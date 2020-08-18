@@ -21,10 +21,15 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import javax.net.ssl.SNIServerName;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLParameters;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -166,6 +171,46 @@ public final class SslProvider {
 		Builder closeNotifyReadTimeoutMillis(long closeNotifyReadTimeoutMillis);
 
 		/**
+		 * Adds a mapping for the given domain name to an {@link SslProvider} builder.
+		 * If a mapping already exists, it will be overridden.
+		 * Note: This configuration is applicable only when configuring the server.
+		 *
+		 * @param domainName the domain name, it may contain wildcard
+		 * @param sslProviderBuilder an {@link SslProvider} builder for building the {@link SslProvider}
+		 * @return {@literal this}
+		 */
+		Builder addSniMapping(String domainName, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder);
+
+		/**
+		 * Adds the provided mappings of domain names to {@link SslProvider} builders to the existing mappings.
+		 * If a mapping already exists, it will be overridden.
+		 * Note: This configuration is applicable only when configuring the server.
+		 *
+		 * @param confPerDomainName mappings of domain names to {@link SslProvider} builders
+		 * @return {@literal this}
+		 */
+		Builder addSniMappings(Map<String, Consumer<? super SslContextSpec>> confPerDomainName);
+
+		/**
+		 * Sets the provided mappings of domain names to {@link SslProvider} builders.
+		 * The existing mappings will be removed.
+		 * Note: This configuration is applicable only when configuring the server.
+		 *
+		 * @param confPerDomainName mappings of domain names to {@link SslProvider} builders
+		 * @return {@literal this}
+		 */
+		Builder setSniMappings(Map<String, Consumer<? super SslProvider.SslContextSpec>> confPerDomainName);
+
+		/**
+		 * Sets the desired {@link SNIServerName}s.
+		 * Note: This configuration is applicable only when configuring the client.
+		 *
+		 * @param serverNames the desired {@link SNIServerName}s
+		 * @return {@literal this}
+		 */
+		Builder serverNames(SNIServerName... serverNames);
+
+		/**
 		 * Builds new SslProvider
 		 *
 		 * @return builds new SslProvider
@@ -237,6 +282,7 @@ public final class SslProvider {
 	final long                         closeNotifyReadTimeoutMillis;
 	final Consumer<? super SslHandler> handlerConfigurator;
 	final int                          builderHashCode;
+	final SniProvider                  sniProvider;
 
 	SslProvider(SslProvider.Build builder) {
 		this.sslContextBuilder = builder.sslCtxBuilder;
@@ -260,11 +306,35 @@ public final class SslProvider {
 		else {
 			this.sslContext = builder.sslContext;
 		}
-		this.handlerConfigurator = builder.handlerConfigurator;
+		if (builder.serverNames != null) {
+			Consumer<SslHandler> configurator =
+					h -> {
+						SSLEngine engine = h.engine();
+						SSLParameters sslParameters = engine.getSSLParameters();
+						sslParameters.setServerNames(builder.serverNames);
+						engine.setSSLParameters(sslParameters);
+					};
+			this.handlerConfigurator = builder.handlerConfigurator == null ? configurator :
+					configurator.andThen(builder.handlerConfigurator);
+		}
+		else {
+			this.handlerConfigurator = builder.handlerConfigurator;
+		}
 		this.handshakeTimeoutMillis = builder.handshakeTimeoutMillis;
 		this.closeNotifyFlushTimeoutMillis = builder.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = builder.closeNotifyReadTimeoutMillis;
 		this.builderHashCode = builder.hashCode();
+		if (!builder.confPerDomainName.isEmpty()) {
+			if (this.type != null) {
+				this.sniProvider = updateAllSslProviderConfiguration(builder.confPerDomainName, this, type);
+			}
+			else {
+				this.sniProvider = new SniProvider(builder.confPerDomainName, this);
+			}
+		}
+		else {
+			this.sniProvider = null;
+		}
 	}
 
 	SslProvider(SslProvider from, Consumer<? super SslHandler> handlerConfigurator) {
@@ -284,6 +354,7 @@ public final class SslProvider {
 		this.closeNotifyFlushTimeoutMillis = from.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
 		this.builderHashCode = from.builderHashCode;
+		this.sniProvider = from.sniProvider;
 	}
 
 	SslProvider(SslProvider from, DefaultConfigurationType type) {
@@ -306,6 +377,20 @@ public final class SslProvider {
 		this.closeNotifyFlushTimeoutMillis = from.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
 		this.builderHashCode = from.builderHashCode;
+		if (from.sniProvider != null) {
+			this.sniProvider = updateAllSslProviderConfiguration(from.sniProvider.confPerDomainName, this, type);
+		}
+		else {
+			this.sniProvider = null;
+		}
+	}
+
+	SniProvider updateAllSslProviderConfiguration(Map<String, SslProvider> confPerDomainName,
+			SslProvider defaultSslProvider, SslProvider.DefaultConfigurationType type) {
+		Map<String, SslProvider> config = new HashMap<>();
+		confPerDomainName.forEach((s, sslProvider) ->
+				config.put(s, SslProvider.updateDefaultConfiguration(sslProvider, type)));
+		return new SniProvider(config, defaultSslProvider);
 	}
 
 	void updateDefaultConfiguration() {
@@ -365,6 +450,11 @@ public final class SslProvider {
 	}
 
 	public void addSslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug) {
+		if (sniProvider != null) {
+			sniProvider.addSniHandler(channel, sslDebug);
+			return;
+		}
+
 		SslHandler sslHandler;
 
 		if (remoteAddress instanceof InetSocketAddress) {
@@ -454,6 +544,8 @@ public final class SslProvider {
 		long handshakeTimeoutMillis = DEFAULT_SSL_HANDSHAKE_TIMEOUT;
 		long closeNotifyFlushTimeoutMillis = 3000L;
 		long closeNotifyReadTimeoutMillis;
+		List<SNIServerName> serverNames;
+		final Map<String, SslProvider> confPerDomainName = new HashMap<>();
 
 		// SslContextSpec
 
@@ -535,6 +627,34 @@ public final class SslProvider {
 		}
 
 		@Override
+		public Builder addSniMapping(String domainName, Consumer<? super SslContextSpec> sslProviderBuilder) {
+			addInternal(domainName, sslProviderBuilder);
+			return this;
+		}
+
+		@Override
+		public Builder addSniMappings(Map<String, Consumer<? super SslContextSpec>> confPerDomainName) {
+			Objects.requireNonNull(confPerDomainName);
+			confPerDomainName.forEach(this::addInternal);
+			return this;
+		}
+
+		@Override
+		public Builder setSniMappings(Map<String, Consumer<? super SslContextSpec>> confPerDomainName) {
+			Objects.requireNonNull(confPerDomainName);
+			this.confPerDomainName.clear();
+			confPerDomainName.forEach(this::addInternal);
+			return this;
+		}
+
+		@Override
+		public Builder serverNames(SNIServerName... serverNames) {
+			Objects.requireNonNull(serverNames);
+			this.serverNames = Arrays.asList(serverNames);
+			return this;
+		}
+
+		@Override
 		public SslProvider build() {
 			return new SslProvider(this);
 		}
@@ -544,7 +664,7 @@ public final class SslProvider {
 			if (this == o) {
 				return true;
 			}
-			if (o == null || getClass() != o.getClass()) {
+			if (!(o instanceof Build)) {
 				return false;
 			}
 			Build build = (Build) o;
@@ -554,13 +674,24 @@ public final class SslProvider {
 					Objects.equals(sslCtxBuilder, build.sslCtxBuilder) &&
 					type == build.type &&
 					Objects.equals(sslContext, build.sslContext) &&
-					Objects.equals(handlerConfigurator, build.handlerConfigurator);
+					Objects.equals(handlerConfigurator, build.handlerConfigurator) &&
+					Objects.equals(serverNames, build.serverNames) &&
+					confPerDomainName.equals(build.confPerDomainName);
 		}
 
 		@Override
 		public int hashCode() {
 			return Objects.hash(sslCtxBuilder, type, sslContext, handlerConfigurator,
-					handshakeTimeoutMillis, closeNotifyFlushTimeoutMillis, closeNotifyReadTimeoutMillis);
+					handshakeTimeoutMillis, closeNotifyFlushTimeoutMillis, closeNotifyReadTimeoutMillis,
+					serverNames, confPerDomainName);
+		}
+
+		void addInternal(String domainName, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+			Objects.requireNonNull(domainName, "domainName");
+			Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
+			SslProvider.SslContextSpec builder = SslProvider.builder();
+			sslProviderBuilder.accept(builder);
+			confPerDomainName.put(domainName, ((SslProvider.Builder) builder).build());
 		}
 	}
 

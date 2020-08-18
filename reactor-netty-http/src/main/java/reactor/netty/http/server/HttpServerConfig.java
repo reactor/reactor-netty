@@ -53,7 +53,6 @@ import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
-import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ServerTransportConfig;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -171,10 +170,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	/**
-	 * Returns the current {@link SslProvider} if that {@link TcpServer} secured via SSL
-	 * transport or null
+	 * Returns the current {@link SslProvider} if that {@link HttpServer} secured via SSL
+	 * transport or null.
 	 *
-	 * @return the current {@link SslProvider} if that {@link TcpServer} secured via SSL
+	 * @return the current {@link SslProvider} if that {@link HttpServer} secured via SSL
 	 * transport or null
 	 */
 	@Nullable

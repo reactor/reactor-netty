@@ -17,17 +17,25 @@ package reactor.netty.tcp;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.OpenSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.DomainWildcardMappingBuilder;
+import io.netty.util.Mapping;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
@@ -36,8 +44,12 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLHandshakeException;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -45,17 +57,38 @@ import static org.junit.Assert.assertTrue;
  * @author Violeta Georgieva
  */
 public class SslProviderTests {
+	static SelfSignedCertificate cert;
+	static SelfSignedCertificate localhostCert;
+	static SelfSignedCertificate anotherCert;
+
 	private List<String> protocols;
 	private SslContext sslContext;
 	private HttpServer server;
 	private SslContextBuilder serverSslContextBuilder;
+	private SslContext localhostSslContext;
+	private SslContext anotherSslContext;
 	private SslContextBuilder clientSslContextBuilder;
 	private DisposableServer disposableServer;
 
+	@BeforeClass
+	public static void createSelfSignedCertificate() throws Exception {
+		cert = new SelfSignedCertificate("default");
+		localhostCert = new SelfSignedCertificate("localhost");
+		anotherCert = new SelfSignedCertificate("another");
+	}
+
 	@Before
 	public void setUp() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
 		serverSslContextBuilder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+
+		SslContextBuilder localhostSslContextBuilder =
+				SslContextBuilder.forServer(localhostCert.certificate(), localhostCert.privateKey());
+		localhostSslContext = localhostSslContextBuilder.build();
+
+		SslContextBuilder anotherSslContextBuilder =
+				SslContextBuilder.forServer(anotherCert.certificate(), anotherCert.privateKey());
+		anotherSslContext = anotherSslContextBuilder.build();
+
 		clientSslContextBuilder = SslContextBuilder.forClient()
 		                                           .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		protocols = new ArrayList<>();
@@ -211,5 +244,127 @@ public class SslProviderTests {
 		                  .asString())
 		            .expectError(SSLHandshakeException.class)
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testAdd() throws Exception {
+		SslProvider.Builder builder =
+				SslProvider.builder()
+				           .sslContext(serverSslContextBuilder.build())
+				           .addSniMapping("localhost", spec -> spec.sslContext(localhostSslContext));
+
+		SniProvider provider = builder.build().sniProvider;
+		assertThat(mappings(provider).map("localhost")).isSameAs(localhostSslContext);
+
+		provider = builder.addSniMapping("localhost", spec -> spec.sslContext(anotherSslContext))
+		                  .build()
+		                  .sniProvider;
+		assertThat(mappings(provider).map("localhost")).isSameAs(anotherSslContext);
+	}
+
+	@Test
+	public void testAddBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> SslProvider.builder()
+						.sslContext(serverSslContextBuilder.build())
+						.addSniMapping(null, spec -> spec.sslContext(localhostSslContext)));
+
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> SslProvider.builder()
+						.sslContext(serverSslContextBuilder.build())
+						.addSniMapping("localhost", null));
+	}
+
+	@Test
+	public void testAddAll() throws Exception {
+		Map<String, Consumer<? super SslProvider.SslContextSpec>> map = new HashMap<>();
+		map.put("localhost", spec -> spec.sslContext(localhostSslContext));
+
+		SslProvider.Builder builder =
+				SslProvider.builder()
+				           .sslContext(serverSslContextBuilder.build())
+				           .addSniMappings(map);
+
+		SniProvider provider = builder.build().sniProvider;
+		assertThat(mappings(provider).map("localhost")).isSameAs(localhostSslContext);
+
+		map.put("another", spec -> spec.sslContext(anotherSslContext));
+
+		provider = builder.addSniMappings(map).build().sniProvider;
+		assertThat(mappings(provider).map("localhost")).isSameAs(localhostSslContext);
+		assertThat(mappings(provider).map("another")).isSameAs(anotherSslContext);
+	}
+
+	@Test
+	public void testAddAllBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> SslProvider.builder()
+						.sslContext(serverSslContextBuilder.build())
+						.addSniMappings(null));
+	}
+
+	@Test
+	public void testSetAll() throws Exception {
+		Map<String, Consumer<? super SslProvider.SslContextSpec>> map = new HashMap<>();
+		map.put("localhost", spec -> spec.sslContext(localhostSslContext));
+
+		SslContext defaultSslContext = serverSslContextBuilder.build();
+		SslProvider.Builder builder =
+				SslProvider.builder()
+				           .sslContext(defaultSslContext)
+				           .setSniMappings(map);
+
+		SniProvider provider = builder.build().sniProvider;
+		assertThat(mappings(provider).map("localhost")).isSameAs(localhostSslContext);
+
+		map.clear();
+		map.put("another", spec -> spec.sslContext(anotherSslContext));
+
+		provider = builder.setSniMappings(map).build().sniProvider;
+		assertThat(mappings(provider).map("localhost")).isSameAs(defaultSslContext);
+		assertThat(mappings(provider).map("another")).isSameAs(anotherSslContext);
+	}
+
+	@Test
+	public void testSetAllBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> SslProvider.builder()
+						.sslContext(serverSslContextBuilder.build())
+						.setSniMappings(null));
+	}
+
+	@Test
+	public void testServerNames() throws Exception {
+		SslContext defaultSslContext = clientSslContextBuilder.build();
+		SslProvider.Builder builder =
+				SslProvider.builder()
+				          .sslContext(defaultSslContext)
+				          .serverNames(new SNIHostName("test"))
+				          .handlerConfigurator(h -> {
+				              List<SNIServerName> list = h.engine().getSSLParameters().getServerNames();
+				              assertThat(list).isNotNull();
+				              assertThat(list.get(0)).isInstanceOf(SNIHostName.class);
+				              assertThat(((SNIHostName) list.get(0)).getAsciiName()).isEqualTo("test");
+				          });
+
+		SslProvider provider = builder.build();
+		SslHandler handler = provider.getSslContext().newHandler(ByteBufAllocator.DEFAULT);
+		provider.configure(handler);
+	}
+
+	@Test
+	public void testServerNamesBadValues() throws Exception {
+		SslContext defaultSslContext = clientSslContextBuilder.build();
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> SslProvider.builder()
+						.sslContext(defaultSslContext)
+						.serverNames((SNIServerName[]) null));
+	}
+
+	static Mapping<String, SslContext> mappings(SniProvider provider) {
+		DomainWildcardMappingBuilder<SslContext> mappingsBuilder =
+				new DomainWildcardMappingBuilder<>(provider.defaultSslProvider.getSslContext());
+		provider.confPerDomainName.forEach((s, sslProvider) -> mappingsBuilder.add(s, sslProvider.getSslContext()));
+		return mappingsBuilder.build();
 	}
 }

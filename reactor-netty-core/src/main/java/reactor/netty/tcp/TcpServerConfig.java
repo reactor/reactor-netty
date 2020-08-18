@@ -50,13 +50,13 @@ public final class TcpServerConfig extends ServerTransportConfig<TcpServerConfig
 	 *
 	 * @return true if that {@link TcpServer} secured via SSL transport
 	 */
-	public final boolean isSecure(){
+	public final boolean isSecure() {
 		return sslProvider != null;
 	}
 
 	/**
 	 * Returns the current {@link SslProvider} if that {@link TcpServer} secured via SSL
-	 * transport or null
+	 * transport or null.
 	 *
 	 * @return the current {@link SslProvider} if that {@link TcpServer} secured via SSL
 	 * transport or null
