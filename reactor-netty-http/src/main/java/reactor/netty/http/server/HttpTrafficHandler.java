@@ -63,7 +63,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	final ConnectionObserver                                 listener;
 	Boolean                                                  secure;
 	SocketAddress                                            remoteAddress;
-	final boolean                                            readForwardHeaders;
+	final HttpForwardedHeaderHandler                         forwardedHeaderHandler;
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compress;
 	final ServerCookieEncoder                                cookieEncoder;
 	final ServerCookieDecoder                                cookieDecoder;
@@ -79,11 +79,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	boolean overflow;
 	boolean nonInformationalResponse;
 
-	HttpTrafficHandler(ConnectionObserver listener, boolean readForwardHeaders,
+	HttpTrafficHandler(ConnectionObserver listener,
+			@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		this.listener = listener;
-		this.readForwardHeaders = readForwardHeaders;
+		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
@@ -161,10 +162,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							listener,
 							compress, request,
 							ConnectionInfo.from(ctx.channel(),
-							                    readForwardHeaders,
 							                    request,
 							                    secure,
-							                    remoteAddress),
+							                    remoteAddress,
+							                    forwardedHeaderHandler),
 							cookieEncoder,
 							cookieDecoder);
 				}
@@ -345,10 +346,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						compress,
 						nextRequest,
 						ConnectionInfo.from(ctx.channel(),
-						                    readForwardHeaders,
 						                    nextRequest,
 						                    secure,
-						                    remoteAddress),
+						                    remoteAddress,
+						                    forwardedHeaderHandler),
 						cookieEncoder,
 						cookieDecoder);
 				ops.bind();

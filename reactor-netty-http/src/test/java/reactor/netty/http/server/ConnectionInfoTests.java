@@ -42,6 +42,8 @@ import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
+import reactor.netty.transport.AddressUtils;
+import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
@@ -232,6 +234,28 @@ public class ConnectionInfoTests {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
+				});
+	}
+
+	@Test
+	public void customForwardedHandlerForMultipleHost() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com");
+				},
+				(connectionInfo, request) -> {
+					String hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
+					if (hostHeader != null) {
+						String[] hosts = hostHeader.split(",");
+						InetSocketAddress hostAddress = AddressUtils.createUnresolved(
+								hosts[hosts.length - 1].trim(),
+								connectionInfo.getHostAddress().getPort());
+						connectionInfo = connectionInfo.withHostAddress(hostAddress);
+					}
+					return connectionInfo;
 				});
 	}
 
@@ -492,73 +516,15 @@ public class ConnectionInfoTests {
 				});
 	}
 
-	@Test
-	public void parseAddressForHostNameNoPort() {
-		testParseAddress("a.example.com", inetSocketAddress -> {
-			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("a.example.com");
-			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
-		});
-	}
-
-	@Test
-	public void parseAddressForHostNameWithPort() {
-		testParseAddress("a.example.com:443", inetSocketAddress -> {
-			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("a.example.com");
-			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(443);
-		});
-	}
-
-	@Test
-	public void parseAddressForIpV4NoPort() {
-		testParseAddress("192.0.2.60", inetSocketAddress -> {
-			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("192.0.2.60");
-			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
-		});
-	}
-
-	@Test
-	public void parseAddressForIpV4WithPort() {
-		testParseAddress("192.0.2.60:443", inetSocketAddress -> {
-			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("192.0.2.60");
-			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(443);
-		});
-	}
-
-	@Test
-	public void parseAddressForIpV6NoPortNoBrackets() {
-		testParseAddress("1abc:2abc:3abc:0:0:0:5abc:6abc", inetSocketAddress -> {
-			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
-		});
-	}
-
-	@Test
-	public void parseAddressForIpV6NoPortWithBrackets() {
-		testParseAddress("[1abc:2abc:3abc::5ABC:6abc]", inetSocketAddress -> {
-			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
-		});
-	}
-
-	@Test
-	public void parseAddressForIpV6WithPortAndBrackets_1() {
-		testParseAddress("[1abc:2abc:3abc::5ABC:6abc]:443", inetSocketAddress -> {
-			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(443);
-		});
-	}
-
-	@Test
-	public void parseAddressForIpV6WithPortAndBrackets_2() {
-		testParseAddress("[2001:db8:a0b:12f0::1]:dba2", inetSocketAddress -> {
-			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("2001:db8:a0b:12f0:0:0:0:1");
-			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
-		});
+	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
+			Consumer<HttpServerRequest> serverRequestConsumer) {
+		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, null, Function.identity(), Function.identity(), false);
 	}
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
-			Consumer<HttpServerRequest> serverRequestConsumer) {
-		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, Function.identity(), Function.identity(), false);
+			Consumer<HttpServerRequest> serverRequestConsumer,
+			@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler) {
+		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, forwardedHeaderHandler, Function.identity(), Function.identity(), false);
 	}
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
@@ -566,14 +532,25 @@ public class ConnectionInfoTests {
 			Function<HttpClient, HttpClient> clientConfigFunction,
 			Function<HttpServer, HttpServer> serverConfigFunction,
 			boolean useHttps) {
+		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, null, clientConfigFunction, serverConfigFunction, useHttps);
+	}
 
+	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
+			Consumer<HttpServerRequest> serverRequestConsumer,
+			@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+			Function<HttpClient, HttpClient> clientConfigFunction,
+			Function<HttpServer, HttpServer> serverConfigFunction,
+			boolean useHttps) {
+
+		HttpServer server = HttpServer.create()
+				.forwarded(true)
+				.port(0);
+		if (forwardedHeaderHandler != null) {
+			server = server.forwardedHeaderHandler(forwardedHeaderHandler);
+		}
 		this.connection =
 				customizeServerOptions(
-						serverConfigFunction.apply(
-						    HttpServer.create()
-						              .forwarded(true)
-						              .port(0)
-						))
+						serverConfigFunction.apply(server))
 				        .handle((req, res) -> {
 				            try {
 				                serverRequestConsumer.accept(req);
@@ -609,10 +586,6 @@ public class ConnectionInfoTests {
 				        .block();
 
 		assertThat(response).isEqualTo("OK");
-	}
-
-	private void testParseAddress(String address, Consumer<InetSocketAddress> inetSocketAddressConsumer) {
-		inetSocketAddressConsumer.accept(ConnectionInfo.parseAddress(address, 8080));
 	}
 
 	@After

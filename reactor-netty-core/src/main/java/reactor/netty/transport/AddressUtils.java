@@ -181,6 +181,32 @@ public final class AddressUtils {
 		return createUnresolved(host, port);
 	}
 
+	/**
+	 * Parse unresolved InetSocketAddress. Numeric IP addresses will be detected and
+	 * resolved.
+	 *
+	 * @param address ip-address or hostname
+	 * @param defaultPort the default port
+	 * @return InetSocketAddress for given parameters
+	 */
+	public static InetSocketAddress parseAddress(String address, int defaultPort) {
+		int separatorIdx = address.lastIndexOf(':');
+		int ipV6HostSeparatorIdx = address.lastIndexOf(']');
+		if (separatorIdx > ipV6HostSeparatorIdx) {
+			if (separatorIdx == address.indexOf(':') || ipV6HostSeparatorIdx > -1) {
+				String port = address.substring(separatorIdx + 1);
+				if (port.chars().allMatch(Character::isDigit)) {
+					return AddressUtils.createUnresolved(address.substring(0, separatorIdx),
+							Integer.parseInt(port));
+				}
+				else {
+					return AddressUtils.createUnresolved(address.substring(0, separatorIdx), defaultPort);
+				}
+			}
+		}
+		return AddressUtils.createUnresolved(address, defaultPort);
+	}
+
 	@Nullable
 	static InetAddress attemptParsingIpString(String hostname) {
 		byte[] ipAddressBytes = NetUtil.createByteArrayFromIpAddressString(hostname);
@@ -210,4 +236,5 @@ public final class AddressUtils {
 		}
 		return null;
 	}
+
 }

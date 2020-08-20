@@ -99,4 +99,84 @@ public class AddressUtilsTest {
 		InetSocketAddress processedAddress = AddressUtils.replaceWithResolved(socketAddress);
 		assertThat(processedAddress).isSameAs(socketAddress);
 	}
+
+	@Test
+	public void shouldParseNumericIPv4Address() {
+		InetSocketAddress socketAddress = AddressUtils.parseAddress("127.0.0.1", 80);
+		assertThat(socketAddress.isUnresolved()).isFalse();
+		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("127.0.0.1");
+		assertThat(socketAddress.getPort()).isEqualTo(80);
+		assertThat(socketAddress.getHostString()).isEqualTo("127.0.0.1");
+	}
+
+	@Test
+	public void shouldParseAddressForIPv4() {
+		InetSocketAddress socketAddress = AddressUtils.parseAddress("127.0.0.1", 80);
+		assertThat(socketAddress.isUnresolved()).isFalse();
+		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("127.0.0.1");
+		assertThat(socketAddress.getPort()).isEqualTo(80);
+		assertThat(socketAddress.getHostString()).isEqualTo("127.0.0.1");
+	}
+
+	@Test
+	public void shouldParseAddressForIPv4WithPort() {
+		InetSocketAddress socketAddress = AddressUtils.parseAddress("127.0.0.1:8080", 80);
+		assertThat(socketAddress.isUnresolved()).isFalse();
+		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("127.0.0.1");
+		assertThat(socketAddress.getPort()).isEqualTo(8080);
+		assertThat(socketAddress.getHostString()).isEqualTo("127.0.0.1");
+	}
+
+	@Test
+	public void shouldParseAddressForIPv6() {
+		InetSocketAddress socketAddress = AddressUtils.parseAddress("[1abc:2abc:3abc::5ABC:6abc]", 80);
+		assertThat(socketAddress.isUnresolved()).isFalse();
+		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+		assertThat(socketAddress.getPort()).isEqualTo(80);
+		assertThat(socketAddress.getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+	}
+
+	@Test
+	public void shouldParseAddressForIPv6WithPort() {
+		InetSocketAddress socketAddress = AddressUtils.parseAddress("[1abc:2abc:3abc::5ABC:6abc]:8080", 80);
+		assertThat(socketAddress.isUnresolved()).isFalse();
+		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+		assertThat(socketAddress.getPort()).isEqualTo(8080);
+		assertThat(socketAddress.getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+	}
+
+	@Test
+	public void shouldParseAddressForIPv6WithoutBrackets() {
+		InetSocketAddress socketAddress = AddressUtils.parseAddress("1abc:2abc:3abc:0:0:0:5abc:6abc", 80);
+		assertThat(socketAddress.isUnresolved()).isFalse();
+		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+		assertThat(socketAddress.getPort()).isEqualTo(80);
+		assertThat(socketAddress.getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+	}
+
+	@Test
+	public void shouldParseAddressForIPv6WithNotNumericPort() {
+		InetSocketAddress socketAddress = AddressUtils.parseAddress("[1abc:2abc:3abc::5ABC:6abc]:abc42", 80);
+		assertThat(socketAddress.isUnresolved()).isFalse();
+		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+		assertThat(socketAddress.getPort()).isEqualTo(80);
+		assertThat(socketAddress.getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+	}
+
+	@Test
+	public void shouldParseAddressForHostName() {
+		InetSocketAddress socketAddress = AddressUtils.parseAddress("example.com", 80);
+		assertThat(socketAddress.isUnresolved()).isTrue();
+		assertThat(socketAddress.getPort()).isEqualTo(80);
+		assertThat(socketAddress.getHostString()).isEqualTo("example.com");
+	}
+
+	@Test
+	public void shouldParseAddressForHostNameWithPort() {
+		InetSocketAddress socketAddress = AddressUtils.parseAddress("example.com:8080", 80);
+		assertThat(socketAddress.isUnresolved()).isTrue();
+		assertThat(socketAddress.getPort()).isEqualTo(8080);
+		assertThat(socketAddress.getHostString()).isEqualTo("example.com");
+	}
+
 }

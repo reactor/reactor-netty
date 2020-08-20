@@ -211,6 +211,21 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
+	 * Configure the {@link HttpForwardedHeaderHandler}.
+	 *
+	 * @param handler the forwarded header handler
+	 * @return a new {@link HttpServer}
+	 * @since 0.9.12
+	 */
+	public final HttpServer forwardedHeaderHandler(HttpForwardedHeaderHandler handler) {
+		Objects.requireNonNull(handler, "handler");
+		HttpServer dup = duplicate();
+		dup.configuration().forwardedHeaderHandler = handler;
+		dup.configuration().forwarded = true;
+		return dup;
+	}
+
+	/**
 	 * Attach an I/O handler to react on a connected client
 	 *
 	 * @param handler an I/O handler that can dispose underlying connection when {@link
