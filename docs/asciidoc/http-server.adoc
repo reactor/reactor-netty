@@ -293,6 +293,20 @@ include::{examplesdir}/security/Application.java[lines=18..39]
 ----
 ====
 
+=== Server Name Indication
+You can configure the `HTTP` server with multiple `SslContext` mapped to a specific domain.
+An exact domain name or a domain name containing a wildcard can be used when configuring the `SNI` mapping.
+
+The following example uses a domain name containing a wildcard:
+
+====
+[source,java,indent=0]
+.{examplesdir}/sni/Application.java
+----
+include::{examplesdir}/sni/Application.java[lines=18..47]
+----
+====
+
 == HTTP Access Log
 
 The current logging support provides only the https://en.wikipedia.org/wiki/Common_Log_Format[Common Log Format].

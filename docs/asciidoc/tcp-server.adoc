@@ -178,7 +178,7 @@ include::{examplesdir}/eventloop/Application.java[lines=18..35]
 ----
 ====
 
-== SSL/TLS
+== SSL and TLS
 
 When you need SSL or TLS, you can apply the configuration shown in the next listing.
 By default, if `OpenSSL` is available,
@@ -196,6 +196,20 @@ The following example uses `SslContextBuilder`:
 .{examplesdir}/security/Application.java
 ----
 include::{examplesdir}/security/Application.java[lines=18..39]
+----
+====
+
+=== Server Name Indication
+You can configure the `TCP` server with multiple `SslContext` mapped to a specific domain.
+An exact domain name or a domain name containing a wildcard can be used when configuring the `SNI` mapping.
+
+The following example uses a domain name containing a wildcard:
+
+====
+[source,java,indent=0]
+.{examplesdir}/sni/Application.java
+----
+include::{examplesdir}/sni/Application.java[lines=18..47]
 ----
 ====
 

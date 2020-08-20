@@ -257,6 +257,18 @@ include::{examplesdir}/security/Application.java[lines=18..37]
 ----
 ====
 
+=== Server Name Indication
+By default, the `TCP` client sends the remote host name as `SNI` server name.
+When you need to change this default setting, you can configure the `TCP` client as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/sni/Application.java
+----
+include::{examplesdir}/sni/Application.java[lines=18..41]
+----
+====
+
 == Proxy Support
 
 The TCP client supports the proxy functionality provided by Netty and provides a way

@@ -223,7 +223,7 @@ include::{examplesdir}/wiretap/Application.java[lines=18..34]
 <1> Enables the wire logging
 ====
 
-== SSL andTLS
+== SSL and TLS
 When you need SSL or TLS, you can apply the configuration shown in the next example.
 By default, if `OpenSSL` is available, a
 https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
@@ -239,6 +239,18 @@ The following example uses `SslContextBuilder`:
 .{examplesdir}/security/Application.java
 ----
 include::{examplesdir}/security/Application.java[lines=18..37]
+----
+====
+
+=== Server Name Indication
+By default, the `HTTP` client sends the remote host name as `SNI` server name.
+When you need to change this default setting, you can configure the `HTTP` client as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/sni/Application.java
+----
+include::{examplesdir}/sni/Application.java[lines=18..39]
 ----
 ====
 
