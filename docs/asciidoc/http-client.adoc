@@ -257,6 +257,46 @@ include::{examplesdir}/sni/Application.java[lines=18..39]
 == Retry Strategies
 By default, the `HTTP` client retries the request once if it was aborted on the `TCP` level.
 
+== HTTP/2
+
+By default, the `HTTP` client supports `HTTP/1.1`. If you need `HTTP/2`, you can get it through configuration.
+In addition to the protocol configuration, if you need `H2` but not `H2C (cleartext)`, you must also configure SSL.
+
+NOTE: As Application-Layer Protocol Negotiation (ALPN) is not supported "`out-of-the-box`" by JDK8 (although some vendors backported ALPN to JDK8), you need an additional dependency to a native library that
+supports it -- for example, https://netty.io/wiki/forked-tomcat-native.html[`netty-tcnative-boringssl-static`].
+
+The following listing presents a simple `H2` example:
+
+====
+[source,java,indent=0]
+.{examplesdir}/http2/H2Application.java
+----
+include::{examplesdir}/http2/H2Application.java[lines=18..42]
+----
+<1> Configures the client to support only `HTTP/2`
+<2> Configures `SSL`
+====
+
+The following listing presents a simple `H2C` example:
+
+====
+[source,java,indent=0]
+.{examplesdir}/http2/H2CApplication.java
+----
+include::{examplesdir}/http2/H2CApplication.java[lines=18..41]
+----
+====
+
+=== Protocol Selection
+
+====
+[source,java,indent=0]
+.{sourcedir}/reactor/netty/http/HttpProtocol.java
+----
+include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..52]
+----
+====
+
 == Metrics
 The HTTP client supports built-in integration with https://micrometer.io/[`Micrometer`].
 It exposes all metrics with a prefix of `reactor.netty.http.client`.

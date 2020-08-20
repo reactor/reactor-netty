@@ -341,7 +341,7 @@ You can use the following configuration (for Logback or similar logging framewor
 By default, the `HTTP` server supports `HTTP/1.1`. If you need `HTTP/2`, you can get it through configuration.
 In addition to the protocol configuration, if you need `H2` but not `H2C (cleartext)`, you must also configure SSL.
 
-NOTE: As that protocol is not supported "`out-of-the-box`" by JDK8, you need an additional dependency to a native library that
+NOTE: As Application-Layer Protocol Negotiation (ALPN) is not supported "`out-of-the-box`" by JDK8 (although some vendors backported ALPN to JDK8), you need an additional dependency to a native library that
 supports it -- for example, https://netty.io/wiki/forked-tomcat-native.html[`netty-tcnative-boringssl-static`].
 
 The following listing presents a simple `H2` example:
@@ -387,6 +387,16 @@ $ curl --http2-prior-knowledge http://localhost:8080 -i
 HTTP/2 200
 
 hello
+----
+====
+
+=== Protocol Selection
+
+====
+[source,java,indent=0]
+.{sourcedir}/reactor/netty/http/HttpProtocol.java
+----
+include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..52]
 ----
 ====
 
