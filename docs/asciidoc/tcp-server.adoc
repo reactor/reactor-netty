@@ -254,3 +254,17 @@ include::{examplesdir}/metrics/custom/Application.java[lines=18..35]
 ----
 <1> Enables TCP server metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
 ====
+
+== Unix Domain Sockets
+The `TCP` server supports Unix Domain Sockets (UDS) when native transport is in use.
+
+The following example shows how to use UDS support:
+
+====
+[source,java,indent=0]
+.{examplesdir}/uds/Application.java
+----
+include::{examplesdir}/uds/Application.java[lines=18..33]
+----
+<1> Specifies `DomainSocketAddress` that will be used
+====
