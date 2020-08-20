@@ -19,6 +19,7 @@ package reactor.netty.http.server;
 import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 import io.netty.channel.ChannelDuplexHandler;
@@ -60,13 +61,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	static final HttpVersion H2 = HttpVersion.valueOf("HTTP/2.0");
 
-	final ConnectionObserver                                 listener;
-	Boolean                                                  secure;
-	SocketAddress                                            remoteAddress;
-	final boolean                                            readForwardHeaders;
-	final BiPredicate<HttpServerRequest, HttpServerResponse> compress;
-	final ServerCookieEncoder                                cookieEncoder;
-	final ServerCookieDecoder                                cookieDecoder;
+	final ConnectionObserver                                      listener;
+	Boolean                                                       secure;
+	SocketAddress                                                 remoteAddress;
+	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
+	final ServerCookieEncoder                                     cookieEncoder;
+	final ServerCookieDecoder                                     cookieDecoder;
 
 	boolean persistentConnection = true;
 	// Track pending responses to support client pipelining: https://tools.ietf.org/html/rfc7230#section-6.3.2
@@ -79,11 +80,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	boolean overflow;
 	boolean nonInformationalResponse;
 
-	HttpTrafficHandler(ConnectionObserver listener, boolean readForwardHeaders,
+	HttpTrafficHandler(ConnectionObserver listener,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		this.listener = listener;
-		this.readForwardHeaders = readForwardHeaders;
+		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
@@ -161,10 +163,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							listener,
 							compress, request,
 							ConnectionInfo.from(ctx.channel(),
-							                    readForwardHeaders,
 							                    request,
 							                    secure,
-							                    remoteAddress),
+							                    remoteAddress,
+							                    forwardedHeaderHandler),
 							cookieEncoder,
 							cookieDecoder);
 				}
@@ -345,10 +347,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						compress,
 						nextRequest,
 						ConnectionInfo.from(ctx.channel(),
-						                    readForwardHeaders,
 						                    nextRequest,
 						                    secure,
-						                    remoteAddress),
+						                    remoteAddress,
+						                    forwardedHeaderHandler),
 						cookieEncoder,
 						cookieDecoder);
 				ops.bind();

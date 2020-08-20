@@ -199,6 +199,19 @@ include::{examplesdir}/clientaddress/Application.java[lines=18..38]
 <2> Returns the address of the remote (client) peer.
 ====
 
+It is also possible to customize the behavior of the `Forwarded` or `X-Forwarded-*` header handler.
+The following example shows how to do so:
+
+====
+[source,java,indent=0]
+.{examplesdir}/clientaddress/CustomForwardedHeaderHandlerApplication.java
+----
+include::{examplesdir}/clientaddress/CustomForwardedHeaderHandlerApplication.java[lines=18..52]
+----
+<1> Add a custom header handler.
+<2> Returns the address of the remote (client) peer.
+====
+
 === HTTP Request Decoder
 
 By default, `Netty` configures some restrictions for the incoming requests, such as:

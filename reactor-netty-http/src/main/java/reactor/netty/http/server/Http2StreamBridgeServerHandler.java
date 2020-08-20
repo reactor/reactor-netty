@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import java.net.SocketAddress;
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpRequest;
@@ -26,6 +27,7 @@ import io.netty.handler.ssl.SslHandler;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.http.Http2StreamBridgeHandler;
+import reactor.util.annotation.Nullable;
 
 /**
  * Server specific {@link Http2StreamBridgeHandler}.
@@ -34,20 +36,21 @@ import reactor.netty.http.Http2StreamBridgeHandler;
  */
 final class Http2StreamBridgeServerHandler extends Http2StreamBridgeHandler {
 
-	final ServerCookieDecoder cookieDecoder;
-	final ServerCookieEncoder cookieEncoder;
-	final ConnectionObserver  listener;
-	final boolean             readForwardHeaders;
+	final ServerCookieDecoder                                     cookieDecoder;
+	final ServerCookieEncoder                                     cookieEncoder;
+	final ConnectionObserver                                      listener;
+	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 
 	SocketAddress             remoteAddress;
 	Boolean                   secured;
 
-	Http2StreamBridgeServerHandler(ConnectionObserver listener, boolean readForwardHeaders,
+	Http2StreamBridgeServerHandler(ConnectionObserver listener,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
 		this.listener = listener;
-		this.readForwardHeaders = readForwardHeaders;
+		this.forwardedHeaderHandler = forwardedHeaderHandler;
 	}
 
 	@Override
@@ -75,10 +78,10 @@ final class Http2StreamBridgeServerHandler extends Http2StreamBridgeHandler {
 						null,
 						request,
 						ConnectionInfo.from(ctx.channel().parent(),
-						                    readForwardHeaders,
 						                    request,
 						                    secured,
-						                    remoteAddress),
+						                    remoteAddress,
+						                    forwardedHeaderHandler),
 						cookieEncoder,
 						cookieDecoder);
 			}
