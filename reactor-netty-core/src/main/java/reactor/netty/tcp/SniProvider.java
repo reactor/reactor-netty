@@ -18,7 +18,6 @@ package reactor.netty.tcp;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SniHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
@@ -46,18 +45,7 @@ final class SniProvider {
 		ChannelPipeline pipeline = channel.pipeline();
 		pipeline.addFirst(NettyPipeline.SslHandler, newSniHandler());
 
-		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
-			pipeline.addAfter(NettyPipeline.LoggingHandler, NettyPipeline.SslReader, new SslProvider.SslReadHandler());
-			if (sslDebug) {
-				pipeline.addBefore(NettyPipeline.SslHandler,
-						NettyPipeline.SslLoggingHandler,
-						new LoggingHandler("reactor.netty.tcp.ssl"));
-			}
-
-		}
-		else {
-			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, new SslProvider.SslReadHandler());
-		}
+		SslProvider.addSslReadHandler(pipeline, sslDebug);
 	}
 
 	final Map<String, SslProvider> confPerDomainName;

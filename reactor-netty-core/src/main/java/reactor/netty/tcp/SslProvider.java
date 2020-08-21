@@ -486,18 +486,7 @@ public final class SslProvider {
 			pipeline.addFirst(NettyPipeline.SslHandler, sslHandler);
 		}
 
-		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
-			pipeline.addAfter(NettyPipeline.LoggingHandler, NettyPipeline.SslReader, new SslReadHandler());
-			if (sslDebug) {
-				pipeline.addBefore(NettyPipeline.SslHandler,
-						NettyPipeline.SslLoggingHandler,
-						new LoggingHandler("reactor.netty.tcp.ssl"));
-			}
-
-		}
-		else {
-			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, new SslReadHandler());
-		}
+		addSslReadHandler(pipeline, sslDebug);
 	}
 
 	@Override
@@ -525,6 +514,18 @@ public final class SslProvider {
 	@Override
 	public int hashCode() {
 		return Objects.hash(builderHashCode);
+	}
+
+	static void addSslReadHandler(ChannelPipeline pipeline, boolean sslDebug) {
+		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
+			pipeline.addAfter(NettyPipeline.LoggingHandler, NettyPipeline.SslReader, new SslReadHandler());
+			if (sslDebug) {
+				pipeline.addBefore(NettyPipeline.SslHandler, NettyPipeline.SslLoggingHandler, LOGGING_HANDLER);
+			}
+		}
+		else {
+			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, new SslReadHandler());
+		}
 	}
 
 	static final class Build implements SslContextSpec, DefaultConfigurationSpec, Builder {
@@ -762,6 +763,8 @@ public final class SslProvider {
 	}
 
 	static final Logger log = Loggers.getLogger(SslProvider.class);
+
+	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler("reactor.netty.tcp.ssl");
 
 	/**
 	 * <a href="https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility">Mozilla Modern Cipher
