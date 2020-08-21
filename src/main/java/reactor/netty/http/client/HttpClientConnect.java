@@ -386,6 +386,10 @@ final class HttpClientConnect extends HttpClient {
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "The request will be redirected"));
 				}
+				HttpClientOperations ops = connection.as(HttpClientOperations.class);
+				if (ops != null && handler.redirectRequestBiConsumer != null) {
+					handler.previousRequestHeaders = ops.requestHeaders;
+				}
 			}
 			else if (AbortedException.isConnectionReset(error) && handler.shouldRetry) {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
@@ -460,6 +464,8 @@ final class HttpClientConnect extends HttpClient {
 		                              followRedirectPredicate;
 		final Consumer<HttpClientRequest>
 		                              redirectRequestConsumer;
+		final BiConsumer<HttpHeaders, HttpClientRequest>
+		                              redirectRequestBiConsumer;
 		final HttpResponseDecoderSpec decoder;
 		final ProxyProvider           proxyProvider;
 		final Duration                responseTimeout;
@@ -468,6 +474,7 @@ final class HttpClientConnect extends HttpClient {
 		volatile UriEndpoint        fromURI;
 		volatile Supplier<String>[] redirectedFrom;
 		volatile boolean            shouldRetry;
+		volatile HttpHeaders        previousRequestHeaders;
 
 		@SuppressWarnings("unchecked")
 		HttpClientHandler(HttpClientConfiguration configuration, @Nullable SocketAddress address,
@@ -476,6 +483,7 @@ final class HttpClientConnect extends HttpClient {
 			this.compress = configuration.acceptGzip;
 			this.followRedirectPredicate = configuration.followRedirectPredicate;
 			this.redirectRequestConsumer = configuration.redirectRequestConsumer;
+			this.redirectRequestBiConsumer = configuration.redirectRequestBiConsumer;
 			this.cookieEncoder = configuration.cookieEncoder;
 			this.cookieDecoder = configuration.cookieDecoder;
 			this.decoder = configuration.decoder;
@@ -615,6 +623,12 @@ final class HttpClientConnect extends HttpClient {
 					                              this.redirectRequestConsumer;
 				}
 				ch.redirectRequestConsumer(consumer);
+
+				if (redirectRequestBiConsumer != null) {
+					ch.previousRequestHeaders = previousRequestHeaders;
+					ch.redirectRequestBiConsumer = redirectRequestBiConsumer;
+				}
+
 				return handler != null ? handler.apply(ch, ch) : ch.send();
 			}
 			catch (Throwable t) {

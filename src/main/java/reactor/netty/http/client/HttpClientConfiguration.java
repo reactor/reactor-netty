@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -65,6 +66,7 @@ final class HttpClientConfiguration {
 
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate = null;
 	Consumer<HttpClientRequest> redirectRequestConsumer = null;
+	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer = null;
 
 	Function<String, String> uriTagValue = null;
 
@@ -300,6 +302,16 @@ final class HttpClientConfiguration {
 		HttpClientConfiguration conf = getOrCreate(b);
 		conf.followRedirectPredicate = predicate;
 		conf.redirectRequestConsumer = redirectRequestConsumer;
+		conf.redirectRequestBiConsumer = null;
+		return b;
+	}
+
+	static Bootstrap followRedirectPredicate(Bootstrap b, BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
+			@Nullable BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer) {
+		HttpClientConfiguration conf = getOrCreate(b);
+		conf.followRedirectPredicate = predicate;
+		conf.redirectRequestConsumer = null;
+		conf.redirectRequestBiConsumer = redirectRequestBiConsumer;
 		return b;
 	}
 

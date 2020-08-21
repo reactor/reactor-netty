@@ -115,6 +115,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 	Consumer<HttpClientRequest> redirectRequestConsumer;
+	HttpHeaders previousRequestHeaders;
+	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
 
 	HttpClientOperations(HttpClientOperations replaced) {
 		super(replaced);
@@ -123,6 +125,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.redirecting = replaced.redirecting;
 		this.redirectedFrom = replaced.redirectedFrom;
 		this.redirectRequestConsumer = replaced.redirectRequestConsumer;
+		this.previousRequestHeaders = replaced.previousRequestHeaders;
+		this.redirectRequestBiConsumer = replaced.redirectRequestBiConsumer;
 		this.isSecure = replaced.isSecure;
 		this.nettyRequest = replaced.nettyRequest;
 		this.responseState = replaced.responseState;
@@ -503,8 +507,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	protected void beforeMarkSentHeaders() {
-		if (redirectedFrom.length > 0 && redirectRequestConsumer != null) {
-			redirectRequestConsumer.accept(this);
+		if (redirectedFrom.length > 0) {
+			if(redirectRequestConsumer != null) {
+				redirectRequestConsumer.accept(this);
+			}
+			if (redirectRequestBiConsumer != null && previousRequestHeaders != null) {
+				redirectRequestBiConsumer.accept(previousRequestHeaders, this);
+				previousRequestHeaders = null;
+			}
 		}
 	}
 
