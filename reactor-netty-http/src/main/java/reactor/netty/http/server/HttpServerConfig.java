@@ -24,6 +24,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
@@ -60,6 +61,7 @@ import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -130,7 +132,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * HTTP request headers for deriving information about the connection
 	 */
 	public boolean isForwarded() {
-		return forwarded;
+		return forwardedHeaderHandler != null;
 	}
 
 	/**
@@ -197,27 +199,25 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	// Protected/Package private write API
 
-	BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
-	ServerCookieDecoder                                cookieDecoder;
-	ServerCookieEncoder                                cookieEncoder;
-	HttpRequestDecoderSpec                             decoder;
-	boolean                                            forwarded;
-	HttpForwardedHeaderHandler                         forwardedHeaderHandler;
-	Http2SettingsSpec                                  http2Settings;
-	int                                                minCompressionSize;
-	HttpProtocol[]                                     protocols;
-	int                                                _protocols;
-	ProxyProtocolSupportType                           proxyProtocolSupportType;
-	SslProvider                                        sslProvider;
-	Function<String, String>                           uriTagValue;
+	BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+	ServerCookieDecoder                                     cookieDecoder;
+	ServerCookieEncoder                                     cookieEncoder;
+	HttpRequestDecoderSpec                                  decoder;
+	BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	Http2SettingsSpec                                       http2Settings;
+	int                                                     minCompressionSize;
+	HttpProtocol[]                                          protocols;
+	int                                                     _protocols;
+	ProxyProtocolSupportType                                proxyProtocolSupportType;
+	SslProvider                                             sslProvider;
+	Function<String, String>                                uriTagValue;
 
 	HttpServerConfig(Map<ChannelOption<?>, ?> options, Map<ChannelOption<?>, ?> childOptions, Supplier<? extends SocketAddress> localAddress) {
 		super(options, childOptions, localAddress);
 		this.cookieDecoder = ServerCookieDecoder.STRICT;
 		this.cookieEncoder = ServerCookieEncoder.STRICT;
 		this.decoder = new HttpRequestDecoderSpec();
-		this.forwarded = false;
-		this.forwardedHeaderHandler = new DefaultHttpForwardedHeaderHandler();
+		this.forwardedHeaderHandler = null;
 		this.minCompressionSize = -1;
 		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
 		this._protocols = h11;
@@ -230,7 +230,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.cookieDecoder = parent.cookieDecoder;
 		this.cookieEncoder = parent.cookieEncoder;
 		this.decoder = parent.decoder;
-		this.forwarded = parent.forwarded;
 		this.forwardedHeaderHandler = parent.forwardedHeaderHandler;
 		this.http2Settings = parent.http2Settings;
 		this.minCompressionSize = parent.minCompressionSize;
@@ -260,7 +259,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	protected ChannelPipelineConfigurer defaultOnChannelInit() {
 		return super.defaultOnChannelInit()
 		            .then(new HttpServerChannelInitializer(compressPredicate, cookieDecoder, cookieEncoder,
-		                decoder, getForwardedHeaderHandlerIfEnabled(), http2Settings(), metricsRecorder(), minCompressionSize, channelOperationsProvider(),
+		                decoder, forwardedHeaderHandler, http2Settings(), metricsRecorder(), minCompressionSize, channelOperationsProvider(),
 		                    _protocols, proxyProtocolSupportType, sslProvider, uriTagValue));
 	}
 
@@ -272,11 +271,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	@Override
 	protected void metricsRecorder(@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder) {
 		super.metricsRecorder(metricsRecorder);
-	}
-
-	@Nullable
-	private HttpForwardedHeaderHandler getForwardedHeaderHandlerIfEnabled() {
-		return this.forwarded ? forwardedHeaderHandler : null;
 	}
 
 	void protocols(HttpProtocol... protocols) {
@@ -332,8 +326,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		return settings;
 	}
 
-	static void addStreamHandlers(Channel ch, ChannelOperations.OnSetup opsFactory,
-			ConnectionObserver listener, @Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+	static void addStreamHandlers(Channel ch, ChannelOperations.OnSetup opsFactory, ConnectionObserver listener,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		if (ACCESS_LOG) {
 			ch.pipeline()
@@ -386,7 +380,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	static void configureH2Pipeline(ChannelPipeline p,
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
-			@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
 			ConnectionObserver listener,
 			ChannelOperations.OnSetup opsFactory,
@@ -413,7 +407,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
 			HttpRequestDecoderSpec decoder,
-			@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
 			ConnectionObserver listener,
 			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
@@ -469,7 +463,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
 			HttpRequestDecoderSpec decoder,
-			@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ConnectionObserver listener,
 			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 			int minCompressionSize,
@@ -555,14 +549,14 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final class H2Codec extends ChannelInitializer<Channel> {
 
-		final HttpForwardedHeaderHandler    forwardedHeaderHandler;
-		final ConnectionObserver            listener;
-		final ServerCookieEncoder           cookieEncoder;
-		final ServerCookieDecoder           cookieDecoder;
-		final ChannelOperations.OnSetup     opsFactory;
+		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+		final ConnectionObserver                                      listener;
+		final ServerCookieEncoder                                     cookieEncoder;
+		final ServerCookieDecoder                                     cookieDecoder;
+		final ChannelOperations.OnSetup                               opsFactory;
 
 		H2Codec(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener,
-				@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
 			this.listener = listener;
@@ -581,18 +575,18 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	static final class Http11OrH2CleartextCodec extends ChannelInitializer<Channel>
 			implements HttpServerUpgradeHandler.UpgradeCodecFactory {
 
-		final ServerCookieDecoder           cookieDecoder;
-		final ServerCookieEncoder           cookieEncoder;
-		final HttpForwardedHeaderHandler    forwardedHeaderHandler;
-		final Http2FrameCodec               http2FrameCodec;
-		final ConnectionObserver            listener;
-		final ChannelOperations.OnSetup     opsFactory;
+		final ServerCookieDecoder                                     cookieDecoder;
+		final ServerCookieEncoder                                     cookieEncoder;
+		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+		final Http2FrameCodec                                         http2FrameCodec;
+		final ConnectionObserver                                      listener;
+		final ChannelOperations.OnSetup                               opsFactory;
 
 		Http11OrH2CleartextCodec(
 				ServerCookieDecoder cookieDecoder,
 				ServerCookieEncoder cookieEncoder,
 				boolean debug,
-				@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				Http2Settings http2Settings,
 				ConnectionObserver listener,
 				ChannelOperations.OnSetup opsFactory,
@@ -638,24 +632,24 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final class H2OrHttp11Codec extends ApplicationProtocolNegotiationHandler {
 
-		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
-		final ServerCookieDecoder                                cookieDecoder;
-		final ServerCookieEncoder                                cookieEncoder;
-		final HttpRequestDecoderSpec                             decoder;
-		final HttpForwardedHeaderHandler                         forwardedHeaderHandler;
-		final Http2Settings                                      http2Settings;
-		final ConnectionObserver                                 listener;
-		final Supplier<? extends ChannelMetricsRecorder>         metricsRecorder;
-		final int                                                minCompressionSize;
-		final ChannelOperations.OnSetup                          opsFactory;
-		final Function<String, String>                           uriTagValue;
+		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+		final ServerCookieDecoder                                     cookieDecoder;
+		final ServerCookieEncoder                                     cookieEncoder;
+		final HttpRequestDecoderSpec                                  decoder;
+		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+		final Http2Settings                                           http2Settings;
+		final ConnectionObserver                                      listener;
+		final Supplier<? extends ChannelMetricsRecorder>              metricsRecorder;
+		final int                                                     minCompressionSize;
+		final ChannelOperations.OnSetup                               opsFactory;
+		final Function<String, String>                                uriTagValue;
 
 		H2OrHttp11Codec(
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				ServerCookieDecoder cookieDecoder,
 				ServerCookieEncoder cookieEncoder,
 				HttpRequestDecoderSpec decoder,
-				@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				Http2Settings http2Settings,
 				ConnectionObserver listener,
 				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
@@ -702,26 +696,26 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final class HttpServerChannelInitializer implements ChannelPipelineConfigurer {
 
-		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
-		final ServerCookieDecoder                                cookieDecoder;
-		final ServerCookieEncoder                                cookieEncoder;
-		final HttpRequestDecoderSpec                             decoder;
-		final HttpForwardedHeaderHandler                         forwardedHeaderHandler;
-		final Http2Settings                                      http2Settings;
-		final Supplier<? extends ChannelMetricsRecorder>         metricsRecorder;
-		final int                                                minCompressionSize;
-		final ChannelOperations.OnSetup                          opsFactory;
-		final int                                                protocols;
-		final ProxyProtocolSupportType                           proxyProtocolSupportType;
-		final SslProvider                                        sslProvider;
-		final Function<String, String>                           uriTagValue;
+		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+		final ServerCookieDecoder                                     cookieDecoder;
+		final ServerCookieEncoder                                     cookieEncoder;
+		final HttpRequestDecoderSpec                                  decoder;
+		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+		final Http2Settings                                           http2Settings;
+		final Supplier<? extends ChannelMetricsRecorder>              metricsRecorder;
+		final int                                                     minCompressionSize;
+		final ChannelOperations.OnSetup                               opsFactory;
+		final int                                                     protocols;
+		final ProxyProtocolSupportType                                proxyProtocolSupportType;
+		final SslProvider                                             sslProvider;
+		final Function<String, String>                                uriTagValue;
 
 		HttpServerChannelInitializer(
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				ServerCookieDecoder cookieDecoder,
 				ServerCookieEncoder cookieEncoder,
 				HttpRequestDecoderSpec decoder,
-				@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				Http2Settings http2Settings,
 				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 				int minCompressionSize,

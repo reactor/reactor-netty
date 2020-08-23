@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.SocketChannel;
@@ -47,14 +48,14 @@ public final class ConnectionInfo {
 
 	@Nullable
 	static ConnectionInfo from(Channel channel, HttpRequest request, boolean secured, SocketAddress remoteAddress,
-			@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler) {
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
 		if (!(remoteAddress instanceof InetSocketAddress)) {
 			return null;
 		}
 		else {
 			ConnectionInfo connectionInfo = ConnectionInfo.newConnectionInfo(channel, secured, (InetSocketAddress) remoteAddress);
 			if (forwardedHeaderHandler != null) {
-				return forwardedHeaderHandler.newForwardedConnectionInfo(connectionInfo, request);
+				return forwardedHeaderHandler.apply(connectionInfo, request);
 			}
 			return connectionInfo;
 		}
@@ -79,26 +80,53 @@ public final class ConnectionInfo {
 		this.scheme = scheme;
 	}
 
+	/**
+	 * Return the host address of the connection.
+	 * @return the host address
+	 */
 	public InetSocketAddress getHostAddress() {
 		return hostAddress;
 	}
 
+	/**
+	 * Return the remote address of the connection.
+	 * @return the remote address
+	 */
 	public InetSocketAddress getRemoteAddress() {
 		return remoteAddress;
 	}
 
+	/**
+	 * Return the connection scheme.
+	 * @return the connection scheme
+	 */
 	public String getScheme() {
 		return scheme;
 	}
 
+	/**
+	 * Return a new {@link ConnectionInfo} with the updated host address.
+	 * @param hostAddress the host address
+	 * @return a new {@link ConnectionInfo}
+	 */
 	public ConnectionInfo withHostAddress(InetSocketAddress hostAddress) {
 		return new ConnectionInfo(hostAddress, this.remoteAddress, this.scheme);
 	}
 
+	/**
+	 * Return a new {@link ConnectionInfo} with the updated remote address.
+	 * @param remoteAddress the remote address
+	 * @return a new {@link ConnectionInfo}
+	 */
 	public ConnectionInfo withRemoteAddress(InetSocketAddress remoteAddress) {
 		return new ConnectionInfo(this.hostAddress, remoteAddress, this.scheme);
 	}
 
+	/**
+	 * Return a new {@link ConnectionInfo} with the updated scheme.
+	 * @param scheme the connection scheme
+	 * @return a new {@link ConnectionInfo}
+	 */
 	public ConnectionInfo withScheme(String scheme) {
 		return new ConnectionInfo(this.hostAddress, this.remoteAddress, scheme);
 	}

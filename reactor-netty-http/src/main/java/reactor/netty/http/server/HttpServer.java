@@ -25,6 +25,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.netty.channel.group.ChannelGroup;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.SslContext;
@@ -202,26 +203,33 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @since 0.9.7
 	 */
 	public final HttpServer forwarded(boolean forwardedEnabled) {
-		if (forwardedEnabled == configuration().forwarded) {
-			return this;
+		if (forwardedEnabled) {
+			if (configuration().forwardedHeaderHandler == DefaultHttpForwardedHeaderHandler.INSTANCE) {
+				return this;
+			}
+			HttpServer dup = duplicate();
+			dup.configuration().forwardedHeaderHandler = DefaultHttpForwardedHeaderHandler.INSTANCE;
+			return dup;
 		}
-		HttpServer dup = duplicate();
-		dup.configuration().forwarded = forwardedEnabled;
-		return dup;
+		else if (configuration().forwardedHeaderHandler != null) {
+			HttpServer dup = duplicate();
+			dup.configuration().forwardedHeaderHandler = null;
+			return dup;
+		}
+		return this;
 	}
 
 	/**
-	 * Configure the {@link HttpForwardedHeaderHandler}.
+	 * Specifies a custom request handler for deriving information about the connection.
 	 *
 	 * @param handler the forwarded header handler
 	 * @return a new {@link HttpServer}
 	 * @since 0.9.12
 	 */
-	public final HttpServer forwardedHeaderHandler(HttpForwardedHeaderHandler handler) {
+	public final HttpServer forwarded(BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> handler) {
 		Objects.requireNonNull(handler, "handler");
 		HttpServer dup = duplicate();
 		dup.configuration().forwardedHeaderHandler = handler;
-		dup.configuration().forwarded = true;
 		return dup;
 	}
 

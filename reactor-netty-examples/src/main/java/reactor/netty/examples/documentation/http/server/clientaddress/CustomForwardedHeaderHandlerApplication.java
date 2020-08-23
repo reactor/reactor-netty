@@ -27,7 +27,7 @@ public class CustomForwardedHeaderHandlerApplication {
 	public static void main(String[] args) {
 		DisposableServer server =
 				HttpServer.create()
-						.forwardedHeaderHandler(((connectionInfo, request) -> {  //<1>
+						.forwarded(((connectionInfo, request) -> {  // <1>
 							String hostHeader = request.headers().get("X-Forwarded-Host");
 							if (hostHeader != null) {
 								String[] hosts = hostHeader.split(",");
@@ -41,7 +41,7 @@ public class CustomForwardedHeaderHandlerApplication {
 						.route(routes ->
 								routes.get("/clientip",
 										(request, response) ->
-												response.sendString(Mono.just(request.remoteAddress() //<2>
+												response.sendString(Mono.just(request.remoteAddress() // <2>
 														.getHostString()))))
 						.bindNow();
 

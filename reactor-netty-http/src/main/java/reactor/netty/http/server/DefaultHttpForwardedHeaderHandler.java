@@ -16,6 +16,7 @@
 package reactor.netty.http.server;
 
 import java.net.InetSocketAddress;
+import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,7 +27,9 @@ import reactor.netty.transport.AddressUtils;
  * @author Andrey Shlykov
  * @since 0.9.12
  */
-final class DefaultHttpForwardedHeaderHandler implements HttpForwardedHeaderHandler {
+final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> {
+
+	static final DefaultHttpForwardedHeaderHandler INSTANCE = new DefaultHttpForwardedHeaderHandler();
 
 	static final String  FORWARDED_HEADER         = "Forwarded";
 	static final String  X_FORWARDED_IP_HEADER    = "X-Forwarded-For";
@@ -39,7 +42,7 @@ final class DefaultHttpForwardedHeaderHandler implements HttpForwardedHeaderHand
 	static final Pattern FORWARDED_FOR_PATTERN    = Pattern.compile("for=\"?([^;,\"]+)\"?");
 
 	@Override
-	public ConnectionInfo newForwardedConnectionInfo(ConnectionInfo connectionInfo, HttpRequest request) {
+	public ConnectionInfo apply(ConnectionInfo connectionInfo, HttpRequest request) {
 		String forwardedHeader = request.headers().get(FORWARDED_HEADER);
 		if (forwardedHeader != null) {
 			return parseForwardedInfo(connectionInfo, forwardedHeader);

@@ -204,11 +204,11 @@ The following example shows how to do so:
 
 ====
 [source,java,indent=0]
-.{examplesdir}/clientaddress/Application.java
+.{examplesdir}/clientaddress/CustomForwardedHeaderHandlerApplication.java
 ----
-include::{examplesdir}/clientaddress/CustomForwardedHeaderHandlerApplication.java[lines=18..51]
+include::{examplesdir}/clientaddress/CustomForwardedHeaderHandlerApplication.java[lines=18..52]
 ----
-<1> Configure the custom `HttpForwardedHeaderHandler`.
+<1> Add a custom header handler.
 <2> Returns the address of the remote (client) peer.
 ====
 

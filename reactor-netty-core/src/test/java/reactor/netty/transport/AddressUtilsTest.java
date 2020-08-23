@@ -101,15 +101,6 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldParseNumericIPv4Address() {
-		InetSocketAddress socketAddress = AddressUtils.parseAddress("127.0.0.1", 80);
-		assertThat(socketAddress.isUnresolved()).isFalse();
-		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("127.0.0.1");
-		assertThat(socketAddress.getPort()).isEqualTo(80);
-		assertThat(socketAddress.getHostString()).isEqualTo("127.0.0.1");
-	}
-
-	@Test
 	public void shouldParseAddressForIPv4() {
 		InetSocketAddress socketAddress = AddressUtils.parseAddress("127.0.0.1", 80);
 		assertThat(socketAddress.isUnresolved()).isFalse();

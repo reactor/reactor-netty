@@ -20,6 +20,7 @@ import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -27,6 +28,7 @@ import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
@@ -523,7 +525,7 @@ public class ConnectionInfoTests {
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverRequestConsumer,
-			@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler) {
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
 		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, forwardedHeaderHandler, Function.identity(), Function.identity(), false);
 	}
 
@@ -537,7 +539,7 @@ public class ConnectionInfoTests {
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverRequestConsumer,
-			@Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Function<HttpClient, HttpClient> clientConfigFunction,
 			Function<HttpServer, HttpServer> serverConfigFunction,
 			boolean useHttps) {
@@ -546,7 +548,7 @@ public class ConnectionInfoTests {
 				.forwarded(true)
 				.port(0);
 		if (forwardedHeaderHandler != null) {
-			server = server.forwardedHeaderHandler(forwardedHeaderHandler);
+			server = server.forwarded(forwardedHeaderHandler);
 		}
 		this.connection =
 				customizeServerOptions(

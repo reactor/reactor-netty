@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import java.net.SocketAddress;
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpRequest;
@@ -35,15 +36,16 @@ import reactor.util.annotation.Nullable;
  */
 final class Http2StreamBridgeServerHandler extends Http2StreamBridgeHandler {
 
-	final ServerCookieDecoder           cookieDecoder;
-	final ServerCookieEncoder           cookieEncoder;
-	final ConnectionObserver            listener;
-	final HttpForwardedHeaderHandler    forwardedHeaderHandler;
+	final ServerCookieDecoder                                     cookieDecoder;
+	final ServerCookieEncoder                                     cookieEncoder;
+	final ConnectionObserver                                      listener;
+	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 
 	SocketAddress             remoteAddress;
 	Boolean                   secured;
 
-	Http2StreamBridgeServerHandler(ConnectionObserver listener, @Nullable HttpForwardedHeaderHandler forwardedHeaderHandler,
+	Http2StreamBridgeServerHandler(ConnectionObserver listener,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
