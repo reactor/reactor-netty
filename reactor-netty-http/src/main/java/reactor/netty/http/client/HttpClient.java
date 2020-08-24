@@ -790,7 +790,41 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
-		return followRedirect(predicate, null);
+		return followRedirect(predicate, (Consumer<HttpClientRequest>) null);
+	}
+
+	/**
+	 * Variant of {@link #followRedirect(BiPredicate)} that also accepts
+	 * {@link BiConsumer} that provides the headers from the previous request and the current redirect request.
+	 *
+	 * <p><strong>Note:</strong> The sensitive headers:
+	 * <ul>
+	 *     <li>Expect</li>
+	 *     <li>Cookie</li>
+	 *     <li>Authorization</li>
+	 *     <li>Proxy-Authorization</li>
+	 * </ul>
+	 * are removed from the initialized request when redirecting to a different domain,
+	 * they can be re-added using the {@link BiConsumer}.
+	 *
+	 * @param predicate that returns true to enable auto-redirect support.
+	 * @param redirectRequestBiConsumer {@link BiConsumer}, invoked on redirects, after
+	 * the redirect request has been initialized, in order to apply further changes such as
+	 * add/remove headers and cookies; use {@link HttpClientRequest#redirectedFrom()} to
+	 * check the original and any number of subsequent redirect(s), including the one that
+	 * is in progress. The {@link BiConsumer} provides the headers from the previous request
+	 * and the current redirect request.
+	 * @return a new {@link HttpClient}
+	 * @since 0.9.12
+	 */
+	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
+			@Nullable BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer) {
+		Objects.requireNonNull(predicate, "predicate");
+		HttpClient dup = duplicate();
+		dup.configuration().followRedirectPredicate = predicate;
+		dup.configuration().redirectRequestBiConsumer = redirectRequestBiConsumer;
+		dup.configuration().redirectRequestConsumer = null;
+		return dup;
 	}
 
 	/**
@@ -821,6 +855,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		Objects.requireNonNull(predicate, "predicate");
 		HttpClient dup = duplicate();
 		dup.configuration().followRedirectPredicate = predicate;
+		dup.configuration().redirectRequestBiConsumer = null;
 		dup.configuration().redirectRequestConsumer = redirectRequestConsumer;
 		return dup;
 	}
@@ -838,10 +873,50 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 */
 	public final HttpClient followRedirect(boolean followRedirect) {
 		if (!followRedirect && configuration().followRedirectPredicate == null &&
-					configuration().redirectRequestConsumer == null) {
+					configuration().redirectRequestConsumer == null &&
+					configuration().redirectRequestBiConsumer == null) {
 			return this;
 		}
-		return followRedirect(followRedirect, null);
+		return followRedirect(followRedirect, (Consumer<HttpClientRequest>) null);
+	}
+
+	/**
+	 * Variant of {@link #followRedirect(boolean)} that also accepts
+	 * {@link BiConsumer} that provides the headers from the previous request and the current redirect request.
+	 *
+	 * <p><strong>Note:</strong> The sensitive headers:
+	 * <ul>
+	 *     <li>Expect</li>
+	 *     <li>Cookie</li>
+	 *     <li>Authorization</li>
+	 *     <li>Proxy-Authorization</li>
+	 * </ul>
+	 * are removed from the initialized request when redirecting to a different domain,
+	 * they can be re-added using the {@link BiConsumer}.
+	 *
+	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
+	 *                       is enabled, otherwise disabled (default: false).
+	 * @param redirectRequestBiConsumer {@link BiConsumer}, invoked on redirects, after
+	 * the redirect request has been initialized, in order to apply further changes such as
+	 * add/remove headers and cookies; use {@link HttpClientRequest#redirectedFrom()} to
+	 * check the original and any number of subsequent redirect(s), including the one that
+	 * is in progress. The {@link BiConsumer} provides the headers from the previous request
+	 * and the current redirect request.
+	 * @return a new {@link HttpClient}
+	 * @since 0.9.12
+	 */
+	public final HttpClient followRedirect(boolean followRedirect,
+			@Nullable BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer) {
+		if (followRedirect) {
+			return followRedirect(HttpClientConfig.FOLLOW_REDIRECT_PREDICATE, redirectRequestBiConsumer);
+		}
+		else {
+			HttpClient dup = duplicate();
+			dup.configuration().followRedirectPredicate = null;
+			dup.configuration().redirectRequestBiConsumer = null;
+			dup.configuration().redirectRequestConsumer = null;
+			return dup;
+		}
 	}
 
 	/**
@@ -875,6 +950,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		else {
 			HttpClient dup = duplicate();
 			dup.configuration().followRedirectPredicate = null;
+			dup.configuration().redirectRequestBiConsumer = null;
 			dup.configuration().redirectRequestConsumer = null;
 			return dup;
 		}

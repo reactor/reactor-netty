@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -316,6 +317,10 @@ class HttpClientConnect extends HttpClient {
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "The request will be redirected"));
 				}
+				HttpClientOperations ops = connection.as(HttpClientOperations.class);
+				if (ops != null && handler.redirectRequestBiConsumer != null) {
+					handler.previousRequestHeaders = ops.requestHeaders;
+				}
 			}
 			else if (AbortedException.isConnectionReset(error) && handler.shouldRetry) {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
@@ -387,6 +392,8 @@ class HttpClientConnect extends HttpClient {
 		final WebsocketClientSpec     websocketClientSpec;
 		final BiPredicate<HttpClientRequest, HttpClientResponse>
 		                              followRedirectPredicate;
+		final BiConsumer<HttpHeaders, HttpClientRequest>
+		                              redirectRequestBiConsumer;
 		final Consumer<HttpClientRequest>
 		                              redirectRequestConsumer;
 		final HttpResponseDecoderSpec decoder;
@@ -397,11 +404,13 @@ class HttpClientConnect extends HttpClient {
 		volatile UriEndpoint        fromURI;
 		volatile Supplier<String>[] redirectedFrom;
 		volatile boolean            shouldRetry;
+		volatile HttpHeaders        previousRequestHeaders;
 
 		HttpClientHandler(HttpClientConfig configuration) {
 			this.method = configuration.method;
 			this.compress = configuration.acceptGzip;
 			this.followRedirectPredicate = configuration.followRedirectPredicate;
+			this.redirectRequestBiConsumer = configuration.redirectRequestBiConsumer;
 			this.redirectRequestConsumer = configuration.redirectRequestConsumer;
 			this.decoder = configuration.decoder;
 			this.proxyProvider = configuration.proxyProvider();
@@ -516,6 +525,12 @@ class HttpClientConnect extends HttpClient {
 				if (this.redirectRequestConsumer != null) {
 					consumer = consumer != null ? consumer.andThen(this.redirectRequestConsumer) : this.redirectRequestConsumer;
 				}
+
+				if (redirectRequestBiConsumer != null) {
+					ch.previousRequestHeaders = previousRequestHeaders;
+					ch.redirectRequestBiConsumer = redirectRequestBiConsumer;
+				}
+
 				ch.redirectRequestConsumer(consumer);
 				return handler != null ? handler.apply(ch, ch) : ch.send();
 			}

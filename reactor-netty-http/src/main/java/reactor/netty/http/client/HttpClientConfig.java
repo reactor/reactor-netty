@@ -214,6 +214,16 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	/**
+	 * Return the configured redirect request {@link BiConsumer} or null.
+	 *
+	 * @return the configured redirect request {@link BiConsumer} or null
+	 */
+	@Nullable
+	public BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer() {
+		return redirectRequestBiConsumer;
+	}
+
+	/**
 	 * Return the configured redirect request consumer or null.
 	 *
 	 * @return the configured redirect request consumer or null
@@ -299,6 +309,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	HttpMethod method;
 	HttpProtocol[] protocols;
 	int _protocols;
+	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
 	Consumer<HttpClientRequest> redirectRequestConsumer;
 	Duration responseTimeout;
 	boolean retryDisabled;
@@ -345,6 +356,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.method = parent.method;
 		this.protocols = parent.protocols;
 		this._protocols = parent._protocols;
+		this.redirectRequestBiConsumer = parent.redirectRequestBiConsumer;
 		this.redirectRequestConsumer = parent.redirectRequestConsumer;
 		this.responseTimeout = parent.responseTimeout;
 		this.retryDisabled = parent.retryDisabled;
