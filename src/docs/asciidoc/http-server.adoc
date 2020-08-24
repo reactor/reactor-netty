@@ -418,6 +418,50 @@ public class Application {
 <2> Returns the address of the remote (client) peer.
 ====
 
+It is also possible to customize the behavior of the `Forwarded` or `X-Forwarded-*` header handler.
+The following example shows how to do so:
+
+====
+[source,java]
+----
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+import reactor.netty.transport.AddressUtils;
+import reactor.netty.tcp.InetSocketAddressUtil;
+
+public class Application {
+
+	public static void main(String[] args) {
+		DisposableServer server =
+				HttpServer.create()
+						.forwarded(((connectionInfo, request) -> {  // <1>
+							String hostHeader = request.headers().get("X-Forwarded-Host");
+							if (hostHeader != null) {
+								String[] hosts = hostHeader.split(",");
+								InetSocketAddress hostAddress = InetSocketAddressUtil.createUnresolved(
+										hosts[hosts.length - 1].trim(),
+										connectionInfo.getHostAddress().getPort());
+								connectionInfo = connectionInfo.withHostAddress(hostAddress);
+							}
+							return connectionInfo;
+						}))
+						.route(routes ->
+								routes.get("/clientip",
+										(request, response) ->
+												response.sendString(Mono.just(request.remoteAddress() // <2>
+														.getHostString()))))
+						.bindNow();
+
+		server.onDispose()
+				.block();
+	}
+}
+----
+<1> Add a custom header handler.
+<2> Returns the address of the remote (client) peer.
+====
+
 === HTTP Request Decoder
 
 By default, `Netty` configures some restrictions for the incoming requests, such as:

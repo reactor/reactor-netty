@@ -16,10 +16,12 @@
 
 package reactor.netty.http.server;
 
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AttributeKey;
@@ -37,10 +39,10 @@ final class HttpServerConfiguration {
 	static final AttributeKey<HttpServerConfiguration> CONF_KEY =
 			AttributeKey.newInstance("httpServerConf");
 
-	BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate  = null;
+	BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate      = null;
+	BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler = null;
 
 	int                    minCompressionSize = -1;
-	boolean                forwarded          = false;
 	HttpRequestDecoderSpec decoder            = new HttpRequestDecoderSpec();
 	ServerCookieEncoder    cookieEncoder      = ServerCookieEncoder.STRICT;
 	ServerCookieDecoder    cookieDecoder      = ServerCookieDecoder.STRICT;
@@ -88,13 +90,8 @@ final class HttpServerConfiguration {
 		return b;
 	};
 
-	static final Function<ServerBootstrap, ServerBootstrap> MAP_FORWARDED = b -> {
-		getOrCreate(b).forwarded = true;
-		return b;
-	};
-
-	static final Function<ServerBootstrap, ServerBootstrap> MAP_NO_FORWARDED = b -> {
-		getOrCreate(b).forwarded = false;
+	static ServerBootstrap forwardedHeaderHandler(ServerBootstrap b, BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
+		getOrCreate(b).forwardedHeaderHandler = forwardedHeaderHandler;
 		return b;
 	};
 

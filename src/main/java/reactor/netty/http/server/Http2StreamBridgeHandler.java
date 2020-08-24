@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import java.net.InetSocketAddress;
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -30,22 +31,25 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.SslHandler;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 
 final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
-	final boolean             readForwardHeaders;
+	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+
 	Boolean                   secured;
 	InetSocketAddress         remoteAddress;
 	final ConnectionObserver  listener;
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookieDecoder cookieDecoder;
 
-	Http2StreamBridgeHandler(ConnectionObserver listener, boolean readForwardHeaders,
+	Http2StreamBridgeHandler(ConnectionObserver listener,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ServerCookieEncoder encoder,
 			ServerCookieDecoder decoder) {
-		this.readForwardHeaders = readForwardHeaders;
+		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.listener = listener;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
@@ -79,10 +83,10 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 						null,
 						request,
 						ConnectionInfo.from(ctx.channel().parent(),
-						                    readForwardHeaders,
 						                    request,
 						                    secured,
-						                    remoteAddress),
+						                    remoteAddress,
+						                    forwardedHeaderHandler),
 						cookieEncoder,
 						cookieDecoder);
 			}

@@ -155,4 +155,30 @@ public class InetSocketAddressUtil {
 		return null;
 	}
 
+	/**
+	 * Parse unresolved InetSocketAddress. Numeric IP addresses will be detected and
+	 * resolved.
+	 *
+	 * @param address ip-address or hostname
+	 * @param defaultPort the default port
+	 * @return InetSocketAddress for given parameters
+	 */
+	public static InetSocketAddress parseAddress(String address, int defaultPort) {
+		int separatorIdx = address.lastIndexOf(':');
+		int ipV6HostSeparatorIdx = address.lastIndexOf(']');
+		if (separatorIdx > ipV6HostSeparatorIdx) {
+			if (separatorIdx == address.indexOf(':') || ipV6HostSeparatorIdx > -1) {
+				String port = address.substring(separatorIdx + 1);
+				if (port.chars().allMatch(Character::isDigit)) {
+					return InetSocketAddressUtil.createUnresolved(address.substring(0, separatorIdx),
+							Integer.parseInt(port));
+				}
+				else {
+					return InetSocketAddressUtil.createUnresolved(address.substring(0, separatorIdx), defaultPort);
+				}
+			}
+		}
+		return InetSocketAddressUtil.createUnresolved(address, defaultPort);
+	}
+
 }
