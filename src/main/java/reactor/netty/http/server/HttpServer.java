@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.logging.LoggingHandler;
@@ -240,13 +241,27 @@ public abstract class HttpServer {
 	 *                         otherwise disabled.
 	 * @return a new {@link HttpServer}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpServer forwarded(boolean forwardedEnabled) {
 		if (forwardedEnabled) {
-			return tcpConfiguration(FORWARD_ATTR_CONFIG);
+			return tcpConfiguration(tcp -> tcp.bootstrap(b -> HttpServerConfiguration.forwardedHeaderHandler(b, DefaultHttpForwardedHeaderHandler.INSTANCE)));
 		}
 		else {
-			return tcpConfiguration(FORWARD_ATTR_DISABLE);
+			return tcpConfiguration(tcp -> tcp.bootstrap(b -> HttpServerConfiguration.forwardedHeaderHandler(b, null)));
 		}
+	}
+
+	/**
+	 * Specifies a custom request handler for deriving information about the connection.
+	 *
+	 * @param handler the forwarded header handler
+	 * @return a new {@link HttpServer}
+	 * @since 0.9.12
+	 */
+	@SuppressWarnings("deprecation")
+	public final HttpServer forwarded(BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> handler) {
+		Objects.requireNonNull(handler, "handler");
+		return tcpConfiguration(tcp -> tcp.bootstrap(b -> HttpServerConfiguration.forwardedHeaderHandler(b, handler)));
 	}
 
 	/**
@@ -664,11 +679,4 @@ public abstract class HttpServer {
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_NO_COMPRESS);
 
-	@SuppressWarnings("deprecation")
-	static final Function<TcpServer, TcpServer> FORWARD_ATTR_CONFIG =
-			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_FORWARDED);
-
-	@SuppressWarnings("deprecation")
-	static final Function<TcpServer, TcpServer> FORWARD_ATTR_DISABLE =
-			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_NO_FORWARDED);
 }
