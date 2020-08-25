@@ -498,9 +498,8 @@ public class ConnectionInfoTests {
 				httpServer -> httpServer.forwarded((connectionInfo, request) -> {
 					String hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
 					if (hostHeader != null) {
-						String[] hosts = hostHeader.split(",");
 						InetSocketAddress hostAddress = InetSocketAddressUtil.createUnresolved(
-								hosts[hosts.length - 1].trim(),
+								hostHeader.split(",", 2)[1].trim(),
 								connectionInfo.getHostAddress().getPort());
 						connectionInfo = connectionInfo.withHostAddress(hostAddress);
 					}
@@ -560,10 +559,6 @@ public class ConnectionInfoTests {
 				        .block();
 
 		assertThat(response).isEqualTo("OK");
-	}
-
-	private void testParseAddress(String address, Consumer<InetSocketAddress> inetSocketAddressConsumer) {
-		inetSocketAddressConsumer.accept(InetSocketAddressUtil.parseAddress(address, 8080));
 	}
 
 	@After
