@@ -23,13 +23,14 @@ import reactor.netty.ConnectionObserver;
  * @author Violeta Georgieva
  */
 public enum HttpServerState implements ConnectionObserver.State {
-    /**
-     * The request was received
-     */
-    REQUEST_RECEIVED() {
-        @Override
-        public String toString() {
-            return "[request_received]";
-        }
-    }
+
+	/**
+	 * The request was received
+	 */
+	REQUEST_RECEIVED() {
+		@Override
+		public String toString() {
+			return "[request_received]";
+		}
+	}
 }
