@@ -27,25 +27,25 @@ public class CustomForwardedHeaderHandlerApplication {
 	public static void main(String[] args) {
 		DisposableServer server =
 				HttpServer.create()
-						.forwarded(((connectionInfo, request) -> {  // <1>
-							String hostHeader = request.headers().get("X-Forwarded-Host");
-							if (hostHeader != null) {
-								String[] hosts = hostHeader.split(",");
-								InetSocketAddress hostAddress = AddressUtils.createUnresolved(
-										hosts[hosts.length - 1].trim(),
-										connectionInfo.getHostAddress().getPort());
-								connectionInfo = connectionInfo.withHostAddress(hostAddress);
-							}
-							return connectionInfo;
-						}))
-						.route(routes ->
-								routes.get("/clientip",
-										(request, response) ->
-												response.sendString(Mono.just(request.remoteAddress() // <2>
-														.getHostString()))))
-						.bindNow();
+				          .forwarded((connectionInfo, request) -> {  // <1>
+				              String hostHeader = request.headers().get("X-Forwarded-Host");
+				              if (hostHeader != null) {
+				                  String[] hosts = hostHeader.split(",", 2);
+				                  InetSocketAddress hostAddress = AddressUtils.createUnresolved(
+				                      hosts[hosts.length - 1].trim(),
+				                      connectionInfo.getHostAddress().getPort());
+				                  connectionInfo = connectionInfo.withHostAddress(hostAddress);
+				              }
+				              return connectionInfo;
+				          })
+				          .route(routes ->
+				              routes.get("/clientip",
+				                  (request, response) ->
+				                      response.sendString(Mono.just(request.remoteAddress() // <2>
+				                                                           .getHostString()))))
+				          .bindNow();
 
 		server.onDispose()
-				.block();
+		      .block();
 	}
 }

@@ -45,7 +45,6 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.AddressUtils;
-import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
@@ -251,9 +250,8 @@ public class ConnectionInfoTests {
 				(connectionInfo, request) -> {
 					String hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
 					if (hostHeader != null) {
-						String[] hosts = hostHeader.split(",");
 						InetSocketAddress hostAddress = AddressUtils.createUnresolved(
-								hosts[hosts.length - 1].trim(),
+								hostHeader.split(",", 2)[1].trim(),
 								connectionInfo.getHostAddress().getPort());
 						connectionInfo = connectionInfo.withHostAddress(hostAddress);
 					}
@@ -525,7 +523,7 @@ public class ConnectionInfoTests {
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverRequestConsumer,
-			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
+			BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
 		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, forwardedHeaderHandler, Function.identity(), Function.identity(), false);
 	}
 
@@ -539,7 +537,7 @@ public class ConnectionInfoTests {
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverRequestConsumer,
-			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Function<HttpClient, HttpClient> clientConfigFunction,
 			Function<HttpServer, HttpServer> serverConfigFunction,
 			boolean useHttps) {
