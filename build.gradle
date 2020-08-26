@@ -81,7 +81,7 @@ ext {
 	tomcatVersion = '9.0.37'
 	boringSslVersion = '2.0.31.Final'
 	junitVersion = '4.12'
-	mockitoVersion = '3.5.6'
+	mockitoVersion = '3.5.7'
 
 	javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
 					"https://docs.oracle.com/javaee/6/api/",
