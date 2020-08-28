@@ -142,11 +142,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	public void subscribe(CoreSubscriber<? super Object> s) {
 		if (once == 0 && ONCE.compareAndSet(this, 0, 1)) {
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "Subscribing inbound receiver [pending: {}, cancelled:{}, " +
-								"inboundDone: {}]"),
-						getPending(),
-						isCancelled(),
-						inboundDone);
+				log.debug(format(channel, "{}: subscribing inbound receiver"), this);
 			}
 			if (inboundDone && getPending() == 0) {
 				if (inboundError != null) {
@@ -196,7 +192,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			Object o;
 			while ((o = q.poll()) != null) {
 				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "Dropping frame {}, {} in buffer"), o, getPending());
+					log.debug(format(channel, "{}: dropping frame {}"), this, o);
 				}
 				ReferenceCountUtil.release(o);
 			}
@@ -320,7 +316,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	final void onInboundNext(Object msg) {
 		if (inboundDone || isCancelled()) {
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "Dropping frame {}, {} in buffer"), msg, getPending());
+				log.debug(format(channel, "{}: dropping frame {}"), this, msg);
 			}
 			ReferenceCountUtil.release(msg);
 			return;
@@ -456,9 +452,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public String toString() {
-		return "FluxReceive{receiverQueueSize" +
-				"=" + (receiverQueue != null ? receiverQueue.size() : 0) + ", inboundDone=" + inboundDone
-				+ ",inboundError=" + inboundError + '}';
+		return "FluxReceive{" +
+				"pending=" + getPending() +
+				", cancelled=" + isCancelled() +
+				", inboundDone=" + inboundDone +
+				", inboundError=" + inboundError +
+				'}';
 	}
 
 	static final AtomicReferenceFieldUpdater<FluxReceive, Disposable> CANCEL =

@@ -40,6 +40,7 @@ import java.util.zip.GZIPOutputStream;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -57,6 +58,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
@@ -66,6 +68,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
@@ -2025,5 +2028,85 @@ public class HttpServerTests {
 
 		assertNotNull(hostname.get());
 		assertEquals("test.com", hostname.get());
+	}
+
+	@Test
+	public void testIssue1286() throws Exception {
+		doTestIssue1286(false, false);
+	}
+
+	@Test
+	public void testIssue1286ErrorResponse() throws Exception {
+		doTestIssue1286(false, true);
+	}
+
+	@Test
+	public void testIssue1286ConnectionClose() throws Exception {
+		doTestIssue1286(true, false);
+	}
+
+	@Test
+	public void testIssue1286ConnectionCloseErrorResponse() throws Exception {
+		doTestIssue1286(true, true);
+	}
+
+	private void doTestIssue1286(boolean connectionClose, boolean throwException) throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		Sinks.Many<ByteBuf> replay = Sinks.many().replay().all();
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .doOnConnection(conn ->
+				                  conn.addHandlerLast(new ChannelInboundHandlerAdapter() {
+
+				                      @Override
+				                      public void channelRead(ChannelHandlerContext ctx, Object msg) {
+				                          if (msg instanceof ByteBufHolder) {
+				                              replay.emitNext(((ByteBufHolder) msg).content());
+				                              if (msg instanceof LastHttpContent) {
+				                                  replay.emitComplete();
+				                              }
+				                          }
+				                          else if (msg instanceof ByteBuf) {
+				                              replay.emitNext((ByteBuf) msg);
+				                          }
+				                          ctx.fireChannelRead(msg);
+				                      }
+				                  }))
+				          .handle((req, res) -> {
+				              res.withConnection(conn -> conn.onTerminate()
+				                                             .subscribe(null, t -> latch.countDown(), latch::countDown));
+				              if (throwException) {
+				                  return Mono.delay(Duration.ofMillis(100))
+				                             .flatMap(l -> Mono.error(new RuntimeException("testIssue1286")));
+				              }
+				              return res.sendString(Mono.delay(Duration.ofMillis(100))
+				                                        .flatMap(l -> Mono.just("OK")));
+				          })
+				          .bindNow();
+
+		HttpClient client =
+				HttpClient.create()
+				          .port(disposableServer.port())
+				          .wiretap(true);
+
+		if (connectionClose) {
+			client = client.headers(h -> h.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE));
+		}
+
+		client.post()
+		      .uri("/")
+		      .sendForm((req, form) -> form.attr("testIssue1286", "testIssue1286"))
+		      .responseContent()
+		      .aggregate()
+		      .subscribe();
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		StepVerifier.create(replay.asFlux().delaySubscription(Duration.ofMillis(500)))
+		            .expectNextMatches(buf -> buf.refCnt() == 0)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 }
