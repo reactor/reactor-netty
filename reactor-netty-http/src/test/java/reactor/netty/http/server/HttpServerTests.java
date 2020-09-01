@@ -20,11 +20,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -2108,5 +2111,88 @@ public class HttpServerTests {
 		            .expectNextMatches(buf -> buf.refCnt() == 0)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testCustomMetricsWithUriMapper() {
+		final List<String> collectedUris = Collections.synchronizedList(new ArrayList<>());
+
+		disposableServer =
+				HttpServer.create()
+							.port(0)
+							.handle((req, resp) -> resp.sendString(Mono.just("OK")))
+							.wiretap(true)
+							.metrics(true,
+									() -> new HttpServerMetricsRecorder() {
+										@Override
+										public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+											collectedUris.add(uri);
+										}
+
+										@Override
+										public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+											collectedUris.add(uri);
+										}
+
+										@Override
+										public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+											collectedUris.add(uri);
+										}
+
+										@Override
+										public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
+										}
+
+										@Override
+										public void recordDataSent(SocketAddress remoteAddress, long bytes) {
+										}
+
+										@Override
+										public void incrementErrorsCount(SocketAddress remoteAddress) {
+										}
+
+										@Override
+										public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
+										}
+
+										@Override
+										public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
+										}
+
+										@Override
+										public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
+										}
+
+										@Override
+										public void recordDataReceivedTime(String uri, String method, Duration time) {
+											collectedUris.add(uri);
+										}
+
+										@Override
+										public void recordDataSentTime(String uri, String method, String status, Duration time) {
+											collectedUris.add(uri);
+										}
+
+										@Override
+										public void recordResponseTime(String uri, String method, String status, Duration time) {
+											collectedUris.add(uri);
+										}
+									},
+									s -> s.startsWith("/stream/") ? "/stream/{n}" : s)
+							.bindNow();
+
+		HttpClient.create()
+				.get()
+				.uri("http://localhost:" + disposableServer.port() + "/stream/1024")
+				.responseContent()
+				.aggregate()
+				.block(Duration.ofSeconds(30));
+
+		synchronized (collectedUris) {
+			assertThat(collectedUris).isNotEmpty();
+			for(String uri : collectedUris) {
+				assertThat(uri).isEqualTo("/stream/{n}");
+			}
+		}
 	}
 }

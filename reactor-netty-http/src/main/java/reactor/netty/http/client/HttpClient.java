@@ -1132,6 +1132,24 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		return super.metrics(enable, recorder);
 	}
 
+	public final HttpClient metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder, Function<String, String> uriTagValue) {
+		if (enable) {
+			HttpClient dup = duplicate();
+			dup.configuration().metricsRecorder(recorder);
+			dup.configuration().uriTagValue = uriTagValue;
+			return dup;
+		}
+		else if (configuration().metricsRecorder() != null) {
+			HttpClient dup = duplicate();
+			dup.configuration().metricsRecorder(null);
+			dup.configuration().uriTagValue = null;
+			return dup;
+		}
+		else {
+			return this;
+		}
+	}
+
 	/**
 	 * Removes any previously applied SSL configuration customization
 	 *
