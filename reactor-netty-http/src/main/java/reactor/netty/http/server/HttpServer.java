@@ -343,6 +343,39 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
+	 * Specifies whether the metrics are enabled on the {@link HttpServer}.
+	 * All generated metrics are provided to the specified recorder which is only
+	 * instantiated if metrics are being enabled.
+	 * <p>{@code uriTagValue} function receives the actual uri and returns the uri tag value
+	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag.
+	 * For example instead of using the actual uri {@code "/users/1"} as uri tag value, templated uri
+	 * {@code "/users/{id}"} can be used.
+	 *
+	 * @param enable true enables metrics collection; false disables it
+	 * @param recorder a supplier for the metrics recorder that receives the collected metrics
+	 * @param uriTagValue a function that receives the actual uri and returns the uri tag value
+	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder, Function<String, String> uriTagValue) {
+		if (enable) {
+			HttpServer dup = duplicate();
+			dup.configuration().metricsRecorder(recorder);
+			dup.configuration().uriTagValue = uriTagValue;
+			return dup;
+		}
+		else if (configuration().metricsRecorder() != null) {
+			HttpServer dup = duplicate();
+			dup.configuration().metricsRecorder(null);
+			dup.configuration().uriTagValue = null;
+			return dup;
+		}
+		else {
+			return this;
+		}
+	}
+
+	/**
 	 * Removes any previously applied SSL configuration customization
 	 *
 	 * @return a new {@link HttpServer}
