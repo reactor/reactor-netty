@@ -1132,6 +1132,21 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		return super.metrics(enable, recorder);
 	}
 
+	/**
+	 * Specifies whether the metrics are enabled on the {@link HttpClient}.
+	 * All generated metrics are provided to the specified recorder which is only
+	 * instantiated if metrics are being enabled.
+	 * <p>{@code uriTagValue} function receives the actual uri and returns the uri tag value
+	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag.
+	 * For example instead of using the actual uri {@code "/users/1"} as uri tag value, templated uri
+	 * {@code "/users/{id}"} can be used.
+	 *
+	 * @param enable true enables metrics collection; false disables it
+	 * @param recorder a supplier for the metrics recorder that receives the collected metrics
+	 * @param uriTagValue a function that receives the actual uri and returns the uri tag value
+	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag
+	 * @return a new {@link HttpClient}
+	 */
 	public final HttpClient metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder, Function<String, String> uriTagValue) {
 		if (enable) {
 			HttpClient dup = duplicate();
