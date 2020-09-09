@@ -26,8 +26,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -39,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
 import io.netty.buffer.ByteBuf;
@@ -2115,7 +2114,7 @@ public class HttpServerTests {
 
 	@Test
 	public void testCustomMetricsWithUriMapper() {
-		final List<String> collectedUris = Collections.synchronizedList(new ArrayList<>());
+		Sinks.Many<String> collectedUris = Sinks.many().replay().all();
 
 		disposableServer =
 				HttpServer.create()
@@ -2126,17 +2125,17 @@ public class HttpServerTests {
 									() -> new HttpServerMetricsRecorder() {
 										@Override
 										public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
-											collectedUris.add(uri);
+											collectedUris.emitNext(uri);
 										}
 
 										@Override
 										public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
-											collectedUris.add(uri);
+											collectedUris.emitNext(uri);
 										}
 
 										@Override
 										public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
-											collectedUris.add(uri);
+											collectedUris.emitNext(uri);
 										}
 
 										@Override
@@ -2165,17 +2164,17 @@ public class HttpServerTests {
 
 										@Override
 										public void recordDataReceivedTime(String uri, String method, Duration time) {
-											collectedUris.add(uri);
+											collectedUris.emitNext(uri);
 										}
 
 										@Override
 										public void recordDataSentTime(String uri, String method, String status, Duration time) {
-											collectedUris.add(uri);
+											collectedUris.emitNext(uri);
 										}
 
 										@Override
 										public void recordResponseTime(String uri, String method, String status, Duration time) {
-											collectedUris.add(uri);
+											collectedUris.emitNext(uri);
 										}
 									},
 									s -> s.startsWith("/stream/") ? "/stream/{n}" : s)
@@ -2188,11 +2187,12 @@ public class HttpServerTests {
 				.aggregate()
 				.block(Duration.ofSeconds(30));
 
-		synchronized (collectedUris) {
-			assertThat(collectedUris).isNotEmpty();
-			for(String uri : collectedUris) {
-				assertThat(uri).isEqualTo("/stream/{n}");
-			}
-		}
+		List<String> expected = IntStream.range(0, 5)
+				.mapToObj(i -> "/stream/{n}")
+				.collect(Collectors.toList());
+		StepVerifier.create(collectedUris.asFlux().take(5))
+				.expectNextSequence(expected)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 	}
 }

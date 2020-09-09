@@ -32,7 +32,6 @@ import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -52,6 +51,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
@@ -2501,24 +2503,24 @@ public class HttpClientTest {
 							.wiretap(true)
 							.bindNow();
 
-		final List<String> collectedUris = Collections.synchronizedList(new ArrayList<>());
+		Sinks.Many<String> collectedUris = Sinks.many().replay().all();
 
 		HttpClient.create()
 				.metrics(true,
 						() -> new HttpClientMetricsRecorder() {
 							@Override
 							public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
-								collectedUris.add(uri);
+								collectedUris.emitNext(uri);
 							}
 
 							@Override
 							public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
-								collectedUris.add(uri);
+								collectedUris.emitNext(uri);
 							}
 
 							@Override
 							public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
-								collectedUris.add(uri);
+								collectedUris.emitNext(uri);
 							}
 
 							@Override
@@ -2547,17 +2549,17 @@ public class HttpClientTest {
 
 							@Override
 							public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-								collectedUris.add(uri);
+								collectedUris.emitNext(uri);
 							}
 
 							@Override
 							public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
-								collectedUris.add(uri);
+								collectedUris.emitNext(uri);
 							}
 
 							@Override
 							public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-								collectedUris.add(uri);
+								collectedUris.emitNext(uri);
 							}
 						},
 						s -> s.startsWith("/stream/") ? "/stream/{n}" : s
@@ -2568,11 +2570,12 @@ public class HttpClientTest {
 				.aggregate()
 				.block(Duration.ofSeconds(30));
 
-		synchronized (collectedUris) {
-			assertThat(collectedUris).isNotEmpty();
-			for(String uri : collectedUris) {
-				assertThat(uri).isEqualTo("/stream/{n}");
-			}
-		}
+		List<String> expected = IntStream.range(0, 5)
+				.mapToObj(i -> "/stream/{n}")
+				.collect(Collectors.toList());
+		StepVerifier.create(collectedUris.asFlux().take(5))
+				.expectNextSequence(expected)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 	}
 }
