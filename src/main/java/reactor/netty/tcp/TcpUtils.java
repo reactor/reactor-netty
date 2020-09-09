@@ -45,7 +45,8 @@ final class TcpUtils {
 	}
 
 	static Bootstrap removeProxySupport(Bootstrap b) {
-		return BootstrapHandlers.removeConfiguration(b, NettyPipeline.ProxyHandler);
+		BootstrapHandlers.removeConfiguration(b, NettyPipeline.ProxyHandler);
+		return BootstrapHandlers.updateResolverForNoProxySupport(b);
 	}
 
 	static Bootstrap updateHost(Bootstrap b, String host) {
