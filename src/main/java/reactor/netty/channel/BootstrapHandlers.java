@@ -463,13 +463,12 @@ public abstract class BootstrapHandlers {
 				new MetricsSupportConsumer(recorder, true));
 	}
 
-	@SuppressWarnings("unchecked")
 	public static Bootstrap updateMetricsSupport(Bootstrap b, ChannelMetricsRecorder recorder) {
 		updateConfiguration(b,
 				NettyPipeline.ChannelMetricsHandler,
 				new DeferredMetricsSupport(recorder, false));
 
-		b.resolver(new AddressResolverGroupMetrics((AddressResolverGroup<SocketAddress>) b.config().resolver(), recorder));
+		b.resolver(new AddressResolverGroupMetrics<>(b.config().resolver(), recorder));
 
 		return b;
 	}
@@ -483,7 +482,7 @@ public abstract class BootstrapHandlers {
 
 		AddressResolverGroup<?> resolver = b.config().resolver();
 		if (resolver instanceof AddressResolverGroupMetrics) {
-			b.resolver(((AddressResolverGroupMetrics) resolver).resolverGroup);
+			b.resolver(((AddressResolverGroupMetrics<?>) resolver).resolverGroup);
 		}
 
 		return b;
@@ -497,13 +496,33 @@ public abstract class BootstrapHandlers {
 		if (b.config().resolver() == DefaultAddressResolverGroup.INSTANCE) {
 			return b.resolver(NoopAddressResolverGroup.INSTANCE);
 		} else if (b.config().resolver() instanceof AddressResolverGroupMetrics) {
-			final AddressResolverGroupMetrics addressResolverGroupMetrics =
-					(AddressResolverGroupMetrics) b.config().resolver();
+			final AddressResolverGroupMetrics<?> addressResolverGroupMetrics =
+					(AddressResolverGroupMetrics<?>) b.config().resolver();
 			if (addressResolverGroupMetrics.resolverGroup.equals(DefaultAddressResolverGroup.INSTANCE)) {
 				return b.resolver(
-					new AddressResolverGroupMetrics(
+					new AddressResolverGroupMetrics<>(
 						NoopAddressResolverGroup.INSTANCE,
 						addressResolverGroupMetrics.recorder));
+			}
+		}
+		return b;
+	}
+
+	/**
+	 * Changes the resolver back to {@link DefaultAddressResolverGroup} from
+	 * {@link NoopAddressResolverGroup}.
+	 */
+	public static Bootstrap updateResolverForNoProxySupport(Bootstrap b) {
+		if (b.config().resolver() == NoopAddressResolverGroup.INSTANCE) {
+			return b.resolver(DefaultAddressResolverGroup.INSTANCE);
+		} else if (b.config().resolver() instanceof AddressResolverGroupMetrics) {
+			final AddressResolverGroupMetrics<?> addressResolverGroupMetrics =
+					(AddressResolverGroupMetrics<?>) b.config().resolver();
+			if (addressResolverGroupMetrics.resolverGroup.equals(NoopAddressResolverGroup.INSTANCE)) {
+				return b.resolver(new AddressResolverGroupMetrics<>(
+						DefaultAddressResolverGroup.INSTANCE,
+						addressResolverGroupMetrics.recorder
+				));
 			}
 		}
 		return b;
