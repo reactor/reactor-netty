@@ -54,7 +54,7 @@ ext {
   logbackVersion = '1.2.3'
 
   // Libraries
-  nettyVersion = '4.1.51.Final'
+  nettyVersion = '4.1.52.Final'
 
   // Testing
   jacksonDatabindVersion = '2.11.2'
@@ -63,7 +63,7 @@ ext {
   assertJVersion = '3.17.2'
   hoverflyJavaVersion = '0.13.1'
   tomcatVersion = '9.0.37'
-  boringSslVersion = '2.0.31.Final'
+  boringSslVersion = '2.0.34.Final'
   junitVersion = '4.12'
 
   javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
