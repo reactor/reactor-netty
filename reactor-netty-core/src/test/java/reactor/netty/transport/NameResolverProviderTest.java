@@ -15,6 +15,7 @@
  */
 package reactor.netty.transport;
 
+import io.netty.handler.logging.LogLevel;
 import io.netty.resolver.ResolvedAddressTypes;
 import org.junit.Before;
 import org.junit.Test;
@@ -237,10 +238,11 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void trace() {
-		assertFalse(builder.build().isTrace());
+	public void traceBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.trace(null, LogLevel.DEBUG));
 
-		builder.trace(true);
-		assertTrue(builder.build().isTrace());
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.trace("category", null));
 	}
 }

@@ -18,11 +18,14 @@ package reactor.netty.transport;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.logging.LogLevel;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
+import io.netty.resolver.dns.LoggingDnsQueryLifeCycleObserverFactory;
 import io.netty.resolver.dns.RoundRobinDnsAddressResolverGroup;
 import reactor.netty.resources.LoopResources;
 import reactor.util.annotation.Nullable;
@@ -198,12 +201,14 @@ public final class NameResolverProvider {
 		NameResolverSpec searchDomains(List<String> searchDomains);
 
 		/**
-		 * Sets if this resolver should generate the detailed trace information.
+		 * Sets a specific category and log level to be used by this resolver when generating a detailed trace
+		 * information in case of resolution failure.
 		 *
-		 * @param enable true if trace is enabled
+		 * @param category the logger category
+		 * @param level the logger level
 		 * @return {@code this}
 		 */
-		NameResolverSpec trace(boolean enable);
+		NameResolverSpec trace(String category, LogLevel level);
 	}
 
 	/**
@@ -276,15 +281,6 @@ public final class NameResolverProvider {
 	 */
 	public boolean isRoundRobinSelection() {
 		return roundRobinSelection;
-	}
-
-	/**
-	 * Returns {@code true} if this resolver should generate the detailed trace information.
-	 *
-	 * @return {@code true} if this resolver should generate the detailed trace information
-	 */
-	public boolean isTrace() {
-		return trace;
 	}
 
 	/**
@@ -369,7 +365,7 @@ public final class NameResolverProvider {
 				ndots == that.ndots &&
 				preferNative == that.preferNative &&
 				roundRobinSelection == that.roundRobinSelection &&
-				trace == that.trace &&
+				Objects.equals(loggingFactory, that.loggingFactory) &&
 				cacheMaxTimeToLive.equals(that.cacheMaxTimeToLive) &&
 				cacheMinTimeToLive.equals(that.cacheMinTimeToLive) &&
 				cacheNegativeTimeToLive.equals(that.cacheNegativeTimeToLive) &&
@@ -382,8 +378,8 @@ public final class NameResolverProvider {
 	@Override
 	public int hashCode() {
 		return Objects.hash(cacheMaxTimeToLive, cacheMinTimeToLive, cacheNegativeTimeToLive, disableRecursionDesired,
-				disableOptionalRecord, loopResources, maxPayloadSize, maxQueriesPerResolve, ndots, preferNative,
-				queryTimeout, resolvedAddressTypes, roundRobinSelection, searchDomains, trace);
+				disableOptionalRecord, loggingFactory, loopResources, maxPayloadSize, maxQueriesPerResolve, ndots,
+				preferNative, queryTimeout, resolvedAddressTypes, roundRobinSelection, searchDomains);
 	}
 
 	/**
@@ -413,10 +409,12 @@ public final class NameResolverProvider {
 				.maxQueriesPerResolve(maxQueriesPerResolve)
 				.ndots(ndots)
 				.queryTimeoutMillis(queryTimeout.toMillis())
-				.traceEnabled(trace)
 				.eventLoop(group.next())
 				.channelFactory(() -> loop.onChannel(DatagramChannel.class, group))
 				.socketChannelFactory(() -> loop.onChannel(SocketChannel.class, group));
+		if (loggingFactory != null) {
+			builder.dnsQueryLifecycleObserverFactory(loggingFactory);
+		}
 		if (resolvedAddressTypes != null) {
 			builder.resolvedAddressTypes(resolvedAddressTypes);
 		}
@@ -431,6 +429,7 @@ public final class NameResolverProvider {
 	final Duration cacheNegativeTimeToLive;
 	final boolean disableRecursionDesired;
 	final boolean disableOptionalRecord;
+	final DnsQueryLifecycleObserverFactory loggingFactory;
 	final LoopResources loopResources;
 	final int maxPayloadSize;
 	final int maxQueriesPerResolve;
@@ -440,7 +439,6 @@ public final class NameResolverProvider {
 	final ResolvedAddressTypes resolvedAddressTypes;
 	final boolean roundRobinSelection;
 	final Iterable<String> searchDomains;
-	final boolean trace;
 
 	NameResolverProvider(Build build) {
 		this.cacheMaxTimeToLive = build.cacheMaxTimeToLive;
@@ -448,6 +446,7 @@ public final class NameResolverProvider {
 		this.cacheNegativeTimeToLive = build.cacheNegativeTimeToLive;
 		this.disableOptionalRecord = build.disableOptionalRecord;
 		this.disableRecursionDesired = build.disableRecursionDesired;
+		this.loggingFactory = build.loggingFactory;
 		this.loopResources = build.loopResources;
 		this.maxPayloadSize = build.maxPayloadSize;
 		this.maxQueriesPerResolve = build.maxQueriesPerResolve;
@@ -457,7 +456,6 @@ public final class NameResolverProvider {
 		this.resolvedAddressTypes = build.resolvedAddressTypes;
 		this.roundRobinSelection = build.roundRobinSelection;
 		this.searchDomains = build.searchDomains;
-		this.trace = build.trace;
 	}
 
 	static final class Build implements NameResolverSpec {
@@ -474,6 +472,7 @@ public final class NameResolverProvider {
 		Duration cacheNegativeTimeToLive = DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE;
 		boolean disableOptionalRecord;
 		boolean disableRecursionDesired;
+		DnsQueryLifecycleObserverFactory loggingFactory;
 		LoopResources loopResources;
 		int maxPayloadSize = DEFAULT_MAX_PAYLOAD_SIZE;
 		int maxQueriesPerResolve = DEFAULT_MAX_QUERIES_PER_RESOLVE;
@@ -483,7 +482,6 @@ public final class NameResolverProvider {
 		ResolvedAddressTypes resolvedAddressTypes;
 		boolean roundRobinSelection;
 		Iterable<String> searchDomains;
-		boolean trace;
 
 		@Override
 		public NameResolverSpec cacheMaxTimeToLive(Duration cacheMaxTimeToLive) {
@@ -587,8 +585,10 @@ public final class NameResolverProvider {
 		}
 
 		@Override
-		public NameResolverSpec trace(boolean enable) {
-			this.trace = enable;
+		public NameResolverSpec trace(String category, LogLevel level) {
+			Objects.requireNonNull(category, "category");
+			Objects.requireNonNull(level, "level");
+			this.loggingFactory = new LoggingDnsQueryLifeCycleObserverFactory(category, level);
 			return this;
 		}
 

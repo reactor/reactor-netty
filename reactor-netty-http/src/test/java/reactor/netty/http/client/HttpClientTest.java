@@ -2478,7 +2478,7 @@ public class HttpClientTest {
 		            .verify(Duration.ofSeconds(30));
 
 		StepVerifier.create(client.runOn(loop, false)
-		                          .resolver(spec -> spec.trace(true))
+		                          .resolver(spec -> spec.trace("reactor.netty.testLoopAndResolver", LogLevel.DEBUG))
 		                          .get()
 		                          .uri("https://example.com")
 		                          .response((r, buf) -> Mono.just(r.status().code())))
