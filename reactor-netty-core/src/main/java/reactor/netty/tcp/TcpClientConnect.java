@@ -31,8 +31,6 @@ import reactor.netty.transport.AddressUtils;
  */
 final class TcpClientConnect extends TcpClient {
 
-	static final TcpClientConnect INSTANCE = new TcpClientConnect(ConnectionProvider.newConnection());
-
 	final TcpClientConfig config;
 
 	TcpClientConnect(ConnectionProvider provider) {

@@ -29,7 +29,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.DefaultAddressResolverGroup;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -84,11 +83,11 @@ public class PooledConnectionProviderCustomMetricsTest {
 		                         .metrics(metricsEnabled, registrarSupplier)
 		                         .build();
 
-		ClientTransportConfig<?> config =
+		ClientTransportConfigImpl config =
 				new ClientTransportConfigImpl(group, pool, Collections.emptyMap(), remoteAddress);
 
 		try {
-			pool.acquire(config, ConnectionObserver.emptyListener(), remoteAddress, config.resolver())
+			pool.acquire(config, ConnectionObserver.emptyListener(), remoteAddress, config.resolverInternal())
 			    .block(Duration.ofSeconds(10L));
 			fail("Exception is expected");
 		}
@@ -123,13 +122,13 @@ public class PooledConnectionProviderCustomMetricsTest {
 		}
 
 		@Override
-		protected AddressResolverGroup<?> defaultResolver() {
-			return DefaultAddressResolverGroup.INSTANCE;
+		protected EventLoopGroup eventLoopGroup() {
+			return group;
 		}
 
 		@Override
-		protected EventLoopGroup eventLoopGroup() {
-			return group;
+		protected AddressResolverGroup<?> resolverInternal() {
+			return super.resolverInternal();
 		}
 	}
 }

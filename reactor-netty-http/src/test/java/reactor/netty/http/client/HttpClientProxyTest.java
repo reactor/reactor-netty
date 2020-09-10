@@ -239,12 +239,12 @@ public class HttpClientProxyTest {
 		                                                   Mono.just(response.responseHeaders())))
 		      .block(Duration.ofSeconds(30));
 
-		assertThat(resolver1.get()).isNotNull()
-			.isEqualTo(HttpClientConfig.DEFAULT_RESOLVER);
+		// Uses the default resolver
+		assertThat(resolver1.get()).isNull();
 		assertThat(resolver2.get()).isNotNull()
 			.isEqualTo(NoopAddressResolverGroup.INSTANCE);
-		assertThat(resolver3.get()).isNotNull()
-			.isSameAs(resolver1.get());
+		// Uses the default resolver
+		assertThat(resolver3.get()).isNull();
 	}
 
 	private Mono<Tuple2<String, HttpHeaders>>  sendRequest(

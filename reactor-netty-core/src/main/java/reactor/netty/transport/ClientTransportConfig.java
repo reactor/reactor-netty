@@ -47,7 +47,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	@Override
 	public int channelHash() {
-		return Objects.hash(super.channelHash(), proxyProvider, nameResolverProvider != null ? nameResolverProvider : resolver.get());
+		return Objects.hash(super.channelHash(), proxyProvider, resolver);
 	}
 
 	/**
@@ -128,12 +128,14 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return the configured {@link AddressResolverGroup}
+	 * Return the configured {@link AddressResolverGroup} or null.
+	 * If there is no {@link AddressResolverGroup} configured, the default will be used.
 	 *
-	 * @return the configured {@link AddressResolverGroup}
+	 * @return the configured {@link AddressResolverGroup} or null
 	 */
+	@Nullable
 	public final AddressResolverGroup<?> resolver() {
-		return getOrCreateResolver();
+		return resolver;
 	}
 
 
@@ -147,14 +149,15 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	NameResolverProvider                     nameResolverProvider;
 	ProxyProvider                            proxyProvider;
 	Supplier<? extends SocketAddress>        remoteAddress;
-	AtomicReference<AddressResolverGroup<?>> resolver;
+	AddressResolverGroup<?>                  resolver;
+	AtomicReference<AddressResolverGroup<?>> defaultResolver;
 
 	protected ClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
 		super(options);
 		this.connectionProvider = Objects.requireNonNull(connectionProvider, "connectionProvider");
 		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddress");
-		this.resolver = new AtomicReference<>();
+		this.defaultResolver = new AtomicReference<>();
 	}
 
 	protected ClientTransportConfig(ClientTransportConfig<CONF> parent) {
@@ -167,6 +170,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.proxyProvider = parent.proxyProvider;
 		this.remoteAddress = parent.remoteAddress;
 		this.resolver = parent.resolver;
+		this.defaultResolver = parent.defaultResolver;
 	}
 
 	@Override
@@ -192,13 +196,6 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		}
 	}
 
-	/**
-	 * Return the configured default {@link AddressResolverGroup}.
-	 *
-	 * @return the configured default {@link AddressResolverGroup}
-	 */
-	protected abstract AddressResolverGroup<?> defaultResolver();
-
 	@Override
 	protected EventLoopGroup eventLoopGroup() {
 		return loopResources().onClient(isPreferNative());
@@ -210,7 +207,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	@SuppressWarnings("unchecked")
 	protected AddressResolverGroup<?> resolverInternal() {
-		AddressResolverGroup<?> resolverGroup = resolver();
+		AddressResolverGroup<?> resolverGroup = resolver != null ? resolver : getOrCreateDefaultResolver();
 		if (metricsRecorder != null) {
 			return new AddressResolverGroupMetrics(
 					(AddressResolverGroup<SocketAddress>) resolverGroup,
@@ -221,24 +218,18 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		}
 	}
 
-	AddressResolverGroup<?> getOrCreateResolver() {
-		AddressResolverGroup<?> resolverGroup = resolver.get();
+	AddressResolverGroup<?> getOrCreateDefaultResolver() {
+		AddressResolverGroup<?> resolverGroup = defaultResolver.get();
 		if (resolverGroup == null) {
-			AddressResolverGroup<?> newResolverGroup;
-			if (nameResolverProvider != null) {
-				newResolverGroup = nameResolverProvider.newNameResolverGroup(loopResources(), preferNative);
-			}
-			else if (loopResources != null) {
-				newResolverGroup = NameResolverProvider.builder().build().newNameResolverGroup(loopResources(), preferNative);
-			}
-			else {
-				newResolverGroup = defaultResolver();
-			}
-			resolver.compareAndSet(null, newResolverGroup);
-			resolverGroup = getOrCreateResolver();
+			AddressResolverGroup<?> newResolverGroup =
+					DEFAULT_NAME_RESOLVER_PROVIDER.newNameResolverGroup(defaultLoopResources(), preferNative);
+			defaultResolver.compareAndSet(null, newResolverGroup);
+			resolverGroup = getOrCreateDefaultResolver();
 		}
 		return resolverGroup;
 	}
+
+	static final NameResolverProvider DEFAULT_NAME_RESOLVER_PROVIDER = NameResolverProvider.builder().build();
 
 	static final class ClientTransportChannelInitializer implements ChannelPipelineConfigurer {
 

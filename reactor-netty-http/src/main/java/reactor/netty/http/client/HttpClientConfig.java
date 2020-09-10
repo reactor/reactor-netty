@@ -76,7 +76,6 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.transport.ClientTransportConfig;
-import reactor.netty.transport.NameResolverProvider;
 import reactor.netty.transport.ProxyProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -403,11 +402,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	@Override
-	protected AddressResolverGroup<?> defaultResolver() {
-		return DEFAULT_RESOLVER;
-	}
-
-	@Override
 	protected void loggingHandler(LoggingHandler loggingHandler) {
 		super.loggingHandler(loggingHandler);
 	}
@@ -597,9 +591,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		bootstrap.handler(new H2Codec(observer, opsFactory));
 		return bootstrap.open();
 	}
-
-	static final AddressResolverGroup<?> DEFAULT_RESOLVER =
-			NameResolverProvider.builder().build().newNameResolverGroup(HttpResources.get(), LoopResources.DEFAULT_NATIVE);
 
 	static final Pattern FOLLOW_REDIRECT_CODES = Pattern.compile("30[1278]");
 

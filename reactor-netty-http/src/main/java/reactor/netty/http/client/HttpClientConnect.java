@@ -142,8 +142,11 @@ class HttpClientConnect extends HttpClient {
 				create(config.connectionProvider()).doOnChannelInit(config.doOnChannelInit())
 				                                   .observe(config.connectionObserver())
 				                                   .remoteAddress(config.remoteAddress())
-				                                   .resolver(config.resolver())
 				                                   .runOn(config.loopResources(), config.isPreferNative());
+
+		if (config.resolver() != null) {
+			httpClient = httpClient.resolver(config.resolver());
+		}
 
 		for (Map.Entry<AttributeKey<?>, ?> entry : config.attributes().entrySet()) {
 			httpClient = httpClient.attr((AttributeKey<Object>) entry.getKey(), entry.getValue());

@@ -98,7 +98,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 * @return a {@link TcpClient}
 	 */
 	public static TcpClient newConnection() {
-		return TcpClientConnect.INSTANCE;
+		return create(ConnectionProvider.newConnection());
 	}
 
 	/**

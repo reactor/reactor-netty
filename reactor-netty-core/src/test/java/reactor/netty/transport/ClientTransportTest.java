@@ -17,8 +17,6 @@ package reactor.netty.transport;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.DefaultAddressResolverGroup;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -100,11 +98,6 @@ public class ClientTransportTest {
 		@Override
 		protected ChannelMetricsRecorder defaultMetricsRecorder() {
 			return null;
-		}
-
-		@Override
-		protected AddressResolverGroup<?> defaultResolver() {
-			return DefaultAddressResolverGroup.INSTANCE;
 		}
 	}
 }

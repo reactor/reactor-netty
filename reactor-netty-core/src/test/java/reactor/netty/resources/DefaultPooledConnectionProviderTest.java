@@ -40,7 +40,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.DefaultAddressResolverGroup;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -138,13 +137,13 @@ public class DefaultPooledConnectionProviderTest {
 			Supplier<? extends SocketAddress> remoteAddress = () -> address;
 			ConnectionObserver observer = ConnectionObserver.emptyListener();
 			EventLoopGroup group = new NioEventLoopGroup(2);
-			ClientTransportConfig<?> config =
+			ClientTransportConfigImpl config =
 					new ClientTransportConfigImpl(group, pool, Collections.emptyMap(), remoteAddress);
 
 			//fail a couple
-			StepVerifier.create(pool.acquire(config, observer, remoteAddress, config.resolver()))
+			StepVerifier.create(pool.acquire(config, observer, remoteAddress, config.resolverInternal()))
 			            .verifyErrorMatches(msg -> msg.getMessage().contains("Connection refused"));
-			StepVerifier.create(pool.acquire(config, observer, remoteAddress, config.resolver()))
+			StepVerifier.create(pool.acquire(config, observer, remoteAddress, config.resolverInternal()))
 			            .verifyErrorMatches(msg -> msg.getMessage().contains("Connection refused"));
 
 			//start the echo server
@@ -152,10 +151,10 @@ public class DefaultPooledConnectionProviderTest {
 			Thread.sleep(100);
 
 			//acquire 2
-			final PooledConnection c1 = (PooledConnection) pool.acquire(config, observer, remoteAddress, config.resolver())
+			final PooledConnection c1 = (PooledConnection) pool.acquire(config, observer, remoteAddress, config.resolverInternal())
 			                                                   .block(Duration.ofSeconds(30));
 			assertThat(c1).isNotNull();
-			final PooledConnection c2 = (PooledConnection) pool.acquire(config, observer, remoteAddress, config.resolver())
+			final PooledConnection c2 = (PooledConnection) pool.acquire(config, observer, remoteAddress, config.resolverInternal())
 			                                                   .block(Duration.ofSeconds(30));
 			assertThat(c2).isNotNull();
 
@@ -163,7 +162,7 @@ public class DefaultPooledConnectionProviderTest {
 			c2.disposeNow();
 
 
-			final PooledConnection c3 = (PooledConnection) pool.acquire(config, observer, remoteAddress, config.resolver())
+			final PooledConnection c3 = (PooledConnection) pool.acquire(config, observer, remoteAddress, config.resolverInternal())
 			                                                   .block(Duration.ofSeconds(30));
 			assertThat(c3).isNotNull();
 
@@ -172,7 +171,7 @@ public class DefaultPooledConnectionProviderTest {
 			sf = service.schedule(() -> c1.onStateChange(c1, ConnectionObserver.State.DISCONNECTING), 500, TimeUnit.MILLISECONDS);
 
 
-			final PooledConnection c4 = (PooledConnection) pool.acquire(config, observer, remoteAddress, config.resolver())
+			final PooledConnection c4 = (PooledConnection) pool.acquire(config, observer, remoteAddress, config.resolverInternal())
 			                                                   .block(Duration.ofSeconds(30));
 			assertThat(c4).isNotNull();
 
@@ -423,13 +422,13 @@ public class DefaultPooledConnectionProviderTest {
 		}
 
 		@Override
-		protected AddressResolverGroup<?> defaultResolver() {
-			return DefaultAddressResolverGroup.INSTANCE;
+		protected EventLoopGroup eventLoopGroup() {
+			return group;
 		}
 
 		@Override
-		protected EventLoopGroup eventLoopGroup() {
-			return group;
+		protected AddressResolverGroup<?> resolverInternal() {
+			return super.resolverInternal();
 		}
 	}
 }

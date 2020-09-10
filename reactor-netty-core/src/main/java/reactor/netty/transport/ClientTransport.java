@@ -18,7 +18,6 @@ package reactor.netty.transport;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -191,8 +190,8 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		proxyOptions.accept(builder);
 		CONF conf = dup.configuration();
 		conf.proxyProvider = builder.build();
-		if (conf.defaultResolver().equals(conf.resolver())) {
-			conf.resolver = new AtomicReference<>(NoopAddressResolverGroup.INSTANCE);
+		if (conf.resolver == null) {
+			conf.resolver = NoopAddressResolverGroup.INSTANCE;
 		}
 		return dup;
 	}
@@ -219,7 +218,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	public T resolver(AddressResolverGroup<?> resolver) {
 		Objects.requireNonNull(resolver, "resolver");
 		T dup = duplicate();
-		dup.configuration().resolver = new AtomicReference<>(resolver);
+		dup.configuration().resolver = resolver;
 		dup.configuration().nameResolverProvider = null;
 		return dup;
 	}
@@ -241,15 +240,19 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 			return dup;
 		}
 		T dup = duplicate();
-		dup.configuration().nameResolverProvider = provider;
-		dup.configuration().resolver = new AtomicReference<>();
+		CONF conf = dup.configuration();
+		conf.nameResolverProvider = provider;
+		conf.resolver = provider.newNameResolverGroup(conf.loopResources(), conf.preferNative);
 		return dup;
 	}
 
 	@Override
 	public T runOn(LoopResources loopResources, boolean preferNative) {
 		T dup = super.runOn(loopResources, preferNative);
-		dup.configuration().resolver = new AtomicReference<>();
+		CONF conf = dup.configuration();
+		if (conf.nameResolverProvider != null) {
+			conf.resolver = conf.nameResolverProvider.newNameResolverGroup(conf.loopResources(), conf.preferNative);
+		}
 		return dup;
 	}
 }

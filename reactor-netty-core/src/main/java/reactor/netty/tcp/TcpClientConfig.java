@@ -18,7 +18,6 @@ package reactor.netty.tcp;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.resolver.AddressResolverGroup;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
@@ -28,7 +27,6 @@ import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.ClientTransportConfig;
-import reactor.netty.transport.NameResolverProvider;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -116,15 +114,7 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 		}
 	}
 
-	@Override
-	protected AddressResolverGroup<?> defaultResolver() {
-		return DEFAULT_RESOLVER;
-	}
-
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new ChannelOperations<>(ch, c);
-
-	static final AddressResolverGroup<?> DEFAULT_RESOLVER =
-			NameResolverProvider.builder().build().newNameResolverGroup(TcpResources.get(), LoopResources.DEFAULT_NATIVE);
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(TcpClient.class);
 
