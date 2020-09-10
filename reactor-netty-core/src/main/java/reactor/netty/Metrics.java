@@ -179,13 +179,6 @@ public class Metrics {
 	public static final String THREAD_LOCAL_CACHES = ".threadlocal.caches";
 
 	/**
-	 * The size of the tiny cache
-	 * @deprecated as of 0.9.12.
-	 */
-	@Deprecated
-	public static final String TINY_CACHE_SIZE = ".tiny.cache.size";
-
-	/**
 	 * The size of the small cache
 	 */
 	public static final String SMALL_CACHE_SIZE = ".small.cache.size";

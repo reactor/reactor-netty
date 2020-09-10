@@ -31,7 +31,6 @@ import static reactor.netty.Metrics.NORMAL_CACHE_SIZE;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.SMALL_CACHE_SIZE;
 import static reactor.netty.Metrics.THREAD_LOCAL_CACHES;
-import static reactor.netty.Metrics.TINY_CACHE_SIZE;
 import static reactor.netty.Metrics.TYPE;
 import static reactor.netty.Metrics.USED_DIRECT_MEMORY;
 import static reactor.netty.Metrics.USED_HEAP_MEMORY;
@@ -48,7 +47,6 @@ final class ByteBufAllocatorMetrics {
 	private ByteBufAllocatorMetrics() {
 	}
 
-	@SuppressWarnings("deprecation")
 	void registerMetrics(String allocType, ByteBufAllocatorMetric metrics) {
 		cache.computeIfAbsent(metrics.hashCode() + "", key -> {
 			String[] tags = new String[] {ID, key, TYPE, allocType};
@@ -78,11 +76,6 @@ final class ByteBufAllocatorMetrics {
 
 				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + THREAD_LOCAL_CACHES, pooledMetrics, PooledByteBufAllocatorMetric::numThreadLocalCaches)
 				     .description("The number of thread local caches.")
-				     .tags(tags)
-				     .register(REGISTRY);
-
-				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + TINY_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::tinyCacheSize)
-				     .description("The size of the tiny cache.")
 				     .tags(tags)
 				     .register(REGISTRY);
 
