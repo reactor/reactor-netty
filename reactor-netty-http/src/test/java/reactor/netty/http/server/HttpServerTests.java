@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
 import io.netty.buffer.ByteBuf;
@@ -2113,29 +2113,34 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testCustomMetricsWithUriMapper() {
-		Sinks.Many<String> collectedUris = Sinks.many().replay().all();
+	public void testCustomMetricsRecorderWithUriMapper() throws InterruptedException {
+		CountDownLatch latch = new CountDownLatch(1);
+		List<String> collectedUris = new CopyOnWriteArrayList<>();
 
 		disposableServer =
 				HttpServer.create()
 							.port(0)
-							.handle((req, resp) -> resp.sendString(Mono.just("OK")))
+							.handle((req, resp) -> {
+								resp.withConnection(conn -> conn.onTerminate()
+										.subscribe(null, null, latch::countDown));
+								return resp.sendString(Mono.just("OK"));
+							})
 							.wiretap(true)
 							.metrics(true,
 									() -> new HttpServerMetricsRecorder() {
 										@Override
 										public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
-											collectedUris.emitNext(uri);
+											collectedUris.add(uri);
 										}
 
 										@Override
 										public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
-											collectedUris.emitNext(uri);
+											collectedUris.add(uri);
 										}
 
 										@Override
 										public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
-											collectedUris.emitNext(uri);
+											collectedUris.add(uri);
 										}
 
 										@Override
@@ -2164,17 +2169,17 @@ public class HttpServerTests {
 
 										@Override
 										public void recordDataReceivedTime(String uri, String method, Duration time) {
-											collectedUris.emitNext(uri);
+											collectedUris.add(uri);
 										}
 
 										@Override
 										public void recordDataSentTime(String uri, String method, String status, Duration time) {
-											collectedUris.emitNext(uri);
+											collectedUris.add(uri);
 										}
 
 										@Override
 										public void recordResponseTime(String uri, String method, String status, Duration time) {
-											collectedUris.emitNext(uri);
+											collectedUris.add(uri);
 										}
 									},
 									s -> s.startsWith("/stream/") ? "/stream/{n}" : s)
@@ -2187,12 +2192,7 @@ public class HttpServerTests {
 				.aggregate()
 				.block(Duration.ofSeconds(30));
 
-		List<String> expected = IntStream.range(0, 5)
-				.mapToObj(i -> "/stream/{n}")
-				.collect(Collectors.toList());
-		StepVerifier.create(collectedUris.asFlux().take(5))
-				.expectNextSequence(expected)
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(collectedUris).isNotEmpty().containsOnly("/stream/{n}");
 	}
 }

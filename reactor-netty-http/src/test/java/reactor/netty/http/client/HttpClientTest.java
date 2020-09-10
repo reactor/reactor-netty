@@ -37,6 +37,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,9 +52,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
@@ -2495,7 +2493,9 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testCustomMetricsWithUriMapper() {
+	public void testCustomMetricsRecorderWithUriMapper() throws InterruptedException {
+		CountDownLatch latch = new CountDownLatch(1);
+
 		disposableServer =
 				HttpServer.create()
 							.port(0)
@@ -2503,24 +2503,26 @@ public class HttpClientTest {
 							.wiretap(true)
 							.bindNow();
 
-		Sinks.Many<String> collectedUris = Sinks.many().replay().all();
+		List<String> collectedUris = new CopyOnWriteArrayList<>();
 
 		HttpClient.create()
+				.doOnRequest((req, conn) -> conn.onTerminate()
+						.subscribe(null, null, latch::countDown))
 				.metrics(true,
 						() -> new HttpClientMetricsRecorder() {
 							@Override
 							public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
-								collectedUris.emitNext(uri);
+								collectedUris.add(uri);
 							}
 
 							@Override
 							public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
-								collectedUris.emitNext(uri);
+								collectedUris.add(uri);
 							}
 
 							@Override
 							public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
-								collectedUris.emitNext(uri);
+								collectedUris.add(uri);
 							}
 
 							@Override
@@ -2549,17 +2551,17 @@ public class HttpClientTest {
 
 							@Override
 							public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-								collectedUris.emitNext(uri);
+								collectedUris.add(uri);
 							}
 
 							@Override
 							public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
-								collectedUris.emitNext(uri);
+								collectedUris.add(uri);
 							}
 
 							@Override
 							public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-								collectedUris.emitNext(uri);
+								collectedUris.add(uri);
 							}
 						},
 						s -> s.startsWith("/stream/") ? "/stream/{n}" : s
@@ -2570,12 +2572,7 @@ public class HttpClientTest {
 				.aggregate()
 				.block(Duration.ofSeconds(30));
 
-		List<String> expected = IntStream.range(0, 5)
-				.mapToObj(i -> "/stream/{n}")
-				.collect(Collectors.toList());
-		StepVerifier.create(collectedUris.asFlux().take(5))
-				.expectNextSequence(expected)
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(collectedUris).isNotEmpty().containsOnly("/stream/{n}");
 	}
 }
