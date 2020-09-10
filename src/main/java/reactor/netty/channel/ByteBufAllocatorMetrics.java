@@ -62,6 +62,7 @@ final class ByteBufAllocatorMetrics {
 		});
 	}
 
+	@SuppressWarnings("deprecation")
 	private static void registerMetricsInternal(String name, ByteBufAllocatorMetric metrics, String... tags) {
 		Gauge.builder(name + USED_HEAP_MEMORY, metrics, ByteBufAllocatorMetric::usedHeapMemory)
 		     .description("The number of the bytes of the heap memory.")
