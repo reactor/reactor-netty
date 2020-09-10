@@ -42,7 +42,6 @@ import static reactor.netty.Metrics.ID;
 import static reactor.netty.Metrics.NORMAL_CACHE_SIZE;
 import static reactor.netty.Metrics.SMALL_CACHE_SIZE;
 import static reactor.netty.Metrics.THREAD_LOCAL_CACHES;
-import static reactor.netty.Metrics.TINY_CACHE_SIZE;
 import static reactor.netty.Metrics.TYPE;
 import static reactor.netty.Metrics.USED_DIRECT_MEMORY;
 import static reactor.netty.Metrics.USED_HEAP_MEMORY;

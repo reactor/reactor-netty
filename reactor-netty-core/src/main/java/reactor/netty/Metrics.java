@@ -180,7 +180,9 @@ public class Metrics {
 
 	/**
 	 * The size of the tiny cache
+	 * @deprecated as of 0.9.12.
 	 */
+	@Deprecated
 	public static final String TINY_CACHE_SIZE = ".tiny.cache.size";
 
 	/**

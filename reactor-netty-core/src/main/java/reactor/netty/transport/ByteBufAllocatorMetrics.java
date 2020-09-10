@@ -48,6 +48,7 @@ final class ByteBufAllocatorMetrics {
 	private ByteBufAllocatorMetrics() {
 	}
 
+	@SuppressWarnings("deprecation")
 	void registerMetrics(String allocType, ByteBufAllocatorMetric metrics) {
 		cache.computeIfAbsent(metrics.hashCode() + "", key -> {
 			String[] tags = new String[] {ID, key, TYPE, allocType};
