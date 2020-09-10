@@ -218,6 +218,7 @@ task japicmp(type: JapicmpTask) {
 	fieldExcludes = [
 			// Deprecated fields in 0.9.x that are removed in 1.0.0
 			// reactor.netty package
+			"reactor.netty.Metrics#TINY_CACHE_SIZE",
 			"reactor.netty.NettyPipeline#HttpInitializer",
 			"reactor.netty.NettyPipeline#SslMetricsHandler"
 	]
