@@ -204,7 +204,6 @@ public class NameResolverProviderTest {
 		assertTrue(builder.build().isRoundRobinSelection());
 	}
 
-	/*
 	@Test
 	public void runOn() {
 		assertNull(builder.build().loopResources());
@@ -221,7 +220,6 @@ public class NameResolverProviderTest {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.runOn(null, false));
 	}
-	*/
 
 	@Test
 	public void searchDomains() {

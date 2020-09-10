@@ -164,7 +164,7 @@ public final class NameResolverProvider {
 		 * @param eventLoopGroup the {@link EventLoopGroup}
 		 * @return {@code this}
 		 */
-		//NameResolverSpec runOn(EventLoopGroup eventLoopGroup);
+		NameResolverSpec runOn(EventLoopGroup eventLoopGroup);
 
 		/**
 		 * Performs the communication with the DNS servers on a supplied {@link EventLoopGroup}
@@ -175,7 +175,7 @@ public final class NameResolverProvider {
 		 * @param loopResources the {@link LoopResources}
 		 * @return {@code this}
 		 */
-		//NameResolverSpec runOn(LoopResources loopResources);
+		NameResolverSpec runOn(LoopResources loopResources);
 
 		/**
 		 * Performs the communication with the DNS servers on a supplied {@link EventLoopGroup}
@@ -185,7 +185,7 @@ public final class NameResolverProvider {
 		 * @param preferNative should prefer running on epoll or kqueue instead of java NIO
 		 * @return {@code this}
 		 */
-		//NameResolverSpec runOn(LoopResources loopResources, boolean preferNative);
+		NameResolverSpec runOn(LoopResources loopResources, boolean preferNative);
 
 		/**
 		 * Sets the list of search domains of the resolver.
@@ -265,9 +265,9 @@ public final class NameResolverProvider {
 	 *
 	 * @return {@code true} if prefer native event loop and channel factory (e.g. epoll or kqueue)
 	 */
-	//public boolean isPreferNative() {
-	//	return preferNative;
-	//}
+	public boolean isPreferNative() {
+		return preferNative;
+	}
 
 	/**
 	 * Returns true if {@link RoundRobinDnsAddressResolverGroup} is in use.
@@ -292,10 +292,10 @@ public final class NameResolverProvider {
 	 *
 	 * @return the configured {@link LoopResources} or null
 	 */
-	//@Nullable
-	//public LoopResources loopResources() {
-	//	return loopResources;
-	//}
+	@Nullable
+	public LoopResources loopResources() {
+		return loopResources;
+	}
 
 	/**
 	 * Returns the configured capacity of the datagram packet buffer.
@@ -392,10 +392,18 @@ public final class NameResolverProvider {
 	 * @param defaultLoopResources the default {@link LoopResources} when {@link LoopResources} is not specified
 	 * @return a new {@link DnsAddressResolverGroup}
 	 */
-	public DnsAddressResolverGroup newNameResolverGroup(LoopResources defaultLoopResources, boolean isPreferNative) {
+	public DnsAddressResolverGroup newNameResolverGroup(LoopResources defaultLoopResources, boolean defaultPreferNative) {
 		Objects.requireNonNull(defaultLoopResources, "defaultLoopResources");
-		LoopResources loop = loopResources == null ? defaultLoopResources : loopResources;
-		EventLoopGroup group = loop.onClient(isPreferNative);
+		LoopResources loop;
+		EventLoopGroup group;
+		if (loopResources == null) {
+			loop = defaultLoopResources;
+			group = loop.onClient(defaultPreferNative);
+		}
+		else {
+			loop = loopResources;
+			group = loop.onClient(preferNative);
+		}
 		DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
 				.ttl(Math.toIntExact(cacheMinTimeToLive.getSeconds()), Math.toIntExact(cacheMaxTimeToLive.getSeconds()))
 				.negativeTtl(Math.toIntExact(cacheNegativeTimeToLive.getSeconds()))
@@ -552,7 +560,6 @@ public final class NameResolverProvider {
 			return this;
 		}
 
-		/*
 		@Override
 		public NameResolverSpec runOn(EventLoopGroup eventLoopGroup) {
 			Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
@@ -572,7 +579,6 @@ public final class NameResolverProvider {
 			this.preferNative = preferNative;
 			return this;
 		}
-		*/
 
 		@Override
 		public NameResolverSpec searchDomains(List<String> searchDomains) {
