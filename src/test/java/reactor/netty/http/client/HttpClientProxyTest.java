@@ -17,6 +17,9 @@ package reactor.netty.http.client;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
+import io.netty.resolver.NoopAddressResolverGroup;
 import io.specto.hoverfly.junit.core.HoverflyConfig;
 import io.specto.hoverfly.junit.rule.HoverflyRule;
 import org.junit.After;
@@ -28,17 +31,21 @@ import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.tcp.ProxyProvider;
+import reactor.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static io.specto.hoverfly.junit.core.SimulationSource.dsl;
 import static io.specto.hoverfly.junit.dsl.HoverflyDsl.service;
 import static io.specto.hoverfly.junit.dsl.ResponseCreators.success;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Violeta Georgieva
@@ -233,5 +240,41 @@ public class HttpClientProxyTest {
 		             .uri(uri)
 		             .responseSingle((response, body) -> Mono.zip(body.asString(),
 		                                                          Mono.just(response.responseHeaders())));
+	}
+
+	@Test
+	public void testIssue1261() {
+		AtomicReference<AddressResolverGroup<?>> resolver = new AtomicReference<>();
+		HttpClient client =
+				HttpClient.create()
+				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+				                                                                   .host("localhost")
+				                                                                   .port(hoverflyRule.getProxyPort()))
+				                                                  .doOnConnect(b -> resolver.set(b.config().resolver())));
+
+		client.get()
+		      .uri("http://localhost:" + port + "/")
+		      .responseContent()
+		      .blockLast(Duration.ofSeconds(30));
+
+		assertNotNull(resolver.get());
+		assertTrue(resolver.get() instanceof NoopAddressResolverGroup);
+
+		client.tcpConfiguration(TcpClient::noProxy)
+		      .get()
+		      .uri("http://localhost:" + port + "/")
+		      .responseContent()
+		      .blockLast(Duration.ofSeconds(30));
+
+		assertNotNull(resolver.get());
+		assertTrue(resolver.get() instanceof DefaultAddressResolverGroup);
+
+		client.get()
+		      .uri("http://localhost:" + port + "/")
+		      .responseContent()
+		      .blockLast(Duration.ofSeconds(30));
+
+		assertNotNull(resolver.get());
+		assertTrue(resolver.get() instanceof NoopAddressResolverGroup);
 	}
 }
