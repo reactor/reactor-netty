@@ -81,6 +81,7 @@ import reactor.util.context.Context;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.http.server.HttpServerState.REQUEST_DECODING_FAILED;
 
 /**
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}.
@@ -101,6 +102,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 
+	Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle;
+
 	Function<? super String, Map<String, String>> paramsResolver;
 
 	HttpServerOperations(HttpServerOperations replaced) {
@@ -115,6 +118,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.compressionPredicate = replaced.compressionPredicate;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
+		this.mapHandle = replaced.mapHandle;
 	}
 
 	HttpServerOperations(Connection c,
@@ -123,10 +127,28 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpRequest nettyRequest,
 			@Nullable ConnectionInfo connectionInfo,
 			ServerCookieEncoder encoder,
-			ServerCookieDecoder decoder) {
+			ServerCookieDecoder decoder,
+			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle) {
+		this(c, listener, compressionPredicate, nettyRequest, connectionInfo, encoder, decoder, mapHandle, true);
+	}
+
+	HttpServerOperations(Connection c,
+			ConnectionObserver listener,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
+			HttpRequest nettyRequest,
+			@Nullable ConnectionInfo connectionInfo,
+			ServerCookieEncoder encoder,
+			ServerCookieDecoder decoder,
+			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle,
+			boolean resolvePath) {
 		super(c, listener);
 		this.nettyRequest = nettyRequest;
-		this.path = resolvePath(nettyRequest.uri());
+		if (resolvePath) {
+			this.path = resolvePath(nettyRequest.uri());
+		}
+		else {
+			this.path = null;
+		}
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		this.responseHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
@@ -135,6 +157,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.connectionInfo = connectionInfo;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
+		this.mapHandle = mapHandle;
 	}
 
 	@Override
@@ -579,7 +602,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 	}
 
-	static void sendDecodingFailures(ChannelHandlerContext ctx, Throwable t, Object msg) {
+	static void sendDecodingFailures(
+			ChannelHandlerContext ctx,
+			ConnectionObserver listener,
+			Throwable t,
+			Object msg) {
+
+		Connection conn = Connection.from(ctx.channel());
+
 		Throwable cause = t.getCause() != null ? t.getCause() : t;
 
 		if (log.isDebugEnabled()) {
@@ -596,6 +626,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 		ctx.writeAndFlush(response)
 		   .addListener(ChannelFutureListener.CLOSE);
+
+		HttpRequest request = null;
+		if (msg instanceof HttpRequest) {
+			request = (HttpRequest) msg;
+		}
+		listener.onStateChange(new FailedHttpServerRequest(conn, listener, request, response), REQUEST_DECODING_FAILED);
 	}
 
 	/**
@@ -615,14 +651,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (markSentHeaders()) {
 			log.error(format(channel(), "Error starting response. Replying error status"), err);
 
-			HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-					HttpResponseStatus.INTERNAL_SERVER_ERROR);
-			response.headers()
-			        .set(responseHeaders)
-			        .remove(HttpHeaderNames.TRANSFER_ENCODING)
-			        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
-			        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-			channel().writeAndFlush(response)
+			nettyResponse.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
+			               .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
+			               .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+			channel().writeAndFlush(outboundHttpMessage())
 			         .addListener(ChannelFutureListener.CLOSE);
 			return;
 		}
@@ -710,4 +743,28 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.CONTINUE,
 					EMPTY_BUFFER);
+
+	static final class FailedHttpServerRequest extends HttpServerOperations {
+
+		final HttpResponse customResponse;
+
+		FailedHttpServerRequest(
+				Connection c,
+				ConnectionObserver listener,
+				@Nullable HttpRequest nettyRequest,
+				HttpResponse nettyResponse) {
+			super(c, listener, null, nettyRequest, null, null, null, null, false);
+			this.customResponse = nettyResponse;
+		}
+
+		@Override
+		protected HttpMessage outboundHttpMessage() {
+			return customResponse;
+		}
+
+		@Override
+		public HttpResponseStatus status() {
+			return customResponse.status();
+		}
+	}
 }

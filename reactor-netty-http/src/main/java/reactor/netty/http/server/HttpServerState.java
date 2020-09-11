@@ -32,5 +32,14 @@ public enum HttpServerState implements ConnectionObserver.State {
 		public String toString() {
 			return "[request_received]";
 		}
+	},
+	/**
+	 * The request was received but with decoding failures
+	 */
+	REQUEST_DECODING_FAILED {
+		@Override
+		public String toString() {
+			return "[request_decoding_failed]";
+		}
 	}
 }

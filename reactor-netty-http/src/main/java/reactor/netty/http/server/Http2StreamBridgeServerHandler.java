@@ -18,12 +18,14 @@ package reactor.netty.http.server;
 import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.SslHandler;
+import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.http.Http2StreamBridgeHandler;
@@ -40,17 +42,20 @@ final class Http2StreamBridgeServerHandler extends Http2StreamBridgeHandler {
 	final ServerCookieEncoder                                     cookieEncoder;
 	final ConnectionObserver                                      listener;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	final Function<? super Mono<Void>, ? extends Mono<Void>>      mapHandle;
 
 	SocketAddress             remoteAddress;
 	Boolean                   secured;
 
 	Http2StreamBridgeServerHandler(ConnectionObserver listener,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
-			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
+			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
+			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle) {
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
 		this.listener = listener;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
+		this.mapHandle = mapHandle;
 	}
 
 	@Override
@@ -83,10 +88,11 @@ final class Http2StreamBridgeServerHandler extends Http2StreamBridgeHandler {
 						                    remoteAddress,
 						                    forwardedHeaderHandler),
 						cookieEncoder,
-						cookieDecoder);
+						cookieDecoder,
+						mapHandle);
 			}
 			catch (RuntimeException e) {
-				HttpServerOperations.sendDecodingFailures(ctx, e, msg);
+				HttpServerOperations.sendDecodingFailures(ctx, listener, e, msg);
 				return;
 			}
 			ops.bind();

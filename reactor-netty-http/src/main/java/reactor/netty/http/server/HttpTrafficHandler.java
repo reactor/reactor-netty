@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
@@ -41,6 +42,7 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
+import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.util.annotation.Nullable;
@@ -68,6 +70,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieEncoder                                     cookieEncoder;
 	final ServerCookieDecoder                                     cookieDecoder;
+	final Function<? super Mono<Void>, ? extends Mono<Void>>      mapHandle;
 
 	boolean persistentConnection = true;
 	// Track pending responses to support client pipelining: https://tools.ietf.org/html/rfc7230#section-6.3.2
@@ -83,12 +86,14 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	HttpTrafficHandler(ConnectionObserver listener,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
-			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
+			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
+			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle) {
 		this.listener = listener;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
+		this.mapHandle = mapHandle;
 	}
 
 	@Override
@@ -168,7 +173,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							                    remoteAddress,
 							                    forwardedHeaderHandler),
 							cookieEncoder,
-							cookieDecoder);
+							cookieDecoder,
+							mapHandle);
 				}
 				catch (RuntimeException e) {
 					sendDecodingFailures(e, msg);
@@ -226,7 +232,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	void sendDecodingFailures(Throwable t, Object msg) {
 		persistentConnection = false;
-		HttpServerOperations.sendDecodingFailures(ctx, t, msg);
+		HttpServerOperations.sendDecodingFailures(ctx, listener, t, msg);
 	}
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
@@ -352,7 +358,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						                    remoteAddress,
 						                    forwardedHeaderHandler),
 						cookieEncoder,
-						cookieDecoder);
+						cookieDecoder,
+						mapHandle);
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 			}

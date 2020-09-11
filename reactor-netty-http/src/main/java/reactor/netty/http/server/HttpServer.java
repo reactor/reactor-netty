@@ -291,6 +291,22 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
+	 * Decorate the configured I/O handler.
+	 * This function will be applied to the result of the previous functions if there are any already configured.
+	 * See {@link #handle(BiFunction)}.
+	 *
+	 * @param mapHandle A function to decorate the configured I/O handler
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer mapHandle(Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle) {
+		Objects.requireNonNull(mapHandle, "mapHandle");
+		HttpServer dup = duplicate();
+		Function<? super Mono<Void>, ? extends Mono<Void>> current = configuration().mapHandle;
+		dup.configuration().mapHandle = current == null ? mapHandle : current.andThen(mapHandle);
+		return dup;
+	}
+
+	/**
 	 * Whether to enable metrics to be collected and registered in Micrometer's
 	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
 	 * under the name {@link reactor.netty.Metrics#HTTP_SERVER_PREFIX}.
@@ -558,8 +574,11 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 						log.debug(format(connection.channel(), "Handler is being applied: {}"), handler);
 					}
 					HttpServerOperations ops = (HttpServerOperations) connection;
-					Mono.fromDirect(handler.apply(ops, ops))
-					    .subscribe(ops.disposeSubscriber());
+					Mono<Void> mono = Mono.fromDirect(handler.apply(ops, ops));
+					if (ops.mapHandle != null) {
+						mono = ops.mapHandle.apply(mono);
+					}
+					mono.subscribe(ops.disposeSubscriber());
 				}
 				catch (Throwable t) {
 					log.error(format(connection.channel(), ""), t);

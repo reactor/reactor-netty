@@ -13,9 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-rootProject.name = 'reactor-netty'
-include 'reactor-netty-core'
-include 'reactor-netty-http'
-include 'reactor-netty-http-brave'
-include 'reactor-netty-examples'
-include 'reactor-netty'
+apply plugin: 'io.spring.javadoc'
+
+dependencies {
+	compile project(':reactor-netty-http')
+
+	compile "io.zipkin.brave:brave-instrumentation-http:$braveVersion"
+
+	// JSR-305 annotations
+	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
+
+	testCompile "io.zipkin.brave:brave-instrumentation-http-tests:$braveVersion"
+
+	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
+}
+
+jar {
+	manifest {
+		attributes("Automatic-Module-Name": "reactor.netty.http.brave")
+	}
+}
+
+description = "Brave instrumentation for Reactor Netty HTTP"

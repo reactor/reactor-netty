@@ -1964,7 +1964,8 @@ public class HttpServerTests {
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
 				null,
 				ServerCookieEncoder.STRICT,
-				ServerCookieDecoder.STRICT);
+				ServerCookieDecoder.STRICT,
+				null);
 		ops.status(status);
 		HttpMessage response = ops.newFullBodyMessage(Unpooled.EMPTY_BUFFER);
 		assertThat(((FullHttpResponse) response).status().reasonPhrase()).isEqualTo(status.reasonPhrase());
