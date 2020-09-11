@@ -42,11 +42,12 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.Sinks;
+import reactor.core.publisher.ReplayProcessor;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
@@ -265,6 +266,7 @@ public class WebsocketTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void duplexEcho() throws Exception {
 
 		int c = 10;
@@ -272,9 +274,9 @@ public class WebsocketTest {
 		CountDownLatch serverLatch = new CountDownLatch(c);
 
 		FluxProcessor<String, String> server =
-				FluxProcessor.<String>fromSink(Sinks.many().replay().all()).serialize();
+				ReplayProcessor.<String>create().serialize();
 		FluxProcessor<String, String> client =
-				FluxProcessor.<String>fromSink(Sinks.many().replay().all()).serialize();
+				ReplayProcessor.<String>create().serialize();
 
 		server.log("server")
 		      .subscribe(v -> serverLatch.countDown());
@@ -555,6 +557,7 @@ public class WebsocketTest {
 				Flux.just("1", "2", "12345678901", "3"), Flux.just("1", "2", "12345678901", "3"), 4);
 	}
 
+	@SuppressWarnings("deprecation")
 	private void doTestServerMaxFramePayloadLength(int maxFramePayloadLength, Flux<String> input, Flux<String> expectation, int count) {
 		httpServer =
 				HttpServer.create()
@@ -570,7 +573,7 @@ public class WebsocketTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		Sinks.Many<String> output = Sinks.many().replay().all();
+		ReplayProcessor<String> output = ReplayProcessor.create();
 		HttpClient.create()
 		          .port(httpServer.port())
 		          .websocket()
@@ -582,11 +585,11 @@ public class WebsocketTest {
 		                                          .map(byteBuf ->
 		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                          .take(count)
-		                                          .subscribeWith(FluxProcessor.fromSink(output))
+		                                          .subscribeWith(output)
 		                                          .then()))
 		          .blockLast(Duration.ofSeconds(30));
 
-		assertThat(output.asFlux().collectList().block(Duration.ofSeconds(30)))
+		assertThat(output.collectList().block(Duration.ofSeconds(30)))
 				.isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
 	}
 
@@ -717,6 +720,7 @@ public class WebsocketTest {
 		        Flux.just("1", "error", "2"), 3);
 	}
 
+	@SuppressWarnings("deprecation")
 	private void doTestConnectionAliveWhenTransformationErrors(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			Flux<String> expectation, int count) {
 		httpServer =
@@ -726,7 +730,7 @@ public class WebsocketTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		Sinks.Many<String> output = Sinks.many().replay().all();
+		ReplayProcessor<String> output = ReplayProcessor.create();
 		HttpClient.create()
 		          .port(httpServer.port())
 		          .websocket()
@@ -738,11 +742,11 @@ public class WebsocketTest {
 		                                          .map(byteBuf ->
 		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                          .take(count)
-		                                          .subscribeWith(FluxProcessor.fromSink(output))
+		                                          .subscribeWith(output)
 		                                          .then()))
 		          .blockLast(Duration.ofSeconds(30));
 
-		assertThat(output.asFlux().collectList().block(Duration.ofSeconds(30)))
+		assertThat(output.collectList().block(Duration.ofSeconds(30)))
 				.isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
 
 	}
@@ -1061,8 +1065,9 @@ public class WebsocketTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void testIssue900_1() {
-		Sinks.One<WebSocketCloseStatus> statusClient = Sinks.one();
+		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
 
 		httpServer =
 				HttpServer.create()
@@ -1080,7 +1085,7 @@ public class WebsocketTest {
 				          .uri("/")
 				          .handle((in, out) -> {
 				              in.receiveCloseStatus()
-				                .subscribeWith(MonoProcessor.fromSink(statusClient));
+				                .subscribeWith(statusClient);
 
 				              return out.sendObject(Flux.just(new TextWebSocketFrame("echo"),
 				                                              new CloseWebSocketFrame(1008, "something")))
@@ -1095,16 +1100,17 @@ public class WebsocketTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusClient.asMono())
+		StepVerifier.create(statusClient)
 		            .expectNext(new WebSocketCloseStatus(1008, "something"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void testIssue900_2() {
-		Sinks.One<WebSocketCloseStatus> statusServer = Sinks.one();
-		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
+		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
+		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
 
 		httpServer =
 				HttpServer.create()
@@ -1112,13 +1118,13 @@ public class WebsocketTest {
 				          .handle((req, res) ->
 				              res.sendWebsocket((in, out) -> {
 				                  in.receiveCloseStatus()
-				                    .subscribeWith(MonoProcessor.fromSink(statusServer));
+				                    .subscribeWith(statusServer);
 
 				                  return out.sendObject(Flux.just(new TextWebSocketFrame("echo"),
 				                                                  new CloseWebSocketFrame(1008, "something"))
 				                                            .delayElements(Duration.ofMillis(100)))
 				                            .then(in.receiveFrames()
-				                                    .subscribeWith(FluxProcessor.fromSink(incomingData))
+				                                    .subscribeWith(incomingData)
 				                                    .then());
 				              })
 				          )
@@ -1133,20 +1139,21 @@ public class WebsocketTest {
 		                                                .doOnNext(WebSocketFrame::retain)))
 		          .subscribe();
 
-		StepVerifier.create(incomingData.asFlux())
+		StepVerifier.create(incomingData)
 		            .expectNext(new TextWebSocketFrame("echo"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusServer.asMono())
+		StepVerifier.create(statusServer)
 		            .expectNext(new WebSocketCloseStatus(1008, "something"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void testIssue663_1() {
-		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
+		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
 
 		httpServer =
 				HttpServer.create()
@@ -1156,7 +1163,7 @@ public class WebsocketTest {
 				                  o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 				                                   .delayElements(Duration.ofMillis(100)))
 				                   .then(i.receiveFrames()
-				                          .subscribeWith(FluxProcessor.fromSink(incomingData))
+				                          .subscribeWith(incomingData)
 				                          .then())))
 				          .wiretap(true)
 				          .bindNow();
@@ -1169,15 +1176,16 @@ public class WebsocketTest {
 		          .handle((in, out) -> in.receiveFrames())
 		          .subscribe();
 
-		StepVerifier.create(incomingData.asFlux())
+		StepVerifier.create(incomingData)
 		            .expectNext(new PongWebSocketFrame())
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void testIssue663_2() {
-		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
+		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
 
 		httpServer =
 				HttpServer.create()
@@ -1187,7 +1195,7 @@ public class WebsocketTest {
 				                  o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 				                   .delayElements(Duration.ofMillis(100)))
 				                   .then(i.receiveFrames()
-				                          .subscribeWith(FluxProcessor.fromSink(incomingData))
+				                          .subscribeWith(incomingData)
 				                          .then())))
 				          .wiretap(true)
 				          .bindNow();
@@ -1200,14 +1208,15 @@ public class WebsocketTest {
 		          .handle((in, out) -> in.receiveFrames())
 		          .subscribe();
 
-		StepVerifier.create(incomingData.asFlux())
+		StepVerifier.create(incomingData)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void testIssue663_3() {
-		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
+		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
 
 		httpServer =
 				HttpServer.create()
@@ -1225,19 +1234,20 @@ public class WebsocketTest {
 		              out.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 		                                 .delayElements(Duration.ofMillis(100)))
 		                 .then(in.receiveFrames()
-		                         .subscribeWith(FluxProcessor.fromSink(incomingData))
+		                         .subscribeWith(incomingData)
 		                         .then()))
 		          .subscribe();
 
-		StepVerifier.create(incomingData.asFlux())
+		StepVerifier.create(incomingData)
 		            .expectNext(new PongWebSocketFrame())
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void testIssue663_4() {
-		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
+		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
 
 		httpServer =
 				HttpServer.create()
@@ -1256,23 +1266,24 @@ public class WebsocketTest {
 		              out.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 		                                 .delayElements(Duration.ofMillis(100)))
 		                 .then(in.receiveFrames()
-		                         .subscribeWith(FluxProcessor.fromSink(incomingData))
+		                         .subscribeWith(incomingData)
 		                         .then()))
 		          .subscribe();
 
-		StepVerifier.create(incomingData.asFlux())
+		StepVerifier.create(incomingData)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
 
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void testIssue967() {
 		Flux<String> somePublisher = Flux.range(1, 10)
 		                                 .map(i -> Integer.toString(i))
 		                                 .delayElements(Duration.ofMillis(50));
 
-		Sinks.Many<String> someConsumer = Sinks.many().replay().all();
+		ReplayProcessor<String> someConsumer = ReplayProcessor.create();
 
 		httpServer =
 				HttpServer.create()
@@ -1287,11 +1298,11 @@ public class WebsocketTest {
 				                              .publish()     // We want the connection alive even after takeUntil
 				                              .autoConnect() // which will trigger cancel
 				                              .takeUntil(msg -> msg.equals("5"))
-				                              .subscribeWith(FluxProcessor.fromSink(someConsumer))
+				                              .subscribeWith(someConsumer)
 				                              .then())))
 				          .bindNow();
 
-		Sinks.Many<String> clientFlux = Sinks.many().replay().all();
+		ReplayProcessor<String> clientFlux = ReplayProcessor.create();
 
 		Flux<String> toSend = Flux.range(1, 10)
 		                          .map(i -> Integer.toString(i));
@@ -1306,11 +1317,11 @@ public class WebsocketTest {
 		                        in.receiveFrames()
 		                          .cast(TextWebSocketFrame.class)
 		                          .map(TextWebSocketFrame::text)
-		                          .subscribeWith(FluxProcessor.fromSink(clientFlux))
+		                          .subscribeWith(clientFlux)
 		                          .then()))
 		          .subscribe();
 
-		StepVerifier.create(clientFlux.asFlux())
+		StepVerifier.create(clientFlux)
 		            .expectNextCount(10)
 		            .verifyComplete();
 	}

@@ -70,7 +70,6 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.Sinks;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -310,6 +309,7 @@ public class TcpServerTests {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void sendFileSecure()
 			throws CertificateException, SSLException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
@@ -331,8 +331,8 @@ public class TcpServerTests {
 
 		assertNotNull(context);
 
-		Sinks.One<String> m1 = Sinks.one();
-		Sinks.One<String> m2 = Sinks.one();
+		MonoProcessor<String> m1 = MonoProcessor.create();
+		MonoProcessor<String> m2 = MonoProcessor.create();
 
 		Connection client1 =
 				TcpClient.create()
@@ -342,7 +342,7 @@ public class TcpServerTests {
 				             in.receive()
 				               .asString()
 				               .log("-----------------CLIENT1")
-				               .subscribe(m1::emitValue);
+				               .subscribe(m1::onNext);
 
 				             return out.sendString(Mono.just("gogogo"))
 				                       .neverComplete();
@@ -360,7 +360,7 @@ public class TcpServerTests {
 				               .takeUntil(d -> d.contains("<- 1024 mark here"))
 				               .reduceWith(String::new, String::concat)
 				               .log("-----------------CLIENT2")
-				               .subscribe(m2::emitValue);
+				               .subscribe(m2::onNext);
 
 				             return out.sendString(Mono.just("GOGOGO"))
 				                       .neverComplete();
@@ -370,8 +370,8 @@ public class TcpServerTests {
 
 		assertNotNull(client2);
 
-		String client1Response = m1.asMono().block();
-		String client2Response = m2.asMono().block();
+		String client1Response = m1.block();
+		String client2Response = m2.block();
 
 		client1.disposeNow();
 		client2.disposeNow();
@@ -418,6 +418,7 @@ public class TcpServerTests {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	private void assertSendFile(Function<NettyOutbound, NettyOutbound> fn) {
 		DisposableServer context =
 				TcpServer.create()
@@ -432,8 +433,8 @@ public class TcpServerTests {
 
 		assertNotNull(context);
 
-		Sinks.One<String> m1 = Sinks.one();
-		Sinks.One<String> m2 = Sinks.one();
+		MonoProcessor<String> m1 = MonoProcessor.create();
+		MonoProcessor<String> m2 = MonoProcessor.create();
 
 		Connection client1 =
 				TcpClient.create()
@@ -442,7 +443,7 @@ public class TcpServerTests {
 				             in.receive()
 				               .asString()
 				               .log("-----------------CLIENT1")
-				               .subscribe(m1::emitValue);
+				               .subscribe(m1::onNext);
 
 				             return out.sendString(Mono.just("gogogo"))
 				                       .neverComplete();
@@ -459,7 +460,7 @@ public class TcpServerTests {
 				               .take(2)
 				               .reduceWith(String::new, String::concat)
 				               .log("-----------------CLIENT2")
-				               .subscribe(m2::emitValue);
+				               .subscribe(m2::onNext);
 
 				             return out.sendString(Mono.just("GOGOGO"))
 				                       .neverComplete();
@@ -469,8 +470,8 @@ public class TcpServerTests {
 
 		assertNotNull(client2);
 
-		String client1Response = m1.asMono().block();
-		String client2Response = m2.asMono().block();
+		String client1Response = m1.block();
+		String client2Response = m2.block();
 
 		client1.disposeNow();
 		client2.disposeNow();
@@ -750,8 +751,9 @@ public class TcpServerTests {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void testChannelGroupClosesAllConnections() throws Exception {
-		Sinks.One<Void> serverConnDisposed = Sinks.one();
+		MonoProcessor<Void> serverConnDisposed = MonoProcessor.create();
 
 		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
 
@@ -762,7 +764,7 @@ public class TcpServerTests {
 				         .port(0)
 				         .doOnConnection(c -> {
 				             c.onDispose()
-				              .subscribe(MonoProcessor.fromSink(serverConnDisposed));
+				              .subscribe(serverConnDisposed);
 				             group.add(c.channel());
 				             latch.countDown();
 				         })
@@ -782,7 +784,7 @@ public class TcpServerTests {
 		FutureMono.from(group.close())
 		          .block(Duration.ofSeconds(30));
 
-		serverConnDisposed.asMono().block(Duration.ofSeconds(5));
+		serverConnDisposed.block(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -878,6 +880,7 @@ public class TcpServerTests {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void testGracefulShutdown() throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(2);
 		CountDownLatch latch2 = new CountDownLatch(2);
@@ -902,14 +905,14 @@ public class TcpServerTests {
 		                            .remoteAddress(disposableServer::address)
 		                            .wiretap(true);
 
-		Sinks.One<String> result = Sinks.one();
+		MonoProcessor<String> result = MonoProcessor.create();
 		Flux.merge(client.connect(), client.connect())
 		    .flatMap(conn ->
 		            conn.inbound()
 		                .receive()
 		                .asString())
 		    .collect(Collectors.joining())
-		    .subscribe(MonoProcessor.fromSink(result));
+		    .subscribe(result);
 
 		assertTrue(latch1.await(30, TimeUnit.SECONDS));
 
@@ -922,7 +925,7 @@ public class TcpServerTests {
 
 		assertTrue(latch2.await(30, TimeUnit.SECONDS));
 
-		StepVerifier.create(result.asMono())
+		StepVerifier.create(result)
 		            .expectNext("delay1000delay1000")
 		            .verifyComplete();
 	}

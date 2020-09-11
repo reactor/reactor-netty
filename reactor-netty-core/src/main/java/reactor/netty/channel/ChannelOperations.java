@@ -36,8 +36,8 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.Operators;
-import reactor.core.publisher.Sinks;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -110,7 +110,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final Connection          connection;
 	final FluxReceive         inbound;
 	final ConnectionObserver  listener;
-	final Sinks.Empty<Void> onTerminate;
+	final MonoProcessor<Void> onTerminate;
 
 	volatile Subscription outboundSubscription;
 
@@ -127,10 +127,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param connection the new {@link Connection} connection
 	 * @param listener the events callback
 	 */
+	@SuppressWarnings("deprecation")
 	public ChannelOperations(Connection connection, ConnectionObserver listener) {
 		this.connection = Objects.requireNonNull(connection, "connection");
 		this.listener = Objects.requireNonNull(listener, "listener");
-		this.onTerminate = Sinks.empty();
+		this.onTerminate = MonoProcessor.create();
 		this.inbound = new FluxReceive(this);
 	}
 
@@ -319,7 +320,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (!isPersistent()) {
 			return connection.onDispose();
 		}
-		return onTerminate.asMono().or(connection.onDispose());
+		return onTerminate.or(connection.onDispose());
 	}
 
 	/**
@@ -443,7 +444,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			// when there is no response state
 			onInboundComplete();
 			afterInboundComplete();
-			onTerminate.emitEmpty();
+			onTerminate.onComplete();
 			listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 		}
 	}

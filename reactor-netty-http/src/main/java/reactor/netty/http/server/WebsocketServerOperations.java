@@ -38,7 +38,7 @@ import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketSe
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
+import reactor.core.publisher.MonoProcessor;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
@@ -61,18 +61,18 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	final WebSocketServerHandshaker           handshaker;
 	final ChannelPromise                      handshakerResult;
-	final Sinks.One<WebSocketCloseStatus> onCloseState;
+	final MonoProcessor<WebSocketCloseStatus> onCloseState;
 	final boolean                             proxyPing;
 
 	volatile int closeSent;
 
-	@SuppressWarnings("FutureReturnValueIgnored")
+	@SuppressWarnings({"FutureReturnValueIgnored", "deprecation"})
 	WebsocketServerOperations(String wsUrl, WebsocketServerSpec websocketServerSpec, HttpServerOperations replaced) {
 		super(replaced);
 		this.proxyPing = websocketServerSpec.handlePing();
 
 		Channel channel = replaced.channel();
-		onCloseState = Sinks.one();
+		onCloseState = MonoProcessor.create();
 
 		// Handshake
 		WebSocketServerHandshakerFactory wsFactory =
@@ -208,7 +208,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	@Override
 	@SuppressWarnings("unchecked")
 	public Mono<WebSocketCloseStatus> receiveCloseStatus() {
-		return onCloseState.asMono().or((Mono)onTerminate());
+		return onCloseState.or((Mono)onTerminate());
 	}
 
 	Mono<Void> sendClose(CloseWebSocketFrame frame) {
@@ -218,7 +218,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			return FutureMono.deferFuture(() -> {
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 					discard();
-					onCloseState.emitValue(new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
+					onCloseState.onNext(new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
 					return channel().writeAndFlush(frame)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
@@ -239,11 +239,11 @@ final class WebsocketServerOperations extends HttpServerOperations
 		}
 		if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 			if (frame != null) {
-				onCloseState.emitValue(new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
+				onCloseState.onNext(new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
 				channel().writeAndFlush(frame)
 				         .addListener(listener);
 			} else {
-				onCloseState.emitValue(new WebSocketCloseStatus(-1, ""));
+				onCloseState.onNext(new WebSocketCloseStatus(-1, ""));
 				channel().writeAndFlush(new CloseWebSocketFrame())
 				         .addListener(listener);
 			}

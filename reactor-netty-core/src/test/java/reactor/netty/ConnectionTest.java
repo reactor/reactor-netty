@@ -36,7 +36,6 @@ import org.junit.Test;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.Sinks;
 import reactor.test.StepVerifier;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -505,12 +504,13 @@ public class ConnectionTest {
 		doTestUnavailable(testContext.inbound().receiveObject().then(), "Receiver Unavailable");
 	}
 
+	@SuppressWarnings("deprecation")
 	private void doTestUnavailable(Mono<Void> publisher, String expectation) {
-		Sinks.One<Throwable> throwable = Sinks.one();
+		MonoProcessor<Throwable> throwable = MonoProcessor.create();
 
-		publisher.subscribe(null, throwable::emitError);
+		publisher.subscribe(null, throwable::onError);
 
-		StepVerifier.create(throwable.asMono())
+		StepVerifier.create(throwable)
 		            .expectErrorMatches(t -> t instanceof IllegalStateException && expectation.equals(t.getMessage()))
 		            .verify(Duration.ofSeconds(30));
 

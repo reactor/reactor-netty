@@ -36,7 +36,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.multipart.MemoryFileUpload;
 import io.netty.handler.stream.ChunkedInput;
 import reactor.core.Exceptions;
-import reactor.core.publisher.Sinks;
+import reactor.core.publisher.DirectProcessor;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -48,7 +48,8 @@ import reactor.util.annotation.Nullable;
 final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		implements ChunkedInput<HttpContent>, Runnable, HttpClientForm {
 
-	final Sinks.Many<Long> progressSink;
+	@SuppressWarnings("deprecation")
+	final DirectProcessor<Long> progressFlux;
 	final HttpRequest request;
 
 	boolean         needNewEncoder;
@@ -69,6 +70,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	 * @throws NullPointerException      for request or charset or factory
 	 * @throws ErrorDataEncoderException if the request is not a POST
 	 */
+	@SuppressWarnings("deprecation")
 	HttpClientFormEncoder(HttpDataFactory factory,
 			HttpRequest request,
 			boolean multipart,
@@ -78,7 +80,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		this.newCharset = charset;
 		this.request = request;
 		this.cleanOnTerminate = true;
-		this.progressSink = Sinks.many().multicast().onBackpressureError();
+		this.progressFlux = DirectProcessor.create();
 		this.newMode = encoderMode;
 		this.newFactory = factory;
 		this.newMultipart = multipart;
@@ -88,12 +90,12 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	public HttpContent readChunk(ByteBufAllocator allocator) throws Exception {
 		HttpContent c = super.readChunk(allocator);
 		if (c == null) {
-			progressSink.emitComplete();
+			progressFlux.onComplete();
 		}
 		else {
-			progressSink.emitNext(progress());
+			progressFlux.onNext(progress());
 			if (isEndOfInput()) {
-				progressSink.emitComplete();
+				progressFlux.onComplete();
 			}
 		}
 		return c;

@@ -84,10 +84,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.Sinks;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
@@ -372,14 +372,15 @@ public class HttpClientTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void prematureCancel() {
-		Sinks.Many<Void> signal = Sinks.many().multicast().onBackpressureError();
+		DirectProcessor<Void> signal = DirectProcessor.create();
 		disposableServer =
 				TcpServer.create()
 				         .host("localhost")
 				         .port(0)
 				         .handle((in, out) -> {
-				             signal.emitComplete();
+				             signal.onComplete();
 				             return out.withConnection(c -> c.addHandlerFirst(new HttpResponseEncoder()))
 				                       .sendObject(Mono.delay(Duration.ofSeconds(2))
 				                                       .map(t -> new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
@@ -394,7 +395,7 @@ public class HttpClientTest {
 				        .get()
 				        .uri("/")
 				        .responseContent()
-				        .timeout(signal.asFlux()))
+				        .timeout(signal))
 				    .verifyError(TimeoutException.class);
 	}
 
@@ -2165,6 +2166,7 @@ public class HttpClientTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void testDoAfterResponseSuccessDisposeConnection() {
 		disposableServer =
 				HttpServer.create()
@@ -2173,12 +2175,12 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
-		Sinks.One<Void> processor = Sinks.one();
+		MonoProcessor<Void> processor = MonoProcessor.create();
 		StepVerifier.create(
 		        createHttpClientForContextWithPort()
 		                .doAfterResponseSuccess((res, conn) -> {
 		                    conn.onDispose()
-		                        .subscribeWith(MonoProcessor.fromSink(processor));
+		                        .subscribeWith(processor);
 		                    conn.dispose();
 		                })
 		                .get()
@@ -2190,7 +2192,7 @@ public class HttpClientTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(processor.asMono())
+		StepVerifier.create(processor)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}

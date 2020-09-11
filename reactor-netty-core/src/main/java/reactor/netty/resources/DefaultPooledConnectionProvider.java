@@ -35,9 +35,9 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.Disposables;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.Operators;
-import reactor.core.publisher.Sinks;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
@@ -356,14 +356,15 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 	static final class PooledConnection implements Connection, ConnectionObserver {
 		final Channel channel;
-		final Sinks.Empty<Void> onTerminate;
+		final MonoProcessor<Void> onTerminate;
 		final InstrumentedPool<PooledConnection> pool;
 
 		PooledRef<PooledConnection> pooledRef;
 
+		@SuppressWarnings("deprecation")
 		PooledConnection(Channel channel, InstrumentedPool<PooledConnection> pool) {
 			this.channel = channel;
-			this.onTerminate = Sinks.empty();
+			this.onTerminate = MonoProcessor.create();
 			this.pool = pool;
 		}
 
@@ -421,7 +422,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				                                 pool.metrics().idleSize(),
 				                                 t);
 				                     }
-				                     onTerminate.emitEmpty();
+				                     onTerminate.onComplete();
 				                     obs.onStateChange(connection, State.RELEASED);
 				                 },
 				                 () -> {
@@ -431,7 +432,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				                                 pool.metrics().acquiredSize(),
 				                                 pool.metrics().idleSize());
 				                     }
-				                     onTerminate.emitEmpty();
+				                     onTerminate.onComplete();
 				                     obs.onStateChange(connection, State.RELEASED);
 				                 });
 				return;
@@ -442,7 +443,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		@Override
 		public Mono<Void> onTerminate() {
-			return onTerminate.asMono().or(onDispose());
+			return onTerminate.or(onDispose());
 		}
 
 		@Override

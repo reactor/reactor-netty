@@ -25,9 +25,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
@@ -346,8 +346,9 @@ public class HttpTests {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void streamAndPoolExplicitCompression() {
-		Sinks.Many<String> ep = Sinks.many().multicast().onBackpressureBuffer();
+		EmitterProcessor<String> ep = EmitterProcessor.create();
 
 		DisposableServer server =
 				HttpServer.create()
@@ -360,7 +361,7 @@ public class HttpTests {
 				                       .get("/stream", (req, res) ->
 						                           req.receive()
 						                              .then(res.compression(true)
-						                                       .sendString(ep.asFlux().log()).then())))
+						                                       .sendString(ep.log()).then())))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -388,14 +389,14 @@ public class HttpTests {
 		System.out.println(content);
 
 		StepVerifier.create(f)
-		            .then(() -> ep.emitNext("test1"))
+		            .then(() -> ep.onNext("test1"))
 		            .expectNext("test1")
 		            .thenAwait(Duration.ofMillis(30))
-		            .then(() -> ep.emitNext("test2"))
+		            .then(() -> ep.onNext("test2"))
 		            .thenAwait(Duration.ofMillis(30))
 		            .expectNext("test2")
 		            .thenAwait(Duration.ofMillis(30))
-		            .then(ep::emitComplete)
+		            .then(ep::onComplete)
 		            .verifyComplete();
 
 
@@ -418,8 +419,9 @@ public class HttpTests {
 
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void streamAndPoolDefaultCompression() {
-		Sinks.Many<String> ep = Sinks.many().multicast().onBackpressureBuffer();
+		EmitterProcessor<String> ep = EmitterProcessor.create();
 
 		DisposableServer server =
 				HttpServer.create()
@@ -433,7 +435,7 @@ public class HttpTests {
 				                                                                  .sendString(Flux.just("test")).then()))
 				                       .get("/stream", (req, res) ->
 						                           req.receive()
-						                              .then(res.sendString(ep.asFlux().log()).then())))
+						                              .then(res.sendString(ep.log()).then())))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -461,14 +463,14 @@ public class HttpTests {
 		System.out.println(content);
 
 		StepVerifier.create(f)
-		            .then(() -> ep.emitNext("test1"))
+		            .then(() -> ep.onNext("test1"))
 		            .expectNext("test1")
 		            .thenAwait(Duration.ofMillis(30))
-		            .then(() -> ep.emitNext("test2"))
+		            .then(() -> ep.onNext("test2"))
 		            .thenAwait(Duration.ofMillis(30))
 		            .expectNext("test2")
 		            .thenAwait(Duration.ofMillis(30))
-		            .then(ep::emitComplete)
+		            .then(ep::onComplete)
 		            .verifyComplete();
 
 
