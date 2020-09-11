@@ -33,23 +33,22 @@ import static reactor.netty.Metrics.SUCCESS;
 /**
  * @author Violeta Georgieva
  */
-final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddress> {
+final class AddressResolverGroupMetrics<T extends SocketAddress> extends AddressResolverGroup<T> {
 
-	final AddressResolverGroup<SocketAddress> resolverGroup;
+	final AddressResolverGroup<T> resolverGroup;
 
 	final ChannelMetricsRecorder recorder;
 
-	AddressResolverGroupMetrics(AddressResolverGroup<SocketAddress> resolverGroup,
-			ChannelMetricsRecorder recorder) {
+	AddressResolverGroupMetrics(AddressResolverGroup<T> resolverGroup, ChannelMetricsRecorder recorder) {
 		this.resolverGroup = resolverGroup;
 		this.recorder = recorder;
 	}
 
 	@Override
-	protected AddressResolver<SocketAddress> newResolver(EventExecutor executor) {
-		AddressResolver<SocketAddress> resolver = resolverGroup.getResolver(executor);
+	protected AddressResolver<T> newResolver(EventExecutor executor) {
+		AddressResolver<T> resolver = resolverGroup.getResolver(executor);
 
-		return new AddressResolver<SocketAddress>() {
+		return new AddressResolver<T>() {
 
 			@Override
 			public boolean isSupported(SocketAddress address) {
@@ -62,22 +61,22 @@ final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddre
 			}
 
 			@Override
-			public Future<SocketAddress> resolve(SocketAddress address) {
+			public Future<T> resolve(SocketAddress address) {
 				return resolveInternal(address, () -> resolver.resolve(address));
 			}
 
 			@Override
-			public Future<SocketAddress> resolve(SocketAddress address, Promise<SocketAddress> promise) {
+			public Future<T> resolve(SocketAddress address, Promise<T> promise) {
 				return resolveInternal(address, () -> resolver.resolve(address, promise));
 			}
 
 			@Override
-			public Future<List<SocketAddress>> resolveAll(SocketAddress address) {
+			public Future<List<T>> resolveAll(SocketAddress address) {
 				return resolveAllInternal(address, () -> resolver.resolveAll(address));
 			}
 
 			@Override
-			public Future<List<SocketAddress>> resolveAll(SocketAddress address, Promise<List<SocketAddress>> promise) {
+			public Future<List<T>> resolveAll(SocketAddress address, Promise<List<T>> promise) {
 				return resolveAllInternal(address, () -> resolver.resolveAll(address, promise));
 			}
 
@@ -86,7 +85,7 @@ final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddre
 				resolver.close();
 			}
 
-			Future<SocketAddress> resolveInternal(SocketAddress address, Supplier<Future<SocketAddress>> resolver) {
+			Future<T> resolveInternal(SocketAddress address, Supplier<Future<T>> resolver) {
 				long resolveTimeStart = System.nanoTime();
 				return resolver.get()
 				               .addListener(
@@ -95,7 +94,7 @@ final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddre
 				                                    address));
 			}
 
-			Future<List<SocketAddress>> resolveAllInternal(SocketAddress address, Supplier<Future<List<SocketAddress>>> resolver) {
+			Future<List<T>> resolveAllInternal(SocketAddress address, Supplier<Future<List<T>>> resolver) {
 				long resolveTimeStart = System.nanoTime();
 				return resolver.get()
 				               .addListener(

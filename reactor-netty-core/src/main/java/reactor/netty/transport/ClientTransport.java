@@ -160,6 +160,9 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		if (configuration().hasProxy()) {
 			T dup = duplicate();
 			dup.configuration().proxyProvider = null;
+			if (dup.configuration().resolver == NoopAddressResolverGroup.INSTANCE) {
+				dup.configuration().resolver = null;
+			}
 			return dup;
 		}
 		@SuppressWarnings("unchecked")

@@ -205,12 +205,10 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.proxyProvider = proxyProvider;
 	}
 
-	@SuppressWarnings("unchecked")
 	protected AddressResolverGroup<?> resolverInternal() {
 		AddressResolverGroup<?> resolverGroup = resolver != null ? resolver : getOrCreateDefaultResolver();
 		if (metricsRecorder != null) {
-			return new AddressResolverGroupMetrics(
-					(AddressResolverGroup<SocketAddress>) resolverGroup,
+			return new AddressResolverGroupMetrics<>(resolverGroup,
 					Objects.requireNonNull(metricsRecorder.get(), "Metrics recorder supplier returned null"));
 		}
 		else {
