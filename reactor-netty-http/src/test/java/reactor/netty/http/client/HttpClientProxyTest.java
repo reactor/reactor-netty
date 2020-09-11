@@ -281,4 +281,39 @@ public class HttpClientProxyTest {
 		             .responseSingle((response, body) -> Mono.zip(body.asString(),
 		                                                          Mono.just(response.responseHeaders())));
 	}
+
+	@Test
+	public void testIssue1261() {
+		AtomicReference<AddressResolverGroup<?>> resolver = new AtomicReference<>();
+		HttpClient client =
+				HttpClient.create()
+				          .proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+				                           .host("localhost")
+				                           .port(hoverflyRule.getProxyPort()))
+				          .doOnConnect(conf -> resolver.set(conf.resolver()));
+
+		client.get()
+		      .uri("http://localhost:" + port + "/")
+		      .responseContent()
+		      .blockLast(Duration.ofSeconds(30));
+
+		assertThat(resolver.get()).isNotNull();
+		assertThat(resolver.get()).isInstanceOf(NoopAddressResolverGroup.class);
+
+		client.noProxy()
+		      .get()
+		      .uri("http://localhost:" + port + "/")
+		      .responseContent()
+		      .blockLast(Duration.ofSeconds(30));
+
+		assertThat(resolver.get()).isNull();
+
+		client.get()
+		      .uri("http://localhost:" + port + "/")
+		      .responseContent()
+		      .blockLast(Duration.ofSeconds(30));
+
+		assertThat(resolver.get()).isNotNull();
+		assertThat(resolver.get()).isInstanceOf(NoopAddressResolverGroup.class);
+	}
 }
