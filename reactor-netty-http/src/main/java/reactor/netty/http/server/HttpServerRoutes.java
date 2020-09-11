@@ -324,9 +324,9 @@ public interface HttpServerRoutes extends
 		return Objects.equals(req.method(), HttpMethod.GET) &&
 		       (uri.getPath()
 		           .endsWith("/") || uri.getPath()
-		                                .indexOf(".",
+		                                .indexOf('.',
 		                                         uri.getPath()
-		                                            .lastIndexOf("/")) == -1);
+		                                            .lastIndexOf('/')) == -1);
 	};
 
 }

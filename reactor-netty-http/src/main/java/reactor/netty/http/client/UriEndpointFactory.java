@@ -102,7 +102,7 @@ final class UriEndpointFactory {
 		}
 		else {
 			// remove possible fragment since it shouldn't be sent to the server
-			int pos = pathAndQuery.indexOf("#");
+			int pos = pathAndQuery.indexOf('#');
 			if (pos > -1) {
 				pathAndQuery = pathAndQuery.substring(0, pos);
 			}
