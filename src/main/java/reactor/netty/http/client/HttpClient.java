@@ -1230,6 +1230,30 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Specifies whether the metrics are enabled on the {@link HttpClient}.
+	 * All generated metrics are provided to the specified recorder
+	 * which is only instantiated if metrics are being enabled.
+	 * <p>{@code uriValue} function receives the actual uri and returns the uri value
+	 * that will be used when the metrics are propagated to the recorder.
+	 * For example instead of using the actual uri {@code "/users/1"} as uri value, templated uri
+	 * {@code "/users/{id}"} can be used.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param recorder a supplier for the {@link HttpClientMetricsRecorder}
+	 * @param uriValue a function that receives the actual uri and returns the uri value
+	 * that will be used when the metrics are propagated to the recorder.
+	 * @return a new {@link HttpClient}
+	 * @since 0.9.7
+	 */
+	@SuppressWarnings("deprecation")
+	public final HttpClient metrics(boolean metricsEnabled, Supplier<? extends HttpClientMetricsRecorder> recorder,
+			Function<String, String> uriValue) {
+		return tcpConfiguration(tcpClient ->
+				tcpClient.metrics(metricsEnabled, recorder)
+				         .bootstrap(b -> HttpClientConfiguration.uriTagValue(b, uriValue)));
+	}
+
+	/**
 	 * Configure the {@link io.netty.handler.codec.http.HttpClientCodec}'s response decoding options.
 	 *
 	 * @param responseDecoderOptions a function to mutate the provided Http response decoder options
