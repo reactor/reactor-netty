@@ -2496,85 +2496,89 @@ public class HttpClientTest {
 
 	@Test
 	public void testCustomMetricsRecorderWithUriMapper() throws InterruptedException {
-		CountDownLatch latch = new CountDownLatch(1);
+		CountDownLatch latch = new CountDownLatch(5);
 
 		disposableServer =
 				HttpServer.create()
-							.port(0)
-							.handle((req, resp) -> resp.sendString(Mono.just("OK")))
-							.wiretap(true)
-							.bindNow();
+				          .port(0)
+				          .handle((req, resp) -> resp.sendString(Mono.just("OK")))
+				          .wiretap(true)
+				          .bindNow();
 
 		List<String> collectedUris = new CopyOnWriteArrayList<>();
 
 		HttpClient.create()
-				.doOnRequest((req, conn) -> conn.onTerminate()
-						.subscribe(null, null, latch::countDown))
-				.metrics(true,
-						() -> new HttpClientMetricsRecorder() {
-							@Override
-							public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
-								collectedUris.add(uri);
-							}
+		          .metrics(true,
+		              () -> new HttpClientMetricsRecorder() {
+		                  @Override
+		                  public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+		                      collectedUris.add(uri);
+		                      latch.countDown();
+		                  }
 
-							@Override
-							public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
-								collectedUris.add(uri);
-							}
+		                  @Override
+		                  public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+		                      collectedUris.add(uri);
+		                      latch.countDown();
+		                  }
 
-							@Override
-							public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
-								collectedUris.add(uri);
-							}
+		                  @Override
+		                  public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+		                      collectedUris.add(uri);
+		                      latch.countDown();
+		                  }
 
-							@Override
-							public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
-							}
+		                  @Override
+		                  public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
+		                  }
 
-							@Override
-							public void recordDataSent(SocketAddress remoteAddress, long bytes) {
-							}
+		                  @Override
+		                  public void recordDataSent(SocketAddress remoteAddress, long bytes) {
+		                  }
 
-							@Override
-							public void incrementErrorsCount(SocketAddress remoteAddress) {
-							}
+		                  @Override
+		                  public void incrementErrorsCount(SocketAddress remoteAddress) {
+		                  }
 
-							@Override
-							public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
-							}
+		                  @Override
+		                  public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
+		                  }
 
-							@Override
-							public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
-							}
+		                  @Override
+		                  public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
+		                  }
 
-							@Override
-							public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
-							}
+		                  @Override
+		                  public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
+		                  }
 
-							@Override
-							public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-								collectedUris.add(uri);
-							}
+		                  @Override
+		                  public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
+		                      collectedUris.add(uri);
+		                      latch.countDown();
+		                  }
 
-							@Override
-							public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
-								collectedUris.add(uri);
-							}
+		                  @Override
+		                  public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
+		                      collectedUris.add(uri);
+		                      latch.countDown();
+		                  }
 
-							@Override
-							public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-								collectedUris.add(uri);
-							}
-						},
-						s -> s.startsWith("/stream/") ? "/stream/{n}" : s
-				)
-				.get()
-				.uri("http://localhost:" + disposableServer.port() + "/stream/1024")
-				.responseContent()
-				.aggregate()
-				.block(Duration.ofSeconds(30));
+		                  @Override
+		                  public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
+		                      collectedUris.add(uri);
+		                      latch.countDown();
+		                  }
+		              },
+		              s -> s.startsWith("/stream/") ? "/stream/{n}" : s)
+		          .get()
+		          .uri("http://localhost:" + disposableServer.port() + "/stream/1024")
+		          .responseContent()
+		          .aggregate()
+		          .block(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
-		assertThat(collectedUris).isNotEmpty().containsOnly("/stream/{n}");
+		assertThat(collectedUris).isNotEmpty()
+		                         .containsOnly("/stream/{n}");
 	}
 }

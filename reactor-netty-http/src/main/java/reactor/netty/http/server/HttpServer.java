@@ -346,22 +346,22 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * Specifies whether the metrics are enabled on the {@link HttpServer}.
 	 * All generated metrics are provided to the specified recorder which is only
 	 * instantiated if metrics are being enabled.
-	 * <p>{@code uriTagValue} function receives the actual uri and returns the uri tag value
-	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag.
-	 * For example instead of using the actual uri {@code "/users/1"} as uri tag value, templated uri
+	 * <p>{@code uriValue} function receives the actual uri and returns the uri value
+	 * that will be used when the metrics are propagated to the recorder.
+	 * For example instead of using the actual uri {@code "/users/1"} as uri value, templated uri
 	 * {@code "/users/{id}"} can be used.
 	 *
 	 * @param enable true enables metrics collection; false disables it
 	 * @param recorder a supplier for the metrics recorder that receives the collected metrics
-	 * @param uriTagValue a function that receives the actual uri and returns the uri tag value
-	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag
+	 * @param uriValue a function that receives the actual uri and returns the uri value
+	 * that will be used when the metrics are propagated to the recorder.
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder, Function<String, String> uriTagValue) {
+	public final HttpServer metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder, Function<String, String> uriValue) {
 		if (enable) {
 			HttpServer dup = duplicate();
 			dup.configuration().metricsRecorder(recorder);
-			dup.configuration().uriTagValue = uriTagValue;
+			dup.configuration().uriTagValue = uriValue;
 			return dup;
 		}
 		else if (configuration().metricsRecorder() != null) {
