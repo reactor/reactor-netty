@@ -1243,7 +1243,7 @@ public abstract class HttpClient {
 	 * @param uriValue a function that receives the actual uri and returns the uri value
 	 * that will be used when the metrics are propagated to the recorder.
 	 * @return a new {@link HttpClient}
-	 * @since 0.9.7
+	 * @since 0.9.12
 	 */
 	@SuppressWarnings("deprecation")
 	public final HttpClient metrics(boolean metricsEnabled, Supplier<? extends HttpClientMetricsRecorder> recorder,
