@@ -20,7 +20,7 @@ The following example shows how to do so:
 [source,java,indent=0]
 .{examplesdir}/connect/Application.java
 ----
-include::{examplesdir}/connect/Application.java[lines=18..32]
+include::{examplesdir}/connect/Application.java[lines=18..30]
 ----
 <1> Creates a {javadoc}/reactor/netty/http/client/HttpClient.html[HttpClient]
 instance ready for configuring.
@@ -48,7 +48,7 @@ In order to connect to a specific host and port, you can apply the following con
 [source,java,indent=0]
 .{examplesdir}/address/Application.java
 ----
-include::{examplesdir}/address/Application.java[lines=18..35]
+include::{examplesdir}/address/Application.java[lines=18..33]
 ----
 <1> Configures the `HTTP` host
 <2> Configures the `HTTP` port
@@ -66,7 +66,7 @@ if necessary. The following example sends `hello`:
 [source,java,indent=0]
 .{examplesdir}/send/Application.java
 ----
-include::{examplesdir}/send/Application.java[lines=18..35]
+include::{examplesdir}/send/Application.java[lines=18..33]
 ----
 <1> Sends a `hello` string to the given `HTTP` endpoint
 ====
@@ -80,7 +80,7 @@ You can use the following configuration to do so:
 [source,java,indent=0]
 .{examplesdir}/send/headers/Application.java
 ----
-include::{examplesdir}/send/headers/Application.java[lines=18..38]
+include::{examplesdir}/send/headers/Application.java[lines=18..36]
 ----
 <1> Disables `Transfer-Encoding: chunked` and provides `Content-Length` header.
 ====
@@ -94,7 +94,7 @@ You can enable compression on the `HTTP` client, which means the request header
 [source,java,indent=0]
 .{examplesdir}/compression/Application.java
 ----
-include::{examplesdir}/compression/Application.java[lines=18..34]
+include::{examplesdir}/compression/Application.java[lines=18..32]
 ----
 ====
 
@@ -114,7 +114,7 @@ The following example uses `followRedirect(true)`:
 [source,java,indent=0]
 .{examplesdir}/redirect/Application.java
 ----
-include::{examplesdir}/redirect/Application.java[lines=18..34]
+include::{examplesdir}/redirect/Application.java[lines=18..32]
 ----
 ====
 
@@ -218,7 +218,7 @@ and apply the following configuration:
 [source,java,indent=0]
 .{examplesdir}/wiretap/Application.java
 ----
-include::{examplesdir}/wiretap/Application.java[lines=18..34]
+include::{examplesdir}/wiretap/Application.java[lines=18..32]
 ----
 <1> Enables the wire logging
 ====
@@ -238,7 +238,7 @@ The following example uses `SslContextBuilder`:
 [source,java,indent=0]
 .{examplesdir}/security/Application.java
 ----
-include::{examplesdir}/security/Application.java[lines=18..37]
+include::{examplesdir}/security/Application.java[lines=18..35]
 ----
 ====
 
@@ -349,7 +349,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 [source,java,indent=0]
 .{examplesdir}/metrics/custom/Application.java
 ----
-include::{examplesdir}/metrics/custom/Application.java[lines=18..37]
+include::{examplesdir}/metrics/custom/Application.java[lines=18..35]
 ----
 <1> Enables HTTP client metrics and provides {javadoc}/reactor/netty/http/client/HttpClientMetricsRecorder.html[`HttpClientMetricsRecorder`] implementation.
 ====

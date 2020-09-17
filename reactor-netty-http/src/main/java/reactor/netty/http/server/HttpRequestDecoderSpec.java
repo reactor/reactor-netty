@@ -17,8 +17,6 @@ package reactor.netty.http.server;
 
 import reactor.netty.http.HttpDecoderSpec;
 
-import java.util.Objects;
-
 /**
  * A configuration builder to fine tune the {@link io.netty.handler.codec.http.HttpServerCodec}
  * (or more precisely the {@link io.netty.handler.codec.http.HttpServerCodec.HttpServerRequestDecoder}) for HTTP/1.1

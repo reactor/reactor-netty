@@ -17,7 +17,6 @@ package reactor.netty.examples.documentation.http.client.metrics.custom;
 
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
 
 import java.net.SocketAddress;
 import java.time.Duration;

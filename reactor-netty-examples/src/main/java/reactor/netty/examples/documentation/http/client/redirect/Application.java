@@ -16,7 +16,6 @@
 package reactor.netty.examples.documentation.http.client.redirect;
 
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
 
 public class Application {
 

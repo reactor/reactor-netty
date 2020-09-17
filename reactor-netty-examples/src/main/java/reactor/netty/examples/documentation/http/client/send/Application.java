@@ -18,7 +18,6 @@ package reactor.netty.examples.documentation.http.client.send;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
 
 public class Application {
 
