@@ -37,6 +37,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.handler.codec.DecoderException;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -418,7 +419,12 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
 			ChannelOperations<?, ?> ops = ChannelOperations.get(connection.channel());
-			if (ops == null && (error instanceof IOException || AbortedException.isConnectionReset(error))) {
+			if (ops == null && (error instanceof IOException || AbortedException.isConnectionReset(error) ||
+					// DecoderException at this point might be SSL handshake issue or other TLS related issue.
+					// In case of HTTP if there is an HTTP decoding issue, it is propagated with
+					// io.netty.handler.codec.DecoderResultProvider
+					// and not with throwing an exception
+					error instanceof DecoderException)) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "onUncaughtException(" + connection + ")"), error);
 				}
