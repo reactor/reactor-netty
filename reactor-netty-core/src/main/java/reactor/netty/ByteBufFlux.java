@@ -212,7 +212,11 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * Convert to a {@link InputStream} inbound {@link Flux}
+	 * Convert to an {@link InputStream} inbound {@link Flux}
+	 * <p>Note: Auto memory release is disabled. The underlying
+	 * {@link ByteBuf} will be released only when {@link InputStream#close()}
+	 * is invoked. Ensure {@link InputStream#close()} is invoked
+	 * for any terminal signal: {@code complete} | {@code error} | {@code cancel}</p>
 	 *
 	 * @return a {@link InputStream} inbound {@link Flux}
 	 */
