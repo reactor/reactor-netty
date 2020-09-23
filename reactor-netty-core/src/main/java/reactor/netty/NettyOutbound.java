@@ -44,6 +44,11 @@ import reactor.core.publisher.Mono;
 
 /**
  * An outbound-traffic API delegating to an underlying {@link Channel}.
+ * <p>Note: With HTTP, chaining multiple send operations is discouraged and will not work as expected
+ * when send involves scalar or mono publishers. For instance {@code send(flux).send(mono)}
+ * or {@code send(flux).sendObject(message)} will ignore {@code send(flux)}.
+ * This is an anticipation of an API simplification moving forward next versions where
+ * send will not return {@link NettyOutbound} anymore.</p>
  *
  * @author Stephane Maldini
  */
