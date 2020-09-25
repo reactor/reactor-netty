@@ -150,7 +150,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	ProxyProvider                            proxyProvider;
 	Supplier<? extends SocketAddress>        remoteAddress;
 	AddressResolverGroup<?>                  resolver;
-	AtomicReference<AddressResolverGroup<?>> defaultResolver;
+	final AtomicReference<AddressResolverGroup<?>> defaultResolver;
 
 	protected ClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
