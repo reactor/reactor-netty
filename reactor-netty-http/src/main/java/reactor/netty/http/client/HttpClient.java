@@ -1074,10 +1074,9 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 			Function<? super Mono<? extends Connection>, ? extends Mono<? extends Connection>> connector) {
 		Objects.requireNonNull(connector, "mapConnect");
 		HttpClient dup = duplicate();
-		@SuppressWarnings("unchecked")
-		Function<Mono<? extends Connection>, Mono<? extends Connection>> current =
-				(Function<Mono<? extends Connection>, Mono<? extends Connection>>) configuration().connector;
-		dup.configuration().connector = current == null ? connector : current.andThen(connector);
+		Function<? super Mono<? extends Connection>, ? extends Mono<? extends Connection>> currentConnector =
+				configuration().connector;
+		dup.configuration().connector = currentConnector == null ? connector : currentConnector.andThen(connector);
 		return dup;
 	}
 
