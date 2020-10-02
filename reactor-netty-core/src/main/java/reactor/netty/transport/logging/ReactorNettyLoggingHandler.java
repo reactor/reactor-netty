@@ -35,7 +35,7 @@ import static java.util.Objects.requireNonNull;
  * @author Maximilian Goeke
  * @since 1.0.0
  */
-public final class ReactorNettyLoggingHandler extends LoggingHandler {
+final class ReactorNettyLoggingHandler extends LoggingHandler {
 
 	private final Charset charset;
 

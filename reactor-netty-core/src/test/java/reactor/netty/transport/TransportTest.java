@@ -33,7 +33,6 @@ import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
-import reactor.netty.transport.logging.ReactorNettyLoggingHandler;
 import reactor.netty.resources.LoopResources;
 
 /**
@@ -75,7 +74,7 @@ public class TransportTest {
 	private void doTestWiretapForTextualLogger(TestTransport transport, LogLevel expectedLevel) {
 		LoggingHandler loggingHandler = transport.config.loggingHandler;
 
-		assertThat(loggingHandler).isInstanceOf(ReactorNettyLoggingHandler.class);
+		assertThat(loggingHandler).hasFieldOrProperty("charset");
 		assertThat(loggingHandler.level()).isSameAs(expectedLevel);
 	}
 
