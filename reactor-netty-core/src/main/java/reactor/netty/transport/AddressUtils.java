@@ -28,6 +28,8 @@ import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.NetUtil;
 import reactor.util.annotation.Nullable;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Internal class that creates unresolved or resolved InetSocketAddress instances
  *
@@ -51,6 +53,7 @@ public final class AddressUtils {
 	 * @return InetSocketAddress for given parameters
 	 */
 	public static InetSocketAddress createInetSocketAddress(String hostname, int port, boolean resolve) {
+		requireNonNull(hostname, "hostname");
 		InetSocketAddress inetAddressForIpString = createForIpString(hostname, port);
 		if (inetAddressForIpString != null) {
 			return inetAddressForIpString;
@@ -92,6 +95,7 @@ public final class AddressUtils {
 	 * @return processed socket address instance
 	 */
 	public static InetSocketAddress replaceUnresolvedNumericIp(InetSocketAddress inetSocketAddress) {
+		requireNonNull(inetSocketAddress, "inetSocketAddress");
 		if (!inetSocketAddress.isUnresolved()) {
 			return inetSocketAddress;
 		}
@@ -113,6 +117,7 @@ public final class AddressUtils {
 	 * @return resolved instance with same host string and port
 	 */
 	public static InetSocketAddress replaceWithResolved(InetSocketAddress inetSocketAddress) {
+		requireNonNull(inetSocketAddress, "inetSocketAddress");
 		if (!inetSocketAddress.isUnresolved()) {
 			return inetSocketAddress;
 		}
@@ -190,6 +195,7 @@ public final class AddressUtils {
 	 * @return InetSocketAddress for given parameters
 	 */
 	public static InetSocketAddress parseAddress(String address, int defaultPort) {
+		requireNonNull(address, "address");
 		int separatorIdx = address.lastIndexOf(':');
 		int ipV6HostSeparatorIdx = address.lastIndexOf(']');
 		if (separatorIdx > ipV6HostSeparatorIdx) {

@@ -16,6 +16,10 @@
 package reactor.netty.transport.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static reactor.netty.transport.logging.AdvancedByteBufFormat.HEX_DUMP;
+import static reactor.netty.transport.logging.AdvancedByteBufFormat.SIMPLE;
+import static reactor.netty.transport.logging.AdvancedByteBufFormat.TEXTUAL;
 
 import java.nio.charset.Charset;
 
@@ -29,7 +33,7 @@ public class AdvancedByteBufFormatTest {
 	@Test
 	public void createSimpleLoggingHandler() {
 		final LoggingHandler loggingHandler =
-			AdvancedByteBufFormat.SIMPLE.toLoggingHandler(
+			SIMPLE.toLoggingHandler(
 				AdvancedByteBufFormatTest.class.toString(),
 				LogLevel.DEBUG,
 				Charset.defaultCharset());
@@ -41,7 +45,7 @@ public class AdvancedByteBufFormatTest {
 	@Test
 	public void createHexDumpLoggingHandler() {
 		final LoggingHandler loggingHandler =
-			AdvancedByteBufFormat.HEX_DUMP.toLoggingHandler(
+			HEX_DUMP.toLoggingHandler(
 				AdvancedByteBufFormatTest.class.toString(),
 				LogLevel.DEBUG,
 				Charset.defaultCharset());
@@ -53,7 +57,7 @@ public class AdvancedByteBufFormatTest {
 	@Test
 	public void createTextualLoggingHandler() {
 		final LoggingHandler loggingHandler =
-			AdvancedByteBufFormat.TEXTUAL.toLoggingHandler(
+			TEXTUAL.toLoggingHandler(
 				AdvancedByteBufFormatTest.class.toString(),
 				LogLevel.DEBUG,
 				Charset.defaultCharset());
@@ -61,4 +65,40 @@ public class AdvancedByteBufFormatTest {
 		assertThat(loggingHandler).isInstanceOf(ReactorNettyLoggingHandler.class);
 	}
 
+	@Test
+	public void simpleToLoggingHandlerBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> SIMPLE.toLoggingHandler(null, LogLevel.DEBUG, Charset.defaultCharset()))
+				.withMessage("name");
+
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> SIMPLE.toLoggingHandler("name", null, Charset.defaultCharset()))
+				.withMessage("level");
+	}
+
+	@Test
+	public void hexdumpToLoggingHandlerBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> HEX_DUMP.toLoggingHandler(null, LogLevel.DEBUG, Charset.defaultCharset()))
+				.withMessage("name");
+
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> HEX_DUMP.toLoggingHandler("name", null, Charset.defaultCharset()))
+				.withMessage("level");
+	}
+
+	@Test
+	public void textualToLoggingHandlerBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> TEXTUAL.toLoggingHandler(null, LogLevel.DEBUG, Charset.defaultCharset()))
+				.withMessage("name");
+
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> TEXTUAL.toLoggingHandler("name", null, Charset.defaultCharset()))
+				.withMessage("level");
+
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> TEXTUAL.toLoggingHandler("name", LogLevel.DEBUG, null))
+				.withMessage("charset");
+	}
 }

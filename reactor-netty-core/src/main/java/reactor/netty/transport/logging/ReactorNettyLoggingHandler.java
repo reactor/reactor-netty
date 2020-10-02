@@ -24,6 +24,8 @@ import io.netty.handler.logging.ByteBufFormat;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Extends {@link LoggingHandler} and logs all events in a
  * textual representation so it's human readable and less verbose.
@@ -46,7 +48,7 @@ public final class ReactorNettyLoggingHandler extends LoggingHandler {
 	 */
 	ReactorNettyLoggingHandler(final String name, final LogLevel level, final Charset charset) {
 		super(name, level);
-		this.charset = charset;
+		this.charset = requireNonNull(charset, "charset");
 	}
 
 	@Override

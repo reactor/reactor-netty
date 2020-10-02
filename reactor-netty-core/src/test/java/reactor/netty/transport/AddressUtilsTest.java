@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class AddressUtilsTest {
 
@@ -170,4 +171,75 @@ public class AddressUtilsTest {
 		assertThat(socketAddress.getHostString()).isEqualTo("example.com");
 	}
 
+	@Test
+	public void createInetSocketAddressBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> AddressUtils.createInetSocketAddress(null, 0, true))
+				.withMessage("hostname");
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> AddressUtils.createInetSocketAddress("hostname", -1, true))
+				.withMessage("port out of range:-1");
+	}
+
+	@Test
+	public void createResolvedBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> AddressUtils.createResolved(null, 0))
+				.withMessage("hostname");
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> AddressUtils.createResolved("hostname", -1))
+				.withMessage("port out of range:-1");
+	}
+
+	@Test
+	public void createUnresolvedBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> AddressUtils.createUnresolved(null, 0))
+				.withMessage("hostname");
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> AddressUtils.createUnresolved("hostname", -1))
+				.withMessage("port out of range:-1");
+	}
+
+	@Test
+	public void replaceUnresolvedNumericIpBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> AddressUtils.replaceUnresolvedNumericIp(null))
+				.withMessage("inetSocketAddress");
+	}
+
+	@Test
+	public void replaceWithResolvedBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> AddressUtils.replaceWithResolved(null))
+				.withMessage("inetSocketAddress");
+	}
+
+	@Test
+	public void updateHostBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> AddressUtils.updateHost(null, null))
+				.withMessage("hostname");
+	}
+
+	@Test
+	public void updatePortBadValues() {
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> AddressUtils.updatePort(null, -1))
+				.withMessage("port out of range:-1");
+	}
+
+	@Test
+	public void parseAddressBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> AddressUtils.parseAddress(null, 0))
+				.withMessage("address");
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> AddressUtils.parseAddress("address", -1))
+				.withMessage("port out of range:-1");
+	}
 }
