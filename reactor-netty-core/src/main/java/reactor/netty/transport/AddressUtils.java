@@ -88,6 +88,33 @@ public final class AddressUtils {
 	}
 
 	/**
+	 * Parse unresolved InetSocketAddress. Numeric IP addresses will be detected and
+	 * resolved.
+	 *
+	 * @param address ip-address or hostname
+	 * @param defaultPort the default port
+	 * @return InetSocketAddress for given parameters
+	 */
+	public static InetSocketAddress parseAddress(String address, int defaultPort) {
+		requireNonNull(address, "address");
+		int separatorIdx = address.lastIndexOf(':');
+		int ipV6HostSeparatorIdx = address.lastIndexOf(']');
+		if (separatorIdx > ipV6HostSeparatorIdx) {
+			if (separatorIdx == address.indexOf(':') || ipV6HostSeparatorIdx > -1) {
+				String port = address.substring(separatorIdx + 1);
+				if (port.chars().allMatch(Character::isDigit)) {
+					return AddressUtils.createUnresolved(address.substring(0, separatorIdx),
+							Integer.parseInt(port));
+				}
+				else {
+					return AddressUtils.createUnresolved(address.substring(0, separatorIdx), defaultPort);
+				}
+			}
+		}
+		return AddressUtils.createUnresolved(address, defaultPort);
+	}
+
+	/**
 	 * Replaces an unresolved InetSocketAddress with a resolved instance in the case that
 	 * the passed address is a numeric IP address (both IPv4 and IPv6 are supported).
 	 *
@@ -184,33 +211,6 @@ public final class AddressUtils {
 		String host = addr == null ? inet.getHostName() : addr.getHostAddress();
 
 		return createUnresolved(host, port);
-	}
-
-	/**
-	 * Parse unresolved InetSocketAddress. Numeric IP addresses will be detected and
-	 * resolved.
-	 *
-	 * @param address ip-address or hostname
-	 * @param defaultPort the default port
-	 * @return InetSocketAddress for given parameters
-	 */
-	public static InetSocketAddress parseAddress(String address, int defaultPort) {
-		requireNonNull(address, "address");
-		int separatorIdx = address.lastIndexOf(':');
-		int ipV6HostSeparatorIdx = address.lastIndexOf(']');
-		if (separatorIdx > ipV6HostSeparatorIdx) {
-			if (separatorIdx == address.indexOf(':') || ipV6HostSeparatorIdx > -1) {
-				String port = address.substring(separatorIdx + 1);
-				if (port.chars().allMatch(Character::isDigit)) {
-					return AddressUtils.createUnresolved(address.substring(0, separatorIdx),
-							Integer.parseInt(port));
-				}
-				else {
-					return AddressUtils.createUnresolved(address.substring(0, separatorIdx), defaultPort);
-				}
-			}
-		}
-		return AddressUtils.createUnresolved(address, defaultPort);
 	}
 
 	@Nullable
