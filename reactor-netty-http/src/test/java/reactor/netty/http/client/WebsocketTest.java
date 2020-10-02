@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
@@ -28,9 +29,12 @@ import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -50,6 +54,8 @@ import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.ReplayProcessor;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
@@ -63,6 +69,7 @@ import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.hamcrest.CoreMatchers.is;
 
 /**
@@ -1385,5 +1392,24 @@ public class WebsocketTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 		assertThat(clientHandler.get()).isEqualTo(compress);
+	}
+
+	@Test
+	public void websocketOperationsBadValues() throws Exception {
+		EmbeddedChannel channel = new EmbeddedChannel();
+		HttpClientOperations parent = new HttpClientOperations(Connection.from(channel),
+				ConnectionObserver.emptyListener(), ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
+		WebsocketClientOperations ops = new WebsocketClientOperations(new URI(""),
+				WebsocketClientSpec.builder().build(), parent);
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> ops.aggregateFrames(-1))
+				.withMessage("maxContentLength: -1 (expected: >= 0)");
+
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> ops.send(null));
+
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> ops.sendString(null, Charset.defaultCharset()));
 	}
 }

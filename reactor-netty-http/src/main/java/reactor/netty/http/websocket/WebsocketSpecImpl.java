@@ -16,6 +16,8 @@
 
 package reactor.netty.http.websocket;
 
+import reactor.util.annotation.Nullable;
+
 /**
  * Configurer implementation for {@link WebsocketSpec}
  *
@@ -37,6 +39,7 @@ public class WebsocketSpecImpl implements WebsocketSpec {
 	}
 
 	@Override
+	@Nullable
 	public final String protocols() {
 		return protocols;
 	}

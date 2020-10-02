@@ -32,6 +32,8 @@ public interface WebsocketServerSpec extends WebsocketSpec {
 	 * maxFramePayloadLength = 65536
 	 * <br>
 	 * handlePing = false
+	 * <br>
+	 * compress = false
 	 *
 	 * @return {@link WebsocketServerSpec.Builder}
 	 */

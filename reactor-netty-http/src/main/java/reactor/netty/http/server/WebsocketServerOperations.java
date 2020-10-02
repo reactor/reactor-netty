@@ -259,6 +259,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	}
 
 	@Override
+	@Nullable
 	public String selectedSubprotocol() {
 		return handshaker.selectedSubprotocol();
 	}

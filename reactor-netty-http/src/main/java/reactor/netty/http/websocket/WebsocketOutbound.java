@@ -40,10 +40,11 @@ public interface WebsocketOutbound extends NettyOutbound {
 
 	/**
 	 * Returns the websocket subprotocol negotiated by the client and server during
-	 * the websocket handshake, or empty if none was requested.
+	 * the websocket handshake, or null if none was requested.
 	 *
-	 * @return the subprotocols
+	 * @return the subprotocol, or null
 	 */
+	@Nullable
 	String selectedSubprotocol();
 
 	@Override
@@ -99,8 +100,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	Mono<Void> sendClose(int rsv, int statusCode, @Nullable String reasonText);
 
 	@Override
-	default NettyOutbound sendString(Publisher<? extends String> dataStream,
-			Charset charset) {
+	default NettyOutbound sendString(Publisher<? extends String> dataStream, Charset charset) {
 		return sendObject(Flux.from(dataStream)
 		                      .map(stringToWebsocketFrame));
 	}
