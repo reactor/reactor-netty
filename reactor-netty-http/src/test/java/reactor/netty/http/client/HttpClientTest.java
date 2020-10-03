@@ -32,9 +32,12 @@ import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -2581,4 +2584,85 @@ public class HttpClientTest {
 		assertThat(collectedUris).isNotEmpty()
 		                         .containsOnly("/stream/{n}");
 	}
+
+	/**
+	 * Verify that adding a parameter to a base with an existing value-less
+	 * parameter uses the ampersand delimiter. Issue #1058
+	 */
+	@Test
+	public final void testQueryParameterAppendsAdditionalParam() {
+		// given
+		final String base = "https://example.com/path?flag";
+		final HttpClient original = HttpClient.create().baseUrl(base);
+
+		// when
+		final HttpClient result = original.queryParameter("key with spaces", "value with spaces");
+
+		// then
+		final HttpClientConfig configuration = result.configuration();
+		final String urlString = configuration.baseUrl();
+		assertThat(urlString).isEqualTo("https://example.com/path?flag&key%20with%20spaces=value%20with%20spaces");
+	}
+
+	/**
+	 * Verify that adding a value-less parameter to a base with existing
+	 * parameters uses the ampersand delimiter. Issue #1058
+	 */
+	@Test
+	public final void testQueryParameterAppendsFlag() {
+		// given
+		final String base = "https://example.com/path?key%20with%20spaces=value%20with%20spaces";
+		final HttpClient original = HttpClient.create().baseUrl(base);
+
+		// when
+		final HttpClient result = original.queryParameter("ausführlich");
+
+		// then
+		final HttpClientConfig configuration = result.configuration();
+		final String urlString = configuration.baseUrl();
+		assertThat(urlString)
+		        .isEqualTo("https://example.com/path?key%20with%20spaces=value%20with%20spaces&ausf%C3%BChrlich");
+	}
+
+	/**
+	 * Verify that adding parameters sets the question mark delimiter. Issue
+	 * #1058
+	 */
+	@Test
+	public final void testQueryParametersSetsParams() {
+		// given
+		final String base = "https://example.com/path";
+		final HttpClient original = HttpClient.create().baseUrl(base);
+		final NavigableMap<String, String> params = new TreeMap<String, String>();
+		params.put("colon-separated values", "a:b:c:d");
+		params.put("comma-separated values", "1,2,3,4");
+
+		// when
+		final HttpClient result = original.queryParameters(params.entrySet());
+
+		// then
+		final HttpClientConfig configuration = result.configuration();
+		final String urlString = configuration.baseUrl();
+		assertThat(urlString).isEqualTo(
+		        "https://example.com/path?colon-separated%20values=a%3Ab%3Ac%3Ad&comma-separated%20values=1%2C2%2C3%2C4");
+	}
+
+	/**
+	 * Verify that adding no parameters keeps the URL unaltered. Issue #1058
+	 */
+	@Test
+	public final void testQueryParametersHandlesEmptyList() {
+		// given
+		final String base = "https://example.com/path?flag&key%20with%20spaces=value%20with%20spaces";
+		final HttpClient original = HttpClient.create().baseUrl(base);
+
+		// when
+		final HttpClient result = original.queryParameters(Collections.emptyList());
+
+		// then
+		final HttpClientConfig configuration = result.configuration();
+		final String urlString = configuration.baseUrl();
+		assertThat(urlString).isEqualTo(base);
+	}
+
 }

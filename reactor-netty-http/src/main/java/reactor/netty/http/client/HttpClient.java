@@ -17,7 +17,10 @@ package reactor.netty.http.client;
 
 import java.net.SocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -26,6 +29,7 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -34,6 +38,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -456,6 +461,25 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		HttpClient dup = duplicate();
 		dup.configuration().baseUrl = baseUrl;
 		return dup;
+	}
+
+	/**
+	 * Configure URI to use for this request/response.
+	 * <p>Note: Configured {@code baseUrl} only applies when used with
+	 * {@link UriConfiguration#uri(String)} or
+	 * {@link UriConfiguration#uri(Mono)}.
+	 *
+	 * @param urlEncoder the encoder that will generate the base URL. It
+	 *                   <strong>must</strong> be able to generate valid
+	 *                   {@link URI URIs}. Cannot be null.
+	 * @return the appropriate sending or receiving contract
+	 */
+	public final HttpClient baseUrl(final QueryStringEncoder urlEncoder) {
+		try {
+			return baseUrl(urlEncoder.toUri().toString());
+		} catch (final URISyntaxException use) {
+			throw new IllegalArgumentException("Encoder generated an invalid URI: " + use.getMessage(), use);
+		}
 	}
 
 	/**
@@ -975,6 +999,89 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
+	 * Encode and append a series of query parameters.
+	 *
+	 * @param queryParameters non-encoded query parameters to append to the URL.
+	 * @return a new {@link HttpClient} with the parameters appended
+	 */
+	public final HttpClient queryParameters(final Iterable<Entry<String, String>> queryParameters) {
+		final HttpClientConfig config = configuration();
+		try {
+			final String originalBaseUrl = config.baseUrl();
+			final String baseUrlWithoutQueryParameters = QUERY_PATTERN.matcher(originalBaseUrl).replaceAll("");
+			final QueryStringEncoder encoder = new QueryStringEncoder(baseUrlWithoutQueryParameters);
+
+			for (final Entry<String, String> entry : queryParameters) {
+				encoder.addParam(entry.getKey(), entry.getValue());
+			}
+
+			final URI originalUri = new URI(originalBaseUrl);
+			if (originalUri.getRawQuery() != null) {
+				/*
+				 * Existing base URL already had query parameters. Note, we cannot
+				 * simply use encoder.addParam on the original parameters. We do not
+				 * want to double-encode them. We also cannot use the QueryStringDecoder
+				 * to decode them first because it incorrectly converts value-less query
+				 * parameters into key value pairs with 0-length values.
+				 */
+				final String urlWithNewParameters = encoder.toUri().toString();
+				final int querySeparatorIndex = urlWithNewParameters.indexOf('?');
+				if (querySeparatorIndex < 0) {
+					return this;
+				}
+				final String prefix = urlWithNewParameters.substring(0, querySeparatorIndex);
+				final String suffix = urlWithNewParameters.substring(querySeparatorIndex + 1);
+				// retain the original parameters' positions and ordering
+				final String newBaseUrl = prefix + '?' + originalUri.getRawQuery() + '&' + suffix;
+				return baseUrl(newBaseUrl);
+			}
+
+			return baseUrl(encoder);
+		} catch (final URISyntaxException use) {
+			throw new IllegalStateException(
+			        "Base URL prior to adding query parameters was invalid: " + use.getMessage(), use);
+		}
+	}
+
+	/**
+	 * Encode and append a key value pair to the query string. Multiple
+	 * calls with the same name will append the name each time. e.g. calling
+	 * <code>queryParameter( "id", "a" ); queryParameter( "id", "b" );</code>
+	 * will result in <code>id=a&id=b</code>.
+	 *
+	 * @param name  the non-encoded query parameter key (not null)
+	 * @param value the non-encoded query parameter value (may be null)
+	 * @return a new {@link HttpClient} with the parameter appended
+	 */
+	public final HttpClient queryParameter(final String name, final String value) {
+		final Entry<String, String> entry = new Entry<String, String>() {
+
+			public String getKey() {
+				return name;
+			}
+
+			public String getValue() {
+				return value;
+			}
+
+			public String setValue(String value) {
+				throw new UnsupportedOperationException();
+			}
+		};
+		return queryParameters(Collections.singleton(entry));
+	}
+
+	/**
+	 * Encode and append a value-less query parameter
+	 *
+	 * @param name the non-encoded query parameter to add
+	 * @return a new {@link HttpClient} with the parameter appended
+	 */
+	public final HttpClient queryParameter(final String name) {
+		return queryParameter(name, null);
+	}
+
+	/**
 	 * Apply headers configuration.
 	 *
 	 * @param headerBuilder the header {@link Consumer} to invoke before requesting
@@ -1405,4 +1512,6 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	static final String WS_SCHEME = "ws";
 
 	static final String WSS_SCHEME = "wss";
+
+	static final Pattern QUERY_PATTERN = Pattern.compile("\\?.*$");
 }
