@@ -2665,4 +2665,53 @@ public class HttpClientTest {
 		assertThat(urlString).isEqualTo(base);
 	}
 
+	/**
+	 * Verify that repeatedly adding parameters keeps the original
+	 * parameters unaltered. Issue #1058
+	 */
+	@Test
+	public final void testQueryParameterAppendsMultiple() {
+		// given
+		final String base = "https://example.com/path?flag&key%20with%20spaces=value%20with%20spaces";
+		final HttpClient original = HttpClient.create().baseUrl(base);
+
+		// when
+		final HttpClient result = original
+				.queryParameter("coördinated", "True")
+				.queryParameter("debug")
+		        .queryParameter("verbose")
+		        .queryParameter("viewLevel", "Summary");
+
+		// then
+		final HttpClientConfig configuration = result.configuration();
+		final String urlString = configuration.baseUrl();
+		assertThat(urlString).isEqualTo(
+		        "https://example.com/path?flag&key%20with%20spaces=value%20with%20spaces&co%C3%B6rdinated=True&debug&verbose&viewLevel=Summary");
+	}
+
+	/**
+	 * Verify that adding multiple parameters keeps the original parameters
+	 * unaltered. Issue #1058
+	 */
+	@Test
+	public final void testQueryParametersAppendsMultiple() {
+		// given
+		final String base = "https://example.com/path?flag&key%20with%20spaces=value%20with%20spaces";
+		final HttpClient original = HttpClient.create().baseUrl(base);
+		final NavigableMap<String, String> additionalQueryParameters = new TreeMap<String, String>();
+		additionalQueryParameters.put("coördinated", "True");
+		additionalQueryParameters.put("debug", null);
+		additionalQueryParameters.put("verbose", null);
+		additionalQueryParameters.put("viewLevel", "Summary");
+
+		// when
+		final HttpClient result = original.queryParameters(additionalQueryParameters.entrySet());
+
+		// then
+		final HttpClientConfig configuration = result.configuration();
+		final String urlString = configuration.baseUrl();
+		assertThat(urlString).isEqualTo(
+		        "https://example.com/path?flag&key%20with%20spaces=value%20with%20spaces&co%C3%B6rdinated=True&debug&verbose&viewLevel=Summary");
+	}
+
 }
