@@ -83,6 +83,7 @@ public interface LoopResources extends Disposable {
 	 * same thread stack
 	 */
 	static EventLoopGroup colocate(EventLoopGroup group) {
+		Objects.requireNonNull(group, "group");
 		return new ColocatedEventLoopGroup(group);
 	}
 
@@ -95,6 +96,9 @@ public interface LoopResources extends Disposable {
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
 	static LoopResources create(String prefix) {
+		if (Objects.requireNonNull(prefix, "prefix").isEmpty()) {
+			throw new IllegalArgumentException("Cannot use empty prefix");
+		}
 		return new DefaultLoopResources(prefix, DEFAULT_IO_SELECT_COUNT, DEFAULT_IO_WORKER_COUNT, true);
 	}
 
@@ -109,6 +113,9 @@ public interface LoopResources extends Disposable {
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
 	static LoopResources create(String prefix, int workerCount, boolean daemon) {
+		if (Objects.requireNonNull(prefix, "prefix").isEmpty()) {
+			throw new IllegalArgumentException("Cannot use empty prefix");
+		}
 		if (workerCount < 1) {
 			throw new IllegalArgumentException("Must provide a strictly positive worker threads number, was: " + workerCount);
 		}

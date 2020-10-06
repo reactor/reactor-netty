@@ -441,6 +441,7 @@ public final class SslProvider {
 	}
 
 	public void configure(SslHandler sslHandler) {
+		Objects.requireNonNull(sslHandler, "sslHandler");
 		sslHandler.setHandshakeTimeoutMillis(handshakeTimeoutMillis);
 		sslHandler.setCloseNotifyFlushTimeoutMillis(closeNotifyFlushTimeoutMillis);
 		sslHandler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeoutMillis);
@@ -450,6 +451,7 @@ public final class SslProvider {
 	}
 
 	public void addSslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug) {
+		Objects.requireNonNull(channel, "channel");
 		if (sniProvider != null) {
 			sniProvider.addSniHandler(channel, sslDebug);
 			return;

@@ -70,7 +70,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	 * as metrics-related frameworks (such as micrometer) don't hold strong references to metrics providing objects
 	 * (rightfully so). When the PoolKey is garbage collected, the metrics will become garbage collectable again.
 	 *
-	 * @see #acquire(TransportConfig, ConnectionObserver, Supplier, AddressResolverGroup) 
+	 * @see #acquire(TransportConfig, ConnectionObserver, Supplier, AddressResolverGroup)
 	 * @see #disposeLater()
 	 */
 	private final Map<PoolKey, ConnectionPoolMetrics> poolMetrics = new WeakHashMap<>();
@@ -88,6 +88,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			ConnectionObserver connectionObserver,
 			@Nullable Supplier<? extends SocketAddress> remote,
 			@Nullable AddressResolverGroup<?> resolverGroup) {
+		Objects.requireNonNull(config, "config");
+		Objects.requireNonNull(connectionObserver, "connectionObserver");
 		Objects.requireNonNull(remote, "remoteAddress");
 		Objects.requireNonNull(resolverGroup, "resolverGroup");
 		return Mono.create(sink -> {

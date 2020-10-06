@@ -44,6 +44,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
+import static java.util.Objects.requireNonNull;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -102,6 +103,7 @@ public abstract class TransportConfig {
 	 */
 	public final ChannelInitializer<Channel> channelInitializer(ConnectionObserver connectionObserver,
 			@Nullable SocketAddress remoteAddress, boolean onServer) {
+		requireNonNull(connectionObserver, "connectionObserver");
 		return new TransportChannelInitializer(this, connectionObserver, remoteAddress, onServer);
 	}
 
@@ -203,7 +205,7 @@ public abstract class TransportConfig {
 		this.attrs = Collections.emptyMap();
 		this.doOnChannelInit = ChannelPipelineConfigurer.emptyConfigurer();
 		this.observer = ConnectionObserver.emptyListener();
-		this.options = Objects.requireNonNull(options, "options");
+		this.options = requireNonNull(options, "options");
 		this.preferNative = LoopResources.DEFAULT_NATIVE;
 	}
 
@@ -212,10 +214,10 @@ public abstract class TransportConfig {
 	 */
 	protected TransportConfig(Map<ChannelOption<?>, ?> options, Supplier<? extends SocketAddress> bindAddress) {
 		this.attrs = Collections.emptyMap();
-		this.bindAddress = Objects.requireNonNull(bindAddress, "bindAddress");
+		this.bindAddress = requireNonNull(bindAddress, "bindAddress");
 		this.doOnChannelInit = ChannelPipelineConfigurer.emptyConfigurer();
 		this.observer = ConnectionObserver.emptyListener();
-		this.options = Objects.requireNonNull(options, "options");
+		this.options = requireNonNull(options, "options");
 		this.preferNative = LoopResources.DEFAULT_NATIVE;
 	}
 
@@ -362,7 +364,7 @@ public abstract class TransportConfig {
 
 			if (config.metricsRecorder != null) {
 				ChannelOperations.addMetricsHandler(channel,
-						Objects.requireNonNull(config.metricsRecorder.get(), "Metrics recorder supplier returned null"),
+						requireNonNull(config.metricsRecorder.get(), "Metrics recorder supplier returned null"),
 						remoteAddress,
 						onServer);
 

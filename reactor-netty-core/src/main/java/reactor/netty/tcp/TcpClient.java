@@ -46,6 +46,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
+import static java.util.Objects.requireNonNull;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -89,6 +90,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 * @return a {@link TcpClient}
 	 */
 	public static TcpClient create(ConnectionProvider provider) {
+		requireNonNull(provider, "provider");
 		return new TcpClientConnect(provider);
 	}
 
@@ -137,7 +139,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	@Deprecated
 	@SuppressWarnings("ReturnValueIgnored")
 	public final TcpClient bootstrap(Function<? super Bootstrap, ? extends Bootstrap> bootstrapMapper) {
-		Objects.requireNonNull(bootstrapMapper, "bootstrapMapper");
+		requireNonNull(bootstrapMapper, "bootstrapMapper");
 		TcpClientBootstrap tcpClientBootstrap = new TcpClientBootstrap(this);
 		// ReturnValueIgnored is deliberate
 		bootstrapMapper.apply(tcpClientBootstrap);
@@ -183,7 +185,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 * @return a new {@link TcpClient}
 	 */
 	public TcpClient handle(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
-		Objects.requireNonNull(handler, "handler");
+		requireNonNull(handler, "handler");
 		return doOnConnected(new OnConnectedHandle(handler));
 	}
 
@@ -291,7 +293,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 * @return a new {@link TcpClient}
 	 */
 	public TcpClient secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
+		requireNonNull(sslProviderBuilder, "sslProviderBuilder");
 		TcpClient dup = duplicate();
 		SslProvider.SslContextSpec builder = SslProvider.builder();
 		sslProviderBuilder.accept(builder);
@@ -307,7 +309,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 * @return a new {@link TcpClient}
 	 */
 	public TcpClient secure(SslProvider sslProvider) {
-		Objects.requireNonNull(sslProvider, "sslProvider");
+		requireNonNull(sslProvider, "sslProvider");
 		TcpClient dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
 		return dup;

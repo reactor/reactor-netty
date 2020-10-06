@@ -179,6 +179,8 @@ public final class ReactorNetty {
 	 * @return a formatted msg
 	 */
 	public static String format(Channel channel, String msg) {
+		Objects.requireNonNull(channel, "channel");
+		Objects.requireNonNull(msg, "msg");
 		if (LOG_CHANNEL_INFO) {
 			String channelStr = channel.toString();
 			return new StringBuilder(channelStr.length() + 1 + msg.length())
@@ -196,6 +198,7 @@ public final class ReactorNetty {
 	 * Pretty hex dump will be returned when the object is {@link ByteBuf} or {@link ByteBufHolder}
 	 */
 	public static String toPrettyHexDump(Object msg) {
+		Objects.requireNonNull(msg, "msg");
 		String result;
 		if (msg instanceof ByteBufHolder &&
 				!Objects.equals(Unpooled.EMPTY_BUFFER, ((ByteBufHolder) msg).content())) {

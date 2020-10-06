@@ -162,6 +162,7 @@ public final class ProxyProvider {
 	}
 
 	public void addProxyHandler(Channel channel) {
+		Objects.requireNonNull(channel, "channel");
 		ChannelPipeline pipeline = channel.pipeline();
 		pipeline.addFirst(NettyPipeline.ProxyHandler, newProxyHandler());
 

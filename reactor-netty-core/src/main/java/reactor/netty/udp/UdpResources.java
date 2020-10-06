@@ -30,6 +30,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Hold the default UDP resources
  *
@@ -110,6 +112,8 @@ public class UdpResources implements LoopResources {
 	 * @since 0.9.3
 	 */
 	public static Mono<Void> shutdownLater(Duration quietPeriod, Duration timeout) {
+		requireNonNull(quietPeriod, "quietPeriod");
+		requireNonNull(timeout, "timeout");
 		return Mono.defer(() -> {
 			UdpResources resources = udpResources.getAndSet(null);
 			if (resources != null) {
@@ -137,11 +141,15 @@ public class UdpResources implements LoopResources {
 
 	@Override
 	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoopGroup group) {
+		requireNonNull(channelType, "channelType");
+		requireNonNull(group, "group");
 		return defaultLoops.onChannel(channelType, group);
 	}
 
 	@Override
 	public <CHANNEL extends Channel> Class<? extends CHANNEL> onChannelClass(Class<CHANNEL> channelType, EventLoopGroup group) {
+		requireNonNull(channelType, "channelType");
+		requireNonNull(group, "group");
 		return defaultLoops.onChannelClass(channelType, group);
 	}
 
