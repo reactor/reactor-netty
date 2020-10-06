@@ -15,19 +15,27 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelOperations;
-import reactor.netty.http.Http2StreamBridgeHandler;
+
+import static reactor.netty.ReactorNetty.format;
 
 /**
- * Client specific {@link Http2StreamBridgeHandler}.
+ * This handler is intended to work together with {@link Http2StreamFrameToHttpObjectCodec}
+ * it converts the outgoing messages into objects expected by
+ * {@link Http2StreamFrameToHttpObjectCodec}.
  *
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-final class Http2StreamBridgeClientHandler extends Http2StreamBridgeHandler {
+final class Http2StreamBridgeClientHandler extends ChannelDuplexHandler {
 
 	final ConnectionObserver observer;
 	final ChannelOperations.OnSetup opsFactory;
@@ -45,11 +53,26 @@ final class Http2StreamBridgeClientHandler extends Http2StreamBridgeHandler {
 
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) {
-		super.handlerAdded(ctx);
+		if (HttpClientOperations.log.isDebugEnabled()) {
+			HttpClientOperations.log.debug(format(ctx.channel(), "New HTTP/2 stream"));
+		}
 
 		ChannelOperations<?, ?> ops = opsFactory.create(Connection.from(ctx.channel()), observer, null);
 		if (ops != null) {
 			ops.bind();
+		}
+	}
+
+	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
+	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+		if (msg instanceof ByteBuf) {
+			//"FutureReturnValueIgnored" this is deliberate
+			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
+		}
+		else {
+			//"FutureReturnValueIgnored" this is deliberate
+			ctx.write(msg, promise);
 		}
 	}
 }

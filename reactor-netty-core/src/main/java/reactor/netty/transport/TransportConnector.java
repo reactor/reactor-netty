@@ -56,6 +56,8 @@ import static reactor.netty.ReactorNetty.format;
  */
 public final class TransportConnector {
 
+	TransportConnector() {}
+
 	/**
 	 * Binds a {@link Channel}.
 	 *
@@ -107,7 +109,7 @@ public final class TransportConnector {
 	 * @param attrs the attributes
 	 */
 	@SuppressWarnings("unchecked")
-	public static void setAttributes(Channel channel, Map<AttributeKey<?>, ?> attrs) {
+	static void setAttributes(Channel channel, Map<AttributeKey<?>, ?> attrs) {
 		for (Map.Entry<AttributeKey<?>, ?> e : attrs.entrySet()) {
 			channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
 		}
@@ -120,7 +122,7 @@ public final class TransportConnector {
 	 * @param options the options
 	 */
 	@SuppressWarnings("unchecked")
-	public static void setChannelOptions(Channel channel, Map<ChannelOption<?>, ?> options, boolean isDomainSocket) {
+	static void setChannelOptions(Channel channel, Map<ChannelOption<?>, ?> options, boolean isDomainSocket) {
 		for (Map.Entry<ChannelOption<?>, ?> e : options.entrySet()) {
 			if (isDomainSocket &&
 					(ChannelOption.SO_REUSEADDR.equals(e.getKey()) || ChannelOption.TCP_NODELAY.equals(e.getKey()))) {
