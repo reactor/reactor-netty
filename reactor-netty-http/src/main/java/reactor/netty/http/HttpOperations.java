@@ -341,6 +341,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 * @return the decoded path portion from the provided {@code uri}
 	 */
 	public static String resolvePath(String uri) {
+		Objects.requireNonNull(uri, "uri");
 		if (uri.isEmpty()) {
 			return uri;
 		}

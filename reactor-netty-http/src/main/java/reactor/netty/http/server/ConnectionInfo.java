@@ -24,6 +24,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
 import reactor.util.annotation.Nullable;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Resolve information about the current connection, including the
  * host (server) address, the remote (client) address and the scheme.
@@ -110,6 +112,7 @@ public final class ConnectionInfo {
 	 * @return a new {@link ConnectionInfo}
 	 */
 	public ConnectionInfo withHostAddress(InetSocketAddress hostAddress) {
+		requireNonNull(hostAddress, "hostAddress");
 		return new ConnectionInfo(hostAddress, this.remoteAddress, this.scheme);
 	}
 
@@ -119,6 +122,7 @@ public final class ConnectionInfo {
 	 * @return a new {@link ConnectionInfo}
 	 */
 	public ConnectionInfo withRemoteAddress(InetSocketAddress remoteAddress) {
+		requireNonNull(remoteAddress, "remoteAddress");
 		return new ConnectionInfo(this.hostAddress, remoteAddress, this.scheme);
 	}
 
@@ -128,6 +132,7 @@ public final class ConnectionInfo {
 	 * @return a new {@link ConnectionInfo}
 	 */
 	public ConnectionInfo withScheme(String scheme) {
+		requireNonNull(scheme, "scheme");
 		return new ConnectionInfo(this.hostAddress, this.remoteAddress, scheme);
 	}
 

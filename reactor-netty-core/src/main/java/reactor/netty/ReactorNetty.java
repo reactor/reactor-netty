@@ -57,6 +57,8 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Internal helpers for reactor-netty contracts
  *
@@ -683,7 +685,7 @@ public final class ReactorNetty {
 
 		OutboundIdleStateHandler(long idleTimeout, Runnable onWriteIdle) {
 			super(0, idleTimeout, 0, TimeUnit.MILLISECONDS);
-			this.onWriteIdle = onWriteIdle;
+			this.onWriteIdle = requireNonNull(onWriteIdle, "onWriteIdle");
 		}
 
 		@Override
@@ -702,7 +704,7 @@ public final class ReactorNetty {
 
 		InboundIdleStateHandler(long idleTimeout, Runnable onReadIdle) {
 			super(idleTimeout, 0, 0, TimeUnit.MILLISECONDS);
-			this.onReadIdle = onReadIdle;
+			this.onReadIdle = requireNonNull(onReadIdle, "onReadIdle");
 		}
 
 		@Override

@@ -427,6 +427,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 */
 	@Deprecated
 	public static HttpClient from(TcpClient tcpClient) {
+		Objects.requireNonNull(tcpClient, "tcpClient");
 		return HttpClientConnect.applyTcpClientConfig(tcpClient.configuration());
 	}
 
@@ -1277,6 +1278,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 0.9.11
 	 */
 	public final HttpClient responseTimeout(Duration timeout) {
+		Objects.requireNonNull(timeout, "timeout");
 		if (Objects.equals(timeout, configuration().responseTimeout)) {
 			return this;
 		}

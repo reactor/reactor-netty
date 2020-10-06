@@ -128,6 +128,7 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes file(String uri, String path) {
+		Objects.requireNonNull(path, "path");
 		return file(HttpPredicate.get(uri), Paths.get(path), null);
 	}
 

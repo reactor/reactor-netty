@@ -25,6 +25,8 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpResources;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Hold the default HTTP/1.x resources
  *
@@ -76,6 +78,8 @@ public final class HttpResources extends TcpResources {
 	 * @since 0.9.3
 	 */
 	public static Mono<Void> disposeLoopsAndConnectionsLater(Duration quietPeriod, Duration timeout) {
+		requireNonNull(quietPeriod, "quietPeriod");
+		requireNonNull(timeout, "timeout");
 		return Mono.defer(() -> {
 			HttpResources resources = httpResources.getAndSet(null);
 			if (resources != null) {

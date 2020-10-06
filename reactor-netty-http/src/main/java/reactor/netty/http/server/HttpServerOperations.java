@@ -753,7 +753,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ConnectionObserver listener,
 				@Nullable HttpRequest nettyRequest,
 				HttpResponse nettyResponse) {
-			super(c, listener, null, nettyRequest, null, null, null, null, false);
+			super(c, listener, null, nettyRequest, null, ServerCookieEncoder.STRICT, ServerCookieDecoder.STRICT, null, false);
 			this.customResponse = nettyResponse;
 		}
 

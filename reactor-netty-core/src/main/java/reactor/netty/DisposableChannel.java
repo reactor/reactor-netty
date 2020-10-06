@@ -18,13 +18,14 @@ package reactor.netty;
 
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.Objects;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.DatagramChannel;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Holds contextual information for the underlying channel and provides
@@ -90,7 +91,7 @@ public interface DisposableChannel extends Disposable {
 			return;
 		}
 
-		Objects.requireNonNull(timeout, "timeout");
+		requireNonNull(timeout, "timeout");
 
 		dispose();
 		try {
@@ -135,6 +136,7 @@ public interface DisposableChannel extends Disposable {
 	 * @return {@literal this}
 	 */
 	default DisposableChannel onDispose(Disposable onDispose) {
+		requireNonNull(onDispose, "onDispose");
 		onDispose().subscribe(null, e -> onDispose.dispose(), onDispose::dispose);
 		return this;
 	}

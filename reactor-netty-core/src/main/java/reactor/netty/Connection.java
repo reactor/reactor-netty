@@ -22,6 +22,8 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Hold contextual information for the underlying {@link Channel}
  *
@@ -39,6 +41,7 @@ public interface Connection extends DisposableChannel {
 	 * @return an existing {@link Connection} wrapper or create a simple new one
 	 */
 	static Connection from(Channel channel) {
+		requireNonNull(channel, "channel");
 		if(channel.hasAttr(ReactorNetty.CONNECTION)) {
 			return channel.attr(ReactorNetty.CONNECTION)
 			              .get();
@@ -56,6 +59,7 @@ public interface Connection extends DisposableChannel {
 	 */
 	@Nullable
 	default  <T extends Connection> T as(Class<T> clazz) {
+		requireNonNull(clazz, "clazz");
 		if(clazz.isAssignableFrom(this.getClass())) {
 			@SuppressWarnings("unchecked")
 			T thiz = (T) this;
@@ -160,7 +164,7 @@ public interface Connection extends DisposableChannel {
 	/**
 	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just after the reactor-added codecs. If a handler with a similar name already
-	 * exists, this operation is skipped. 
+	 * exists, this operation is skipped.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}.
 	 * <p>
@@ -180,7 +184,7 @@ public interface Connection extends DisposableChannel {
 	/**
 	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just after the reactor-added codecs. If a handler with a similar name already
-	 * exists, this operation is skipped. 
+	 * exists, this operation is skipped.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
 	 * <p>

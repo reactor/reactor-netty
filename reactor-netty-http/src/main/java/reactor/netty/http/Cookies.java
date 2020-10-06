@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -76,10 +77,10 @@ public final class Cookies {
 
 	private Cookies(HttpHeaders nettyHeaders, CharSequence cookiesHeaderName, boolean isClientChannel,
 					CookieDecoder decoder) {
-		this.nettyHeaders = nettyHeaders;
+		this.nettyHeaders = Objects.requireNonNull(nettyHeaders, "nettyHeaders");
 		this.cookiesHeaderName = cookiesHeaderName;
 		this.isClientChannel = isClientChannel;
-		this.decoder = decoder;
+		this.decoder = Objects.requireNonNull(decoder, "decoder");
 		cachedCookies = Collections.emptyMap();
 	}
 

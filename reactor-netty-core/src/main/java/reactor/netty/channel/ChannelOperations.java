@@ -18,7 +18,6 @@ package reactor.netty.channel;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
@@ -51,6 +50,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
+import static java.util.Objects.requireNonNull;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -72,6 +72,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param listener the listener to forward connection events to
 	 */
 	public static void addReactiveBridge(Channel ch, OnSetup opsFactory, ConnectionObserver listener) {
+		requireNonNull(ch, "channel");
+		requireNonNull(opsFactory, "opsFactory");
+		requireNonNull(listener, "listener");
 		ch.pipeline()
 		  .addLast(NettyPipeline.ReactiveBridge, new ChannelOperationsHandler(opsFactory, listener));
 	}
@@ -86,6 +89,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	public static void addMetricsHandler(Channel ch, ChannelMetricsRecorder recorder,
 			@Nullable SocketAddress remoteAddress, boolean onServer) {
+		requireNonNull(ch, "channel");
+		requireNonNull(recorder, "recorder");
 		SocketAddress remote = remoteAddress;
 		if (remote == null) {
 			remote = ch.remoteAddress();
@@ -129,8 +134,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	@SuppressWarnings("deprecation")
 	public ChannelOperations(Connection connection, ConnectionObserver listener) {
-		this.connection = Objects.requireNonNull(connection, "connection");
-		this.listener = Objects.requireNonNull(listener, "listener");
+		this.connection = requireNonNull(connection, "connection");
+		this.listener = requireNonNull(listener, "listener");
 		this.onTerminate = MonoProcessor.create();
 		this.inbound = new FluxReceive(this);
 	}
@@ -169,6 +174,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> withConnection(Consumer<? super Connection> withConnection) {
+		requireNonNull(withConnection, "withConnection");
 		withConnection.accept(this);
 		return this;
 	}
@@ -261,6 +267,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
+		requireNonNull(predicate, "predicate");
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
@@ -273,6 +280,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public NettyOutbound sendObject(Publisher<?> dataStream, Predicate<Object> predicate) {
+		requireNonNull(predicate, "predicate");
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
@@ -298,9 +306,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
 			BiFunction<? super Connection, ? super S, ?> mappedInput,
 			Consumer<? super S> sourceCleanup) {
-		Objects.requireNonNull(sourceInput, "sourceInput");
-		Objects.requireNonNull(mappedInput, "mappedInput");
-		Objects.requireNonNull(sourceCleanup, "sourceCleanup");
+		requireNonNull(sourceInput, "sourceInput");
+		requireNonNull(mappedInput, "mappedInput");
+		requireNonNull(sourceCleanup, "sourceCleanup");
 
 		return then(Mono.using(
 				sourceInput,

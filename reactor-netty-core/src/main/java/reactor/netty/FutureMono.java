@@ -46,6 +46,7 @@ public abstract class FutureMono extends Mono<Void> {
 	 * @return A {@link Mono} forwarding {@link Future} success or failure
 	 */
 	public static <F extends Future<Void>> Mono<Void> from(F future) {
+		Objects.requireNonNull(future, "future");
 		if(future.isDone()){
 			if(!future.isSuccess()){
 				return Mono.error(FutureSubscription.wrapError(future.cause()));

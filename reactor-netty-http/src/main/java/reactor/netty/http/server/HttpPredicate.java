@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -29,6 +28,8 @@ import java.util.regex.Pattern;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import reactor.util.annotation.Nullable;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A Predicate to match against ServerRequest
@@ -102,10 +103,6 @@ final class HttpPredicate
 	public static Predicate<HttpServerRequest> http(String uri,
 			@Nullable HttpVersion protocol,
 			HttpMethod method) {
-		if (null == uri) {
-			return null;
-		}
-
 		return new HttpPredicate(uri, protocol, method);
 	}
 
@@ -172,7 +169,8 @@ final class HttpPredicate
 	 * @see Predicate
 	 */
 	public static Predicate<HttpServerRequest> prefix(String prefix, HttpMethod method) {
-		Objects.requireNonNull(prefix, "Prefix must be provided");
+		requireNonNull(prefix, "Prefix must be provided");
+		requireNonNull(method, "method");
 
 		String target = prefix.startsWith("/") ? prefix : "/".concat(prefix);
 		//target = target.endsWith("/") ? target :  prefix.concat("/");
@@ -201,25 +199,17 @@ final class HttpPredicate
 	final String          uri;
 	final UriPathTemplate template;
 
-	@SuppressWarnings("unused")
-	public HttpPredicate(String uri) {
-		this(uri, null, null);
-	}
-
 	public HttpPredicate(String uri,
 			@Nullable HttpVersion protocol,
-			@Nullable HttpMethod method) {
+			HttpMethod method) {
 		this.protocol = protocol;
-		this.uri = uri;
-		this.method = method;
-		this.template = uri != null ? new UriPathTemplate(uri) : null;
+		this.uri = requireNonNull(uri, "uri");
+		this.method = requireNonNull(method, "method");
+		this.template = new UriPathTemplate(uri);
 	}
 
 	@Override
 	public Map<String, String> apply(Object key) {
-		if (template == null) {
-			return null;
-		}
 		Map<String, String> headers = template.match(key.toString());
 		if (null != headers && !headers.isEmpty()) {
 			return headers;
@@ -229,8 +219,8 @@ final class HttpPredicate
 
 	@Override
 	public final boolean test(HttpServerRequest key) {
-		return (protocol == null || protocol.equals(key.version())) && (method == null || method.equals(
-				key.method())) && (template == null || template.matches(key.uri()));
+		return (protocol == null || protocol.equals(key.version())) && method.equals(key.method()) &&
+				template.matches(key.uri());
 	}
 
 	/**
@@ -387,9 +377,7 @@ final class HttpPredicate
 
 		@Override
 		public boolean test(HttpServerRequest key) {
-			return (method == null || method.equals(key.method())) && key.uri()
-			                                                             .startsWith(
-					                                                             prefix);
+			return method.equals(key.method()) && key.uri().startsWith(prefix);
 		}
 	}
 }

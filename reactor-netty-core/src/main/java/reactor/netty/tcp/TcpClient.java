@@ -18,7 +18,6 @@ package reactor.netty.tcp;
 
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;

@@ -30,6 +30,8 @@ import reactor.core.Fuseable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoOperator;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * A decorating {@link Mono} {@link NettyInbound} with various {@link ByteBuf} related
  * operations.
@@ -89,6 +91,7 @@ public class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 	 * @return a {@link String} inbound {@link Mono}
 	 */
 	public final Mono<String> asString(Charset charset) {
+		requireNonNull(charset, "charset");
 		return handle((bb, sink) -> {
 			try {
 				sink.next(bb.readCharSequence(bb.readableBytes(), charset).toString());

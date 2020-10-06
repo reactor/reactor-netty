@@ -86,6 +86,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 
 	public static ByteBufFlux fromString(Publisher<? extends String> source, Charset charset, ByteBufAllocator allocator) {
 		Objects.requireNonNull(allocator, "allocator");
+		Objects.requireNonNull(charset, "charset");
 		return maybeFuse(
 				Flux.from(ReactorNetty.publisherOrScalarMap(
 						source, s -> {
@@ -248,6 +249,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	 * @return a {@link String} inbound {@link Flux}
 	 */
 	public final Flux<String> asString(Charset charset) {
+		Objects.requireNonNull(charset, "charset");
 		return handle((bb, sink) -> {
 			try {
 				sink.next(bb.readCharSequence(bb.readableBytes(), charset).toString());

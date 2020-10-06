@@ -84,6 +84,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 */
 	@Deprecated
 	public static HttpServer from(TcpServer tcpServer) {
+		Objects.requireNonNull(tcpServer, "tcpServer");
 		return HttpServerBind.applyTcpServerConfig(tcpServer.configuration());
 	}
 
