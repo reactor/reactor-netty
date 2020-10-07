@@ -18,7 +18,6 @@ package reactor.netty.http.server;
 import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -50,7 +49,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 	final ServerCookieEncoder                                     cookieEncoder;
 	final ConnectionObserver                                      listener;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-	final Function<? super Mono<Void>, ? extends Mono<Void>>      mapHandle;
+	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 
 	SocketAddress             remoteAddress;
 	Boolean                   secured;
@@ -58,7 +57,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 	Http2StreamBridgeServerHandler(ConnectionObserver listener,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
-			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle) {
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
 		this.listener = listener;

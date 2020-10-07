@@ -13,23 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.http.server;
+package reactor.netty.http.brave;
 
+import brave.propagation.TraceContext;
 import brave.test.http.ITHttpServer;
 import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.HttpServerRoutes;
 
 import java.io.IOException;
 
 import static brave.Span.Kind.SERVER;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ITBraveHttpServerTracingTest extends ITHttpServer {
+public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 	private DisposableServer disposableServer;
 
 	@After
@@ -63,20 +65,18 @@ public class ITBraveHttpServerTracingTest extends ITHttpServer {
 				                .get("/child", (req, res) ->
 				                        Mono.deferContextual(Mono::just)
 				                            .flatMap(ctx -> {
-				                                    TracingContext.of(ctx)
-				                                                  .ifPresent(tracing -> tracing.span(span ->
-				                                                          httpTracing.tracing()
-				                                                                     .tracer()
-				                                                                     .newChild(span.context())
-				                                                                     .name("child")
-				                                                                     .start()
-				                                                                     .finish()));
+				                                    httpTracing.tracing()
+				                                               .tracer()
+				                                               .newChild(ctx.get(TraceContext.class))
+				                                               .name("child")
+				                                               .start()
+				                                               .finish();
 
 				                                    return res.send();
 				                            }));
 
-		ConnectionObserver observer =
-				BraveHttpServerTracing.create(
+		ReactorNettyHttpTracing reactorNettyHttpTracing =
+				ReactorNettyHttpTracing.create(
 				        httpTracing,
 				        s -> {
 				            if ("/foo/bark".equals(s)) {
@@ -91,13 +91,12 @@ public class ITBraveHttpServerTracingTest extends ITHttpServer {
 				            return s;
 				        });
 
-		disposableServer = HttpServer.create()
-		                             .port(0)
-		                             .wiretap(true)
-		                             .forwarded(true)
-		                             .childObserve(observer)
-		                             .handle(routes)
-		                             .bindNow();
+		disposableServer = reactorNettyHttpTracing.decorateHttpServer(
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .forwarded(true)
+				          .handle(routes)).bindNow();
 	}
 
 	@Override
@@ -121,13 +120,13 @@ public class ITBraveHttpServerTracingTest extends ITHttpServer {
 			disposableServer.disposeNow();
 		}
 
-		disposableServer = HttpServer.create()
-		                             .port(0)
-		                             .wiretap(true)
-		                             .httpRequestDecoder(spec -> spec.maxInitialLineLength(10))
-		                             .childObserve(BraveHttpServerTracing.create(httpTracing))
-		                             .handle((req, res) -> res.sendString(Mono.just("this code should not be reached")))
-		                             .bindNow();
+		ReactorNettyHttpTracing reactorNettyHttpTracing = ReactorNettyHttpTracing.create(httpTracing);
+		disposableServer = reactorNettyHttpTracing.decorateHttpServer(
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .httpRequestDecoder(spec -> spec.maxInitialLineLength(10))
+				          .handle((req, res) -> res.sendString(Mono.just("this code should not be reached")))).bindNow();
 
 		this.get("/request_line_too_long");
 

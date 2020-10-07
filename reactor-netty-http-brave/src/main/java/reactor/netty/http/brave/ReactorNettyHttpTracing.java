@@ -62,9 +62,11 @@ public final class ReactorNettyHttpTracing {
 	}
 
 	final TracingHttpClientDecorator httpClientDecorator;
+	final TracingHttpServerDecorator httpServerDecorator;
 
 	ReactorNettyHttpTracing(HttpTracing httpTracing, Function<String, String> uriMapping) {
 		this.httpClientDecorator = new TracingHttpClientDecorator(httpTracing, uriMapping);
+		this.httpServerDecorator = new TracingHttpServerDecorator(httpTracing, uriMapping);
 	}
 
 	/**
@@ -77,8 +79,13 @@ public final class ReactorNettyHttpTracing {
 		return httpClientDecorator.decorate(client);
 	}
 
+	/**
+	 * Returns a decorated {@link HttpServer} in order to enable Brave instrumentation.
+	 *
+	 * @param server a server to decorate
+	 * @return a decorated {@link HttpServer}
+	 */
 	public HttpServer decorateHttpServer(HttpServer server) {
-		// TODO migrate the Brave instrumentation for HttpServer
-		return server;
+		return httpServerDecorator.decorate(server);
 	}
 }

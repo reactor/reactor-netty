@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.http.client;
+package reactor.netty.http.brave;
 
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.SamplingFlags;
@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
-import reactor.netty.http.brave.ReactorNettyHttpTracing;
+import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.util.context.ContextView;
 

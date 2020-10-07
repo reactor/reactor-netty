@@ -102,7 +102,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 
-	Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle;
+	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
 
 	Function<? super String, Map<String, String>> paramsResolver;
 
@@ -128,7 +128,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			@Nullable ConnectionInfo connectionInfo,
 			ServerCookieEncoder encoder,
 			ServerCookieDecoder decoder,
-			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle) {
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		this(c, listener, compressionPredicate, nettyRequest, connectionInfo, encoder, decoder, mapHandle, true);
 	}
 
@@ -139,7 +139,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			@Nullable ConnectionInfo connectionInfo,
 			ServerCookieEncoder encoder,
 			ServerCookieDecoder decoder,
-			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle,
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean resolvePath) {
 		super(c, listener);
 		this.nettyRequest = nettyRequest;

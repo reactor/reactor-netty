@@ -70,7 +70,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieEncoder                                     cookieEncoder;
 	final ServerCookieDecoder                                     cookieDecoder;
-	final Function<? super Mono<Void>, ? extends Mono<Void>>      mapHandle;
+	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 
 	boolean persistentConnection = true;
 	// Track pending responses to support client pipelining: https://tools.ietf.org/html/rfc7230#section-6.3.2
@@ -87,7 +87,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
-			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle) {
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		this.listener = listener;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;

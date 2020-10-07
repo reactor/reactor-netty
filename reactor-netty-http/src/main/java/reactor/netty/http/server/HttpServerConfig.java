@@ -45,6 +45,7 @@ import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.util.AsciiString;
 import reactor.core.publisher.Mono;
 import reactor.netty.ChannelPipelineConfigurer;
+import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
@@ -206,7 +207,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	HttpRequestDecoderSpec                                  decoder;
 	BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	Http2SettingsSpec                                       http2Settings;
-	Function<? super Mono<Void>, ? extends Mono<Void>>      mapHandle;
+	BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
 	int                                                     minCompressionSize;
 	HttpProtocol[]                                          protocols;
 	int                                                     _protocols;
@@ -332,7 +333,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	static void addStreamHandlers(Channel ch, ChannelOperations.OnSetup opsFactory, ConnectionObserver listener,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
-			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle) {
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		if (ACCESS_LOG) {
 			ch.pipeline()
 			  .addLast(NettyPipeline.AccessLogHandler, new AccessLogHandlerH2());
@@ -387,7 +388,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
 			ConnectionObserver listener,
-			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle,
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			ChannelOperations.OnSetup opsFactory,
 			boolean validate) {
 		p.remove(NettyPipeline.ReactiveBridge);
@@ -415,7 +416,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
 			ConnectionObserver listener,
-			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle,
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
@@ -471,7 +472,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			HttpRequestDecoderSpec decoder,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ConnectionObserver listener,
-			@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle,
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 			int minCompressionSize,
 			@Nullable Function<String, String> uriTagValue) {
@@ -560,13 +561,13 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ConnectionObserver                                      listener;
 		final ServerCookieEncoder                                     cookieEncoder;
 		final ServerCookieDecoder                                     cookieDecoder;
-		final Function<? super Mono<Void>, ? extends Mono<Void>>      mapHandle;
+		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 		final ChannelOperations.OnSetup                               opsFactory;
 
 		H2Codec(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				ServerCookieEncoder encoder, ServerCookieDecoder decoder,
-				@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle) {
+				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
 			this.listener = listener;
 			this.cookieEncoder = encoder;
@@ -590,7 +591,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2FrameCodec                                         http2FrameCodec;
 		final ConnectionObserver                                      listener;
-		final Function<? super Mono<Void>, ? extends Mono<Void>>      mapHandle;
+		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 		final ChannelOperations.OnSetup                               opsFactory;
 
 		Http11OrH2CleartextCodec(
@@ -600,7 +601,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				Http2Settings http2Settings,
 				ConnectionObserver listener,
-				@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle,
+				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 				ChannelOperations.OnSetup opsFactory,
 				boolean validate) {
 			this.cookieDecoder = cookieDecoder;
@@ -652,7 +653,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2Settings                                           http2Settings;
 		final ConnectionObserver                                      listener;
-		final Function<? super Mono<Void>, ? extends Mono<Void>>      mapHandle;
+		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 		final Supplier<? extends ChannelMetricsRecorder>              metricsRecorder;
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
@@ -666,7 +667,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				Http2Settings http2Settings,
 				ConnectionObserver listener,
-				@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle,
+				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 				int minCompressionSize,
 				ChannelOperations.OnSetup opsFactory,
@@ -718,7 +719,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final HttpRequestDecoderSpec                                  decoder;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2Settings                                           http2Settings;
-		final Function<? super Mono<Void>, ? extends Mono<Void>>      mapHandle;
+		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 		final Supplier<? extends ChannelMetricsRecorder>              metricsRecorder;
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
@@ -734,7 +735,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				HttpRequestDecoderSpec decoder,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				Http2Settings http2Settings,
-				@Nullable Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle,
+				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 				int minCompressionSize,
 				ChannelOperations.OnSetup opsFactory,

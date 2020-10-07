@@ -293,17 +293,15 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 
 	/**
 	 * Decorate the configured I/O handler.
-	 * This function will be applied to the result of the previous functions if there are any already configured.
 	 * See {@link #handle(BiFunction)}.
 	 *
-	 * @param mapHandle A function to decorate the configured I/O handler
+	 * @param mapHandle A {@link BiFunction} to decorate the configured I/O handler
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer mapHandle(Function<? super Mono<Void>, ? extends Mono<Void>> mapHandle) {
+	public final HttpServer mapHandle(BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		Objects.requireNonNull(mapHandle, "mapHandle");
 		HttpServer dup = duplicate();
-		Function<? super Mono<Void>, ? extends Mono<Void>> current = configuration().mapHandle;
-		dup.configuration().mapHandle = current == null ? mapHandle : current.andThen(mapHandle);
+		dup.configuration().mapHandle = mapHandle;
 		return dup;
 	}
 
@@ -577,7 +575,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 					HttpServerOperations ops = (HttpServerOperations) connection;
 					Mono<Void> mono = Mono.fromDirect(handler.apply(ops, ops));
 					if (ops.mapHandle != null) {
-						mono = ops.mapHandle.apply(mono);
+						mono = ops.mapHandle.apply(mono, connection);
 					}
 					mono.subscribe(ops.disposeSubscriber());
 				}
