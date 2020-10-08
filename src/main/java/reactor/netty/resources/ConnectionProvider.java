@@ -377,9 +377,7 @@ public interface ConnectionProvider extends Disposable {
 	 * Returns the maximum number of connections before starting pending
 	 *
 	 * @return the maximum number of connections before starting pending
-	 * @deprecated as of 0.9.5.
 	 */
-	@Deprecated
 	default int maxConnections() {
 		return -1;
 	}
