@@ -126,6 +126,7 @@ public class Http2SettingsSpecTests {
 				.withMessage("Setting MAX_HEADER_LIST_SIZE is invalid: -1");
 	}
 
+	/*
 	@Test
 	public void pushEnabled() {
 		builder.pushEnabled(true);
@@ -137,4 +138,5 @@ public class Http2SettingsSpecTests {
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
 		assertThat(spec.pushEnabled()).isTrue();
 	}
+	*/
 }

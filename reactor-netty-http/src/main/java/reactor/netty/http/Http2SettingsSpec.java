@@ -84,7 +84,7 @@ public final class Http2SettingsSpec {
 		 * @param pushEnabled the {@code SETTINGS_ENABLE_PUSH} value
 		 * @return {@code this}
 		 */
-		Builder pushEnabled(boolean pushEnabled);
+		//Builder pushEnabled(boolean pushEnabled);
 	}
 
 	/**
@@ -234,10 +234,12 @@ public final class Http2SettingsSpec {
 			return this;
 		}
 
+		/*
 		@Override
 		public Builder pushEnabled(boolean pushEnabled) {
 			http2Settings.pushEnabled(pushEnabled);
 			return this;
 		}
+		*/
 	}
 }
