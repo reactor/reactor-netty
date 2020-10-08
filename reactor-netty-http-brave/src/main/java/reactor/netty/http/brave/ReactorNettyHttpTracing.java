@@ -24,6 +24,7 @@ import java.util.function.Function;
 /**
  * Brave instrumentation for Reactor Netty HTTP.
  *
+ * <pre>
  * {@code
  *     ReactorNettyHttpTracing reactorNettyHttpTracing = ReactorNettyHttpTracing.create(httpTracing);
  *     HttpClient client = reactorNettyHttpTracing.decorateHttpClient(HttpClient.create().port(0)...);
