@@ -202,6 +202,25 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
+	 * Returns the maximum number of connections before starting pending
+	 *
+	 * @return the maximum number of connections before starting pending
+	 */
+	default int maxConnections() {
+		return -1;
+	}
+
+	/**
+	 * Returns the maximum number of connections per host before starting pending
+	 *
+	 * @return the maximum number of connections per host before starting pending
+	 */
+	@Nullable
+	default Map<SocketAddress, Integer> maxConnectionsPerHost() {
+		return null;
+	}
+
+	/**
 	 * Build a {@link ConnectionProvider} to cache and reuse a fixed maximum number of
 	 * {@link Connection}. Further connections will be pending acquisition depending on
 	 * pendingAcquireTime. The maximum number of connections is for the connections in a single

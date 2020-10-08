@@ -146,7 +146,6 @@ task japicmp(type: JapicmpTask) {
 			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long)",
 			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration)",
 			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration, java.time.Duration)",
-			"reactor.netty.resources.ConnectionProvider#maxConnections()",
 			"reactor.netty.resources.LoopResources#onChannel(io.netty.channel.EventLoopGroup)",
 			"reactor.netty.resources.LoopResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
 			"reactor.netty.resources.LoopResources#onServerChannel(io.netty.channel.EventLoopGroup)",
@@ -184,6 +183,8 @@ task japicmp(type: JapicmpTask) {
 			// reactor.netty package
 			"reactor.netty.DisposableServer#address()",
 			"reactor.netty.DisposableServer#path()",
+			// reactor.netty.resources package
+			"reactor.netty.resources.ConnectionProvider#maxConnectionsPerHost()",
 
 			// !!!Backwards incompatible changes!!!
 			// reactor.netty.resources package

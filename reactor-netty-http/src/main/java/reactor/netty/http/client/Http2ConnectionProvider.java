@@ -39,7 +39,6 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.PooledConnectionProvider;
 import reactor.netty.transport.TransportConfig;
-import reactor.netty.internal.shaded.reactor.pool.AllocationStrategy;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 import reactor.netty.internal.shaded.reactor.pool.PooledRef;
 import reactor.netty.internal.shaded.reactor.pool.PooledRefMetadata;
@@ -53,8 +52,6 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -73,11 +70,9 @@ import static reactor.netty.http.client.HttpClientState.UPGRADE_SUCCESSFUL;
  */
 final class Http2ConnectionProvider extends PooledConnectionProvider<Connection> {
 	final ConnectionProvider parent;
-	final int maxHttp2Connections;
 
-	Http2ConnectionProvider(ConnectionProvider parent, int maxHttp2Connections) {
-		super(ConnectionProvider.builder("http2").maxConnections(maxHttp2Connections).pendingAcquireMaxCount(-1));
-		this.maxHttp2Connections = maxHttp2Connections;
+	Http2ConnectionProvider(ConnectionProvider parent, Builder builder) {
+		super(builder);
 		this.parent = parent;
 	}
 
@@ -97,7 +92,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			PooledConnectionProvider.PoolFactory<Connection> poolFactory,
 			SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup) {
-		return new PooledConnectionAllocator(parent, config, maxHttp2Connections, poolFactory, () -> remoteAddress, resolverGroup).pool;
+		return new PooledConnectionAllocator(parent, config, poolFactory, () -> remoteAddress, resolverGroup).pool;
 	}
 
 	static void invalidate(@Nullable ConnectionObserver owner, Channel channel) {
@@ -426,9 +421,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 	static final class PooledConnectionAllocator {
 		final ConnectionProvider parent;
-		final SizeBasedAllocationStrategy allocationStrategy;
 		final HttpClientConfig config;
-		final int initialMaxConnection;
 		final InstrumentedPool<Connection> pool;
 		final Supplier<SocketAddress> remoteAddress;
 		final AddressResolverGroup<?> resolver;
@@ -436,18 +429,14 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		PooledConnectionAllocator(
 				ConnectionProvider parent,
 				TransportConfig config,
-				int maxConnections,
 				PoolFactory<Connection> poolFactory,
 				Supplier<SocketAddress> remoteAddress,
 				AddressResolverGroup<?> resolver) {
 			this.parent = parent;
 			this.config = (HttpClientConfig) config;
-			this.initialMaxConnection = maxConnections;
 			this.remoteAddress = remoteAddress;
 			this.resolver = resolver;
-			this.allocationStrategy = new SizeBasedAllocationStrategy(0, maxConnections);
-			this.pool = poolFactory.newPool(connectChannel(), new SizeBasedAllocationStrategy(0, maxConnections),
-					DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE);
+			this.pool = poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE);
 		}
 
 		Publisher<Connection> connectChannel() {
@@ -458,19 +447,6 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				                                 "now {} active connections and {} inactive connections"),
 				                         pool.metrics().acquiredSize(),
 				                         pool.metrics().idleSize());
-				             }
-
-				             SslHandler handler = conn.channel().pipeline().get(SslHandler.class);
-				             if (handler != null) {
-				                 String protocol = handler.applicationProtocol() != null ? handler.applicationProtocol() : ApplicationProtocolNames.HTTP_1_1;
-				                 if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
-				                     if (allocationStrategy.compareAndSet(initialMaxConnection, Integer.MAX_VALUE)) {
-				                         if (log.isDebugEnabled()) {
-				                             log.debug(format(conn.channel(), "Negotiated protocol HTTP/1.1, " +
-				                                     "upgrade the max connections to Integer.MAX_VALUE"));
-				                         }
-				                     }
-				                 }
 				             }
 
 				             return conn;
@@ -500,83 +476,5 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					}
 					return Mono.empty();
 				};
-	}
-
-	static final class SizeBasedAllocationStrategy extends AtomicInteger implements AllocationStrategy {
-
-		final int min;
-
-		volatile int permits;
-		static final AtomicIntegerFieldUpdater<SizeBasedAllocationStrategy> PERMITS =
-				AtomicIntegerFieldUpdater.newUpdater(SizeBasedAllocationStrategy.class, "permits");
-
-		SizeBasedAllocationStrategy(int min, int max) {
-			super(max);
-			if (min < 0) throw new IllegalArgumentException("min must be positive or zero");
-			if (max < 1) throw new IllegalArgumentException("max must be strictly positive");
-			if (min > max) throw new IllegalArgumentException("min must be less than or equal to max");
-			this.min = min;
-			PERMITS.lazySet(this, max);
-		}
-
-		@Override
-		public int getPermits(int desired) {
-			if (desired < 0) return 0;
-
-			//impl note: this should be more efficient compared to the previous approach for desired == 1
-			// (incrementAndGet + decrementAndGet compensation both induce a CAS loop, vs single loop here)
-			for (;;) {
-				int target;
-				int p = permits;
-				int granted = get() - p;
-
-				if (desired >= p) {
-					target = p;
-				}
-				else if (granted < min) {
-					target = Math.max(desired, min - granted);
-				}
-				else {
-					target = desired;
-				}
-
-				if (PERMITS.compareAndSet(this, p, p - target)) {
-					return target;
-				}
-			}
-		}
-
-		@Override
-		public int estimatePermitCount() {
-			return PERMITS.get(this);
-		}
-
-		@Override
-		public int permitMinimum() {
-			return min;
-		}
-
-		@Override
-		public int permitMaximum() {
-			return get();
-		}
-
-		@Override
-		public int permitGranted() {
-			return get() - PERMITS.get(this);
-		}
-
-		@Override
-		public void returnPermits(int returned) {
-			for(;;) {
-				int p = PERMITS.get(this);
-				if (p + returned > get()) {
-					throw new IllegalArgumentException("Too many permits returned: returned=" + returned + ", would bring to " + (p + returned) + "/" + get());
-				}
-				if (PERMITS.compareAndSet(this, p, p + returned)) {
-					return;
-				}
-			}
-		}
 	}
 }

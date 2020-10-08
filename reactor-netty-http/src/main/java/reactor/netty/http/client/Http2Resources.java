@@ -29,7 +29,7 @@ import java.util.function.BiFunction;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-public final class Http2Resources extends TcpResources {
+final class Http2Resources extends TcpResources {
 
 	/**
 	 * Return the global HTTP/2 resources for event loops and pooling
@@ -46,18 +46,25 @@ public final class Http2Resources extends TcpResources {
 	 * @return the global HTTP/2 resources
 	 */
 	public static Http2Resources set(ConnectionProvider provider) {
-		return getOrCreate(http2Resources, null, provider, ON_HTTP2_NEW, "http2");
+		return getOrCreate(http2Resources, null, newConnectionProvider(provider), ON_HTTP2_NEW, "http2");
 	}
 
 	Http2Resources(LoopResources loops, ConnectionProvider provider) {
 		super(loops, provider);
 	}
 
-	static ConnectionProvider newConnectionProvider() {
-		return new Http2ConnectionProvider(HttpResources.get(), DEFAULT_MAX_HTTP2_CONNECTIONS);
-	}
+	static ConnectionProvider newConnectionProvider(ConnectionProvider parent) {
+		Builder builder =
+				ConnectionProvider.builder("http2")
+				                  .maxConnections(parent.maxConnections())
+				                  .pendingAcquireMaxCount(-1);
+		if (parent.maxConnectionsPerHost() != null) {
+			parent.maxConnectionsPerHost()
+			      .forEach((address, maxConn) -> builder.forRemoteHost(address, spec -> spec.maxConnections(maxConn)));
+		}
 
-	static final int DEFAULT_MAX_HTTP2_CONNECTIONS = 1;
+		return new Http2ConnectionProvider(parent, builder);
+	}
 
 	static final AtomicReference<Http2Resources> http2Resources;
 
@@ -65,6 +72,6 @@ public final class Http2Resources extends TcpResources {
 
 	static {
 		ON_HTTP2_NEW = Http2Resources::new;
-		http2Resources = new AtomicReference<>(new Http2Resources(HttpResources.get(), newConnectionProvider()));
+		http2Resources = new AtomicReference<>(new Http2Resources(HttpResources.get(), newConnectionProvider(HttpResources.get())));
 	}
 }

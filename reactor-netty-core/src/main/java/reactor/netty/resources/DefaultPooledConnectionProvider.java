@@ -64,12 +64,19 @@ import static reactor.netty.ReactorNetty.format;
  */
 final class DefaultPooledConnectionProvider extends PooledConnectionProvider<DefaultPooledConnectionProvider.PooledConnection> {
 	final Map<SocketAddress, PoolFactory<PooledConnection>> poolFactoryPerRemoteHost = new HashMap<>();
+	final Map<SocketAddress, Integer> maxConnections = new HashMap<>();
 
 	DefaultPooledConnectionProvider(Builder builder) {
 		super(builder);
 		for (Map.Entry<SocketAddress, ConnectionPoolSpec<?>> entry : builder.confPerRemoteHost.entrySet()) {
 			poolFactoryPerRemoteHost.put(entry.getKey(), new PoolFactory<>(entry.getValue()));
+			maxConnections.put(entry.getKey(), entry.getValue().maxConnections);
 		}
+	}
+
+	@Override
+	public Map<SocketAddress, Integer> maxConnectionsPerHost() {
+		return maxConnections;
 	}
 
 	@Override

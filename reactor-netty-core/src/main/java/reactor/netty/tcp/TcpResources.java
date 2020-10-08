@@ -18,6 +18,7 @@ package reactor.netty.tcp;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -188,6 +189,16 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	@Override
 	public boolean isDisposed() {
 		return defaultLoops.isDisposed() && defaultProvider.isDisposed();
+	}
+
+	@Override
+	public int maxConnections() {
+		return defaultProvider.maxConnections();
+	}
+
+	@Override
+	public Map<SocketAddress, Integer> maxConnectionsPerHost() {
+		return defaultProvider.maxConnectionsPerHost();
 	}
 
 	@Override

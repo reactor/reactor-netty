@@ -27,8 +27,6 @@ import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-import static reactor.netty.http.client.Http2Resources.DEFAULT_MAX_HTTP2_CONNECTIONS;
-
 /**
  * {@link ConnectionProvider} for HTTP protocol.
  *
@@ -60,11 +58,7 @@ final class HttpConnectionProvider implements ConnectionProvider {
 	final Supplier<ConnectionProvider> h2ConnectionProviderSupplier;
 
 	HttpConnectionProvider(ConnectionProvider http1ConnectionProvider) {
-		this(http1ConnectionProvider, DEFAULT_MAX_HTTP2_CONNECTIONS);
-	}
-
-	HttpConnectionProvider(ConnectionProvider http1ConnectionProvider, int maxHttp2Connections) {
-		this(http1ConnectionProvider, () -> getOrCreate(http1ConnectionProvider, maxHttp2Connections));
+		this(http1ConnectionProvider, () -> getOrCreate(http1ConnectionProvider));
 	}
 
 	HttpConnectionProvider(ConnectionProvider http1ConnectionProvider, Supplier<ConnectionProvider> h2ConnectionProviderSupplier) {
@@ -72,12 +66,20 @@ final class HttpConnectionProvider implements ConnectionProvider {
 		this.h2ConnectionProviderSupplier = h2ConnectionProviderSupplier;
 	}
 
-	static ConnectionProvider getOrCreate(ConnectionProvider http1ConnectionProvider, int maxHttp2Connections) {
+	static ConnectionProvider getOrCreate(ConnectionProvider http1ConnectionProvider) {
 		ConnectionProvider provider = h2ConnectionProvider.get();
 		if (provider == null) {
+			Builder builder =
+					ConnectionProvider.builder("http2")
+					                  .maxConnections(http1ConnectionProvider.maxConnections())
+					                  .pendingAcquireMaxCount(-1);
+			if (http1ConnectionProvider.maxConnectionsPerHost() != null) {
+				http1ConnectionProvider.maxConnectionsPerHost()
+				                       .forEach((address, maxConn) -> builder.forRemoteHost(address, spec -> spec.maxConnections(maxConn)));
+			}
 			h2ConnectionProvider.compareAndSet(null,
-					new Http2ConnectionProvider(http1ConnectionProvider, maxHttp2Connections));
-			provider = getOrCreate(http1ConnectionProvider, maxHttp2Connections);
+					new Http2ConnectionProvider(http1ConnectionProvider, builder));
+			provider = getOrCreate(http1ConnectionProvider);
 		}
 		return provider;
 	}

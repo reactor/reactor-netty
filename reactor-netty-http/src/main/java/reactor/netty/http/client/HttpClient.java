@@ -403,22 +403,6 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Prepare an {@link HttpClient}. {@link UriConfiguration#uri(String)} or
-	 * {@link #baseUrl(String)} should be invoked before a verb
-	 * {@link #request(HttpMethod)} is selected.
-	 *
-	 * @param connectionProvider the {@link ConnectionProvider} to be used
-	 * @param maxHttp2Connections the max number of connections that will be used for HTTP/2 requests
-	 * @return a {@link HttpClient}
-	 */
-	public static HttpClient create(ConnectionProvider connectionProvider, int maxHttp2Connections) {
-		Objects.requireNonNull(connectionProvider, "connectionProvider");
-		if (maxHttp2Connections <= 0) {
-			throw new IllegalArgumentException("Max HTTP/2 connections value must be strictly positive");
-		}
-		return new HttpClientConnect(new HttpConnectionProvider(connectionProvider, maxHttp2Connections));
-	}
-	/**
 	 * Prepare an {@link HttpClient}
 	 *
 	 * @return a new {@link HttpClient}

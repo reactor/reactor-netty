@@ -165,6 +165,11 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		                                             .allMatch(Disposable::isDisposed);
 	}
 
+	@Override
+	public int maxConnections() {
+		return defaultPoolFactory.maxConnections;
+	}
+
 	protected abstract CoreSubscriber<PooledRef<T>> createDisposableAcquire(
 			ConnectionObserver connectionObserver,
 			ChannelOperations.OnSetup opsFactory,

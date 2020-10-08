@@ -96,6 +96,11 @@ final class NewConnectionProvider implements ConnectionProvider {
 		return false;
 	}
 
+	@Override
+	public int maxConnections() {
+		return 1;
+	}
+
 	static final class DisposableConnect implements CoreSubscriber<Channel>, Disposable {
 		final MonoSink<Connection> sink;
 		final Supplier<? extends SocketAddress> bindAddress;

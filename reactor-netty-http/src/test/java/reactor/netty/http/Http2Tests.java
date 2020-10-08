@@ -87,16 +87,6 @@ public class Http2Tests {
 		                            " via HttpServer#noSSL())");
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testMaxHttp2ConnectionsNegative() {
-		HttpClient.create(ConnectionProvider.create("testMaxHttp2ConnectionsNegative", 1), -1);
-	}
-
-	@Test(expected = IllegalArgumentException.class)
-	public void testMaxHttp2ConnectionsZero() {
-		HttpClient.create(ConnectionProvider.create("testMaxHttp2ConnectionsZero", 1), 0);
-	}
-
 	@Test
 	public void testCustomConnectionProvider() {
 		disposableServer =
@@ -110,7 +100,7 @@ public class Http2Tests {
 
 		ConnectionProvider provider = ConnectionProvider.create("testCustomConnectionProvider", 1);
 		String response =
-				HttpClient.create(provider, 1)
+				HttpClient.create(provider)
 				          .port(disposableServer.port())
 				          .protocol(HttpProtocol.H2C)
 				          .wiretap(true)
@@ -167,8 +157,6 @@ public class Http2Tests {
 
 	@Test
 	public void testMaxActiveStreams_1() throws Exception {
-		doTestMaxActiveStreams(HttpClient.create(), 1, 1, 1);
-
 		ConnectionProvider provider = ConnectionProvider.create("testMaxActiveStreams_1", 1);
 		doTestMaxActiveStreams(HttpClient.create(provider), 1, 1, 1);
 		provider.disposeLater()
