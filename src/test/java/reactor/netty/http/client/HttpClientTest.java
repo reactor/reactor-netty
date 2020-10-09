@@ -98,6 +98,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.resources.ConnectionPoolMetrics;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
@@ -2489,5 +2490,47 @@ public class HttpClientTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(collectedUris).isNotEmpty()
 		                         .containsOnly("/stream/{n}");
+	}
+
+	@Test
+	public void testNoEvictInBackground() throws Exception {
+		doTestEvictInBackground(1, false);
+	}
+
+	@Test
+	public void testEvictInBackground() throws Exception {
+		doTestEvictInBackground(0, true);
+	}
+
+	private void doTestEvictInBackground(int expectation, boolean evict) throws Exception {
+		AtomicReference<ConnectionPoolMetrics> m = new AtomicReference<>();
+		ConnectionProvider.Builder builder =
+				ConnectionProvider.builder("testEvictInBackground")
+				                  .maxConnections(1)
+				                  .maxIdleTime(Duration.ofMillis(20))
+				                  .metrics(true, () -> (poolName, id, remoteAddress, metrics) -> m.set(metrics));
+
+		if (evict) {
+			builder.evictInBackground(Duration.ofMillis(50));
+		}
+
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, resp) -> resp.sendString(Mono.just("testEvictInBackground")))
+				          .wiretap(true)
+				          .bindNow();
+
+		createHttpClientForContextWithAddress(builder.build())
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .aggregate()
+		        .block(Duration.ofSeconds(30));
+
+		Thread.sleep(200);
+
+		assertThat(m.get()).isNotNull();
+		assertThat(m.get().idleSize()).isEqualTo(expectation);
 	}
 }

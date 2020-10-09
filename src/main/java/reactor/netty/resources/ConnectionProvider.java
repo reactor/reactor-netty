@@ -452,8 +452,10 @@ public interface ConnectionProvider extends Disposable {
 	 */
 	class ConnectionPoolSpec<SPEC extends ConnectionPoolSpec<SPEC>> implements Supplier<SPEC> {
 
+		static final Duration EVICT_IN_BACKGROUND_DISABLED       = Duration.ZERO;
 		static final int PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED = -2;
 
+		Duration evictionInterval       = EVICT_IN_BACKGROUND_DISABLED;
 		int      maxConnections         = DEFAULT_POOL_MAX_CONNECTIONS;
 		int      pendingAcquireMaxCount = PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED;
 		Duration pendingAcquireTimeout  = Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT);
@@ -613,6 +615,21 @@ public interface ConnectionProvider extends Disposable {
 		 */
 		public final SPEC fifo() {
 			this.leasingStrategy = LEASING_STRATEGY_FIFO;
+			return get();
+		}
+
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} background eviction.
+		 * When a background eviction is enabled, the connection pool is regularly checked for connections,
+		 * that are applicable for removal.
+		 * Default to {@link #EVICT_IN_BACKGROUND_DISABLED} - the background eviction is disabled.
+		 * Providing an {@code evictionInterval} of {@link Duration#ZERO zero} means the background eviction is disabled.
+		 *
+		 * @param evictionInterval specifies the interval to be used for checking the connection pool, (resolution: ns)
+		 * @return {@literal this}
+		 */
+		public final SPEC evictInBackground(Duration evictionInterval) {
+			this.evictionInterval = Objects.requireNonNull(evictionInterval, "evictionInterval");
 			return get();
 		}
 

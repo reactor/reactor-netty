@@ -710,6 +710,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 
 	final static class PoolFactory {
+		final Duration    evictionInterval;
 		final int         maxConnections;
 		final int         pendingAcquireMaxCount;
 		final long        pendingAcquireTimeout;
@@ -720,6 +721,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		final Supplier<? extends MeterRegistrar> registrar;
 
 		PoolFactory(ConnectionPoolSpec<?> conf) {
+			this.evictionInterval = conf.evictionInterval;
 			this.maxConnections = conf.maxConnections;
 			this.pendingAcquireMaxCount = conf.pendingAcquireMaxCount == PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED ?
 					2 * conf.maxConnections : conf.pendingAcquireMaxCount;
@@ -739,7 +741,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
 					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
 					           .maxPendingAcquire(pendingAcquireMaxCount)
-					           .sizeBetween(0, maxConnections);
+					           .sizeBetween(0, maxConnections)
+					           .evictInBackground(evictionInterval);
 			if (LEASING_STRATEGY_FIFO.equals(leasingStrategy)) {
 				return poolBuilder.idleResourceReuseLruOrder()
 				                  .buildPool();
