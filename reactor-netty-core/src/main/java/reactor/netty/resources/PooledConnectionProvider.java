@@ -206,6 +206,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	static final Logger log = Loggers.getLogger(PooledConnectionProvider.class);
 
 	protected static final class PoolFactory<T extends Connection> {
+		final Duration evictionInterval;
 		final String leasingStrategy;
 		final int maxConnections;
 		final long maxIdleTime;
@@ -216,6 +217,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final Supplier<? extends MeterRegistrar> registrar;
 
 		PoolFactory(ConnectionPoolSpec<?> conf) {
+			this.evictionInterval = conf.evictionInterval;
 			this.leasingStrategy = conf.leasingStrategy;
 			this.maxConnections = conf.maxConnections;
 			this.maxIdleTime = conf.maxIdleTime != null ? conf.maxIdleTime.toMillis() : -1;
@@ -239,7 +241,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
 					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
 					           .maxPendingAcquire(pendingAcquireMaxCount)
-					           .sizeBetween(0, maxConnections);
+					           .sizeBetween(0, maxConnections)
+					           .evictInBackground(evictionInterval);
 			if (allocationStrategy != null) {
 				poolBuilder = poolBuilder.allocationStrategy(allocationStrategy);
 			}
