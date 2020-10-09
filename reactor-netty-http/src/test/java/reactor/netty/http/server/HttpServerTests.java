@@ -803,6 +803,7 @@ public class HttpServerTests {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void contextShouldBeTransferredFromDownStreamToUpStream() {
 		AtomicReference<Context> context = new AtomicReference<>();
 		disposableServer =
@@ -819,7 +820,7 @@ public class HttpServerTests {
 			Mono<String> content = client.post()
 			                             .uri("/")
 			                             .send(ByteBufFlux.fromString(Mono.just("bodysample")
-			                                                              .contextWrite(
+			                                                              .subscriberContext(
 			                                                                      c -> {
 			                                                                          context.set(c);
 			                                                                          return c;
@@ -827,7 +828,7 @@ public class HttpServerTests {
 			                             .responseContent()
 			                             .aggregate()
 			                             .asString()
-			                             .contextWrite(c -> c.put("Hello", "World"));
+			                             .subscriberContext(c -> c.put("Hello", "World"));
 
 			StepVerifier.create(content)
 			            .expectComplete()

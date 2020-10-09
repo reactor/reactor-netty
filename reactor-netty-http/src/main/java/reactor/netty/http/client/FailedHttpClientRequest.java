@@ -25,7 +25,6 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
 import reactor.util.context.Context;
-import reactor.util.context.ContextView;
 
 import java.time.Duration;
 import java.util.Map;
@@ -40,7 +39,7 @@ import java.util.Set;
  */
 final class FailedHttpClientRequest implements HttpClientRequest {
 
-	final ContextView         contextView;
+	final Context             context;
 	final ClientCookieDecoder cookieDecoder;
 	final HttpHeaders         headers;
 	final boolean             isWebsocket;
@@ -49,8 +48,8 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	final Duration            responseTimeout;
 	final String              uri;
 
-	FailedHttpClientRequest(ContextView contextView, HttpClientConfig c) {
-		this.contextView = contextView;
+	FailedHttpClientRequest(Context context, HttpClientConfig c) {
+		this.context = context;
 		this.cookieDecoder = c.cookieDecoder;
 		this.headers = c.headers;
 		this.isWebsocket = c.websocketClientSpec != null;
@@ -77,14 +76,8 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	}
 
 	@Override
-	@SuppressWarnings("deprecation")
 	public Context currentContext() {
-		return Context.of(contextView);
-	}
-
-	@Override
-	public ContextView currentContextView() {
-		return contextView;
+		return context;
 	}
 
 	@Override

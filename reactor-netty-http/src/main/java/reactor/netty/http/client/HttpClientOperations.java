@@ -86,7 +86,6 @@ import reactor.netty.http.HttpOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
-import reactor.util.context.ContextView;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -366,11 +365,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	public final HttpClientOperations onDispose(Disposable onDispose) {
 		super.onDispose(onDispose);
 		return this;
-	}
-
-	@Override
-	public ContextView currentContextView() {
-		return currentContext();
 	}
 
 	@Override

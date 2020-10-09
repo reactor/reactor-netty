@@ -671,6 +671,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return nettyResponse;
 	}
 
+	@SuppressWarnings("deprecation")
 	final Mono<Void> withWebsocketSupport(String url,
 			WebsocketServerSpec websocketServerSpec,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
@@ -683,7 +684,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			                 .doOnEach(signal -> {
 			                     if(!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
 			                         websocketHandler.apply(ops, ops)
-			                                         .subscribe(new WebsocketSubscriber(ops, Context.of(signal.getContextView())));
+			                                         .subscribe(new WebsocketSubscriber(ops, signal.getContext()));
 			                     }
 			                 });
 		}

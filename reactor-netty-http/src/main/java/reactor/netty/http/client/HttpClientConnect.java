@@ -100,6 +100,7 @@ class HttpClientConnect extends HttpClient {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	protected Mono<? extends Connection> connect() {
 		HttpClientConfig config = configuration();
 
@@ -118,7 +119,7 @@ class HttpClientConnect extends HttpClient {
 
 		if (config.doOnRequestError != null) {
 			mono = mono.onErrorResume(error ->
-					Mono.deferContextual(Mono::just)
+					Mono.subscriberContext()
 					    .doOnNext(ctx -> config.doOnRequestError.accept(new FailedHttpClientRequest(ctx, config), error))
 					    .then(Mono.error(error)));
 		}

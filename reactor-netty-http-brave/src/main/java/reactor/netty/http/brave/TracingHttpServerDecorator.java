@@ -257,6 +257,7 @@ final class TracingHttpServerDecorator {
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		public Mono<Void> apply(Mono<Void> voidMono, Connection connection) {
 			HttpServerRequest braveRequest = connection.channel().attr(REQUEST_ATTR_KEY).get();
 			Span span = connection.channel().attr(SPAN_ATTR_KEY).get();
@@ -281,8 +282,8 @@ final class TracingHttpServerDecorator {
 			                   }
 			               })
 			               .doOnError(this::throwable)
-			               .contextWrite(ctx -> ctx.put(TraceContext.class, span.context())
-			                                       .put(SpanCustomizer.class, span.customizer()));
+			               .subscriberContext(ctx -> ctx.put(TraceContext.class, span.context())
+			                                            .put(SpanCustomizer.class, span.customizer()));
 		}
 
 		void throwable(Throwable t) {

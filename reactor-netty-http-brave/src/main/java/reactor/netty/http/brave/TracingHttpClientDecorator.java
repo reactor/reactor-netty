@@ -27,7 +27,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.http.client.HttpClient;
 import reactor.util.annotation.Nullable;
-import reactor.util.context.ContextView;
+import reactor.util.context.Context;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -72,8 +72,8 @@ final class TracingHttpClientDecorator {
 			this.handler = handler;
 		}
 
-		void handleReceive(HttpClientResponse response, ContextView contextView) {
-			PendingSpan pendingSpan = contextView.get(PendingSpan.class);
+		void handleReceive(HttpClientResponse response, Context context) {
+			PendingSpan pendingSpan = context.get(PendingSpan.class);
 			Span span = pendingSpan.getAndSet(null);
 			if (span != null) {
 				handler.handleReceive(response, span);
@@ -191,8 +191,8 @@ final class TracingHttpClientDecorator {
 
 		@Override
 		public void accept(reactor.netty.http.client.HttpClientRequest request, Connection connection) {
-			ContextView contextView = request.currentContextView();
-			TraceContext parent = contextView.getOrDefault(TraceContext.class, null);
+			Context context = request.currentContext();
+			TraceContext parent = context.getOrDefault(TraceContext.class, null);
 
 			HttpClientRequest braveRequest = new DelegatingHttpRequest(request, uriMapping);
 			Span span = handler.handleSendWithParent(braveRequest, parent);
@@ -203,13 +203,13 @@ final class TracingHttpClientDecorator {
 				span.remoteIpAndPort(address.getHostString(), address.getPort());
 			}
 
-			PendingSpan pendingSpan = contextView.get(PendingSpan.class);
+			PendingSpan pendingSpan = context.get(PendingSpan.class);
 			Span oldSpan = pendingSpan.getAndSet(span);
 			if (oldSpan != null) {
 				oldSpan.abandon();
 			}
 
-			AtomicReference<SpanCustomizer> ref = contextView.get(SpanCustomizer.class.getName());
+			AtomicReference<SpanCustomizer> ref = context.get(SpanCustomizer.class.getName());
 			ref.set(span.customizer());
 		}
 	}
@@ -231,10 +231,10 @@ final class TracingHttpClientDecorator {
 			if (request instanceof reactor.netty.http.client.HttpClientResponse) {
 				DelegatingHttpResponse delegate = new DelegatingHttpResponse((reactor.netty.http.client.HttpClientResponse) request,
 						new DelegatingHttpRequest(request, uriMapping), throwable);
-				handleReceive(delegate, request.currentContextView());
+				handleReceive(delegate, request.currentContext());
 			}
 			else {
-				PendingSpan pendingSpan = request.currentContextView().get(PendingSpan.class);
+				PendingSpan pendingSpan = request.currentContext().get(PendingSpan.class);
 				Span span = pendingSpan.getAndSet(null);
 				if (span != null) {
 					span.error(throwable).finish();
@@ -259,7 +259,7 @@ final class TracingHttpClientDecorator {
 		public void accept(reactor.netty.http.client.HttpClientResponse response, Throwable throwable) {
 			DelegatingHttpResponse delegate = new DelegatingHttpResponse(response,
 					new DelegatingHttpRequest((reactor.netty.http.client.HttpClientRequest) response, uriMapping), throwable);
-			handleReceive(delegate, response.currentContextView());
+			handleReceive(delegate, response.currentContext());
 		}
 	}
 
@@ -279,7 +279,7 @@ final class TracingHttpClientDecorator {
 		public void accept(reactor.netty.http.client.HttpClientResponse response, Connection connection) {
 			HttpClientResponse delegate = new DelegatingHttpResponse(response,
 					new DelegatingHttpRequest((reactor.netty.http.client.HttpClientRequest) response, uriMapping), null);
-			handleReceive(delegate, response.currentContextView());
+			handleReceive(delegate, response.currentContext());
 		}
 	}
 
@@ -292,6 +292,7 @@ final class TracingHttpClientDecorator {
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		public Mono<? extends Connection> apply(Mono<? extends Connection> mono) {
 			PendingSpan pendingSpan = new PendingSpan();
 			return mono.doOnCancel(() -> {
@@ -300,7 +301,7 @@ final class TracingHttpClientDecorator {
 			                   span.annotate("cancel").finish();
 			               }
 			           })
-			           .contextWrite(ctx -> {
+			           .subscriberContext(ctx -> {
 			               TraceContext invocationContext = currentTraceContext.get();
 			               if (invocationContext != null) {
 			                   ctx = ctx.put(TraceContext.class, invocationContext);

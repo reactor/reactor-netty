@@ -26,7 +26,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
-import reactor.util.context.ContextView;
+import reactor.util.context.Context;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
@@ -72,10 +72,10 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 
 	@Override
 	protected void get(HttpClient client, String path, BiConsumer<Integer, Throwable> callback) {
-		client.doAfterResponseSuccess((res, conn) -> invokeCallback(callback, res.currentContextView(), res.status().code(), null))
+		client.doAfterResponseSuccess((res, conn) -> invokeCallback(callback, res.currentContext(), res.status().code(), null))
 		      .doOnError(
-		          (req, throwable) -> invokeCallback(callback, req.currentContextView(), null, throwable),
-		          (res, throwable) -> invokeCallback(callback, res.currentContextView(), null, throwable))
+		          (req, throwable) -> invokeCallback(callback, req.currentContext(), null, throwable),
+		          (res, throwable) -> invokeCallback(callback, res.currentContext(), null, throwable))
 		      .get()
 		      .uri(path.isEmpty() ? "/" : path)
 		      .responseContent()
@@ -107,7 +107,7 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 			      .request(HttpMethod.GET)
 			      .uri("/")
 			      .send((req, out) -> {
-			          TraceContext traceContext = req.currentContextView().getOrDefault(TraceContext.class, null);
+			          TraceContext traceContext = req.currentContext().getOrDefault(TraceContext.class, null);
 			          if (traceContext != null) {
 			              req.header("test-id", traceContext.traceIdString());
 			          }
@@ -146,7 +146,7 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 		      .block(Duration.ofSeconds(30));
 	}
 
-	void invokeCallback(BiConsumer<Integer, Throwable> callback, ContextView contextView, Integer status, Throwable throwable) {
+	void invokeCallback(BiConsumer<Integer, Throwable> callback, Context contextView, Integer status, Throwable throwable) {
 		TraceContext traceContext = contextView.getOrDefault(TraceContext.class, null);
 		if (traceContext != null) {
 			try (CurrentTraceContext.Scope scope = currentTraceContext.maybeScope(traceContext)) {

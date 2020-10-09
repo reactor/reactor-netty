@@ -1092,6 +1092,7 @@ public class HttpClientTest {
 		doTestClientContext(HttpClient.create(ConnectionProvider.newConnection()));
 	}
 
+	@SuppressWarnings("deprecation")
 	private void doTestClientContext(HttpClient client) throws Exception {
 		CountDownLatch latch = new CountDownLatch(4);
 
@@ -1105,32 +1106,32 @@ public class HttpClientTest {
 		StepVerifier.create(
 				client.port(disposableServer.port())
 				      .doOnRequest((req, c) -> {
-				          if (req.currentContextView().hasKey("test")) {
+				          if (req.currentContext().hasKey("test")) {
 				              latch.countDown();
 				          }
 				      })
 				      .doAfterRequest((req, c) -> {
-				          if (req.currentContextView().hasKey("test")) {
+				          if (req.currentContext().hasKey("test")) {
 				              latch.countDown();
 				          }
 				      })
 				      .doOnResponse((res, c) -> {
-				          if (res.currentContextView().hasKey("test")) {
+				          if (res.currentContext().hasKey("test")) {
 				              latch.countDown();
 				          }
 				      })
 				      .doAfterResponseSuccess((req, c) -> {
-				          if (req.currentContextView().hasKey("test")) {
+				          if (req.currentContext().hasKey("test")) {
 				              latch.countDown();
 				          }
 				      })
 				      .post()
 				      .send((req, out) ->
-				          out.sendString(Mono.deferContextual(Mono::just)
+				          out.sendString(Mono.subscriberContext()
 				                             .map(ctx -> ctx.getOrDefault("test", "fail"))))
 				      .responseContent()
 				      .asString()
-				      .contextWrite(Context.of("test", "success")))
+				      .subscriberContext(Context.of("test", "success")))
 				    .expectNext("success")
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -1139,6 +1140,7 @@ public class HttpClientTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void doOnError() {
 		disposableServer =
 				HttpServer.create()
@@ -1159,10 +1161,10 @@ public class HttpClientTest {
 				createHttpClientForContextWithPort()
 				        .headers(h -> h.add("before", "test"))
 				        .doOnRequestError((req, err) ->
-				            requestError1.set(req.currentContextView().getOrDefault("test", "empty")))
+				            requestError1.set(req.currentContext().getOrDefault("test", "empty")))
 				        .doOnResponseError((res, err) ->
-				            responseError1.set(res.currentContextView().getOrDefault("test", "empty")))
-				        .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
+				            responseError1.set(res.currentContext().getOrDefault("test", "empty")))
+				        .mapConnect((c) -> c.subscriberContext(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
 				        .responseContent()
@@ -1182,10 +1184,10 @@ public class HttpClientTest {
 				createHttpClientForContextWithPort()
 				        .headers(h -> h.add("during", "test"))
 				        .doOnError((req, err) ->
-				            requestError2.set(req.currentContextView().getOrDefault("test", "empty"))
+				            requestError2.set(req.currentContext().getOrDefault("test", "empty"))
 				            ,(res, err) ->
-				            responseError2.set(res.currentContextView().getOrDefault("test", "empty")))
-				        .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
+				            responseError2.set(res.currentContext().getOrDefault("test", "empty")))
+				        .mapConnect((c) -> c.subscriberContext(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
 				        .responseContent()
@@ -1200,6 +1202,7 @@ public class HttpClientTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void withConnector() {
 		disposableServer = HttpServer.create()
 		                             .port(0)
@@ -1209,13 +1212,13 @@ public class HttpClientTest {
 		                             .bindNow();
 
 		Mono<String> content = createHttpClientForContextWithPort()
-		                               .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
+		                               .mapConnect((c) -> c.subscriberContext(Context.of("test", "success")))
 		                               .post()
 		                               .uri("/")
 		                               .send((req, out) -> {
 		                                   req.requestHeaders()
 		                                      .set("test",
-		                                           req.currentContextView()
+		                                           req.currentContext()
 		                                              .getOrDefault("test", "fail"));
 		                                   return Mono.empty();
 		                               })

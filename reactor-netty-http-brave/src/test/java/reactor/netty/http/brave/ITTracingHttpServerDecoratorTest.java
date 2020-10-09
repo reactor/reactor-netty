@@ -42,6 +42,7 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	protected void init() {
 		HttpServerRoutes routes =
 				HttpServerRoutes.newRoutes()
@@ -63,7 +64,7 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 				                                           .publishOn(Schedulers.boundedElastic())))
 				                .get("/nested/items/{itemId}", (req, res) -> res.sendString(Mono.just(req.param("itemId"))))
 				                .get("/child", (req, res) ->
-				                        Mono.deferContextual(Mono::just)
+				                        Mono.subscriberContext()
 				                            .flatMap(ctx -> {
 				                                    httpTracing.tracing()
 				                                               .tracer()
