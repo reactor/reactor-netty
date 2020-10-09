@@ -115,6 +115,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final Connection          connection;
 	final FluxReceive         inbound;
 	final ConnectionObserver  listener;
+	@SuppressWarnings("deprecation")
 	final MonoProcessor<Void> onTerminate;
 
 	volatile Subscription outboundSubscription;

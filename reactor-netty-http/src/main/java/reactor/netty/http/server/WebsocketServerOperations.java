@@ -61,6 +61,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	final WebSocketServerHandshaker           handshaker;
 	final ChannelPromise                      handshakerResult;
+	@SuppressWarnings("deprecation")
 	final MonoProcessor<WebSocketCloseStatus> onCloseState;
 	final boolean                             proxyPing;
 

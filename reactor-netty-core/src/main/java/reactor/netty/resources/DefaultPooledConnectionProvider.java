@@ -363,6 +363,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 	static final class PooledConnection implements Connection, ConnectionObserver {
 		final Channel channel;
+		@SuppressWarnings("deprecation")
 		final MonoProcessor<Void> onTerminate;
 		final InstrumentedPool<PooledConnection> pool;
 

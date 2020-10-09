@@ -56,6 +56,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
 	final WebSocketClientHandshaker handshaker;
+	@SuppressWarnings("deprecation")
 	final MonoProcessor<WebSocketCloseStatus> onCloseState;
 	final boolean proxyPing;
 
