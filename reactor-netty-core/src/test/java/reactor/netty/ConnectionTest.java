@@ -19,6 +19,7 @@ package reactor.netty;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 import io.netty.channel.Channel;
@@ -35,12 +36,11 @@ import org.junit.Before;
 import org.junit.Test;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
-import reactor.test.StepVerifier;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -504,15 +504,19 @@ public class ConnectionTest {
 		doTestUnavailable(testContext.inbound().receiveObject().then(), "Receiver Unavailable");
 	}
 
-	@SuppressWarnings("deprecation")
 	private void doTestUnavailable(Mono<Void> publisher, String expectation) {
-		MonoProcessor<Throwable> throwable = MonoProcessor.create();
+		AtomicReference<Throwable> throwable = new AtomicReference<>();
 
-		publisher.subscribe(null, throwable::onError);
+		publisher.onErrorResume(t -> {
+		             throwable.set(t);
+		             return Mono.empty();
+		         })
+		         .block(Duration.ofSeconds(30));
 
-		StepVerifier.create(throwable)
-		            .expectErrorMatches(t -> t instanceof IllegalStateException && expectation.equals(t.getMessage()))
-		            .verify(Duration.ofSeconds(30));
+		assertNotNull(throwable.get());
+		Throwable t = throwable.get();
+		assertTrue(t instanceof IllegalStateException);
+		assertEquals(expectation, t.getMessage());
 
 		assertTrue(channel.isActive());
 	}

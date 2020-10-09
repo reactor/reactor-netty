@@ -89,7 +89,6 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
@@ -2168,8 +2167,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testDoAfterResponseSuccessDisposeConnection() {
+	public void testDoAfterResponseSuccessDisposeConnection() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -2177,12 +2175,12 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
-		MonoProcessor<Void> processor = MonoProcessor.create();
+		CountDownLatch latch = new CountDownLatch(1);
 		StepVerifier.create(
 		        createHttpClientForContextWithPort()
 		                .doAfterResponseSuccess((res, conn) -> {
 		                    conn.onDispose()
-		                        .subscribeWith(processor);
+		                        .subscribe(null, null, latch::countDown);
 		                    conn.dispose();
 		                })
 		                .get()
@@ -2194,9 +2192,7 @@ public class HttpClientTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(processor)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 	}
 
 	@Test(expected = IllegalArgumentException.class)

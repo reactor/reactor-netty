@@ -26,6 +26,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -89,10 +90,7 @@ import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.ReplayProcessor;
 import reactor.core.publisher.SignalType;
-import reactor.core.publisher.UnicastProcessor;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
@@ -1197,13 +1195,14 @@ public class HttpServerTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testNormalConnectionCloseForWebSocketClient() {
+	public void testNormalConnectionCloseForWebSocketClient() throws Exception {
 		Flux<String> flux = Flux.range(0, 100)
 		                        .map(n -> String.format("%010d", n));
-		UnicastProcessor<String> receiver = UnicastProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+		AtomicReference<List<String>> receiver = new AtomicReference<>(new ArrayList<>());
+		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
+		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
+
+		CountDownLatch latch = new CountDownLatch(3);
 		List<String> test =
 		    flux.collectList()
 		        .block();
@@ -1215,7 +1214,10 @@ public class HttpServerTests {
 			                               out.sendString(flux)
 			                                  .then(out.sendClose(4404, "test"))
 			                                  .then(in.receiveCloseStatus()
-			                                          .subscribeWith(statusServer)
+			                                          .doOnNext(o -> {
+			                                              statusServer.set(o);
+			                                              latch.countDown();
+			                                          })
 			                                          .then())
 		                               ))
 		                               .wiretap(true)
@@ -1227,49 +1229,50 @@ public class HttpServerTests {
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> {
-			          MonoProcessor<Object> done = MonoProcessor.create();
 			          in.receiveCloseStatus()
-			            .subscribeWith(statusClient);
-			          in.receive()
-			            .asString()
-			            .doFinally((s) -> done.onComplete())
-			            .subscribeWith(receiver);
-			          return done.then(Mono.delay(Duration.ofMillis(500)));
+			            .doOnNext(o -> {
+			                statusClient.set(o);
+			                latch.countDown();
+			            })
+			            .subscribe();
+
+			          return in.receive()
+			                   .asString()
+			                   .doOnNext(s -> receiver.get().add(s))
+			                   .doFinally(sig -> latch.countDown())
+			                   .then(Mono.delay(Duration.ofMillis(500)));
 		          })
 		          .blockLast();
 
-		StepVerifier.create(receiver)
-		            .expectNextSequence(test)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(receiver.get()).containsAll(test);
 
-		StepVerifier.create(statusClient)
-		            .expectNext(new WebSocketCloseStatus(4404, "test"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(statusClient.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(4404, "test"));
 
-
-		StepVerifier.create(statusServer)
-		            .expectNext(new WebSocketCloseStatus(4404, "test"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(statusServer.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(4404, "test"));
 
 		c.disposeNow();
 	}
 
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testNormalConnectionCloseForWebSocketServer() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+	public void testNormalConnectionCloseForWebSocketServer() throws Exception {
+		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
+		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
+		CountDownLatch latch = new CountDownLatch(2);
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) ->
-		                                 resp.sendWebsocket((in, out) -> in.receiveCloseStatus()
-		                                                                   .subscribeWith(statusServer)
-		                                                                   .then()))
+		                                 resp.sendWebsocket((in, out) ->
+		                                     in.receiveCloseStatus()
+		                                       .doOnNext(o -> {
+		                                           statusServer.set(o);
+		                                           latch.countDown();
+		                                       })
+		                                       .then()))
 		                             .wiretap(true)
 		                             .bindNow();
 
@@ -1280,32 +1283,36 @@ public class HttpServerTests {
 		          .uri("/")
 		          .handle((in, out) -> out.sendClose(4404, "test")
 		                                  .then(in.receiveCloseStatus()
-		                                          .subscribeWith(statusClient)))
+		                                          .doOnNext(o -> {
+		                                              statusClient.set(o);
+		                                              latch.countDown();
+		                                          })))
 		          .blockLast();
 
-		StepVerifier.create(statusClient)
-		            .expectNext(new WebSocketCloseStatus(4404, "test"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(statusClient.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(4404, "test"));
 
-		StepVerifier.create(statusServer)
-		            .expectNext(new WebSocketCloseStatus(4404, "test"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(statusServer.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(4404, "test"));
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testCancelConnectionCloseForWebSocketClient() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+	public void testCancelConnectionCloseForWebSocketClient() throws Exception {
+		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
+		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
+		CountDownLatch latch = new CountDownLatch(2);
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) ->
-		                                 resp.sendWebsocket((in, out) -> in.receiveCloseStatus()
-		                                                                   .subscribeWith(statusServer)
-		                                                                   .then()))
+		                                 resp.sendWebsocket((in, out) ->
+		                                     in.receiveCloseStatus()
+		                                       .doOnNext(o -> {
+		                                           statusServer.set(o);
+		                                           latch.countDown();
+		                                       })
+		                                       .then()))
 		                             .wiretap(true)
 		                             .bindNow();
 
@@ -1316,7 +1323,11 @@ public class HttpServerTests {
 		          .uri("/")
 		          .handle((in, out) -> {
 		              in.receiveCloseStatus()
-		                .subscribeWith(statusClient);
+		                .doOnNext(o -> {
+		                    statusClient.set(o);
+		                    latch.countDown();
+		                })
+		              .subscribe();
 
 		              in.withConnection(Connection::dispose);
 
@@ -1324,29 +1335,30 @@ public class HttpServerTests {
 		          })
 		          .subscribe();
 
-		StepVerifier.create(statusClient)
-		            .expectNext(new WebSocketCloseStatus(-1, ""))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(statusClient.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(-1, ""));
 
-		StepVerifier.create(statusServer)
-		            .expectNext(new WebSocketCloseStatus(-1, ""))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(statusServer.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(-1, ""));
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testCancelReceivingForWebSocketClient() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+	public void testCancelReceivingForWebSocketClient() throws Exception {
+		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
+		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
+		CountDownLatch latch = new CountDownLatch(2);
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) ->
 		                                 resp.sendWebsocket((in, out) -> {
 		                                     in.receiveCloseStatus()
-		                                       .subscribeWith(statusServer);
+		                                       .doOnNext(o -> {
+		                                           statusServer.set(o);
+		                                           latch.countDown();
+		                                       })
+		                                       .subscribe();
 
 		                                     return out.sendString(Flux.interval(Duration.ofMillis(10))
 		                                                               .map(l -> l + ""));
@@ -1361,7 +1373,11 @@ public class HttpServerTests {
 		          .uri("/")
 		          .handle((in, out) -> {
 		              in.receiveCloseStatus()
-		                .subscribeWith(statusClient);
+		                .doOnNext(o -> {
+		                    statusClient.set(o);
+		                    latch.countDown();
+		                })
+		                .subscribe();
 
 		              in.receive()
 		                .take(1)
@@ -1371,28 +1387,29 @@ public class HttpServerTests {
 		          })
 		          .subscribe();
 
-		StepVerifier.create(statusClient)
-		            .expectNext(new WebSocketCloseStatus(-1, ""))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(statusClient.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(-1, ""));
 
-		StepVerifier.create(statusServer)
-		            .expectNext(new WebSocketCloseStatus(-1, ""))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(statusServer.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(-1, ""));
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testCancelConnectionCloseForWebSocketServer() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+	public void testCancelConnectionCloseForWebSocketServer() throws Exception {
+		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
+		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
+		CountDownLatch latch = new CountDownLatch(2);
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) -> resp.sendWebsocket((in, out) -> {
 		                                 in.receiveCloseStatus()
-		                                   .subscribeWith(statusServer);
+		                                   .doOnNext(o -> {
+		                                       statusServer.set(o);
+		                                       latch.countDown();
+		                                   })
+		                                 .subscribe();
 
 		                                 in.withConnection(Connection::dispose);
 
@@ -1408,34 +1425,39 @@ public class HttpServerTests {
 		          .uri("/")
 		          .handle((in, out) -> {
 		              in.receiveCloseStatus()
-		                .subscribeWith(statusClient);
+		                .doOnNext(o -> {
+		                    statusClient.set(o);
+		                    latch.countDown();
+		                })
+		                .subscribe();
 
 		              return Mono.never();
 		          })
 		          .subscribe();
 
-		StepVerifier.create(statusClient)
-		            .expectNext(new WebSocketCloseStatus(-1, ""))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(statusClient.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(-1, ""));
 
-		StepVerifier.create(statusServer)
-		            .expectNext(new WebSocketCloseStatus(-1, ""))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(statusServer.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(-1, ""));
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testCancelReceivingForWebSocketServer() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+	public void testCancelReceivingForWebSocketServer() throws Exception {
+		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
+		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
+		CountDownLatch latch = new CountDownLatch(2);
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) -> resp.sendWebsocket((in, out) -> {
 		                                 in.receiveCloseStatus()
-		                                   .subscribeWith(statusServer);
+		                                   .doOnNext(o -> {
+		                                       statusServer.set(o);
+		                                       latch.countDown();
+		                                   })
+		                                   .subscribe();
 
 		                                 in.receive()
 		                                   .take(1)
@@ -1453,22 +1475,23 @@ public class HttpServerTests {
 		          .uri("/")
 		          .handle((in, out) -> {
 		              in.receiveCloseStatus()
-		                .subscribeWith(statusClient);
+		                .doOnNext(o -> {
+		                    statusClient.set(o);
+		                    latch.countDown();
+		                })
+		                .subscribe();
 
 		              return out.sendString(Flux.interval(Duration.ofMillis(10))
 		                                        .map(l -> l + ""));
 		          })
 		          .subscribe();
 
-		StepVerifier.create(statusClient)
-		            .expectNext(new WebSocketCloseStatus(-1, ""))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(statusClient.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(-1, ""));
 
-		StepVerifier.create(statusServer)
-		            .expectNext(new WebSocketCloseStatus(-1, ""))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(statusServer.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(-1, ""));
 	}
 
 	@Test
@@ -1695,10 +1718,10 @@ public class HttpServerTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void testGracefulShutdown() throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(2);
 		CountDownLatch latch2 = new CountDownLatch(2);
+		CountDownLatch latch3 = new CountDownLatch(1);
 		LoopResources loop = LoopResources.create("testGracefulShutdown");
 		disposableServer =
 				HttpServer.create()
@@ -1722,7 +1745,7 @@ public class HttpServerTests {
 		                              .remoteAddress(disposableServer::address)
 		                              .wiretap(true);
 
-		MonoProcessor<String> result = MonoProcessor.create();
+		AtomicReference<String> result = new AtomicReference<>();
 		Flux.just("/delay500", "/delay1000")
 		    .flatMap(s ->
 		            client.get()
@@ -1731,7 +1754,10 @@ public class HttpServerTests {
 		                  .aggregate()
 		                  .asString())
 		    .collect(Collectors.joining())
-		    .subscribe(result);
+		    .subscribe(s -> {
+		        result.set(s);
+		        latch3.countDown();
+		    });
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
 
@@ -1744,9 +1770,9 @@ public class HttpServerTests {
 		loop.disposeLater()
 		    .block(Duration.ofSeconds(30));
 
-		StepVerifier.create(result)
-		            .expectNext("delay500delay1000")
-		            .verifyComplete();
+		assertThat(latch3.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(result.get()).isNotNull()
+				.isEqualTo("delay500delay1000");
 	}
 
 	@Test(expected = ChannelBindException.class)
@@ -2060,10 +2086,9 @@ public class HttpServerTests {
 		doTestIssue1286(true, true);
 	}
 
-	@SuppressWarnings("deprecation")
 	private void doTestIssue1286(boolean connectionClose, boolean throwException) throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
-		ReplayProcessor<ByteBuf> replay = ReplayProcessor.create();
+		AtomicReference<List<ByteBuf>> replay = new AtomicReference<>(new ArrayList<>());
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -2074,13 +2099,10 @@ public class HttpServerTests {
 				                      @Override
 				                      public void channelRead(ChannelHandlerContext ctx, Object msg) {
 				                          if (msg instanceof ByteBufHolder) {
-				                              replay.onNext(((ByteBufHolder) msg).content());
-				                              if (msg instanceof LastHttpContent) {
-				                                  replay.onComplete();
-				                              }
+				                              replay.get().add(((ByteBufHolder) msg).content());
 				                          }
 				                          else if (msg instanceof ByteBuf) {
-				                              replay.onNext((ByteBuf) msg);
+				                              replay.get().add((ByteBuf) msg);
 				                          }
 				                          ctx.fireChannelRead(msg);
 				                      }
@@ -2114,11 +2136,9 @@ public class HttpServerTests {
 		      .subscribe();
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
-
-		StepVerifier.create(replay.delaySubscription(Duration.ofMillis(500)))
-		            .expectNextMatches(buf -> buf.refCnt() == 0)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		Mono.delay(Duration.ofMillis(500))
+		    .block();
+		assertThat(replay.get()).allMatch(buf -> buf.refCnt() == 0);
 	}
 
 	@Test

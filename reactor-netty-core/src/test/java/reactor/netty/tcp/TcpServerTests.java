@@ -19,7 +19,6 @@ package reactor.netty.tcp;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
@@ -30,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -42,7 +40,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SNIHostName;
-import javax.net.ssl.SSLException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
@@ -70,7 +67,6 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -81,7 +77,6 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
 import reactor.netty.resources.LoopResources;
-import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -310,9 +305,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void sendFileSecure()
-			throws CertificateException, SSLException, URISyntaxException {
+	public void sendFileSecure() throws Exception {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -332,9 +325,10 @@ public class TcpServerTests {
 
 		assertNotNull(context);
 
-		MonoProcessor<String> m1 = MonoProcessor.create();
-		MonoProcessor<String> m2 = MonoProcessor.create();
+		AtomicReference<String> m1 = new AtomicReference<>();
+		AtomicReference<String> m2 = new AtomicReference<>();
 
+		CountDownLatch latch = new CountDownLatch(2);
 		Connection client1 =
 				TcpClient.create()
 				         .port(context.port())
@@ -343,7 +337,10 @@ public class TcpServerTests {
 				             in.receive()
 				               .asString()
 				               .log("-----------------CLIENT1")
-				               .subscribe(m1::onNext);
+				               .subscribe(s -> {
+				                   m1.set(s);
+				                   latch.countDown();
+				               });
 
 				             return out.sendString(Mono.just("gogogo"))
 				                       .neverComplete();
@@ -361,7 +358,10 @@ public class TcpServerTests {
 				               .takeUntil(d -> d.contains("<- 1024 mark here"))
 				               .reduceWith(String::new, String::concat)
 				               .log("-----------------CLIENT2")
-				               .subscribe(m2::onNext);
+				               .subscribe(s -> {
+				                   m2.set(s);
+				                   latch.countDown();
+				               });
 
 				             return out.sendString(Mono.just("GOGOGO"))
 				                       .neverComplete();
@@ -371,16 +371,18 @@ public class TcpServerTests {
 
 		assertNotNull(client2);
 
-		String client1Response = m1.block();
-		String client2Response = m2.block();
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
 
 		client1.disposeNow();
 		client2.disposeNow();
 		context.disposeNow();
 
-		Assertions.assertThat(client1Response).isEqualTo("NOPE");
+		Assertions.assertThat(m1.get())
+		          .isNotNull()
+		          .isEqualTo("NOPE");
 
-		Assertions.assertThat(client2Response)
+		Assertions.assertThat(m2.get())
+		          .isNotNull()
 		          .startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
 		          .contains("1024 mark here ->")
 		          .contains("<- 1024 mark here")
@@ -388,14 +390,14 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void sendFileChunked() throws IOException, URISyntaxException {
+	public void sendFileChunked() throws Exception {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
 		assertSendFile(out -> out.sendFileChunked(largeFile, 0, fileSize));
 	}
 
 	@Test
-	public void sendZipFileChunked() throws IOException {
+	public void sendZipFileChunked() throws Exception {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -408,7 +410,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void sendZipFileDefault() throws IOException {
+	public void sendZipFileDefault() throws Exception {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 
@@ -419,8 +421,7 @@ public class TcpServerTests {
 		}
 	}
 
-	@SuppressWarnings("deprecation")
-	private void assertSendFile(Function<NettyOutbound, NettyOutbound> fn) {
+	private void assertSendFile(Function<NettyOutbound, NettyOutbound> fn) throws Exception {
 		DisposableServer context =
 				TcpServer.create()
 				         .handle((in, out) ->
@@ -434,9 +435,10 @@ public class TcpServerTests {
 
 		assertNotNull(context);
 
-		MonoProcessor<String> m1 = MonoProcessor.create();
-		MonoProcessor<String> m2 = MonoProcessor.create();
+		AtomicReference<String> m1 = new AtomicReference<>();
+		AtomicReference<String> m2 = new AtomicReference<>();
 
+		CountDownLatch latch = new CountDownLatch(2);
 		Connection client1 =
 				TcpClient.create()
 				         .port(context.port())
@@ -444,7 +446,10 @@ public class TcpServerTests {
 				             in.receive()
 				               .asString()
 				               .log("-----------------CLIENT1")
-				               .subscribe(m1::onNext);
+				               .subscribe(s -> {
+				                   m1.set(s);
+				                   latch.countDown();
+				               });
 
 				             return out.sendString(Mono.just("gogogo"))
 				                       .neverComplete();
@@ -462,7 +467,10 @@ public class TcpServerTests {
 				               .take(2)
 				               .reduceWith(String::new, String::concat)
 				               .log("-----------------CLIENT2")
-				               .subscribe(m2::onNext);
+				               .subscribe(s -> {
+				                   m2.set(s);
+				                   latch.countDown();
+				               });
 
 				             return out.sendString(Mono.just("GOGOGO"))
 				                       .neverComplete();
@@ -472,16 +480,18 @@ public class TcpServerTests {
 
 		assertNotNull(client2);
 
-		String client1Response = m1.block();
-		String client2Response = m2.block();
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
 
 		client1.disposeNow();
 		client2.disposeNow();
 		context.disposeNow();
 
-		Assertions.assertThat(client1Response).isEqualTo("NOPE");
+		Assertions.assertThat(m1.get())
+		          .isNotNull()
+		          .isEqualTo("NOPE");
 
-		Assertions.assertThat(client2Response)
+		Assertions.assertThat(m2.get())
+		          .isNotNull()
 		          .startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
 		          .contains("1024 mark here ->")
 		          .contains("<- 1024 mark here")
@@ -753,22 +763,20 @@ public class TcpServerTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void testChannelGroupClosesAllConnections() throws Exception {
-		MonoProcessor<Void> serverConnDisposed = MonoProcessor.create();
-
 		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
 
-		CountDownLatch latch = new CountDownLatch(1);
+		CountDownLatch latch1 = new CountDownLatch(1);
+		CountDownLatch latch2 = new CountDownLatch(1);
 
 		DisposableServer boundServer =
 				TcpServer.create()
 				         .port(0)
 				         .doOnConnection(c -> {
 				             c.onDispose()
-				              .subscribe(serverConnDisposed);
+				              .subscribe(null, null, latch2::countDown);
 				             group.add(c.channel());
-				             latch.countDown();
+				             latch1.countDown();
 				         })
 				         .wiretap(true)
 				         .bindNow();
@@ -779,14 +787,14 @@ public class TcpServerTests {
 		         .connect()
 		         .subscribe();
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertTrue(latch1.await(30, TimeUnit.SECONDS));
 
 		boundServer.disposeNow();
 
 		FutureMono.from(group.close())
 		          .block(Duration.ofSeconds(30));
 
-		serverConnDisposed.block(Duration.ofSeconds(5));
+		assertTrue(latch2.await(5, TimeUnit.SECONDS));
 	}
 
 	@Test
@@ -882,10 +890,10 @@ public class TcpServerTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void testGracefulShutdown() throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(2);
 		CountDownLatch latch2 = new CountDownLatch(2);
+		CountDownLatch latch3 = new CountDownLatch(1);
 		LoopResources loop = LoopResources.create("testGracefulShutdown");
 		DisposableServer disposableServer =
 				TcpServer.create()
@@ -907,14 +915,17 @@ public class TcpServerTests {
 		                            .remoteAddress(disposableServer::address)
 		                            .wiretap(true);
 
-		MonoProcessor<String> result = MonoProcessor.create();
+		AtomicReference<String> result = new AtomicReference<>();
 		Flux.merge(client.connect(), client.connect())
 		    .flatMap(conn ->
 		            conn.inbound()
 		                .receive()
 		                .asString())
 		    .collect(Collectors.joining())
-		    .subscribe(result);
+		    .subscribe(s -> {
+		        result.set(s);
+		        latch3.countDown();
+		    });
 
 		assertTrue(latch1.await(30, TimeUnit.SECONDS));
 
@@ -927,9 +938,9 @@ public class TcpServerTests {
 
 		assertTrue(latch2.await(30, TimeUnit.SECONDS));
 
-		StepVerifier.create(result)
-		            .expectNext("delay1000delay1000")
-		            .verifyComplete();
+		Assertions.assertThat(latch3.await(30, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(result.get()).isNotNull()
+		          .isEqualTo("delay1000delay1000");
 	}
 
 	@Test(expected = ChannelBindException.class)

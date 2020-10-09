@@ -19,6 +19,7 @@ package reactor.netty.http.client;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -46,12 +47,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.ReplayProcessor;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
@@ -273,22 +270,11 @@ public class WebsocketTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void duplexEcho() throws Exception {
 
 		int c = 10;
 		CountDownLatch clientLatch = new CountDownLatch(c);
 		CountDownLatch serverLatch = new CountDownLatch(c);
-
-		FluxProcessor<String, String> server =
-				ReplayProcessor.<String>create().serialize();
-		FluxProcessor<String, String> client =
-				ReplayProcessor.<String>create().serialize();
-
-		server.log("server")
-		      .subscribe(v -> serverLatch.countDown());
-		client.log("client")
-		      .subscribe(v -> clientLatch.countDown());
 
 		httpServer = HttpServer.create()
 		                       .port(0)
@@ -296,22 +282,23 @@ public class WebsocketTest {
 		                               i.receive()
 		                                .asString()
 		                                .take(c)
-		                                .subscribeWith(server))))
+		                                .doOnNext(s -> serverLatch.countDown())
+		                                .log("server"))))
 		                       .wiretap(true)
 		                       .bindNow();
 
-		Flux.interval(Duration.ofMillis(200))
-		    .map(Object::toString)
-		    .subscribe(client::onNext);
+		Flux<String> flux = Flux.interval(Duration.ofMillis(200))
+		                        .map(Object::toString);
 
 		HttpClient.create()
 		          .port(httpServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/test")
-		          .handle((i, o) -> o.sendString(i.receive()
-		                                          .asString()
-		                                          .subscribeWith(client)))
+		          .handle((i, o) -> o.sendString(Flux.merge(flux, i.receive()
+		                                                            .asString()
+		                                                            .doOnNext(s -> clientLatch.countDown())
+		                                                            .log("client"))))
 		          .log()
 		          .subscribe();
 
@@ -564,7 +551,6 @@ public class WebsocketTest {
 				Flux.just("1", "2", "12345678901", "3"), Flux.just("1", "2", "12345678901", "3"), 4);
 	}
 
-	@SuppressWarnings("deprecation")
 	private void doTestServerMaxFramePayloadLength(int maxFramePayloadLength, Flux<String> input, Flux<String> expectation, int count) {
 		httpServer =
 				HttpServer.create()
@@ -580,7 +566,7 @@ public class WebsocketTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		ReplayProcessor<String> output = ReplayProcessor.create();
+		AtomicReference<List<String>> output = new AtomicReference<>(new ArrayList<>());
 		HttpClient.create()
 		          .port(httpServer.port())
 		          .websocket()
@@ -592,12 +578,12 @@ public class WebsocketTest {
 		                                          .map(byteBuf ->
 		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                          .take(count)
-		                                          .subscribeWith(output)
+		                                          .doOnNext(s -> output.get().add(s))
 		                                          .then()))
 		          .blockLast(Duration.ofSeconds(30));
 
-		assertThat(output.collectList().block(Duration.ofSeconds(30)))
-				.isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
+		List<String> test = expectation.collectList().block(Duration.ofSeconds(30));
+		assertThat(output.get()).isEqualTo(test);
 	}
 
 
@@ -727,7 +713,6 @@ public class WebsocketTest {
 		        Flux.just("1", "error", "2"), 3);
 	}
 
-	@SuppressWarnings("deprecation")
 	private void doTestConnectionAliveWhenTransformationErrors(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			Flux<String> expectation, int count) {
 		httpServer =
@@ -737,7 +722,7 @@ public class WebsocketTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		ReplayProcessor<String> output = ReplayProcessor.create();
+		AtomicReference<List<String>> output = new AtomicReference<>(new ArrayList<>());
 		HttpClient.create()
 		          .port(httpServer.port())
 		          .websocket()
@@ -749,12 +734,12 @@ public class WebsocketTest {
 		                                          .map(byteBuf ->
 		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                          .take(count)
-		                                          .subscribeWith(output)
+		                                          .doOnNext(s -> output.get().add(s))
 		                                          .then()))
 		          .blockLast(Duration.ofSeconds(30));
 
-		assertThat(output.collectList().block(Duration.ofSeconds(30)))
-				.isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
+		List<String> test = expectation.collectList().block(Duration.ofSeconds(30));
+		assertThat(output.get()).isEqualTo(test);
 
 	}
 
@@ -1072,9 +1057,8 @@ public class WebsocketTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testIssue900_1() {
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+	public void testIssue900_1() throws Exception {
+		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
 		httpServer =
 				HttpServer.create()
@@ -1085,6 +1069,7 @@ public class WebsocketTest {
 				          .wiretap(true)
 				          .bindNow();
 
+		CountDownLatch latch = new CountDownLatch(1);
 		Flux<WebSocketFrame> response =
 				HttpClient.create()
 				          .port(httpServer.port())
@@ -1092,7 +1077,11 @@ public class WebsocketTest {
 				          .uri("/")
 				          .handle((in, out) -> {
 				              in.receiveCloseStatus()
-				                .subscribeWith(statusClient);
+				                .doOnNext(o -> {
+				                    statusClient.set(o);
+				                    latch.countDown();
+				                })
+				                .subscribe();
 
 				              return out.sendObject(Flux.just(new TextWebSocketFrame("echo"),
 				                                              new CloseWebSocketFrame(1008, "something")))
@@ -1107,31 +1096,38 @@ public class WebsocketTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusClient)
-		            .expectNext(new WebSocketCloseStatus(1008, "something"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(statusClient.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(1008, "something"));
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testIssue900_2() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+	public void testIssue900_2() throws Exception {
+		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
+		AtomicReference<String> incomingData = new AtomicReference<>();
 
+		CountDownLatch latch = new CountDownLatch(1);
 		httpServer =
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) ->
 				              res.sendWebsocket((in, out) -> {
 				                  in.receiveCloseStatus()
-				                    .subscribeWith(statusServer);
+				                    .doOnNext(o -> {
+				                        statusServer.set(o);
+				                        latch.countDown();
+				                    })
+				                    .subscribe();
 
 				                  return out.sendObject(Flux.just(new TextWebSocketFrame("echo"),
 				                                                  new CloseWebSocketFrame(1008, "something"))
 				                                            .delayElements(Duration.ofMillis(100)))
 				                            .then(in.receiveFrames()
-				                                    .subscribeWith(incomingData)
+				                                    .doOnNext(o -> {
+				                                        if (o instanceof TextWebSocketFrame) {
+				                                            incomingData.set(((TextWebSocketFrame) o).text());
+				                                        }
+				                                    })
 				                                    .then());
 				              })
 				          )
@@ -1146,22 +1142,18 @@ public class WebsocketTest {
 		                                                .doOnNext(WebSocketFrame::retain)))
 		          .subscribe();
 
-		StepVerifier.create(incomingData)
-		            .expectNext(new TextWebSocketFrame("echo"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-
-		StepVerifier.create(statusServer)
-		            .expectNext(new WebSocketCloseStatus(1008, "something"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(incomingData.get()).isNotNull()
+				.isEqualTo("echo");
+		assertThat(statusServer.get()).isNotNull()
+				.isEqualTo(new WebSocketCloseStatus(1008, "something"));
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testIssue663_1() {
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+	public void testIssue663_1() throws Exception {
+		AtomicBoolean incomingData = new AtomicBoolean();
 
+		CountDownLatch latch = new CountDownLatch(1);
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -1170,7 +1162,12 @@ public class WebsocketTest {
 				                  o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 				                                   .delayElements(Duration.ofMillis(100)))
 				                   .then(i.receiveFrames()
-				                          .subscribeWith(incomingData)
+				                          .doOnNext(f -> {
+				                              if (f instanceof PongWebSocketFrame) {
+				                                  incomingData.set(true);
+				                              }
+				                          })
+				                          .doOnComplete(latch::countDown)
 				                          .then())))
 				          .wiretap(true)
 				          .bindNow();
@@ -1183,17 +1180,15 @@ public class WebsocketTest {
 		          .handle((in, out) -> in.receiveFrames())
 		          .subscribe();
 
-		StepVerifier.create(incomingData)
-		            .expectNext(new PongWebSocketFrame())
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(incomingData.get()).isTrue();
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testIssue663_2() {
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+	public void testIssue663_2() throws Exception {
+		AtomicBoolean incomingData = new AtomicBoolean();
 
+		CountDownLatch latch = new CountDownLatch(1);
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -1202,7 +1197,8 @@ public class WebsocketTest {
 				                  o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 				                   .delayElements(Duration.ofMillis(100)))
 				                   .then(i.receiveFrames()
-				                          .subscribeWith(incomingData)
+				                          .doOnNext(f -> incomingData.set(true))
+				                          .doOnComplete(latch::countDown)
 				                          .then())))
 				          .wiretap(true)
 				          .bindNow();
@@ -1215,16 +1211,15 @@ public class WebsocketTest {
 		          .handle((in, out) -> in.receiveFrames())
 		          .subscribe();
 
-		StepVerifier.create(incomingData)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(incomingData.get()).isFalse();
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testIssue663_3() {
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+	public void testIssue663_3() throws Exception {
+		AtomicBoolean incomingData = new AtomicBoolean();
 
+		CountDownLatch latch = new CountDownLatch(1);
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -1241,21 +1236,24 @@ public class WebsocketTest {
 		              out.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 		                                 .delayElements(Duration.ofMillis(100)))
 		                 .then(in.receiveFrames()
-		                         .subscribeWith(incomingData)
+		                         .doOnNext(f -> {
+		                             if (f instanceof PongWebSocketFrame) {
+		                                 incomingData.set(true);
+		                             }
+		                         })
+		                         .doOnComplete(latch::countDown)
 		                         .then()))
 		          .subscribe();
 
-		StepVerifier.create(incomingData)
-		            .expectNext(new PongWebSocketFrame())
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(incomingData.get()).isTrue();
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testIssue663_4() {
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+	public void testIssue663_4() throws Exception {
+		AtomicBoolean incomingData = new AtomicBoolean();
 
+		CountDownLatch latch = new CountDownLatch(1);
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -1273,24 +1271,22 @@ public class WebsocketTest {
 		              out.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 		                                 .delayElements(Duration.ofMillis(100)))
 		                 .then(in.receiveFrames()
-		                         .subscribeWith(incomingData)
+		                         .doOnNext(f -> incomingData.set(true))
+		                         .doOnComplete(latch::countDown)
 		                         .then()))
 		          .subscribe();
 
-		StepVerifier.create(incomingData)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(incomingData.get()).isFalse();
 	}
 
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void testIssue967() {
+	public void testIssue967() throws Exception {
 		Flux<String> somePublisher = Flux.range(1, 10)
 		                                 .map(i -> Integer.toString(i))
 		                                 .delayElements(Duration.ofMillis(50));
-
-		ReplayProcessor<String> someConsumer = ReplayProcessor.create();
 
 		httpServer =
 				HttpServer.create()
@@ -1305,15 +1301,14 @@ public class WebsocketTest {
 				                              .publish()     // We want the connection alive even after takeUntil
 				                              .autoConnect() // which will trigger cancel
 				                              .takeUntil(msg -> msg.equals("5"))
-				                              .subscribeWith(someConsumer)
 				                              .then())))
 				          .bindNow();
-
-		ReplayProcessor<String> clientFlux = ReplayProcessor.create();
 
 		Flux<String> toSend = Flux.range(1, 10)
 		                          .map(i -> Integer.toString(i));
 
+		AtomicInteger count = new AtomicInteger();
+		CountDownLatch latch = new CountDownLatch(1);
 		HttpClient.create()
 		          .port(httpServer.port())
 		          .wiretap(true)
@@ -1324,13 +1319,13 @@ public class WebsocketTest {
 		                        in.receiveFrames()
 		                          .cast(TextWebSocketFrame.class)
 		                          .map(TextWebSocketFrame::text)
-		                          .subscribeWith(clientFlux)
+		                          .doOnNext(s -> count.getAndIncrement())
+		                          .doOnComplete(latch::countDown)
 		                          .then()))
 		          .subscribe();
 
-		StepVerifier.create(clientFlux)
-		            .expectNextCount(10)
-		            .verifyComplete();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(count.get()).isEqualTo(10);
 	}
 
 	@Test
