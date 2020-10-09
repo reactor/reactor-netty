@@ -113,7 +113,7 @@ By default, the `TCP` client is configured with the following options:
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/tcp/TcpClientConnect.java
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[lines=38..43]
+include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[lines=36..41]
 ----
 ====
 
@@ -163,7 +163,7 @@ The following listing shows the default configuration for the Event Loop Group:
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=78..107]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=79..108]
 ----
 ====
 
@@ -190,7 +190,7 @@ until a channel is returned to the pool again.
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=114..135]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=111..137]
 ----
 ====
 
