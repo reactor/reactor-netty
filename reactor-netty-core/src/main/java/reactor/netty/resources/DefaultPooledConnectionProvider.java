@@ -339,6 +339,10 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		final Queue<Pending> pendingQueue = Queues.<Pending>unbounded(4).get();
 		final Context context;
 
+		public PendingConnectionObserver() {
+			this(Context.empty());
+		}
+
 		public PendingConnectionObserver(final Context context) {
 			this.context = context;
 		}
@@ -379,14 +383,11 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		PooledRef<PooledConnection> pooledRef;
 
-		final Context context;
-
 		@SuppressWarnings("deprecation")
-		PooledConnection(Channel channel, InstrumentedPool<PooledConnection> pool, Context context) {
+		PooledConnection(Channel channel, InstrumentedPool<PooledConnection> pool) {
 			this.channel = channel;
 			this.onTerminate = MonoProcessor.create();
 			this.pool = pool;
-			this.context = context;
 		}
 
 		@Override
@@ -484,7 +485,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				obs = channel.attr(OWNER)
 				             .get();
 				if (obs == null) {
-					obs = new PendingConnectionObserver(context);
+					obs = new PendingConnectionObserver();
 				}
 				else {
 					return obs;
@@ -539,12 +540,13 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 							pool.metrics().idleSize());
 				}
 
-				PooledConnection pooledConnection = new PooledConnection(ch, pool, sink.currentContext());
+				PooledConnection pooledConnection = new PooledConnection(ch, pool);
 
 				this.pooledConnection = pooledConnection;
 
 				pooledConnection.bind();
 
+				ch.attr(OWNER).compareAndSet(null, new PendingConnectionObserver(sink.currentContext()));
 				ch.pipeline().remove(this);
 				ch.pipeline()
 				  .addFirst(config.channelInitializer(pooledConnection, remoteAddress, false));
