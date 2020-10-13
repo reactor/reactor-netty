@@ -337,6 +337,11 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 	static final class PendingConnectionObserver implements ConnectionObserver {
 		final Queue<Pending> pendingQueue = Queues.<Pending>unbounded(4).get();
+		final Context context;
+
+		public PendingConnectionObserver(final Context context) {
+			this.context = context;
+		}
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
@@ -346,6 +351,11 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
 			pendingQueue.add(new Pending(connection, error, null));
+		}
+
+		@Override
+		public Context currentContext() {
+			return this.context;
 		}
 
 		static class Pending {
@@ -369,11 +379,14 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		PooledRef<PooledConnection> pooledRef;
 
+		final Context context;
+
 		@SuppressWarnings("deprecation")
-		PooledConnection(Channel channel, InstrumentedPool<PooledConnection> pool) {
+		PooledConnection(Channel channel, InstrumentedPool<PooledConnection> pool, Context context) {
 			this.channel = channel;
 			this.onTerminate = MonoProcessor.create();
 			this.pool = pool;
+			this.context = context;
 		}
 
 		@Override
@@ -471,7 +484,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				obs = channel.attr(OWNER)
 				             .get();
 				if (obs == null) {
-					obs = new PendingConnectionObserver();
+					obs = new PendingConnectionObserver(context);
 				}
 				else {
 					return obs;
@@ -526,7 +539,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 							pool.metrics().idleSize());
 				}
 
-				PooledConnection pooledConnection = new PooledConnection(ch, pool);
+				PooledConnection pooledConnection = new PooledConnection(ch, pool, sink.currentContext());
 
 				this.pooledConnection = pooledConnection;
 
