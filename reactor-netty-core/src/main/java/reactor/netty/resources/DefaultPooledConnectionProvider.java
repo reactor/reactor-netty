@@ -337,6 +337,15 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 	static final class PendingConnectionObserver implements ConnectionObserver {
 		final Queue<Pending> pendingQueue = Queues.<Pending>unbounded(4).get();
+		final Context context;
+
+		public PendingConnectionObserver() {
+			this(Context.empty());
+		}
+
+		public PendingConnectionObserver(final Context context) {
+			this.context = context;
+		}
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
@@ -346,6 +355,11 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
 			pendingQueue.add(new Pending(connection, error, null));
+		}
+
+		@Override
+		public Context currentContext() {
+			return this.context;
 		}
 
 		static class Pending {
@@ -532,6 +546,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 				pooledConnection.bind();
 
+				ch.attr(OWNER).compareAndSet(null, new PendingConnectionObserver(sink.currentContext()));
 				ch.pipeline().remove(this);
 				ch.pipeline()
 				  .addFirst(config.channelInitializer(pooledConnection, remoteAddress, false));
