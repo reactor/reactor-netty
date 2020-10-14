@@ -453,7 +453,7 @@ public class TcpServerTests {
 	public void sendFileChunked() throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
-		assertSendFile(out -> out.sendFileChunked(largeFile, 0, fileSize));
+		assertSendFile(out -> out.sendFileChunked(largeFile, 0, fileSize), 2);
 	}
 
 	@Test
@@ -465,7 +465,7 @@ public class TcpServerTests {
 		try (FileSystem zipFs = FileSystems.newFileSystem(path, (ClassLoader) null)) {
 			Path fromZipFile = zipFs.getPath("/largeFile.txt");
 			long fileSize = Files.size(fromZipFile);
-			assertSendFile(out -> out.sendFileChunked(fromZipFile, 0, fileSize));
+			assertSendFile(out -> out.sendFileChunked(fromZipFile, 0, fileSize), 2);
 		}
 	}
 
@@ -477,11 +477,11 @@ public class TcpServerTests {
 		try (FileSystem zipFs = FileSystems.newFileSystem(path, (ClassLoader) null)) {
 			Path fromZipFile = zipFs.getPath("/largeFile.txt");
 			long fileSize = Files.size(fromZipFile);
-			assertSendFile(out -> out.sendFile(fromZipFile, 0, fileSize));
+			assertSendFile(out -> out.sendFile(fromZipFile, 0, fileSize), 1);
 		}
 	}
 
-	private void assertSendFile(Function<NettyOutbound, NettyOutbound> fn) {
+	private void assertSendFile(Function<NettyOutbound, NettyOutbound> fn, int chunks) {
 		DisposableServer context =
 				TcpServer.create()
 				         .handle((in, out) ->
@@ -519,7 +519,7 @@ public class TcpServerTests {
 				         .handle((in, out) -> {
 				             in.receive()
 				               .asString(StandardCharsets.UTF_8)
-				               .take(2)
+				               .take(chunks)
 				               .reduceWith(String::new, String::concat)
 				               .log("-----------------CLIENT2")
 				               .subscribe(m2::onNext);
