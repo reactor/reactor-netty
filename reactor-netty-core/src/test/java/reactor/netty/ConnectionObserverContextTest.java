@@ -57,12 +57,20 @@ public class ConnectionObserverContextTest {
 
 	private static final String CONTEXT_KEY = "marcels-key";
 	private static final String CONTEXT_VALUE = "marcels-context";
-	private static final ThreadLocal<String> helloWorld = new ThreadLocal();
+	private static final ThreadLocal<String> helloWorld = new ThreadLocal<>();
 
 	private static final DisposableServer server = TcpServer.create().port(0).bindNow();
 
 	@Before
 	public void before() {
+		// Ideally, we would like to add the context to the stream in test via
+		// contextWrite(Context.of(CONTEXT_KEY, CONTEXT_VALUE))
+		// and let it propagate to the innermost stream.  Only then the propagation
+		// to the ConnectionObserver is possible.  However, there is a propagation issue
+		// as mentioned in the first item of this comment
+		// https://github.com/reactor/reactor-netty/issues/1327#issuecomment-707849473
+		// Once https://github.com/reactor/reactor-pool/issues/103 is addressed, we should
+		// hopefully not need the `Hooks` anymore.
 		helloWorld.set(CONTEXT_VALUE);
 		Hooks.onLastOperator(HelloWorldPropagatorSubscriber.class.getName(), HelloWorldPropagatorSubscriber.asOperator());
 	}
@@ -94,10 +102,8 @@ public class ConnectionObserverContextTest {
 				.remoteAddress(server::address)
 				.wiretap(true)
 				.connect()
-				.contextWrite(Context.of(CONTEXT_KEY, CONTEXT_VALUE))
 				.subscribe();
 
-		Thread.sleep(1000);
 		assertTrue(channelInitialized.await(30, TimeUnit.SECONDS));
 		assertNotNull(contextualData.get());
 		assertEquals(CONTEXT_VALUE, contextualData.get());
