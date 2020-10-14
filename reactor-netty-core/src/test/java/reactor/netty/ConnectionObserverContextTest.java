@@ -171,6 +171,7 @@ public class ConnectionObserverContextTest {
 		 *
 		 * @param contextModifier a function that modifies the {@link Context} given to it.
 		 */
+		@SuppressWarnings("rawtypes")
 		public static <T> Function<? super Publisher<T>, ? extends Publisher<T>> asOperator(
 				final UnaryOperator<Context> contextModifier
 		) {
