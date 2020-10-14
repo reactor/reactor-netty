@@ -158,12 +158,25 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		HttpResponse res =
 				new DefaultFullHttpResponse(version(), status(), body);
 
-		responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
-		if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
+		if (!HttpMethod.HEAD.equals(method())) {
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+			if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
 
-			if (HttpUtil.getContentLength(nettyResponse, -1) == -1) {
-				responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+				if (HttpUtil.getContentLength(nettyResponse, -1) == -1) {
+					responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+				}
 			}
+		}
+		// For HEAD requests:
+		// - if there is Transfer-Encoding and Content-Length, Transfer-Encoding will be removed
+		// - if there is only Transfer-Encoding, it will be kept and not replaced by
+		// Content-Length: body.readableBytes()
+		// For HEAD requests, the I/O handler may decide to provide only the headers and complete
+		// the response. In that case body will be EMPTY_BUFFER and if we set Content-Length: 0,
+		// this will not be correct
+		// https://github.com/reactor/reactor-netty/issues/1333
+		else if (HttpUtil.getContentLength(nettyResponse, -1) != -1) {
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 		}
 
 		res.headers().set(responseHeaders);
