@@ -653,8 +653,8 @@ public class HttpServerTests {
 		doTestContentLengthHeadRequest("/4", address, HttpMethod.HEAD, sentHeaders, true, false);
 		doTestContentLengthHeadRequest("/5", address, HttpMethod.HEAD, sentHeaders, false, true);
 		doTestContentLengthHeadRequest("/6", address, HttpMethod.HEAD, sentHeaders, false, false);
-		doTestContentLengthHeadRequest("/7", address, HttpMethod.HEAD, sentHeaders, false, false);
-		doTestContentLengthHeadRequest("/8", address, HttpMethod.HEAD, sentHeaders, false, false);
+		doTestContentLengthHeadRequest("/7", address, HttpMethod.HEAD, sentHeaders, true, false);
+		doTestContentLengthHeadRequest("/8", address, HttpMethod.HEAD, sentHeaders, false, true);
 		doTestContentLengthHeadRequest("/9", address, HttpMethod.HEAD, sentHeaders, false, false);
 		doTestContentLengthHeadRequest("/10", address, HttpMethod.HEAD, sentHeaders, false, false);
 		doTestContentLengthHeadRequest("/11", address, HttpMethod.HEAD, sentHeaders, false, false);
