@@ -105,7 +105,7 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 	}
 
 	@Override
-	@Ignore
+	@Ignore("TODO: mention why you can't have different HTTP status on uncaught")
 	public void httpStatusCodeSettable_onUncaughtException() {
 	}
 
