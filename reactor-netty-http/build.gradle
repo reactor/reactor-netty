@@ -71,7 +71,6 @@ dependencies {
 	testCompile "io.specto:hoverfly-java:$hoverflyJavaVersion"
 	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
-	testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"
 	testCompile "junit:junit:$junitVersion"
 

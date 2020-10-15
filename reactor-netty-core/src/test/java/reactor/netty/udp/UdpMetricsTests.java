@@ -36,10 +36,7 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_SENT;
@@ -128,7 +125,7 @@ public class UdpMetricsTests {
 		                    }
 		                });
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		checkExpectationsPositive();
 	}
@@ -155,26 +152,26 @@ public class UdpMetricsTests {
 
 	private void checkClientConnectTime(String[] tags) {
 		Timer timer = registry.find(CLIENT_CONNECT_TIME).tags(tags).timer();
-		assertNotNull(timer);
-		assertEquals(1, timer.count());
-		assertTrue(timer.totalTime(TimeUnit.NANOSECONDS) > 0);
+		assertThat(timer).isNotNull();
+		assertThat(timer.count()).isEqualTo(1);
+		assertThat(timer.totalTime(TimeUnit.NANOSECONDS) > 0).isTrue();
 	}
 
 	private void checkDistributionSummary(String name, String[] tags) {
 		DistributionSummary summary = registry.find(name).tags(tags).summary();
-		assertNotNull(summary);
-		assertEquals(1, summary.count());
-		assertTrue(summary.totalAmount() >= 5);
+		assertThat(summary).isNotNull();
+		assertThat(summary.count()).isEqualTo(1);
+		assertThat(summary.totalAmount() >= 5).isTrue();
 	}
 
 	private void checkCounter(String name, String[] tags, boolean exists) {
 		Counter counter = registry.find(name).tags(tags).counter();
 		if (exists) {
-			assertNotNull(counter);
-			assertEquals(0, counter.count(), 0.0);
+			assertThat(counter).isNotNull();
+			assertThat(counter.count()).isEqualTo(0);
 		}
 		else {
-			assertNull(counter);
+			assertThat(counter).isNull();
 		}
 	}
 

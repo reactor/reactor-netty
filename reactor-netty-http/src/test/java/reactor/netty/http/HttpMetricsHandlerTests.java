@@ -16,10 +16,6 @@
 package reactor.netty.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static reactor.netty.Metrics.*;
 
 import io.micrometer.core.instrument.Counter;
@@ -56,7 +52,7 @@ public class HttpMetricsHandlerTests {
 	private ConnectionProvider provider;
 	HttpClient httpClient;
 	private MeterRegistry registry;
-	
+
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
 	@Before
@@ -119,7 +115,7 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -141,7 +137,7 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		sa = (InetSocketAddress) serverAddress.get();
 
@@ -172,7 +168,7 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -193,7 +189,7 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		sa = (InetSocketAddress) serverAddress.get();
 
@@ -226,7 +222,7 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -310,26 +306,26 @@ public class HttpMetricsHandlerTests {
 
 	void checkTimer(String name, String[] tags, long expectedCount) {
 		Timer timer = registry.find(name).tags(tags).timer();
-		assertNotNull(timer);
-		assertEquals(expectedCount, timer.count());
-		assertTrue(timer.totalTime(TimeUnit.NANOSECONDS) > 0);
+		assertThat(timer).isNotNull();
+		assertThat(timer.count()).isEqualTo(expectedCount);
+		assertThat(timer.totalTime(TimeUnit.NANOSECONDS) > 0).isTrue();
 	}
 
 	private void checkDistributionSummary(String name, String[] tags, long expectedCount, double expectedAmount) {
 		DistributionSummary summary = registry.find(name).tags(tags).summary();
-		assertNotNull(summary);
-		assertEquals(expectedCount, summary.count());
-		assertTrue(summary.totalAmount() >= expectedAmount);
+		assertThat(summary).isNotNull();
+		assertThat(summary.count()).isEqualTo(expectedCount);
+		assertThat(summary.totalAmount() >= expectedAmount).isTrue();
 	}
 
 	void checkCounter(String name, String[] tags, boolean exists, double expectedCount) {
 		Counter counter = registry.find(name).tags(tags).counter();
 		if (exists) {
-			assertNotNull(counter);
-			assertTrue(counter.count() >= expectedCount);
+			assertThat(counter).isNotNull();
+			assertThat(counter.count() >= expectedCount).isTrue();
 		}
 		else {
-			assertNull(counter);
+			assertThat(counter).isNull();
 		}
 	}
 

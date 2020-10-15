@@ -83,7 +83,6 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
@@ -497,13 +496,14 @@ public class HttpClientTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, resp) -> {
-				                  Assert.assertTrue("" + req.requestHeaders()
-				                                            .get(HttpHeaderNames.USER_AGENT),
-				                                   req.requestHeaders()
-				                                       .contains(HttpHeaderNames.USER_AGENT) &&
+				                  assertThat(req.requestHeaders()
+				                                .contains(HttpHeaderNames.USER_AGENT) &&
 				                                   req.requestHeaders()
 				                                      .get(HttpHeaderNames.USER_AGENT)
-				                                      .equals(HttpClient.USER_AGENT));
+				                                      .equals(HttpClient.USER_AGENT))
+				                      .as("" + req.requestHeaders()
+				                                  .get(HttpHeaderNames.USER_AGENT))
+				                      .isTrue();
 
 				                  return req.receive().then();
 				          })
@@ -713,7 +713,7 @@ public class HttpClientTest {
 		        .responseContent()
 		        .blockLast(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		assertThat(onReq.get()).isEqualTo(3);
 		assertThat(afterReq.get()).isEqualTo(3);
 		assertThat(onResp.get()).isEqualTo(3);
@@ -823,7 +823,7 @@ public class HttpClientTest {
 				    .map(v -> "test")
 				    .collectList()
 				    .block();
-		Assert.assertNotNull(expected);
+		assertThat(expected).isNotNull();
 
 		StepVerifier.create(
 				Flux.range(1, 10)
@@ -1135,7 +1135,7 @@ public class HttpClientTest {
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isEqualTo(true);
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isEqualTo(true);
 	}
 
 	@Test

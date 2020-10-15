@@ -76,7 +76,6 @@ dependencies {
 	// Testing
 	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
-	testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"
 	testCompile "junit:junit:$junitVersion"
 	testCompile "org.mockito:mockito-core:$mockitoVersion"

@@ -39,9 +39,7 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * This test class verifies that a stream's {@link Context} is propagated to
@@ -104,9 +102,9 @@ public class ConnectionObserverContextTest {
 				.connect()
 				.subscribe();
 
-		assertTrue(channelInitialized.await(30, TimeUnit.SECONDS));
-		assertNotNull(contextualData.get());
-		assertEquals(CONTEXT_VALUE, contextualData.get());
+		assertThat(channelInitialized.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(contextualData.get()).isNotNull();
+		assertThat(contextualData.get()).isEqualTo(CONTEXT_VALUE);
 	}
 
 	/**

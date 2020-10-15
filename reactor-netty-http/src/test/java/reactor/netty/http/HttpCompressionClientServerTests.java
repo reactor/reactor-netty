@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
 
 import io.netty.handler.codec.http.HttpHeaders;
-import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -57,7 +56,7 @@ public class HttpCompressionClientServerTests {
 		          .remoteAddress(runningServer::address)
 		          .wiretap(true)
 		          .compress(true)
-		          .headers(h -> Assert.assertTrue(h.contains("Accept-Encoding", "gzip", true)))
+		          .headers(h -> assertThat(h.contains("Accept-Encoding", "gzip", true)).isTrue())
 		          .get()
 		          .uri("/test")
 		          .responseContent()
@@ -92,7 +91,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isNull();
 
-		Assert.assertEquals("reply", resp.getT1());
+		assertThat(resp.getT1()).isEqualTo("reply");
 
 		runningServer.dispose();
 		runningServer.onDispose()
@@ -126,7 +125,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isNull();
 
-		Assert.assertEquals("reply", resp.getT1());
+		assertThat(resp.getT1()).isEqualTo("reply");
 
 		runningServer.dispose();
 		runningServer.onDispose()
@@ -211,7 +210,7 @@ public class HttpCompressionClientServerTests {
 
 		//check the server sent plain text
 		String reply = resp.getT1();
-		Assert.assertEquals("reply", reply);
+		assertThat(reply).isEqualTo("reply");
 
         connection.dispose();
         connection.onDispose()
@@ -298,7 +297,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(headers.get("conTENT-encoding")).isNull();
 
 		//check the server sent plain text
-		Assert.assertEquals("reply", resp.getT1());
+		assertThat(resp.getT1()).isEqualTo("reply");
 
 		runningServer.dispose();
 		runningServer.onDispose()

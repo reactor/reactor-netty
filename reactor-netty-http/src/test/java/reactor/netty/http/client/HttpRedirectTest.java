@@ -51,8 +51,7 @@ import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 public class HttpRedirectTest {
 
@@ -706,7 +705,7 @@ public class HttpRedirectTest {
 	}
 
 	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client) {
-		assumeTrue(LoopResources.hasNativeSupport());
+		assumeThat(LoopResources.hasNativeSupport()).isTrue();
 		DisposableServer disposableServer = null;
 		try {
 			disposableServer =
@@ -727,7 +726,7 @@ public class HttpRedirectTest {
 					      .asString()
 					      .block(Duration.ofSeconds(30));
 
-			assertEquals("END", response);
+			assertThat(response).isEqualTo("END");
 		}
 		finally {
 			assertThat(disposableServer).isNotNull();

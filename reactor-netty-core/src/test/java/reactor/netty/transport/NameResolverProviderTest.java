@@ -28,9 +28,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_MAX_TIME_TO_LIVE;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_MIN_TIME_TO_LIVE;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE;
@@ -109,18 +106,18 @@ public class NameResolverProviderTest {
 
 	@Test
 	public void disableOptionalRecord() {
-		assertFalse(builder.build().isDisableOptionalRecord());
+		assertThat(builder.build().isDisableOptionalRecord()).isFalse();
 
 		builder.disableOptionalRecord(true);
-		assertTrue(builder.build().isDisableOptionalRecord());
+		assertThat(builder.build().isDisableOptionalRecord()).isTrue();
 	}
 
 	@Test
 	public void disableRecursionDesired() {
-		assertFalse(builder.build().isDisableRecursionDesired());
+		assertThat(builder.build().isDisableRecursionDesired()).isFalse();
 
 		builder.disableRecursionDesired(true);
-		assertTrue(builder.build().isDisableRecursionDesired());
+		assertThat(builder.build().isDisableRecursionDesired()).isTrue();
 	}
 
 	@Test
@@ -185,7 +182,7 @@ public class NameResolverProviderTest {
 
 	@Test
 	public void resolvedAddressTypes() {
-		assertNull(builder.build().resolvedAddressTypes());
+		assertThat(builder.build().resolvedAddressTypes()).isNull();
 
 		builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
 		assertThat(builder.build().resolvedAddressTypes()).isEqualTo(ResolvedAddressTypes.IPV4_ONLY);
@@ -199,21 +196,21 @@ public class NameResolverProviderTest {
 
 	@Test
 	public void roundRobinSelection() {
-		assertFalse(builder.build().isRoundRobinSelection());
+		assertThat(builder.build().isRoundRobinSelection()).isFalse();
 
 		builder.roundRobinSelection(true);
-		assertTrue(builder.build().isRoundRobinSelection());
+		assertThat(builder.build().isRoundRobinSelection()).isTrue();
 	}
 
 	@Test
 	public void runOn() {
-		assertNull(builder.build().loopResources());
-		assertTrue(builder.build().isPreferNative());
+		assertThat(builder.build().loopResources()).isNull();
+		assertThat(builder.build().isPreferNative()).isTrue();
 
 		LoopResources loop = LoopResources.create("runOn");
 		builder.runOn(loop, false);
 		assertThat(builder.build().loopResources()).isEqualTo(loop);
-		assertFalse(builder.build().isPreferNative());
+		assertThat(builder.build().isPreferNative()).isFalse();
 	}
 
 	@Test
@@ -224,7 +221,7 @@ public class NameResolverProviderTest {
 
 	@Test
 	public void searchDomains() {
-		assertNull(builder.build().searchDomains());
+		assertThat(builder.build().searchDomains()).isNull();
 
 		List<String> searchDomains = Collections.singletonList("searchDomains");
 		builder.searchDomains(searchDomains);

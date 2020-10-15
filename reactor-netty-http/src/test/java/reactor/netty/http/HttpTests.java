@@ -193,7 +193,7 @@ public class HttpTests {
 		            .expectError(IOException.class)
 		            .verify(Duration.ofSeconds(30));
 
-		Assertions.assertThat(errored1.await(30, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(errored1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		client.get()
 		      .uri("/issue231_1")

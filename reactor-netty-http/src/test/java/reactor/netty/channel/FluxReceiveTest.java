@@ -159,7 +159,7 @@ public class FluxReceiveTest {
 
 		ops.onInboundError(new OutOfMemoryError());
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		assertThat(buffer.refCnt()).isEqualTo(0);
 	}

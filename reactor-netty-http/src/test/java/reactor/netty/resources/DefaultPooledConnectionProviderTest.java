@@ -176,7 +176,7 @@ public class DefaultPooledConnectionProviderTest {
 		      .onErrorResume(e -> Mono.empty())
 		      .block(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		provider.channelPools.forEach((k, v) -> assertThat(v.metrics().acquiredSize()).isEqualTo(0));
 
@@ -221,7 +221,7 @@ public class DefaultPooledConnectionProviderTest {
 
 		assertThat(response).isEqualTo("OK");
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		provider.channelPools.forEach((k, v) -> assertThat(v.metrics().acquiredSize()).isEqualTo(0));
 
 		provider.disposeLater()

@@ -32,7 +32,6 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.util.CharsetUtil;
-import org.hamcrest.MatcherAssert;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.netty.Connection;
@@ -40,12 +39,7 @@ import reactor.netty.Connection;
 import java.util.Map;
 import java.util.Set;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Stephane Maldini
@@ -76,29 +70,27 @@ public class HttpOperationsTest {
 		channel.writeInbound(content);
 
 		Object t = channel.readInbound();
-		MatcherAssert.assertThat(t, instanceOf(HttpResponse.class));
-		MatcherAssert.assertThat(t, not(instanceOf(HttpContent.class)));
+		assertThat(t).isInstanceOf(HttpResponse.class);
+		assertThat(t).isNotInstanceOf(HttpContent.class);
 
 		t = channel.readInbound();
-		MatcherAssert.assertThat(t, instanceOf(ByteBuf.class));
+		assertThat(t).isInstanceOf(ByteBuf.class);
 		ByteBuf b = (ByteBuf) t;
-		MatcherAssert.assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8),
-				is("{\"some\": 1}"));
+		assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8)).isEqualTo("{\"some\": 1}");
 		b.release();
 
 		t = channel.readInbound();
-		MatcherAssert.assertThat(t, instanceOf(ByteBuf.class));
+		assertThat(t).isInstanceOf(ByteBuf.class);
 		b = (ByteBuf) t;
-		MatcherAssert.assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8),
-				is("{\"value\": true, \"test\": 1}"));
+		assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8)).isEqualTo("{\"value\": true, \"test\": 1}");
 		b.release();
 
 		t = channel.readInbound();
-		MatcherAssert.assertThat(t, is(LastHttpContent.EMPTY_LAST_CONTENT));
+		assertThat(t).isEqualTo(LastHttpContent.EMPTY_LAST_CONTENT);
 		((LastHttpContent) t).release();
 
 		t = channel.readInbound();
-		MatcherAssert.assertThat(t, nullValue());
+		assertThat(t).isNull();
 	}
 
 	@Test
@@ -140,51 +132,51 @@ public class HttpOperationsTest {
 		uris.zipWith(expectations)
 		            .doOnNext(tuple -> {
 		                infos.uri = tuple.getT1();
-		                assertEquals(tuple.getT2(), infos.path());
+		                assertThat(tuple.getT2()).isEqualTo(infos.path());
 		            })
 		            .blockLast();
 	}
 
 	@Test
 	public void testFullPath() {
-		assertEquals("", HttpOperations.resolvePath("http://localhost:8080"));
-		assertEquals("/", HttpOperations.resolvePath("http://localhost:8080/"));
-		assertEquals("//", HttpOperations.resolvePath("http://localhost:8080//"));
-		assertEquals("///", HttpOperations.resolvePath("http://localhost:8080///"));
-		assertEquals("/a", HttpOperations.resolvePath("http://localhost:8080/a"));
-		assertEquals("/a/", HttpOperations.resolvePath("http://localhost:8080/a/"));
-		assertEquals("/", HttpOperations.resolvePath("http://localhost:8080/?b"));
-		assertEquals("/a", HttpOperations.resolvePath("http://localhost:8080/a?b"));
-		assertEquals("/", HttpOperations.resolvePath("http://localhost:8080/#b"));
-		assertEquals("/a", HttpOperations.resolvePath("http://localhost:8080/a#b"));
-		assertEquals("/a", HttpOperations.resolvePath("http://localhost:8080/a?b#c"));
-		assertEquals("/a b", HttpOperations.resolvePath("http://localhost:8080/a%20b"));
+		assertThat(HttpOperations.resolvePath("http://localhost:8080")).isEqualTo("");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080/")).isEqualTo("/");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080//")).isEqualTo("//");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080///")).isEqualTo("///");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080/a")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080/a/")).isEqualTo("/a/");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080/?b")).isEqualTo("/");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080/a?b")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080/#b")).isEqualTo("/");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080/a#b")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080/a?b#c")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080/a%20b")).isEqualTo("/a b");
 
-		assertEquals("", HttpOperations.resolvePath("localhost:8080"));
-		assertEquals("/", HttpOperations.resolvePath("localhost:8080/"));
-		assertEquals("//", HttpOperations.resolvePath("localhost:8080//"));
-		assertEquals("///", HttpOperations.resolvePath("localhost:8080///"));
-		assertEquals("/a", HttpOperations.resolvePath("localhost:8080/a"));
-		assertEquals("/a/", HttpOperations.resolvePath("localhost:8080/a/"));
-		assertEquals("/", HttpOperations.resolvePath("localhost:8080/?b"));
-		assertEquals("/a", HttpOperations.resolvePath("localhost:8080/a?b"));
-		assertEquals("/", HttpOperations.resolvePath("localhost:8080/#b"));
-		assertEquals("/a", HttpOperations.resolvePath("localhost:8080/a#b"));
-		assertEquals("/a", HttpOperations.resolvePath("localhost:8080/a?b#c"));
-		assertEquals("/a b", HttpOperations.resolvePath("localhost:8080/a%20b"));
+		assertThat(HttpOperations.resolvePath("localhost:8080")).isEqualTo("");
+		assertThat(HttpOperations.resolvePath("localhost:8080/")).isEqualTo("/");
+		assertThat(HttpOperations.resolvePath("localhost:8080//")).isEqualTo("//");
+		assertThat(HttpOperations.resolvePath("localhost:8080///")).isEqualTo("///");
+		assertThat(HttpOperations.resolvePath("localhost:8080/a")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("localhost:8080/a/")).isEqualTo("/a/");
+		assertThat(HttpOperations.resolvePath("localhost:8080/?b")).isEqualTo("/");
+		assertThat(HttpOperations.resolvePath("localhost:8080/a?b")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("localhost:8080/#b")).isEqualTo("/");
+		assertThat(HttpOperations.resolvePath("localhost:8080/a#b")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("localhost:8080/a?b#c")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("localhost:8080/a%20b")).isEqualTo("/a b");
 
-		assertEquals("", HttpOperations.resolvePath(""));
-		assertEquals("/", HttpOperations.resolvePath("/"));
-		assertEquals("//", HttpOperations.resolvePath("//"));
-		assertEquals("///", HttpOperations.resolvePath("///"));
-		assertEquals("/a", HttpOperations.resolvePath("/a"));
-		assertEquals("/a/", HttpOperations.resolvePath("/a/"));
-		assertEquals("/", HttpOperations.resolvePath("/?b"));
-		assertEquals("/a", HttpOperations.resolvePath("/a?b"));
-		assertEquals("/", HttpOperations.resolvePath("/#b"));
-		assertEquals("/a", HttpOperations.resolvePath("/a#b"));
-		assertEquals("/a", HttpOperations.resolvePath("/a?b#c"));
-		assertEquals("/a b", HttpOperations.resolvePath("/a%20b"));
+		assertThat(HttpOperations.resolvePath("")).isEqualTo("");
+		assertThat(HttpOperations.resolvePath("/")).isEqualTo("/");
+		assertThat(HttpOperations.resolvePath("//")).isEqualTo("//");
+		assertThat(HttpOperations.resolvePath("///")).isEqualTo("///");
+		assertThat(HttpOperations.resolvePath("/a")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("/a/")).isEqualTo("/a/");
+		assertThat(HttpOperations.resolvePath("/?b")).isEqualTo("/");
+		assertThat(HttpOperations.resolvePath("/a?b")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("/#b")).isEqualTo("/");
+		assertThat(HttpOperations.resolvePath("/a#b")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("/a?b#c")).isEqualTo("/a");
+		assertThat(HttpOperations.resolvePath("/a%20b")).isEqualTo("/a b");
 	}
 
 	static final class TestHttpInfos implements HttpInfos {

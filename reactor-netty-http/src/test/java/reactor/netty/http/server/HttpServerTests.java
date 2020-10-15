@@ -71,7 +71,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
@@ -116,10 +115,10 @@ import reactor.util.function.Tuple3;
 
 import javax.net.ssl.SNIHostName;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assume.assumeTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 
 /**
@@ -323,7 +322,7 @@ public class HttpServerTests {
 				         .wiretap(true)
 				         .connectNow();
 
-		assertThat(latch.await(45, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(45, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		client.disposeNow();
 	}
@@ -1823,7 +1822,7 @@ public class HttpServerTests {
 	}
 
 	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client) {
-		assumeTrue(LoopResources.hasNativeSupport());
+		assumeThat(LoopResources.hasNativeSupport()).isTrue();
 		try {
 			disposableServer =
 					server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -1851,7 +1850,7 @@ public class HttpServerTests {
 					      .asString()
 					      .block(Duration.ofSeconds(30));
 
-			assertEquals("123", response);
+			assertThat(response).isEqualTo("123");
 		}
 		finally {
 			assertThat(disposableServer).isNotNull();
@@ -2009,7 +2008,7 @@ public class HttpServerTests {
 				          .wiretap(true)
 				          .bindNow();
 
-		assertNotNull(httpServer);
+		assertThat(httpServer).isNotNull();
 
 		httpServer.disposeNow();
 	}
@@ -2062,8 +2061,8 @@ public class HttpServerTests {
 		          .aggregate()
 		          .block(Duration.ofSeconds(30));
 
-		assertNotNull(hostname.get());
-		assertEquals("test.com", hostname.get());
+		assertThat(hostname.get()).isNotNull();
+		assertThat(hostname.get()).isEqualTo("test.com");
 	}
 
 	@Test

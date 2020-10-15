@@ -33,7 +33,7 @@ import java.security.cert.CertificateException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.URI;
 
@@ -96,7 +96,7 @@ public class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 		          .responseContent()
 		          .subscribe();
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		Thread.sleep(1000);
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();

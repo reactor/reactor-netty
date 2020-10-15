@@ -50,8 +50,6 @@ import javax.net.ssl.SSLHandshakeException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * @author Violeta Georgieva
@@ -116,9 +114,9 @@ public class SslProviderTests {
 				server.protocol(HttpProtocol.HTTP11)
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .bindNow();
-		assertTrue(protocols.isEmpty());
-		assertTrue(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
-		                                   sslContext instanceof JdkSslContext);
+		assertThat(protocols.isEmpty()).isTrue();
+		assertThat(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
+		                                   sslContext instanceof JdkSslContext).isTrue();
 	}
 
 	@Test
@@ -127,9 +125,9 @@ public class SslProviderTests {
 				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.HTTP11)
 				      .bindNow();
-		assertTrue(protocols.isEmpty());
-		assertTrue(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
-		                                   sslContext instanceof JdkSslContext);
+		assertThat(protocols.isEmpty()).isTrue();
+		assertThat(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
+		                                   sslContext instanceof JdkSslContext).isTrue();
 	}
 
 	@Test
@@ -139,9 +137,9 @@ public class SslProviderTests {
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.HTTP11)
 				      .bindNow();
-		assertTrue(protocols.isEmpty());
-		assertTrue(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
-		                                   sslContext instanceof JdkSslContext);
+		assertThat(protocols.isEmpty()).isTrue();
+		assertThat(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
+		                                   sslContext instanceof JdkSslContext).isTrue();
 	}
 
 	@Test
@@ -150,11 +148,11 @@ public class SslProviderTests {
 				server.protocol(HttpProtocol.H2)
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .bindNow();
-		assertEquals(2, protocols.size());
-		assertTrue(protocols.contains("h2"));
-		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
+		assertThat(protocols.size()).isEqualTo(2);
+		assertThat(protocols.contains("h2")).isTrue();
+		assertThat(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 		                                       sslContext instanceof OpenSslContext :
-		                                       sslContext instanceof JdkSslContext);
+		                                       sslContext instanceof JdkSslContext).isTrue();
 	}
 
 	@Test
@@ -163,11 +161,11 @@ public class SslProviderTests {
 				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
-		assertEquals(2, protocols.size());
-		assertTrue(protocols.contains("h2"));
-		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
+		assertThat(protocols.size()).isEqualTo(2);
+		assertThat(protocols.contains("h2")).isTrue();
+		assertThat(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 		                                       sslContext instanceof OpenSslContext :
-		                                       sslContext instanceof JdkSslContext);
+		                                       sslContext instanceof JdkSslContext).isTrue();
 	}
 
 	@Test
@@ -177,11 +175,11 @@ public class SslProviderTests {
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
-		assertEquals(2, protocols.size());
-		assertTrue(protocols.contains("h2"));
-		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
+		assertThat(protocols.size()).isEqualTo(2);
+		assertThat(protocols.contains("h2")).isTrue();
+		assertThat(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 		                                       sslContext instanceof OpenSslContext :
-		                                       sslContext instanceof JdkSslContext);
+		                                       sslContext instanceof JdkSslContext).isTrue();
 	}
 
 	@Test
