@@ -27,8 +27,8 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ConnectionObserver;
@@ -230,7 +230,7 @@ public class DefaultPooledConnectionProviderTest {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testSslEngineClosed() throws Exception {
 		DisposableServer server =
 				HttpServer.create()

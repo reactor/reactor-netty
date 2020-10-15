@@ -40,9 +40,9 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.NetUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ChannelBindException;
@@ -53,6 +53,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
 
 /**
@@ -65,12 +66,12 @@ public class UdpServerTests {
 
 	ExecutorService threadPool;
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		threadPool = Executors.newCachedThreadPool();
 	}
 
-	@After
+	@AfterEach
 	public void cleanup() throws InterruptedException {
 		threadPool.shutdown();
 		threadPool.awaitTermination(5, TimeUnit.SECONDS);
@@ -273,33 +274,37 @@ public class UdpServerTests {
 		conn.disposeNow();
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	public void testUdpServerWithDomainSockets() {
-		UdpServer.create()
-		         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		         .bindNow();
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> UdpServer.create()
+		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .bindNow());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testUdpServerWithDomainSocketsWithHost() {
-		UdpServer.create()
-		         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		         .host("localhost")
-		         .bindNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> UdpServer.create()
+		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .host("localhost")
+		                                   .bindNow());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testUdpServerWithDomainSocketsWithPort() {
-		UdpServer.create()
-		         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		         .port(1234)
-		         .bindNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> UdpServer.create()
+		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .port(1234)
+		                                   .bindNow());
 	}
 
-	@Test(expected = ArithmeticException.class)
+	@Test
 	public void testBindTimeoutLongOverflow() {
-		UdpServer.create()
-		         .port(0)
-		         .bindNow(Duration.ofMillis(Long.MAX_VALUE));
+		assertThatExceptionOfType(ArithmeticException.class)
+				.isThrownBy(() -> UdpServer.create()
+		                                   .port(0)
+		                                   .bindNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 }

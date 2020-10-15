@@ -22,8 +22,8 @@ import java.util.function.Supplier;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolverGroup;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -39,7 +39,7 @@ public class HttpResourcesTest {
 	private AtomicBoolean      poolDisposed;
 	private HttpResources      testResources;
 
-	@Before
+	@BeforeEach
 	public void before() {
 		loopDisposed = new AtomicBoolean();
 		poolDisposed = new AtomicBoolean();

@@ -19,11 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -36,6 +33,10 @@ import reactor.netty.http.server.HttpServerConfig;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -49,16 +50,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-@RunWith(Parameterized.class)
 public class HttpProtocolsTests {
 
-	@Parameter
-	public HttpServer server;
+	@Retention(RetentionPolicy.RUNTIME)
+	@Target(ElementType.METHOD)
+	@ParameterizedTest(name = "{index}: {0}, {1}")
+	@MethodSource("data")
+	@interface ParameterizedHttpProtocolsTest {
+	}
 
-	@Parameter(1)
-	public HttpClient client;
-
-	@Parameters(name = "{index}: {0}, {1}")
 	public static Object[][] data() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
@@ -102,8 +102,8 @@ public class HttpProtocolsTests {
 		           .toArray(new Object[servers.length * clients.length][2]);
 	}
 
-	@Test
-	public void testProtocolVariationsGetRequest() {
+	@ParameterizedHttpProtocolsTest
+	public void testProtocolVariationsGetRequest(HttpServer server, HttpClient client) {
 		HttpServerConfig serverConfig = server.configuration();
 		HttpClientConfig clientConfig = client.configuration();
 		List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());
@@ -158,17 +158,17 @@ public class HttpProtocolsTests {
 		}
 	}
 
-	@Test
-	public void testProtocolVariationsPostRequest_1() {
-		doTestProtocolVariationsPostRequest(false);
+	@ParameterizedHttpProtocolsTest
+	public void testProtocolVariationsPostRequest_1(HttpServer server, HttpClient client) {
+		doTestProtocolVariationsPostRequest(server, client, false);
 	}
 
-	@Test
-	public void testProtocolVariationsPostRequest_2() {
-		doTestProtocolVariationsPostRequest(true);
+	@ParameterizedHttpProtocolsTest
+	public void testProtocolVariationsPostRequest_2(HttpServer server, HttpClient client) {
+		doTestProtocolVariationsPostRequest(server, client, true);
 	}
 
-	public void doTestProtocolVariationsPostRequest(boolean externalThread) {
+	public void doTestProtocolVariationsPostRequest(HttpServer server, HttpClient client, boolean externalThread) {
 		HttpServerConfig serverConfig = server.configuration();
 		HttpClientConfig clientConfig = client.configuration();
 		List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());

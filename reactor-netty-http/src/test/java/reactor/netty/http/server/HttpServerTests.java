@@ -84,8 +84,10 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Timeout;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -127,7 +129,7 @@ import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 public class HttpServerTests {
 	private DisposableServer disposableServer;
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
@@ -1774,35 +1776,40 @@ public class HttpServerTests {
 				.isEqualTo("delay500delay1000");
 	}
 
-	@Test(expected = ChannelBindException.class)
+	@Test
 	public void testHttpServerWithDomainSocketsNIOTransport() {
-		LoopResources loop = LoopResources.create("testHttpServerWithDomainSocketsNIOTransport");
-		try {
-			HttpServer.create()
-			          .runOn(loop, false)
-			          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-			          .bindNow();
-		}
-		finally {
-			loop.disposeLater()
-			    .block(Duration.ofSeconds(30));
-		}
+		assertThatExceptionOfType(ChannelBindException.class)
+				.isThrownBy(() -> {
+					LoopResources loop = LoopResources.create("testHttpServerWithDomainSocketsNIOTransport");
+					try {
+						HttpServer.create()
+						          .runOn(loop, false)
+						          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+						          .bindNow();
+					}
+					finally {
+						loop.disposeLater()
+						    .block(Duration.ofSeconds(30));
+					}
+		});
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testHttpServerWithDomainSocketsWithHost() {
-		HttpServer.create()
-		          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		          .host("localhost")
-		          .bindNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> HttpServer.create()
+		                                    .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                    .host("localhost")
+		                                    .bindNow());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testHttpServerWithDomainSocketsWithPort() {
-		HttpServer.create()
-		          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		          .port(1234)
-		          .bindNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> HttpServer.create()
+		                                    .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                    .port(1234)
+		                                    .bindNow());
 	}
 
 	@Test
@@ -1946,31 +1953,34 @@ public class HttpServerTests {
 		          .doOnChannelInit((observer, channel, address) -> latch.countDown());
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	@SuppressWarnings("deprecation")
 	public void testTcpConfigurationUnsupported_1() {
-		HttpServer.create()
-				.tcpConfiguration(tcp -> tcp.doOnBind(TransportConfig::attributes));
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> HttpServer.create()
+		                                    .tcpConfiguration(tcp -> tcp.doOnBind(TransportConfig::attributes)));
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	@SuppressWarnings("deprecation")
 	public void testTcpConfigurationUnsupported_2() {
-		HttpServer.create()
-				.tcpConfiguration(tcp -> {
-					tcp.bind();
-					return tcp;
-				});
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> HttpServer.create()
+		                                    .tcpConfiguration(tcp -> {
+		                                        tcp.bind();
+		                                        return tcp;
+		                                    }));
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	@SuppressWarnings("deprecation")
 	public void testTcpConfigurationUnsupported_3() {
-		HttpServer.create()
-				.tcpConfiguration(tcp -> {
-					tcp.configuration();
-					return tcp;
-				});
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> HttpServer.create()
+		                                    .tcpConfiguration(tcp -> {
+		                                        tcp.configuration();
+		                                        return tcp;
+		                                    }));
 	}
 
 	@Test
@@ -1998,19 +2008,20 @@ public class HttpServerTests {
 		channel.close();
 	}
 
-	@Test(timeout = 10000)
+	@Test
+	@Timeout(10)
 	public void testHang() {
-		DisposableServer httpServer =
-				HttpServer.create()
-				          .port(0)
-				          .host("0.0.0.0")
-				          .route(r -> r.get("/data", (request, response) -> response.send(Mono.empty())))
-				          .wiretap(true)
-				          .bindNow();
+			DisposableServer httpServer =
+					HttpServer.create()
+					          .port(0)
+					          .host("0.0.0.0")
+					          .route(r -> r.get("/data", (request, response) -> response.send(Mono.empty())))
+					          .wiretap(true)
+					          .bindNow();
 
-		assertThat(httpServer).isNotNull();
+			assertThat(httpServer).isNotNull();
 
-		httpServer.disposeNow();
+			httpServer.disposeNow();
 	}
 
 	@Test

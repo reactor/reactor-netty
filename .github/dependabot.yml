@@ -17,10 +17,6 @@ updates:
   - dependency-name: io.micrometer:micrometer-core
     versions:
     - "> 1.5.0"
-  - dependency-name: junit:junit
-    versions:
-    - ">= 4.13.a"
-    - "< 4.14"
   - dependency-name: org.asciidoctor.convert
     versions:
     - "> 1.5.11"

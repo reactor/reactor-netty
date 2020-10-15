@@ -16,10 +16,10 @@
 
 package reactor.netty;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -59,7 +59,7 @@ public class ConnectionObserverContextTest {
 
 	private static final DisposableServer server = TcpServer.create().port(0).bindNow();
 
-	@Before
+	@BeforeEach
 	public void before() {
 		// Ideally, we would like to add the context to the stream in test via
 		// contextWrite(Context.of(CONTEXT_KEY, CONTEXT_VALUE))
@@ -73,13 +73,13 @@ public class ConnectionObserverContextTest {
 		Hooks.onLastOperator(HelloWorldPropagatorSubscriber.class.getName(), HelloWorldPropagatorSubscriber.asOperator());
 	}
 
-	@After
+	@AfterEach
 	public void after() {
 		helloWorld.remove();
 		Hooks.resetOnLastOperator(HelloWorldPropagatorSubscriber.class.getName());
 	}
 
-	@AfterClass
+	@AfterAll
 	public static void afterClass() {
 		server.disposeNow();
 	}

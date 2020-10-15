@@ -16,11 +16,12 @@
 package reactor.netty.transport.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.nio.charset.Charset;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
@@ -44,7 +45,7 @@ public class ReactorNettyLoggingHandlerTest {
 	private Appender<ILoggingEvent> mockedAppender;
 	private ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor;
 
-	@Before
+	@BeforeEach
 	@SuppressWarnings("unchecked")
 	public void setUp() {
 		defaultCharsetReactorNettyLoggingHandler =
@@ -90,9 +91,10 @@ public class ReactorNettyLoggingHandlerTest {
 		assertThat(relevantLog.getMessage()).isEqualTo(expectedResult);
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	public void shouldThrowUnsupportedOperationExceptionWhenByteBufFormatIsCalled() {
-		defaultCharsetReactorNettyLoggingHandler.byteBufFormat();
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> defaultCharsetReactorNettyLoggingHandler.byteBufFormat());
 	}
 
 }

@@ -52,9 +52,9 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -97,7 +97,7 @@ public class TcpClientTests {
 	HeartbeatServer         heartbeatServer;
 	Future<?>               heartbeatServerFuture;
 
-	@Before
+	@BeforeEach
 	public void setup() throws Exception {
 		echoServerPort = SocketUtils.findAvailableTcpPort();
 		echoServer = new EchoServer(echoServerPort);
@@ -128,7 +128,7 @@ public class TcpClientTests {
 		}
 	}
 
-	@After
+	@AfterEach
 	public void cleanup() throws Exception {
 		echoServer.close();
 		abortServer.close();
@@ -1034,14 +1034,16 @@ public class TcpClientTests {
 		assertThat(ref.get()).isNull();
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testTcpClientWithDomainSocketsNIOTransport() {
 		LoopResources loop = LoopResources.create("testTcpClientWithDomainSocketsNIOTransport");
 		try {
-			TcpClient.create()
-			         .runOn(loop, false)
-			         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-			         .connectNow();
+			assertThatExceptionOfType(IllegalArgumentException.class)
+					.isThrownBy(() ->
+						TcpClient.create()
+						         .runOn(loop, false)
+						         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+						         .connectNow());
 		}
 		finally {
 			loop.disposeLater()
@@ -1049,20 +1051,22 @@ public class TcpClientTests {
 		}
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testTcpClientWithDomainSocketsWithHost() {
-		TcpClient.create()
-		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		         .host("localhost")
-		         .connectNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> TcpClient.create()
+		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .host("localhost")
+		                                   .connectNow());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testTcpClientWithDomainSocketsWithPort() {
-		TcpClient.create()
-		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		         .port(1234)
-		         .connectNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> TcpClient.create()
+		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .port(1234)
+		                                   .connectNow());
 	}
 
 	@Test

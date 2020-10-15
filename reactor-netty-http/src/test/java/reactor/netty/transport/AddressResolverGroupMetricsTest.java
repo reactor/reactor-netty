@@ -19,9 +19,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
@@ -42,13 +42,13 @@ import static reactor.netty.Metrics.SUCCESS;
 public class AddressResolverGroupMetricsTest {
 	private MeterRegistry registry;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		Metrics.removeRegistry(registry);
 		registry.clear();

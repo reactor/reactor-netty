@@ -16,8 +16,8 @@
 package reactor.netty.http;
 
 import io.netty.handler.codec.http2.Http2CodecUtil;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -26,7 +26,7 @@ public class Http2SettingsSpecTests {
 
 	private Http2SettingsSpec.Builder builder;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		builder = Http2SettingsSpec.builder();
 	}

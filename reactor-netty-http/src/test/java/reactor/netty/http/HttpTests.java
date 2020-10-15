@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -35,6 +35,7 @@ import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Violeta Georgieva
@@ -491,11 +492,12 @@ public class HttpTests {
 		server.disposeNow();
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testIssue387() {
-		HttpServer.create()
-		          .secure(sslContextSpec -> System.out.println())
-		          .bindNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> HttpServer.create()
+		                                    .secure(sslContextSpec -> System.out.println())
+		                                    .bindNow());
 	}
 
 	@Test

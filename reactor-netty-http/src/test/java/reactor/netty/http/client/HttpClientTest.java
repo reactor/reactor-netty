@@ -82,8 +82,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
@@ -111,6 +111,7 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Stephane Maldini
@@ -122,7 +123,7 @@ public class HttpClientTest {
 
 	private DisposableServer disposableServer;
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
@@ -2196,95 +2197,106 @@ public class HttpClientTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testHttpClientWithDomainSocketsNIOTransport() {
-		LoopResources loop = LoopResources.create("testHttpClientWithDomainSocketsNIOTransport");
-		try {
-			HttpClient.create()
-			          .runOn(loop, false)
-			          .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-			          .get()
-			          .uri("/")
-			          .responseContent()
-			          .aggregate()
-			          .block(Duration.ofSeconds(30));
-		}
-		finally {
-			loop.disposeLater()
-			    .block(Duration.ofSeconds(30));
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> {
+					LoopResources loop = LoopResources.create("testHttpClientWithDomainSocketsNIOTransport");
+					try {
+						HttpClient.create()
+						          .runOn(loop, false)
+						          .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+						          .get()
+						          .uri("/")
+						          .responseContent()
+						          .aggregate()
+						          .block(Duration.ofSeconds(30));
+					}
+					finally {
+						loop.disposeLater()
+						    .block(Duration.ofSeconds(30));
+					}
+		});
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testHttpClientWithDomainSocketsWithHost() {
-		HttpClient.create()
-		          .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		          .host("localhost")
-		          .get()
-		          .uri("/")
-		          .responseContent()
-		          .aggregate()
-		          .block(Duration.ofSeconds(30));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> HttpClient.create()
+		                                    .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                    .host("localhost")
+		                                    .get()
+		                                    .uri("/")
+		                                    .responseContent()
+		                                    .aggregate()
+		                                    .block(Duration.ofSeconds(30)));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testHttpClientWithDomainSocketsWithPort() {
-		HttpClient.create()
-		          .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		          .port(1234)
-		          .get()
-		          .uri("/")
-		          .responseContent()
-		          .aggregate()
-		          .block(Duration.ofSeconds(30));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> HttpClient.create()
+		                                    .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                    .port(1234)
+		                                    .get()
+		                                    .uri("/")
+		                                    .responseContent()
+		                                    .aggregate()
+		                                    .block(Duration.ofSeconds(30)));
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	@SuppressWarnings("deprecation")
 	public void testTcpConfigurationUnsupported_1() {
-		HttpClient.create()
-		          .tcpConfiguration(tcp -> tcp.doOnConnect(TransportConfig::attributes));
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> HttpClient.create()
+		                                    .tcpConfiguration(tcp -> tcp.doOnConnect(TransportConfig::attributes)));
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	@SuppressWarnings("deprecation")
 	public void testTcpConfigurationUnsupported_2() {
-		HttpClient.create()
-		          .tcpConfiguration(tcp -> tcp.handle((req, res) -> res.sendString(Mono.just("test"))));
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> HttpClient.create()
+		                                    .tcpConfiguration(tcp -> tcp.handle((req, res) -> res.sendString(Mono.just("test")))));
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	@SuppressWarnings("deprecation")
 	public void testTcpConfigurationUnsupported_3() {
-		HttpClient.create()
-		          .tcpConfiguration(tcp -> {
-		              tcp.connect();
-		              return tcp;
-		          });
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> HttpClient.create()
+		                                    .tcpConfiguration(tcp -> {
+		                                        tcp.connect();
+		                                        return tcp;
+		                                    }));
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	@SuppressWarnings("deprecation")
 	public void testTcpConfigurationUnsupported_4() {
-		HttpClient.create()
-		          .tcpConfiguration(tcp -> {
-		              tcp.configuration();
-		              return tcp;
-		          });
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> HttpClient.create()
+		                                    .tcpConfiguration(tcp -> {
+		                                        tcp.configuration();
+		                                        return tcp;
+		                                    }));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testUriNotAbsolute_1() throws Exception {
-		HttpClient.create()
-		          .get()
-		          .uri(new URI("/"));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> HttpClient.create()
+		                                    .get()
+		                                    .uri(new URI("/")));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testUriNotAbsolute_2() throws Exception {
-		HttpClient.create()
-		          .websocket()
-		          .uri(new URI("/"));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> HttpClient.create()
+		                                    .websocket()
+		                                    .uri(new URI("/")));
 	}
 
 	@Test

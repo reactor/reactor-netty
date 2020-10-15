@@ -25,6 +25,7 @@ dependencies {
 
 	testCompile "io.zipkin.brave:brave-instrumentation-http-tests:$braveVersion"
 
+	testRuntimeOnly "org.junit.vintage:junit-vintage-engine:$junitVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 }
 

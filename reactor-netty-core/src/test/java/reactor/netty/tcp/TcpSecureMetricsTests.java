@@ -20,8 +20,8 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeAll;
 import reactor.core.publisher.Mono;
 
 import javax.net.ssl.SSLException;
@@ -41,7 +41,7 @@ import static reactor.netty.Metrics.URI;
 public class TcpSecureMetricsTests extends TcpMetricsTests {
 	private static SelfSignedCertificate ssc;
 
-	@BeforeClass
+	@BeforeAll
 	public static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 	}

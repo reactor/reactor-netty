@@ -27,9 +27,9 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
@@ -52,7 +52,7 @@ public class TcpMetricsTests {
 	private ConnectionProvider provider;
 	private MeterRegistry registry;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		tcpServer =
 				customizeServerOptions(TcpServer.create()
@@ -70,7 +70,7 @@ public class TcpMetricsTests {
 		Metrics.addRegistry(registry);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();

@@ -26,12 +26,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.CharsetUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.resources.LoopResources;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class UdpClientTest {
 
@@ -124,26 +125,29 @@ public class UdpClientTest {
 		resources.dispose();
 	}
 
-	@Test(expected = UnsupportedOperationException.class)
+	@Test
 	public void testUdpClientWithDomainSockets() {
-		UdpClient.create()
-		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		         .connectNow();
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> UdpClient.create()
+		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .connectNow());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testUdpClientWithDomainSocketsWithHost() {
-		UdpClient.create()
-		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		         .host("localhost")
-		         .connectNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> UdpClient.create()
+		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .host("localhost")
+		                                   .connectNow());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testUdpClientWithDomainSocketsWithPort() {
-		UdpClient.create()
-		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		         .port(1234)
-		         .connectNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> UdpClient.create()
+		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .port(1234)
+		                                   .connectNow());
 	}
 }

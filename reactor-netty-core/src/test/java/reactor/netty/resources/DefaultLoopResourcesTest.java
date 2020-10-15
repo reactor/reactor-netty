@@ -18,7 +18,7 @@ package reactor.netty.resources;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.tcp.TcpResources;
 import reactor.test.StepVerifier;

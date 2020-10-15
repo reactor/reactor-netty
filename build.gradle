@@ -81,7 +81,7 @@ ext {
 	hoverflyJavaVersion = '0.13.1'
 	tomcatVersion = '9.0.39'
 	boringSslVersion = '2.0.34.Final'
-	junitVersion = '4.12'
+	junitVersion = '5.7.0'
 	mockitoVersion = '3.5.13'
 
 	javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
@@ -179,6 +179,8 @@ subprojects {
 		include '**/*Test.*'
 		include '**/*Spec.*'
 		exclude '**/*Abstract*.*'
+
+		useJUnitPlatform()
 	}
 
 	test {

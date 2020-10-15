@@ -68,12 +68,14 @@ dependencies {
 	}
 
 	// Testing
-	testCompile "io.specto:hoverfly-java:$hoverflyJavaVersion"
+	testCompile "io.specto:hoverfly-java-junit5:$hoverflyJavaVersion"
 	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"
-	testCompile "junit:junit:$junitVersion"
+	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	testCompile "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 
+	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 

@@ -17,7 +17,7 @@ package reactor.netty.transport;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.logging.LoggingHandler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.channel.ChannelMetricsRecorder;
@@ -25,34 +25,41 @@ import reactor.netty.resources.LoopResources;
 
 import java.time.Duration;
 
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
 /**
  * @author Violeta Georgieva
  */
 public class ServerTransportTest {
 
-	@Test(expected = NullPointerException.class)
+	@Test
 	public void testBindMonoEmpty() {
-		new TestServerTransport(Mono.empty()).bindNow(Duration.ofMillis(Long.MAX_VALUE));
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> new TestServerTransport(Mono.empty()).bindNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 
-	@Test(expected = IllegalStateException.class)
+	@Test
 	public void testBindTimeout() {
-		new TestServerTransport(Mono.never()).bindNow(Duration.ofMillis(1));
+		assertThatExceptionOfType(IllegalStateException.class)
+				.isThrownBy(() -> new TestServerTransport(Mono.never()).bindNow(Duration.ofMillis(1)));
 	}
 
-	@Test(expected = ArithmeticException.class)
+	@Test
 	public void testBindTimeoutLongOverflow() {
-		new TestServerTransport(Mono.never()).bindNow(Duration.ofMillis(Long.MAX_VALUE));
+		assertThatExceptionOfType(ArithmeticException.class)
+				.isThrownBy(() -> new TestServerTransport(Mono.never()).bindNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 
-	@Test(expected = IllegalStateException.class)
+	@Test
 	public void testDisposeTimeout() {
-		new TestServerTransport(Mono.just(EmbeddedChannel::new)).bindNow().disposeNow(Duration.ofMillis(1));
+		assertThatExceptionOfType(IllegalStateException.class)
+				.isThrownBy(() -> new TestServerTransport(Mono.just(EmbeddedChannel::new)).bindNow().disposeNow(Duration.ofMillis(1)));
 	}
 
-	@Test(expected = ArithmeticException.class)
+	@Test
 	public void testDisposeTimeoutLongOverflow() {
-		new TestServerTransport(Mono.just(EmbeddedChannel::new)).bindNow().disposeNow(Duration.ofMillis(Long.MAX_VALUE));
+		assertThatExceptionOfType(ArithmeticException.class)
+				.isThrownBy(() -> new TestServerTransport(Mono.just(EmbeddedChannel::new)).bindNow().disposeNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 
 	static final class TestServerTransport extends ServerTransport<TestServerTransport, TestServerTransportConfig> {

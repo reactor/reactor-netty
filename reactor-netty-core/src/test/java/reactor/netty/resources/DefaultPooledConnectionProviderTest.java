@@ -40,8 +40,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
@@ -66,7 +66,7 @@ public class DefaultPooledConnectionProviderTest {
 
 	private InstrumentedPool<PooledConnection> channelPool;
 
-	@Before
+	@BeforeEach
 	public void before() {
 		channelPool = new PoolImpl();
 	}

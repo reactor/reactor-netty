@@ -25,9 +25,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 
@@ -57,7 +57,7 @@ public class UdpMetricsTests {
 	private Connection clientConnection;
 	private MeterRegistry registry;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		udpServer =
 				UdpServer.create()
@@ -74,7 +74,7 @@ public class UdpMetricsTests {
 		Metrics.addRegistry(registry);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if (serverConnection != null) {
 			serverConnection.disposeNow();

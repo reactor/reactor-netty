@@ -29,9 +29,9 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.transport.ClientTransportConfig;
@@ -47,13 +47,13 @@ public class PooledConnectionProviderCustomMetricsTest {
 
 	private ConnectionProvider pool;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		remoteAddress = () -> InetSocketAddress.createUnresolved("localhost", 0);
 		group = new NioEventLoopGroup(2);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		group.shutdownGracefully()
 		     .get(10L, TimeUnit.SECONDS);

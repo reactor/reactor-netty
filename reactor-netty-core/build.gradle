@@ -77,10 +77,11 @@ dependencies {
 	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"
-	testCompile "junit:junit:$junitVersion"
+	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testCompile "org.mockito:mockito-core:$mockitoVersion"
 	testCompile "ch.qos.logback:logback-classic:$logbackVersion"
 
+	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 
 	for (dependency in project.configurations.shaded.dependencies) {
@@ -89,7 +90,8 @@ dependencies {
 	}
 
 	jarFileTestCompile "org.assertj:assertj-core:$assertJVersion"
-	jarFileTestCompile "junit:junit:$junitVersion"
+	jarFileTestCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	jarFileTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
 
 jar {

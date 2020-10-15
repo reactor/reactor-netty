@@ -23,7 +23,7 @@ import static reactor.netty.transport.logging.AdvancedByteBufFormat.TEXTUAL;
 
 import java.nio.charset.Charset;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;

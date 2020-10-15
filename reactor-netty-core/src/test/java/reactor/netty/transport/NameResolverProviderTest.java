@@ -17,8 +17,8 @@ package reactor.netty.transport;
 
 import io.netty.handler.logging.LogLevel;
 import io.netty.resolver.ResolvedAddressTypes;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpResources;
 
@@ -42,7 +42,7 @@ import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_QUERY_T
 public class NameResolverProviderTest {
 	private NameResolverProvider.Build builder;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		builder = new NameResolverProvider.Build();
 	}

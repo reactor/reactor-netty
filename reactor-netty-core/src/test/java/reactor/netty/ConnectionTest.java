@@ -30,8 +30,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.Utf8FrameValidator;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
@@ -48,7 +48,7 @@ public class ConnectionTest {
 	static final BiConsumer<? super ChannelHandlerContext, Object> ADD_EXTRACTOR =
 			ChannelHandlerContext::fireChannelRead;
 
-	@Before
+	@BeforeEach
 	public void init() {
 		channel = new EmbeddedChannel();
 		testContext = () -> channel;

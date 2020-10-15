@@ -61,7 +61,9 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Timeout;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -80,6 +82,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 
@@ -494,7 +497,8 @@ public class TcpServerTests {
 		          .endsWith("End of File");
 	}
 
-	@Test(timeout = 2000)
+	@Test
+	@Timeout(2)
 	public void startAndAwait() throws InterruptedException {
 		AtomicReference<DisposableServer> conn = new AtomicReference<>();
 		CountDownLatch startLatch = new CountDownLatch(1);
@@ -939,35 +943,40 @@ public class TcpServerTests {
 		          .isEqualTo("delay1000delay1000");
 	}
 
-	@Test(expected = ChannelBindException.class)
+	@Test
 	public void testTcpServerWithDomainSocketsNIOTransport() {
-		LoopResources loop = LoopResources.create("testTcpServerWithDomainSocketsNIOTransport");
-		try {
-			TcpServer.create()
-			         .runOn(loop, false)
-			         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-			         .bindNow();
-		}
-		finally {
-			loop.disposeLater()
-			    .block(Duration.ofSeconds(30));
-		}
+		assertThatExceptionOfType(ChannelBindException.class)
+				.isThrownBy(() -> {
+					LoopResources loop = LoopResources.create("testTcpServerWithDomainSocketsNIOTransport");
+					try {
+						TcpServer.create()
+						         .runOn(loop, false)
+						         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+						         .bindNow();
+					}
+					finally {
+						loop.disposeLater()
+						    .block(Duration.ofSeconds(30));
+					}
+		});
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testTcpServerWithDomainSocketsWithHost() {
-		TcpServer.create()
-		         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		         .host("localhost")
-		         .bindNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> TcpServer.create()
+		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .host("localhost")
+		                                   .bindNow());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testTcpServerWithDomainSocketsWithPort() {
-		TcpServer.create()
-		         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		         .port(1234)
-		         .bindNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> TcpServer.create()
+		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .port(1234)
+		                                   .bindNow());
 	}
 
 	@Test
@@ -1064,19 +1073,21 @@ public class TcpServerTests {
 		}
 	}
 
-	@Test(expected = ArithmeticException.class)
+	@Test
 	public void testBindTimeoutLongOverflow() {
-		TcpServer.create()
-		         .port(0)
-		         .bindNow(Duration.ofMillis(Long.MAX_VALUE));
+		assertThatExceptionOfType(ArithmeticException.class)
+				.isThrownBy(() -> TcpServer.create()
+		                                   .port(0)
+		                                   .bindNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 
-	@Test(expected = ArithmeticException.class)
+	@Test
 	public void testDisposeTimeoutLongOverflow() {
-		TcpServer.create()
-		         .port(0)
-		         .bindNow()
-		         .disposeNow(Duration.ofMillis(Long.MAX_VALUE));
+		assertThatExceptionOfType(ArithmeticException.class)
+				.isThrownBy(() -> TcpServer.create()
+		                                   .port(0)
+		                                   .bindNow()
+		                                   .disposeNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 
 	@Test

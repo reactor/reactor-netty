@@ -29,9 +29,9 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 
@@ -46,12 +46,12 @@ public class ByteBufFluxTest {
 
 	private static File temporaryDirectory;
 
-	@BeforeClass
+	@BeforeAll
 	public static void createTempDir() {
 		temporaryDirectory = createTemporaryDirectory();
 	}
 
-	@AfterClass
+	@AfterAll
 	public static void deleteTempDir() {
 		deleteTemporaryDirectoryRecursively(temporaryDirectory);
 	}
