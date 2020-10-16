@@ -34,7 +34,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.timeout.WriteTimeoutHandler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;

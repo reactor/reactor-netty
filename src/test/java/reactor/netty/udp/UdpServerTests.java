@@ -39,9 +39,9 @@ import java.util.concurrent.TimeUnit;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.NetUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ChannelBindException;
@@ -64,12 +64,12 @@ public class UdpServerTests {
 
 	ExecutorService threadPool;
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		threadPool = Executors.newCachedThreadPool();
 	}
 
-	@After
+	@AfterEach
 	public void cleanup() throws InterruptedException {
 		threadPool.shutdown();
 		threadPool.awaitTermination(5, TimeUnit.SECONDS);

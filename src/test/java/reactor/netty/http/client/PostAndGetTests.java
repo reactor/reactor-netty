@@ -23,10 +23,10 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.function.BiFunction;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.netty.DisposableServer;
@@ -40,14 +40,14 @@ import reactor.util.Loggers;
  * @author tjreactive
  * @author smaldini
  */
-@Ignore
+@Disabled
 public class PostAndGetTests {
 
 	static final Logger log = Loggers.getLogger(PostAndGetTests.class);
 
 	private DisposableServer httpServer;
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		setupServer();
 	}
@@ -113,7 +113,7 @@ public class PostAndGetTests {
 		};
 	}
 
-	@After
+	@AfterEach
 	public void teardown() {
 		httpServer.disposeNow();
 	}

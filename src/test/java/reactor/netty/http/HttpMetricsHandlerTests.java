@@ -25,9 +25,9 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.ByteBuf;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
@@ -55,7 +55,7 @@ public class HttpMetricsHandlerTests {
 	
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
-	@Before
+	@BeforeEach
 	@SuppressWarnings("deprecation")
 	public void setUp() {
 		httpServer = customizeServerOptions(
@@ -78,7 +78,7 @@ public class HttpMetricsHandlerTests {
 		Metrics.addRegistry(registry);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();

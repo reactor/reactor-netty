@@ -47,9 +47,9 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
@@ -77,7 +77,7 @@ public class PooledConnectionProviderTest {
 
 	private InstrumentedPool<PooledConnection> channelPool;
 
-	@Before
+	@BeforeEach
 	public void before() {
 		channelPool = new PoolImpl();
 	}
@@ -549,7 +549,7 @@ public class PooledConnectionProviderTest {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testSslEngineClosed() throws Exception {
 		DisposableServer server =
 				HttpServer.create()

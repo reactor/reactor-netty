@@ -61,10 +61,12 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -100,13 +102,13 @@ public class TcpServerTests {
 	ExecutorService threadPool;
 	CountDownLatch  latch;
 
-	@Before
+	@BeforeEach
 	public void loadEnv() {
 		latch = new CountDownLatch(msgs * threads);
 		threadPool = Executors.newCachedThreadPool();
 	}
 
-	@After
+	@AfterEach
 	public void cleanup() {
 		threadPool.shutdownNow();
 		Schedulers.shutdownNow();
@@ -201,7 +203,8 @@ public class TcpServerTests {
 		connectedServer.disposeNow();
 	}
 
-	@Test(timeout = 10000)
+	@Test
+	@Timeout(2)
 	public void testHang() {
 		DisposableServer httpServer =
 				HttpServer.create()
@@ -330,7 +333,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void proxyTest() {
 		HttpServer server = HttpServer.create();
 		server.route(r -> r.get("/search/{search}",
@@ -346,7 +349,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void wsTest() {
 		HttpServer server = HttpServer.create();
 		server.route(r -> r.get("/search/{search}",
@@ -548,7 +551,8 @@ public class TcpServerTests {
 		          .endsWith("End of File");
 	}
 
-	@Test(timeout = 2000)
+	@Test
+	@Timeout(2)
 	public void startAndAwait() throws InterruptedException {
 		AtomicReference<DisposableServer> conn = new AtomicReference<>();
 		CountDownLatch startLatch = new CountDownLatch(1);

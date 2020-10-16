@@ -38,8 +38,8 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
@@ -75,7 +75,7 @@ public class WebsocketTest {
 
 	DisposableServer httpServer = null;
 
-	@After
+	@AfterEach
 	public void disposeHttpServer() {
 		if (httpServer != null)
 			httpServer.disposeNow();

@@ -22,9 +22,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -43,7 +43,7 @@ public class TcpResourcesTest {
 	private ConnectionProvider poolResources;
 	private TcpResources       tcpResources;
 
-	@Before
+	@BeforeEach
 	public void before() {
 		loopDisposed = new AtomicBoolean();
 		poolDisposed = new AtomicBoolean();
@@ -87,7 +87,7 @@ public class TcpResourcesTest {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void disposeLaterDefers() {
 		assertThat(tcpResources.isDisposed()).isFalse();
 

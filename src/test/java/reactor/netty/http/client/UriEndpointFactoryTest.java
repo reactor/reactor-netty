@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import reactor.netty.tcp.InetSocketAddressUtil;
 
 import static org.assertj.core.api.Assertions.assertThat;

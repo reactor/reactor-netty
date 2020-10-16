@@ -21,9 +21,9 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
@@ -50,14 +50,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class HttpClientWithTomcatTest {
 	private static TomcatServer tomcat;
 
-	@BeforeClass
+	@BeforeAll
 	public static void startTomcat() throws Exception {
 		tomcat = new TomcatServer();
 		tomcat.createDefaultContext();
 		tomcat.start();
 	}
 
-	@AfterClass
+	@AfterAll
 	public static void stopTomcat() throws Exception {
 		if (tomcat != null) {
 			tomcat.stop();

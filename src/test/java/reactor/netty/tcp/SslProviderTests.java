@@ -26,9 +26,9 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.HttpProtocol;
@@ -51,7 +51,7 @@ public class SslProviderTests {
 	private SslContextBuilder clientSslContextBuilder;
 	private DisposableServer disposableServer;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		serverSslContextBuilder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
@@ -69,7 +69,7 @@ public class SslProviderTests {
 		                   }));
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();

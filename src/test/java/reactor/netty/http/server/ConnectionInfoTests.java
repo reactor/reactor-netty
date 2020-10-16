@@ -33,9 +33,9 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
@@ -59,7 +59,7 @@ public class ConnectionInfoTests {
 
 	private DisposableServer connection;
 
-	@BeforeClass
+	@BeforeAll
 	public static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 	}
@@ -561,7 +561,7 @@ public class ConnectionInfoTests {
 		assertThat(response).isEqualTo("OK");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if(null != this.connection) {
 			this.connection.disposeNow();

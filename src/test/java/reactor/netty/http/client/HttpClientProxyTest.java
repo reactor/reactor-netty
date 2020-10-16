@@ -20,12 +20,15 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
-import io.specto.hoverfly.junit.core.HoverflyConfig;
-import io.specto.hoverfly.junit.rule.HoverflyRule;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import io.specto.hoverfly.junit.core.Hoverfly;
+import io.specto.hoverfly.junit.core.HoverflyMode;
+import io.specto.hoverfly.junit5.HoverflyExtension;
+import io.specto.hoverfly.junit5.api.HoverflyConfig;
+import io.specto.hoverfly.junit5.api.HoverflyCore;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
@@ -49,21 +52,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Violeta Georgieva
  */
+@HoverflyCore(mode = HoverflyMode.SIMULATE, config = @HoverflyConfig(plainHttpTunneling = true))
+@ExtendWith(HoverflyExtension.class)
 public class HttpClientProxyTest {
-
-	@ClassRule
-	public static final HoverflyRule hoverflyRule =
-			HoverflyRule.inSimulationMode(
-					HoverflyConfig.localConfigs()
-					              .plainHttpTunneling());
 
 	private DisposableServer server;
 	private int port;
 	private static final String LOCALLY_NOT_RESOLVABLE_ADDRESS =
 			"http://some-random-address-that-is-only-resolvable-by-the-proxy-1234.com";
 
-	@Before
-	public void setUp() {
+	@BeforeEach
+	public void setUp(Hoverfly hoverfly) {
 		server = HttpServer.create()
 		                   .port(port)
 		                   .host("localhost")
@@ -73,7 +72,7 @@ public class HttpClientProxyTest {
 
 		port = server.port();
 
-		hoverflyRule.simulate(
+		hoverfly.simulate(
 				dsl(service("http://127.0.0.1:" + port)
 				        .get("/")
 				        .willReturn(success()
@@ -84,7 +83,7 @@ public class HttpClientProxyTest {
 				        .willReturn(success().body("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS))));
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if (server != null) {
 			server.disposeNow();
@@ -92,11 +91,11 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	public void proxy_1() {
+	public void proxy_1(Hoverfly hoverfly) {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                      .host("localhost")
-				                      .port(hoverflyRule.getProxyPort()),
+				                      .port(hoverfly.getHoverflyConfig().getProxyPort()),
 				            server::address,
 				            "/",
 				            true))
@@ -109,11 +108,11 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	public void proxy_2() {
+	public void proxy_2(Hoverfly hoverfly) {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                      .host("localhost")
-				                      .port(hoverflyRule.getProxyPort()),
+				                      .port(hoverfly.getHoverflyConfig().getProxyPort()),
 				            null,
 				            "http://127.0.0.1:" + port + "/",
 				            true))
@@ -126,11 +125,11 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	public void nonProxyHosts_1() {
+	public void nonProxyHosts_1(Hoverfly hoverfly) {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                      .host("localhost")
-				                      .port(hoverflyRule.getProxyPort())
+				                      .port(hoverfly.getHoverflyConfig().getProxyPort())
 				                      .nonProxyHosts("127.0.0.1"),
 				            server::address,
 				            "/",
@@ -143,11 +142,11 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	public void nonProxyHosts_2() {
+	public void nonProxyHosts_2(Hoverfly hoverfly) {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                      .host("localhost")
-				                      .port(hoverflyRule.getProxyPort())
+				                      .port(hoverfly.getHoverflyConfig().getProxyPort())
 				                      .nonProxyHosts("localhost"),
 				            null,
 				             "http://localhost:" + port + "/",
@@ -160,11 +159,11 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	public void testIssue804() {
+	public void testIssue804(Hoverfly hoverfly) {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                      .host("localhost")
-				                      .port(hoverflyRule.getProxyPort()),
+				                      .port(hoverfly.getHoverflyConfig().getProxyPort()),
 				            server::address,
 				            "/",
 				            false))
@@ -177,11 +176,11 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	public void shouldNotResolveTargetHostnameWhenMetricsEnabled() {
+	public void shouldNotResolveTargetHostnameWhenMetricsEnabled(Hoverfly hoverfly) {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                      .host("localhost")
-				                      .port(hoverflyRule.getProxyPort()),
+				                      .port(hoverfly.getHoverflyConfig().getProxyPort()),
 				            null,
 				            LOCALLY_NOT_RESOLVABLE_ADDRESS,
 				            true,
@@ -192,11 +191,11 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	public void shouldNotResolveTargetHostnameWhenMetricsDisabled() {
+	public void shouldNotResolveTargetHostnameWhenMetricsDisabled(Hoverfly hoverfly) {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                      .host("localhost")
-				                      .port(hoverflyRule.getProxyPort()),
+				                      .port(hoverfly.getHoverflyConfig().getProxyPort()),
 				            null,
 				            LOCALLY_NOT_RESOLVABLE_ADDRESS,
 				            true,
@@ -242,13 +241,13 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	public void testIssue1261() {
+	public void testIssue1261(Hoverfly hoverfly) {
 		AtomicReference<AddressResolverGroup<?>> resolver = new AtomicReference<>();
 		HttpClient client =
 				HttpClient.create()
 				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                                                                   .host("localhost")
-				                                                                   .port(hoverflyRule.getProxyPort()))
+				                                                                   .port(hoverfly.getHoverflyConfig().getProxyPort()))
 				                                                  .doOnConnect(b -> resolver.set(b.config().resolver())));
 
 		client.get()

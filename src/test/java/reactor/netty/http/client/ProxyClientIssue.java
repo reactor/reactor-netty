@@ -30,8 +30,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServer;
@@ -69,7 +69,7 @@ public class ProxyClientIssue {
 	private static int CONTENT_SERVER_PORT = 2379;
 
 	@Test
-	@Ignore
+	@Disabled
 	public void startContentServer() {
 		Random random = new Random(0);
 		byte[] content = new byte[1024 * 10];
@@ -92,7 +92,7 @@ public class ProxyClientIssue {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void startEmulatingClients() {
 
 		int concurrencyLevel = 10;
@@ -131,7 +131,7 @@ public class ProxyClientIssue {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void startProxyServer() {
 		HttpServer server = HttpServer.create()
 		                              .port(PROXY_PORT)

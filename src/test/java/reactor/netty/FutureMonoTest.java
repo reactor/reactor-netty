@@ -16,7 +16,7 @@
 package reactor.netty;
 
 import io.netty.util.concurrent.*;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import reactor.netty.channel.AbortedException;
 import reactor.test.StepVerifier;
 

@@ -43,10 +43,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.LineBasedFrameDecoder;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -88,7 +88,7 @@ public class TcpClientTests {
 	HeartbeatServer         heartbeatServer;
 	Future<?>               heartbeatServerFuture;
 
-	@Before
+	@BeforeEach
 	public void setup() throws Exception {
 		echoServerPort = SocketUtils.findAvailableTcpPort();
 		echoServer = new EchoServer(echoServerPort);
@@ -119,7 +119,7 @@ public class TcpClientTests {
 		}
 	}
 
-	@After
+	@AfterEach
 	public void cleanup() throws Exception {
 		echoServer.close();
 		abortServer.close();
@@ -460,7 +460,7 @@ public class TcpClientTests {
 		c.disposeNow();
 	}
 
-	@Ignore
+	@Disabled
 	public void consumerSpecAssignsEventHandlers()
 			throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(2);
@@ -495,7 +495,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void readIdleDoesNotFireWhileDataIsBeingRead()
 			throws InterruptedException, IOException {
 		final CountDownLatch latch = new CountDownLatch(1);

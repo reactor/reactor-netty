@@ -80,9 +80,9 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
-import org.junit.After;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
@@ -111,6 +111,7 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
 
 /**
@@ -123,7 +124,7 @@ public class HttpClientTest {
 
 	private DisposableServer disposableServer;
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
@@ -252,7 +253,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void pipelined() {
 		disposableServer =
 				TcpServer.create()
@@ -2222,18 +2223,20 @@ public class HttpClientTest {
 		            .verify(Duration.ofSeconds(30));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testUriNotAbsolute_1() throws Exception {
-		HttpClient.create()
-		          .get()
-		          .uri(new URI("/"));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> HttpClient.create()
+		                                    .get()
+		                                    .uri(new URI("/")));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testUriNotAbsolute_2() throws Exception {
-		HttpClient.create()
-		          .websocket()
-		          .uri(new URI("/"));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> HttpClient.create()
+		                                    .websocket()
+		                                    .uri(new URI("/")));
 	}
 
 	@Test

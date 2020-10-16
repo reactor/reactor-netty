@@ -37,8 +37,8 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
@@ -53,13 +53,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class HttpRedirectTest {
 
 	@Test
-	@Ignore
+	@Disabled
 	public void deadlockWhenRedirectsToSameUrl(){
 		redirectTests("/login");
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void okWhenRedirectsToOther(){
 		redirectTests("/other");
 	}

@@ -27,8 +27,8 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -41,6 +41,8 @@ import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 import reactor.netty.tcp.SslProvider;
 import reactor.test.StepVerifier;
+
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Violeta Georgieva
@@ -524,7 +526,7 @@ public class HttpTests {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testNettyOom() throws Exception {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < 1000; i++) {
@@ -571,7 +573,7 @@ public class HttpTests {
 
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testHttpSsl() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
@@ -616,7 +618,7 @@ public class HttpTests {
 //	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testH2PriorKnowledge() throws Exception {
 //		SelfSignedCertificate cert = new SelfSignedCertificate();
 //		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
@@ -634,7 +636,7 @@ public class HttpTests {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testHttp1or2_1() {
 		DisposableServer server =
 				HttpServer.create()
@@ -649,7 +651,7 @@ public class HttpTests {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testHttp1or2_2() {
 		DisposableServer server =
 				HttpServer.create()
@@ -667,7 +669,7 @@ public class HttpTests {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testH2Secure() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
@@ -686,7 +688,7 @@ public class HttpTests {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testH2OrH1Secure() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
@@ -705,7 +707,7 @@ public class HttpTests {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testIssue395() throws Exception {
 		BiFunction<HttpServerRequest, HttpServerResponse, Mono<Void>> echoHandler =
 				(req, res) -> res.send(req.receive().map(ByteBuf::retain)).then();
@@ -726,7 +728,7 @@ public class HttpTests {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testHttp1or2Secure() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
@@ -772,15 +774,16 @@ public class HttpTests {
 		).verifyErrorMessage("Configured H2 Clear-Text protocol with TLS. Use the non clear-text h2 protocol via HttpServer#protocol or disable TLS via HttpServer#tcpConfiguration(tcp -> tcp.noSSL())");
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testIssue387() {
-		HttpServer.create()
-		          .secure(sslContextSpec -> System.out.println())
-		          .bindNow();
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> HttpServer.create()
+		                                    .secure(sslContextSpec -> System.out.println())
+		                                    .bindNow());
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void testIssue1071() {
 		DisposableServer server =
 				HttpServer.create()

@@ -16,9 +16,7 @@
 
 package reactor.netty.http.server;
 
-import java.util.Arrays;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import reactor.netty.http.server.HttpPredicate.UriPathTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;

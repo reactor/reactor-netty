@@ -78,8 +78,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -114,7 +114,7 @@ import static org.assertj.core.api.Assertions.*;
 public class HttpServerTests {
 	private DisposableServer disposableServer;
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
@@ -427,7 +427,7 @@ public class HttpServerTests {
 		                              .host("example.com")
 		                              .compress(true);
 		assertThat(server.tcpConfiguration().configure())
-		          .isNotSameAs(HttpServer.DEFAULT_TCP_SERVER)
+		          .isNotSameAs(HttpServer.DEFAULT_TCP_SERVER.configure())
 		          .isNotSameAs(server.tcpConfiguration().configure());
 	}
 

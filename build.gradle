@@ -76,7 +76,7 @@ ext {
   hoverflyJavaVersion = '0.13.1'
   tomcatVersion = '9.0.39'
   boringSslVersion = '2.0.34.Final'
-  junitVersion = '4.12'
+  junitVersion = '5.7.0'
 
   javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
 				  "https://docs.oracle.com/javaee/6/api/",
@@ -183,6 +183,8 @@ configure(rootProject) { project ->
 	include '**/*Test.*'
 	include '**/*Spec.*'
 	exclude '**/*Abstract*.*'
+
+	useJUnitPlatform()
   }
 
   test {
@@ -286,17 +288,19 @@ configure(rootProject) { project ->
 	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"
-	testCompile "io.specto:hoverfly-java:$hoverflyJavaVersion"
+	testCompile "io.specto:hoverfly-java-junit5:$hoverflyJavaVersion"
 	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
-	testCompile "junit:junit:$junitVersion"
+	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 
+	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntime "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	testRuntime "ch.qos.logback:logback-classic:$logbackVersion"
 	// Needed for HTTP/2 testing
 	testRuntime "io.netty:netty-tcnative-boringssl-static:$boringSslVersion" + os_suffix
 
 	jarFileTestCompile "org.assertj:assertj-core:$assertJVersion"
-	jarFileTestCompile "junit:junit:$junitVersion"
+	jarFileTestCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	jarFileTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 
 	for (dependency in project.configurations.shaded.dependencies) {
 	    compileOnly(dependency)

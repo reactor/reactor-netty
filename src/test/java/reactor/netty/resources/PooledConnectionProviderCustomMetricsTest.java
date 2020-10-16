@@ -23,9 +23,9 @@ import java.util.function.Supplier;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -36,14 +36,14 @@ public class PooledConnectionProviderCustomMetricsTest {
 
 	private ConnectionProvider pool;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		bootstrap = new Bootstrap().remoteAddress("localhost", 0)
 				.channelFactory(NioSocketChannel::new)
 				.group(new NioEventLoopGroup(2));
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		bootstrap.config().group().shutdownGracefully().get(10L, TimeUnit.SECONDS);
 		pool.dispose();
