@@ -62,7 +62,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Timeout;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;

@@ -203,7 +203,7 @@ public class HttpTests {
 		      .next()
 		      .block(Duration.ofSeconds(30));
 
-		Assertions.assertThat(errored2.await(30, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(errored2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		client.get()
 		      .uri("/issue231_2")
@@ -212,7 +212,7 @@ public class HttpTests {
 		      .next()
 		      .block(Duration.ofSeconds(30));
 
-		Assertions.assertThat(errored3.await(30, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(errored3.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		Flux<ByteBuf> content2 = client.get()
 		                               .uri("/issue237_1")
@@ -224,7 +224,7 @@ public class HttpTests {
 		            .expectError(IOException.class)
 		            .verify(Duration.ofSeconds(30));
 
-		Assertions.assertThat(errored4.await(30, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(errored4.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		content2 = client.get()
 		                 .uri("/issue237_2")
@@ -236,7 +236,7 @@ public class HttpTests {
 		            .expectError(IOException.class)
 		            .verify(Duration.ofSeconds(30));
 
-		Assertions.assertThat(errored5.await(30, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(errored5.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		code = client.get()
 				     .uri("/test3")
@@ -341,7 +341,7 @@ public class HttpTests {
 
 		System.out.println(content);
 
-		Assertions.assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		server.disposeNow();
 	}
