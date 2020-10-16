@@ -24,4 +24,4 @@ jobs:
         with:
           java-version: 1.8
       - name: Build with Gradle
-        run: ./gradlew clean check -PforceTransport=${{ matrix.transport }}
+        run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }}
