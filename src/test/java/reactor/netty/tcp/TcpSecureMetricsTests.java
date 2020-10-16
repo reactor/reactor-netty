@@ -30,7 +30,7 @@ import java.security.cert.CertificateException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
@@ -96,7 +96,7 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 		          .asString()
 		          .subscribe(null, null, latch::countDown);
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		checkExpectationsNegative();
 	}

@@ -27,9 +27,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 public class PooledConnectionProviderCustomMetricsTest {
 
@@ -56,7 +55,7 @@ public class PooledConnectionProviderCustomMetricsTest {
 		AtomicBoolean used = new AtomicBoolean();
 
 		triggerAcquisition(true, () -> (a, b, c, d) -> used.set(true));
-		assertTrue(used.get());
+		assertThat(used.get()).isTrue();
 	}
 
 	@Test
@@ -64,7 +63,7 @@ public class PooledConnectionProviderCustomMetricsTest {
 		AtomicBoolean used = new AtomicBoolean();
 
 		triggerAcquisition(false, () -> {used.set(true); return null;});
-		assertFalse(used.get());
+		assertThat(used.get()).isFalse();
 	}
 
 	private void triggerAcquisition(boolean metricsEnabled, Supplier<ConnectionProvider.MeterRegistrar> registrarSupplier) {

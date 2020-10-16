@@ -15,11 +15,8 @@
  */
 package reactor.netty.tcp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 import static reactor.netty.Metrics.*;
 
 import io.micrometer.core.instrument.Counter;
@@ -125,7 +122,7 @@ public class TcpMetricsTests {
 		              }
 		          });
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		checkExpectationsPositive();
 	}
@@ -158,7 +155,7 @@ public class TcpMetricsTests {
 			// expected
 		}
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		checkExpectationsNegative(port);
 	}
@@ -215,35 +212,35 @@ public class TcpMetricsTests {
 	void checkTimer(String name, String[] tags, boolean exists) {
 		Timer timer = registry.find(name).tags(tags).timer();
 		if (exists) {
-			assertNotNull(timer);
-			assertEquals(1, timer.count());
-			assertTrue(timer.totalTime(TimeUnit.NANOSECONDS) >= 0);
+			assertThat(timer).isNotNull();
+			assertThat(timer.count()).isEqualTo(1);
+			assertThat(timer.totalTime(TimeUnit.NANOSECONDS) >= 0).isTrue();
 		}
 		else {
-			assertNull(timer);
+			assertThat(timer).isNull();
 		}
 	}
 
 	void checkDistributionSummary(String name, String[] tags, long expectedCount, int expectedAmount, boolean exists) {
 		DistributionSummary summary = registry.find(name).tags(tags).summary();
 		if (exists) {
-			assertNotNull(summary);
-			assertEquals(expectedCount, summary.count());
-			assertTrue(summary.totalAmount() >= expectedAmount);
+			assertThat(summary).isNotNull();
+			assertThat(summary.count()).isEqualTo(expectedCount);
+			assertThat(summary.totalAmount() >= expectedAmount).isTrue();
 		}
 		else {
-			assertNull(summary);
+			assertThat(summary).isNull();
 		}
 	}
 
 	void checkCounter(String name, String[] tags, double expectedCount, boolean exists) {
 		Counter counter = registry.find(name).tags(tags).counter();
 		if (exists) {
-			assertNotNull(counter);
-			assertTrue(counter.count() >= expectedCount);
+			assertThat(counter).isNotNull();
+			assertThat(counter.count() >= expectedCount).isTrue();
 		}
 		else {
-			assertNull(counter);
+			assertThat(counter).isNull();
 		}
 	}
 

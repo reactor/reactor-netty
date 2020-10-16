@@ -43,7 +43,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.LineBasedFrameDecoder;
-import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -65,10 +64,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.retry.Retry;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Stephane Maldini
@@ -129,10 +125,10 @@ public class TcpClientTests {
 		abortServer.close();
 		timeoutServer.close();
 		heartbeatServer.close();
-		assertNull(echoServerFuture.get());
-		assertNull(abortServerFuture.get());
-		assertNull(timeoutServerFuture.get());
-		assertNull(heartbeatServerFuture.get());
+		assertThat(echoServerFuture.get()).isNull();
+		assertThat(abortServerFuture.get()).isNull();
+		assertThat(timeoutServerFuture.get()).isNull();
+		assertThat(heartbeatServerFuture.get()).isNull();
 		threadPool.shutdown();
 		threadPool.awaitTermination(5, TimeUnit.SECONDS);
 		Thread.sleep(500);
@@ -143,8 +139,8 @@ public class TcpClientTests {
 		TcpClient secureClient = TcpClient.create()
 		                                  .secure();
 
-		assertTrue(secureClient.isSecure());
-		assertFalse(secureClient.noSSL().isSecure());
+		assertThat(secureClient.isSecure()).isTrue();
+		assertThat(secureClient.noSSL().isSecure()).isFalse();
 	}
 
 	@Test
@@ -165,11 +161,9 @@ public class TcpClientTests {
 		                             .wiretap(true)
 		                             .connectNow();
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		client.disposeNow();
-
-		assertThat("latch was counted down", latch.getCount(), is(0L));
 	}
 
 
@@ -189,7 +183,7 @@ public class TcpClientTests {
 		client.disposeNow();
 		resources.dispose();
 
-		assertThat("client was configured", client instanceof ChannelOperations);
+		assertThat(client).as("client was configured").isInstanceOf(ChannelOperations.class);
 	}
 
 	@Test
@@ -209,11 +203,9 @@ public class TcpClientTests {
 		                     .wiretap(true)
 		                     .connectNow(Duration.ofSeconds(5));
 
-		assertTrue(latch.await(5, TimeUnit.SECONDS));
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		s.disposeNow();
-
-		assertThat("latch was counted down", latch.getCount(), is(0L));
 	}
 
 	@Test
@@ -244,10 +236,11 @@ public class TcpClientTests {
 				         .wiretap(true)
 				         .connectNow(Duration.ofSeconds(15));
 
-		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
-				latch.await(15, TimeUnit.SECONDS));
+		assertThat(latch.await(15, TimeUnit.SECONDS))
+				.as("Expected messages not received. Received " + strings.size() + " messages: " + strings)
+				.isTrue();
 
-		assertEquals(messages, strings.size());
+		assertThat(strings).hasSize(messages);
 		client.disposeNow();
 	}
 
@@ -312,10 +305,11 @@ public class TcpClientTests {
 		 .log()
 		 .block(Duration.ofSeconds(30));
 
-		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
-				latch.await(15, TimeUnit.SECONDS));
+		assertThat(latch.await(15, TimeUnit.SECONDS))
+				.as("Expected messages not received. Received " + strings.size() + " messages: " + strings)
+				.isTrue();
 
-		assertEquals(messages, strings.size());
+		assertThat(strings).hasSize(messages);
 	}
 
 	@Test
@@ -362,9 +356,8 @@ public class TcpClientTests {
 		                                    })))
 		         .subscribe(System.out::println);
 
-		assertTrue(latch.await(5, TimeUnit.SECONDS));
-		assertEquals("latch was counted down:" + latch.getCount(), 0, latch.getCount());
-		assertThat("totalDelay was >1.6s", totalDelay.get(), greaterThanOrEqualTo(1600L));
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(totalDelay.get()).as("totalDelay was >1.6s").isGreaterThanOrEqualTo(1600L);
 	}
 
 	/*Check in details*/
@@ -415,11 +408,11 @@ public class TcpClientTests {
 					handler.log()
 					       .then(handler.doOnSuccess(s -> reconnectionLatch.countDown()))
 					       .block(Duration.ofSeconds(30));
-			assertNotNull(c);
+			assertThat(c).isNotNull();
 			c.onDispose();
 
-			assertTrue("Initial connection is made", connectionLatch.await(5, TimeUnit.SECONDS));
-			assertTrue("A reconnect attempt was made", reconnectionLatch.await(5, TimeUnit.SECONDS));
+			assertThat(connectionLatch.await(5, TimeUnit.SECONDS)).as("Initial connection is made").isTrue();
+			assertThat(reconnectionLatch.await(5, TimeUnit.SECONDS)).as("A reconnect attempt was made").isTrue();
 		}
 		catch (AbortedException ise){
 			return;
@@ -463,7 +456,7 @@ public class TcpClientTests {
 		})
 		             .connectNow();
 
-		assertTrue("Cancel not propagated", connectionLatch.await(30, TimeUnit.SECONDS));
+		assertThat(connectionLatch.await(30, TimeUnit.SECONDS)).as("Cancel not propagated").isTrue();
 		c.disposeNow();
 	}
 
@@ -495,9 +488,9 @@ public class TcpClientTests {
 		                     .wiretap(true)
 		                     .connectNow();
 
-		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
-		assertTrue("close was counted down", close.await(30, TimeUnit.SECONDS));
-		assertThat("totalDelay was >500ms", totalDelay.get(), greaterThanOrEqualTo(500L));
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch was counted down").isTrue();
+		assertThat(close.await(30, TimeUnit.SECONDS)).as("close was counted down").isTrue();
+		assertThat(totalDelay.get()).as("totalDelay was > 200ms").isGreaterThanOrEqualTo(200L);
 		s.disposeNow();
 	}
 
@@ -518,12 +511,12 @@ public class TcpClientTests {
 		                     .wiretap(true)
 		                     .connectNow();
 
-		assertTrue(latch.await(15, TimeUnit.SECONDS));
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 		heartbeatServer.close();
 
 		long duration = System.currentTimeMillis() - start;
 
-		assertThat(duration, is(greaterThanOrEqualTo(500L)));
+		assertThat(duration).isGreaterThanOrEqualTo(200L);
 		s.disposeNow();
 	}
 
@@ -553,18 +546,18 @@ public class TcpClientTests {
 
 		log.debug("Started");
 
-		assertTrue(latch.await(5, TimeUnit.SECONDS));
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		long duration = System.currentTimeMillis() - start;
 
-		assertThat(duration, is(greaterThanOrEqualTo(500L)));
+		assertThat(duration).isGreaterThanOrEqualTo(500L);
 		client.disposeNow();
 	}
 
 	@Test
 	public void gettingOptionsDuplicates() {
 		TcpClient client = TcpClient.create().host("example.com").port(123);
-		Assertions.assertThat(client.configure())
+		assertThat(client.configure())
 		          .isNotSameAs(TcpClient.DEFAULT_BOOTSTRAP)
 		          .isNotSameAs(client.configure());
 	}
@@ -823,7 +816,7 @@ public class TcpClientTests {
 		loop.dispose();
 		server.disposeNow();
 
-		Assertions.assertThat(threadNames.size()).isGreaterThan(1);
+		assertThat(threadNames.size()).isGreaterThan(1);
 	}
 
 	@Test
@@ -856,9 +849,9 @@ public class TcpClientTests {
 				         .connect()
 				         .retry()
 				         .block(Duration.ofSeconds(30));
-		assertNotNull(conn);
+		assertThat(conn).isNotNull();
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		conn.disposeNow();
 		server.disposeNow();
@@ -884,7 +877,7 @@ public class TcpClientTests {
 
 		connect(client, true, latch);
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		server.disposeNow();
 	}
@@ -944,17 +937,17 @@ public class TcpClientTests {
 		    .doOnError(t -> latch.countDown())
 		    .subscribe(conn.disposeSubscriber());
 
-		Assertions.assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		Assertions.assertThat(b1.refCnt()).isEqualTo(0);
+		assertThat(b1.refCnt()).isEqualTo(0);
 		b1 = null;
 		checkReference(refCheck1);
 
-		Assertions.assertThat(b2.refCnt()).isEqualTo(0);
+		assertThat(b2.refCnt()).isEqualTo(0);
 		b2 = null;
 		checkReference(refCheck2);
 
-		Assertions.assertThat(b3.refCnt()).isEqualTo(0);
+		assertThat(b3.refCnt()).isEqualTo(0);
 		b3 = null;
 		checkReference(refCheck3);
 
@@ -993,7 +986,7 @@ public class TcpClientTests {
 		   .then()
 		   .block(Duration.ofSeconds(30));
 
-		Assertions.assertThat(b1.refCnt()).isEqualTo(0);
+		assertThat(b1.refCnt()).isEqualTo(0);
 		b1 = null;
 		checkReference(refCheck1);
 
@@ -1001,7 +994,7 @@ public class TcpClientTests {
 		   .then()
 		   .block(Duration.ofSeconds(30));
 
-		Assertions.assertThat(b2.refCnt()).isEqualTo(0);
+		assertThat(b2.refCnt()).isEqualTo(0);
 		b2 = null;
 		checkReference(refCheck2);
 
@@ -1009,7 +1002,7 @@ public class TcpClientTests {
 		   .then()
 		   .block(Duration.ofSeconds(30));
 
-		Assertions.assertThat(b3.refCnt()).isEqualTo(0);
+		assertThat(b3.refCnt()).isEqualTo(0);
 		b3 = null;
 		checkReference(refCheck3);
 
@@ -1026,6 +1019,6 @@ public class TcpClientTests {
 			Thread.sleep(100);
 		}
 
-		Assertions.assertThat(ref.get()).isNull();
+		assertThat(ref.get()).isNull();
 	}
 }

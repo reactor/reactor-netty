@@ -46,7 +46,7 @@ import reactor.netty.tcp.InetSocketAddressUtil;
 import reactor.netty.tcp.TcpClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.fail;
 
 /**
  * Tests for {@link ConnectionInfo}

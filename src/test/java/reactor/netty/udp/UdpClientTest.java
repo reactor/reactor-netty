@@ -30,7 +30,6 @@ import reactor.netty.Connection;
 import reactor.netty.resources.LoopResources;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
 
 public class UdpClientTest {
 
@@ -99,7 +98,7 @@ public class UdpClientTest {
 				         .block(Duration.ofSeconds(30));
 		assertThat(client2).isNotNull();
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		server.disposeNow();
 		client1.disposeNow();
 		client2.disposeNow();

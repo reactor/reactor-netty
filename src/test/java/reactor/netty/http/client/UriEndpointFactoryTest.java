@@ -28,9 +28,6 @@ import reactor.netty.tcp.InetSocketAddressUtil;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.in;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class UriEndpointFactoryTest {
 	private final UriEndpointFactoryBuilder builder = new UriEndpointFactoryBuilder();
@@ -75,11 +72,11 @@ public class UriEndpointFactoryTest {
 		for(String[] input : inputs) {
 			Matcher matcher = UriEndpointFactory.URL_PATTERN
 					.matcher(input[0]);
-			assertTrue(matcher.matches());
-			assertEquals(input[1], matcher.group(1));
-			assertEquals(input[2], matcher.group(2));
-			assertEquals(input[3], matcher.group(3));
-			assertEquals(input[4], matcher.group(4));
+			assertThat(matcher.matches()).isTrue();
+			assertThat(input[1]).isEqualTo(matcher.group(1));
+			assertThat(input[2]).isEqualTo(matcher.group(2));
+			assertThat(input[3]).isEqualTo(matcher.group(3));
+			assertThat(input[4]).isEqualTo(matcher.group(4));
 		}
 	}
 

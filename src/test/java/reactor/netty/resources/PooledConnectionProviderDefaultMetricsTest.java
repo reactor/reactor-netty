@@ -34,9 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.ID;
@@ -139,22 +137,22 @@ public class PooledConnectionProviderDefaultMetricsTest {
 				.asString()
 				.block(Duration.ofSeconds(30));
 
-		assertTrue(latch.await(30, TimeUnit.SECONDS));
-		assertTrue(metrics1.get());
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(metrics1.get()).isTrue();
 		String[] tagsArr = tags1.get();
-		assertNotNull(tagsArr);
-		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr), 0.0);
+		assertThat(tagsArr).isNotNull();
+		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr)).isEqualTo(0);
+		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr)).isEqualTo(0);
+		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr)).isEqualTo(0);
+		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr)).isEqualTo(0);
 
-		assertTrue(metrics2.get());
+		assertThat(metrics2.get()).isTrue();
 		tagsArr = tags2.get();
-		assertNotNull(tagsArr);
-		assertEquals(0, getGaugeValue(namePrefix + TOTAL_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(namePrefix + ACTIVE_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(namePrefix + IDLE_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr), 0.0);
+		assertThat(tagsArr).isNotNull();
+		assertThat(getGaugeValue(namePrefix + TOTAL_CONNECTIONS, tagsArr)).isEqualTo(0);
+		assertThat(getGaugeValue(namePrefix + ACTIVE_CONNECTIONS, tagsArr)).isEqualTo(0);
+		assertThat(getGaugeValue(namePrefix + IDLE_CONNECTIONS, tagsArr)).isEqualTo(0);
+		assertThat(getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr)).isEqualTo(0);
 
 		fixed.disposeLater()
 				.block(Duration.ofSeconds(30));

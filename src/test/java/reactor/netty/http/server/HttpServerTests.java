@@ -309,7 +309,7 @@ public class HttpServerTests {
 				         .wiretap(true)
 				         .connectNow();
 
-		assertThat(latch.await(45, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(45, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		client.disposeNow();
 	}

@@ -29,18 +29,12 @@ import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.util.CharsetUtil;
-import org.hamcrest.MatcherAssert;
 import org.junit.Test;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Simon Baslé
@@ -56,17 +50,18 @@ public class HttpClientOperationsTest {
 				.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
-		MatcherAssert.assertThat(channel.pipeline().names().iterator().next(), is("JsonObjectDecoder$extractor"));
+		assertThat(channel.pipeline().names()).first().isEqualTo("JsonObjectDecoder$extractor");
 
 		Object content = channel.readInbound();
-		MatcherAssert.assertThat(content, instanceOf(ByteBuf.class));
+		assertThat(content).isInstanceOf(ByteBuf.class);
 		((ByteBuf) content).release();
 
 		content = channel.readInbound();
-		MatcherAssert.assertThat(content, instanceOf(LastHttpContent.class));
+		assertThat(content).isInstanceOf(LastHttpContent.class);
 		((LastHttpContent) content).release();
 
-		MatcherAssert.assertThat(channel.readInbound(), nullValue());
+		content = channel.readInbound();
+		assertThat(content).isNull();
 	}
 
 	@Test
@@ -78,17 +73,18 @@ public class HttpClientOperationsTest {
 				.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
-		MatcherAssert.assertThat(channel.pipeline().names().iterator().next(), is("json$extractor"));
+		assertThat(channel.pipeline().names()).first().isEqualTo("json$extractor");
 
 		Object content = channel.readInbound();
-		MatcherAssert.assertThat(content, instanceOf(ByteBuf.class));
+		assertThat(content).isInstanceOf(ByteBuf.class);
 		((ByteBuf) content).release();
 
 		content = channel.readInbound();
-		MatcherAssert.assertThat(content, instanceOf(LastHttpContent.class));
+		assertThat(content).isInstanceOf(LastHttpContent.class);
 		((LastHttpContent) content).release();
 
-		MatcherAssert.assertThat(channel.readInbound(), nullValue());
+		content = channel.readInbound();
+		assertThat(content).isNull();
 	}
 
 	@Test
@@ -100,17 +96,18 @@ public class HttpClientOperationsTest {
 				.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
-		MatcherAssert.assertThat(channel.pipeline().names().iterator().next(), is("JsonObjectDecoder$extractor"));
+		assertThat(channel.pipeline().names()).first().isEqualTo("JsonObjectDecoder$extractor");
 
 		Object content = channel.readInbound();
-		MatcherAssert.assertThat(content, instanceOf(ByteBuf.class));
+		assertThat(content).isInstanceOf(ByteBuf.class);
 		((ByteBuf) content).release();
 
 		content = channel.readInbound();
-		MatcherAssert.assertThat(content, instanceOf(LastHttpContent.class));
+		assertThat(content).isInstanceOf(LastHttpContent.class);
 		((LastHttpContent) content).release();
 
-		MatcherAssert.assertThat(channel.readInbound(), nullValue());
+		content = channel.readInbound();
+		assertThat(content).isNull();
 	}
 
 	@Test
@@ -122,17 +119,18 @@ public class HttpClientOperationsTest {
 				.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
-		MatcherAssert.assertThat(channel.pipeline().names().iterator().next(), is("json$extractor"));
+		assertThat(channel.pipeline().names()).first().isEqualTo("json$extractor");
 
 		Object content = channel.readInbound();
-		MatcherAssert.assertThat(content, instanceOf(ByteBuf.class));
+		assertThat(content).isInstanceOf(ByteBuf.class);
 		((ByteBuf) content).release();
 
 		content = channel.readInbound();
-		MatcherAssert.assertThat(content, instanceOf(LastHttpContent.class));
+		assertThat(content).isInstanceOf(LastHttpContent.class);
 		((LastHttpContent) content).release();
 
-		MatcherAssert.assertThat(channel.readInbound(), nullValue());
+		content = channel.readInbound();
+		assertThat(content).isNull();
 	}
 
 	@Test
@@ -151,16 +149,16 @@ public class HttpClientOperationsTest {
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);
 
-		assertSame(ops1.channel(), ops2.channel());
-		assertSame(ops1.started, ops2.started);
-		assertSame(ops1.retrying, ops2.retrying);
-		assertSame(ops1.redirecting, ops2.redirecting);
-		assertSame(ops1.redirectedFrom, ops2.redirectedFrom);
-		assertSame(ops1.isSecure, ops2.isSecure);
-		assertSame(ops1.nettyRequest, ops2.nettyRequest);
-		assertSame(ops1.responseState, ops2.responseState);
-		assertSame(ops1.followRedirectPredicate, ops2.followRedirectPredicate);
-		assertSame(ops1.requestHeaders, ops2.requestHeaders);
+		assertThat(ops1.channel()).isSameAs(ops2.channel());
+		assertThat(ops1.started).isSameAs(ops2.started);
+		assertThat(ops1.retrying).isSameAs(ops2.retrying);
+		assertThat(ops1.redirecting).isSameAs(ops2.redirecting);
+		assertThat(ops1.redirectedFrom).isSameAs(ops2.redirectedFrom);
+		assertThat(ops1.isSecure).isSameAs(ops2.isSecure);
+		assertThat(ops1.nettyRequest).isSameAs(ops2.nettyRequest);
+		assertThat(ops1.responseState).isSameAs(ops2.responseState);
+		assertThat(ops1.followRedirectPredicate).isSameAs(ops2.followRedirectPredicate);
+		assertThat(ops1.requestHeaders).isSameAs(ops2.requestHeaders);
 	}
 
 	@Test
@@ -175,6 +173,6 @@ public class HttpClientOperationsTest {
 				ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
 		ops.setNettyResponse(new DefaultFullHttpResponse(HTTP_1_1, status, Unpooled.EMPTY_BUFFER));
-		assertEquals(status.reasonPhrase(), ops.status().reasonPhrase());
+		assertThat(ops.status().reasonPhrase()).isEqualTo(status.reasonPhrase());
 	}
 }

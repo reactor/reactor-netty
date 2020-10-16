@@ -17,7 +17,6 @@
 package reactor.netty;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
@@ -30,7 +29,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.Utf8FrameValidator;
-import org.hamcrest.MatcherAssert;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.Disposable;
@@ -38,11 +36,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 import reactor.test.StepVerifier;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Simon Baslé
@@ -73,12 +67,8 @@ public class ConnectionTest {
 		           .addHandlerFirst("decoder$extract",
 				           NettyPipeline.inboundHandler(ADD_EXTRACTOR));
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList("decoder$extract",
-						"decoder",
-						NettyPipeline.ReactiveBridge,
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly("decoder$extract", "decoder", NettyPipeline.ReactiveBridge, "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -93,12 +83,8 @@ public class ConnectionTest {
 		           .addHandlerFirst("decoder$extract",
 				           NettyPipeline.inboundHandler(ADD_EXTRACTOR));
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList(NettyPipeline.HttpCodec,
-						"decoder$extract",
-						"decoder",
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly(NettyPipeline.HttpCodec, "decoder$extract", "decoder", "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -110,11 +96,8 @@ public class ConnectionTest {
 		           .addHandlerFirst("decoder$extract",
 				           NettyPipeline.inboundHandler(ADD_EXTRACTOR));
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList("decoder$extract",
-						"decoder",
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly("decoder$extract", "decoder", "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -131,14 +114,9 @@ public class ConnectionTest {
 		           .addHandlerFirst("decoder$extract",
 				           NettyPipeline.inboundHandler(ADD_EXTRACTOR));
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpTrafficHandler,
-						"decoder$extract",
-						"decoder",
-						NettyPipeline.ReactiveBridge,
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly(NettyPipeline.HttpCodec, NettyPipeline.HttpTrafficHandler, "decoder$extract",
+						"decoder", NettyPipeline.ReactiveBridge, "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -152,11 +130,8 @@ public class ConnectionTest {
 
 		testContext.addHandlerLast("decoder", decoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList("decoder",
-						NettyPipeline.ReactiveBridge,
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly("decoder", NettyPipeline.ReactiveBridge, "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -170,11 +145,8 @@ public class ConnectionTest {
 
 		testContext.addHandlerLast("decoder", decoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList(NettyPipeline.HttpCodec,
-						"decoder",
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly(NettyPipeline.HttpCodec, "decoder", "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -185,9 +157,8 @@ public class ConnectionTest {
 
 		testContext.addHandlerLast("decoder", decoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList("decoder", "DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly("decoder", "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -203,13 +174,9 @@ public class ConnectionTest {
 
 		testContext.addHandlerLast("decoder", decoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpTrafficHandler,
-						"decoder",
-						NettyPipeline.ReactiveBridge,
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly(NettyPipeline.HttpCodec, NettyPipeline.HttpTrafficHandler, "decoder",
+						NettyPipeline.ReactiveBridge, "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -231,16 +198,10 @@ public class ConnectionTest {
 				           NettyPipeline.inboundHandler(ADD_EXTRACTOR))
 		           .addHandlerLast("decoder2", decoder2);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpTrafficHandler,
-						"decoder1$extract",
-						"decoder1",
-						"decoder2$extract",
-						"decoder2",
-						NettyPipeline.ReactiveBridge,
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly(NettyPipeline.HttpCodec, NettyPipeline.HttpTrafficHandler, "decoder1$extract",
+						"decoder1", "decoder2$extract", "decoder2",
+						NettyPipeline.ReactiveBridge, "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -253,11 +214,8 @@ public class ConnectionTest {
 
 		testContext.addHandlerFirst("encoder", encoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList("encoder",
-						NettyPipeline.ReactiveBridge,
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly("encoder", NettyPipeline.ReactiveBridge, "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -270,11 +228,8 @@ public class ConnectionTest {
 
 		testContext.addHandlerFirst("encoder", encoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList(NettyPipeline.HttpCodec,
-						"encoder",
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly(NettyPipeline.HttpCodec, "encoder", "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -284,9 +239,8 @@ public class ConnectionTest {
 
 		testContext.addHandlerFirst("encoder", encoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList("encoder", "DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly("encoder", "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -301,13 +255,9 @@ public class ConnectionTest {
 
 		testContext.addHandlerFirst("encoder", encoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpTrafficHandler,
-						"encoder",
-						NettyPipeline.ReactiveBridge,
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly(NettyPipeline.HttpCodec, NettyPipeline.HttpTrafficHandler, "encoder",
+						NettyPipeline.ReactiveBridge, "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -321,11 +271,8 @@ public class ConnectionTest {
 
 		testContext.addHandlerFirst("encoder", encoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList("encoder",
-						NettyPipeline.ReactiveBridge,
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly("encoder", NettyPipeline.ReactiveBridge, "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -339,11 +286,8 @@ public class ConnectionTest {
 
 		testContext.addHandlerFirst("encoder", encoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList(NettyPipeline.HttpCodec,
-						"encoder",
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly(NettyPipeline.HttpCodec, "encoder", "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -354,9 +298,8 @@ public class ConnectionTest {
 
 		testContext.addHandlerFirst("encoder", encoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList("encoder", "DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly("encoder", "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -372,13 +315,9 @@ public class ConnectionTest {
 
 		testContext.addHandlerFirst("encoder", encoder);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpTrafficHandler,
-						"encoder",
-						NettyPipeline.ReactiveBridge,
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly(NettyPipeline.HttpCodec, NettyPipeline.HttpTrafficHandler, "encoder",
+						NettyPipeline.ReactiveBridge, "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -395,14 +334,9 @@ public class ConnectionTest {
 		testContext.addHandlerFirst("encoder1", encoder1)
 		           .addHandlerFirst("encoder2", encoder2);
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpTrafficHandler,
-						"encoder2",
-						"encoder1",
-						NettyPipeline.ReactiveBridge,
-						"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names())
+				.containsExactly(NettyPipeline.HttpCodec, NettyPipeline.HttpTrafficHandler, "encoder2",
+						"encoder1", NettyPipeline.ReactiveBridge, "DefaultChannelPipeline$TailContext#0");
 	}
 
 	@Test
@@ -431,8 +365,8 @@ public class ConnectionTest {
 		 .addHandlerFirst("encoder", new ChannelHandlerAdapter() {
 		 });
 
-		MatcherAssert.assertThat(c.isPersistent(), is(false));
-		MatcherAssert.assertThat(closeCount.intValue(), is(0));
+		assertThat(c.isPersistent()).isFalse();
+		assertThat(closeCount.intValue()).isEqualTo(0);
 	}
 
 	@Test
@@ -461,8 +395,8 @@ public class ConnectionTest {
 		 .addHandlerLast("decoder", new ChannelHandlerAdapter() {
 		 });
 
-		MatcherAssert.assertThat(c.isPersistent(), is(false));
-		MatcherAssert.assertThat(closeCount.intValue(), is(0));
+		assertThat(c.isPersistent()).isFalse();
+		assertThat(closeCount.intValue()).isEqualTo(0);
 	}
 
 	@Test
@@ -472,11 +406,9 @@ public class ConnectionTest {
 
 		testContext.addHandlerFirst("foo", new LineBasedFrameDecoder(10));
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList("foo", "DefaultChannelPipeline$TailContext#0"));
-		MatcherAssert.assertThat(channel.pipeline()
-		                  .get("foo"), is(instanceOf(Utf8FrameValidator.class)));
+		assertThat(channel.pipeline().names())
+				.containsExactly("foo", "DefaultChannelPipeline$TailContext#0");
+		assertThat(channel.pipeline().get("foo")).isInstanceOf(Utf8FrameValidator.class);
 	}
 
 	@Test
@@ -486,11 +418,9 @@ public class ConnectionTest {
 
 		testContext.addHandlerFirst("foo", new LineBasedFrameDecoder(10));
 
-		assertEquals(channel.pipeline()
-		                    .names(),
-				Arrays.asList("foo", "DefaultChannelPipeline$TailContext#0"));
-		MatcherAssert.assertThat(channel.pipeline()
-		                  .get("foo"), is(instanceOf(Utf8FrameValidator.class)));
+		assertThat(channel.pipeline().names())
+				.containsExactly("foo", "DefaultChannelPipeline$TailContext#0");
+		assertThat(channel.pipeline().get("foo")).isInstanceOf(Utf8FrameValidator.class);
 	}
 
 	@Test
@@ -514,6 +444,6 @@ public class ConnectionTest {
 		            .expectErrorMatches(t -> t instanceof IllegalStateException && expectation.equals(t.getMessage()))
 		            .verify(Duration.ofSeconds(30));
 
-		assertTrue(channel.isActive());
+		assertThat(channel.isActive()).isTrue();
 	}
 }

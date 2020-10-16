@@ -79,7 +79,7 @@ public class AddressResolverGroupMetricsTest {
 		          .asString()
 		          .block(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		assertThat(getTimerValue("localhost:" + server.port())).isGreaterThan(0);
 

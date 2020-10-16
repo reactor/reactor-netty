@@ -44,8 +44,7 @@ import java.util.function.Supplier;
 import static io.specto.hoverfly.junit.core.SimulationSource.dsl;
 import static io.specto.hoverfly.junit.dsl.HoverflyDsl.service;
 import static io.specto.hoverfly.junit.dsl.ResponseCreators.success;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Violeta Georgieva
@@ -257,8 +256,8 @@ public class HttpClientProxyTest {
 		      .responseContent()
 		      .blockLast(Duration.ofSeconds(30));
 
-		assertNotNull(resolver.get());
-		assertTrue(resolver.get() instanceof NoopAddressResolverGroup);
+		assertThat(resolver.get()).isNotNull();
+		assertThat(resolver.get()).isInstanceOf(NoopAddressResolverGroup.class);
 
 		client.tcpConfiguration(TcpClient::noProxy)
 		      .get()
@@ -266,15 +265,15 @@ public class HttpClientProxyTest {
 		      .responseContent()
 		      .blockLast(Duration.ofSeconds(30));
 
-		assertNotNull(resolver.get());
-		assertTrue(resolver.get() instanceof DefaultAddressResolverGroup);
+		assertThat(resolver.get()).isNotNull();
+		assertThat(resolver.get()).isInstanceOf(DefaultAddressResolverGroup.class);
 
 		client.get()
 		      .uri("http://localhost:" + port + "/")
 		      .responseContent()
 		      .blockLast(Duration.ofSeconds(30));
 
-		assertNotNull(resolver.get());
-		assertTrue(resolver.get() instanceof NoopAddressResolverGroup);
+		assertThat(resolver.get()).isNotNull();
+		assertThat(resolver.get()).isInstanceOf(NoopAddressResolverGroup.class);
 	}
 }

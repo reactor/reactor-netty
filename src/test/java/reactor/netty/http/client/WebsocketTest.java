@@ -39,7 +39,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
@@ -63,7 +62,6 @@ import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.CoreMatchers.is;
 
 /**
  * @author tjreactive
@@ -103,8 +101,8 @@ public class WebsocketTest {
 				          .collectList()
 				          .block();
 
-		Assert.assertNotNull(res);
-		Assert.assertThat(res.get(0), is("test"));
+		assertThat(res).isNotNull();
+		assertThat(res.get(0)).isEqualTo("test");
 	}
 
 	@Test
@@ -163,7 +161,7 @@ public class WebsocketTest {
 				    .map(v -> "test")
 				    .collectList()
 				    .block();
-		Assert.assertNotNull(expected);
+		assertThat(expected).isNotNull();
 
 		StepVerifier.create(ws.take(c)
 		                      .log())
@@ -257,7 +255,7 @@ public class WebsocketTest {
 				    .map(v -> "test")
 				    .collectList()
 				    .block();
-		Assert.assertNotNull(expected);
+		assertThat(expected).isNotNull();
 
 		StepVerifier.create(ws.take(c)
 		                      .log())
@@ -308,8 +306,8 @@ public class WebsocketTest {
 		          .log()
 		          .subscribe();
 
-		Assert.assertTrue(serverLatch.await(10, TimeUnit.SECONDS));
-		Assert.assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
+		assertThat(serverLatch.await(10, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(clientLatch.await(10, TimeUnit.SECONDS)).as("latch await").isTrue();
 	}
 
 	@Test
@@ -376,8 +374,8 @@ public class WebsocketTest {
 				          .collectList()
 				          .block(Duration.ofSeconds(30));
 
-		Assert.assertNotNull(res);
-		Assert.assertThat(res.get(0), is("test"));
+		assertThat(res).isNotNull();
+		assertThat(res.get(0)).isEqualTo("test");
 	}
 
 	@Test
@@ -405,8 +403,8 @@ public class WebsocketTest {
 				          .collectList()
 				          .block(Duration.ofSeconds(30));
 
-		Assert.assertNotNull(res);
-		Assert.assertThat(res.get(0), is("CLIENT:Common-SERVER:Common"));
+		assertThat(res).isNotNull();
+		assertThat(res.get(0)).isEqualTo("CLIENT:Common-SERVER:Common");
 	}
 
 	@Test
@@ -431,8 +429,8 @@ public class WebsocketTest {
 				          .collectList()
 				          .block(Duration.ofSeconds(30));
 
-		Assert.assertNotNull(res);
-		Assert.assertThat(res.get(0), is("CLIENT:null-SERVER:null"));
+		assertThat(res).isNotNull();
+		assertThat(res.get(0)).isEqualTo("CLIENT:null-SERVER:null");
 	}
 
 	@Test
@@ -458,8 +456,8 @@ public class WebsocketTest {
 				          .collectList()
 				          .block(Duration.ofSeconds(30));
 
-		Assert.assertNotNull(res);
-		Assert.assertThat(res.get(0), is("CLIENT:proto1-SERVER:proto1"));
+		assertThat(res).isNotNull();
+		assertThat(res.get(0)).isEqualTo("CLIENT:proto1-SERVER:proto1");
 	}
 
 	@Test
@@ -496,10 +494,10 @@ public class WebsocketTest {
 		          })
 		          .blockLast(Duration.ofSeconds(30));
 
-		Assert.assertTrue(latch.await(30, TimeUnit.SECONDS));
-		Assert.assertThat(serverSelectedProtocol.get(), is("proto1"));
-		Assert.assertThat(clientSelectedProtocol.get(), is("proto1"));
-		Assert.assertThat(clientSelectedProtocolWhenSimplyUpgrading.get(), is("proto1"));
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(serverSelectedProtocol.get()).isEqualTo("proto1");
+		assertThat(clientSelectedProtocol.get()).isEqualTo("proto1");
+		assertThat(clientSelectedProtocolWhenSimplyUpgrading.get()).isEqualTo("proto1");
 	}
 
 	@Test
@@ -620,7 +618,7 @@ public class WebsocketTest {
 				    .map(v -> "test")
 				    .collectList()
 				    .block();
-		Assert.assertNotNull(expected);
+		assertThat(expected).isNotNull();
 
 		StepVerifier.create(
 				Flux.range(1, 10)
@@ -807,7 +805,7 @@ public class WebsocketTest {
 		          })
 		          .blockLast(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		assertThat(error.get()).isFalse();
 	}
@@ -869,7 +867,7 @@ public class WebsocketTest {
 		          })
 		          .blockLast(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		assertThat(error.get()).isFalse();
 	}
@@ -1076,8 +1074,8 @@ public class WebsocketTest {
 				          .uri("/ws")
 				          .response()
 				          .block();
-		Assert.assertNotNull(res);
-		Assert.assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
+		assertThat(res).isNotNull();
+		assertThat(res.status()).isEqualTo(HttpResponseStatus.SWITCHING_PROTOCOLS);
 	}
 
 	@Test

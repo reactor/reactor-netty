@@ -22,7 +22,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -44,8 +43,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * @author Violeta Georgieva
@@ -82,9 +79,10 @@ public class HttpClientWithTomcatTest {
 		                        .doOnSuccess(v -> latch.countDown())
 		                        .block(Duration.ofSeconds(30));
 
-		assertTrue("Latch didn't time out", latch.await(15, TimeUnit.SECONDS));
-		assertNotNull(response);
-		assertTrue(response.contains("q=test%20d%20dq"));
+		assertThat(latch.await(15, TimeUnit.SECONDS)).as("Latch didn't time out").isTrue();
+		assertThat(response)
+				.isNotNull()
+				.contains("q=test%20d%20dq");
 	}
 
 	@Test
@@ -220,9 +218,9 @@ public class HttpClientWithTomcatTest {
 
 		same.set(ch1.get() == ch2.get());
 
-		Assert.assertTrue(same.get());
+		assertThat(same.get()).isTrue();
 
-		Assert.assertEquals(r, HttpResponseStatus.NOT_FOUND);
+		assertThat(r).isEqualTo(HttpResponseStatus.NOT_FOUND);
 		p.dispose();
 	}
 
@@ -254,9 +252,9 @@ public class HttpClientWithTomcatTest {
 
 		assertThat(r2).isNotNull();
 
-		Assert.assertSame(r.getT2(), r2);
+		assertThat(r.getT2()).isSameAs(r2);
 
-		Assert.assertEquals(r.getT1(), HttpResponseStatus.NOT_FOUND);
+		assertThat(r.getT1()).isEqualTo(HttpResponseStatus.NOT_FOUND);
 		p.dispose();
 	}
 
@@ -281,7 +279,7 @@ public class HttpClientWithTomcatTest {
 		      .responseSingle((res, buf) -> Mono.just(res.status()))
 		      .block(Duration.ofSeconds(30));
 
-		Assert.assertEquals(r, HttpResponseStatus.BAD_REQUEST);
+		assertThat(r).isEqualTo(HttpResponseStatus.BAD_REQUEST);
 		fixed.dispose();
 	}
 

@@ -25,8 +25,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -72,7 +72,6 @@ import reactor.test.StepVerifier;
 import javax.net.ssl.SSLException;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertNotNull;
 
 public class PooledConnectionProviderTest {
 
@@ -101,7 +100,7 @@ public class PooledConnectionProviderTest {
 		CountDownLatch latch = new CountDownLatch(1);
 		disposer.subscribe(null, null, latch::countDown);
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		assertThat(((AtomicInteger) channelPool).get()).as("pool closed by disposer subscribe()").isEqualTo(1);
 	}
 
@@ -120,14 +119,14 @@ public class PooledConnectionProviderTest {
 		CountDownLatch latch1 = new CountDownLatch(1);
 		poolResources.disposeLater().subscribe(null, null, latch1::countDown);
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		assertThat(((AtomicInteger) channelPool).get()).as("pool closed by disposeLater()").isEqualTo(1);
 
 		CountDownLatch latch2 = new CountDownLatch(2);
 		poolResources.disposeLater().subscribe(null, null, latch2::countDown);
 		poolResources.disposeLater().subscribe(null, null, latch2::countDown);
 
-		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		assertThat(((AtomicInteger) channelPool).get()).as("pool closed only once").isEqualTo(1);
 	}
 
@@ -140,7 +139,7 @@ public class PooledConnectionProviderTest {
 
 		java.util.concurrent.Future<?> f1 = null;
 		java.util.concurrent.Future<?> f2 = null;
-		ScheduledFuture<?> sf = null;
+		Future<?> sf = null;
 		try {
 			final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", echoServerPort);
 			ConnectionProvider pool = ConnectionProvider.create("fixedPoolTwoAcquire", 2);
@@ -223,7 +222,7 @@ public class PooledConnectionProviderTest {
 			assertThat(f1.get()).isNull();
 			assertThat(f2).isNotNull();
 			assertThat(f2.get()).isNull();
-			assertNotNull(sf);
+			assertThat(sf).isNotNull();
 			assertThat(sf.get()).isNull();
 		}
 	}
@@ -496,7 +495,7 @@ public class PooledConnectionProviderTest {
 		      .onErrorResume(e -> Mono.empty())
 		      .block(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		provider.channelPools.forEach((k, v) -> assertThat(v.metrics().acquiredSize()).isEqualTo(0));
 
@@ -541,7 +540,7 @@ public class PooledConnectionProviderTest {
 
 		assertThat(response).isEqualTo("OK");
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		provider.channelPools.forEach((k, v) -> assertThat(v.metrics().acquiredSize()).isEqualTo(0));
 
 		provider.disposeLater()

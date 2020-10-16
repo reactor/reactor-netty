@@ -39,7 +39,6 @@ import java.util.concurrent.TimeUnit;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.NetUtil;
-import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,10 +51,8 @@ import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 /**
  * @author Jon Brisbin
@@ -119,9 +116,9 @@ public class UdpServerTests {
 			                                   }
 		                                   })
 		                                   .block(Duration.ofSeconds(30));
-		Assertions.assertThat(server).isNotNull();
+		assertThat(server).isNotNull();
 
-		assertThat("latch was counted down", latch.await(10, TimeUnit.SECONDS));
+		assertThat(latch.await(10, TimeUnit.SECONDS)).as("latch was counted down").isTrue();
 		server.disposeNow();
 	}
 
@@ -179,7 +176,7 @@ public class UdpServerTests {
 			servers.add(server);
 		}
 
-		assertTrue(latch2.await(5, TimeUnit.SECONDS));
+		assertThat(latch2.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		for (int i = 0; i < Schedulers.DEFAULT_POOL_SIZE; i++) {
 			threadPool.submit(() -> {
@@ -205,8 +202,9 @@ public class UdpServerTests {
 			          .get(5, TimeUnit.SECONDS);
 		}
 
-		assertTrue("latch was not counted down enough: " + latch1.getCount() + " left on " + (4 ^ 2),
-				latch1.await(5, TimeUnit.SECONDS));
+		assertThat(latch1.await(5, TimeUnit.SECONDS))
+				.as("latch was not counted down enough: " + latch1.getCount() + " left on " + (4 ^ 2))
+				.isTrue();
 
 		for (Connection s : servers) {
 			s.disposeNow();
@@ -267,7 +265,7 @@ public class UdpServerTests {
 			fail("illegal-success");
 		}
 		catch (ChannelBindException e) {
-			assertEquals(e.localPort(), conn.address().getPort());
+			assertThat(conn.address().getPort()).isEqualTo(e.localPort());
 			e.printStackTrace();
 		}
 

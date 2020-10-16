@@ -30,14 +30,12 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link ByteBufFlux}
@@ -67,7 +65,7 @@ public class ByteBufFluxTest {
 		final byte[] data = new byte[]{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9};
 		Files.write(tmpFile, data);
 		// Make sure the file is 10 bytes (i.e. the same as the data length)
-		Assert.assertEquals(data.length, Files.size(tmpFile));
+		assertThat(data.length).isEqualTo(Files.size(tmpFile));
 
 		// Use the ByteBufFlux to read the file in chunks of 3 bytes max and write them into a ByteArrayOutputStream for verification
 		final Iterator<ByteBuf> it = ByteBufFlux.fromPath(tmpFile, chunkSize)
@@ -79,12 +77,12 @@ public class ByteBufFluxTest {
 			byte[] read = new byte[bb.readableBytes()];
 			bb.readBytes(read);
 			bb.release();
-			Assert.assertEquals(0, bb.readableBytes());
+			assertThat(bb.readableBytes()).isEqualTo(0);
 			out.write(read);
 		}
 
 		// Verify that we read the file.
-		Assert.assertArrayEquals(data, out.toByteArray());
+		assertThat(data).isEqualTo(out.toByteArray());
 		System.out.println(Files.exists(tmpFile));
 
 	}
@@ -92,8 +90,8 @@ public class ByteBufFluxTest {
 	private static File createTemporaryDirectory() {
 		try {
 			final File tempDir = File.createTempFile("ByteBufFluxTest", "", null);
-			assertTrue(tempDir.delete());
-			assertTrue(tempDir.mkdir());
+			assertThat(tempDir.delete()).isTrue();
+			assertThat(tempDir.mkdir()).isTrue();
 			return tempDir;
 		} catch (Exception e) {
 			throw new RuntimeException("Error creating the temporary directory", e);
@@ -153,7 +151,7 @@ public class ByteBufFluxTest {
 		      .doOnNext(b -> counter.addAndGet(b.readableBytes()))
 		      .blockLast(Duration.ofSeconds(30));
 
-		assertEquals(1245, counter.get());
+		assertThat(counter.get()).isEqualTo(1245);
 
 		c.disposeNow();
 	}

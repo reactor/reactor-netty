@@ -72,7 +72,6 @@ ext {
   // Testing
   jacksonDatabindVersion = '2.11.3'
   testAddonVersion = reactorCoreVersion
-  hamcrestVersion = '2.2'
   assertJVersion = '3.17.2'
   hoverflyJavaVersion = '0.13.1'
   tomcatVersion = '9.0.39'
@@ -286,7 +285,6 @@ configure(rootProject) { project ->
 	// Testing
 	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
-	testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"
 	testCompile "io.specto:hoverfly-java:$hoverflyJavaVersion"
 	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"

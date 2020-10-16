@@ -34,7 +34,6 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
 
 public class TcpResourcesTest {
 
@@ -162,7 +161,7 @@ public class TcpResourcesTest {
 		                               })
 		                             .connectNow();
 
-		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch was counted down").isTrue();
 
 		client.dispose();
 		server.disposeNow();
