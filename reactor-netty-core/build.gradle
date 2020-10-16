@@ -229,6 +229,7 @@ task japicmp(type: JapicmpTask) {
 			// reactor.netty.channel package
 			"reactor.netty.channel.BootstrapHandlers", // Removed
 			// reactor.netty.resources package
+			"reactor.netty.resources.ConnectionPoolMetrics#DelegatingConnectionPoolMetrics", // Reduced visibility
 			"reactor.netty.resources.PooledConnectionProvider", // Renamed to DefaultPooledConnectionProvider
 			// reactor.netty.tcp package
 			"reactor.netty.tcp.InetSocketAddressUtil", // Moved and renamed

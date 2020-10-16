@@ -15,8 +15,6 @@
  */
 package reactor.netty.resources;
 
-import reactor.pool.InstrumentedPool;
-
 public interface ConnectionPoolMetrics {
 
 	/**
@@ -55,34 +53,5 @@ public interface ConnectionPoolMetrics {
 	 * @return the number of pending acquire
 	 */
 	int pendingAcquireSize();
-
-	class DelegatingConnectionPoolMetrics implements ConnectionPoolMetrics {
-
-		private final InstrumentedPool.PoolMetrics delegate;
-
-		public DelegatingConnectionPoolMetrics(InstrumentedPool.PoolMetrics delegate) {
-			this.delegate = delegate;
-		}
-
-		@Override
-		public int acquiredSize() {
-			return delegate.acquiredSize();
-		}
-
-		@Override
-		public int allocatedSize() {
-			return delegate.allocatedSize();
-		}
-
-		@Override
-		public int idleSize() {
-			return delegate.idleSize();
-		}
-
-		@Override
-		public int pendingAcquireSize() {
-			return delegate.pendingAcquireSize();
-		}
-	}
 
 }

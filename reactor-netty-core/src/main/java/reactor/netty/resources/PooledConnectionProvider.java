@@ -109,8 +109,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					MeterRegistrar registrar = poolFactory.registrar != null ?
 							poolFactory.registrar.get() : MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE;
 
-					ConnectionPoolMetrics.DelegatingConnectionPoolMetrics metrics =
-							new ConnectionPoolMetrics.DelegatingConnectionPoolMetrics(newPool.metrics());
+					DelegatingConnectionPoolMetrics metrics = new DelegatingConnectionPoolMetrics(newPool.metrics());
 					poolMetrics.put(poolKey, metrics);
 					registrar.registerMetrics(name, poolKey.hashCode() + "", remoteAddress, metrics);
 				}
