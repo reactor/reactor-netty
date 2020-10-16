@@ -26,6 +26,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Fuseable;
 import reactor.core.publisher.Hooks;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
@@ -45,31 +46,27 @@ import static org.assertj.core.api.Assertions.assertThat;
  * This test class verifies that a stream's {@link Context} is propagated to
  * {@link ConnectionObserver} in {@link TcpClient#doOnChannelInit}.
  *
- * The test is specifically interested in verifying that the available
- * {@link Context} is propagated to {@link ConnectionObserver}, not really
- * interested in verifying that {@link Context} is propagated from outer stream
- * to the inner stream.  That's why it uses {@link Hooks} to propagate
- * {@link Context} from outer stream to the inner stream.
+ * <p>Two scenarios are tested:
+ * <ul>
+ *     <li>Scenario 1. Verifying that {@link Context} is propagated from outer stream to the inner stream.</li>
+ *     <li>Scenario 2. {@link Hooks} are used to propagate {@link Context} from outer stream to the inner stream.</li>
+ * </ul>
+ * <p>
+ * https://github.com/reactor/reactor-netty/issues/1327#issuecomment-707849473
+ * https://github.com/reactor/reactor-pool/issues/103
  */
 public class ConnectionObserverContextTest {
 
 	private static final String CONTEXT_KEY = "marcels-key";
-	private static final String CONTEXT_VALUE = "marcels-context";
+	private static final String CONTEXT_VALUE_1 = "marcels-context-1";
+	private static final String CONTEXT_VALUE_2 = "marcels-context-2";
 	private static final ThreadLocal<String> helloWorld = new ThreadLocal<>();
 
 	private static final DisposableServer server = TcpServer.create().port(0).bindNow();
 
 	@BeforeEach
 	public void before() {
-		// Ideally, we would like to add the context to the stream in test via
-		// contextWrite(Context.of(CONTEXT_KEY, CONTEXT_VALUE))
-		// and let it propagate to the innermost stream.  Only then the propagation
-		// to the ConnectionObserver is possible.  However, there is a propagation issue
-		// as mentioned in the first item of this comment
-		// https://github.com/reactor/reactor-netty/issues/1327#issuecomment-707849473
-		// Once https://github.com/reactor/reactor-pool/issues/103 is addressed, we should
-		// hopefully not need the `Hooks` anymore.
-		helloWorld.set(CONTEXT_VALUE);
+		helloWorld.set(CONTEXT_VALUE_1);
 		Hooks.onLastOperator(HelloWorldPropagatorSubscriber.class.getName(), HelloWorldPropagatorSubscriber.asOperator());
 	}
 
@@ -86,10 +83,19 @@ public class ConnectionObserverContextTest {
 
 	@Test
 	public void testContextIsPropagatedToConnectionObserver() throws Exception {
+		doTestContextIsPropagatedToConnectionObserver(true);
+	}
 
+	@Test
+	public void testContextIsPropagatedToConnectionObserverViaHooks() throws Exception {
+		doTestContextIsPropagatedToConnectionObserver(false);
+	}
+
+	private void doTestContextIsPropagatedToConnectionObserver(boolean noHooks) throws Exception {
 		final AtomicReference<String> contextualData = new AtomicReference<>();
 		final CountDownLatch channelInitialized = new CountDownLatch(1);
 
+		Mono<? extends Connection> mono =
 		TcpClient.create()
 				.doOnChannelInit((connectionObserver, channel, remoteAddress) -> {
 					if (connectionObserver.currentContext().hasKey(CONTEXT_KEY)) {
@@ -99,12 +105,17 @@ public class ConnectionObserverContextTest {
 				})
 				.remoteAddress(server::address)
 				.wiretap(true)
-				.connect()
-				.subscribe();
+				.connect();
+		if (noHooks) {
+			mono = mono.contextWrite(Context.of(CONTEXT_KEY, CONTEXT_VALUE_2));
+		}
+
+		mono.subscribe();
 
 		assertThat(channelInitialized.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		assertThat(contextualData.get()).isNotNull();
-		assertThat(contextualData.get()).isEqualTo(CONTEXT_VALUE);
+		Object value = noHooks ? CONTEXT_VALUE_2 : CONTEXT_VALUE_1;
+		assertThat(contextualData.get()).isEqualTo(value);
 	}
 
 	/**
