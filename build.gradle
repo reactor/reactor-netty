@@ -26,6 +26,7 @@ plugins {
 	id 'com.github.hierynomus.license' version '0.15.0'
 	id 'org.asciidoctor.convert' version '2.4.0'
 	id 'com.google.osdetector' version '1.6.2'
+	id 'org.gradle.test-retry' version '1.1.9'
 	id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
 	id 'com.jfrog.artifactory' version '4.16.1' apply false
 	id 'me.champeau.gradle.japicmp' version '0.2.9' apply false
@@ -100,6 +101,7 @@ subprojects {
 	apply plugin: 'jacoco'
 	apply plugin: 'propdeps'
 	apply plugin: 'license'
+	apply plugin: 'org.gradle.test-retry'
 	apply from: "${rootDir}/gradle/setup.gradle"
 	apply from: "${rootDir}/gradle/javadoc.gradle"
 	apply from: "${rootDir}/gradle/errorprone.gradle"
@@ -194,6 +196,11 @@ subprojects {
 			if (event.message.contains("ResourceLeakDetector")) {
 				logger.error("ERROR: Test: " + descriptor + " produced resource leak: " + event.message)
 			}
+		}
+
+		retry {
+			maxFailures = 10
+			maxRetries = 1
 		}
 	}
 
