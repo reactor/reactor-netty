@@ -17,8 +17,8 @@ apply plugin: 'org.asciidoctor.convert'
 
 // put asciidoctor dependencies/extensions to 'asciidoctor' configuration instead of buildscript classpath
 dependencies {
-	asciidoctor 'org.asciidoctor:asciidoctorj-pdf:1.5.0-alpha.16'
-	asciidoctor 'org.jruby:jruby-complete:9.2.5.0'
+	asciidoctor 'org.asciidoctor:asciidoctorj-pdf:1.5.3'
+	asciidoctor 'org.jruby:jruby-complete:9.2.13.0'
 }
 
 asciidoctor {

@@ -13,7 +13,4 @@ updates:
   - dependency-name: io.micrometer:micrometer-core
     versions:
     - "> 1.5.0"
-  - dependency-name: org.asciidoctor.convert
-    versions:
-    - "> 1.5.11"
   rebase-strategy: disabled
