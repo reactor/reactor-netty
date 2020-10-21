@@ -15,15 +15,18 @@
  */
 package reactor.netty.http;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.ByteBufMono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
@@ -38,6 +41,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -432,5 +436,45 @@ public class Http2Tests {
 		            .verify(Duration.ofSeconds(30));
 
 		assertThat(channel.get()).isTrue();
+	}
+
+	@Test
+	public void testMonoRequestBodySentAsFullRequest() throws Exception {
+		// sends the message and then last http content
+		doTestMonoRequestBodySentAsFullRequest(ByteBufFlux.fromString(Mono.just("test")), 2);
+		// sends "full" request
+		doTestMonoRequestBodySentAsFullRequest(ByteBufMono.fromString(Mono.just("test")), 1);
+	}
+
+	private void doTestMonoRequestBodySentAsFullRequest(Publisher<? extends ByteBuf> body, int expectedMsg) throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		SslContextBuilder clientCtx = SslContextBuilder.forClient()
+		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+
+		AtomicInteger counter = new AtomicInteger();
+		disposableServer =
+				HttpServer.create()
+				          .protocol(HttpProtocol.H2)
+				          .secure(spec -> spec.sslContext(serverCtx))
+				          .wiretap(true)
+				          .handle((req, res) -> req.receiveContent()
+				                                   .doOnNext(httpContent -> counter.getAndIncrement())
+				                                   .then(res.send()))
+				          .bindNow(Duration.ofSeconds(30));
+
+		HttpClient.create()
+		          .port(disposableServer.port())
+		          .protocol(HttpProtocol.H2)
+		          .secure(spec -> spec.sslContext(clientCtx))
+		          .wiretap(true)
+		          .post()
+		          .uri("/")
+		          .send(body)
+		          .responseContent()
+		          .aggregate()
+		          .block(Duration.ofSeconds(30));
+
+		assertThat(counter.get()).isEqualTo(expectedMsg);
 	}
 }

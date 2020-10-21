@@ -18,6 +18,7 @@ package reactor.netty;
 import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -472,6 +473,23 @@ public final class ReactorNetty {
 
 		return Flux.from(publisher)
 		           .map(mapper);
+	}
+
+	static <T, V> CorePublisher<V> publisherOrScalarMap(
+			Publisher<T> publisher,
+			Function<? super T, ? extends V> monoMapper,
+			Function<? super List<T>, ? extends V> fluxMapper) {
+
+		if (publisher instanceof Callable) {
+			return Mono.fromCallable(new ScalarMap<>(publisher, monoMapper));
+		}
+		else if (publisher instanceof Mono) {
+			return ((Mono<T>) publisher).map(monoMapper);
+		}
+
+		return Flux.from(publisher)
+		           .collectList()
+		           .map(fluxMapper);
 	}
 
 	ReactorNetty(){

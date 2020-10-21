@@ -23,8 +23,10 @@ import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.util.IllegalReferenceCountException;
+import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.Fuseable;
 import reactor.core.publisher.Mono;
@@ -120,6 +122,44 @@ public class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 				sink.complete();
 			}
 		});
+	}
+
+	/**
+	 * Decorate as {@link ByteBufMono}
+	 *
+	 * @param source publisher to decorate
+	 * @return a {@link ByteBufMono}
+	 */
+	public static ByteBufMono fromString(Publisher<? extends String> source) {
+		return fromString(source, Charset.defaultCharset(), ByteBufAllocator.DEFAULT);
+	}
+
+	/**
+	 * Decorate as {@link ByteBufMono}
+	 *
+	 * @param source publisher to decorate
+	 * @param charset the encoding charset
+	 * @param allocator the {@link ByteBufAllocator}
+	 * @return a {@link ByteBufMono}
+	 */
+	public static ByteBufMono fromString(Publisher<? extends String> source, Charset charset, ByteBufAllocator allocator) {
+		requireNonNull(allocator, "allocator");
+		requireNonNull(charset, "charset");
+		return maybeFuse(
+				Mono.from(ReactorNetty.publisherOrScalarMap(
+						source,
+						s -> {
+							ByteBuf buffer = allocator.buffer();
+							buffer.writeCharSequence(s, charset);
+							return buffer;
+						},
+						l -> {
+							ByteBuf buffer = allocator.buffer();
+							for (String s : l) {
+								buffer.writeCharSequence(s, charset);
+							}
+							return buffer;
+						})));
 	}
 
 	/**

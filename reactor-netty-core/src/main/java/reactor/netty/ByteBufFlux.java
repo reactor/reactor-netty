@@ -77,13 +77,20 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	 * Decorate as {@link ByteBufFlux}
 	 *
 	 * @param source publisher to decorate
-	 *
 	 * @return a {@link ByteBufFlux}
 	 */
 	public static ByteBufFlux fromString(Publisher<? extends String> source) {
 		return fromString(source, Charset.defaultCharset(), ByteBufAllocator.DEFAULT);
 	}
 
+	/**
+	 * Decorate as {@link ByteBufFlux}
+	 *
+	 * @param source publisher to decorate
+	 * @param charset the encoding charset
+	 * @param allocator the {@link ByteBufAllocator}
+	 * @return a {@link ByteBufFlux}
+	 */
 	public static ByteBufFlux fromString(Publisher<? extends String> source, Charset charset, ByteBufAllocator allocator) {
 		Objects.requireNonNull(allocator, "allocator");
 		Objects.requireNonNull(charset, "charset");
