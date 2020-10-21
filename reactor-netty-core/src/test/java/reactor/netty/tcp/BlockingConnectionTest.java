@@ -85,19 +85,15 @@ public class BlockingConnectionTest {
 	};
 
 	@Test
-	public void simpleServerFromAsyncServer() throws InterruptedException {
+	public void simpleServerFromAsyncServer() {
 		DisposableServer simpleServer =
 				TcpServer.create()
-				         .handle((in, out) -> out
-						         .sendString(
-								         in.receive()
-								           .asString()
-								           .takeUntil(s -> s.endsWith("CONTROL"))
-								           .map(s -> "ECHO: " + s.replaceAll("CONTROL", ""))
-								           .concatWith(Mono.just("DONE"))
-						         )
-						         .neverComplete()
-				         )
+				         .handle((in, out) -> out.sendString(in.receive()
+				                                               .asString()
+				                                               .takeUntil(s -> s.endsWith("CONTROL"))
+				                                               .map(s -> "ECHO: " + s.replaceAll("CONTROL", ""))
+				                                               .concatWith(Mono.just("DONE")))
+				                                 .neverComplete())
 				         .wiretap(true)
 				         .bindNow();
 
@@ -110,14 +106,14 @@ public class BlockingConnectionTest {
 				TcpClient.create().port(address.getPort())
 				         .handle((in, out) -> out.sendString(Flux.just("Hello", "World", "CONTROL"))
 				                                 .then(in.receive()
-				                                        .asString()
-				                                        .takeUntil(s -> s.endsWith("DONE"))
-				                                        .map(s -> s.replaceAll("DONE", ""))
-				                                        .filter(s -> !s.isEmpty())
-				                                        .collectList()
-				                                        .doOnNext(data1::set)
-				                                        .doOnNext(System.err::println)
-				                                        .then()))
+				                                         .asString()
+				                                         .takeUntil(s -> s.endsWith("DONE"))
+				                                         .map(s -> s.replaceAll("DONE", ""))
+				                                         .filter(s -> !s.isEmpty())
+				                                         .collectList()
+				                                         .doOnNext(data1::set)
+				                                         .doOnNext(System.err::println)
+				                                         .then()))
 				         .wiretap(true)
 				         .connectNow();
 
@@ -126,23 +122,24 @@ public class BlockingConnectionTest {
 				         .port(address.getPort())
 				         .handle((in, out) -> out.sendString(Flux.just("How", "Are", "You?", "CONTROL"))
 				                                 .then(in.receive()
-				                                        .asString()
-				                                        .takeUntil(s -> s.endsWith("DONE"))
-				                                        .map(s -> s.replaceAll("DONE", ""))
-				                                        .filter(s -> !s.isEmpty())
-				                                        .collectList()
-				                                        .doOnNext(data2::set)
-				                                        .doOnNext(System.err::println)
-				                                        .then()))
+				                                         .asString()
+				                                         .takeUntil(s -> s.endsWith("DONE"))
+				                                         .map(s -> s.replaceAll("DONE", ""))
+				                                         .filter(s -> !s.isEmpty())
+				                                         .collectList()
+				                                         .doOnNext(data2::set)
+				                                         .doOnNext(System.err::println)
+				                                         .then()))
 				         .wiretap(true)
 				         .connectNow();
 
-		Thread.sleep(100);
-		System.err.println("STOPPING 1");
-		simpleClient1.disposeNow();
+		simpleClient1.onDispose()
+		             .block(Duration.ofSeconds(30));
+		System.err.println("STOPPED 1");
 
-		System.err.println("STOPPING 2");
-		simpleClient2.disposeNow();
+		simpleClient2.onDispose()
+		             .block(Duration.ofSeconds(30));
+		System.err.println("STOPPED 2");
 
 		System.err.println("STOPPING SERVER");
 		simpleServer.disposeNow();
@@ -161,7 +158,7 @@ public class BlockingConnectionTest {
 		                .toString()
 		                .replaceAll("ECHO: ", "")
 		                .replaceAll(", ", ""))
-		.isEqualTo("[HowAreYou?]");
+				.isEqualTo("[HowAreYou?]");
 	}
 
 	@Test
