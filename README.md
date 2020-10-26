@@ -14,14 +14,14 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
 
 ```groovy
     repositories {
-      maven { url 'https://repo.spring.io/snapshot' }
+      //maven { url 'https://repo.spring.io/snapshot' }
       maven { url 'https://repo.spring.io/release' }
       mavenCentral()
     }
 
     dependencies {
-      compile "io.projectreactor.netty:reactor-netty:1.0.0-RC2"
-      //compile "io.projectreactor.netty:reactor-netty:1.0.0"
+      //compile "io.projectreactor.netty:reactor-netty:1.0.1-SNAPSHOT"
+      compile "io.projectreactor.netty:reactor-netty:1.0.0"
     }
 ```
 
