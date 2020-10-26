@@ -10,6 +10,10 @@ updates:
   labels:
   - type/dependency-upgrade
   ignore:
+  - dependency-name: com.github.johnrengelman.shadow
+    versions:
+    - ">= 6.a"
+    - "< 7"
   - dependency-name: io.micrometer:micrometer-core
     versions:
     - "> 1.5.0"
