@@ -350,6 +350,61 @@ configure(rootProject) { project ->
 		txtOutputFile = file("${project.buildDir}/reports/japi.txt")
 		ignoreMissingClasses = true
 		includeSynthetic = true
+		methodExcludes = [
+				// New methods with default implementation
+				// reactor.netty.http.server
+				"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, java.util.function.BiFunction)",
+				"reactor.netty.http.server.HttpServerResponse#sendWebsocket(boolean, java.util.function.BiFunction)",
+				"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, boolean, java.util.function.BiFunction)",
+				"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int, boolean)",
+				"reactor.netty.http.server.HttpServerRoutes#ws(java.lang.String, java.util.function.BiFunction, reactor.netty.http.server.WebsocketServerSpec)",
+				"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, reactor.netty.http.server.WebsocketServerSpec)",
+				// reactor.netty.resources
+				"reactor.netty.resources.LoopResources#disposeLater(java.time.Duration, java.time.Duration)",
+				"reactor.netty.resources.LoopResources#onChannel(java.lang.Class, io.netty.channel.EventLoopGroup)",
+				"reactor.netty.resources.LoopResources#onChannelClass(java.lang.Class, io.netty.channel.EventLoopGroup)",
+
+				// New static methods
+				// reactor.netty.resources
+				"reactor.netty.resources.ConnectionProvider#builder(java.lang.String)",
+				"reactor.netty.resources.ConnectionProvider#create(java.lang.String)",
+				"reactor.netty.resources.ConnectionProvider#create(java.lang.String, int)",
+				"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String, java.time.Duration, java.time.Duration)",
+				"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration, java.time.Duration)",
+				"reactor.netty.resources.LoopResources#hasNativeSupport()",
+
+				// Removed methods
+				// reactor.netty.channel
+				"reactor.netty.channel.BootstrapHandlers#updateMetricsSupport(io.netty.bootstrap.ServerBootstrap, java.lang.String, java.lang.String)",
+				"reactor.netty.channel.BootstrapHandlers#updateMetricsSupport(io.netty.bootstrap.Bootstrap, java.lang.String, java.lang.String)",
+				"reactor.netty.channel.MicrometerChannelMetricsRecorder#name()",
+				"reactor.netty.channel.MicrometerChannelMetricsRecorder#registry()",
+				"reactor.netty.channel.MicrometerChannelMetricsRecorder#remoteAddress()"
+		]
+		fieldExcludes = [
+				// Removed fields
+				// reactor.netty
+				"reactor.netty.Metrics#MAX_URI_TAGS"
+		]
+		classExcludes = [
+				// Parent class changed
+				// reactor.netty.http
+				"reactor.netty.http.MicrometerHttpMetricsRecorder",
+
+				// Removed classes
+				// reactor.netty.http.server
+				"reactor.netty.http.server.HttpToH2Operations",
+				// reactor.netty.resources
+				"reactor.netty.resources.NettyBlockHoundIntegration",
+
+				// serialVersionUID removed but not matches new default serialVersionUID
+				// reactor.netty
+				"reactor.netty.ChannelBindException",
+				// reactor.netty.channel
+				"reactor.netty.channel.AbortedException",
+				// reactor.netty.http.client
+				"reactor.netty.http.client.PrematureCloseException"
+		]
 		onlyIf {"$compatibleVersion" != "SKIP"}
   }
   tasks.japicmp.dependsOn(downloadBaseline)
