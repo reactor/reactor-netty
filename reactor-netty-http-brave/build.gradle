@@ -1,3 +1,5 @@
+import me.champeau.gradle.japicmp.JapicmpTask
+
 /*
  * Copyright (c) 2011-Present VMware, Inc. or its affiliates, All Rights Reserved.
  *
@@ -14,6 +16,8 @@
  * limitations under the License.
  */
 apply plugin: 'io.spring.javadoc'
+apply plugin: 'me.champeau.gradle.japicmp'
+apply plugin: 'de.undercouch.download'
 
 dependencies {
 	compile project(':reactor-netty-http')
@@ -33,6 +37,40 @@ jar {
 	manifest {
 		attributes("Automatic-Module-Name": "reactor.netty.http.brave")
 	}
+}
+
+task downloadBaseline(type: Download) {
+	onlyIf {
+		if (project.gradle.startParameter.isOffline()) {
+			println "Offline: skipping downloading of baseline and JAPICMP"
+			return false
+		}
+		else if ("$compatibleVersion" == "SKIP") {
+			println "SKIP: Instructed to skip the baseline comparison"
+			return false
+		}
+		else {
+			println "Will download and perform baseline comparison with ${compatibleVersion}"
+			return true
+		}
+	}
+
+	onlyIfNewer true
+	compress true
+	src "https://repo.spring.io/libs-release/io/projectreactor/netty/reactor-netty-http-brave/$compatibleVersion/reactor-netty-http-brave-${compatibleVersion}.jar"
+	dest "${buildDir}/baselineLibs/reactor-netty-http-brave-${compatibleVersion}.jar"
+}
+
+task japicmp(type: JapicmpTask) {
+	oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-http-brave-${compatibleVersion}.jar")
+	newClasspath = files(jar.archiveFile, project(':reactor-netty-core').jar)
+	onlyBinaryIncompatibleModified = true
+	failOnModification = true
+	failOnSourceIncompatibility = true
+	txtOutputFile = file("${project.buildDir}/reports/japi.txt")
+	ignoreMissingClasses = true
+	includeSynthetic = true
+	onlyIf { "$compatibleVersion" != "SKIP" }
 }
 
 description = "Brave instrumentation for Reactor Netty HTTP"

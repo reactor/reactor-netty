@@ -109,66 +109,19 @@ task downloadBaseline(type: Download) {
 
 	onlyIfNewer true
 	compress true
-	src "https://repo.spring.io/libs-snapshot/io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}.jar"
-	dest "${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar"
+	src "https://repo.spring.io/libs-release/io/projectreactor/netty/reactor-netty-http/$compatibleVersion/reactor-netty-http-${compatibleVersion}.jar"
+	dest "${buildDir}/baselineLibs/reactor-netty-http-${compatibleVersion}.jar"
 }
 
 task japicmp(type: JapicmpTask) {
-	oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar")
+	oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-http-${compatibleVersion}.jar")
 	newClasspath = files(jar.archiveFile, project(':reactor-netty-core').jar)
-	packageIncludes = ["reactor.netty.http", "reactor.netty.http.client", "reactor.netty.http.server"]
 	onlyBinaryIncompatibleModified = true
 	failOnModification = true
 	failOnSourceIncompatibility = true
 	txtOutputFile = file("${project.buildDir}/reports/japi.txt")
 	ignoreMissingClasses = true
 	includeSynthetic = true
-	methodExcludes = [
-			// Deprecated methods in 0.9.x that are removed in 1.0.0
-			// reactor.netty.http.client package
-			"reactor.netty.http.client.HttpClient#addressSupplier(java.util.function.Supplier)",
-			"reactor.netty.http.client.HttpClient#doAfterResponse(java.util.function.BiConsumer)",
-			"reactor.netty.http.client.HttpClient#metrics(boolean)",
-			"reactor.netty.http.client.HttpClient#metrics(boolean, reactor.netty.http.client.HttpClientMetricsRecorder)",
-			"reactor.netty.http.client.HttpClient#websocket(java.lang.String)",
-			"reactor.netty.http.client.HttpClient#websocket(int)",
-			"reactor.netty.http.client.HttpClient#websocket(boolean)",
-			"reactor.netty.http.client.HttpClient#websocket(java.lang.String, int)",
-			"reactor.netty.http.client.HttpClient#websocket(java.lang.String, int, boolean)",
-			// reactor.netty.http.server package
-			"reactor.netty.http.server.HttpServer#metrics(boolean)",
-			"reactor.netty.http.server.HttpServer#metrics(boolean, reactor.netty.http.server.HttpServerMetricsRecorder)",
-			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(boolean, java.util.function.BiFunction)",
-			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, java.util.function.BiFunction)",
-			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, java.util.function.BiFunction)",
-			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, boolean, java.util.function.BiFunction)",
-			"reactor.netty.http.server.HttpServerRoutes#ws(java.lang.String, java.util.function.BiFunction, java.lang.String)",
-			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String)",
-			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int)",
-			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int, boolean)",
-
-			// !!!Backwards incompatible changes!!!
-			// reactor.netty.http.client package
-			"reactor.netty.http.client.HttpClient#mapConnect(java.util.function.BiFunction)",
-			// reactor.netty.http.server package
-			"reactor.netty.http.server.HttpServer#observe(reactor.netty.ConnectionObserver)" // Renamed to `childObserve`
-	]
-	fieldExcludes = [
-			// Deprecated fields in 0.9.x that are removed in 1.0.0
-			// reactor.netty.http.client package
-			"reactor.netty.http.client.PrematureCloseException#DURING_RESPONSE",
-			"reactor.netty.http.client.PrematureCloseException#BEFORE_RESPONSE_SENDING_REQUEST",
-			"reactor.netty.http.client.PrematureCloseException#BEFORE_RESPONSE"
-	]
-	classExcludes = [
-			// !!!Backwards incompatible changes!!!
-			// reactor.netty.http.client package
-			"reactor.netty.http.client.HttpResponseDecoderSpec",
-			// reactor.netty.http.server package
-			"reactor.netty.http.server.HttpRequestDecoderSpec",
-			// reactor.netty.http package
-			"reactor.netty.http.HttpResources" // Method changed in super class
-	]
 	onlyIf { "$compatibleVersion" != "SKIP" }
 }
 
