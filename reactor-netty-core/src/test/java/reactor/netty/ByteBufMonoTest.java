@@ -21,6 +21,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 
 public class ByteBufMonoTest {
@@ -51,14 +52,18 @@ public class ByteBufMonoTest {
 	}
 
 	private void doTestFromString(Publisher<? extends String> source) {
-		StepVerifier.create(ByteBufMono.fromString(source).asString())
-		            .expectNext("123")
+		StepVerifier.create(ByteBufMono.fromString(source))
+		            .expectNextMatches(b -> {
+		                String result = b.toString(Charset.defaultCharset());
+		                b.release();
+		                return "123".equals(result);
+		            })
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
 
 	private void doTestFromStringEmptyPublisher(Publisher<? extends String> source) {
-		StepVerifier.create(ByteBufMono.fromString(source).asString())
+		StepVerifier.create(ByteBufMono.fromString(source))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}

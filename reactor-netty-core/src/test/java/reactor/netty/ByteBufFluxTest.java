@@ -21,7 +21,12 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class ByteBufFluxTest {
 
@@ -42,8 +47,19 @@ public class ByteBufFluxTest {
 
 	@Test
 	public void testFromString_Flux() {
-		StepVerifier.create(ByteBufFlux.fromString(Flux.just("1", "2", "3")).asString())
-		            .expectNext("1", "2", "3")
+		List<String> original = Arrays.asList("1", "2", "3");
+		StepVerifier.create(ByteBufFlux.fromString(Flux.fromIterable(original)).collectList())
+		            .expectNextMatches(list -> {
+		                List<String> newList =
+		                        list.stream()
+		                            .map(b -> {
+		                                String result = b.toString(Charset.defaultCharset());
+		                                b.release();
+		                                return result;
+		                            })
+		                            .collect(Collectors.toList());
+		                return Objects.equals(original, newList);
+		            })
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
@@ -54,14 +70,18 @@ public class ByteBufFluxTest {
 	}
 
 	private void doTestFromString(Publisher<? extends String> source) {
-		StepVerifier.create(ByteBufMono.fromString(source).asString())
-		            .expectNext("123")
+		StepVerifier.create(ByteBufFlux.fromString(source))
+		            .expectNextMatches(b -> {
+		                String result = b.toString(Charset.defaultCharset());
+		                b.release();
+		                return "123".equals(result);
+		            })
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
 
 	private void doTestFromStringEmptyPublisher(Publisher<? extends String> source) {
-		StepVerifier.create(ByteBufFlux.fromString(source).asString())
+		StepVerifier.create(ByteBufFlux.fromString(source))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
