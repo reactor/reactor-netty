@@ -37,6 +37,8 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.server.logging.AccessLog;
+import reactor.netty.http.server.logging.AccessLogArgProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ServerTransport;
@@ -526,6 +528,35 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		Objects.requireNonNull(sslProvider, "sslProvider");
 		HttpServer dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
+		return dup;
+	}
+
+	/**
+	 * Provide customized access log.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *         .port(8080)
+	 *         .route(r -> r.get("/hello",
+	 *                 (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                         .sendString(Mono.just("Hello World!"))))
+	 *         .accessLog(argProvider ->
+	 *                 AccessLog.create("user-agent={}", argProvider.requestHeader("user-agent")))
+	 *         .bindNow()
+	 *         .onDispose()
+	 *         .block();
+	 * }
+	 * </pre>
+	 *
+	 * @param accessLog apply an {@link AccessLog} by an {@link AccessLogArgProvider}
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLog) {
+		Objects.requireNonNull(accessLog, "accessLog");
+		HttpServer dup = duplicate();
+		dup.configuration().accessLog = accessLog;
 		return dup;
 	}
 
