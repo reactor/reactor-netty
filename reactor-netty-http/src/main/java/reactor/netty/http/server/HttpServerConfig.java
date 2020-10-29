@@ -214,6 +214,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	ProxyProtocolSupportType                                proxyProtocolSupportType;
 	SslProvider                                             sslProvider;
 	Function<String, String>                                uriTagValue;
+	AccessLogFactory                                        accessLogFactory;
 
 	HttpServerConfig(Map<ChannelOption<?>, ?> options, Map<ChannelOption<?>, ?> childOptions, Supplier<? extends SocketAddress> localAddress) {
 		super(options, childOptions, localAddress);
@@ -242,6 +243,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.proxyProtocolSupportType = parent.proxyProtocolSupportType;
 		this.sslProvider = parent.sslProvider;
 		this.uriTagValue = parent.uriTagValue;
+		this.accessLogFactory = parent.accessLogFactory;
 	}
 
 	@Override
@@ -264,7 +266,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		return super.defaultOnChannelInit()
 		            .then(new HttpServerChannelInitializer(compressPredicate, cookieDecoder, cookieEncoder,
 		                decoder, forwardedHeaderHandler, http2Settings(), mapHandle, metricsRecorder(), minCompressionSize, channelOperationsProvider(),
-		                    _protocols, proxyProtocolSupportType, sslProvider, uriTagValue));
+		                    _protocols, proxyProtocolSupportType, sslProvider, uriTagValue, accessLogFactory));
 	}
 
 	@Override
@@ -333,10 +335,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	static void addStreamHandlers(Channel ch, ChannelOperations.OnSetup opsFactory, ConnectionObserver listener,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
-			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+	        @Nullable AccessLogFactory accessLogFactory) {
 		if (ACCESS_LOG) {
 			ch.pipeline()
-			  .addLast(NettyPipeline.AccessLogHandler, new AccessLogHandlerH2());
+			  .addLast(NettyPipeline.AccessLogHandler, new AccessLogHandlerH2(accessLogFactory));
 		}
 		ch.pipeline()
 		  .addLast(NettyPipeline.H2ToHttp11Codec, new Http2StreamFrameToHttpObjectCodec(true))
@@ -390,7 +393,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			ChannelOperations.OnSetup opsFactory,
-			boolean validate) {
+			boolean validate,
+	        @Nullable AccessLogFactory accessLogFactory) {
 		p.remove(NettyPipeline.ReactiveBridge);
 
 		Http2FrameCodecBuilder http2FrameCodecBuilder =
@@ -405,7 +409,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
 		 .addLast(NettyPipeline.H2MultiplexHandler,
-		          new Http2MultiplexHandler(new H2Codec(opsFactory, listener, forwardedHeaderHandler, cookieEncoder, cookieDecoder, mapHandle)));
+		          new Http2MultiplexHandler(new H2Codec(opsFactory, listener, forwardedHeaderHandler, cookieEncoder,
+				          cookieDecoder, mapHandle, accessLogFactory)));
 	}
 
 	static void configureHttp11OrH2CleartextPipeline(ChannelPipeline p,
@@ -420,14 +425,15 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
-			@Nullable Function<String, String> uriTagValue) {
+			@Nullable Function<String, String> uriTagValue,
+	        @Nullable AccessLogFactory accessLogFactory) {
 		HttpServerCodec httpServerCodec =
 				new HttpServerCodec(decoder.maxInitialLineLength(), decoder.maxHeaderSize(),
 						decoder.maxChunkSize(), decoder.validateHeaders(), decoder.initialBufferSize());
 
 		Http11OrH2CleartextCodec
 				upgrader = new Http11OrH2CleartextCodec(cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null,
-					forwardedHeaderHandler, http2Settings, listener, mapHandle, opsFactory, decoder.validateHeaders());
+					forwardedHeaderHandler, http2Settings, listener, mapHandle, opsFactory, decoder.validateHeaders(), accessLogFactory);
 
 		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader);
 		CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler = new CleartextHttp2ServerUpgradeHandler(
@@ -442,7 +448,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		            new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder, cookieDecoder, mapHandle));
 
 		if (ACCESS_LOG) {
-			p.addAfter(NettyPipeline.H2CUpgradeHandler, NettyPipeline.AccessLogHandler, new AccessLogHandler());
+			p.addAfter(NettyPipeline.H2CUpgradeHandler, NettyPipeline.AccessLogHandler, new AccessLogHandler(accessLogFactory));
 		}
 
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
@@ -475,7 +481,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 			int minCompressionSize,
-			@Nullable Function<String, String> uriTagValue) {
+			@Nullable Function<String, String> uriTagValue,
+	        @Nullable AccessLogFactory accessLogFactory) {
 		p.addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpCodec,
 		            new HttpServerCodec(decoder.maxInitialLineLength(), decoder.maxHeaderSize(),
@@ -485,7 +492,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		            new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder, cookieDecoder, mapHandle));
 
 		if (ACCESS_LOG) {
-			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.AccessLogHandler, new AccessLogHandler());
+			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.AccessLogHandler, new AccessLogHandler(accessLogFactory));
 		}
 
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
@@ -563,23 +570,27 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ServerCookieDecoder                                     cookieDecoder;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 		final ChannelOperations.OnSetup                               opsFactory;
+		final AccessLogFactory                                        accessLogFactory;
 
 		H2Codec(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				ServerCookieEncoder encoder, ServerCookieDecoder decoder,
-				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
+				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+		        @Nullable AccessLogFactory accessLogFactory) {
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
 			this.listener = listener;
 			this.cookieEncoder = encoder;
 			this.cookieDecoder = decoder;
 			this.mapHandle = mapHandle;
 			this.opsFactory = opsFactory;
+			this.accessLogFactory = accessLogFactory;
 		}
 
 		@Override
 		protected void initChannel(Channel ch) {
 			ch.pipeline().remove(this);
-			addStreamHandlers(ch, opsFactory, listener, forwardedHeaderHandler, cookieEncoder, cookieDecoder, mapHandle);
+			addStreamHandlers(ch, opsFactory, listener, forwardedHeaderHandler, cookieEncoder, cookieDecoder, mapHandle,
+					accessLogFactory);
 		}
 	}
 
@@ -593,6 +604,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ConnectionObserver                                      listener;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 		final ChannelOperations.OnSetup                               opsFactory;
+		final AccessLogFactory                                        accessLogFactory;
 
 		Http11OrH2CleartextCodec(
 				ServerCookieDecoder cookieDecoder,
@@ -603,7 +615,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				ConnectionObserver listener,
 				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 				ChannelOperations.OnSetup opsFactory,
-				boolean validate) {
+				boolean validate,
+				@Nullable AccessLogFactory accessLogFactory) {
 			this.cookieDecoder = cookieDecoder;
 			this.cookieEncoder = cookieEncoder;
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
@@ -621,6 +634,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.listener = listener;
 			this.mapHandle = mapHandle;
 			this.opsFactory = opsFactory;
+			this.accessLogFactory = accessLogFactory;
 		}
 
 		/**
@@ -629,7 +643,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		@Override
 		protected void initChannel(Channel ch) {
 			ch.pipeline().remove(this);
-			addStreamHandlers(ch, opsFactory, listener, forwardedHeaderHandler, cookieEncoder, cookieDecoder, mapHandle);
+			addStreamHandlers(ch, opsFactory, listener, forwardedHeaderHandler, cookieEncoder, cookieDecoder, mapHandle,
+					accessLogFactory);
 		}
 
 		@Override
@@ -658,6 +673,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
 		final Function<String, String>                                uriTagValue;
+		final AccessLogFactory                                        accessLogFactory;
 
 		H2OrHttp11Codec(
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
@@ -671,7 +687,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 				int minCompressionSize,
 				ChannelOperations.OnSetup opsFactory,
-				@Nullable Function<String, String> uriTagValue) {
+				@Nullable Function<String, String> uriTagValue,
+				@Nullable AccessLogFactory accessLogFactory) {
 			super(ApplicationProtocolNames.HTTP_1_1);
 			this.compressPredicate = compressPredicate;
 			this.cookieDecoder = cookieDecoder;
@@ -685,6 +702,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.minCompressionSize = minCompressionSize;
 			this.opsFactory = opsFactory;
 			this.uriTagValue = uriTagValue;
+			this.accessLogFactory = accessLogFactory;
 		}
 
 		@Override
@@ -697,13 +715,13 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
 				configureH2Pipeline(p, cookieDecoder, cookieEncoder, forwardedHeaderHandler, http2Settings,
-						listener, mapHandle, opsFactory, decoder.validateHeaders());
+						listener, mapHandle, opsFactory, decoder.validateHeaders(), accessLogFactory);
 				return;
 			}
 
 			if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
 				configureHttp11Pipeline(p, compressPredicate, cookieDecoder, cookieEncoder, decoder, forwardedHeaderHandler,
-						listener, mapHandle, metricsRecorder, minCompressionSize, uriTagValue);
+						listener, mapHandle, metricsRecorder, minCompressionSize, uriTagValue, accessLogFactory);
 				return;
 			}
 
@@ -727,6 +745,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ProxyProtocolSupportType                                proxyProtocolSupportType;
 		final SslProvider                                             sslProvider;
 		final Function<String, String>                                uriTagValue;
+		final AccessLogFactory                                        accessLogFactory;
 
 		HttpServerChannelInitializer(
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
@@ -742,7 +761,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				int protocols,
 				ProxyProtocolSupportType proxyProtocolSupportType,
 				@Nullable SslProvider sslProvider,
-				@Nullable Function<String, String> uriTagValue) {
+				@Nullable Function<String, String> uriTagValue,
+				@Nullable AccessLogFactory accessLogFactory) {
 			this.compressPredicate = compressPredicate;
 			this.cookieDecoder = cookieDecoder;
 			this.cookieEncoder = cookieEncoder;
@@ -757,6 +777,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.proxyProtocolSupportType = proxyProtocolSupportType;
 			this.sslProvider = sslProvider;
 			this.uriTagValue = uriTagValue;
+			this.accessLogFactory = accessLogFactory;
 		}
 
 		@Override
@@ -780,7 +801,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 					               metricsRecorder,
 					               minCompressionSize,
 					               opsFactory,
-					               uriTagValue));
+					               uriTagValue,
+							       accessLogFactory));
 				}
 				else if ((protocols & h11) == h11) {
 					configureHttp11Pipeline(
@@ -794,7 +816,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							mapHandle,
 							metricsRecorder,
 							minCompressionSize,
-							uriTagValue);
+							uriTagValue,
+							accessLogFactory);
 				}
 				else if ((protocols & h2) == h2) {
 					configureH2Pipeline(
@@ -806,7 +829,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							observer,
 							mapHandle,
 							opsFactory,
-							decoder.validateHeaders());
+							decoder.validateHeaders(),
+							accessLogFactory);
 				}
 			}
 			else {
@@ -824,7 +848,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							metricsRecorder,
 							minCompressionSize,
 							opsFactory,
-							uriTagValue);
+							uriTagValue,
+							accessLogFactory);
 				}
 				else if ((protocols & h11) == h11) {
 					configureHttp11Pipeline(
@@ -838,7 +863,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							mapHandle,
 							metricsRecorder,
 							minCompressionSize,
-							uriTagValue);
+							uriTagValue,
+							accessLogFactory);
 				}
 				else if ((protocols & h2c) == h2c) {
 					configureH2Pipeline(
@@ -850,7 +876,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							observer,
 							mapHandle,
 							opsFactory,
-							decoder.validateHeaders());
+							decoder.validateHeaders(),
+							accessLogFactory);
 					needRead = true;
 				}
 			}

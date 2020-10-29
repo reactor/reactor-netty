@@ -25,15 +25,20 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
+import reactor.util.annotation.Nullable;
 
 /**
  * @author Violeta Georgieva
  */
 final class AccessLogHandler extends ChannelDuplexHandler {
 
-	AccessLog accessLog = new AccessLog();
+	final AccessLogFactory accessLogFactory;
+	AccessLogArgProviderH1 accessLogArgProvider = new AccessLogArgProviderH1();
+
+	AccessLogHandler(@Nullable AccessLogFactory accessLogFactory) {
+		this.accessLogFactory = accessLogFactory == null ? AccessLogFactory.DEFAULT : accessLogFactory;
+	}
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -41,12 +46,9 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 			final HttpRequest request = (HttpRequest) msg;
 			final SocketChannel channel = (SocketChannel) ctx.channel();
 
-			accessLog = new AccessLog()
-			        .address(channel.remoteAddress().getHostString())
-			        .port(channel.localAddress().getPort())
-			        .method(request.method().name())
-			        .uri(request.uri())
-			        .protocol(request.protocolVersion().text());
+			accessLogArgProvider = new AccessLogArgProviderH1()
+					.channel(channel)
+					.request(request);
 		}
 		ctx.fireChannelRead(msg);
 	}
@@ -64,28 +66,25 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 				return;
 			}
 
-			final boolean chunked = HttpUtil.isTransferEncodingChunked(response);
-			accessLog.status(status.codeAsText())
-			         .chunked(chunked);
-			if (!chunked) {
-				accessLog.contentLength(HttpUtil.getContentLength(response, -1));
-			}
+			accessLogArgProvider.response(response);
 		}
 		if (msg instanceof LastHttpContent) {
-			accessLog.increaseContentLength(((LastHttpContent) msg).content().readableBytes());
+			accessLogArgProvider.increaseContentLength(((LastHttpContent) msg).content().readableBytes());
 			ctx.write(msg, promise.unvoid())
 			   .addListener(future -> {
 			       if (future.isSuccess()) {
-			           accessLog.log();
+				       accessLogFactory
+						       .create(accessLogArgProvider)
+						       .log();
 			       }
 			   });
 			return;
 		}
 		if (msg instanceof ByteBuf) {
-			accessLog.increaseContentLength(((ByteBuf) msg).readableBytes());
+			accessLogArgProvider.increaseContentLength(((ByteBuf) msg).readableBytes());
 		}
 		if (msg instanceof ByteBufHolder) {
-			accessLog.increaseContentLength(((ByteBufHolder) msg).content().readableBytes());
+			accessLogArgProvider.increaseContentLength(((ByteBufHolder) msg).content().readableBytes());
 		}
 		//"FutureReturnValueIgnored" this is deliberate
 		ctx.write(msg, promise);

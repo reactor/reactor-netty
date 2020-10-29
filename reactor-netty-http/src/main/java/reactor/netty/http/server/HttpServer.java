@@ -530,6 +530,35 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
+	 * Provide customized access log.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *         .port(8080)
+	 *         .route(r -> r.get("/hello",
+	 *                 (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                         .sendString(Mono.just("Hello World!"))))
+	 *         .accessLogFactory(argProvider ->
+	 *                 AccessLog.create("user-agent={}", argProvider.header("user-agent")))
+	 *         .bindNow()
+	 *         .onDispose()
+	 *         .block();
+	 * }
+	 * </pre>
+	 *
+	 * @param accessLogFactory The factory to create {@link AccessLog}
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer accessLogFactory(AccessLogFactory accessLogFactory) {
+		Objects.requireNonNull(accessLogFactory, "accessLogFactory");
+		HttpServer dup = duplicate();
+		dup.configuration().accessLogFactory = accessLogFactory;
+		return dup;
+	}
+
+	/**
 	 * Apply a {@link TcpServer} mapping function to update TCP configuration and
 	 * return an enriched {@link HttpServer} to use.
 	 *

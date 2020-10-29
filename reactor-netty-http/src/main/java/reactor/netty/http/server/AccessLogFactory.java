@@ -15,29 +15,22 @@
  */
 package reactor.netty.http.server;
 
-import reactor.util.Logger;
-import reactor.util.Loggers;
+import static reactor.netty.http.server.AbstractAccessLogArgProvider.MISSING;
 
-public final class AccessLog {
+/**
+ * A factory for {@link AccessLog}.
+ *
+ * @author limaoning
+ */
+@FunctionalInterface
+public interface AccessLogFactory {
 
-	static final Logger log = Loggers.getLogger("reactor.netty.http.server.AccessLog");
+	String DEFAULT_LOG_FORMAT =
+			"{} - {} [{}] \"{} {} {}\" {} {} {} {} ms";
+	AccessLogFactory DEFAULT = args -> AccessLog.create(DEFAULT_LOG_FORMAT, args.address(), args.user(),
+			args.zonedDateTime(), args.method(), args.uri(), args.protocol(), args.status(),
+			(args.contentLength() > -1 ? args.contentLength() : MISSING), args.port(), args.duration());
 
-	final String logFormat;
-	final Object[] args;
-
-	private AccessLog(String logFormat, Object... args) {
-		this.logFormat = logFormat;
-		this.args = args;
-	}
-
-	public static AccessLog create(String logFormat, Object... args) {
-		return new AccessLog(logFormat, args);
-	}
-
-	void log() {
-		if (log.isInfoEnabled()) {
-			log.info(logFormat, args);
-		}
-	}
+	AccessLog create(AccessLogArgProvider accessLogArgProvider);
 
 }

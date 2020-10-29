@@ -20,16 +20,20 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http2.Http2DataFrame;
-import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
+import reactor.util.annotation.Nullable;
 
 /**
  * @author Violeta Georgieva
  */
 final class AccessLogHandlerH2 extends ChannelDuplexHandler {
-	static final String H2_PROTOCOL_NAME = "HTTP/2.0";
 
-	AccessLog accessLog = new AccessLog();
+	final AccessLogFactory accessLogFactory;
+	AccessLogArgProviderH2 accessLogArgProvider = new AccessLogArgProviderH2();
+
+	AccessLogHandlerH2(@Nullable AccessLogFactory accessLogFactory) {
+		this.accessLogFactory = accessLogFactory == null ? AccessLogFactory.DEFAULT : accessLogFactory;
+	}
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -37,14 +41,10 @@ final class AccessLogHandlerH2 extends ChannelDuplexHandler {
 			final Http2HeadersFrame requestHeaders = (Http2HeadersFrame) msg;
 			final SocketChannel channel = (SocketChannel) ctx.channel()
 			                                                 .parent();
-			final Http2Headers headers = requestHeaders.headers();
 
-			accessLog = new AccessLog()
-			        .address(channel.remoteAddress().getHostString())
-			        .port(channel.localAddress().getPort())
-			        .method(headers.method())
-			        .uri(headers.path())
-			        .protocol(H2_PROTOCOL_NAME);
+			accessLogArgProvider = new AccessLogArgProviderH2()
+					.channel(channel)
+					.requestHeaders(requestHeaders);
 		}
 		ctx.fireChannelRead(msg);
 	}
@@ -55,23 +55,23 @@ final class AccessLogHandlerH2 extends ChannelDuplexHandler {
 		boolean lastContent = false;
 		if (msg instanceof Http2HeadersFrame) {
 			final Http2HeadersFrame responseHeaders = (Http2HeadersFrame) msg;
-			final Http2Headers headers = responseHeaders.headers();
 			lastContent = responseHeaders.isEndStream();
 
-			accessLog.status(headers.status())
-			         .chunked(true);
+			accessLogArgProvider.responseHeaders(responseHeaders);
 		}
 		if (msg instanceof Http2DataFrame) {
 			final Http2DataFrame data = (Http2DataFrame) msg;
 			lastContent = data.isEndStream();
 
-			accessLog.increaseContentLength(data.content().readableBytes());
+			accessLogArgProvider.increaseContentLength(data.content().readableBytes());
 		}
 		if (lastContent) {
 			ctx.write(msg, promise.unvoid())
 			   .addListener(future -> {
 			       if (future.isSuccess()) {
-			           accessLog.log();
+				       accessLogFactory
+						       .create(accessLogArgProvider)
+						       .log();
 			       }
 			   });
 			return;
