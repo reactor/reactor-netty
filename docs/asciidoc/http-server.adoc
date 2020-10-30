@@ -343,7 +343,7 @@ You can use the following configuration (for Logback or similar logging framewor
     <appender-ref ref="accessLog" />
 </appender>
 
-<logger name="reactor.netty.http.server.AccessLog" level="INFO" additivity="false">
+<logger name="reactor.netty.http.server.logging.AccessLog" level="INFO" additivity="false">
     <appender-ref ref="async"/>
 </logger>
 ----

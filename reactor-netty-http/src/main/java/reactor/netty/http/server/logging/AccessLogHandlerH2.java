@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.http.server;
+package reactor.netty.http.server.logging;
 
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
@@ -24,14 +25,17 @@ import io.netty.handler.codec.http2.Http2HeadersFrame;
 import reactor.util.annotation.Nullable;
 
 /**
+ * {@link ChannelHandler} for access log of HTTP/2.0.
+ *
  * @author Violeta Georgieva
+ * @author limaoning
  */
-final class AccessLogHandlerH2 extends ChannelDuplexHandler {
+public final class AccessLogHandlerH2 extends ChannelDuplexHandler {
 
 	final AccessLogFactory accessLogFactory;
 	AccessLogArgProviderH2 accessLogArgProvider = new AccessLogArgProviderH2();
 
-	AccessLogHandlerH2(@Nullable AccessLogFactory accessLogFactory) {
+	public AccessLogHandlerH2(@Nullable AccessLogFactory accessLogFactory) {
 		this.accessLogFactory = accessLogFactory == null ? AccessLogFactory.DEFAULT : accessLogFactory;
 	}
 

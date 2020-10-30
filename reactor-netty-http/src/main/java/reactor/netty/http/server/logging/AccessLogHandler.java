@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package reactor.netty.http.server;
+package reactor.netty.http.server.logging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
@@ -29,14 +30,17 @@ import io.netty.handler.codec.http.LastHttpContent;
 import reactor.util.annotation.Nullable;
 
 /**
+ * {@link ChannelHandler} for access log of HTTP/1.1.
+ *
  * @author Violeta Georgieva
+ * @author limaoning
  */
-final class AccessLogHandler extends ChannelDuplexHandler {
+public final class AccessLogHandler extends ChannelDuplexHandler {
 
 	final AccessLogFactory accessLogFactory;
 	AccessLogArgProviderH1 accessLogArgProvider = new AccessLogArgProviderH1();
 
-	AccessLogHandler(@Nullable AccessLogFactory accessLogFactory) {
+	public AccessLogHandler(@Nullable AccessLogFactory accessLogFactory) {
 		this.accessLogFactory = accessLogFactory == null ? AccessLogFactory.DEFAULT : accessLogFactory;
 	}
 

@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.http.server;
+package reactor.netty.http.server.logging;
 
-import static reactor.netty.http.server.AbstractAccessLogArgProvider.MISSING;
+import static reactor.netty.http.server.logging.AbstractAccessLogArgProvider.MISSING;
 
 /**
  * A factory for {@link AccessLog}.
@@ -31,6 +31,12 @@ public interface AccessLogFactory {
 			args.zonedDateTime(), args.method(), args.uri(), args.protocol(), args.status(),
 			(args.contentLength() > -1 ? args.contentLength() : MISSING), args.port(), args.duration());
 
+	/**
+	 * Create an {@link AccessLog}.
+	 *
+	 * @param accessLogArgProvider the provider of the args required for access log
+	 * @return the {@link AccessLog}
+	 */
 	AccessLog create(AccessLogArgProvider accessLogArgProvider);
 
 }

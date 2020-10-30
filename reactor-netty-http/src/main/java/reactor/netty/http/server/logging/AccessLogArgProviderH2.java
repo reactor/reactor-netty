@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.http.server;
+package reactor.netty.http.server.logging;
 
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http2.Http2HeadersFrame;

@@ -13,31 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.http.server;
 
-import reactor.util.Logger;
-import reactor.util.Loggers;
+/**
+ * Http access log
+ */
+@NonNullApi
+package reactor.netty.http.server.logging;
 
-public final class AccessLog {
-
-	static final Logger log = Loggers.getLogger("reactor.netty.http.server.AccessLog");
-
-	final String logFormat;
-	final Object[] args;
-
-	private AccessLog(String logFormat, Object... args) {
-		this.logFormat = logFormat;
-		this.args = args;
-	}
-
-	public static AccessLog create(String logFormat, Object... args) {
-		return new AccessLog(logFormat, args);
-	}
-
-	void log() {
-		if (log.isInfoEnabled()) {
-			log.info(logFormat, args);
-		}
-	}
-
-}
+import reactor.util.annotation.NonNullApi;

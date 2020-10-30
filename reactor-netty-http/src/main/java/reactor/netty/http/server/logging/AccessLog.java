@@ -13,35 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.http.server;
+package reactor.netty.http.server.logging;
+
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
- * A provider of the args required for access log.
+ * Log the http access information.
  *
  * @author limaoning
  */
-public interface AccessLogArgProvider {
+public final class AccessLog {
 
-	String zonedDateTime();
+	static final Logger log = Loggers.getLogger("reactor.netty.http.server.logging.AccessLog");
 
-	String address();
+	final String logFormat;
+	final Object[] args;
 
-	int port();
+	private AccessLog(String logFormat, Object... args) {
+		this.logFormat = logFormat;
+		this.args = args;
+	}
 
-	CharSequence method();
+	public static AccessLog create(String logFormat, Object... args) {
+		return new AccessLog(logFormat, args);
+	}
 
-	CharSequence uri();
-
-	String protocol();
-
-	String user();
-
-	CharSequence status();
-
-	long contentLength();
-
-	long duration();
-
-	CharSequence header(CharSequence name);
+	void log() {
+		if (log.isInfoEnabled()) {
+			log.info(logFormat, args);
+		}
+	}
 
 }
