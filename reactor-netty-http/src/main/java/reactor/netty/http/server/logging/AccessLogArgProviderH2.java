@@ -15,62 +15,57 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
+import reactor.util.annotation.Nullable;
+
+import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  * @author limaoning
  */
-final class AccessLogArgProviderH2 extends AbstractAccessLogArgProvider {
+final class AccessLogArgProviderH2 extends AbstractAccessLogArgProvider<AccessLogArgProviderH2> {
 
 	static final String H2_PROTOCOL_NAME = "HTTP/2.0";
 
 	Http2HeadersFrame requestHeaders;
-	Http2HeadersFrame responseHeaders;
 
-	AccessLogArgProviderH2 channel(SocketChannel channel) {
-		super.channel = channel;
-		return this;
+	AccessLogArgProviderH2(@Nullable SocketAddress remoteAddress) {
+		super(remoteAddress);
 	}
 
 	AccessLogArgProviderH2 requestHeaders(Http2HeadersFrame requestHeaders) {
-		this.requestHeaders = requestHeaders;
+		this.requestHeaders = Objects.requireNonNull(requestHeaders, "requestHeaders");
+		onRequest();
+		return get();
+	}
+
+	@Override
+	@Nullable
+	public CharSequence requestHeader(CharSequence name) {
+		Objects.requireNonNull(name, "name");
+		return requestHeaders == null ? null : requestHeaders.headers().get(name);
+	}
+
+	@Override
+	void onRequest() {
+		super.onRequest();
+		if (requestHeaders != null) {
+			super.method = requestHeaders.headers().method();
+			super.uri = requestHeaders.headers().path();
+			super.protocol = H2_PROTOCOL_NAME;
+		}
+	}
+
+	@Override
+	void clear() {
+		super.clear();
+		this.requestHeaders = null;
+	}
+
+	@Override
+	public AccessLogArgProviderH2 get() {
 		return this;
-	}
-
-	AccessLogArgProviderH2 responseHeaders(Http2HeadersFrame responseHeaders) {
-		this.responseHeaders = responseHeaders;
-		return this;
-	}
-
-	@Override
-	public CharSequence method() {
-		return requestHeaders.headers().method();
-	}
-
-	@Override
-	public CharSequence uri() {
-		return requestHeaders.headers().path();
-	}
-
-	@Override
-	public String protocol() {
-		return H2_PROTOCOL_NAME;
-	}
-
-	@Override
-	public CharSequence status() {
-		return responseHeaders.headers().status();
-	}
-
-	@Override
-	void increaseContentLength(long contentLength) {
-		super.contentLength += contentLength;
-	}
-
-	@Override
-	public CharSequence header(CharSequence name) {
-		return requestHeaders.headers().get(name);
 	}
 
 }

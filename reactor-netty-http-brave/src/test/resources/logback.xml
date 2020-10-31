@@ -41,7 +41,7 @@
         <appender-ref ref="accessLog" />
     </appender>
 
-    <logger name="reactor.netty.http.server.logging.AccessLog" level="INFO" additivity="false">
+    <logger name="reactor.netty.http.server.AccessLog" level="INFO" additivity="false">
         <appender-ref ref="async"/>
     </logger> -->
 

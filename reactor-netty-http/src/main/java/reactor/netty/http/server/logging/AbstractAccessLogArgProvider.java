@@ -15,52 +15,82 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.HttpMethod;
+import reactor.util.annotation.Nullable;
 
+import java.net.SocketAddress;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * @author limaoning
  */
-abstract class AbstractAccessLogArgProvider implements AccessLogArgProvider {
+abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgProvider<SELF>>
+		implements AccessLogArgProvider, Supplier<SELF> {
 
 	static final DateTimeFormatter DATE_TIME_FORMATTER =
 			DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z");
 	static final String MISSING = "-";
 
-	final String zonedDateTime;
-	String user = MISSING;
-	SocketChannel channel;
-	long contentLength;
-	long startTime = System.currentTimeMillis();
+	final SocketAddress remoteAddress;
+	final String user = MISSING;
+	String zonedDateTime;
+	CharSequence method;
+	CharSequence uri;
+	String protocol;
+	CharSequence status;
+	boolean chunked;
+	long contentLength = -1;
+	long startTime;
 
-	AbstractAccessLogArgProvider() {
-		this.zonedDateTime = ZonedDateTime.now(ZoneId.systemDefault()).format(DATE_TIME_FORMATTER);
+	AbstractAccessLogArgProvider(@Nullable SocketAddress remoteAddress) {
+		this.remoteAddress = remoteAddress;
 	}
 
 	@Override
+	@Nullable
 	public String zonedDateTime() {
 		return zonedDateTime;
 	}
 
 	@Override
-	public String address() {
-		return channel.remoteAddress().getHostString();
+	@Nullable
+	public SocketAddress remoteAddress() {
+		return remoteAddress;
 	}
 
 	@Override
-	public int port() {
-		return channel.remoteAddress().getPort();
+	@Nullable
+	public CharSequence method() {
+		return method;
 	}
 
 	@Override
+	@Nullable
+	public CharSequence uri() {
+		return uri;
+	}
+
+	@Override
+	@Nullable
+	public String protocol() {
+		return protocol;
+	}
+
+	@Override
+	@Nullable
 	public String user() {
 		return user;
 	}
 
-	abstract void increaseContentLength(long contentLength);
+	@Override
+	@Nullable
+	public CharSequence status() {
+		return status;
+	}
 
 	@Override
 	public long contentLength() {
@@ -70,6 +100,49 @@ abstract class AbstractAccessLogArgProvider implements AccessLogArgProvider {
 	@Override
 	public long duration() {
 		return System.currentTimeMillis() - startTime;
+	}
+
+	/**
+	 * Initialize some fields (e.g. ZonedDateTime startTime).
+	 * Should be called when a new request is received.
+	 */
+	void onRequest() {
+		this.zonedDateTime = ZonedDateTime.now(ZoneId.systemDefault()).format(DATE_TIME_FORMATTER);
+		this.startTime = System.currentTimeMillis();
+	}
+
+	/**
+	 * Remove non-final fields for reuse.
+	 */
+	void clear() {
+		this.zonedDateTime = null;
+		this.method = null;
+		this.uri = null;
+		this.protocol = null;
+		this.status = null;
+		this.chunked = false;
+		this.contentLength = -1;
+		this.startTime = 0;
+	}
+
+	SELF status(CharSequence status) {
+		this.status = Objects.requireNonNull(status, "status");
+		return get();
+	}
+
+	SELF chunked(boolean chunked) {
+		this.chunked = chunked;
+		return get();
+	}
+
+	SELF increaseContentLength(long contentLength) {
+		if (chunked && contentLength >= 0 && !HttpMethod.HEAD.asciiName().contentEqualsIgnoreCase(method)) {
+			if (this.contentLength == -1) {
+				this.contentLength = 0;
+			}
+			this.contentLength += contentLength;
+		}
+		return get();
 	}
 
 }

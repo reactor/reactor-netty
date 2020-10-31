@@ -15,37 +15,19 @@
  */
 package reactor.netty.http.server.logging;
 
-import reactor.util.Logger;
-import reactor.util.Loggers;
+import org.junit.jupiter.api.Test;
 
-import java.util.Objects;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Log the http access information.
- *
  * @author limaoning
  */
-public final class AccessLog {
+class AccessLogHandlerFactoryTest {
 
-	static final Logger log = Loggers.getLogger("reactor.netty.http.server.AccessLog");
-
-	final String logFormat;
-	final Object[] args;
-
-	private AccessLog(String logFormat, Object... args) {
-		Objects.requireNonNull(logFormat, "logFormat");
-		this.logFormat = logFormat;
-		this.args = args;
-	}
-
-	public static AccessLog create(String logFormat, Object... args) {
-		return new AccessLog(logFormat, args);
-	}
-
-	void log() {
-		if (log.isInfoEnabled()) {
-			log.info(logFormat, args);
-		}
+	@Test
+	void create() {
+		assertThat(AccessLogHandlerFactory.H1.create(null)).isInstanceOf(AccessLogHandlerH1.class);
+		assertThat(AccessLogHandlerFactory.H2.create(null)).isInstanceOf(AccessLogHandlerH2.class);
 	}
 
 }

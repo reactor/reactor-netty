@@ -15,37 +15,20 @@
  */
 package reactor.netty.http.server.logging;
 
-import reactor.util.Logger;
-import reactor.util.Loggers;
+import io.netty.handler.codec.http.HttpHeaderNames;
 
-import java.util.Objects;
+import java.nio.charset.StandardCharsets;
 
 /**
- * Log the http access information.
+ * Common constants for access log tests.
  *
  * @author limaoning
  */
-public final class AccessLog {
+class LoggingTests {
 
-	static final Logger log = Loggers.getLogger("reactor.netty.http.server.AccessLog");
-
-	final String logFormat;
-	final Object[] args;
-
-	private AccessLog(String logFormat, Object... args) {
-		Objects.requireNonNull(logFormat, "logFormat");
-		this.logFormat = logFormat;
-		this.args = args;
-	}
-
-	public static AccessLog create(String logFormat, Object... args) {
-		return new AccessLog(logFormat, args);
-	}
-
-	void log() {
-		if (log.isInfoEnabled()) {
-			log.info(logFormat, args);
-		}
-	}
+	static final CharSequence HEADER_CONNECTION_NAME = HttpHeaderNames.CONNECTION;
+	static final String HEADER_CONNECTION_VALUE = "keep-alive";
+	static final String URI = "/hello";
+	static final byte[] RESPONSE_CONTENT = "Hello".getBytes(StandardCharsets.UTF_8);
 
 }

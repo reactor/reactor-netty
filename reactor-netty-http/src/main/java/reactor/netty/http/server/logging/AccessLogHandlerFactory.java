@@ -15,36 +15,40 @@
  */
 package reactor.netty.http.server.logging;
 
-import reactor.util.Logger;
-import reactor.util.Loggers;
+import io.netty.channel.ChannelHandler;
+import reactor.util.annotation.Nullable;
 
-import java.util.Objects;
+import java.util.function.Function;
 
 /**
- * Log the http access information.
+ * Use to create an access-log handler.
  *
  * @author limaoning
  */
-public final class AccessLog {
+public enum AccessLogHandlerFactory {
 
-	static final Logger log = Loggers.getLogger("reactor.netty.http.server.AccessLog");
+	/**
+	 * HTTP/1.1
+	 */
+	H1,
+	/**
+	 * HTTP/2.0
+	 */
+	H2;
 
-	final String logFormat;
-	final Object[] args;
-
-	private AccessLog(String logFormat, Object... args) {
-		Objects.requireNonNull(logFormat, "logFormat");
-		this.logFormat = logFormat;
-		this.args = args;
-	}
-
-	public static AccessLog create(String logFormat, Object... args) {
-		return new AccessLog(logFormat, args);
-	}
-
-	void log() {
-		if (log.isInfoEnabled()) {
-			log.info(logFormat, args);
+	/**
+	 * Create a access log handler, {@link AccessLogHandlerH1} or {@link AccessLogHandlerH2}.
+	 *
+	 * @param accessLog apply an {@link AccessLog} by an {@link AccessLogArgProvider}
+	 * @return the access log handler
+	 */
+	public ChannelHandler create(@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+		switch (this) {
+			case H2:
+				return new AccessLogHandlerH2(accessLog);
+			case H1:
+			default:
+				return new AccessLogHandlerH1(accessLog);
 		}
 	}
 

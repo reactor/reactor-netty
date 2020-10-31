@@ -15,6 +15,10 @@
  */
 package reactor.netty.http.server.logging;
 
+import reactor.util.annotation.Nullable;
+
+import java.net.SocketAddress;
+
 /**
  * A provider of the args required for access log.
  *
@@ -27,27 +31,23 @@ public interface AccessLogArgProvider {
 	 *
 	 * @return the date-time string with a time-zone
 	 */
+	@Nullable
 	String zonedDateTime();
 
 	/**
-	 * Returns the remote hostname.
+	 * Returns the address of the remote peer or {@code null} in case of Unix Domain Sockets.
 	 *
-	 * @return the remote hostname
+	 * @return the peer's address
 	 */
-	String address();
-
-	/**
-	 * Returns the remote port.
-	 *
-	 * @return the remote port
-	 */
-	int port();
+	@Nullable
+	SocketAddress remoteAddress();
 
 	/**
 	 * Returns the name of this method, (e.g. "GET").
 	 *
 	 * @return the name of this method
 	 */
+	@Nullable
 	CharSequence method();
 
 	/**
@@ -55,6 +55,7 @@ public interface AccessLogArgProvider {
 	 *
 	 * @return the requested URI
 	 */
+	@Nullable
 	CharSequence uri();
 
 	/**
@@ -62,6 +63,7 @@ public interface AccessLogArgProvider {
 	 *
 	 * @return the protocol version
 	 */
+	@Nullable
 	String protocol();
 
 	/**
@@ -69,6 +71,7 @@ public interface AccessLogArgProvider {
 	 *
 	 * @return the user identifier
 	 */
+	@Nullable
 	String user();
 
 	/**
@@ -76,6 +79,7 @@ public interface AccessLogArgProvider {
 	 *
 	 * @return the response status
 	 */
+	@Nullable
 	CharSequence status();
 
 	/**
@@ -93,11 +97,12 @@ public interface AccessLogArgProvider {
 	long duration();
 
 	/**
-	 * Returns the value of a header with the specified name.
+	 * Returns the value of a request header with the specified name.
 	 *
-	 * @param name the header name
-	 * @return the value of the header
+	 * @param name the request header name
+	 * @return the value of the request header
 	 */
-	CharSequence header(CharSequence name);
+	@Nullable
+	CharSequence requestHeader(CharSequence name);
 
 }

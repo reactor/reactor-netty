@@ -15,67 +15,60 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpUtil;
+import reactor.util.annotation.Nullable;
+
+import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  * @author limaoning
  */
-final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider {
+final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLogArgProviderH1> {
 
 	HttpRequest request;
-	HttpResponse response;
-	boolean chunked;
 
-	AccessLogArgProviderH1 channel(SocketChannel channel) {
-		super.channel = channel;
-		return this;
+	AccessLogArgProviderH1(@Nullable SocketAddress remoteAddress) {
+		super(remoteAddress);
 	}
 
 	AccessLogArgProviderH1 request(HttpRequest request) {
-		this.request = request;
-		return this;
-	}
-
-	AccessLogArgProviderH1 response(HttpResponse response) {
-		this.response = response;
-		this.chunked = HttpUtil.isTransferEncodingChunked(response);
-		super.contentLength = HttpUtil.getContentLength(response, -1);
-		return this;
+		this.request = Objects.requireNonNull(request, "request");
+		onRequest();
+		return get();
 	}
 
 	@Override
-	public CharSequence method() {
-		return request.method().name();
+	@Nullable
+	public CharSequence requestHeader(CharSequence name) {
+		Objects.requireNonNull(name, "name");
+		return request == null ? null : request.headers().get(name);
 	}
 
 	@Override
-	public CharSequence uri() {
-		return request.uri();
-	}
-
-	@Override
-	public String protocol() {
-		return request.protocolVersion().text();
-	}
-
-	@Override
-	public CharSequence status() {
-		return response.status().codeAsText();
-	}
-
-	@Override
-	void increaseContentLength(long contentLength) {
-		if (chunked) {
-			super.contentLength += contentLength;
+	void onRequest() {
+		super.onRequest();
+		if (request != null) {
+			super.method = request.method().name();
+			super.uri = request.uri();
+			super.protocol = request.protocolVersion().text();
 		}
 	}
 
 	@Override
-	public CharSequence header(CharSequence name) {
-		return request.headers().get(name);
+	void clear() {
+		super.clear();
+		this.request = null;
+	}
+
+	AccessLogArgProviderH1 contentLength(long contentLength) {
+		super.contentLength = contentLength;
+		return get();
+	}
+
+	@Override
+	public AccessLogArgProviderH1 get() {
+		return this;
 	}
 
 }

@@ -18,16 +18,17 @@ package reactor.netty.http.server.logging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.util.annotation.Nullable;
+
+import java.util.function.Function;
 
 /**
  * {@link ChannelHandler} for access log of HTTP/1.1.
@@ -35,24 +36,23 @@ import reactor.util.annotation.Nullable;
  * @author Violeta Georgieva
  * @author limaoning
  */
-public final class AccessLogHandler extends ChannelDuplexHandler {
+final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 
-	final AccessLogFactory accessLogFactory;
-	AccessLogArgProviderH1 accessLogArgProvider = new AccessLogArgProviderH1();
+	AccessLogArgProviderH1 accessLogArgProvider;
 
-	public AccessLogHandler(@Nullable AccessLogFactory accessLogFactory) {
-		this.accessLogFactory = accessLogFactory == null ? AccessLogFactory.DEFAULT : accessLogFactory;
+	AccessLogHandlerH1(@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+		super(accessLog);
 	}
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
 			final HttpRequest request = (HttpRequest) msg;
-			final SocketChannel channel = (SocketChannel) ctx.channel();
 
-			accessLogArgProvider = new AccessLogArgProviderH1()
-					.channel(channel)
-					.request(request);
+			if (accessLogArgProvider == null) {
+				accessLogArgProvider = new AccessLogArgProviderH1(ctx.channel().remoteAddress());
+			}
+			accessLogArgProvider.request(request);
 		}
 		ctx.fireChannelRead(msg);
 	}
@@ -70,16 +70,23 @@ public final class AccessLogHandler extends ChannelDuplexHandler {
 				return;
 			}
 
-			accessLogArgProvider.response(response);
+			final boolean chunked = HttpUtil.isTransferEncodingChunked(response);
+			accessLogArgProvider.status(status.codeAsText())
+					.chunked(chunked);
+			if (!chunked) {
+				accessLogArgProvider.contentLength(HttpUtil.getContentLength(response, -1));
+			}
 		}
 		if (msg instanceof LastHttpContent) {
 			accessLogArgProvider.increaseContentLength(((LastHttpContent) msg).content().readableBytes());
 			ctx.write(msg, promise.unvoid())
 			   .addListener(future -> {
 			       if (future.isSuccess()) {
-				       accessLogFactory
-						       .create(accessLogArgProvider)
-						       .log();
+				       AccessLog log = accessLog.apply(accessLogArgProvider);
+				       if (log != null) {
+					       log.log();
+				       }
+				       accessLogArgProvider.clear();
 			       }
 			   });
 			return;
