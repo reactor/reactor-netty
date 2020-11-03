@@ -33,6 +33,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
+import reactor.netty.Connection;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -219,7 +220,35 @@ public final class TransportConnector {
 				return monoChannelPromise;
 			}
 
+			if (config instanceof ClientTransportConfig) {
+				final ClientTransportConfig<?> clientTransportConfig = (ClientTransportConfig<?>) config;
+				if (clientTransportConfig.doOnResolve != null) {
+					clientTransportConfig.doOnResolve.accept(Connection.from(channel));
+				}
+			}
+
 			Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
+
+			if (config instanceof ClientTransportConfig) {
+				final ClientTransportConfig<?> clientTransportConfig = (ClientTransportConfig<?>) config;
+
+				if (clientTransportConfig.doOnResolveError != null) {
+					resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
+						if (future.cause() != null) {
+							clientTransportConfig.doOnResolveError.accept(Connection.from(channel), future.cause());
+						}
+					});
+				}
+
+				if (clientTransportConfig.doAfterResolve != null) {
+					resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
+						if (future.isSuccess()) {
+							clientTransportConfig.doAfterResolve.accept(Connection.from(channel), future.getNow());
+						}
+					});
+				}
+			}
+
 			if (resolveFuture.isDone()) {
 				Throwable cause = resolveFuture.cause();
 				if (cause != null) {
