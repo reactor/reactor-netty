@@ -151,7 +151,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		Objects.requireNonNull(doOnResolve, "doOnResolve");
 		T dup = duplicate();
 		@SuppressWarnings("unchecked")
-		Consumer<Connection> current = ((ClientTransportConfig)configuration()).doOnResolve;
+		Consumer<Connection> current = (Consumer<Connection>) configuration().doOnResolve;
 		dup.configuration().doOnResolve = current == null ? doOnResolve : current.andThen(doOnResolve);
 		return dup;
 	}
