@@ -219,7 +219,31 @@ public final class TransportConnector {
 				return monoChannelPromise;
 			}
 
+			if (config instanceof ClientTransportConfig) {
+				final ClientTransportConfig clientTransportConfig = (ClientTransportConfig)config;
+				if (clientTransportConfig.doOnResolve != null) {
+					clientTransportConfig.doOnResolve.accept(channel);
+				}
+			}
+
 			Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
+
+			if (config instanceof ClientTransportConfig) {
+				final ClientTransportConfig clientTransportConfig = (ClientTransportConfig)config;
+				resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
+					if (future.cause() != null) {
+						if (clientTransportConfig.doOnResolveError != null) {
+							clientTransportConfig.doOnResolveError.accept(channel, future.cause());
+						}
+					}
+					else {
+						if (clientTransportConfig.doAfterResolve != null) {
+							clientTransportConfig.doAfterResolve.accept(channel, future.getNow());
+						}
+					}
+				});
+			}
+
 			if (resolveFuture.isDone()) {
 				Throwable cause = resolveFuture.cause();
 				if (cause != null) {

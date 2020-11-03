@@ -18,9 +18,11 @@ package reactor.netty.transport;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import io.netty.channel.Channel;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
 import reactor.core.publisher.Mono;
@@ -137,6 +139,48 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		@SuppressWarnings("unchecked")
 		Consumer<Connection> current = (Consumer<Connection>) configuration().doOnDisconnected;
 		dup.configuration().doOnDisconnected = current == null ? doOnDisconnected : current.andThen(doOnDisconnected);
+		return dup;
+	}
+
+	/**
+	 * Set or add a callback called before {@link SocketAddress} is resolved.
+	 *
+	 * @param doOnResolve a consumer observing resolve events
+	 * @return a new {@link ClientTransport} reference
+	 */
+	public T doOnResolve(Consumer<? super Channel> doOnResolve) {
+		Objects.requireNonNull(doOnResolve, "doOnResolve");
+		T dup = duplicate();
+		Consumer<Channel> current = ((ClientTransportConfig)configuration()).doOnResolve;
+		dup.configuration().doOnResolve = current == null ? doOnResolve : current.andThen(doOnResolve);
+		return dup;
+	}
+
+	/**
+	 * Set or add a callback called after {@link SocketAddress} is resolved.
+	 *
+	 * @param doAfterResolve a consumer observing resolved events
+	 * @return a new {@link ClientTransport} reference
+	 */
+	public T doAfterResolve(BiConsumer<? super Channel, ? super SocketAddress> doAfterResolve) {
+		Objects.requireNonNull(doAfterResolve, "doAfterResolve");
+		T dup = duplicate();
+		BiConsumer<Channel, SocketAddress> current = ((ClientTransportConfig)configuration()).doAfterResolve;
+		dup.configuration().doAfterResolve = current == null ? doAfterResolve : current.andThen(doAfterResolve);
+		return dup;
+	}
+
+	/**
+	 * Set or add a callback called if an exception happens whlie resolving to a {@link SocketAddress}.
+	 *
+	 * @param doOnResolveError a consumer observing resolve error events
+	 * @return a new {@link ClientTransport} reference
+	 */
+	public T doOnResolveError(BiConsumer<? super Channel, ? super Throwable> doOnResolveError) {
+		Objects.requireNonNull(doOnResolveError, "doOnResolveError");
+		T dup = duplicate();
+		BiConsumer<Channel, Throwable> current = ((ClientTransportConfig)configuration()).doOnResolveError;
+		dup.configuration().doOnResolveError = current == null ? doOnResolveError : current.andThen(doOnResolveError);
 		return dup;
 	}
 
