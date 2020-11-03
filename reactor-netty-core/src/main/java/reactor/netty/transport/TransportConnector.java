@@ -221,7 +221,7 @@ public final class TransportConnector {
 			}
 
 			if (config instanceof ClientTransportConfig) {
-				final ClientTransportConfig clientTransportConfig = (ClientTransportConfig)config;
+				final ClientTransportConfig<?> clientTransportConfig = (ClientTransportConfig<?>) config;
 				if (clientTransportConfig.doOnResolve != null) {
 					clientTransportConfig.doOnResolve.accept(Connection.from(channel));
 				}
@@ -230,19 +230,23 @@ public final class TransportConnector {
 			Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
 
 			if (config instanceof ClientTransportConfig) {
-				final ClientTransportConfig clientTransportConfig = (ClientTransportConfig)config;
-				resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
-					if (future.cause() != null) {
-						if (clientTransportConfig.doOnResolveError != null) {
+				final ClientTransportConfig<?> clientTransportConfig = (ClientTransportConfig<?>) config;
+
+				if (clientTransportConfig.doOnResolveError != null) {
+					resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
+						if (future.cause() != null) {
 							clientTransportConfig.doOnResolveError.accept(Connection.from(channel), future.cause());
 						}
-					}
-					else {
-						if (clientTransportConfig.doAfterResolve != null) {
+					});
+				}
+
+				if (clientTransportConfig.doAfterResolve != null) {
+					resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
+						if (future.isSuccess()) {
 							clientTransportConfig.doAfterResolve.accept(Connection.from(channel), future.getNow());
 						}
-					}
-				});
+					});
+				}
 			}
 
 			if (resolveFuture.isDone()) {

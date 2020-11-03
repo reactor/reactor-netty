@@ -22,7 +22,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import io.netty.channel.Channel;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
 import reactor.core.publisher.Mono;
@@ -143,7 +142,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	}
 
 	/**
-	 * Set or add a callback called before {@link SocketAddress} is resolved.
+	 * Set or add a callback called before {@link SocketAddress} is resolved successfully.
 	 *
 	 * @param doOnResolve a consumer observing resolve events
 	 * @return a new {@link ClientTransport} reference
@@ -151,6 +150,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	public T doOnResolve(Consumer<? super Connection> doOnResolve) {
 		Objects.requireNonNull(doOnResolve, "doOnResolve");
 		T dup = duplicate();
+		@SuppressWarnings("unchecked")
 		Consumer<Connection> current = ((ClientTransportConfig)configuration()).doOnResolve;
 		dup.configuration().doOnResolve = current == null ? doOnResolve : current.andThen(doOnResolve);
 		return dup;
@@ -165,13 +165,15 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	public T doAfterResolve(BiConsumer<? super Connection, ? super SocketAddress> doAfterResolve) {
 		Objects.requireNonNull(doAfterResolve, "doAfterResolve");
 		T dup = duplicate();
-		BiConsumer<Connection, SocketAddress> current = ((ClientTransportConfig)configuration()).doAfterResolve;
+		@SuppressWarnings("unchecked")
+		BiConsumer<Connection, SocketAddress> current =
+				(BiConsumer<Connection, SocketAddress>) configuration().doAfterResolve;
 		dup.configuration().doAfterResolve = current == null ? doAfterResolve : current.andThen(doAfterResolve);
 		return dup;
 	}
 
 	/**
-	 * Set or add a callback called if an exception happens whlie resolving to a {@link SocketAddress}.
+	 * Set or add a callback called if an exception happens while resolving to a {@link SocketAddress}.
 	 *
 	 * @param doOnResolveError a consumer observing resolve error events
 	 * @return a new {@link ClientTransport} reference
@@ -179,7 +181,9 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	public T doOnResolveError(BiConsumer<? super Connection, ? super Throwable> doOnResolveError) {
 		Objects.requireNonNull(doOnResolveError, "doOnResolveError");
 		T dup = duplicate();
-		BiConsumer<Connection, Throwable> current = ((ClientTransportConfig)configuration()).doOnResolveError;
+		@SuppressWarnings("unchecked")
+		BiConsumer<Connection, Throwable> current =
+				(BiConsumer<Connection, Throwable>) configuration().doOnResolveError;
 		dup.configuration().doOnResolveError = current == null ? doOnResolveError : current.andThen(doOnResolveError);
 		return dup;
 	}
