@@ -48,9 +48,9 @@ public class ClientTransportResolverHooksTest {
 				})
 				.host("localhost")
 				.port(server.port())
-				.doOnResolve(ch -> doOnResolve.set(ch.attr(TRACE_ID_KEY).get()))
-				.doAfterResolve((ch, socketAddress) -> doAfterResolve.set(ch.attr(TRACE_ID_KEY).get()))
-				.doOnResolveError((ch, th) -> doOnResolveError.set(ch.attr(TRACE_ID_KEY).get()))
+				.doOnResolve(conn -> doOnResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
+				.doAfterResolve((conn, socketAddress) -> doAfterResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
+				.doOnResolveError((conn, th) -> doOnResolveError.set(conn.channel().attr(TRACE_ID_KEY).get()))
 				.connect()
 				.block();
 
@@ -76,10 +76,10 @@ public class ClientTransportResolverHooksTest {
 					})
 					.host("idontexist")
 					.port(server.port())
-					.doOnResolve(ch -> doOnResolve.set(ch.attr(TRACE_ID_KEY).get()))
-					.doAfterResolve((ch, socketAddress) -> doAfterResolve.set(ch.attr(TRACE_ID_KEY).get()))
-					.doOnResolveError((ch, th) -> {
-						doOnResolveError.set(ch.attr(TRACE_ID_KEY).get());
+					.doOnResolve(conn -> doOnResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
+					.doAfterResolve((conn, socket) -> doAfterResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
+					.doOnResolveError((conn, th) -> {
+						doOnResolveError.set(conn.channel().attr(TRACE_ID_KEY).get());
 						throwable.set(th);
 					})
 					.connect()

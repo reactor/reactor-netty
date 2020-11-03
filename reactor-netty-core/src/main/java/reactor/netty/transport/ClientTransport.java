@@ -148,10 +148,10 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param doOnResolve a consumer observing resolve events
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public T doOnResolve(Consumer<? super Channel> doOnResolve) {
+	public T doOnResolve(Consumer<? super Connection> doOnResolve) {
 		Objects.requireNonNull(doOnResolve, "doOnResolve");
 		T dup = duplicate();
-		Consumer<Channel> current = ((ClientTransportConfig)configuration()).doOnResolve;
+		Consumer<Connection> current = ((ClientTransportConfig)configuration()).doOnResolve;
 		dup.configuration().doOnResolve = current == null ? doOnResolve : current.andThen(doOnResolve);
 		return dup;
 	}
@@ -162,10 +162,10 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param doAfterResolve a consumer observing resolved events
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public T doAfterResolve(BiConsumer<? super Channel, ? super SocketAddress> doAfterResolve) {
+	public T doAfterResolve(BiConsumer<? super Connection, ? super SocketAddress> doAfterResolve) {
 		Objects.requireNonNull(doAfterResolve, "doAfterResolve");
 		T dup = duplicate();
-		BiConsumer<Channel, SocketAddress> current = ((ClientTransportConfig)configuration()).doAfterResolve;
+		BiConsumer<Connection, SocketAddress> current = ((ClientTransportConfig)configuration()).doAfterResolve;
 		dup.configuration().doAfterResolve = current == null ? doAfterResolve : current.andThen(doAfterResolve);
 		return dup;
 	}
@@ -176,10 +176,10 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param doOnResolveError a consumer observing resolve error events
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public T doOnResolveError(BiConsumer<? super Channel, ? super Throwable> doOnResolveError) {
+	public T doOnResolveError(BiConsumer<? super Connection, ? super Throwable> doOnResolveError) {
 		Objects.requireNonNull(doOnResolveError, "doOnResolveError");
 		T dup = duplicate();
-		BiConsumer<Channel, Throwable> current = ((ClientTransportConfig)configuration()).doOnResolveError;
+		BiConsumer<Connection, Throwable> current = ((ClientTransportConfig)configuration()).doOnResolveError;
 		dup.configuration().doOnResolveError = current == null ? doOnResolveError : current.andThen(doOnResolveError);
 		return dup;
 	}

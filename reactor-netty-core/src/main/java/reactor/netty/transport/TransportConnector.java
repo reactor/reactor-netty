@@ -33,6 +33,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
+import reactor.netty.Connection;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -222,7 +223,7 @@ public final class TransportConnector {
 			if (config instanceof ClientTransportConfig) {
 				final ClientTransportConfig clientTransportConfig = (ClientTransportConfig)config;
 				if (clientTransportConfig.doOnResolve != null) {
-					clientTransportConfig.doOnResolve.accept(channel);
+					clientTransportConfig.doOnResolve.accept(Connection.from(channel));
 				}
 			}
 
@@ -233,12 +234,12 @@ public final class TransportConnector {
 				resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
 					if (future.cause() != null) {
 						if (clientTransportConfig.doOnResolveError != null) {
-							clientTransportConfig.doOnResolveError.accept(channel, future.cause());
+							clientTransportConfig.doOnResolveError.accept(Connection.from(channel), future.cause());
 						}
 					}
 					else {
 						if (clientTransportConfig.doAfterResolve != null) {
-							clientTransportConfig.doAfterResolve.accept(channel, future.getNow());
+							clientTransportConfig.doAfterResolve.accept(Connection.from(channel), future.getNow());
 						}
 					}
 				});
