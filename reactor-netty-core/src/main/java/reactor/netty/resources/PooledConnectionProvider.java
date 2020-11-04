@@ -256,7 +256,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		@Override
 		public String toString() {
 			return "PoolFactory{" +
-					"leasingStrategy=" + leasingStrategy +
+					"evictionInterval=" + evictionInterval +
+					", leasingStrategy=" + leasingStrategy +
 					", maxConnections=" + maxConnections +
 					", maxIdleTime=" + maxIdleTime +
 					", maxLifeTime=" + maxLifeTime +
