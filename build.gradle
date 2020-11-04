@@ -57,7 +57,7 @@ ext {
 	//Metrics
 	micrometerVersion = '1.5.0' //optional baseline: technically could work with 1.2.x, should work with any 1.3.x
 
-	braveVersion = '5.12.7'
+	braveVersion = '5.13.0'
 
 	jsr305Version = '3.0.2'
 
