@@ -156,7 +156,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			PoolFactory poolFactory = poolFactoryPerRemoteHost.getOrDefault(remoteAddress, defaultPoolFactory);
 			InstrumentedPool<PooledConnection> pool = channelPools.computeIfAbsent(holder, poolKey -> {
 				if (log.isDebugEnabled()) {
-					log.debug("Creating a new client pool [{}] for [{}]", poolFactory, remoteAddress);
+					log.debug("Creating a new [{}] client pool [{}] for [{}]", name, poolFactory, remoteAddress);
 				}
 
 				InstrumentedPool<PooledConnection> newPool =
@@ -753,13 +753,15 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public String toString() {
-			return "PoolFactory {" +
-					"maxConnections=" + maxConnections +
-					", pendingAcquireMaxCount=" + pendingAcquireMaxCount +
-					", pendingAcquireTimeout=" + pendingAcquireTimeout +
+			return "PoolFactory{" +
+					"evictionInterval=" + evictionInterval +
+					", leasingStrategy=" + leasingStrategy +
+					", maxConnections=" + maxConnections +
 					", maxIdleTime=" + maxIdleTime +
 					", maxLifeTime=" + maxLifeTime +
 					", metricsEnabled=" + metricsEnabled +
+					", pendingAcquireMaxCount=" + pendingAcquireMaxCount +
+					", pendingAcquireTimeout=" + pendingAcquireTimeout +
 					'}';
 		}
 
