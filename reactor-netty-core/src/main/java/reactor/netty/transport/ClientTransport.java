@@ -142,7 +142,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	}
 
 	/**
-	 * Set or add a callback called before {@link SocketAddress} is resolved successfully.
+	 * Set or add a callback called before {@link SocketAddress} is resolved.
 	 *
 	 * @param doOnResolve a consumer observing resolve events
 	 * @return a new {@link ClientTransport} reference
@@ -157,7 +157,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	}
 
 	/**
-	 * Set or add a callback called after {@link SocketAddress} is resolved.
+	 * Set or add a callback called after {@link SocketAddress} is resolved successfully.
 	 *
 	 * @param doAfterResolve a consumer observing resolved events
 	 * @return a new {@link ClientTransport} reference

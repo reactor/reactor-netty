@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import reactor.netty.DisposableServer;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
+import reactor.test.StepVerifier;
 
 import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -28,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ClientTransportResolverHooksTest {
+class ClientTransportResolverHooksTest {
 
 	private static final AttributeKey<Long> TRACE_ID_KEY = AttributeKey.newInstance("traceid");
 	private static final long TRACE_ID_VALUE = 125L;
@@ -54,9 +55,9 @@ public class ClientTransportResolverHooksTest {
 				.connect()
 				.block();
 
-		assertThat(doOnResolve.get()).isEqualTo(TRACE_ID_VALUE);
-		assertThat(doAfterResolve.get()).isEqualTo(TRACE_ID_VALUE);
-		assertThat(doOnResolveError.get()).isEqualTo(0);
+		assertThat(doOnResolve).hasValue(TRACE_ID_VALUE);
+		assertThat(doAfterResolve).hasValue(TRACE_ID_VALUE);
+		assertThat(doOnResolveError).hasValue(0);
 	}
 
 	@Test
@@ -69,29 +70,25 @@ public class ClientTransportResolverHooksTest {
 
 		final DisposableServer server = TcpServer.create().port(0).bindNow();
 
-		try {
-			TcpClient.create()
-					.doOnChannelInit((connectionObserver, channel, remoteAddress) -> {
-						channel.attr(TRACE_ID_KEY).set(TRACE_ID_VALUE);
-					})
-					.host("idontexist")
-					.port(server.port())
-					.doOnResolve(conn -> doOnResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
-					.doAfterResolve((conn, socket) -> doAfterResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
-					.doOnResolveError((conn, th) -> {
-						doOnResolveError.set(conn.channel().attr(TRACE_ID_KEY).get());
-						throwable.set(th);
-					})
-					.connect()
-					.block();
-		} catch (Exception ex) {
-			// This is expected.  Ignore.
-		}
-		finally {
-			assertThat(doOnResolve.get()).isEqualTo(TRACE_ID_VALUE);
-			assertThat(doAfterResolve.get()).isEqualTo(0);
-			assertThat(doOnResolveError.get()).isEqualTo(TRACE_ID_VALUE);
+		TcpClient.create()
+				.doOnChannelInit((connectionObserver, channel, remoteAddress) -> {
+					channel.attr(TRACE_ID_KEY).set(TRACE_ID_VALUE);
+				})
+				.host("idontexist")
+				.port(server.port())
+				.doOnResolve(conn -> doOnResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
+				.doAfterResolve((conn, socket) -> doAfterResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
+				.doOnResolveError((conn, th) -> {
+					doOnResolveError.set(conn.channel().attr(TRACE_ID_KEY).get());
+					throwable.set(th);
+				})
+				.connect()
+				.as(StepVerifier::create)
+				.verifyError(UnknownHostException.class);
+
+			assertThat(doOnResolve).hasValue(TRACE_ID_VALUE);
+			assertThat(doAfterResolve).hasValue(0);
+			assertThat(doOnResolveError).hasValue(TRACE_ID_VALUE);
 			assertThat(throwable.get()).isInstanceOf(UnknownHostException.class);
-		}
 	}
 }
