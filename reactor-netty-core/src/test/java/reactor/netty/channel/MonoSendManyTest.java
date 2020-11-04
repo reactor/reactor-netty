@@ -39,7 +39,7 @@ import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.UnicastProcessor;
+import reactor.core.publisher.Sinks;
 import reactor.test.StepVerifier;
 import reactor.test.publisher.TestPublisher;
 import reactor.test.util.RaceTestUtils;
@@ -206,7 +206,6 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void shouldNotLeakIfFusedOnRacingCancelAndOnNext() {
 		int messagesToSend = 128;
 
@@ -219,8 +218,8 @@ public class MonoSendManyTest {
 			//use an extra handler
 			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
 
-			UnicastProcessor<ByteBuf> source = UnicastProcessor.create();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> false);
+			Sinks.Many<ByteBuf> source = Sinks.many().unicast().onBackpressureBuffer();
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source.asFlux(), channel, b -> false);
 			BaseSubscriber<Void> testSubscriber = m
 					.doOnDiscard(ReferenceCounted.class, discarded::add)
 					.subscribeWith(new BaseSubscriber<Void>() {});
@@ -232,7 +231,7 @@ public class MonoSendManyTest {
 
 			RaceTestUtils.race(testSubscriber::cancel, () -> {
 				for (ByteBuf buf : buffersToSend) {
-					source.onNext(buf);
+					source.emitNext(buf, Sinks.EmitFailureHandler.FAIL_FAST);
 				}
 			});
 

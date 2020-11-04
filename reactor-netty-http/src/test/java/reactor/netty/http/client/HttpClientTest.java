@@ -85,9 +85,9 @@ import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
@@ -374,15 +374,14 @@ public class HttpClientTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void prematureCancel() {
-		DirectProcessor<Void> signal = DirectProcessor.create();
+		Sinks.Many<Void> signal = Sinks.unsafe().many().unicast().onBackpressureError();
 		disposableServer =
 				TcpServer.create()
 				         .host("localhost")
 				         .port(0)
 				         .handle((in, out) -> {
-				             signal.onComplete();
+				             signal.tryEmitComplete().orThrow();
 				             return out.withConnection(c -> c.addHandlerFirst(new HttpResponseEncoder()))
 				                       .sendObject(Mono.delay(Duration.ofSeconds(2))
 				                                       .map(t -> new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
@@ -397,7 +396,7 @@ public class HttpClientTest {
 				        .get()
 				        .uri("/")
 				        .responseContent()
-				        .timeout(signal))
+				        .timeout(signal.asFlux()))
 				    .verifyError(TimeoutException.class);
 	}
 
