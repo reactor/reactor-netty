@@ -35,7 +35,7 @@ class ClientTransportResolverHooksTest {
 	private static final long TRACE_ID_VALUE = 125L;
 
 	@Test
-	public void shouldCallHooksInSuccessScenario() {
+	void shouldCallHooksInSuccessScenario() {
 
 		final AtomicLong doOnResolve = new AtomicLong(0);
 		final AtomicLong doAfterResolve = new AtomicLong(0);
@@ -61,7 +61,7 @@ class ClientTransportResolverHooksTest {
 	}
 
 	@Test
-	public void shouldCallHooksInErrorScenario() {
+	void shouldCallHooksInErrorScenario() {
 
 		final AtomicLong doOnResolve = new AtomicLong(0);
 		final AtomicLong doAfterResolve = new AtomicLong(0);
