@@ -163,6 +163,7 @@ public interface LoopResources extends Disposable {
 	 * if you need to synchronously wait for the underlying resources to be disposed.
 	 */
 	@Override
+	@SuppressWarnings("FunctionalInterfaceMethodChanged")
 	default void dispose() {
 		//noop default
 		disposeLater().subscribe();

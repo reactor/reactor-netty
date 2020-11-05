@@ -371,7 +371,14 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				// stop accept new connections for 1 second to allow the channel to recover
 				// See https://github.com/netty/netty/issues/1328
 				config.setAutoRead(false);
-				ctx.channel().eventLoop().schedule(enableAutoReadTask, 1, TimeUnit.SECONDS);
+				ctx.channel()
+				   .eventLoop()
+				   .schedule(enableAutoReadTask, 1, TimeUnit.SECONDS)
+				   .addListener(future -> {
+				       if (!future.isSuccess()) {
+				           log.debug(format(ctx.channel(), "Cannot enable auto-read"), future.cause());
+				       }
+				   });
 			}
 			// still let the exceptionCaught event flow through the pipeline to give the user
 			// a chance to do something with it

@@ -350,6 +350,7 @@ public final class NameResolverProvider {
 	}
 
 	@Override
+	@SuppressWarnings("UndefinedEquals")
 	public boolean equals(Object o) {
 		if (this == o) {
 			return true;
@@ -372,6 +373,7 @@ public final class NameResolverProvider {
 				Objects.equals(loopResources, that.loopResources) &&
 				queryTimeout.equals(that.queryTimeout) &&
 				resolvedAddressTypes == that.resolvedAddressTypes &&
+				// searchDomains is List so Objects.equals is OK
 				Objects.equals(searchDomains, that.searchDomains);
 	}
 

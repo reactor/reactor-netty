@@ -671,7 +671,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		// Context interface impl
 		@Override
-		@SuppressWarnings({"unchecked", "rawtypes"})
+		@SuppressWarnings({"unchecked", "rawtypes", "TypeParameterUnusedInFormals"})
 		public <T> T get(Object key) {
 			if (KEY_ON_DISCARD == key) {
 				return (T) this;

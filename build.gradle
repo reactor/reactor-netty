@@ -133,7 +133,7 @@ subprojects {
 															 "-Xlint:unchecked",
 															 "-Xlint:-serial",      // intentionally disabled
 															 "-Xlint:-options",     // intentionally disabled
-															 "-Xlint:-fallthrough", // intentionally disabled
+															 "-Xlint:fallthrough",
 															 "-Xlint:rawtypes"
 	]
 
