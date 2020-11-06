@@ -210,7 +210,9 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 		Objects.requireNonNull(key, "key");
 		// Reference comparison is deliberate
 		if (ChannelOption.AUTO_READ == key) {
-			log.error("ChannelOption.AUTO_READ is configured to be [false], it cannot be set to [{}]", value);
+			if (value instanceof Boolean && Boolean.TRUE.equals(value)) {
+				log.error("ChannelOption.AUTO_READ is configured to be [false], it cannot be set to [true]");
+			}
 			@SuppressWarnings("unchecked")
 			T dup = (T) this;
 			return dup;
