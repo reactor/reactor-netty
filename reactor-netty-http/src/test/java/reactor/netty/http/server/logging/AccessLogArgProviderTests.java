@@ -19,7 +19,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -119,7 +118,7 @@ class AccessLogArgProviderTests {
 
 	static class TestAccessLogArgProvider extends AbstractAccessLogArgProvider<TestAccessLogArgProvider> {
 
-		TestAccessLogArgProvider(@Nullable SocketAddress remoteAddress) {
+		TestAccessLogArgProvider(SocketAddress remoteAddress) {
 			super(remoteAddress);
 		}
 
