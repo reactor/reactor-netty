@@ -65,6 +65,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -127,6 +128,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 */
 	public Http2SettingsSpec http2SettingsSpec() {
 		return http2Settings;
+	}
+
+	/**
+	 * Return the configured idle timeout for the connection when it is waiting for an HTTP request or null.
+	 *
+	 * @return the configured idle timeout for the connection when it is waiting for an HTTP request or null
+	 */
+	@Nullable
+	public Duration idleTimeout() {
+		return idleTimeout;
 	}
 
 	/**
@@ -211,6 +222,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	HttpRequestDecoderSpec                                  decoder;
 	BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	Http2SettingsSpec                                       http2Settings;
+	Duration                                                idleTimeout;
 	BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
 	int                                                     minCompressionSize;
 	HttpProtocol[]                                          protocols;
@@ -239,6 +251,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.decoder = parent.decoder;
 		this.forwardedHeaderHandler = parent.forwardedHeaderHandler;
 		this.http2Settings = parent.http2Settings;
+		this.idleTimeout = parent.idleTimeout;
 		this.mapHandle = parent.mapHandle;
 		this.minCompressionSize = parent.minCompressionSize;
 		this.protocols = parent.protocols;
@@ -426,7 +439,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Function<String, String> uriTagValue,
-			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable Duration idleTimeout) {
 		HttpServerCodec httpServerCodec =
 				new HttpServerCodec(decoder.maxInitialLineLength(), decoder.maxHeaderSize(),
 						decoder.maxChunkSize(), decoder.validateHeaders(), decoder.initialBufferSize());
@@ -445,7 +459,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		            NettyPipeline.H2CUpgradeHandler, h2cUpgradeHandler)
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
-		            new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder, cookieDecoder, mapHandle));
+		            new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder,
+		                    cookieDecoder, mapHandle, idleTimeout));
 
 		if (ACCESS_LOG) {
 			p.addAfter(NettyPipeline.H2CUpgradeHandler, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
@@ -482,14 +497,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 			int minCompressionSize,
 			@Nullable Function<String, String> uriTagValue,
-			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable Duration idleTimeout) {
 		p.addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpCodec,
 		            new HttpServerCodec(decoder.maxInitialLineLength(), decoder.maxHeaderSize(),
 		                    decoder.maxChunkSize(), decoder.validateHeaders(), decoder.initialBufferSize()))
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
-		            new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder, cookieDecoder, mapHandle));
+		            new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder,
+		                    cookieDecoder, mapHandle, idleTimeout));
 
 		if (ACCESS_LOG) {
 			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
@@ -668,6 +685,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final HttpRequestDecoderSpec                                  decoder;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2Settings                                           http2Settings;
+		final Duration                                                idleTimeout;
 		final ConnectionObserver                                      listener;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 		final Supplier<? extends ChannelMetricsRecorder>              metricsRecorder;
@@ -684,6 +702,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.decoder = initializer.decoder;
 			this.forwardedHeaderHandler = initializer.forwardedHeaderHandler;
 			this.http2Settings = initializer.http2Settings;
+			this.idleTimeout = initializer.idleTimeout;
 			this.listener = listener;
 			this.mapHandle = initializer.mapHandle;
 			this.metricsRecorder = initializer.metricsRecorder;
@@ -708,7 +727,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
 				configureHttp11Pipeline(p, compressPredicate, cookieDecoder, cookieEncoder, decoder, forwardedHeaderHandler,
-						listener, mapHandle, metricsRecorder, minCompressionSize, uriTagValue, accessLog);
+						listener, mapHandle, metricsRecorder, minCompressionSize, uriTagValue, accessLog, idleTimeout);
 				return;
 			}
 
@@ -725,6 +744,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final HttpRequestDecoderSpec                                  decoder;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2Settings                                           http2Settings;
+		final Duration                                                idleTimeout;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 		final Supplier<? extends ChannelMetricsRecorder>              metricsRecorder;
 		final int                                                     minCompressionSize;
@@ -742,6 +762,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.decoder = config.decoder;
 			this.forwardedHeaderHandler = config.forwardedHeaderHandler;
 			this.http2Settings = config.http2Settings();
+			this.idleTimeout = config.idleTimeout;
 			this.mapHandle = config.mapHandle;
 			this.metricsRecorder = config.metricsRecorder();
 			this.minCompressionSize = config.minCompressionSize;
@@ -778,7 +799,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							metricsRecorder,
 							minCompressionSize,
 							uriTagValue,
-							accessLog);
+							accessLog,
+							idleTimeout);
 				}
 				else if ((protocols & h2) == h2) {
 					configureH2Pipeline(
@@ -810,7 +832,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							minCompressionSize,
 							opsFactory,
 							uriTagValue,
-							accessLog);
+							accessLog,
+							idleTimeout);
 				}
 				else if ((protocols & h11) == h11) {
 					configureHttp11Pipeline(
@@ -825,7 +848,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							metricsRecorder,
 							minCompressionSize,
 							uriTagValue,
-							accessLog);
+							accessLog,
+							idleTimeout);
 				}
 				else if ((protocols & h2c) == h2c) {
 					configureH2Pipeline(

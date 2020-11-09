@@ -2236,4 +2236,81 @@ public class HttpServerTests {
 		assertThat(collectedUris).isNotEmpty()
 		                         .containsOnly("/stream/{n}");
 	}
+
+	@Test
+	void testIdleTimeout() throws Exception {
+		doTestIdleTimeout(false);
+		doTestIdleTimeout(true);
+	}
+
+	private void doTestIdleTimeout(boolean applyTimeout) throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		HttpServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, resp) -> {
+				              req.withConnection(conn -> conn.onDispose(latch::countDown));
+				              return resp.sendString(Mono.just("doTestIdleTimeout"));
+				          })
+				          .wiretap(true);
+
+		if (applyTimeout) {
+			server = server.idleTimeout(Duration.ofMillis(200));
+		}
+
+		disposableServer = server.bindNow(Duration.ofSeconds(30));
+
+		HttpClient.create()
+		          .port(disposableServer.port())
+		          .wiretap(true)
+		          .get()
+		          .uri("/")
+		          .responseContent()
+		          .aggregate()
+		          .block(Duration.ofSeconds(30));
+
+		assertThat(latch.await(500, TimeUnit.MILLISECONDS)).isEqualTo(applyTimeout);
+	}
+
+	@Test
+	void testIdleTimeout_DelayFirstRequest() throws Exception {
+		doTestIdleTimeout_DelayFirstRequest(false);
+		doTestIdleTimeout_DelayFirstRequest(true);
+	}
+
+	private void doTestIdleTimeout_DelayFirstRequest(boolean withSecurity) throws Exception {
+		HttpServer server =
+				HttpServer.create()
+				          .port(0)
+				          .idleTimeout(Duration.ofMillis(200))
+				          .handle((req, resp) -> resp.send(req.receive().retain()))
+				          .wiretap(true);
+
+		HttpClient client =
+				HttpClient.create()
+				          .remoteAddress(() -> disposableServer.address())
+				          .wiretap(true)
+				          .disableRetry(true);
+
+		if (withSecurity) {
+			SelfSignedCertificate cert = new SelfSignedCertificate();
+			SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+			SslContextBuilder clientCtx = SslContextBuilder.forClient()
+			                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+			server = server.secure(spec -> spec.sslContext(serverCtx));
+			client = client.secure(spec -> spec.sslContext(clientCtx));
+		}
+
+		disposableServer = server.bindNow(Duration.ofSeconds(30));
+
+		client.post()
+		      .uri("/")
+		      .send((req, out) -> out.sendString(Mono.just("doTestIdleTimeout_DelayFirstRequest")
+		                                             .delaySubscription(Duration.ofMillis(500))))
+		      .responseContent()
+		      .aggregate()
+		      .as(StepVerifier::create)
+		      .expectErrorMatches(t -> t instanceof IOException || t instanceof AbortedException)
+		      .verify(Duration.ofSeconds(30));
+	}
 }

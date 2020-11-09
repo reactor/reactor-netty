@@ -17,6 +17,7 @@
 package reactor.netty.http.server;
 
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -334,6 +335,25 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		Objects.requireNonNull(mapHandle, "mapHandle");
 		HttpServer dup = duplicate();
 		dup.configuration().mapHandle = mapHandle;
+		return dup;
+	}
+
+	/**
+	 * Specifies an idle timeout on the connection when it is waiting for an HTTP request (resolution: ms).
+	 * Once the timeout is reached the connection will be closed.
+	 * <p>If an {@code idleTimeout} is not specified, this indicates no timeout (i.e. infinite),
+	 * which means the connection will be closed only if one of the peers decides to close it.
+	 * <p>If the {@code idleTimeout} is less than {@code 1ms}, then {@code 1ms} will be the idle timeout.
+	 * <p>By default {@code idleTimeout} is not specified.
+	 *
+	 * @param idleTimeout an idle timeout on the connection when it is waiting for an HTTP request (resolution: ms)
+	 * @return a new {@link HttpServer}
+	 * @since 0.9.15
+	 */
+	public final HttpServer idleTimeout(Duration idleTimeout) {
+		Objects.requireNonNull(idleTimeout, "idleTimeout");
+		HttpServer dup = duplicate();
+		dup.configuration().idleTimeout = idleTimeout;
 		return dup;
 	}
 
