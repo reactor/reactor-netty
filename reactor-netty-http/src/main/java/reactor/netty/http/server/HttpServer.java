@@ -90,6 +90,35 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		return HttpServerBind.applyTcpServerConfig(tcpServer.configuration());
 	}
 
+	/**
+	 * Provide customized access log.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .port(8080)
+	 *           .route(r -> r.get("/hello",
+	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                                    .sendString(Mono.just("Hello World!"))))
+	 *           .accessLog(argProvider ->
+	 *                   AccessLog.create("user-agent={}", argProvider.requestHeader("user-agent")))
+	 *           .bindNow()
+	 *           .onDispose()
+	 *           .block();
+	 * }
+	 * </pre>
+	 *
+	 * @param accessLog apply an {@link AccessLog} by an {@link AccessLogArgProvider}
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLog) {
+		Objects.requireNonNull(accessLog, "accessLog");
+		HttpServer dup = duplicate();
+		dup.configuration().accessLog = accessLog;
+		return dup;
+	}
+
 	@Override
 	public final HttpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
 		return super.bindAddress(bindAddressSupplier);
@@ -196,6 +225,20 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
+	 * Specifies a custom request handler for deriving information about the connection.
+	 *
+	 * @param handler the forwarded header handler
+	 * @return a new {@link HttpServer}
+	 * @since 0.9.12
+	 */
+	public final HttpServer forwarded(BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> handler) {
+		Objects.requireNonNull(handler, "handler");
+		HttpServer dup = duplicate();
+		dup.configuration().forwardedHeaderHandler = handler;
+		return dup;
+	}
+
+	/**
 	 * Specifies whether support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
 	 * HTTP request headers for deriving information about the connection is enabled.
 	 *
@@ -220,20 +263,6 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 			return dup;
 		}
 		return this;
-	}
-
-	/**
-	 * Specifies a custom request handler for deriving information about the connection.
-	 *
-	 * @param handler the forwarded header handler
-	 * @return a new {@link HttpServer}
-	 * @since 0.9.12
-	 */
-	public final HttpServer forwarded(BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> handler) {
-		Objects.requireNonNull(handler, "handler");
-		HttpServer dup = duplicate();
-		dup.configuration().forwardedHeaderHandler = handler;
-		return dup;
 	}
 
 	/**
@@ -528,35 +557,6 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		Objects.requireNonNull(sslProvider, "sslProvider");
 		HttpServer dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
-		return dup;
-	}
-
-	/**
-	 * Provide customized access log.
-	 * <p>
-	 * Example:
-	 * <pre>
-	 * {@code
-	 * HttpServer.create()
-	 *         .port(8080)
-	 *         .route(r -> r.get("/hello",
-	 *                 (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
-	 *                         .sendString(Mono.just("Hello World!"))))
-	 *         .accessLog(argProvider ->
-	 *                 AccessLog.create("user-agent={}", argProvider.requestHeader("user-agent")))
-	 *         .bindNow()
-	 *         .onDispose()
-	 *         .block();
-	 * }
-	 * </pre>
-	 *
-	 * @param accessLog apply an {@link AccessLog} by an {@link AccessLogArgProvider}
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLog) {
-		Objects.requireNonNull(accessLog, "accessLog");
-		HttpServer dup = duplicate();
-		dup.configuration().accessLog = accessLog;
 		return dup;
 	}
 
