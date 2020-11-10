@@ -156,7 +156,8 @@ final class HttpServerBind extends HttpServer
 								conf.forwardedHeaderHandler,
 								conf.cookieEncoder,
 								conf.cookieDecoder,
-								conf.uriTagValue));
+								conf.uriTagValue,
+								conf.idleTimeout));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h11) == HttpServerConfiguration.h11) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -171,7 +172,8 @@ final class HttpServerBind extends HttpServer
 								conf.forwardedHeaderHandler,
 								conf.cookieEncoder,
 								conf.cookieDecoder,
-								conf.uriTagValue));
+								conf.uriTagValue,
+								conf.idleTimeout));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h2) == HttpServerConfiguration.h2) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -206,7 +208,8 @@ final class HttpServerBind extends HttpServer
 								conf.cookieEncoder,
 								conf.cookieDecoder,
 								conf.uriTagValue,
-								conf.decoder.h2cMaxContentLength));
+								conf.decoder.h2cMaxContentLength,
+								conf.idleTimeout));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h11) == HttpServerConfiguration.h11) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -221,7 +224,8 @@ final class HttpServerBind extends HttpServer
 								conf.forwardedHeaderHandler,
 								conf.cookieEncoder,
 								conf.cookieDecoder,
-								conf.uriTagValue));
+								conf.uriTagValue,
+								conf.idleTimeout));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h2c) == HttpServerConfiguration.h2c) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -334,6 +338,7 @@ final class HttpServerBind extends HttpServer
 		final ServerCookieEncoder                                     cookieEncoder;
 		final ServerCookieDecoder                                     cookieDecoder;
 		final Function<String, String>                                uriTagValue;
+		final Duration                                                idleTimeout;
 
 		Http1Initializer(int line,
 				int header,
@@ -345,7 +350,8 @@ final class HttpServerBind extends HttpServer
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				ServerCookieEncoder encoder,
 				ServerCookieDecoder decoder,
-				@Nullable Function<String, String> uriTagValue) {
+				@Nullable Function<String, String> uriTagValue,
+				@Nullable Duration idleTimeout) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -357,6 +363,7 @@ final class HttpServerBind extends HttpServer
 			this.cookieEncoder = encoder;
 			this.cookieDecoder = decoder;
 			this.uriTagValue = uriTagValue;
+			this.idleTimeout = idleTimeout;
 		}
 
 		@Override
@@ -377,7 +384,7 @@ final class HttpServerBind extends HttpServer
 			}
 
 			p.addLast(NettyPipeline.HttpTrafficHandler,
-					new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder, cookieDecoder));
+					new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder, cookieDecoder, idleTimeout));
 
 			ChannelHandler channelMetricsHandler = p.get(NettyPipeline.ChannelMetricsHandler);
 			if (channelMetricsHandler != null) {
@@ -411,6 +418,7 @@ final class HttpServerBind extends HttpServer
 		final ServerCookieDecoder                                     cookieDecoder;
 		final Function<String, String>                                uriTagValue;
 		final int                                                     h2cMaxContentLength;
+		final Duration                                                idleTimeout;
 
 		Http1OrH2CleartextInitializer(int line,
 				int header,
@@ -423,7 +431,8 @@ final class HttpServerBind extends HttpServer
 				ServerCookieEncoder encoder,
 				ServerCookieDecoder decoder,
 				@Nullable Function<String, String> uriTagValue,
-				int h2cMaxContentLength) {
+				int h2cMaxContentLength,
+				@Nullable Duration idleTimeout) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -436,6 +445,7 @@ final class HttpServerBind extends HttpServer
 			this.cookieDecoder = decoder;
 			this.uriTagValue = uriTagValue;
 			this.h2cMaxContentLength = h2cMaxContentLength;
+			this.idleTimeout = idleTimeout;
 		}
 
 		@Override
@@ -490,7 +500,7 @@ final class HttpServerBind extends HttpServer
 			}
 
 			p.addLast(NettyPipeline.HttpTrafficHandler,
-					new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder, cookieDecoder));
+					new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder, cookieDecoder, idleTimeout));
 
 			ChannelHandler channelMetricsHandler = p.get(NettyPipeline.ChannelMetricsHandler);
 			if (channelMetricsHandler != null) {
@@ -621,6 +631,7 @@ final class HttpServerBind extends HttpServer
 		final ServerCookieEncoder                                     cookieEncoder;
 		final ServerCookieDecoder                                     cookieDecoder;
 		final Function<String, String>                                uriTagValue;
+		final Duration                                                idleTimeout;
 
 		Http1OrH2Initializer(
 				int line,
@@ -633,7 +644,8 @@ final class HttpServerBind extends HttpServer
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				ServerCookieEncoder encoder,
 				ServerCookieDecoder decoder,
-				@Nullable Function<String, String> uriTagValue) {
+				@Nullable Function<String, String> uriTagValue,
+				@Nullable Duration idleTimeout) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -645,6 +657,7 @@ final class HttpServerBind extends HttpServer
 			this.cookieEncoder = encoder;
 			this.cookieDecoder = decoder;
 			this.uriTagValue = uriTagValue;
+			this.idleTimeout = idleTimeout;
 		}
 
 		@Override
@@ -697,7 +710,8 @@ final class HttpServerBind extends HttpServer
 						new HttpServerCodec(parent.line, parent.header, parent.chunk, parent.validate, parent.buffer))
 				 .addBefore(NettyPipeline.ReactiveBridge,
 						 NettyPipeline.HttpTrafficHandler,
-						 new HttpTrafficHandler(listener, parent.forwardedHeaderHandler, parent.compressPredicate, parent.cookieEncoder, parent.cookieDecoder));
+						 new HttpTrafficHandler(listener, parent.forwardedHeaderHandler, parent.compressPredicate,
+								parent.cookieEncoder, parent.cookieDecoder, parent.idleTimeout));
 
 				if (ACCESS_LOG) {
 					p.addAfter(NettyPipeline.HttpCodec,

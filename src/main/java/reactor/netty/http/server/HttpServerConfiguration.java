@@ -16,6 +16,7 @@
 
 package reactor.netty.http.server;
 
+import java.time.Duration;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -47,6 +48,7 @@ final class HttpServerConfiguration {
 	ServerCookieEncoder    cookieEncoder      = ServerCookieEncoder.STRICT;
 	ServerCookieDecoder    cookieDecoder      = ServerCookieDecoder.STRICT;
 	int                    protocols          = h11;
+	Duration               idleTimeout        = null;
 
 	Function<String, String> uriTagValue      = null;
 
@@ -141,6 +143,11 @@ final class HttpServerConfiguration {
 
 	static ServerBootstrap uriTagValue(ServerBootstrap b, @Nullable Function<String, String> uriTagValue) {
 		getOrCreate(b).uriTagValue = uriTagValue;
+		return b;
+	}
+
+	static ServerBootstrap idleTimeout(ServerBootstrap b, @Nullable Duration idleTimeout) {
+		getOrCreate(b).idleTimeout = idleTimeout;
 		return b;
 	}
 

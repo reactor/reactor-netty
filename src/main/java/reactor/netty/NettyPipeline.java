@@ -59,6 +59,7 @@ public interface NettyPipeline {
 	String HttpDecompressor   = LEFT + "decompressor";
 	String HttpAggregator     = LEFT + "httpAggregator";
 	String HttpTrafficHandler = LEFT + "httpTrafficHandler";
+	String IdleTimeoutHandler = LEFT + "idleTimeoutHandler";
 	/**
 	 * @deprecated as of 0.9.8. Not used in 1.0.0 version.
 	 */
