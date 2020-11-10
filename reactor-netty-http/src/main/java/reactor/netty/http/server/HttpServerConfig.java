@@ -266,9 +266,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	@Override
 	protected ChannelPipelineConfigurer defaultOnChannelInit() {
 		return super.defaultOnChannelInit()
-		            .then(new HttpServerChannelInitializer(compressPredicate, cookieDecoder, cookieEncoder,
-		                decoder, forwardedHeaderHandler, http2Settings(), mapHandle, metricsRecorder(), minCompressionSize, channelOperationsProvider(),
-		                    _protocols, proxyProtocolSupportType, sslProvider, uriTagValue, accessLog));
+		            .then(new HttpServerChannelInitializer(this));
 	}
 
 	@Override
@@ -677,34 +675,21 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ChannelOperations.OnSetup                               opsFactory;
 		final Function<String, String>                                uriTagValue;
 
-		H2OrHttp11Codec(
-				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
-				ServerCookieDecoder cookieDecoder,
-				ServerCookieEncoder cookieEncoder,
-				HttpRequestDecoderSpec decoder,
-				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
-				Http2Settings http2Settings,
-				ConnectionObserver listener,
-				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
-				int minCompressionSize,
-				ChannelOperations.OnSetup opsFactory,
-				@Nullable Function<String, String> uriTagValue,
-				@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+		H2OrHttp11Codec(HttpServerChannelInitializer initializer, ConnectionObserver listener) {
 			super(ApplicationProtocolNames.HTTP_1_1);
-			this.accessLog = accessLog;
-			this.compressPredicate = compressPredicate;
-			this.cookieDecoder = cookieDecoder;
-			this.cookieEncoder = cookieEncoder;
-			this.decoder = decoder;
-			this.forwardedHeaderHandler = forwardedHeaderHandler;
-			this.http2Settings = http2Settings;
+			this.accessLog = initializer.accessLog;
+			this.compressPredicate = compressPredicate(initializer.compressPredicate, initializer.minCompressionSize);
+			this.cookieDecoder = initializer.cookieDecoder;
+			this.cookieEncoder = initializer.cookieEncoder;
+			this.decoder = initializer.decoder;
+			this.forwardedHeaderHandler = initializer.forwardedHeaderHandler;
+			this.http2Settings = initializer.http2Settings;
 			this.listener = listener;
-			this.mapHandle = mapHandle;
-			this.metricsRecorder = metricsRecorder;
-			this.minCompressionSize = minCompressionSize;
-			this.opsFactory = opsFactory;
-			this.uriTagValue = uriTagValue;
+			this.mapHandle = initializer.mapHandle;
+			this.metricsRecorder = initializer.metricsRecorder;
+			this.minCompressionSize = initializer.minCompressionSize;
+			this.opsFactory = initializer.opsFactory;
+			this.uriTagValue = initializer.uriTagValue;
 		}
 
 		@Override
@@ -749,37 +734,22 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final SslProvider                                             sslProvider;
 		final Function<String, String>                                uriTagValue;
 
-		HttpServerChannelInitializer(
-				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
-				ServerCookieDecoder cookieDecoder,
-				ServerCookieEncoder cookieEncoder,
-				HttpRequestDecoderSpec decoder,
-				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
-				Http2Settings http2Settings,
-				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
-				int minCompressionSize,
-				ChannelOperations.OnSetup opsFactory,
-				int protocols,
-				ProxyProtocolSupportType proxyProtocolSupportType,
-				@Nullable SslProvider sslProvider,
-				@Nullable Function<String, String> uriTagValue,
-				@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
-			this.accessLog = accessLog;
-			this.compressPredicate = compressPredicate;
-			this.cookieDecoder = cookieDecoder;
-			this.cookieEncoder = cookieEncoder;
-			this.decoder = decoder;
-			this.forwardedHeaderHandler = forwardedHeaderHandler;
-			this.http2Settings = http2Settings;
-			this.mapHandle = mapHandle;
-			this.metricsRecorder = metricsRecorder;
-			this.minCompressionSize = minCompressionSize;
-			this.opsFactory = opsFactory;
-			this.protocols = protocols;
-			this.proxyProtocolSupportType = proxyProtocolSupportType;
-			this.sslProvider = sslProvider;
-			this.uriTagValue = uriTagValue;
+		HttpServerChannelInitializer(HttpServerConfig config) {
+			this.accessLog = config.accessLog;
+			this.compressPredicate = config.compressPredicate;
+			this.cookieDecoder = config.cookieDecoder;
+			this.cookieEncoder = config.cookieEncoder;
+			this.decoder = config.decoder;
+			this.forwardedHeaderHandler = config.forwardedHeaderHandler;
+			this.http2Settings = config.http2Settings();
+			this.mapHandle = config.mapHandle;
+			this.metricsRecorder = config.metricsRecorder();
+			this.minCompressionSize = config.minCompressionSize;
+			this.opsFactory = config.channelOperationsProvider();
+			this.protocols = config._protocols;
+			this.proxyProtocolSupportType = config.proxyProtocolSupportType;
+			this.sslProvider = config.sslProvider;
+			this.uriTagValue = config.uriTagValue;
 		}
 
 		@Override
@@ -791,20 +761,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 				if ((protocols & h11orH2) == h11orH2) {
 					channel.pipeline()
-					       .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2OrHttp11Codec, new H2OrHttp11Codec(
-					               compressPredicate(compressPredicate, minCompressionSize),
-					               cookieDecoder,
-					               cookieEncoder,
-					               decoder,
-					               forwardedHeaderHandler,
-					               http2Settings,
-					               observer,
-					               mapHandle,
-					               metricsRecorder,
-					               minCompressionSize,
-					               opsFactory,
-					               uriTagValue,
-							       accessLog));
+					       .addBefore(NettyPipeline.ReactiveBridge,
+					                  NettyPipeline.H2OrHttp11Codec,
+					                  new H2OrHttp11Codec(this, observer));
 				}
 				else if ((protocols & h11) == h11) {
 					configureHttp11Pipeline(

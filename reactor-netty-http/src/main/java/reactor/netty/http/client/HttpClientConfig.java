@@ -397,8 +397,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Override
 	protected ChannelPipelineConfigurer defaultOnChannelInit() {
 		return super.defaultOnChannelInit()
-		            .then(new HttpClientChannelInitializer(acceptGzip, decoder, http2Settings(),
-		                metricsRecorder(), channelOperationsProvider(), _protocols, sslProvider, uriTagValue));
+		            .then(new HttpClientChannelInitializer(this));
 	}
 
 	@Override
@@ -698,19 +697,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final ConnectionObserver                         observer;
 		final Function<String, String>                   uriTagValue;
 
-		H2OrHttp11Codec(
-				boolean acceptGzip,
-				HttpResponseDecoderSpec decoder,
-				Http2Settings http2Settings,
-				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
-				ConnectionObserver observer,
-				@Nullable Function<String, String> uriTagValue) {
-			this.acceptGzip = acceptGzip;
-			this.decoder = decoder;
-			this.http2Settings = http2Settings;
-			this.metricsRecorder = metricsRecorder;
+		H2OrHttp11Codec(HttpClientChannelInitializer initializer, ConnectionObserver observer) {
+			this.acceptGzip = initializer.acceptGzip;
+			this.decoder = initializer.decoder;
+			this.http2Settings = initializer.http2Settings;
+			this.metricsRecorder = initializer.metricsRecorder;
 			this.observer = observer;
-			this.uriTagValue = uriTagValue;
+			this.uriTagValue = initializer.uriTagValue;
 		}
 
 		@Override
@@ -750,23 +743,15 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final SslProvider                                sslProvider;
 		final Function<String, String>                   uriTagValue;
 
-		HttpClientChannelInitializer(
-				boolean acceptGzip,
-				HttpResponseDecoderSpec decoder,
-				Http2Settings http2Settings,
-				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
-				ChannelOperations.OnSetup opsFactory,
-				int protocols,
-				@Nullable SslProvider sslProvider,
-				@Nullable Function<String, String> uriTagValue) {
-			this.acceptGzip = acceptGzip;
-			this.decoder = decoder;
-			this.http2Settings = http2Settings;
-			this.metricsRecorder = metricsRecorder;
-			this.opsFactory = opsFactory;
-			this.protocols = protocols;
-			this.sslProvider = sslProvider;
-			this.uriTagValue = uriTagValue;
+		HttpClientChannelInitializer(HttpClientConfig config) {
+			this.acceptGzip = config.acceptGzip;
+			this.decoder = config.decoder;
+			this.http2Settings = config.http2Settings();
+			this.metricsRecorder = config.metricsRecorder();
+			this.opsFactory = config.channelOperationsProvider();
+			this.protocols = config._protocols;
+			this.sslProvider = config.sslProvider;
+			this.uriTagValue = config.uriTagValue;
 		}
 
 		@Override
@@ -777,7 +762,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				if ((protocols & h11orH2) == h11orH2) {
 					channel.pipeline()
 					       .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2OrHttp11Codec,
-					               new H2OrHttp11Codec(acceptGzip, decoder, http2Settings, metricsRecorder, observer, uriTagValue));
+					               new H2OrHttp11Codec(this, observer));
 				}
 				else if ((protocols & h11) == h11) {
 					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, uriTagValue);
