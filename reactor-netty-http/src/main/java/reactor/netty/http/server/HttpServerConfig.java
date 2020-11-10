@@ -204,6 +204,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	// Protected/Package private write API
 
+	Function<AccessLogArgProvider, AccessLog>               accessLog;
 	BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 	ServerCookieDecoder                                     cookieDecoder;
 	ServerCookieEncoder                                     cookieEncoder;
@@ -217,14 +218,12 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	ProxyProtocolSupportType                                proxyProtocolSupportType;
 	SslProvider                                             sslProvider;
 	Function<String, String>                                uriTagValue;
-	Function<AccessLogArgProvider, AccessLog>               accessLog;
 
 	HttpServerConfig(Map<ChannelOption<?>, ?> options, Map<ChannelOption<?>, ?> childOptions, Supplier<? extends SocketAddress> localAddress) {
 		super(options, childOptions, localAddress);
 		this.cookieDecoder = ServerCookieDecoder.STRICT;
 		this.cookieEncoder = ServerCookieEncoder.STRICT;
 		this.decoder = new HttpRequestDecoderSpec();
-		this.forwardedHeaderHandler = null;
 		this.minCompressionSize = -1;
 		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
 		this._protocols = h11;
@@ -233,6 +232,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	HttpServerConfig(HttpServerConfig parent) {
 		super(parent);
+		this.accessLog = parent.accessLog;
 		this.compressPredicate = parent.compressPredicate;
 		this.cookieDecoder = parent.cookieDecoder;
 		this.cookieEncoder = parent.cookieEncoder;
@@ -246,7 +246,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.proxyProtocolSupportType = parent.proxyProtocolSupportType;
 		this.sslProvider = parent.sslProvider;
 		this.uriTagValue = parent.uriTagValue;
-		this.accessLog = parent.accessLog;
 	}
 
 	@Override
@@ -567,26 +566,26 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final class H2Codec extends ChannelInitializer<Channel> {
 
+		final Function<AccessLogArgProvider, AccessLog>               accessLog;
+		final ServerCookieDecoder                                     cookieDecoder;
+		final ServerCookieEncoder                                     cookieEncoder;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final ConnectionObserver                                      listener;
-		final ServerCookieEncoder                                     cookieEncoder;
-		final ServerCookieDecoder                                     cookieDecoder;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 		final ChannelOperations.OnSetup                               opsFactory;
-		final Function<AccessLogArgProvider, AccessLog>               accessLog;
 
 		H2Codec(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				ServerCookieEncoder encoder, ServerCookieDecoder decoder,
 				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 				@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+			this.accessLog = accessLog;
+			this.cookieDecoder = decoder;
+			this.cookieEncoder = encoder;
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
 			this.listener = listener;
-			this.cookieEncoder = encoder;
-			this.cookieDecoder = decoder;
 			this.mapHandle = mapHandle;
 			this.opsFactory = opsFactory;
-			this.accessLog = accessLog;
 		}
 
 		@Override
@@ -600,6 +599,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	static final class Http11OrH2CleartextCodec extends ChannelInitializer<Channel>
 			implements HttpServerUpgradeHandler.UpgradeCodecFactory {
 
+		final Function<AccessLogArgProvider, AccessLog>               accessLog;
 		final ServerCookieDecoder                                     cookieDecoder;
 		final ServerCookieEncoder                                     cookieEncoder;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
@@ -607,7 +607,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ConnectionObserver                                      listener;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 		final ChannelOperations.OnSetup                               opsFactory;
-		final Function<AccessLogArgProvider, AccessLog>               accessLog;
 
 		Http11OrH2CleartextCodec(
 				ServerCookieDecoder cookieDecoder,
@@ -620,6 +619,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				ChannelOperations.OnSetup opsFactory,
 				boolean validate,
 				@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+			this.accessLog = accessLog;
 			this.cookieDecoder = cookieDecoder;
 			this.cookieEncoder = cookieEncoder;
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
@@ -637,7 +637,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.listener = listener;
 			this.mapHandle = mapHandle;
 			this.opsFactory = opsFactory;
-			this.accessLog = accessLog;
 		}
 
 		/**
@@ -664,6 +663,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final class H2OrHttp11Codec extends ApplicationProtocolNegotiationHandler {
 
+		final Function<AccessLogArgProvider, AccessLog>               accessLog;
 		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 		final ServerCookieDecoder                                     cookieDecoder;
 		final ServerCookieEncoder                                     cookieEncoder;
@@ -676,7 +676,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
 		final Function<String, String>                                uriTagValue;
-		final Function<AccessLogArgProvider, AccessLog>               accessLog;
 
 		H2OrHttp11Codec(
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
@@ -693,6 +692,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable Function<String, String> uriTagValue,
 				@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
 			super(ApplicationProtocolNames.HTTP_1_1);
+			this.accessLog = accessLog;
 			this.compressPredicate = compressPredicate;
 			this.cookieDecoder = cookieDecoder;
 			this.cookieEncoder = cookieEncoder;
@@ -705,7 +705,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.minCompressionSize = minCompressionSize;
 			this.opsFactory = opsFactory;
 			this.uriTagValue = uriTagValue;
-			this.accessLog = accessLog;
 		}
 
 		@Override
@@ -734,6 +733,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final class HttpServerChannelInitializer implements ChannelPipelineConfigurer {
 
+		final Function<AccessLogArgProvider, AccessLog>               accessLog;
 		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 		final ServerCookieDecoder                                     cookieDecoder;
 		final ServerCookieEncoder                                     cookieEncoder;
@@ -748,7 +748,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ProxyProtocolSupportType                                proxyProtocolSupportType;
 		final SslProvider                                             sslProvider;
 		final Function<String, String>                                uriTagValue;
-		final Function<AccessLogArgProvider, AccessLog>               accessLog;
 
 		HttpServerChannelInitializer(
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
@@ -766,6 +765,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable SslProvider sslProvider,
 				@Nullable Function<String, String> uriTagValue,
 				@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+			this.accessLog = accessLog;
 			this.compressPredicate = compressPredicate;
 			this.cookieDecoder = cookieDecoder;
 			this.cookieEncoder = cookieEncoder;
@@ -780,7 +780,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.proxyProtocolSupportType = proxyProtocolSupportType;
 			this.sslProvider = sslProvider;
 			this.uriTagValue = uriTagValue;
-			this.accessLog = accessLog;
 		}
 
 		@Override
