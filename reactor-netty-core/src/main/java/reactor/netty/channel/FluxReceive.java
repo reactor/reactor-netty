@@ -140,6 +140,15 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public void subscribe(CoreSubscriber<? super Object> s) {
+		if (eventLoop.inEventLoop()){
+			startReceiver(s);
+		}
+		else {
+			eventLoop.execute(() -> startReceiver(s));
+		}
+	}
+
+	final void startReceiver(CoreSubscriber<? super Object> s) {
 		if (once == 0 && ONCE.compareAndSet(this, 0, 1)) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel, "{}: subscribing inbound receiver"), this);
