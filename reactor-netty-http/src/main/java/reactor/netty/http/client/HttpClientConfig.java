@@ -483,8 +483,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		return settings;
 	}
 
-	static void configureHttp2Pipeline(ChannelPipeline p, HttpResponseDecoderSpec decoder, Http2Settings http2Settings,
-			ConnectionObserver observer) {
+	static void configureHttp2Pipeline(ChannelPipeline p, boolean acceptGzip, HttpResponseDecoderSpec decoder,
+			Http2Settings http2Settings, ConnectionObserver observer) {
 		Http2FrameCodecBuilder http2FrameCodecBuilder =
 				Http2FrameCodecBuilder.forClient()
 				                      .validateHeaders(decoder.validateHeaders())
@@ -496,7 +496,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
-		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(new H2Codec()))
+		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(new H2Codec(acceptGzip)))
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(observer));
 	}
 
@@ -531,7 +531,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		Http2FrameCodec http2FrameCodec = http2FrameCodecBuilder.build();
 
-		Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(http2FrameCodec, new H2CleartextCodec(http2FrameCodec, opsFactory));
+		Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(http2FrameCodec,
+				new H2CleartextCodec(http2FrameCodec, opsFactory, acceptGzip));
 
 		HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(httpClientCodec, upgradeCodec, decoder.h2cMaxContentLength());
 
@@ -540,7 +541,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(observer));
 
 		if (acceptGzip) {
-			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
+			p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
 		}
 
 		if (metricsRecorder != null) {
@@ -584,10 +585,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 	}
 
-	static Future<Http2StreamChannel> openStream(Channel channel, ConnectionObserver observer, ChannelOperations.OnSetup opsFactory) {
+	static Future<Http2StreamChannel> openStream(Channel channel, ConnectionObserver observer,
+			ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
 		Http2StreamChannelBootstrap bootstrap = new Http2StreamChannelBootstrap(channel);
 		bootstrap.option(ChannelOption.AUTO_READ, false);
-		bootstrap.handler(new H2Codec(observer, opsFactory));
+		bootstrap.handler(new H2Codec(observer, opsFactory, acceptGzip));
 		return bootstrap.open();
 	}
 
@@ -620,10 +622,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	static final class H2CleartextCodec extends ChannelHandlerAdapter {
 
+		final boolean acceptGzip;
 		final Http2FrameCodec http2FrameCodec;
 		final ChannelOperations.OnSetup opsFactory;
 
-		H2CleartextCodec(Http2FrameCodec http2FrameCodec, ChannelOperations.OnSetup opsFactory) {
+		H2CleartextCodec(Http2FrameCodec http2FrameCodec, ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
+			this.acceptGzip = acceptGzip;
 			this.http2FrameCodec = http2FrameCodec;
 			this.opsFactory = opsFactory;
 		}
@@ -633,7 +637,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			ChannelPipeline pipeline = ctx.pipeline();
 			pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, http2FrameCodec)
 			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler,
-			                new Http2MultiplexHandler(new H2Codec(opsFactory), new H2Codec(opsFactory)));
+			                new Http2MultiplexHandler(new H2Codec(opsFactory, acceptGzip), new H2Codec(opsFactory, acceptGzip)));
 			if (pipeline.get(NettyPipeline.HttpDecompressor) != null) {
 				pipeline.remove(NettyPipeline.HttpDecompressor);
 			}
@@ -643,18 +647,20 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	static final class H2Codec extends ChannelInitializer<Channel> {
+		final boolean acceptGzip;
 		final ConnectionObserver observer;
 		final ChannelOperations.OnSetup opsFactory;
 
-		H2Codec() {
-			this(null, null);
+		H2Codec(boolean acceptGzip) {
+			this(null, null, acceptGzip);
 		}
 
-		H2Codec(@Nullable ChannelOperations.OnSetup opsFactory) {
-			this(null, opsFactory);
+		H2Codec(@Nullable ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
+			this(null, opsFactory, acceptGzip);
 		}
 
-		H2Codec(@Nullable ConnectionObserver observer, @Nullable ChannelOperations.OnSetup opsFactory) {
+		H2Codec(@Nullable ConnectionObserver observer, @Nullable ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
+			this.acceptGzip = acceptGzip;
 			this.observer = observer;
 			this.opsFactory = opsFactory;
 		}
@@ -676,10 +682,14 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			}
 		}
 
-		static void addStreamHandlers(Channel ch, ConnectionObserver obs, ChannelOperations.OnSetup opsFactory) {
-			ch.pipeline()
-			  .addLast(NettyPipeline.H2ToHttp11Codec, new Http2StreamFrameToHttpObjectCodec(false))
-			  .addLast(NettyPipeline.HttpTrafficHandler, new Http2StreamBridgeClientHandler(obs, opsFactory));
+		void addStreamHandlers(Channel ch, ConnectionObserver obs, ChannelOperations.OnSetup opsFactory) {
+			ChannelPipeline pipeline = ch.pipeline();
+			pipeline.addLast(NettyPipeline.H2ToHttp11Codec, new Http2StreamFrameToHttpObjectCodec(false))
+			        .addLast(NettyPipeline.HttpTrafficHandler, new Http2StreamBridgeClientHandler(obs, opsFactory));
+
+			if (acceptGzip) {
+				pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
+			}
 
 			ChannelOperations.addReactiveBridge(ch, opsFactory, obs);
 
@@ -717,7 +727,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				log.debug(format(ctx.channel(), "Negotiated application-level protocol [" + protocol + "]"));
 			}
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-				configureHttp2Pipeline(ctx.channel().pipeline(), decoder, http2Settings, observer);
+				configureHttp2Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, http2Settings, observer);
 			}
 			else if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
 				configureHttp11Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, metricsRecorder, uriTagValue);
@@ -768,7 +778,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, uriTagValue);
 				}
 				else if ((protocols & h2) == h2) {
-					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
+					configureHttp2Pipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, observer);
 				}
 			}
 			else {
@@ -779,7 +789,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, uriTagValue);
 				}
 				else if ((protocols & h2c) == h2c) {
-					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
+					configureHttp2Pipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, observer);
 				}
 			}
 		}

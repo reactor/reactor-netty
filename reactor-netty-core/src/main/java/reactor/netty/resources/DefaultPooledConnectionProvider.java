@@ -81,12 +81,13 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 	@Override
 	protected CoreSubscriber<PooledRef<PooledConnection>> createDisposableAcquire(
+			TransportConfig config,
 			ConnectionObserver connectionObserver,
-			ChannelOperations.OnSetup opsFactory,
 			long pendingAcquireTimeout,
 			InstrumentedPool<PooledConnection> pool,
 			MonoSink<Connection> sink) {
-		return new DisposableAcquire(connectionObserver, opsFactory, pendingAcquireTimeout, pool, sink);
+		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
+				pendingAcquireTimeout, pool, sink);
 	}
 
 	@Override

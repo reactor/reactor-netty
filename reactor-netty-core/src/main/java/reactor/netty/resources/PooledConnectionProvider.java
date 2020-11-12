@@ -117,7 +117,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			});
 
 			pool.acquire(Duration.ofMillis(poolFactory.pendingAcquireTimeout))
-			    .subscribe(createDisposableAcquire(connectionObserver, config.channelOperationsProvider(),
+			    .subscribe(createDisposableAcquire(config, connectionObserver,
 			            poolFactory.pendingAcquireTimeout, pool, sink));
 		});
 	}
@@ -170,8 +170,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	}
 
 	protected abstract CoreSubscriber<PooledRef<T>> createDisposableAcquire(
+			TransportConfig config,
 			ConnectionObserver connectionObserver,
-			ChannelOperations.OnSetup opsFactory,
 			long pendingAcquireTimeout,
 			InstrumentedPool<T> pool,
 			MonoSink<Connection> sink);

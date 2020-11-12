@@ -16,15 +16,23 @@
 package reactor.netty.http;
 
 import java.io.ByteArrayInputStream;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
@@ -42,20 +50,46 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Violeta Georgieva
  */
 public class HttpCompressionClientServerTests {
-	HttpServer server;
+
+	@Retention(RetentionPolicy.RUNTIME)
+	@Target(ElementType.METHOD)
+	@ParameterizedTest(name = "{index}: {0}, {1}")
+	@MethodSource("data")
+	@interface ParameterizedCompressionTest {
+	}
 
 	DisposableServer disposableServer;
 
-	HttpClient client;
+	public static Object[][] data() throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		SslContextBuilder clientCtx = SslContextBuilder.forClient()
+		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 
-	@BeforeEach
-	void setUp() {
-		server = HttpServer.create()
-		                   .port(0)
-		                   .wiretap(true);
+		HttpServer server = HttpServer.create()
+		                              .port(0)
+		                              .wiretap(true);
 
-		client = HttpClient.create()
-		                   .wiretap(true);
+		HttpServer h2Server = server.protocol(HttpProtocol.H2)
+		                            .secure(spec -> spec.sslContext(serverCtx));
+
+		HttpServer h2Http1Server = server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11)
+		                                 .secure(spec -> spec.sslContext(serverCtx));
+
+		HttpClient client = HttpClient.create()
+		                              .wiretap(true);
+
+		HttpClient h2Client = client.protocol(HttpProtocol.H2)
+		                            .secure(spec -> spec.sslContext(clientCtx));
+
+		HttpClient h2Http1Client = client.protocol(HttpProtocol.H2, HttpProtocol.HTTP11)
+		                                 .secure(spec -> spec.sslContext(clientCtx));
+
+		return new Object[][] {{server, client},
+				{server.protocol(HttpProtocol.H2C), client.protocol(HttpProtocol.H2C)},
+				{server.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11), client.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)},
+				{h2Server, h2Client},
+				{h2Http1Server, h2Http1Client}};
 	}
 
 	@AfterEach
@@ -65,8 +99,8 @@ public class HttpCompressionClientServerTests {
 		}
 	}
 
-	@Test
-	public void trueEnabledIncludeContentEncoding() {
+	@ParameterizedCompressionTest
+	public void trueEnabledIncludeContentEncoding(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(true)
 				      .handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -81,8 +115,8 @@ public class HttpCompressionClientServerTests {
 		      .blockLast(Duration.ofSeconds(10));
 	}
 
-	@Test
-	public void serverCompressionDefault() {
+	@ParameterizedCompressionTest
+	public void serverCompressionDefault(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .bindNow(Duration.ofSeconds(10));
@@ -102,8 +136,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(resp.getT1()).isEqualTo("reply");
 	}
 
-	@Test
-	public void serverCompressionDisabled() {
+	@ParameterizedCompressionTest
+	public void serverCompressionDisabled(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(false)
 				      .handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -126,8 +160,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(resp.getT1()).isEqualTo("reply");
 	}
 
-	@Test
-	public void serverCompressionAlwaysEnabled() throws Exception {
+	@ParameterizedCompressionTest
+	public void serverCompressionAlwaysEnabled(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.compress(true)
 				      .handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -162,8 +196,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(deflated).isEqualTo("reply");
 	}
 
-	@Test
-	public void serverCompressionEnabledSmallResponse() {
+	@ParameterizedCompressionTest
+	public void serverCompressionEnabledSmallResponse(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(25)
 				      .handle((in, out) -> out.header("content-length", "5")
@@ -191,8 +225,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(reply).isEqualTo("reply");
 	}
 
-	@Test
-	public void serverCompressionPredicateTrue() throws Exception {
+	@ParameterizedCompressionTest
+	public void serverCompressionPredicateTrue(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.compress((req, res) -> true)
 				      .handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -229,8 +263,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(deflated).isEqualTo("reply");
 	}
 
-	@Test
-	public void serverCompressionPredicateFalse() {
+	@ParameterizedCompressionTest
+	public void serverCompressionPredicateFalse(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress((req, res) -> false)
 				      .handle((in, out) -> out.sendString(Flux.just("reply").hide()))
@@ -257,8 +291,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(resp.getT1()).isEqualTo("reply");
 	}
 
-	@Test
-	public void serverCompressionEnabledBigResponse() throws Exception {
+	@ParameterizedCompressionTest
+	public void serverCompressionEnabledBigResponse(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.compress(4)
 				      .handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -292,8 +326,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(deflated).isEqualTo("reply");
 	}
 
-	@Test
-	public void compressionServerEnabledClientDisabledIsNone() {
+	@ParameterizedCompressionTest
+	public void compressionServerEnabledClientDisabledIsNone(HttpServer server, HttpClient client) {
 		String serverReply = "reply";
 		disposableServer =
 				server.compress(true)
@@ -314,8 +348,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(resp.getT1()).isEqualTo(serverReply);
 	}
 
-	@Test
-	public void compressionServerDefaultClientDefaultIsNone() {
+	@ParameterizedCompressionTest
+	public void compressionServerDefaultClientDefaultIsNone(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .bindNow(Duration.ofSeconds(10));
@@ -333,8 +367,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(resp.getT1()).isEqualTo("reply");
 	}
 
-	@Test
-	public void compressionActivatedOnClientAddsHeader() {
+	@ParameterizedCompressionTest
+	public void compressionActivatedOnClientAddsHeader(HttpServer server, HttpClient client) {
 		AtomicReference<String> zip = new AtomicReference<>("fail");
 
 		disposableServer =
@@ -352,8 +386,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(zip.get()).isEqualTo("gzip");
 	}
 
-	@Test
-	public void testIssue282() {
+	@ParameterizedCompressionTest
+	public void testIssue282(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(2048)
 				      .handle((req, res) -> res.sendString(Mono.just("testtesttesttesttest")))
@@ -373,8 +407,8 @@ public class HttpCompressionClientServerTests {
 		            .verify(Duration.ofSeconds(10));
 	}
 
-	@Test
-	public void testIssue292() {
+	@ParameterizedCompressionTest
+	public void testIssue292(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(10)
 				      .handle((req, res) ->
