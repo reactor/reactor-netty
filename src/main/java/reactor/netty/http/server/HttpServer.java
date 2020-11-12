@@ -515,7 +515,7 @@ public abstract class HttpServer {
 	 *
 	 * @param idleTimeout an idle timeout on the connection when it is waiting for an HTTP request (resolution: ms)
 	 * @return a new {@link HttpServer}
-	 * @since 0.9.14
+	 * @since 0.9.15
 	 */
 	@SuppressWarnings("deprecation")
 	public final HttpServer idleTimeout(Duration idleTimeout) {
