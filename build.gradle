@@ -60,7 +60,7 @@ ext {
   logbackVersion = '1.2.3'
 
   // Netty
-  nettyDefaultVersion = '4.1.53.Final'
+  nettyDefaultVersion = '4.1.54.Final'
   if (!project.hasProperty("forceNettyVersion")) {
 	nettyVersion = nettyDefaultVersion
   }
@@ -72,7 +72,7 @@ ext {
   // Testing
   jacksonDatabindVersion = '2.11.3'
   testAddonVersion = reactorCoreVersion
-  assertJVersion = '3.18.0'
+  assertJVersion = '3.18.1'
   hoverflyJavaVersion = '0.13.1'
   tomcatVersion = '9.0.39'
   boringSslVersion = '2.0.34.Final'
