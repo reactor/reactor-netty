@@ -54,7 +54,7 @@ ext {
   logbackVersion = '1.2.3'
 
   // Libraries
-  nettyVersion = '4.1.53.Final'
+  nettyVersion = '4.1.54.Final'
 
   // Testing
   jacksonDatabindVersion = '2.11.3'
