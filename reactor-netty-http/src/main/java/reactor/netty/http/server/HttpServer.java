@@ -111,6 +111,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 *
 	 * @param accessLog apply an {@link AccessLog} by an {@link AccessLogArgProvider}
 	 * @return a new {@link HttpServer}
+	 * @since 1.0.1
 	 */
 	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLog) {
 		Objects.requireNonNull(accessLog, "accessLog");

@@ -146,6 +146,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 *
 	 * @param doOnResolve a consumer observing resolve events
 	 * @return a new {@link ClientTransport} reference
+	 * @since 1.0.1
 	 */
 	public final T doOnResolve(Consumer<? super Connection> doOnResolve) {
 		Objects.requireNonNull(doOnResolve, "doOnResolve");
@@ -161,6 +162,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 *
 	 * @param doAfterResolve a consumer observing resolved events
 	 * @return a new {@link ClientTransport} reference
+	 * @since 1.0.1
 	 */
 	public final T doAfterResolve(BiConsumer<? super Connection, ? super SocketAddress> doAfterResolve) {
 		Objects.requireNonNull(doAfterResolve, "doAfterResolve");
@@ -177,6 +179,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 *
 	 * @param doOnResolveError a consumer observing resolve error events
 	 * @return a new {@link ClientTransport} reference
+	 * @since 1.0.1
 	 */
 	public final T doOnResolveError(BiConsumer<? super Connection, ? super Throwable> doOnResolveError) {
 		Objects.requireNonNull(doOnResolveError, "doOnResolveError");
