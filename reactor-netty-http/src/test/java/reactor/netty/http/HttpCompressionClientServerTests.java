@@ -22,6 +22,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -37,125 +39,111 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author mostroverkhov
  * @author smaldini
+ * @author Violeta Georgieva
  */
 public class HttpCompressionClientServerTests {
+	HttpServer server;
+
+	DisposableServer disposableServer;
+
+	HttpClient client;
+
+	@BeforeEach
+	void setUp() {
+		server = HttpServer.create()
+		                   .port(0)
+		                   .wiretap(true);
+
+		client = HttpClient.create()
+		                   .wiretap(true);
+	}
+
+	@AfterEach
+	void tearDown() {
+		if (disposableServer != null) {
+			disposableServer.disposeNow();
+		}
+	}
 
 	@Test
 	public void trueEnabledIncludeContentEncoding() {
-
-		HttpServer server = HttpServer.create()
-		                              .port(0)
-		                              .compress(true);
-
-		DisposableServer runningServer =
-				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap(true)
+		disposableServer =
+				server.compress(true)
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .bindNow(Duration.ofSeconds(10));
 
-		HttpClient.create()
-		          .remoteAddress(runningServer::address)
-		          .wiretap(true)
-		          .compress(true)
-		          .headers(h -> assertThat(h.contains("Accept-Encoding", "gzip", true)).isTrue())
-		          .get()
-		          .uri("/test")
-		          .responseContent()
-		          .blockLast();
-
-		runningServer.dispose();
-		runningServer.onDispose()
-		            .block();
+		client.port(disposableServer.port())
+		      .compress(true)
+		      .headers(h -> assertThat(h.contains("Accept-Encoding", "gzip", true)).isTrue())
+		      .get()
+		      .uri("/test")
+		      .responseContent()
+		      .blockLast(Duration.ofSeconds(10));
 	}
 
 	@Test
 	public void serverCompressionDefault() {
-		HttpServer server = HttpServer.create()
-		                              .port(0);
-
-		DisposableServer runningServer =
+		disposableServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
-		HttpClient client = HttpClient.create()
-				                      .remoteAddress(runningServer::address)
-				                      .wiretap(true);
 		Tuple2<String, HttpHeaders> resp =
-				client.headers(h -> h.add("Accept-Encoding", "gzip"))
+				client.port(disposableServer.port())
+				      .headers(h -> h.add("Accept-Encoding", "gzip"))
 				      .get()
 				      .uri("/test")
 				      .response((res, buf) -> buf.asString()
 				                                 .zipWith(Mono.just(res.responseHeaders())))
-				      .blockFirst();
+				      .blockFirst(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isNull();
 
 		assertThat(resp.getT1()).isEqualTo("reply");
-
-		runningServer.dispose();
-		runningServer.onDispose()
-		            .block();
 	}
 
 	@Test
 	public void serverCompressionDisabled() {
-		HttpServer server = HttpServer.create()
-		                              .port(0)
-		                              .compress(false);
-
-		DisposableServer runningServer =
-				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap(true)
+		disposableServer =
+				server.compress(false)
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.create()
-				                      .remoteAddress(runningServer::address)
-				                      .wiretap(true);
 		Tuple2<String, HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
-				client.headers(h -> h.add("Accept-Encoding", "gzip"))
+				client.port(disposableServer.port())
+				      .headers(h -> h.add("Accept-Encoding", "gzip"))
 				      .get()
 				      .uri("/test")
 				      .response((res, buf) -> buf.asString()
 				                                 .zipWith(Mono.just(res.responseHeaders())))
-				      .blockFirst();
+				      .blockFirst(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isNull();
 
 		assertThat(resp.getT1()).isEqualTo("reply");
-
-		runningServer.dispose();
-		runningServer.onDispose()
-		            .block();
 	}
 
 	@Test
 	public void serverCompressionAlwaysEnabled() throws Exception {
-		HttpServer server = HttpServer.create()
-		                              .port(0)
-		                              .compress(true);
-
-		DisposableServer runningServer =
-				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap(true)
+		disposableServer =
+				server.compress(true)
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.create()
-				                      .remoteAddress(runningServer::address)
-		                              .compress(false)
-				                      .wiretap(true);
 		Tuple2<byte[], HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
-				client.headers(h -> h.add("Accept-Encoding", "gzip"))
+				client.port(disposableServer.port())
+				      .compress(false)
+				      .headers(h -> h.add("Accept-Encoding", "gzip"))
 				      .get()
 				      .uri("/test")
 				      .responseSingle((res, buf) -> buf.asByteArray()
 				                                       .zipWith(Mono.just(res.responseHeaders())))
-				      .block();
+				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isEqualTo("gzip");
@@ -172,36 +160,26 @@ public class HttpCompressionClientServerTests {
 		String deflated = new String(deflatedBuf, 0, readable, Charset.defaultCharset());
 
 		assertThat(deflated).isEqualTo("reply");
-
-		runningServer.dispose();
-		runningServer.onDispose()
-		          .block();
 	}
-
-
 
 	@Test
 	public void serverCompressionEnabledSmallResponse() {
-		HttpServer server = HttpServer.create()
-		                              .port(0)
-		                              .compress(25);
-
-		DisposableServer connection =
-				server.handle((in, out) -> out.header("content-length", "5")
+		disposableServer =
+				server.compress(25)
+				      .handle((in, out) -> out.header("content-length", "5")
 				                              .sendString(Mono.just("reply")))
-				      .bindNow();
+				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.create()
-		                              .remoteAddress(connection::address);
 		Tuple2<String, HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
-				client.headers(h -> h.add("Accept-Encoding", "gzip"))
+				client.port(disposableServer.port())
+				      .headers(h -> h.add("Accept-Encoding", "gzip"))
 				      .get()
 				      .uri("/test")
 				      .response((res, byteBufFlux) -> byteBufFlux.asString()
-				                                          .zipWith(Mono.just(res.responseHeaders())))
-				      .blockFirst();
+				                                                 .zipWith(Mono.just(res.responseHeaders())))
+				      .blockFirst(Duration.ofSeconds(10));
 		assertThat(resp).isNotNull();
 
 		//check the server didn't send the gzip header, only transfer-encoding
@@ -211,37 +189,26 @@ public class HttpCompressionClientServerTests {
 		//check the server sent plain text
 		String reply = resp.getT1();
 		assertThat(reply).isEqualTo("reply");
-
-        connection.dispose();
-        connection.onDispose()
-		            .block();
 	}
 
 	@Test
 	public void serverCompressionPredicateTrue() throws Exception {
-		HttpServer server = HttpServer.create()
-		                              .port(0)
-		                              .compress((req, res) -> true)
-		                              .wiretap(true);
-
-		DisposableServer connection =
-				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .bindNow();
+		disposableServer =
+				server.compress((req, res) -> true)
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
+				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.create()
-		                              .remoteAddress(connection::address);
 		Tuple2<HttpHeaders, byte[]> resp =
 				//edit the header manually to attempt to trigger compression on server side
-				client.headers(h -> h.add("Accept-Encoding", "gzip"))
-				      .wiretap(true)
+				client.port(disposableServer.port())
+				      .headers(h -> h.add("Accept-Encoding", "gzip"))
 				      .get()
 				      .uri("/test")
 				      .responseSingle((res, byteBufMono) -> Mono.just(res.responseHeaders())
-				                                          .zipWith(byteBufMono
-								                                          .asByteArray())
-						      .log())
-				      .block();
+				                                                .zipWith(byteBufMono.asByteArray())
+				                                                .log())
+				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT1().get("content-encoding")).isEqualTo("gzip");
@@ -260,35 +227,25 @@ public class HttpCompressionClientServerTests {
 		String deflated = new String(deflatedBuf, 0, readable, Charset.defaultCharset());
 
 		assertThat(deflated).isEqualTo("reply");
-
-        connection.dispose();
-        connection.onDispose()
-		            .block();
 	}
 
 	@Test
 	public void serverCompressionPredicateFalse() {
-		HttpServer server = HttpServer.create()
-		                              .port(0)
-		                              .compress((req, res) -> false);
-
-		DisposableServer runningServer =
-				server.handle((in, out) -> out.sendString(Flux.just("reply").hide()))
-				      .wiretap(true)
+		disposableServer =
+				server.compress((req, res) -> false)
+				      .handle((in, out) -> out.sendString(Flux.just("reply").hide()))
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.create()
-				                      .remoteAddress(runningServer::address)
-				                      .wiretap(true);
 		Tuple2<String, HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
-				client.headers(h -> h.add("Accept-Encoding", "gzip"))
+				client.port(disposableServer.port())
+				      .headers(h -> h.add("Accept-Encoding", "gzip"))
 				      .get()
 				      .uri("/test")
 				      .response((res, buf) -> buf.asString()
 				                                 .zipWith(Mono.just(res.responseHeaders())))
-				      .blockFirst();
+				      .blockFirst(Duration.ofSeconds(10));
 		assertThat(resp).isNotNull();
 
 		//check the server didn't send the gzip header, only transfer-encoding
@@ -298,35 +255,25 @@ public class HttpCompressionClientServerTests {
 
 		//check the server sent plain text
 		assertThat(resp.getT1()).isEqualTo("reply");
-
-		runningServer.dispose();
-		runningServer.onDispose()
-		            .block(Duration.ofSeconds(15));
 	}
 
 	@Test
 	public void serverCompressionEnabledBigResponse() throws Exception {
-		HttpServer server = HttpServer.create()
-		                              .port(0)
-		                              .compress(4);
-
-		DisposableServer runningServer =
-				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap(true)
+		disposableServer =
+				server.compress(4)
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.create()
-				                      .remoteAddress(runningServer::address)
-				                      .wiretap(true);
 		Tuple2<byte[], HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
-				client.headers(h -> h.add("accept-encoding", "gzip"))
+				client.port(disposableServer.port())
+				      .headers(h -> h.add("accept-encoding", "gzip"))
 				      .get()
 				      .uri("/test")
 				      .responseSingle((res, buf) -> buf.asByteArray()
 				                                       .zipWith(Mono.just(res.responseHeaders())))
-				      .block();
+				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isEqualTo("gzip");
@@ -343,172 +290,123 @@ public class HttpCompressionClientServerTests {
 		String deflated = new String(deflatedBuf, 0, readable, Charset.defaultCharset());
 
 		assertThat(deflated).isEqualTo("reply");
-
-		runningServer.dispose();
-		runningServer.onDispose()
-		          .block();
 	}
 
 	@Test
 	public void compressionServerEnabledClientDisabledIsNone() {
-		HttpServer server = HttpServer.create()
-		                              .port(0)
-		                              .compress(true);
-
 		String serverReply = "reply";
-		DisposableServer runningServer =
-				server.handle((in, out) -> out.sendString(Mono.just(serverReply)))
-				      .wiretap(true)
+		disposableServer =
+				server.compress(true)
+				      .handle((in, out) -> out.sendString(Mono.just(serverReply)))
 				      .bindNow(Duration.ofSeconds(10));
 
-		HttpClient client = HttpClient.create()
-				                      .remoteAddress(runningServer::address)
-				                      .wiretap(true)
-				                      .compress(false);
-
 		Tuple2<String, HttpHeaders> resp =
-				client.get()
+				client.port(disposableServer.port())
+				      .compress(false)
+				      .get()
 				      .uri("/test")
 				      .response((res, buf) -> buf.asString()
 				                                 .zipWith(Mono.just(res.responseHeaders())))
-				      .blockFirst();
+				      .blockFirst(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("Content-Encoding")).isNull();
 		assertThat(resp.getT1()).isEqualTo(serverReply);
-
-		runningServer.dispose();
-		runningServer.onDispose()
-		            .block();
 	}
-
 
 	@Test
 	public void compressionServerDefaultClientDefaultIsNone() {
-		HttpServer server = HttpServer.create()
-		                              .port(0);
-
-		DisposableServer runningServer =
+		disposableServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
-		HttpClient client = HttpClient.create()
-				                      .remoteAddress(runningServer::address)
-				                      .wiretap(true);
-
 		Tuple2<String, HttpHeaders> resp =
-				client.get()
+				client.port(disposableServer.port())
+				      .get()
 				      .uri("/test")
 				      .response((res, buf) -> buf.asString()
 				                                 .zipWith(Mono.just(res.responseHeaders())))
-				      .blockFirst();
+				      .blockFirst(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("Content-Encoding")).isNull();
 		assertThat(resp.getT1()).isEqualTo("reply");
-
-		runningServer.dispose();
-		runningServer.onDispose()
-		            .block();
 	}
 
 	@Test
 	public void compressionActivatedOnClientAddsHeader() {
 		AtomicReference<String> zip = new AtomicReference<>("fail");
 
-		HttpServer server = HttpServer.create()
-		                              .port(0)
-		                              .compress(true);
-		DisposableServer runningServer =
-				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap(true)
+		disposableServer =
+				server.compress(true)
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .bindNow(Duration.ofSeconds(10));
-		HttpClient.create()
-		          .remoteAddress(runningServer::address)
-		          .wiretap(true)
-		          .compress(true)
-		          .headers(h -> zip.set(h.get("accept-encoding")))
-		          .get()
-		          .uri("/test")
-		          .responseContent()
-		          .blockLast();
+		client.port(disposableServer.port())
+		      .compress(true)
+		      .headers(h -> zip.set(h.get("accept-encoding")))
+		      .get()
+		      .uri("/test")
+		      .responseContent()
+		      .blockLast(Duration.ofSeconds(10));
 
 		assertThat(zip.get()).isEqualTo("gzip");
-		runningServer.dispose();
-		runningServer.onDispose()
-				.block();
 	}
 
 	@Test
 	public void testIssue282() {
-		DisposableServer server =
-				HttpServer.create()
-				          .compress(2048)
-				          .port(0)
-				          .handle((req, res) -> res.sendString(Mono.just("testtesttesttesttest")))
-				          .bindNow();
+		disposableServer =
+				server.compress(2048)
+				      .handle((req, res) -> res.sendString(Mono.just("testtesttesttesttest")))
+				      .bindNow(Duration.ofSeconds(10));
 
 		Mono<String> response =
-				HttpClient.create()
-				          .port(server.port())
-				          .get()
-				          .uri("/")
-				          .responseContent()
-				          .aggregate()
-				          .asString();
+				client.port(disposableServer.port())
+				      .get()
+				      .uri("/")
+				      .responseContent()
+				      .aggregate()
+				      .asString();
 
 		StepVerifier.create(response)
 		            .expectNextMatches("testtesttesttesttest"::equals)
 		            .expectComplete()
-		            .verify();
-
-		server.disposeNow();
+		            .verify(Duration.ofSeconds(10));
 	}
 
 	@Test
 	public void testIssue292() {
-		DisposableServer server =
-				HttpServer.create()
-				          .compress(10)
-				          .port(0)
-				          .wiretap(true)
-				          .handle((req, res) ->
-				                  res.sendHeaders().sendString(Flux.just("test", "test", "test", "test")))
-				          .bindNow();
+		disposableServer =
+				server.compress(10)
+				      .handle((req, res) ->
+				              res.sendHeaders().sendString(Flux.just("test", "test", "test", "test")))
+				      .bindNow(Duration.ofSeconds(10));
 
 		Mono<String> response =
-				HttpClient.create()
-				          .port(server.port())
-				          .compress(true)
-				          .wiretap(true)
-				          .get()
-				          .uri("/")
-				          .responseContent()
-				          .aggregate()
-				          .asString();
+				client.port(disposableServer.port())
+				      .compress(true)
+				      .get()
+				      .uri("/")
+				      .responseContent()
+				      .aggregate()
+				      .asString();
 
 		StepVerifier.create(response)
 		            .expectNextMatches("testtesttesttest"::equals)
 		            .expectComplete()
-		            .verify();
+		            .verify(Duration.ofSeconds(10));
 
-		response = HttpClient.create()
-		                     .port(server.port())
-		                     .wiretap(true)
-		                     .compress(true)
-		                     .get()
-		                     .uri("/")
-		                     .responseContent()
-		                     .aggregate()
-		                     .asString();
+		response = client.port(disposableServer.port())
+		                 .compress(true)
+		                 .get()
+		                 .uri("/")
+		                 .responseContent()
+		                 .aggregate()
+		                 .asString();
 
 		StepVerifier.create(response)
 		            .expectNextMatches("testtesttesttest"::equals)
 		            .expectComplete()
-		            .verify();
-
-		server.disposeNow();
+		            .verify(Duration.ofSeconds(10));
 	}
 
 	@Test
