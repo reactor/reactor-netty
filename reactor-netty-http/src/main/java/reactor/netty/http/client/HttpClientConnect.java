@@ -183,7 +183,7 @@ class HttpClientConnect extends HttpClient {
 		}
 
 		if (config.sslProvider() != null) {
-			httpClient.secure(config.sslProvider());
+			httpClient = httpClient.secure(config.sslProvider());
 		}
 
 		return httpClient;

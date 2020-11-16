@@ -100,6 +100,7 @@ import reactor.netty.resources.ConnectionPoolMetrics;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
+import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.TransportConfig;
 import reactor.test.StepVerifier;
@@ -2280,6 +2281,15 @@ public class HttpClientTest {
 		                                        tcp.configuration();
 		                                        return tcp;
 		                                    }));
+	}
+
+	@Test
+	void testApplyTcpClientSSLConfig() throws Exception {
+		SslContext sslContext = SslContextBuilder.forClient().build();
+		TcpClient tcpClient = TcpClient.create().secure(sslProviderBuilder -> sslProviderBuilder.sslContext(sslContext));
+		HttpClient httpClient = HttpClientConnect.applyTcpClientConfig(tcpClient.configuration());
+
+		assertThat(tcpClient.configuration().sslProvider()).isEqualTo(httpClient.configuration().sslProvider());
 	}
 
 	@Test
