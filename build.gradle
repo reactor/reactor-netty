@@ -15,6 +15,7 @@
  */
 buildscript {
 	repositories {
+		mavenCentral()
 		maven { url "https://repo.spring.io/plugins-release" }
 	}
 	dependencies {
@@ -213,11 +214,11 @@ subprojects {
 			else {
 				println 'Bamboo CI detected, avoiding use of mavenLocal()'
 			}
-			maven { url 'https://repo.spring.io/libs-snapshot' }
+			maven { url 'https://repo.spring.io/snapshot' }
 			maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
 		}
-		maven { url 'https://repo.spring.io/libs-milestone' }
-		maven { url 'https://repo.spring.io/libs-release' }
+		maven { url 'https://repo.spring.io/milestone' }
+		maven { url 'https://repo.spring.io/release' }
 		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 		jcenter()
 	}
