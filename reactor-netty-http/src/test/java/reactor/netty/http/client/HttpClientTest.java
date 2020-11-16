@@ -2284,7 +2284,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testApplyTcpClientSSLConfig() throws Exception {
+	void testApplyTcpClientSSLConfig() throws Exception {
 		SslContext sslContext = SslContextBuilder.forClient().build();
 		TcpClient tcpClient = TcpClient.create().secure(sslProviderBuilder -> sslProviderBuilder.sslContext(sslContext));
 		HttpClient httpClient = HttpClientConnect.applyTcpClientConfig(tcpClient.configuration());
