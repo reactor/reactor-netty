@@ -18,6 +18,7 @@ package reactor.netty.http.server;
 import java.net.InetSocketAddress;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -44,15 +45,18 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 	final ConnectionObserver  listener;
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookieDecoder cookieDecoder;
+	final BiPredicate<HttpServerRequest, HttpServerResponse> compress;
 
 	Http2StreamBridgeHandler(ConnectionObserver listener,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ServerCookieEncoder encoder,
-			ServerCookieDecoder decoder) {
+			ServerCookieDecoder decoder,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress) {
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.listener = listener;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
+		this.compress = compress;
 	}
 
 	@Override
@@ -80,7 +84,7 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 			try {
 				ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
-						null,
+						compress,
 						request,
 						ConnectionInfo.from(ctx.channel().parent(),
 						                    request,

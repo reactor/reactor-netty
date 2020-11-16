@@ -276,20 +276,27 @@ final class HttpServerBind extends HttpServer
 	}
 
 	static void addStreamHandlers(Channel ch, ConnectionObserver listener,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
-			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
+			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
+			int minCompressionSize) {
+		ChannelPipeline pipeline = ch.pipeline();
 		if (ACCESS_LOG) {
-			ch.pipeline()
-			  .addLast(NettyPipeline.AccessLogHandler, new AccessLogHandlerH2());
+			pipeline.addLast(NettyPipeline.AccessLogHandler, new AccessLogHandlerH2());
 		}
-		ch.pipeline()
-		  .addLast(new Http2StreamFrameToHttpObjectCodec(true))
-		  .addLast(new Http2StreamBridgeHandler(listener, forwardedHeaderHandler, encoder, decoder));
+		pipeline.addLast(new Http2StreamFrameToHttpObjectCodec(true))
+		        .addLast(new Http2StreamBridgeHandler(listener, forwardedHeaderHandler, encoder, decoder, compressPredicate));
+
+		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
+
+		if (alwaysCompress) {
+			pipeline.addLast(NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
+		}
 
 		ChannelOperations.addReactiveBridge(ch, ChannelOperations.OnSetup.empty(), listener);
 
 		if (log.isDebugEnabled()) {
-			log.debug(format(ch, "Initialized HTTP/2 pipeline {}"), ch.pipeline());
+			log.debug(format(ch, "Initialized HTTP/2 pipeline {}"), pipeline);
 		}
 	}
 
@@ -551,7 +558,8 @@ final class HttpServerBind extends HttpServer
 		 */
 		@Override
 		protected void initChannel(Channel ch) {
-			addStreamHandlers(ch, listener, parent.forwardedHeaderHandler, parent.cookieEncoder, parent.cookieDecoder);
+			addStreamHandlers(ch, listener, parent.compressPredicate, parent.forwardedHeaderHandler,
+					parent.cookieEncoder, parent.cookieDecoder, parent.minCompressionSize);
 		}
 
 		@Override
@@ -609,7 +617,8 @@ final class HttpServerBind extends HttpServer
 
 			p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
 			 .addLast(new Http2MultiplexHandler(
-			        new Http2StreamInitializer(listener, forwardedHeaderHandler, cookieEncoder, cookieDecoder)));
+			        new Http2StreamInitializer(listener, compressPredicate, forwardedHeaderHandler, cookieEncoder,
+			                cookieDecoder, minCompressionSize)));
 
 			channel.read();
 		}
@@ -697,8 +706,8 @@ final class HttpServerBind extends HttpServer
 
 				p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
 				 .addLast(new Http2MultiplexHandler(
-				        new Http2StreamInitializer(listener, parent.forwardedHeaderHandler,
-				            parent.cookieEncoder, parent.cookieDecoder)));
+				        new Http2StreamInitializer(listener, parent.compressPredicate, parent.forwardedHeaderHandler,
+				            parent.cookieEncoder, parent.cookieDecoder, parent.minCompressionSize)));
 
 				return;
 			}
@@ -786,7 +795,8 @@ final class HttpServerBind extends HttpServer
 
 			p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
 			 .addLast(new Http2MultiplexHandler(
-			        new Http2StreamInitializer(listener, forwardedHeaderHandler, cookieEncoder, cookieDecoder)));
+			        new Http2StreamInitializer(listener, compressPredicate, forwardedHeaderHandler, cookieEncoder,
+			                cookieDecoder, minCompressionSize)));
 		}
 	}
 
@@ -796,19 +806,26 @@ final class HttpServerBind extends HttpServer
 		final ConnectionObserver  listener;
 		final ServerCookieEncoder cookieEncoder;
 		final ServerCookieDecoder cookieDecoder;
+		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
+		final int minCompressionSize;
 
 		Http2StreamInitializer(ConnectionObserver listener,
+				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
-				ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
+				ServerCookieEncoder encoder, ServerCookieDecoder decoder,
+				int minCompressionSize) {
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
 			this.listener = listener;
 			this.cookieEncoder = encoder;
 			this.cookieDecoder = decoder;
+			this.compressPredicate = compressPredicate;
+			this.minCompressionSize = minCompressionSize;
 		}
 
 		@Override
 		protected void initChannel(Channel ch) {
-			addStreamHandlers(ch, listener, forwardedHeaderHandler, cookieEncoder, cookieDecoder);
+			addStreamHandlers(ch, listener, compressPredicate, forwardedHeaderHandler, cookieEncoder, cookieDecoder,
+					minCompressionSize);
 		}
 	}
 
