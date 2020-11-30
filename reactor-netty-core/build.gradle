@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import aQute.bnd.gradle.BundleTaskConvention
 import me.champeau.gradle.japicmp.JapicmpTask
 
 apply plugin: 'java-test-fixtures'
@@ -20,6 +21,22 @@ apply plugin: 'io.spring.javadoc'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
+apply plugin: 'biz.aQute.bnd.builder'
+
+ext {
+	bndOptions = [
+			"Export-Package" : "!reactor.netty.internal*,reactor.netty*;version=$osgiVersion;-noimport:=true",
+			"Import-Package": [
+					"!javax.annotation",
+					"io.netty.channel.kqueue;resolution:=optional;version=\"[4.1,5)\"",
+					"io.micrometer.*;resolution:=optional",
+					"*"
+			].join(","),
+			"Bundle-Name" : "reactor-netty-core",
+			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-core",
+			"Bundle-Version" : "$osgiVersion"
+	]
+}
 
 sourceSets {
 	jarFileTest
@@ -99,6 +116,7 @@ jar {
 	manifest {
 		attributes("Automatic-Module-Name": "reactor.netty.core")
 	}
+	bnd(bndOptions)
 }
 
 components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }
@@ -143,6 +161,14 @@ tasks.japicmp.dependsOn(downloadBaseline)
 tasks.check.dependsOn(japicmp)
 
 shadowJar {
+	configure {
+		it.convention.plugins.bundle = new BundleTaskConvention(it)
+		doLast {
+			buildBundle()
+		}
+	}
+	bnd(bndOptions)
+
 	archiveClassifier.set(null)
 
 	dependsOn(project.tasks.jar)
@@ -181,6 +207,13 @@ task relocateShadowJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.Co
 }
 
 tasks.shadowJar.dependsOn(relocateShadowJar)
+
+//delay the maven publishing so that the OSGi metadata is generated
+//then add shadowJar to the publication
+components.java.withVariantsFromConfiguration(configurations.shadowRuntimeElements) {
+	skip()
+}
+publishing.publications.mavenJava.artifact(shadowJar)
 
 task jarFileTest(type: Test) {
 	testClassesDirs = sourceSets.jarFileTest.output.classesDirs

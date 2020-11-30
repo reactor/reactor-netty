@@ -18,6 +18,17 @@ import me.champeau.gradle.japicmp.JapicmpTask
 apply plugin: 'io.spring.javadoc'
 apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
+apply plugin: 'biz.aQute.bnd.builder'
+
+ext {
+	bndOptions = [
+			"Export-Package" : "reactor.netty.http.brave*;version=$osgiVersion;-noimport:=true",
+			"Import-Package" : "!javax.annotation,*",
+			"Bundle-Name" : "reactor-netty-http-brave",
+			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-http-brave",
+			"Bundle-Version" : "$osgiVersion"
+	]
+}
 
 dependencies {
 	compile project(':reactor-netty-http')
@@ -37,6 +48,7 @@ jar {
 	manifest {
 		attributes("Automatic-Module-Name": "reactor.netty.http.brave")
 	}
+	bnd(bndOptions)
 }
 
 task downloadBaseline(type: Download) {

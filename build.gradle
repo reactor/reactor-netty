@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import org.gradle.util.VersionNumber
+import java.text.SimpleDateFormat
+
 buildscript {
 	repositories {
 		mavenCentral()
@@ -34,6 +37,7 @@ plugins {
 	id 'de.undercouch.download' version '4.1.1' apply false
 	id 'io.spring.javadoc' version '0.0.1' apply false
 	id 'io.spring.javadoc-aggregate' version '0.0.1' apply false
+	id 'biz.aQute.bnd.builder' version '5.2.0' apply false
 }
 
 description = 'Reactive Streams Netty driver'
@@ -48,6 +52,23 @@ ext {
 			project.version = realVersion
 			println "Building special snapshot ${project.version}"
 		}
+	}
+
+	versionNumber = VersionNumber.parse(version.toString())
+	if (versionNumber.qualifier == null || versionNumber.qualifier.size() == 0) {
+		osgiVersion = "${version}.RELEASE"
+		println "$version is a release, will use $osgiVersion for bnd"
+	}
+	else if (versionNumber.qualifier.equalsIgnoreCase("SNAPSHOT")) {
+		sdf = new SimpleDateFormat("yyyyMMddHHmm");
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		buildTimestamp = sdf.format(new Date())
+		osgiVersion = "${versionNumber.major}.${versionNumber.minor}.${versionNumber.micro}.BUILD-$buildTimestamp"
+		println "$version is a snapshot, will use $osgiVersion for bnd"
+	}
+	else {
+		osgiVersion = "${versionNumber.major}.${versionNumber.minor}.${versionNumber.micro}.${versionNumber.qualifier}"
+		println "$version is neither release nor snapshot, will use $osgiVersion for bnd"
 	}
 
 	os_suffix = ""

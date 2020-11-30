@@ -18,6 +18,23 @@ import me.champeau.gradle.japicmp.JapicmpTask
 apply plugin: 'io.spring.javadoc'
 apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
+apply plugin: 'biz.aQute.bnd.builder'
+
+ext {
+	bndOptions = [
+			"Export-Package" : "reactor.netty.http*;version=$osgiVersion;-noimport:=true",
+			"Import-Package": [
+					"!javax.annotation",
+					"io.netty.channel.kqueue;resolution:=optional;version=\"[4.1,5)\"",
+					"io.netty.handler.codec.haproxy;resolution:=optional;version=\"[4.1,5)\"",
+					"io.micrometer.*;resolution:=optional",
+					"*"
+			].join(","),
+			"Bundle-Name" : "reactor-netty-http",
+			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-http",
+			"Bundle-Version" : "$osgiVersion"
+	]
+}
 
 dependencies {
 	compile project(path: ':reactor-netty-core', configuration: 'shadow')
@@ -89,6 +106,7 @@ jar {
 	manifest {
 		attributes("Automatic-Module-Name": "reactor.netty.http")
 	}
+	bnd(bndOptions)
 }
 
 task downloadBaseline(type: Download) {

@@ -72,6 +72,8 @@ public class JarFileShadingTest extends AbstractJarFileTest {
 				.replace("-original.jar", "")
 				.replace(".jar", "");
 
+		String osgiVersion = version.replace("-SNAPSHOT", ".BUILD-");
+
 		try (InputStream inputStream = jar.getInputStream(manifest);
 		     BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, UTF_8))) {
 			String lines = reader.lines()
@@ -82,9 +84,19 @@ public class JarFileShadingTest extends AbstractJarFileTest {
 			assertThat(lines)
 					.as("base content")
 					.contains(
-							"Implementation-Title: reactor-netty",
+							"Implementation-Title: reactor-netty-core",
 							"Implementation-Version: " + version,
-							"Automatic-Module-Name: reactor.netty"
+							"Automatic-Module-Name: reactor.netty.core"
+					);
+			assertThat(lines)
+					.as("OSGI content")
+					.contains(
+							"Bundle-Name: reactor-netty-core",
+							"Bundle-SymbolicName: io.projectreactor.netty.reactor-netty-core",
+							"Import-Package: ", //only assert the section is there
+							"Require-Capability:",
+							"Export-Package:", //only assert the section is there
+							"Bundle-Version: " + osgiVersion
 					);
 		}
 		catch (IOException ioe) {
