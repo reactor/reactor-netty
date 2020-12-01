@@ -42,6 +42,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -53,6 +54,17 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class Http2Tests {
 	private DisposableServer disposableServer;
+	private final static String H2_WITHOUT_TLS_SERVER = "Configured H2 protocol without TLS. Use" +
+			" a Clear-Text H2 protocol via HttpServer#protocol or configure TLS" +
+			" via HttpServer#secure";
+	private final static String H2C_WITH_TLS_SERVER = "Configured H2 Clear-Text protocol with TLS. Use" +
+			" the non Clear-Text H2 protocol via HttpServer#protocol or disable TLS" +
+			" via HttpServer#noSSL())";
+	private final static String H2_WITHOUT_TLS_CLIENT = "Configured H2 protocol without TLS. Use H2 Clear-Text " +
+			"protocol via HttpClient#protocol or configure TLS via HttpClient#secure";
+	private final static String H2C_WITH_TLS_CLIENT = "Configured H2 Clear-Text protocol with TLS. " +
+			"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
+			"via HttpClient#noSSL()";
 
 	@AfterEach
 	public void tearDown() {
@@ -69,9 +81,7 @@ public class Http2Tests {
 		                  .handle((req, res) -> res.sendString(Mono.just("Hello")))
 		                  .wiretap(true)
 		                 .bind())
-		            .verifyErrorMessage("Configured H2 protocol without TLS. Use" +
-		                    " a Clear-Text H2 protocol via HttpServer#protocol or configure TLS" +
-		                            " via HttpServer#secure");
+		            .verifyErrorMessage(H2_WITHOUT_TLS_SERVER);
 	}
 
 	@Test
@@ -86,9 +96,7 @@ public class Http2Tests {
 		                  .handle((req, res) -> res.sendString(Mono.just("Hello")))
 		                  .wiretap(true)
 		                  .bind())
-		            .verifyErrorMessage("Configured H2 Clear-Text protocol with TLS. Use" +
-		                    " the non Clear-Text H2 protocol via HttpServer#protocol or disable TLS" +
-		                            " via HttpServer#noSSL())");
+		            .verifyErrorMessage(H2C_WITH_TLS_SERVER);
 	}
 
 	@Test
@@ -476,5 +484,130 @@ public class Http2Tests {
 		          .block(Duration.ofSeconds(30));
 
 		assertThat(counter.get()).isEqualTo(expectedMsg);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpConfiguredH2CNegotiatedH2C() {
+		// "prior-knowledge" is used and stream id is 3
+		doTestIssue1394_SchemeHttp("3", HttpProtocol.H2C);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpConfiguredH2CAndH2NegotiatedH2C() {
+		// "prior-knowledge" is used and stream id is 3
+		doTestIssue1394_SchemeHttp("3", HttpProtocol.H2, HttpProtocol.H2C);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpConfiguredH2CAndHTTP11NegotiatedH2C() {
+		// "Upgrade" header is used and stream id is 1
+		doTestIssue1394_SchemeHttp("1", HttpProtocol.HTTP11, HttpProtocol.H2C);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpConfiguredH2CAndHTTP11AndH2NegotiatedH2C() {
+		// "Upgrade" header is used and stream id is 1
+		doTestIssue1394_SchemeHttp("1", HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpConfiguredHTTP11NegotiatedHTTP11() {
+		// there is no header with stream id information
+		doTestIssue1394_SchemeHttp("null", HttpProtocol.HTTP11);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpConfiguredHTTP11AndH2NegotiatedHTTP11() {
+		// there is no header with stream id information
+		doTestIssue1394_SchemeHttp("null", HttpProtocol.HTTP11, HttpProtocol.H2);
+	}
+
+	private void doTestIssue1394_SchemeHttp(String expectedStreamId, HttpProtocol... protocols) {
+		disposableServer =
+				HttpServer.create()
+				          .host("localhost")
+				          .port(0)
+				          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
+				          .wiretap(true)
+				          .handle((req, res) -> res.sendString(Mono.just("testIssue1394")))
+				          .bindNow(Duration.ofSeconds(30));
+
+		SslContextBuilder clientCtx = SslContextBuilder.forClient();
+		HttpClient.create()
+		          .protocol(protocols)
+		          .secure(spec -> spec.sslContext(clientCtx))
+		          .wiretap(true)
+		          .get()
+		          .uri("http://localhost:" + disposableServer.port() + "/")
+		          .responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
+		          .as(StepVerifier::create)
+		          .expectNext(expectedStreamId)
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpsConfiguredH2NegotiatedH2() {
+		doTestIssue1394_SchemeHttps(s -> !"null".equals(s), HttpProtocol.H2);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpsConfiguredH2AndH2CNegotiatedH2() {
+		doTestIssue1394_SchemeHttps(s -> !"null".equals(s), HttpProtocol.H2, HttpProtocol.H2C);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpsConfiguredH2AndH2CAndHTTP11NegotiatedH2() {
+		doTestIssue1394_SchemeHttps(s -> !"null".equals(s), HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpsConfiguredH2AndHTTP11NegotiatedH2() {
+		doTestIssue1394_SchemeHttps(s -> !"null".equals(s), HttpProtocol.HTTP11, HttpProtocol.H2);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpsConfiguredHTTP11NegotiatedHTTP11() {
+		doTestIssue1394_SchemeHttps("null"::equals, HttpProtocol.HTTP11);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpsConfiguredHTTP11AndH2CNegotiatedHTTP11() {
+		doTestIssue1394_SchemeHttps("null"::equals, HttpProtocol.HTTP11, HttpProtocol.H2C);
+	}
+
+	private void doTestIssue1394_SchemeHttps(Predicate<String> predicate, HttpProtocol... protocols) {
+		HttpClient.create()
+		          .protocol(protocols)
+		          .wiretap(true)
+		          .get()
+		          .uri("https://example.com")
+		          .responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
+		          .as(StepVerifier::create)
+		          .expectNextMatches(predicate)
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpConfiguredH2() {
+		doTestIssue1394_ProtocolSchemeNotCompatible(HttpProtocol.H2, "http", H2_WITHOUT_TLS_CLIENT);
+	}
+
+	@Test
+	void testIssue1394_SchemeHttpsConfiguredH2C() {
+		doTestIssue1394_ProtocolSchemeNotCompatible(HttpProtocol.H2C, "https", H2C_WITH_TLS_CLIENT);
+	}
+
+	private void doTestIssue1394_ProtocolSchemeNotCompatible(HttpProtocol protocol, String scheme, String expectedMessage) {
+		HttpClient.create()
+		          .protocol(protocol)
+		          .wiretap(true)
+		          .get()
+		          .uri(scheme + "://example.com")
+		          .responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id")))
+		          .as(StepVerifier::create)
+		          .expectErrorMessage(expectedMessage)
+		          .verify(Duration.ofSeconds(30));
 	}
 }
