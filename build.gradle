@@ -190,6 +190,9 @@ configure(rootProject) { project ->
 
   repositories {
 	mavenCentral()
+	jcenter()
+	maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+	maven { url 'https://repo.spring.io/milestone' }
 	if (version.endsWith('BUILD-SNAPSHOT')) {
 	  if (System.getenv ()["bamboo_buildNumber"] == null) {
 		mavenLocal()
@@ -198,10 +201,6 @@ configure(rootProject) { project ->
 	  }
 	  maven { url 'https://repo.spring.io/snapshot' }
 	}
-	maven { url 'https://repo.spring.io/milestone' }
-	maven { url 'https://repo.spring.io/release' }
-	maven { url "https://oss.sonatype.org/content/repositories/releases/" }
-	jcenter()
   }
 
 	def os_suffix = ""
