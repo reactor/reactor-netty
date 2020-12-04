@@ -228,6 +228,9 @@ subprojects {
 
 	repositories {
 		mavenCentral()
+		jcenter()
+		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+		maven { url 'https://repo.spring.io/milestone' }
 		if (version.endsWith('-SNAPSHOT') || version.contains('-SNAPSHOT-')) { //classic or customized snapshots
 			if (System.getenv()["bamboo_buildNumber"] == null) {
 				mavenLocal()
@@ -238,10 +241,6 @@ subprojects {
 			maven { url 'https://repo.spring.io/snapshot' }
 			maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
 		}
-		maven { url 'https://repo.spring.io/milestone' }
-		maven { url 'https://repo.spring.io/release' }
-		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
-		jcenter()
 	}
 
 	tasks.withType(GenerateModuleMetadata) {
