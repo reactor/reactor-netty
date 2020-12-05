@@ -77,6 +77,13 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	}
 
 	/**
+	 * Returns a {@link HttpServerPostDecoder} that can decode post data
+	 *
+	 * @return a {@link HttpServerPostDecoder} that can decode post data
+	 */
+	HttpServerPostDecoder receivePostData();
+
+	/**
 	 * Returns the address of the host peer or {@code null} in case of Unix Domain Sockets.
 	 *
 	 * @return the host's address

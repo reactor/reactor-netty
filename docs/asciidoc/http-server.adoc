@@ -200,6 +200,22 @@ include::{examplesdir}/read/headers/Application.java[lines=18..40]
 ----
 ====
 
+=== Reading Post Body Data
+
+If you receive post data from the connected clients, you can decode it
+using {javadoc}/reactor/netty/http/server/HttpServerRequest.html#receivePostData--[`HttpServerRequest#receivePostData()`].
+Reactor Netty provide you https://netty.io/4.1/api/io/netty/handler/codec/http/multipart/InterfaceHttpData.html[`InterfaceHttpData`]s,
+here is an https://github.com/netty/netty/blob/4.1/example/src/main/java/io/netty/example/http/upload/HttpUploadServerHandler.java#L212-L254[example]
+from Netty how to use them. The following example shows how to do so:
+
+====
+[source,java,indent=0]
+.{examplesdir}/read/post/Application.java
+----
+include::{examplesdir}/read/post/Application.java[lines=18..45]
+----
+====
+
 ==== Obtaining the Remote (Client) Address
 
 In addition to the metadata that you can obtain from the request, you can also receive the

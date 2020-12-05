@@ -332,6 +332,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public HttpServerPostDecoder receivePostData() {
+		if (this.nettyRequest != null) {
+			return new HttpServerPostDecoder(this.nettyRequest, this);
+		}
+		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
 	public Flux<?> receiveObject() {
 		// Handle the 'Expect: 100-continue' header if necessary.
 		// TODO: Respond with 413 Request Entity Too Large
