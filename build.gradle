@@ -19,6 +19,7 @@ import me.champeau.gradle.japicmp.JapicmpTask
 buildscript {
   repositories {
 	mavenCentral()
+	jcenter()
 	maven { url "https://repo.spring.io/plugins-release" }
   }
   dependencies {
