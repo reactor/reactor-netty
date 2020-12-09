@@ -147,10 +147,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
-			CloseWebSocketFrame close = (CloseWebSocketFrame) msg;
-			sendCloseNow(new CloseWebSocketFrame(true,
-					close.rsv(),
-					close.content()));
+			sendCloseNow(new CloseWebSocketFrame(true, ((CloseWebSocketFrame) msg).rsv(),
+					((CloseWebSocketFrame) msg).content()));
 			onInboundComplete();
 		}
 		else if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
@@ -163,7 +161,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 		if (log.isDebugEnabled()) {
 			log.debug(format(channel(), "Cancelling Websocket inbound. Closing Websocket"));
 		}
-		sendCloseNow(null);
+		sendCloseNow(new CloseWebSocketFrame(), WebSocketCloseStatus.ABNORMAL_CLOSURE);
 	}
 
 	@Override
@@ -181,7 +179,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Outbound error happened"), err);
 			}
-			sendCloseNow(new CloseWebSocketFrame(1002, "Client internal error"));
+			sendCloseNow(new CloseWebSocketFrame(WebSocketCloseStatus.PROTOCOL_ERROR));
 		}
 	}
 
@@ -239,33 +237,27 @@ final class WebsocketClientOperations extends HttpClientOperations
 		return Mono.empty();
 	}
 
+	void sendCloseNow(CloseWebSocketFrame frame) {
+		sendCloseNow(frame, new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
+	}
+
 	@SuppressWarnings("FutureReturnValueIgnored")
-	void sendCloseNow(@Nullable CloseWebSocketFrame frame) {
-		if (frame != null && !frame.isFinalFragment()) {
+	void sendCloseNow(CloseWebSocketFrame frame, WebSocketCloseStatus closeStatus) {
+		if (!frame.isFinalFragment()) {
 			//"FutureReturnValueIgnored" this is deliberate
 			channel().writeAndFlush(frame);
 			return;
 		}
 		if (CLOSE_SENT.getAndSet(this, 1) == 0) {
-			if (frame != null) {
-				// EmitResult is ignored as CLOSE_SENT guarantees that there will be only one emission
-				// Whether there are subscribers or the subscriber cancels is not of interest
-				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
-				// FAIL_ZERO_SUBSCRIBER
-				onCloseState.tryEmitValue(new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
-				channel().writeAndFlush(frame)
-				         .addListener(ChannelFutureListener.CLOSE);
-			} else {
-				// EmitResult is ignored as CLOSE_SENT guarantees that there will be only one emission
-				// Whether there are subscribers or the subscriber cancels is not of interest
-				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
-				// FAIL_ZERO_SUBSCRIBER
-				onCloseState.tryEmitValue(new WebSocketCloseStatus(-1, ""));
-				channel().writeAndFlush(new CloseWebSocketFrame())
-				         .addListener(ChannelFutureListener.CLOSE);
-			}
+			// EmitResult is ignored as CLOSE_SENT guarantees that there will be only one emission
+			// Whether there are subscribers or the subscriber cancels is not of interest
+			// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
+			// FAIL_ZERO_SUBSCRIBER
+			onCloseState.tryEmitValue(closeStatus);
+			channel().writeAndFlush(frame)
+			         .addListener(ChannelFutureListener.CLOSE);
 		}
-		else if (frame != null) {
+		else {
 			frame.release();
 		}
 	}

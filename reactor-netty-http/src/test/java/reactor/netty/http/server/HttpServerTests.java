@@ -1337,7 +1337,7 @@ public class HttpServerTests {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(statusClient.get()).isNotNull()
-				.isEqualTo(new WebSocketCloseStatus(-1, ""));
+				.isEqualTo(WebSocketCloseStatus.ABNORMAL_CLOSURE);
 
 		assertThat(statusServer.get()).isNotNull()
 				.isEqualTo(new WebSocketCloseStatus(-1, ""));
@@ -1389,7 +1389,7 @@ public class HttpServerTests {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(statusClient.get()).isNotNull()
-				.isEqualTo(new WebSocketCloseStatus(-1, ""));
+				.isEqualTo(WebSocketCloseStatus.ABNORMAL_CLOSURE);
 
 		assertThat(statusServer.get()).isNotNull()
 				.isEqualTo(new WebSocketCloseStatus(-1, ""));
@@ -1440,7 +1440,7 @@ public class HttpServerTests {
 				.isEqualTo(new WebSocketCloseStatus(-1, ""));
 
 		assertThat(statusServer.get()).isNotNull()
-				.isEqualTo(new WebSocketCloseStatus(-1, ""));
+				.isEqualTo(WebSocketCloseStatus.ABNORMAL_CLOSURE);
 	}
 
 	@Test
@@ -1491,7 +1491,7 @@ public class HttpServerTests {
 				.isEqualTo(new WebSocketCloseStatus(-1, ""));
 
 		assertThat(statusServer.get()).isNotNull()
-				.isEqualTo(new WebSocketCloseStatus(-1, ""));
+				.isEqualTo(WebSocketCloseStatus.ABNORMAL_CLOSURE);
 	}
 
 	@Test

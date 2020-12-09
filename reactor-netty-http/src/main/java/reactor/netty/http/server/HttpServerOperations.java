@@ -56,6 +56,8 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
@@ -739,7 +741,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		public void onComplete() {
 			if (ops.channel()
 			       .isActive()) {
-				ops.sendCloseNow(null, this);
+				ops.sendCloseNow(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE), this);
 			}
 		}
 
