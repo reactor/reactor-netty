@@ -140,7 +140,7 @@ task downloadBaseline(type: Download) {
 
 	onlyIfNewer true
 	compress true
-	src "https://repo.spring.io/libs-release/io/projectreactor/netty/reactor-netty-core/$compatibleVersion/reactor-netty-core-${compatibleVersion}-original.jar"
+	src "${repositories.jcenter().url}io/projectreactor/netty/reactor-netty-core/$compatibleVersion/reactor-netty-core-${compatibleVersion}-original.jar"
 	dest "${buildDir}/baselineLibs/reactor-netty-core-${compatibleVersion}-original.jar"
 }
 
