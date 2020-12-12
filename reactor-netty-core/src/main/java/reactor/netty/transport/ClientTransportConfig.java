@@ -227,7 +227,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		AddressResolverGroup<?> resolverGroup = defaultResolver.get();
 		if (resolverGroup == null) {
 			AddressResolverGroup<?> newResolverGroup =
-					DEFAULT_NAME_RESOLVER_PROVIDER.newNameResolverGroup(defaultLoopResources(), preferNative);
+					DEFAULT_NAME_RESOLVER_PROVIDER.newNameResolverGroup(loopResources(), preferNative);
 			defaultResolver.compareAndSet(null, newResolverGroup);
 			resolverGroup = getOrCreateDefaultResolver();
 		}
