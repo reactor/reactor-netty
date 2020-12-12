@@ -49,6 +49,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	final AtomicReference<EventLoopGroup> cacheNativeServerLoops;
 	final AtomicReference<EventLoopGroup> cacheNativeSelectLoops;
 	final AtomicBoolean                   running;
+	final AtomicBoolean                   eventLoopGroupCreationInProgress;
 
 	DefaultLoopResources(String prefix, int workerCount, boolean daemon) {
 		this(prefix, -1, workerCount, daemon);
@@ -56,6 +57,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 
 	DefaultLoopResources(String prefix, int selectCount, int workerCount, boolean daemon) {
 		this.running = new AtomicBoolean(true);
+		this.eventLoopGroupCreationInProgress = new AtomicBoolean(false);
 		this.daemon = daemon;
 		this.workerCount = workerCount;
 		this.prefix = prefix;
@@ -201,17 +203,28 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 
 	@SuppressWarnings("FutureReturnValueIgnored")
 	EventLoopGroup cacheNioServerLoops() {
-		EventLoopGroup eventLoopGroup = serverLoops.get();
-		if (null == eventLoopGroup) {
+		final EventLoopGroup eventLoopGroup = serverLoops.get();
+
+		if (null != eventLoopGroup) {
+			return eventLoopGroup;
+		}
+
+		if (eventLoopGroupCreationInProgress.compareAndSet(false, true)) {
+			if (null == serverLoops.get()) {
 			EventLoopGroup newEventLoopGroup = new NioEventLoopGroup(workerCount,
 					threadFactory(this, "nio"));
-			if (!serverLoops.compareAndSet(null, newEventLoopGroup)) {
+				if (serverLoops.compareAndSet(null, newEventLoopGroup)) {
+					eventLoopGroupCreationInProgress.set(false);
+				} else {
 				//"FutureReturnValueIgnored" this is deliberate
 				newEventLoopGroup.shutdownGracefully();
 			}
-			eventLoopGroup = cacheNioServerLoops();
 		}
-		return eventLoopGroup;
+		} else {
+			while (null == serverLoops.get()) {}
+		}
+
+		return cacheNioServerLoops();
 	}
 
 	EventLoopGroup cacheNativeClientLoops() {
