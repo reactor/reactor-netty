@@ -103,7 +103,9 @@ dependencies {
 	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testCompile "org.mockito:mockito-core:$mockitoVersion"
 	testCompile "ch.qos.logback:logback-classic:$logbackVersion"
+	testCompile "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 

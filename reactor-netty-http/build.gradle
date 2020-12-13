@@ -97,7 +97,9 @@ dependencies {
 	testCompile "org.assertj:assertj-core:$assertJVersion"
 	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testCompile "org.junit.jupiter:junit-jupiter-params:$junitVersion"
+	testCompile "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
