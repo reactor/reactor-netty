@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.nio.charset.Charset;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -44,21 +45,26 @@ public class ReactorNettyLoggingHandlerTest {
 
 	private Appender<ILoggingEvent> mockedAppender;
 	private ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor;
+	private Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 
 	@BeforeEach
 	@SuppressWarnings("unchecked")
 	public void setUp() {
+		mockedAppender = (Appender<ILoggingEvent>) Mockito.mock(Appender.class);
 		defaultCharsetReactorNettyLoggingHandler =
 			new ReactorNettyLoggingHandler(
 				ReactorNettyLoggingHandlerTest.class.getName(),
 				LogLevel.DEBUG,
 				Charset.defaultCharset());
 
-		mockedAppender = (Appender<ILoggingEvent>) Mockito.mock(Appender.class);
 		loggingEventArgumentCaptor = ArgumentCaptor.forClass(LoggingEvent.class);
 		Mockito.when(mockedAppender.getName()).thenReturn("MOCK");
-		Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 		root.addAppender(mockedAppender);
+	}
+
+	@AfterEach
+	public void tearDown(){
+		root.detachAppender(mockedAppender);
 	}
 
 	@Test
