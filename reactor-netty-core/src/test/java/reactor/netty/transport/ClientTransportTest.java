@@ -15,16 +15,26 @@
  */
 package reactor.netty.transport;
 
+import io.netty.channel.ChannelOption;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
@@ -62,6 +72,34 @@ public class ClientTransportTest {
 				.isThrownBy(() -> new TestClientTransport(Mono.just(EmbeddedChannel::new)).connectNow().disposeNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 
+	@Test
+	void testDefaultResolverWithCustomEventLoop() throws Exception {
+		final LoopResources loop1 = LoopResources.create("test", 1, true);
+		final NioEventLoopGroup loop2 = new NioEventLoopGroup(1);
+		final ConnectionProvider provider = ConnectionProvider.create("test");
+		try {
+			TestClientTransportConfig config =
+					new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
+
+			assertThatExceptionOfType(NullPointerException.class)
+					.isThrownBy(config::resolverInternal);
+
+			config.loopResources = loop1;
+			config.resolverInternal()
+					.getResolver(loop2.next())
+					.resolve(new InetSocketAddress("example.com", 443))
+					.addListener(f -> assertThat(Thread.currentThread().getName()).startsWith("test-"));
+		}
+		finally {
+			loop1.disposeLater()
+					.block(Duration.ofSeconds(10));
+			provider.disposeLater()
+					.block(Duration.ofSeconds(10));
+			loop2.shutdownGracefully()
+					.get(10, TimeUnit.SECONDS);
+		}
+	}
+
 	static final class TestClientTransport extends ClientTransport<TestClientTransport, TestClientTransportConfig> {
 
 		final Mono<? extends Connection> connect;
@@ -87,6 +125,11 @@ public class ClientTransportTest {
 	}
 
 	static final class TestClientTransportConfig extends ClientTransportConfig<TestClientTransportConfig> {
+
+		TestClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
+		                      Supplier<? extends SocketAddress> remoteAddress) {
+			super(connectionProvider, options, remoteAddress);
+		}
 
 		TestClientTransportConfig(ClientTransportConfig<TestClientTransportConfig> parent) {
 			super(parent);
