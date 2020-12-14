@@ -41,11 +41,12 @@ import io.netty.handler.logging.LoggingHandler;
 
 public class ReactorNettyLoggingHandlerTest {
 
+	private static final Logger ROOT = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+
 	private LoggingHandler defaultCharsetReactorNettyLoggingHandler;
 
 	private Appender<ILoggingEvent> mockedAppender;
 	private ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor;
-	private Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 
 	@BeforeEach
 	@SuppressWarnings("unchecked")
@@ -59,12 +60,12 @@ public class ReactorNettyLoggingHandlerTest {
 
 		loggingEventArgumentCaptor = ArgumentCaptor.forClass(LoggingEvent.class);
 		Mockito.when(mockedAppender.getName()).thenReturn("MOCK");
-		root.addAppender(mockedAppender);
+		ROOT.addAppender(mockedAppender);
 	}
 
 	@AfterEach
 	public void tearDown(){
-		root.detachAppender(mockedAppender);
+		ROOT.detachAppender(mockedAppender);
 	}
 
 	@Test
