@@ -27,6 +27,8 @@ public interface WebsocketClientSpec extends WebsocketSpec {
 
 	/**
 	 * Create builder with default properties:<br>
+	 * version = 13
+	 * <br>
 	 * protocols = null
 	 * <br>
 	 * maxFramePayloadLength = 65536

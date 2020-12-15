@@ -16,6 +16,7 @@
 package reactor.netty.http.client;
 
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -57,7 +58,7 @@ public class WebsocketClientOperationsTest {
 				                            return res.status(token).send();
 				                        }
 				                        return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
-				                                WebsocketServerSpec.builder().protocols(serverSubprotocol).build());
+				                                WebsocketServerSpec.builder().versions(WebSocketVersion.V08).protocols(serverSubprotocol).build());
 				                    }))
 				          .wiretap(true)
 				          .bindNow();
@@ -67,7 +68,7 @@ public class WebsocketClientOperationsTest {
 				          .port(httpServer.port())
 				          .wiretap(true)
 				          .headersWhen(h -> login(httpServer.port()).map(token -> h.set("Authorization", token)))
-				          .websocket(WebsocketClientSpec.builder().protocols(clientSubprotocol).build())
+				          .websocket(WebsocketClientSpec.builder().versions(WebSocketVersion.V08).protocols(clientSubprotocol).build())
 				          .uri("/ws")
 				          .handle((i, o) -> i.receive().asString())
 				          .log()

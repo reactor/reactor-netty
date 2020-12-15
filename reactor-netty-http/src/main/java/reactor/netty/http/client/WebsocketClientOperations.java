@@ -71,7 +71,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 		String subprotocols = websocketClientSpec.protocols();
 		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
-					WebSocketVersion.V13,
+					websocketClientSpec.version(),
 					subprotocols != null && !subprotocols.isEmpty() ? subprotocols : null,
 					true,
 					replaced.requestHeaders()
