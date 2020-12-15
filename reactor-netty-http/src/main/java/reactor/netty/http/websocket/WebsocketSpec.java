@@ -89,7 +89,7 @@ public interface WebsocketSpec {
 		public final SPEC versions(WebSocketVersion version) {
 			Objects.requireNonNull(version, "version");
 			if (WebSocketVersion.UNKNOWN.equals(version)) {
-				this.version = WebSocketVersion.V13;
+				throw new NullPointerException("Unknown web socket version:" + version);
 			}
 			return get();
 		}
