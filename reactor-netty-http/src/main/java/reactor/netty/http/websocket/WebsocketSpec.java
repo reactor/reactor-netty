@@ -16,7 +16,6 @@
 
 package reactor.netty.http.websocket;
 
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
@@ -30,13 +29,6 @@ import java.util.function.Supplier;
  * @since 0.9.5
  */
 public interface WebsocketSpec {
-
-	/**
-	 * Returns the configured WebSocket version
-	 *
-	 * @return returns the configured WebSocket version
-	 */
-	WebSocketVersion version();
 
 	/**
 	 * Returns the configured sub protocols.
@@ -68,30 +60,12 @@ public interface WebsocketSpec {
 	boolean compress();
 
 	class Builder<SPEC extends Builder<SPEC>> implements Supplier<SPEC> {
-		WebSocketVersion version;
 		String protocols;
 		int maxFramePayloadLength = 65536;
 		boolean handlePing;
 		boolean compress;
 
 		protected Builder() {
-		}
-
-		/**
-		 * Sets websocket version to use.
-		 * Set to v13 by default
-		 *
-		 * @param version WebSocket version to be used
-		 * @return {@literal this}
-		 * @throws NullPointerException if version is null
-		 * @since 1.0.3
-		 */
-		public final SPEC versions(WebSocketVersion version) {
-			Objects.requireNonNull(version, "version");
-			if (WebSocketVersion.UNKNOWN.equals(version)) {
-				throw new NullPointerException("Unknown web socket version:" + version);
-			}
-			return get();
 		}
 
 		/**

@@ -58,7 +58,7 @@ public class WebsocketClientOperationsTest {
 				                            return res.status(token).send();
 				                        }
 				                        return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
-				                                WebsocketServerSpec.builder().versions(WebSocketVersion.V08).protocols(serverSubprotocol).build());
+				                                WebsocketServerSpec.builder().protocols(serverSubprotocol).build());
 				                    }))
 				          .wiretap(true)
 				          .bindNow();
@@ -68,7 +68,7 @@ public class WebsocketClientOperationsTest {
 				          .port(httpServer.port())
 				          .wiretap(true)
 				          .headersWhen(h -> login(httpServer.port()).map(token -> h.set("Authorization", token)))
-				          .websocket(WebsocketClientSpec.builder().versions(WebSocketVersion.V08).protocols(clientSubprotocol).build())
+				          .websocket(WebsocketClientSpec.builder().version(WebSocketVersion.V08).protocols(clientSubprotocol).build())
 				          .uri("/ws")
 				          .handle((i, o) -> i.receive().asString())
 				          .log()

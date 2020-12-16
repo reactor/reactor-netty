@@ -16,7 +16,6 @@
 
 package reactor.netty.http.websocket;
 
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -27,23 +26,17 @@ import reactor.util.annotation.Nullable;
  * @since 0.9.5
  */
 public class WebsocketSpecImpl implements WebsocketSpec {
-	private final WebSocketVersion version;
+
 	private final String protocols;
 	private final int maxFramePayloadLength;
 	private final boolean proxyPing;
 	private final boolean compress;
 
 	protected WebsocketSpecImpl(WebsocketSpec.Builder<?> builder) {
-		this.version = builder.version;
 		this.protocols = builder.protocols;
 		this.maxFramePayloadLength = builder.maxFramePayloadLength;
 		this.proxyPing = builder.handlePing;
 		this.compress = builder.compress;
-	}
-
-	@Override
-	public WebSocketVersion version() {
-		return version;
 	}
 
 	@Override
