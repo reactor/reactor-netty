@@ -25,6 +25,11 @@ import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.WebsocketServerSpec;
 import reactor.test.StepVerifier;
 
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * @author Violeta Georgieva
  */
@@ -68,7 +73,7 @@ public class WebsocketClientOperationsTest {
 				          .port(httpServer.port())
 				          .wiretap(true)
 				          .headersWhen(h -> login(httpServer.port()).map(token -> h.set("Authorization", token)))
-				          .websocket(WebsocketClientSpec.builder().version(WebSocketVersion.V08).protocols(clientSubprotocol).build())
+				          .websocket(WebsocketClientSpec.builder().protocols(clientSubprotocol).build())
 				          .uri("/ws")
 				          .handle((i, o) -> i.receive().asString())
 				          .log()
@@ -89,4 +94,34 @@ public class WebsocketClientOperationsTest {
 		                 .uri("/login")
 		                 .responseSingle((res, buf) -> Mono.just(res.status().code() + ""));
 	}
+
+	@Test
+	public void testConfigureWebSocketVersion(){
+		DisposableServer httpServer = HttpServer.create()
+				.port(0)
+				.handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test"))))
+				.bindNow();
+
+		List<String> res = HttpClient.create()
+						.port(httpServer.port())
+						.websocket(WebsocketClientSpec.builder().version(WebSocketVersion.V08).build())
+						.uri("/test")
+						.handle((i, o) -> i.receive().asString())
+						.collectList()
+						.block();
+
+		assertThat(res).isNotNull();
+		assertThat(res.get(0)).isEqualTo("test");
+	}
+
+	@Test
+	public void testNullWebSocketVersionShouldFail(){
+		assertThatNullPointerException().isThrownBy(() -> WebsocketClientSpec.builder().version(null).build());
+	}
+
+	@Test
+	public void testUnknownWebSocketVersionShouldFail(){
+		assertThatIllegalArgumentException().isThrownBy(() -> WebsocketClientSpec.builder().version(WebSocketVersion.UNKNOWN).build());
+	}
+
 }
