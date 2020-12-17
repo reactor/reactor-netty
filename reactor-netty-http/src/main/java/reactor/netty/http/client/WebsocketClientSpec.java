@@ -55,6 +55,7 @@ public interface WebsocketClientSpec extends WebsocketSpec {
 	}
 
 	final class Builder extends WebsocketSpec.Builder<Builder> {
+
 		WebSocketVersion version = WebSocketVersion.V13;
 
 		private Builder() {
@@ -73,7 +74,7 @@ public interface WebsocketClientSpec extends WebsocketSpec {
 		public final Builder version(WebSocketVersion version) {
 			Objects.requireNonNull(version, "version");
 			if (WebSocketVersion.UNKNOWN.equals(version)) {
-				throw new IllegalArgumentException("Unknown web socket version:" + version);
+				throw new IllegalArgumentException("WebSocketVersion.UNKNOWN represents an invalid version, please provide a proper version");
 			}
 			this.version = version;
 			return this;

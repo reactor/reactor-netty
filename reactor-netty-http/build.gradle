@@ -91,6 +91,7 @@ dependencies {
 	}
 
 	// Testing
+	testCompile "org.mockito:mockito-core:$mockitoVersion"
 	testCompile "io.specto:hoverfly-java-junit5:$hoverflyJavaVersion"
 	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"

@@ -23,6 +23,7 @@ import reactor.netty.http.websocket.WebsocketSpecImpl;
  * @since 0.9.7
  */
 final class WebsocketClientSpecImpl extends WebsocketSpecImpl implements WebsocketClientSpec {
+
 	private final WebSocketVersion version;
 
 	@Override

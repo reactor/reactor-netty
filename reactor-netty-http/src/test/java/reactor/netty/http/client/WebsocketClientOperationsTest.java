@@ -15,9 +15,13 @@
  */
 package reactor.netty.http.client;
 
+import com.sun.org.apache.xpath.internal.Arg;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.mockito.ArgumentCaptor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
@@ -28,7 +32,7 @@ import reactor.test.StepVerifier;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 /**
  * @author Violeta Georgieva
@@ -54,73 +58,77 @@ public class WebsocketClientOperationsTest {
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
 		DisposableServer httpServer =
 				HttpServer.create()
-				          .port(0)
-				          .route(routes ->
-				              routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
-				                    .get("/ws", (req, res) -> {
-				                        int token = Integer.parseInt(req.requestHeaders().get("Authorization"));
-				                        if (token >= 400) {
-				                            return res.status(token).send();
-				                        }
-				                        return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
-				                                WebsocketServerSpec.builder().protocols(serverSubprotocol).build());
-				                    }))
-				          .wiretap(true)
-				          .bindNow();
+						.port(0)
+						.route(routes ->
+								routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
+										.get("/ws", (req, res) -> {
+											int token = Integer.parseInt(req.requestHeaders().get("Authorization"));
+											if (token >= 400) {
+												return res.status(token).send();
+											}
+											return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
+													WebsocketServerSpec.builder().protocols(serverSubprotocol).build());
+										}))
+						.wiretap(true)
+						.bindNow();
 
 		Flux<String> response =
 				HttpClient.create()
-				          .port(httpServer.port())
-				          .wiretap(true)
-				          .headersWhen(h -> login(httpServer.port()).map(token -> h.set("Authorization", token)))
-				          .websocket(WebsocketClientSpec.builder().protocols(clientSubprotocol).build())
-				          .uri("/ws")
-				          .handle((i, o) -> i.receive().asString())
-				          .log()
-				          .switchIfEmpty(Mono.error(new Exception()));
+						.port(httpServer.port())
+						.wiretap(true)
+						.headersWhen(h -> login(httpServer.port()).map(token -> h.set("Authorization", token)))
+						.websocket(WebsocketClientSpec.builder().protocols(clientSubprotocol).build())
+						.uri("/ws")
+						.handle((i, o) -> i.receive().asString())
+						.log()
+						.switchIfEmpty(Mono.error(new Exception()));
 
 		StepVerifier.create(response)
-		            .expectError(WebSocketHandshakeException.class)
-		            .verify();
+				.expectError(WebSocketHandshakeException.class)
+				.verify();
 
 		httpServer.disposeNow();
 	}
 
 	private Mono<String> login(int port) {
 		return HttpClient.create()
-		                 .port(port)
-		                 .wiretap(true)
-		                 .post()
-		                 .uri("/login")
-		                 .responseSingle((res, buf) -> Mono.just(res.status().code() + ""));
+				.port(port)
+				.wiretap(true)
+				.post()
+				.uri("/login")
+				.responseSingle((res, buf) -> Mono.just(res.status().code() + ""));
 	}
 
 	@Test
-	public void testConfigureWebSocketVersion(){
+	public void testConfigureWebSocketVersion() {
+		ArgumentCaptor<HttpHeaders> argumentCaptor = ArgumentCaptor.forClass(HttpHeaders.class);
+
 		DisposableServer httpServer = HttpServer.create()
 				.port(0)
-				.handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test"))))
+				.handle((in, out) -> {
+					assertThat(in.requestHeaders().get("sec-websocket-version")).isEqualTo("8");
+					return out.sendWebsocket((i, o) -> o.sendString(Mono.just("test")));
+				})
+				.wiretap(true)
 				.bindNow();
 
-		List<String> res = HttpClient.create()
-						.port(httpServer.port())
-						.websocket(WebsocketClientSpec.builder().version(WebSocketVersion.V08).build())
-						.uri("/test")
-						.handle((i, o) -> i.receive().asString())
-						.collectList()
-						.block();
-
-		assertThat(res).isNotNull();
-		assertThat(res.get(0)).isEqualTo("test");
+		 HttpClient.create()
+				.port(httpServer.port())
+				.wiretap(true)
+				.websocket(WebsocketClientSpec.builder().version(WebSocketVersion.V08).build())
+				.uri("/test")
+				.handle((in, out) -> in.receive().aggregate().asString())
+				.collectList()
+				.block();
 	}
 
 	@Test
-	public void testNullWebSocketVersionShouldFail(){
+	public void testNullWebSocketVersionShouldFail() {
 		assertThatNullPointerException().isThrownBy(() -> WebsocketClientSpec.builder().version(null).build());
 	}
 
 	@Test
-	public void testUnknownWebSocketVersionShouldFail(){
+	public void testUnknownWebSocketVersionShouldFail() {
 		assertThatIllegalArgumentException().isThrownBy(() -> WebsocketClientSpec.builder().version(WebSocketVersion.UNKNOWN).build());
 	}
 
