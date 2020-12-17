@@ -1,6 +1,7 @@
 :sourcedir: ./../../reactor-netty-core/src/main/java
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client
 :javadoc: https://projectreactor.io/docs/netty/release/api
+:nettyjavadoc: https://netty.io/4.1/api
 
 [[tcp-client]]
 = TCP Client
@@ -129,7 +130,7 @@ include::{examplesdir}/channeloptions/Application.java[lines=18..35]
 
 You can find more about `Netty` channel options at the following links:
 
-* https://netty.io/4.1/api/io/netty/channel/ChannelOption.html[`ChannelOption`]
+* {nettyjavadoc}/io/netty/channel/ChannelOption.html[ChannelOption]
 * https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[Socket Options]
 
 [[client-tcp-level-configurations-event-wire-logger]]
@@ -240,11 +241,11 @@ include::{examplesdir}/pool/metrics/Application.java[lines=18..40]
 
 When you need SSL or TLS, you can apply the following configuration.
 By default, if `OpenSSL` is available, the
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
+{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#OPENSSL[SslProvider.OPENSSL]
 provider is used as a provider. Otherwise, the provider is
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`].
+{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[SslProvider.JDK].
 You can switch the provider by using
-https://netty.io/4.1/api/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
+{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[SslContextBuilder]
 or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 
 The following example uses `SslContextBuilder`:
@@ -341,4 +342,71 @@ The following example shows how to use UDS support:
 include::{examplesdir}/uds/Application.java[lines=18..33]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
+====
+
+== Host Name Resolution
+By default, the `TcpClient` uses Netty's domain name lookup mechanism that resolves a domain name asynchronously.
+This is as an alternative of the JVM's built-in blocking resolver.
+
+When you need to change the default settings, you can configure the `TcpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/resolver/Application.java
+----
+include::{examplesdir}/resolver/Application.java[lines=18..36]
+----
+<1> The timeout of each DNS query performed by this resolver will be 500ms.
+====
+
+The following listing shows the available configurations:
+
+[width="100%",options="header"]
+|=======
+| Configuration name | Description
+| `cacheMaxTimeToLive` | The max time to live of the cached DNS resource records (resolution: seconds).
+ If the time to live of the DNS resource record returned by the DNS server is greater
+ than this max time to live, this resolver ignores the time to live from
+ the DNS server and uses use this max time to live.
+ Default to `Integer.MAX_VALUE`.
+| `cacheMinTimeToLive` | The min time to live of the cached DNS resource records (resolution: seconds).
+ If the time to live of the DNS resource record returned by the DNS server is less
+ than this min time to live, this resolver ignores the time to live from
+ the DNS server and uses this min time to live.
+ Default: 0.
+| `cacheNegativeTimeToLive` | The time to live of the cache for the failed DNS queries (resolution: seconds). Default: 0.
+| `disableOptionalRecord` | Disables the automatic inclusion of an optional record that tries to give a hint to the remote DNS server about
+ how much data the resolver can read per response. By default, this setting is enabled.
+| `disableRecursionDesired` | Specifies whether this resolver has to send a DNS query with the recursion desired (RD) flag set.
+ By default, this setting is enabled.
+| `maxPayloadSize` | Sets the capacity of the datagram packet buffer (in bytes). Default: 4096.
+| `maxQueriesPerResolve` | Sets the maximum allowed number of DNS queries to send when resolving a host name. Default: 16.
+| `ndots` | Sets the number of dots that must appear in a name before an initial absolute query is made.
+ Default: -1 (to determine the value from the OS on Unix or use a value of 1 otherwise).
+| `queryTimeout` | Sets the timeout of each DNS query performed by this resolver (resolution: milliseconds). Default: 5000.
+| `resolvedAddressTypes` | The list of the protocol families of the resolved address.
+| `roundRobinSelection` | Enables an
+ {nettyjavadoc}/io/netty/resolver/AddressResolverGroup.html[`AddressResolverGroup`] of
+ {nettyjavadoc}/io/netty/resolver/dns/DnsNameResolver.html[`DnsNameResolver`] that supports random selection
+ of destination addresses if multiple are provided by the nameserver.
+ See {nettyjavadoc}/io/netty/resolver/dns/RoundRobinDnsAddressResolverGroup.html[`RoundRobinDnsAddressResolverGroup`].
+ Default: {nettyjavadoc}/io/netty/resolver/dns/DnsAddressResolverGroup.html[`DnsAddressResolverGroup`]
+| `runOn` | Performs the communication with the DNS servers on the given
+ {javadoc}/reactor/netty/resources/LoopResources.html[`LoopResources`]. By default, the LoopResources
+ specified on the client level are used.
+| `searchDomains` | The list of search domains of the resolver.
+ By default, the effective search domain list is populated by using the system DNS search domains.
+| `trace` | A specific logger and log level to be used by this resolver when generating detailed trace
+ information in case of resolution failure.
+|=======
+
+Sometimes, you may want to switch to the JVM built-in resolver. To do so, you can configure the `TcpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/resolver/custom/Application.java
+----
+include::{examplesdir}/resolver/custom/Application.java[lines=18..37]
+----
+<1> Sets the JVM built-in resolver.
 ====

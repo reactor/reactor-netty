@@ -1,6 +1,7 @@
 :sourcedir: ./../../reactor-netty-http/src/main/java
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client
 :javadoc: https://projectreactor.io/docs/netty/release/api
+:nettyjavadoc: https://netty.io/4.1/api
 
 [[http-client]]
 = HTTP Client
@@ -159,7 +160,7 @@ By default, `Netty` configures some restrictions for the incoming responses, suc
 * The maximum length of all headers.
 * The maximum length of the content or each chunk.
 
-For more information, see https://netty.io/4.1/api/io/netty/handler/codec/http/HttpResponseDecoder.html[`HttpResponseDecoder`]
+For more information, see {nettyjavadoc}/io/netty/handler/codec/http/HttpResponseDecoder.html[HttpResponseDecoder]
 
 By default, the `HTTP` client is configured with the following settings:
 
@@ -188,7 +189,7 @@ include::{examplesdir}/responsedecoder/Application.java[lines=18..35]
 ----
 <1> The maximum length of all headers will be `16384`.
 When this value is exceeded, a
-https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
+{nettyjavadoc}/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
 is raised.
 ====
 
@@ -226,11 +227,11 @@ include::{examplesdir}/wiretap/Application.java[lines=18..32]
 == SSL and TLS
 When you need SSL or TLS, you can apply the configuration shown in the next example.
 By default, if `OpenSSL` is available, a
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
+{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#OPENSSL[SslProvider.OPENSSL]
 provider is used as a provider. Otherwise a
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#JDK[SslProvider.JDK] provider is used
+{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[SslProvider.JDK] provider is used
 You can switch the provider by using
-https://netty.io/4.1/api/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
+{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[SslContextBuilder]
 or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 The following example uses `SslContextBuilder`:
 
@@ -366,4 +367,70 @@ The following example shows how to use UDS support:
 include::{examplesdir}/uds/Application.java[lines=18..33]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
+====
+== Host Name Resolution
+By default, the `HttpClient` uses Netty's domain name lookup mechanism that resolves a domain name asynchronously.
+This is as an alternative of the JVM's built-in blocking resolver.
+
+When you need to change the default settings, you can configure the `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/resolver/Application.java
+----
+include::{examplesdir}/resolver/Application.java[lines=18..39]
+----
+<1> The timeout of each DNS query performed by this resolver will be 500ms.
+====
+
+The following listing shows the available configurations:
+
+[width="100%",options="header"]
+|=======
+| Configuration name | Description
+| `cacheMaxTimeToLive` | The max time to live of the cached DNS resource records (resolution: seconds).
+If the time to live of the DNS resource record returned by the DNS server is greater
+than this max time to live, this resolver ignores the time to live from
+the DNS server and uses this max time to live.
+Default to `Integer.MAX_VALUE`.
+| `cacheMinTimeToLive` | The min time to live of the cached DNS resource records (resolution: seconds).
+If the time to live of the DNS resource record returned by the DNS server is less
+than this min time to live, this resolver ignores the time to live from
+the DNS server and uses this min time to live.
+Default: 0.
+| `cacheNegativeTimeToLive` | The time to live of the cache for the failed DNS queries (resolution: seconds). Default: 0.
+| `disableOptionalRecord` | Disables the automatic inclusion of an optional record that tries to give a hint to the remote DNS server about
+how much data the resolver can read per response. By default, this setting is enabled.
+| `disableRecursionDesired` | Specifies whether this resolver has to send a DNS query with the recursion desired (RD) flag set.
+By default, this setting is enabled.
+| `maxPayloadSize` | Sets the capacity of the datagram packet buffer (in bytes). Default: 4096.
+| `maxQueriesPerResolve` | Sets the maximum allowed number of DNS queries to send when resolving a host name. Default: 16.
+| `ndots` | Sets the number of dots that must appear in a name before an initial absolute query is made.
+Default: -1 (to determine the value from the OS on Unix or use a value of 1 otherwise).
+| `queryTimeout` | Sets the timeout of each DNS query performed by this resolver (resolution: milliseconds). Default: 5000.
+| `resolvedAddressTypes` | The list of the protocol families of the resolved address.
+| `roundRobinSelection` | Enables an
+{nettyjavadoc}/io/netty/resolver/AddressResolverGroup.html[`AddressResolverGroup`] of
+{nettyjavadoc}/io/netty/resolver/dns/DnsNameResolver.html[`DnsNameResolver`] that supports random selection
+of destination addresses if multiple are provided by the nameserver.
+See {nettyjavadoc}/io/netty/resolver/dns/RoundRobinDnsAddressResolverGroup.html[`RoundRobinDnsAddressResolverGroup`].
+Default: {nettyjavadoc}/io/netty/resolver/dns/DnsAddressResolverGroup.html[`DnsAddressResolverGroup`]
+| `runOn` | Performs the communication with the DNS servers on the given
+{javadoc}/reactor/netty/resources/LoopResources.html[`LoopResources`]. By default, the LoopResources
+specified on the client level are used.
+| `searchDomains` | The list of search domains of the resolver.
+By default, the effective search domain list is populated by using the system DNS search domains.
+| `trace` | A specific logger and log level to be used by this resolver when generating detailed trace
+information in case of resolution failure.
+|=======
+
+Sometimes, you may want to switch to the JVM built-in resolver. To do so, you can configure the `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/resolver/custom/Application.java
+----
+include::{examplesdir}/resolver/custom/Application.java[lines=18..38]
+----
+<1> Sets the JVM built-in resolver.
 ====
