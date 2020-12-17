@@ -1816,7 +1816,7 @@ public class HttpServerTests {
 		HttpServer server = HttpServer.create();
 		HttpClient client = HttpClient.create();
 
-		doTestHttpServerWithDomainSockets(server, client);
+		doTestHttpServerWithDomainSockets(server, client, "http");
 
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
@@ -1824,10 +1824,11 @@ public class HttpServerTests {
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		doTestHttpServerWithDomainSockets(
 				server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
-				client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
+				client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				"https");
 	}
 
-	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client) {
+	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client, String expectedScheme) {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
 		try {
 			disposableServer =
@@ -1839,6 +1840,7 @@ public class HttpServerTests {
 					              assertThat(conn.channel().remoteAddress()).isNull();
 					              assertThat(req.hostAddress()).isNull();
 					              assertThat(req.remoteAddress()).isNull();
+					              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
 					          });
 					          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
 					          return res.send(req.receive().retain());
@@ -1999,7 +2001,8 @@ public class HttpServerTests {
 				null,
 				ServerCookieEncoder.STRICT,
 				ServerCookieDecoder.STRICT,
-				null);
+				null,
+				false);
 		ops.status(status);
 		HttpMessage response = ops.newFullBodyMessage(Unpooled.EMPTY_BUFFER);
 		assertThat(((FullHttpResponse) response).status().reasonPhrase()).isEqualTo(status.reasonPhrase());

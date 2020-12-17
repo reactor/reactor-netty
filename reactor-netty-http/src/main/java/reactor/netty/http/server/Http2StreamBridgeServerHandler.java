@@ -102,10 +102,11 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 						                    forwardedHeaderHandler),
 						cookieEncoder,
 						cookieDecoder,
-						mapHandle);
+						mapHandle,
+						secured);
 			}
 			catch (RuntimeException e) {
-				HttpServerOperations.sendDecodingFailures(ctx, listener, e, msg);
+				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg);
 				return;
 			}
 			ops.bind();

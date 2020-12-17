@@ -101,6 +101,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final ConnectionInfo connectionInfo;
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookieDecoder cookieDecoder;
+	final String scheme;
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 
@@ -121,17 +122,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.mapHandle = replaced.mapHandle;
-	}
-
-	HttpServerOperations(Connection c,
-			ConnectionObserver listener,
-			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			HttpRequest nettyRequest,
-			@Nullable ConnectionInfo connectionInfo,
-			ServerCookieEncoder encoder,
-			ServerCookieDecoder decoder,
-			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
-		this(c, listener, compressionPredicate, nettyRequest, connectionInfo, encoder, decoder, mapHandle, true);
+		this.scheme = replaced.scheme;
 	}
 
 	HttpServerOperations(Connection c,
@@ -142,6 +133,19 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ServerCookieEncoder encoder,
 			ServerCookieDecoder decoder,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			boolean secured) {
+		this(c, listener, compressionPredicate, nettyRequest, connectionInfo, encoder, decoder, mapHandle, secured, true);
+	}
+
+	HttpServerOperations(Connection c,
+			ConnectionObserver listener,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
+			HttpRequest nettyRequest,
+			@Nullable ConnectionInfo connectionInfo,
+			ServerCookieEncoder encoder,
+			ServerCookieDecoder decoder,
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			boolean secured,
 			boolean resolvePath) {
 		super(c, listener);
 		this.nettyRequest = nettyRequest;
@@ -160,6 +164,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
 		this.mapHandle = mapHandle;
+		this.scheme = secured ? "https" : "http";
 	}
 
 	@Override
@@ -372,7 +377,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public String scheme() {
-		return this.connectionInfo.getScheme();
+		if (connectionInfo != null) {
+			return this.connectionInfo.getScheme();
+		}
+		else {
+			return scheme;
+		}
 	}
 
 	@Override
@@ -620,6 +630,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	static void sendDecodingFailures(
 			ChannelHandlerContext ctx,
 			ConnectionObserver listener,
+			boolean secure,
 			Throwable t,
 			Object msg) {
 
@@ -646,7 +657,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (msg instanceof HttpRequest) {
 			request = (HttpRequest) msg;
 		}
-		listener.onStateChange(new FailedHttpServerRequest(conn, listener, request, response), REQUEST_DECODING_FAILED);
+		listener.onStateChange(new FailedHttpServerRequest(conn, listener, request, response, secure), REQUEST_DECODING_FAILED);
 	}
 
 	/**
@@ -767,8 +778,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				Connection c,
 				ConnectionObserver listener,
 				@Nullable HttpRequest nettyRequest,
-				HttpResponse nettyResponse) {
-			super(c, listener, null, nettyRequest, null, ServerCookieEncoder.STRICT, ServerCookieDecoder.STRICT, null, false);
+				HttpResponse nettyResponse,
+				boolean secure) {
+			super(c, listener, null, nettyRequest, null, ServerCookieEncoder.STRICT, ServerCookieDecoder.STRICT, null, secure, false);
 			this.customResponse = nettyResponse;
 		}
 

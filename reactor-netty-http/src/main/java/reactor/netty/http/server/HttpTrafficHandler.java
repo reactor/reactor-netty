@@ -196,7 +196,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							                    forwardedHeaderHandler),
 							cookieEncoder,
 							cookieDecoder,
-							mapHandle);
+							mapHandle,
+							secure);
 				}
 				catch (RuntimeException e) {
 					sendDecodingFailures(e, msg);
@@ -254,7 +255,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	void sendDecodingFailures(Throwable t, Object msg) {
 		persistentConnection = false;
-		HttpServerOperations.sendDecodingFailures(ctx, listener, t, msg);
+		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg);
 	}
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
@@ -381,7 +382,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						                    forwardedHeaderHandler),
 						cookieEncoder,
 						cookieDecoder,
-						mapHandle);
+						mapHandle,
+						secure);
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 			}
