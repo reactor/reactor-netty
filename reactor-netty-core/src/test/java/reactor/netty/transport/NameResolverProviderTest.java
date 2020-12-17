@@ -17,8 +17,12 @@ package reactor.netty.transport;
 
 import io.netty.handler.logging.LogLevel;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsServerAddressStreamProviders;
+import io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpResources;
 
@@ -241,5 +245,12 @@ public class NameResolverProviderTest {
 
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.trace("category", null));
+	}
+
+	@Test
+	@EnabledOnOs(OS.MAC)
+	void testMacOsResolver() {
+		assertThat(DnsServerAddressStreamProviders.platformDefault())
+				.isInstanceOf(MacOSDnsServerAddressStreamProvider.class);
 	}
 }
