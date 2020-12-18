@@ -54,45 +54,45 @@ public class WebsocketClientOperationsTest {
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
 		DisposableServer httpServer =
 				HttpServer.create()
-						.port(0)
-						.route(routes ->
-								routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
-										.get("/ws", (req, res) -> {
-											int token = Integer.parseInt(req.requestHeaders().get("Authorization"));
-											if (token >= 400) {
-												return res.status(token).send();
-											}
-											return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
-													WebsocketServerSpec.builder().protocols(serverSubprotocol).build());
-										}))
-						.wiretap(true)
-						.bindNow();
+				         .port(0)
+				          .route(routes ->
+				              routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
+				                    .get("/ws", (req, res) -> {
+				                        int token = Integer.parseInt(req.requestHeaders().get("Authorization"));
+				                        if (token >= 400) {
+				                            return res.status(token).send();
+				                        }
+				                        return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
+				                                WebsocketServerSpec.builder().protocols(serverSubprotocol).build());
+				                    }))
+				          .wiretap(true)
+				          .bindNow();
 
 		Flux<String> response =
 				HttpClient.create()
-						.port(httpServer.port())
-						.wiretap(true)
-						.headersWhen(h -> login(httpServer.port()).map(token -> h.set("Authorization", token)))
-						.websocket(WebsocketClientSpec.builder().protocols(clientSubprotocol).build())
-						.uri("/ws")
-						.handle((i, o) -> i.receive().asString())
-						.log()
-						.switchIfEmpty(Mono.error(new Exception()));
+				          .port(httpServer.port())
+				          .wiretap(true)
+				          .headersWhen(h -> login(httpServer.port()).map(token -> h.set("Authorization", token)))
+				          .websocket(WebsocketClientSpec.builder().protocols(clientSubprotocol).build())
+				          .uri("/ws")
+				          .handle((i, o) -> i.receive().asString())
+				          .log()
+				          .switchIfEmpty(Mono.error(new Exception()));
 
 		StepVerifier.create(response)
-				.expectError(WebSocketHandshakeException.class)
-				.verify();
+		            .expectError(WebSocketHandshakeException.class)
+		            .verify();
 
 		httpServer.disposeNow();
 	}
 
 	private Mono<String> login(int port) {
 		return HttpClient.create()
-				.port(port)
-				.wiretap(true)
-				.post()
-				.uri("/login")
-				.responseSingle((res, buf) -> Mono.just(res.status().code() + ""));
+		                 .port(port)
+		                 .wiretap(true)
+		                 .post()
+		                 .uri("/login")
+		                 .responseSingle((res, buf) -> Mono.just(res.status().code() + ""));
 	}
 
 	@Test
@@ -114,7 +114,7 @@ public class WebsocketClientOperationsTest {
 				.block(Duration.ofSeconds(10));
 
 		assertThat(response).hasSize(1);
-		assertThat(response.get(0)).isEqualTo("8").isNotEqualTo("foo");
+		assertThat(response.get(0)).isEqualTo("8");
 	}
 
 	@Test
