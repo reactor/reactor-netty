@@ -15,7 +15,10 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import reactor.netty.http.websocket.WebsocketSpec;
+
+import java.util.Objects;
 
 /**
  * Websocket client configuration
@@ -26,7 +29,17 @@ import reactor.netty.http.websocket.WebsocketSpec;
 public interface WebsocketClientSpec extends WebsocketSpec {
 
 	/**
+	 * Returns the configured WebSocket version
+	 *
+	 * @return returns the configured WebSocket version
+	 * @since 1.0.3
+	 */
+	WebSocketVersion version();
+
+	/**
 	 * Create builder with default properties:<br>
+	 * version = {@link io.netty.handler.codec.http.websocketx.WebSocketVersion#V13}
+	 * <br>
 	 * protocols = null
 	 * <br>
 	 * maxFramePayloadLength = 65536
@@ -43,7 +56,28 @@ public interface WebsocketClientSpec extends WebsocketSpec {
 
 	final class Builder extends WebsocketSpec.Builder<Builder> {
 
+		WebSocketVersion version = WebSocketVersion.V13;
+
 		private Builder() {
+		}
+
+		/**
+		 * Sets websocket version to use.
+		 * Set to {@link io.netty.handler.codec.http.websocketx.WebSocketVersion#V13} by default
+		 *
+		 * @param version WebSocket version to be used
+		 * @return {@literal this}
+		 * @throws NullPointerException if version is null
+		 * @throws IllegalArgumentException if the version is unknown
+		 * @since 1.0.3
+		 */
+		public final Builder version(WebSocketVersion version) {
+			Objects.requireNonNull(version, "version");
+			if (WebSocketVersion.UNKNOWN.equals(version)) {
+				throw new IllegalArgumentException("WebSocketVersion.UNKNOWN represents an invalid version, please provide a proper version");
+			}
+			this.version = version;
+			return this;
 		}
 
 		/**

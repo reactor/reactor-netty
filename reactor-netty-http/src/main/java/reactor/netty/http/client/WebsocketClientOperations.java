@@ -34,7 +34,6 @@ import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -71,7 +70,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 		String subprotocols = websocketClientSpec.protocols();
 		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
-					WebSocketVersion.V13,
+					websocketClientSpec.version(),
 					subprotocols != null && !subprotocols.isEmpty() ? subprotocols : null,
 					true,
 					replaced.requestHeaders()
