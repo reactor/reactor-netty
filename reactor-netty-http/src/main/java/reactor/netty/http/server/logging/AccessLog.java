@@ -21,13 +21,14 @@ import reactor.util.Loggers;
 import java.util.Objects;
 
 /**
- * Log the http access information.
+ * Log the http access information into a Logger named {@code reactor.netty.http.server.AccessLog} at INFO level.
  *
  * @author limaoning
+ * @since 1.0.1
  */
 public final class AccessLog {
 
-	static final Logger log = Loggers.getLogger("reactor.netty.http.server.AccessLog");
+	static final Logger LOG = Loggers.getLogger("reactor.netty.http.server.AccessLog");
 
 	final String logFormat;
 	final Object[] args;
@@ -43,8 +44,8 @@ public final class AccessLog {
 	}
 
 	void log() {
-		if (log.isInfoEnabled()) {
-			log.info(logFormat, args);
+		if (LOG.isInfoEnabled()) {
+			LOG.info(logFormat, args);
 		}
 	}
 
