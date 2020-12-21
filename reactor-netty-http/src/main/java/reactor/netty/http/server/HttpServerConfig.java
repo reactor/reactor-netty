@@ -354,10 +354,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			int minCompressionSize,
-			boolean accessLogEnable,
+			boolean accessLogEnabled,
 			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
 		ChannelPipeline pipeline = ch.pipeline();
-		if (accessLogEnable) {
+		if (accessLogEnabled) {
 			pipeline.addLast(NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H2.create(accessLog));
 		}
 		pipeline.addLast(NettyPipeline.H2ToHttp11Codec, new Http2StreamFrameToHttpObjectCodec(true))
