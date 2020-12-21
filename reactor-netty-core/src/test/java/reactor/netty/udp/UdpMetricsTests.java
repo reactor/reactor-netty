@@ -50,7 +50,7 @@ import static reactor.netty.Metrics.URI;
 /**
  * @author Violeta Georgieva
  */
-public class UdpMetricsTests {
+class UdpMetricsTests {
 	private UdpServer udpServer;
 	private Connection serverConnection;
 	private UdpClient udpClient;
@@ -58,7 +58,7 @@ public class UdpMetricsTests {
 	private MeterRegistry registry;
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		udpServer =
 				UdpServer.create()
 				         .host("127.0.0.1")
@@ -75,7 +75,7 @@ public class UdpMetricsTests {
 	}
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		if (serverConnection != null) {
 			serverConnection.disposeNow();
 		}
@@ -90,7 +90,7 @@ public class UdpMetricsTests {
 	}
 
 	@Test
-	public void testSuccessfulCommunication() throws Exception {
+	void testSuccessfulCommunication() throws Exception {
 		CountDownLatch latch = new CountDownLatch(2);
 		serverConnection =
 				udpServer.handle((in, out) ->

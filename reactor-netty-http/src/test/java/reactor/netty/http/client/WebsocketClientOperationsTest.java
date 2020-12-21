@@ -33,20 +33,20 @@ import static org.assertj.core.api.Assertions.*;
 /**
  * @author Violeta Georgieva
  */
-public class WebsocketClientOperationsTest {
+class WebsocketClientOperationsTest {
 
 	@Test
-	public void requestError() {
+	void requestError() {
 		failOnClientServerError(401, "", "");
 	}
 
 	@Test
-	public void serverError() {
+	void serverError() {
 		failOnClientServerError(500, "", "");
 	}
 
 	@Test
-	public void failedNegotiation() {
+	void failedNegotiation() {
 		failOnClientServerError(200, "Server-Protocol", "Client-Protocol");
 	}
 
@@ -96,7 +96,7 @@ public class WebsocketClientOperationsTest {
 	}
 
 	@Test
-	public void testConfigureWebSocketVersion() {
+	void testConfigureWebSocketVersion() {
 		DisposableServer httpServer = HttpServer.create()
 				.port(0)
 				.handle((in, out) -> out.sendWebsocket((i, o) ->
@@ -118,12 +118,12 @@ public class WebsocketClientOperationsTest {
 	}
 
 	@Test
-	public void testNullWebSocketVersionShouldFail() {
+	void testNullWebSocketVersionShouldFail() {
 		assertThatNullPointerException().isThrownBy(() -> WebsocketClientSpec.builder().version(null).build());
 	}
 
 	@Test
-	public void testUnknownWebSocketVersionShouldFail() {
+	void testUnknownWebSocketVersionShouldFail() {
 		assertThatIllegalArgumentException().isThrownBy(() -> WebsocketClientSpec.builder().version(WebSocketVersion.UNKNOWN).build());
 	}
 

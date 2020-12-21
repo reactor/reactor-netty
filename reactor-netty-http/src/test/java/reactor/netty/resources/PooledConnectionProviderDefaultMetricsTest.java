@@ -47,29 +47,29 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 /**
  * @author Violeta Georgieva
  */
-public class PooledConnectionProviderDefaultMetricsTest {
+class PooledConnectionProviderDefaultMetricsTest {
 	private MeterRegistry registry;
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
 	}
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		Metrics.removeRegistry(registry);
 		registry.clear();
 		registry.close();
 	}
 
 	@Test
-	public void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabled() throws Exception {
+	void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabled() throws Exception {
 		doTest(ConnectionProvider.create("test", 1), true);
 	}
 
 	@Test
-	public void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabled() throws Exception {
+	void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabled() throws Exception {
 		doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo().build(), false);
 	}
 

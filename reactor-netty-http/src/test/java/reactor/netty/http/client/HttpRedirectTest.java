@@ -53,15 +53,15 @@ import reactor.util.function.Tuple2;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
-public class HttpRedirectTest {
+class HttpRedirectTest {
 
 	@Test
-	public void deadlockWhenRedirectsToSameUrl(){
+	void deadlockWhenRedirectsToSameUrl(){
 		redirectTests("/login");
 	}
 
 	@Test
-	public void okWhenRedirectsToOther(){
+	void okWhenRedirectsToOther(){
 		redirectTests("/other");
 	}
 
@@ -105,7 +105,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void redirectDisabledByDefault() {
+	void redirectDisabledByDefault() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -135,7 +135,7 @@ public class HttpRedirectTest {
 
 	/** This ensures functionality such as metrics and tracing can accurately count requests. */
 	@Test
-	public void redirect_issuesOnRequestForEachAttempt() {
+	void redirect_issuesOnRequestForEachAttempt() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -182,7 +182,7 @@ public class HttpRedirectTest {
 	 * timestamp.
 	 */
 	@Test
-	public void redirect_onResponseBeforeBlockCompletes() throws Exception {
+	void redirect_onResponseBeforeBlockCompletes() throws Exception {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -211,7 +211,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testIssue253() {
+	void testIssue253() {
 		final int serverPort1 = SocketUtils.findAvailableTcpPort();
 
 		DisposableServer server =
@@ -275,7 +275,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testIssue278() {
+	void testIssue278() {
 		final int serverPort1 = SocketUtils.findAvailableTcpPort();
 		final int serverPort2 = SocketUtils.findAvailableTcpPort();
 
@@ -343,7 +343,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testIssue522() {
+	void testIssue522() {
 		final int serverPort = SocketUtils.findAvailableTcpPort();
 
 		DisposableServer server =
@@ -440,7 +440,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testIssue606() {
+	void testIssue606() {
 		final int serverPort = SocketUtils.findAvailableTcpPort();
 
 		DisposableServer server =
@@ -473,7 +473,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testFollowRedirectPredicateThrowsException() {
+	void testFollowRedirectPredicateThrowsException() {
 		final int serverPort = SocketUtils.findAvailableTcpPort();
 
 		DisposableServer server =
@@ -501,7 +501,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testIssue843() throws Exception {
+	void testIssue843() throws Exception {
 		final int server2Port = SocketUtils.findAvailableTcpPort();
 
 		SelfSignedCertificate cert1 = new SelfSignedCertificate();
@@ -548,7 +548,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testRelativeRedirectKeepsScheme() {
+	void testRelativeRedirectKeepsScheme() {
 		final String requestPath = "/request";
 		final String redirectPath = "/redirect";
 		final String responseContent = "Success";
@@ -584,7 +584,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testLastLocationSetToResourceUrlOnRedirect() throws CertificateException {
+	void testLastLocationSetToResourceUrlOnRedirect() throws CertificateException {
 		final String redirectPath = "/redirect";
 		final String destinationPath = "/destination";
 		final String responseContent = "Success";
@@ -633,12 +633,12 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testBuffersForRedirectWithContentShouldBeReleased() {
+	void testBuffersForRedirectWithContentShouldBeReleased() {
 		doTestBuffersForRedirectWithContentShouldBeReleased("Redirect response content!");
 	}
 
 	@Test
-	public void testBuffersForRedirectWithLargeContentShouldBeReleased() {
+	void testBuffersForRedirectWithLargeContentShouldBeReleased() {
 		doTestBuffersForRedirectWithContentShouldBeReleased(StringUtils.repeat("a", 10000));
 	}
 
@@ -689,7 +689,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testHttpServerWithDomainSockets() throws Exception {
+	void testHttpServerWithDomainSockets() throws Exception {
 		HttpServer server = HttpServer.create();
 		HttpClient client = HttpClient.create();
 
@@ -735,7 +735,7 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testHttp2Redirect() throws Exception {
+	void testHttp2Redirect() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()

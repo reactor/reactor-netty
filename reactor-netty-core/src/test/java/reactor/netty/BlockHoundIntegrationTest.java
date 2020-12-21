@@ -29,11 +29,11 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * Smoke test that ensures that BlockHound is enabled
  */
-public class BlockHoundIntegrationTest {
+class BlockHoundIntegrationTest {
 
 	@Test
 	@SuppressWarnings("FutureReturnValueIgnored")
-	public void shouldDisallowBlockingCalls() {
+	void shouldDisallowBlockingCalls() {
 		LoopResources resources = LoopResources.create("foo", 1, true);
 		try {
 			CompletableFuture<?> future = new CompletableFuture<>();

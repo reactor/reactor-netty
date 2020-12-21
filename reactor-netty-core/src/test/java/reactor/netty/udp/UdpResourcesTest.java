@@ -23,10 +23,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Violeta Georgieva
  */
-public class UdpResourcesTest {
+class UdpResourcesTest {
 
 	@Test
-	public void testIssue1227() {
+	void testIssue1227() {
 		UdpResources.get();
 
 		UdpResources old = UdpResources.udpResources.get();

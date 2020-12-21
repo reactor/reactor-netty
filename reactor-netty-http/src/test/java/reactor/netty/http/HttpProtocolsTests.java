@@ -50,7 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-public class HttpProtocolsTests {
+class HttpProtocolsTests {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
@@ -59,7 +59,7 @@ public class HttpProtocolsTests {
 	@interface ParameterizedHttpProtocolsTest {
 	}
 
-	public static Object[][] data() throws Exception {
+	static Object[][] data() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
@@ -103,7 +103,7 @@ public class HttpProtocolsTests {
 	}
 
 	@ParameterizedHttpProtocolsTest
-	public void testProtocolVariationsGetRequest(HttpServer server, HttpClient client) {
+	void testProtocolVariationsGetRequest(HttpServer server, HttpClient client) {
 		HttpServerConfig serverConfig = server.configuration();
 		HttpClientConfig clientConfig = client.configuration();
 		List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());
@@ -159,16 +159,16 @@ public class HttpProtocolsTests {
 	}
 
 	@ParameterizedHttpProtocolsTest
-	public void testProtocolVariationsPostRequest_1(HttpServer server, HttpClient client) {
+	void testProtocolVariationsPostRequest_1(HttpServer server, HttpClient client) {
 		doTestProtocolVariationsPostRequest(server, client, false);
 	}
 
 	@ParameterizedHttpProtocolsTest
-	public void testProtocolVariationsPostRequest_2(HttpServer server, HttpClient client) {
+	void testProtocolVariationsPostRequest_2(HttpServer server, HttpClient client) {
 		doTestProtocolVariationsPostRequest(server, client, true);
 	}
 
-	public void doTestProtocolVariationsPostRequest(HttpServer server, HttpClient client, boolean externalThread) {
+	private void doTestProtocolVariationsPostRequest(HttpServer server, HttpClient client, boolean externalThread) {
 		HttpServerConfig serverConfig = server.configuration();
 		HttpClientConfig clientConfig = client.configuration();
 		List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());

@@ -54,7 +54,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Violeta Georgieva
  */
-public class SslProviderTests {
+class SslProviderTests {
 	static SelfSignedCertificate cert;
 	static SelfSignedCertificate localhostCert;
 	static SelfSignedCertificate anotherCert;
@@ -69,14 +69,14 @@ public class SslProviderTests {
 	private DisposableServer disposableServer;
 
 	@BeforeAll
-	public static void createSelfSignedCertificate() throws Exception {
+	static void createSelfSignedCertificate() throws Exception {
 		cert = new SelfSignedCertificate("default");
 		localhostCert = new SelfSignedCertificate("localhost");
 		anotherCert = new SelfSignedCertificate("another");
 	}
 
 	@BeforeEach
-	public void setUp() throws Exception {
+	void setUp() throws Exception {
 		serverSslContextBuilder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 
 		SslContextBuilder localhostSslContextBuilder =
@@ -102,14 +102,14 @@ public class SslProviderTests {
 	}
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
 	}
 
 	@Test
-	public void testProtocolHttp11SslConfiguration() {
+	void testProtocolHttp11SslConfiguration() {
 		disposableServer =
 				server.protocol(HttpProtocol.HTTP11)
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
@@ -120,7 +120,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testSslConfigurationProtocolHttp11_1() {
+	void testSslConfigurationProtocolHttp11_1() {
 		disposableServer =
 				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.HTTP11)
@@ -131,7 +131,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testSslConfigurationProtocolHttp11_2() {
+	void testSslConfigurationProtocolHttp11_2() {
 		disposableServer =
 				server.protocol(HttpProtocol.H2)
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
@@ -143,7 +143,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testProtocolH2SslConfiguration() {
+	void testProtocolH2SslConfiguration() {
 		disposableServer =
 				server.protocol(HttpProtocol.H2)
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
@@ -156,7 +156,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testSslConfigurationProtocolH2_1() {
+	void testSslConfigurationProtocolH2_1() {
 		disposableServer =
 				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.H2)
@@ -169,7 +169,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testSslConfigurationProtocolH2_2() {
+	void testSslConfigurationProtocolH2_2() {
 		disposableServer =
 				server.protocol(HttpProtocol.HTTP11)
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
@@ -183,7 +183,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testTls13Support() {
+	void testTls13Support() {
 		disposableServer =
 				server.secure(spec -> spec.sslContext(serverSslContextBuilder.protocols("TLSv1.3")))
 				      .handle((req, res) -> res.sendString(Mono.just("testTls13Support")))
@@ -204,12 +204,12 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testTls13UnsupportedProtocol_1() {
+	void testTls13UnsupportedProtocol_1() {
 		doTestTls13UnsupportedProtocol(true, false);
 	}
 
 	@Test
-	public void testTls13UnsupportedProtocol_2() {
+	void testTls13UnsupportedProtocol_2() {
 		doTestTls13UnsupportedProtocol(false, true);
 	}
 
@@ -245,7 +245,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testAdd() throws Exception {
+	void testAdd() throws Exception {
 		SslProvider.Builder builder =
 				SslProvider.builder()
 				           .sslContext(serverSslContextBuilder.build())
@@ -261,7 +261,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testAddBadValues() {
+	void testAddBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder.build())
@@ -274,7 +274,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testAddAll() throws Exception {
+	void testAddAll() throws Exception {
 		Map<String, Consumer<? super SslProvider.SslContextSpec>> map = new HashMap<>();
 		map.put("localhost", spec -> spec.sslContext(localhostSslContext));
 
@@ -294,7 +294,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testAddAllBadValues() {
+	void testAddAllBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder.build())
@@ -302,7 +302,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testSetAll() throws Exception {
+	void testSetAll() throws Exception {
 		Map<String, Consumer<? super SslProvider.SslContextSpec>> map = new HashMap<>();
 		map.put("localhost", spec -> spec.sslContext(localhostSslContext));
 
@@ -324,7 +324,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testSetAllBadValues() {
+	void testSetAllBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder.build())
@@ -332,7 +332,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testServerNames() throws Exception {
+	void testServerNames() throws Exception {
 		SslContext defaultSslContext = clientSslContextBuilder.build();
 		SslProvider.Builder builder =
 				SslProvider.builder()
@@ -351,7 +351,7 @@ public class SslProviderTests {
 	}
 
 	@Test
-	public void testServerNamesBadValues() throws Exception {
+	void testServerNamesBadValues() throws Exception {
 		SslContext defaultSslContext = clientSslContextBuilder.build();
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()

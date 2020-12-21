@@ -21,17 +21,17 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class HttpDecoderSpecTest {
+class HttpDecoderSpecTest {
 
 	private HttpDecoderSpecImpl conf;
 
 	@BeforeEach
-	public void init() {
+	void init() {
 		conf = new HttpDecoderSpecImpl();
 	}
 
 	@Test
-	public void maxInitialLineLength() {
+	void maxInitialLineLength() {
 		conf.maxInitialLineLength(123);
 
 		assertThat(conf.maxInitialLineLength()).as("initial line length").isEqualTo(123);
@@ -43,7 +43,7 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
-	public void maxInitialLineLengthBadValues() {
+	void maxInitialLineLengthBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> conf.maxInitialLineLength(0))
 				.as("rejects 0")
@@ -56,7 +56,7 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
-	public void maxHeaderSize() {
+	void maxHeaderSize() {
 		conf.maxHeaderSize(123);
 
 		assertThat(conf.maxHeaderSize()).as("header size").isEqualTo(123);
@@ -68,7 +68,7 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
-	public void maxHeaderSizeBadValues() {
+	void maxHeaderSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> conf.maxHeaderSize(0))
 				.as("rejects 0")
@@ -81,7 +81,7 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
-	public void maxChunkSize() {
+	void maxChunkSize() {
 		conf.maxChunkSize(123);
 
 		assertThat(conf.maxChunkSize()).as("chunk size").isEqualTo(123);
@@ -93,7 +93,7 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
-	public void maxChunkSizeBadValues() {
+	void maxChunkSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> conf.maxChunkSize(0))
 				.as("rejects 0")
@@ -106,7 +106,7 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
-	public void validateHeaders() {
+	void validateHeaders() {
 		conf.validateHeaders(false);
 
 		assertThat(conf.validateHeaders()).as("validate headers").isFalse();
@@ -118,7 +118,7 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
-	public void initialBufferSize() {
+	void initialBufferSize() {
 		conf.initialBufferSize(123);
 
 		assertThat(conf.initialBufferSize()).as("initial buffer size").isEqualTo(123);
@@ -130,7 +130,7 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
-	public void initialBufferSizeBadValues() {
+	void initialBufferSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> conf.initialBufferSize(0))
 				.as("rejects 0")

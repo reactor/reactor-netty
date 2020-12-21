@@ -52,10 +52,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class DefaultPooledConnectionProviderTest {
+class DefaultPooledConnectionProviderTest {
 
 	@Test
-	public void testIssue903() throws CertificateException {
+	void testIssue903() throws CertificateException {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.key(), cert.cert());
 		DisposableServer server =
@@ -83,7 +83,7 @@ public class DefaultPooledConnectionProviderTest {
 	}
 
 	@Test
-	public void testIssue973() {
+	void testIssue973() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -146,7 +146,7 @@ public class DefaultPooledConnectionProviderTest {
 	}
 
 	@Test
-	public void testIssue1012() throws Exception {
+	void testIssue1012() throws Exception {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -186,7 +186,7 @@ public class DefaultPooledConnectionProviderTest {
 	}
 
 	@Test
-	public void connectionReleasedOnRedirect() throws Exception {
+	void connectionReleasedOnRedirect() throws Exception {
 		String redirectedContent = StringUtils.repeat("a", 10000);
 		DisposableServer server =
 				HttpServer.create()
@@ -231,7 +231,7 @@ public class DefaultPooledConnectionProviderTest {
 
 	@Test
 	@Disabled
-	public void testSslEngineClosed() throws Exception {
+	void testSslEngineClosed() throws Exception {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)

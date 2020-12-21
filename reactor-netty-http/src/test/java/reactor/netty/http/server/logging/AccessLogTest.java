@@ -38,12 +38,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.server.logging.AccessLog.LOG;
 
 class AccessLogTest {
-	public static final String ACCESS_LOG_HANDLER = "AccessLogHandler";
 
-	private static final Logger ROOT = (Logger) LoggerFactory.getLogger(LOG.getName());
-	public static final String NOT_FOUND = "NOT FOUND";
-	public static final String FOUND = "FOUND";
-	public static final String CUSTOM_FORMAT = "method={}, uri={}";
+	static final String ACCESS_LOG_HANDLER = "AccessLogHandler";
+	static final Logger ROOT = (Logger) LoggerFactory.getLogger(LOG.getName());
+	static final String NOT_FOUND = "NOT FOUND";
+	static final String FOUND = "FOUND";
+	static final String CUSTOM_FORMAT = "method={}, uri={}";
 
 	private Appender<ILoggingEvent> mockedAppender;
 	private ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor;
@@ -52,7 +52,7 @@ class AccessLogTest {
 
 	@BeforeEach
 	@SuppressWarnings("unchecked")
-	public void setUp() {
+	void setUp() {
 		mockedAppender = (Appender<ILoggingEvent>) Mockito.mock(Appender.class);
 		loggingEventArgumentCaptor = ArgumentCaptor.forClass(LoggingEvent.class);
 		Mockito.when(mockedAppender.getName()).thenReturn("MOCK");
@@ -60,7 +60,7 @@ class AccessLogTest {
 	}
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
@@ -68,7 +68,7 @@ class AccessLogTest {
 	}
 
 	@Test
-	public void accessLogDefaultFormat() {
+	void accessLogDefaultFormat() {
 		disposableServer = HttpServer.create()
 				.port(0)
 				.handle((req, resp) -> {
@@ -94,7 +94,7 @@ class AccessLogTest {
 	}
 
 	@Test
-	public void accessLogCustomFormat() {
+	void accessLogCustomFormat() {
 		disposableServer = HttpServer.create()
 				.port(8080)
 				.handle((req, resp) -> {
@@ -120,7 +120,7 @@ class AccessLogTest {
 	}
 
 	@Test
-	public void secondCallToAccessLogOverridesPreviousOne() {
+	void secondCallToAccessLogOverridesPreviousOne() {
 		disposableServer = HttpServer.create()
 				.port(8080)
 				.handle((req, resp) -> {

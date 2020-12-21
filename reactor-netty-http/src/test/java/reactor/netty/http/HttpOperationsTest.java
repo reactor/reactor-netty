@@ -44,10 +44,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Stephane Maldini
  */
-public class HttpOperationsTest {
+class HttpOperationsTest {
 
 	@Test
-	public void httpAndJsonDecoders() {
+	void httpAndJsonDecoders() {
 
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Connection testContext = () -> channel;
@@ -94,7 +94,7 @@ public class HttpOperationsTest {
 	}
 
 	@Test
-	public void testPath() {
+	void testPath() {
 		TestHttpInfos infos = new TestHttpInfos();
 		Flux<String> expectations = Flux.just("", "", "", "/", "a", "a", "", "a", "", "a", "a", "a b");
 
@@ -128,6 +128,7 @@ public class HttpOperationsTest {
 
 		doTestPath(infos, expectations, Flux.just("", "/", "//", "///", "/a", "/a/", "/?b", "/a?b", "/#b", "/a#b", "/a?b#c", "/a%20b"));
 	}
+
 	private void doTestPath(TestHttpInfos infos, Flux<String> expectations, Flux<String> uris) {
 		uris.zipWith(expectations)
 		            .doOnNext(tuple -> {
@@ -138,7 +139,7 @@ public class HttpOperationsTest {
 	}
 
 	@Test
-	public void testFullPath() {
+	void testFullPath() {
 		assertThat(HttpOperations.resolvePath("http://localhost:8080")).isEqualTo("");
 		assertThat(HttpOperations.resolvePath("http://localhost:8080/")).isEqualTo("/");
 		assertThat(HttpOperations.resolvePath("http://localhost:8080//")).isEqualTo("//");

@@ -38,7 +38,7 @@ import reactor.netty.transport.ClientTransportConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class BlockingConnectionTest {
+class BlockingConnectionTest {
 
 	static final Connection NEVER_STOP_CONTEXT = new Connection() {
 		@Override
@@ -85,7 +85,7 @@ public class BlockingConnectionTest {
 	};
 
 	@Test
-	public void simpleServerFromAsyncServer() {
+	void simpleServerFromAsyncServer() {
 		DisposableServer simpleServer =
 				TcpServer.create()
 				         .handle((in, out) -> out.sendString(in.receive()
@@ -162,7 +162,7 @@ public class BlockingConnectionTest {
 	}
 
 	@Test
-	public void testTimeoutOnStart() {
+	void testTimeoutOnStart() {
 		TestClientTransport neverStart = new TestClientTransport(Mono.never());
 
 		assertThatExceptionOfType(IllegalStateException.class)
@@ -171,7 +171,7 @@ public class BlockingConnectionTest {
 	}
 
 	@Test
-	public void testTimeoutOnStop() {
+	void testTimeoutOnStop() {
 		Connection c = new TestClientTransport(Mono.just(NEVER_STOP_CONTEXT)).connectNow();
 
 		assertThatExceptionOfType(RuntimeException.class)
@@ -180,7 +180,7 @@ public class BlockingConnectionTest {
 	}
 
 	@Test
-	public void getContextAddressAndHost() {
+	void getContextAddressAndHost() {
 		DisposableServer c = new TcpServer() {
 
 			@Override

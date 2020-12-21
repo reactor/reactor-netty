@@ -30,10 +30,10 @@ import reactor.test.StepVerifier;
 /**
  * @author tokuhirom
  */
-public class HttpErrorTests {
+class HttpErrorTests {
 
 	@Test
-	public void test() {
+	void test() {
 		DisposableServer server = HttpServer.create()
 		                              .port(0)
 		                              .route(httpServerRoutes -> httpServerRoutes.get(

@@ -33,14 +33,14 @@ import reactor.netty.transport.TransportConfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class HttpResourcesTest {
+class HttpResourcesTest {
 
 	private AtomicBoolean      loopDisposed;
 	private AtomicBoolean      poolDisposed;
 	private HttpResources      testResources;
 
 	@BeforeEach
-	public void before() {
+	void before() {
 		loopDisposed = new AtomicBoolean();
 		poolDisposed = new AtomicBoolean();
 
@@ -86,7 +86,7 @@ public class HttpResourcesTest {
 	}
 
 	@Test
-	public void shutdownLaterDefers() {
+	void shutdownLaterDefers() {
 		HttpResources oldHttpResources = HttpResources.httpResources.getAndSet(testResources);
 		HttpResources newHttpResources = HttpResources.httpResources.get();
 
@@ -109,7 +109,7 @@ public class HttpResourcesTest {
 	}
 
 	@Test
-	public void testIssue1227() {
+	void testIssue1227() {
 		HttpResources.get();
 
 		HttpResources old = HttpResources.httpResources.get();

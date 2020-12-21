@@ -22,17 +22,17 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class Http2SettingsSpecTests {
+class Http2SettingsSpecTests {
 
 	private Http2SettingsSpec.Builder builder;
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		builder = Http2SettingsSpec.builder();
 	}
 
 	@Test
-	public void headerTableSize() {
+	void headerTableSize() {
 		builder.headerTableSize(123);
 		Http2SettingsSpec spec = builder.build();
 		assertThat(spec.headerTableSize()).isEqualTo(123);
@@ -44,14 +44,14 @@ public class Http2SettingsSpecTests {
 	}
 
 	@Test
-	public void headerTableSizeBadValues() {
+	void headerTableSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.headerTableSize(-1))
 				.withMessage("Setting HEADER_TABLE_SIZE is invalid: -1");
 	}
 
 	@Test
-	public void initialWindowSize() {
+	void initialWindowSize() {
 		builder.initialWindowSize(123);
 		Http2SettingsSpec spec = builder.build();
 		assertThat(spec.headerTableSize()).isNull();
@@ -63,14 +63,14 @@ public class Http2SettingsSpecTests {
 	}
 
 	@Test
-	public void initialWindowSizeBadValues() {
+	void initialWindowSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.initialWindowSize(-1))
 				.withMessage("Setting INITIAL_WINDOW_SIZE is invalid: -1");
 	}
 
 	@Test
-	public void maxConcurrentStreams() {
+	void maxConcurrentStreams() {
 		builder.maxConcurrentStreams(123);
 		Http2SettingsSpec spec = builder.build();
 		assertThat(spec.headerTableSize()).isNull();
@@ -82,14 +82,14 @@ public class Http2SettingsSpecTests {
 	}
 
 	@Test
-	public void maxConcurrentStreamsBadValues() {
+	void maxConcurrentStreamsBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxConcurrentStreams(-1))
 				.withMessage("Setting MAX_CONCURRENT_STREAMS is invalid: -1");
 	}
 
 	@Test
-	public void maxFrameSize() {
+	void maxFrameSize() {
 		builder.maxFrameSize(16384);
 		Http2SettingsSpec spec = builder.build();
 		assertThat(spec.headerTableSize()).isNull();
@@ -101,14 +101,14 @@ public class Http2SettingsSpecTests {
 	}
 
 	@Test
-	public void maxFrameSizeBadValues() {
+	void maxFrameSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxFrameSize(-1))
 				.withMessage("Setting MAX_FRAME_SIZE is invalid: -1");
 	}
 
 	@Test
-	public void maxHeaderListSize() {
+	void maxHeaderListSize() {
 		builder.maxHeaderListSize(123);
 		Http2SettingsSpec spec = builder.build();
 		assertThat(spec.headerTableSize()).isNull();
@@ -120,7 +120,7 @@ public class Http2SettingsSpecTests {
 	}
 
 	@Test
-	public void maxHeaderListSizeBadValues() {
+	void maxHeaderListSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxHeaderListSize(-1))
 				.withMessage("Setting MAX_HEADER_LIST_SIZE is invalid: -1");

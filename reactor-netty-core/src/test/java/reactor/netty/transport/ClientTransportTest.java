@@ -40,34 +40,34 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Violeta Georgieva
  */
-public class ClientTransportTest {
+class ClientTransportTest {
 
 	@Test
-	public void testConnectMonoEmpty() {
+	void testConnectMonoEmpty() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> new TestClientTransport(Mono.empty()).connectNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 
 	@Test
-	public void testConnectTimeout() {
+	void testConnectTimeout() {
 		assertThatExceptionOfType(IllegalStateException.class)
 				.isThrownBy(() -> new TestClientTransport(Mono.never()).connectNow(Duration.ofMillis(1)));
 	}
 
 	@Test
-	public void testConnectTimeoutLongOverflow() {
+	void testConnectTimeoutLongOverflow() {
 		assertThatExceptionOfType(ArithmeticException.class)
 				.isThrownBy(() -> new TestClientTransport(Mono.never()).connectNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 
 	@Test
-	public void testDisposeTimeout() {
+	void testDisposeTimeout() {
 		assertThatExceptionOfType(IllegalStateException.class)
 				.isThrownBy(() -> new TestClientTransport(Mono.just(EmbeddedChannel::new)).connectNow().disposeNow(Duration.ofMillis(1)));
 	}
 
 	@Test
-	public void testDisposeTimeoutLongOverflow() {
+	void testDisposeTimeoutLongOverflow() {
 		assertThatExceptionOfType(ArithmeticException.class)
 				.isThrownBy(() -> new TestClientTransport(Mono.just(EmbeddedChannel::new)).connectNow().disposeNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}

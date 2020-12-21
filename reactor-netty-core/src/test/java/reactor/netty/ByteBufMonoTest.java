@@ -24,30 +24,30 @@ import reactor.test.StepVerifier;
 import java.nio.charset.Charset;
 import java.time.Duration;
 
-public class ByteBufMonoTest {
+class ByteBufMonoTest {
 
 	@Test
-	public void testFromString_EmptyFlux() {
+	void testFromString_EmptyFlux() {
 		doTestFromStringEmptyPublisher(Flux.empty());
 	}
 
 	@Test
-	public void testFromString_EmptyMono() {
+	void testFromString_EmptyMono() {
 		doTestFromStringEmptyPublisher(Mono.empty());
 	}
 
 	@Test
-	public void testFromString_Callable() {
+	void testFromString_Callable() {
 		doTestFromString(Mono.fromCallable(() -> "123"));
 	}
 
 	@Test
-	public void testFromString_Flux() {
+	void testFromString_Flux() {
 		doTestFromString(Flux.just("1", "2", "3"));
 	}
 
 	@Test
-	public void testFromString_Mono() {
+	void testFromString_Mono() {
 		doTestFromString(Mono.just("123"));
 	}
 

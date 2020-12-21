@@ -89,12 +89,12 @@ import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
  * @author Jon Brisbin
  * @author Stephane Maldini
  */
-public class TcpServerTests {
+class TcpServerTests {
 
 	final Logger log     = Loggers.getLogger(TcpServerTests.class);
 
 	@Test
-	public void tcpServerHandlesJsonPojosOverSsl() throws Exception {
+	void tcpServerHandlesJsonPojosOverSsl() throws Exception {
 		final CountDownLatch latch = new CountDownLatch(2);
 
 		SelfSignedCertificate cert = new SelfSignedCertificate();
@@ -183,7 +183,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void exposesRemoteAddress() throws InterruptedException {
+	void exposesRemoteAddress() throws InterruptedException {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(1);
 
@@ -218,7 +218,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void exposesNettyPipelineConfiguration() throws InterruptedException {
+	void exposesNettyPipelineConfiguration() throws InterruptedException {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(2);
 
@@ -260,7 +260,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testIssue462() throws InterruptedException {
+	void testIssue462() throws InterruptedException {
 
 		final CountDownLatch countDownLatch = new CountDownLatch(1);
 
@@ -294,7 +294,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void gettingOptionsDuplicates() {
+	void gettingOptionsDuplicates() {
 		TcpServer server1 = TcpServer.create();
 		TcpServer server2 = server1.host("example.com").port(123);
 		assertThat(server2)
@@ -303,7 +303,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void sendFileSecure() throws Exception {
+	void sendFileSecure() throws Exception {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -388,14 +388,14 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void sendFileChunked() throws Exception {
+	void sendFileChunked() throws Exception {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
 		assertSendFile(out -> out.sendFileChunked(largeFile, 0, fileSize));
 	}
 
 	@Test
-	public void sendZipFileChunked() throws Exception {
+	void sendZipFileChunked() throws Exception {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -408,7 +408,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void sendZipFileDefault() throws Exception {
+	void sendZipFileDefault() throws Exception {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 
@@ -498,7 +498,7 @@ public class TcpServerTests {
 
 	@Test
 	@Timeout(2)
-	public void startAndAwait() throws InterruptedException {
+	void startAndAwait() throws InterruptedException {
 		AtomicReference<DisposableServer> conn = new AtomicReference<>();
 		CountDownLatch startLatch = new CountDownLatch(1);
 
@@ -524,7 +524,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void tcpServerCanEncodeAndDecodeJSON() throws Exception {
+	void tcpServerCanEncodeAndDecodeJSON() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();
 		Function<Pojo, ByteBuf> jsonEncoder = pojo -> {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -578,7 +578,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void flushEvery5ElementsWithManualDecoding() throws Exception {
+	void flushEvery5ElementsWithManualDecoding() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();
 		Function<List<Pojo>, ByteBuf> jsonEncoder = pojo -> {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -645,7 +645,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void retryStrategiesWhenServerFails() throws Exception {
+	void retryStrategiesWhenServerFails() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();
 		Function<List<Pojo>, ByteBuf> jsonEncoder = pojo -> {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -719,7 +719,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testEchoWithLineBasedFrameDecoder() throws Exception {
+	void testEchoWithLineBasedFrameDecoder() throws Exception {
 		CountDownLatch latch = new CountDownLatch(2);
 		DisposableServer server =
 				TcpServer.create()
@@ -762,7 +762,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testChannelGroupClosesAllConnections() throws Exception {
+	void testChannelGroupClosesAllConnections() throws Exception {
 		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
 
 		CountDownLatch latch1 = new CountDownLatch(1);
@@ -797,7 +797,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testIssue688() throws Exception {
+	void testIssue688() throws Exception {
 		CountDownLatch connected = new CountDownLatch(1);
 		CountDownLatch configured = new CountDownLatch(1);
 		CountDownLatch disconnected = new CountDownLatch(1);
@@ -842,7 +842,7 @@ public class TcpServerTests {
 
 	@Test
 	@SuppressWarnings("FutureReturnValueIgnored")
-	public void testHalfClosedConnection() throws Exception {
+	void testHalfClosedConnection() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
@@ -889,7 +889,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testGracefulShutdown() throws Exception {
+	void testGracefulShutdown() throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(2);
 		CountDownLatch latch2 = new CountDownLatch(2);
 		CountDownLatch latch3 = new CountDownLatch(1);
@@ -943,7 +943,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testTcpServerWithDomainSocketsNIOTransport() {
+	void testTcpServerWithDomainSocketsNIOTransport() {
 		assertThatExceptionOfType(ChannelBindException.class)
 				.isThrownBy(() -> {
 					LoopResources loop = LoopResources.create("testTcpServerWithDomainSocketsNIOTransport");
@@ -961,7 +961,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testTcpServerWithDomainSocketsWithHost() {
+	void testTcpServerWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> TcpServer.create()
 		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -970,7 +970,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testTcpServerWithDomainSocketsWithPort() {
+	void testTcpServerWithDomainSocketsWithPort() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> TcpServer.create()
 		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -979,7 +979,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testTcpServerWithDomainSockets() throws Exception {
+	void testTcpServerWithDomainSockets() throws Exception {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
 		DisposableServer disposableServer =
 				TcpServer.create()
@@ -1073,7 +1073,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testBindTimeoutLongOverflow() {
+	void testBindTimeoutLongOverflow() {
 		assertThatExceptionOfType(ArithmeticException.class)
 				.isThrownBy(() -> TcpServer.create()
 		                                   .port(0)
@@ -1081,7 +1081,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testDisposeTimeoutLongOverflow() {
+	void testDisposeTimeoutLongOverflow() {
 		assertThatExceptionOfType(ArithmeticException.class)
 				.isThrownBy(() -> TcpServer.create()
 		                                   .port(0)
@@ -1090,7 +1090,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void testSniSupport() throws Exception {
+	void testSniSupport() throws Exception {
 		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
 		SslContextBuilder defaultSslContextBuilder =
 				SslContextBuilder.forServer(defaultCert.certificate(), defaultCert.privateKey());

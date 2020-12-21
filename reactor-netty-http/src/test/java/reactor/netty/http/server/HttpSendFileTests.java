@@ -56,7 +56,7 @@ import reactor.netty.http.client.HttpClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class HttpSendFileTests {
+class HttpSendFileTests {
 	protected HttpClient customizeClientOptions(HttpClient httpClient) {
 		return httpClient;
 	}
@@ -66,14 +66,14 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendFileChunked() throws IOException, URISyntaxException {
+	void sendFileChunked() throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
 		assertSendFile(out -> out.sendFileChunked(largeFile, 0, fileSize));
 	}
 
 	@Test
-	public void sendFileChunkedOffset() throws IOException, URISyntaxException {
+	void sendFileChunkedOffset() throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
 		assertSendFile(out -> out.sendFileChunked(largeFile, 1024, fileSize - 1024),
@@ -83,7 +83,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileChunked() throws IOException {
+	void sendZipFileChunked() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -96,7 +96,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileDefault() throws IOException {
+	void sendZipFileDefault() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -110,7 +110,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileCompressionOn() throws IOException {
+	void sendZipFileCompressionOn() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -124,7 +124,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileCompressionSize_1() throws IOException {
+	void sendZipFileCompressionSize_1() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -139,7 +139,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileCompressionSize_2() throws IOException {
+	void sendZipFileCompressionSize_2() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -154,7 +154,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileCompressionSize_3() throws IOException {
+	void sendZipFileCompressionSize_3() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -169,7 +169,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileCompressionSize_4() throws IOException {
+	void sendZipFileCompressionSize_4() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -184,7 +184,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileCompressionPredicate_1() throws IOException {
+	void sendZipFileCompressionPredicate_1() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -198,7 +198,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileCompressionPredicate_2() throws IOException {
+	void sendZipFileCompressionPredicate_2() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -213,7 +213,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileCompressionPredicate_3() throws IOException {
+	void sendZipFileCompressionPredicate_3() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -281,7 +281,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendFileAsync4096() throws IOException, URISyntaxException {
+	void sendFileAsync4096() throws IOException, URISyntaxException {
 		doTestSendFileAsync((req, resp) -> resp.sendByteArray(req.receive()
 				                                                 .aggregate()
 				                                                 .asByteArray()),
@@ -290,7 +290,7 @@ public class HttpSendFileTests {
 
 	@Test
 	@SuppressWarnings("FutureReturnValueIgnored")
-	public void sendFileAsync4096Negative() throws IOException, URISyntaxException {
+	void sendFileAsync4096Negative() throws IOException, URISyntaxException {
 		doTestSendFileAsync((req, resp) -> req.receive()
 				                              .take(10)
 				                              .doOnComplete(() -> resp.withConnection(c -> c.channel()
@@ -300,7 +300,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendFileAsync1024() throws IOException, URISyntaxException {
+	void sendFileAsync1024() throws IOException, URISyntaxException {
 		doTestSendFileAsync((req, resp) -> resp.sendByteArray(req.receive()
 		                                                         .asByteArray()
 		                                                         .log("reply", Level.INFO, SignalType.REQUEST)),

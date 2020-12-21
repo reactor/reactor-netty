@@ -25,10 +25,10 @@ import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class DefaultLoopResourcesTest {
+class DefaultLoopResourcesTest {
 
 	@Test
-	public void disposeLaterDefers() {
+	void disposeLaterDefers() {
 		DefaultLoopResources loopResources = new DefaultLoopResources(
 				"test", 0, false);
 
@@ -40,7 +40,7 @@ public class DefaultLoopResourcesTest {
 	}
 
 	@Test
-	public void disposeLaterSubsequentIsQuick() {
+	void disposeLaterSubsequentIsQuick() {
 		DefaultLoopResources loopResources = new DefaultLoopResources(
 				"test", 0, false);
 		loopResources.onServer(true);
@@ -64,7 +64,7 @@ public class DefaultLoopResourcesTest {
 	}
 
 	@Test
-	public void testIssue416() {
+	void testIssue416() {
 		TestResources resources = TestResources.get();
 
 		TestResources.set(ConnectionProvider.create("testIssue416"));

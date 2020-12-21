@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Violeta Georgieva
  */
-public class TcpMetricsTests {
+class TcpMetricsTests {
 	TcpServer tcpServer;
 	DisposableServer disposableServer;
 	TcpClient tcpClient;
@@ -53,7 +53,7 @@ public class TcpMetricsTests {
 	private MeterRegistry registry;
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		tcpServer =
 				customizeServerOptions(TcpServer.create()
 				                                .host("127.0.0.1")
@@ -71,7 +71,7 @@ public class TcpMetricsTests {
 	}
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
@@ -89,7 +89,7 @@ public class TcpMetricsTests {
 	}
 
 	@Test
-	public void testSuccessfulCommunication() throws Exception {
+	void testSuccessfulCommunication() throws Exception {
 		CountDownLatch latch = new CountDownLatch(2);
 		disposableServer =
 				tcpServer.handle((in, out) -> {
@@ -127,7 +127,7 @@ public class TcpMetricsTests {
 	}
 
 	@Test
-	public void testFailedConnect() throws Exception {
+	void testFailedConnect() throws Exception {
 		disposableServer = tcpServer.bindNow();
 
 		CountDownLatch latch = new CountDownLatch(1);

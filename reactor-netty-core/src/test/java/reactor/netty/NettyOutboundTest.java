@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -57,10 +56,10 @@ import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class NettyOutboundTest {
+class NettyOutboundTest {
 
 	@Test
-	public void sendFileWithoutTlsUsesFileRegion() throws URISyntaxException {
+	void sendFileWithoutTlsUsesFileRegion() throws URISyntaxException {
 		List<Class<?>> messageClasses = new ArrayList<>(2);
 
 		EmbeddedChannel channel = new EmbeddedChannel(
@@ -73,7 +72,7 @@ public class NettyOutboundTest {
 						WritableByteChannel wbc = Channels.newChannel(bais);
 
 						msg.transferTo(wbc, msg.position());
-						out.add(new String(bais.toByteArray(), StandardCharsets.UTF_8));
+						out.add(bais.toString("UTF-8"));
 					}
 				},
 				new MessageToMessageEncoder<Object>() {
@@ -141,9 +140,7 @@ public class NettyOutboundTest {
 	}
 
 	@Test
-	public void sendFileWithTlsUsesChunkedFile()
-			throws URISyntaxException, SSLException,
-			       CertificateException {
+	void sendFileWithTlsUsesChunkedFile() throws URISyntaxException, SSLException, CertificateException {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		final SslHandler sslHandler = sslCtx.newHandler(ByteBufAllocator.DEFAULT);
@@ -243,7 +240,7 @@ public class NettyOutboundTest {
 	}
 
 	@Test
-	public void sendFileWithForceChunkedFileUsesStrategyChunks()
+	void sendFileWithForceChunkedFileUsesStrategyChunks()
 			throws URISyntaxException, IOException {
 		List<Class<?>> messageWritten = new ArrayList<>(2);
 		EmbeddedChannel channel = new EmbeddedChannel(

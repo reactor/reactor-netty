@@ -37,10 +37,10 @@ import reactor.netty.http.server.HttpServer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class FluxReceiveTest {
+class FluxReceiveTest {
 
 	@Test
-	public void testByteBufsReleasedWhenTimeout() {
+	void testByteBufsReleasedWhenTimeout() {
 		byte[] content = new byte[1024*8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
@@ -87,7 +87,7 @@ public class FluxReceiveTest {
 	}
 
 	@Test
-	public void testByteBufsReleasedWhenTimeoutUsingHandlers() {
+	void testByteBufsReleasedWhenTimeoutUsingHandlers() {
 		byte[] content = new byte[1024*8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
@@ -135,7 +135,7 @@ public class FluxReceiveTest {
 	}
 
 	@Test
-	public void testIssue1016() throws Exception {
+	void testIssue1016() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
 
 		Connection connection = Connection.from(channel);

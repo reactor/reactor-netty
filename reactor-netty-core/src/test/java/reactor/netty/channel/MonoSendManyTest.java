@@ -49,10 +49,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Stephane Maldini
  */
-public class MonoSendManyTest {
+class MonoSendManyTest {
 
 	@Test
-	public void testPromiseSendTimeout() {
+	void testPromiseSendTimeout() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new WriteTimeoutHandler(1), new ChannelHandlerAdapter() {});
 
@@ -70,7 +70,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void cleanupFuseableSyncCloseFuture() {
+	void cleanupFuseableSyncCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
@@ -91,7 +91,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void cleanupFuseableAsyncCloseFuture() {
+	void cleanupFuseableAsyncCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
@@ -112,7 +112,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void cleanupFuseableErrorCloseFuture() {
+	void cleanupFuseableErrorCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
@@ -133,7 +133,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void cleanupCancelCloseFuture() {
+	void cleanupCancelCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
@@ -151,7 +151,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void cleanupErrorCloseFuture() {
+	void cleanupErrorCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
@@ -168,7 +168,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void shouldNotLeakOnRacingCancelAndOnNext() {
+	void shouldNotLeakOnRacingCancelAndOnNext() {
 		int messagesToSend = 128;
 
 		for (int i = 0; i < 10000; i++) {
@@ -206,7 +206,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void shouldNotLeakIfFusedOnRacingCancelAndOnNext() {
+	void shouldNotLeakIfFusedOnRacingCancelAndOnNext() {
 		int messagesToSend = 128;
 
 		ArrayBlockingQueue<ReferenceCounted> discarded = new ArrayBlockingQueue<>(messagesToSend * 2);

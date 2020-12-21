@@ -118,21 +118,21 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Stephane Maldini
  * @since 0.6
  */
-public class HttpClientTest {
+class HttpClientTest {
 
 	static final Logger log = Loggers.getLogger(HttpClientTest.class);
 
 	private DisposableServer disposableServer;
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
 	}
 
 	@Test
-	public void abort() {
+	void abort() {
 		disposableServer =
 				TcpServer.create()
 				         .port(0)
@@ -175,7 +175,7 @@ public class HttpClientTest {
 
 	/** This ensures that non-default values for the HTTP request line are visible for parsing. */
 	@Test
-	public void postVisibleToOnRequest() {
+	void postVisibleToOnRequest() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -205,7 +205,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void userIssue() throws Exception {
+	void userIssue() throws Exception {
 		final ConnectionProvider pool = ConnectionProvider.create("userIssue", 1);
 		CountDownLatch latch = new CountDownLatch(3);
 		Set<String> localAddresses = ConcurrentHashMap.newKeySet();
@@ -244,7 +244,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testClientReuseIssue405(){
+	void testClientReuseIssue405(){
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -275,7 +275,7 @@ public class HttpClientTest {
 
 	@Test
 	//https://github.com/reactor/reactor-pool/issues/82
-	public void testConnectionRefusedConcurrentRequests(){
+	void testConnectionRefusedConcurrentRequests(){
 		ConnectionProvider provider = ConnectionProvider.create("testConnectionRefusedConcurrentRequests", 1);
 
 		HttpClient httpClient = HttpClient.create(provider)
@@ -301,7 +301,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void backpressured() throws Exception {
+	void backpressured() throws Exception {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
 		disposableServer = HttpServer.create()
 		                             .port(0)
@@ -330,7 +330,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void serverInfiniteClientClose() throws Exception {
+	void serverInfiniteClientClose() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		disposableServer =
 				HttpServer.create()
@@ -354,7 +354,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void simpleTestHttps() {
+	void simpleTestHttps() {
 		StepVerifier.create(HttpClient.create()
 		                              .wiretap(true)
 		                              .get()
@@ -375,7 +375,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void prematureCancel() {
+	void prematureCancel() {
 		Sinks.Many<Void> signal = Sinks.unsafe().many().unicast().onBackpressureError();
 		disposableServer =
 				TcpServer.create()
@@ -402,7 +402,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void gzip() {
+	void gzip() {
 		String content = "HELLO WORLD";
 
 		disposableServer =
@@ -456,12 +456,12 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void gzipEnabled() {
+	void gzipEnabled() {
 		doTestGzip(true);
 	}
 
 	@Test
-	public void gzipDisabled() {
+	void gzipDisabled() {
 		doTestGzip(false);
 	}
 
@@ -492,7 +492,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testUserAgent() {
+	void testUserAgent() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -519,7 +519,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void gettingOptionsDuplicates() {
+	void gettingOptionsDuplicates() {
 		HttpClient client1 = HttpClient.create();
 		HttpClient client2 = client1.host("example.com")
 		                            .wiretap(true)
@@ -531,7 +531,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void sslExchangeRelativeGet() throws CertificateException, SSLException {
+	void sslExchangeRelativeGet() throws CertificateException, SSLException {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
@@ -559,7 +559,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void sslExchangeAbsoluteGet() throws CertificateException, SSLException {
+	void sslExchangeAbsoluteGet() throws CertificateException, SSLException {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient()
@@ -583,7 +583,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void secureSendFile()
+	void secureSendFile()
 			throws CertificateException, SSLException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
@@ -628,7 +628,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void chunkedSendFile() throws URISyntaxException {
+	void chunkedSendFile() throws URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		AtomicReference<String> uploaded = new AtomicReference<>();
 
@@ -667,7 +667,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void test() throws Exception {
+	void test() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .host("localhost")
@@ -721,7 +721,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testDeferredUri() {
+	void testDeferredUri() {
 		disposableServer =
 				HttpServer.create()
 				          .host("localhost")
@@ -754,7 +754,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testDeferredHeader() {
+	void testDeferredHeader() {
 		disposableServer =
 				HttpServer.create()
 				          .host("localhost")
@@ -776,7 +776,7 @@ public class HttpClientTest {
 
 	@Test
 	@SuppressWarnings("CollectionUndefinedEquality")
-	public void testCookie() {
+	void testCookie() {
 		disposableServer =
 				HttpServer.create()
 				          .host("localhost")
@@ -802,7 +802,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void closePool() {
+	void closePool() {
 		ConnectionProvider pr = ConnectionProvider.create("closePool", 1);
 		disposableServer =
 				HttpServer.create()
@@ -838,7 +838,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue303() {
+	void testIssue303() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -894,7 +894,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue361() {
+	void testIssue361() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -936,7 +936,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue473() throws Exception {
+	void testIssue473() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverSslContextBuilder =
 				SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
@@ -958,7 +958,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue407_1() throws Exception {
+	void testIssue407_1() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		disposableServer =
 				HttpServer.create()
@@ -1023,7 +1023,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue407_2() throws Exception {
+	void testIssue407_2() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		disposableServer =
 				HttpServer.create()
@@ -1088,7 +1088,7 @@ public class HttpClientTest {
 
 
 	@Test
-	public void testClientContext() throws Exception {
+	void testClientContext() throws Exception {
 		doTestClientContext(HttpClient.create());
 		doTestClientContext(HttpClient.create(ConnectionProvider.newConnection()));
 	}
@@ -1140,7 +1140,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void doOnError() {
+	void doOnError() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1201,7 +1201,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void withConnector() {
+	void withConnector() {
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) ->
@@ -1230,7 +1230,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testPreferContentLengthWhenPost() {
+	void testPreferContentLengthWhenPost() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1259,7 +1259,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testExplicitEmptyBodyOnGetWorks() throws Exception {
+	void testExplicitEmptyBodyOnGetWorks() throws Exception {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
@@ -1292,7 +1292,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testExplicitSendMonoErrorOnGet() {
+	void testExplicitSendMonoErrorOnGet() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1316,12 +1316,12 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testRetryNotEndlessIssue587() throws Exception {
+	void testRetryNotEndlessIssue587() throws Exception {
 		doTestRetry(false);
 	}
 
 	@Test
-	public void testRetryDisabledIssue995() throws Exception {
+	void testRetryDisabledIssue995() throws Exception {
 		doTestRetry(true);
 	}
 
@@ -1433,12 +1433,12 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue600_1() {
+	void testIssue600_1() {
 		doTestIssue600(true);
 	}
 
 	@Test
-	public void testIssue600_2() {
+	void testIssue600_2() {
 		doTestIssue600(false);
 	}
 
@@ -1481,7 +1481,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testChannelGroupClosesAllConnections() throws Exception {
+	void testChannelGroupClosesAllConnections() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1530,7 +1530,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue614() {
+	void testIssue614() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1558,7 +1558,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue632() throws Exception {
+	void testIssue632() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1584,7 +1584,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue694() {
+	void testIssue694() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1624,7 +1624,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue700AndIssue876() {
+	void testIssue700AndIssue876() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1659,7 +1659,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void httpClientResponseConfigInjectAttributes() {
+	void httpClientResponseConfigInjectAttributes() {
 		AtomicReference<Channel> channelRef = new AtomicReference<>();
 		AtomicReference<Boolean> validate = new AtomicReference<>();
 		AtomicReference<Integer> chunkSize = new AtomicReference<>();
@@ -1725,7 +1725,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testDoOnRequestInvokedBeforeSendingRequest() {
+	void testDoOnRequestInvokedBeforeSendingRequest() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1755,7 +1755,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue719() throws Exception {
+	void testIssue719() throws Exception {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Transfer-Encoding", "chunked"), false);
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
@@ -1828,7 +1828,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue777() {
+	void testIssue777() {
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .wiretap(true)
@@ -1922,7 +1922,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testConnectionIdleTimeFixedPool() throws Exception {
+	void testConnectionIdleTimeFixedPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionIdleTimeFixedPool")
 				                  .maxConnections(1)
@@ -1934,7 +1934,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testConnectionIdleTimeElasticPool() throws Exception {
+	void testConnectionIdleTimeElasticPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionIdleTimeElasticPool")
 				                  .maxConnections(Integer.MAX_VALUE)
@@ -1945,7 +1945,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testConnectionNoIdleTimeFixedPool() throws Exception {
+	void testConnectionNoIdleTimeFixedPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionNoIdleTimeFixedPool")
 				                  .maxConnections(1)
@@ -1956,7 +1956,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testConnectionNoIdleTimeElasticPool() throws Exception {
+	void testConnectionNoIdleTimeElasticPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.create("testConnectionNoIdleTimeElasticPool", Integer.MAX_VALUE);
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
@@ -1989,7 +1989,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testConnectionLifeTimeFixedPool() throws Exception {
+	void testConnectionLifeTimeFixedPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionLifeTimeFixedPool")
 				                  .maxConnections(1)
@@ -2001,7 +2001,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testConnectionLifeTimeElasticPool() throws Exception {
+	void testConnectionLifeTimeElasticPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionNoLifeTimeElasticPool")
 				                  .maxConnections(Integer.MAX_VALUE)
@@ -2012,7 +2012,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testConnectionNoLifeTimeFixedPool() throws Exception {
+	void testConnectionNoLifeTimeFixedPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionNoLifeTimeFixedPool")
 				                  .maxConnections(1)
@@ -2023,7 +2023,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testConnectionNoLifeTimeElasticPool() throws Exception {
+	void testConnectionNoLifeTimeElasticPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.create("testConnectionNoLifeTimeElasticPool", Integer.MAX_VALUE);
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
@@ -2059,7 +2059,7 @@ public class HttpClientTest {
 
 
 	@Test
-	public void testResourceUrlSetInResponse() {
+	void testResourceUrlSetInResponse() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -2079,7 +2079,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue975() throws Exception {
+	void testIssue975() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -2112,7 +2112,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue988() {
+	void testIssue988() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -2169,7 +2169,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testDoAfterResponseSuccessDisposeConnection() throws Exception {
+	void testDoAfterResponseSuccessDisposeConnection() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -2198,7 +2198,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testHttpClientWithDomainSocketsNIOTransport() {
+	void testHttpClientWithDomainSocketsNIOTransport() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> {
 					LoopResources loop = LoopResources.create("testHttpClientWithDomainSocketsNIOTransport");
@@ -2220,7 +2220,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testHttpClientWithDomainSocketsWithHost() {
+	void testHttpClientWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> HttpClient.create()
 		                                    .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -2233,7 +2233,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testHttpClientWithDomainSocketsWithPort() {
+	void testHttpClientWithDomainSocketsWithPort() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> HttpClient.create()
 		                                    .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -2247,7 +2247,7 @@ public class HttpClientTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testTcpConfigurationUnsupported_1() {
+	void testTcpConfigurationUnsupported_1() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> HttpClient.create()
 		                                    .tcpConfiguration(tcp -> tcp.doOnConnect(TransportConfig::attributes)));
@@ -2255,7 +2255,7 @@ public class HttpClientTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testTcpConfigurationUnsupported_2() {
+	void testTcpConfigurationUnsupported_2() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> HttpClient.create()
 		                                    .tcpConfiguration(tcp -> tcp.handle((req, res) -> res.sendString(Mono.just("test")))));
@@ -2263,7 +2263,7 @@ public class HttpClientTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testTcpConfigurationUnsupported_3() {
+	void testTcpConfigurationUnsupported_3() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> HttpClient.create()
 		                                    .tcpConfiguration(tcp -> {
@@ -2274,7 +2274,7 @@ public class HttpClientTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testTcpConfigurationUnsupported_4() {
+	void testTcpConfigurationUnsupported_4() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> HttpClient.create()
 		                                    .tcpConfiguration(tcp -> {
@@ -2293,7 +2293,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testUriNotAbsolute_1() throws Exception {
+	void testUriNotAbsolute_1() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> HttpClient.create()
 		                                    .get()
@@ -2301,7 +2301,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testUriNotAbsolute_2() throws Exception {
+	void testUriNotAbsolute_2() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> HttpClient.create()
 		                                    .websocket()
@@ -2309,12 +2309,12 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testUriWhenFailedRequest_1() throws Exception {
+	void testUriWhenFailedRequest_1() throws Exception {
 		doTestUriWhenFailedRequest(false);
 	}
 
 	@Test
-	public void testUriWhenFailedRequest_2() throws Exception {
+	void testUriWhenFailedRequest_2() throws Exception {
 		doTestUriWhenFailedRequest(true);
 	}
 
@@ -2356,7 +2356,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue1133() throws Exception {
+	void testIssue1133() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -2378,7 +2378,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue1031() {
+	void testIssue1031() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -2428,7 +2428,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue1159() {
+	void testIssue1159() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -2478,7 +2478,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testLoopAndResolver() {
+	void testLoopAndResolver() {
 		LoopResources loop = LoopResources.create("testLoopAndResolver");
 		HttpClient client =
 				HttpClient.create()
@@ -2513,7 +2513,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testCustomMetricsRecorderWithUriMapper() throws InterruptedException {
+	void testCustomMetricsRecorderWithUriMapper() throws InterruptedException {
 		CountDownLatch latch = new CountDownLatch(5);
 
 		disposableServer =
@@ -2601,12 +2601,12 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testNoEvictInBackground() throws Exception {
+	void testNoEvictInBackground() throws Exception {
 		doTestEvictInBackground(1, false);
 	}
 
 	@Test
-	public void testEvictInBackground() throws Exception {
+	void testEvictInBackground() throws Exception {
 		doTestEvictInBackground(0, true);
 	}
 

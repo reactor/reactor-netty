@@ -36,10 +36,10 @@ import static org.assertj.core.api.Assertions.*;
  * This test must be executed with Gradle because it requires a shadow JAR.
  * For example it can be run with {@code ./gradlew jarFileTest --tests *JarFileShadingTest}
  */
-public class JarFileShadingTest extends AbstractJarFileTest {
+class JarFileShadingTest extends AbstractJarFileTest {
 
 	@Test
-	public void testPackages() throws Exception {
+	void testPackages() throws Exception {
 		try (Stream<Path> stream = Files.list(root)) {
 			assertThatFileList(stream).containsOnly("reactor", "META-INF");
 		}
@@ -49,7 +49,7 @@ public class JarFileShadingTest extends AbstractJarFileTest {
 	}
 
 	@Test
-	public void testPackagesReactorPool() throws Exception {
+	void testPackagesReactorPool() throws Exception {
 		try (Stream<Path> stream = Files.list(root.resolve("reactor/netty/internal/shaded"))) {
 			assertThatFileList(stream).containsOnly("reactor");
 		}
@@ -59,7 +59,7 @@ public class JarFileShadingTest extends AbstractJarFileTest {
 	}
 
 	@Test
-	public void testManifestContent() throws IOException {
+	void testManifestContent() throws IOException {
 		ZipFile jar = new ZipFile(jarFilePath.toString());
 		ZipEntry manifest = jar
 				.stream()

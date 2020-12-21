@@ -28,25 +28,25 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class ByteBufFluxTest {
+class ByteBufFluxTest {
 
 	@Test
-	public void testFromString_EmptyFlux() {
+	void testFromString_EmptyFlux() {
 		doTestFromStringEmptyPublisher(Flux.empty());
 	}
 
 	@Test
-	public void testFromString_EmptyMono() {
+	void testFromString_EmptyMono() {
 		doTestFromStringEmptyPublisher(Mono.empty());
 	}
 
 	@Test
-	public void testFromString_Callable() {
+	void testFromString_Callable() {
 		doTestFromString(Mono.fromCallable(() -> "123"));
 	}
 
 	@Test
-	public void testFromString_Flux() {
+	void testFromString_Flux() {
 		List<String> original = Arrays.asList("1", "2", "3");
 		StepVerifier.create(ByteBufFlux.fromString(Flux.fromIterable(original)).collectList())
 		            .expectNextMatches(list -> {
@@ -65,7 +65,7 @@ public class ByteBufFluxTest {
 	}
 
 	@Test
-	public void testFromString_Mono() {
+	void testFromString_Mono() {
 		doTestFromString(Mono.just("123"));
 	}
 

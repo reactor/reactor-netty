@@ -49,24 +49,24 @@ import static reactor.netty.Metrics.USED_HEAP_MEMORY;
 /**
  * @author Violeta Georgieva
  */
-public class ByteBufAllocatorMetricsTest {
+class ByteBufAllocatorMetricsTest {
 	private MeterRegistry registry;
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
 	}
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		Metrics.removeRegistry(registry);
 		registry.clear();
 		registry.close();
 	}
 
 	@Test
-	public void test() throws Exception {
+	void test() throws Exception {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)

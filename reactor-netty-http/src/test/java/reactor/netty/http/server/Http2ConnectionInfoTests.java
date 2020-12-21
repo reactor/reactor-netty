@@ -29,7 +29,7 @@ import javax.net.ssl.SSLException;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-public class Http2ConnectionInfoTests extends ConnectionInfoTests {
+class Http2ConnectionInfoTests extends ConnectionInfoTests {
 	@Override
 	protected HttpClient customizeClientOptions(HttpClient httpClient) {
 		try {

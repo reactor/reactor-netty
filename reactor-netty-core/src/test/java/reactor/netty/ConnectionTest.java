@@ -40,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Simon Baslé
  */
-public class ConnectionTest {
+class ConnectionTest {
 
 	Connection      testContext;
 	EmbeddedChannel channel;
@@ -49,13 +49,13 @@ public class ConnectionTest {
 			ChannelHandlerContext::fireChannelRead;
 
 	@BeforeEach
-	public void init() {
+	void init() {
 		channel = new EmbeddedChannel();
 		testContext = () -> channel;
 	}
 
 	@Test
-	public void addByteDecoderWhenNoLeft() {
+	void addByteDecoderWhenNoLeft() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
@@ -71,7 +71,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteDecoderWhenNoRight() {
+	void addByteDecoderWhenNoRight() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
@@ -87,7 +87,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteDecoderWhenEmptyPipeline() {
+	void addByteDecoderWhenEmptyPipeline() {
 
 		ChannelHandler decoder = new LineBasedFrameDecoder(12);
 
@@ -100,7 +100,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteDecoderWhenFullReactorPipeline() {
+	void addByteDecoderWhenFullReactorPipeline() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
@@ -119,7 +119,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteDecoderWhenNoLeft() {
+	void addNonByteDecoderWhenNoLeft() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
@@ -134,7 +134,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteDecoderWhenNoRight() {
+	void addNonByteDecoderWhenNoRight() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
@@ -149,7 +149,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteDecoderWhenEmptyPipeline() {
+	void addNonByteDecoderWhenEmptyPipeline() {
 
 		ChannelHandler decoder = new ChannelHandlerAdapter() {
 		};
@@ -161,7 +161,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteDecoderWhenFullReactorPipeline() {
+	void addNonByteDecoderWhenFullReactorPipeline() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
@@ -179,7 +179,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addSeveralByteDecodersWhenCodec() {
+	void addSeveralByteDecodersWhenCodec() {
 		ChannelHandler decoder1 = new LineBasedFrameDecoder(12);
 		ChannelHandler decoder2 = new LineBasedFrameDecoder(13);
 
@@ -204,7 +204,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteEncoderWhenNoLeft() {
+	void addByteEncoderWhenNoLeft() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
@@ -218,7 +218,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteEncoderWhenNoRight() {
+	void addByteEncoderWhenNoRight() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
@@ -232,7 +232,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteEncoderWhenEmptyPipeline() {
+	void addByteEncoderWhenEmptyPipeline() {
 
 		ChannelHandler encoder = new LineBasedFrameDecoder(12);
 
@@ -243,7 +243,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteEncoderWhenFullReactorPipeline() {
+	void addByteEncoderWhenFullReactorPipeline() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
@@ -260,7 +260,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteEncoderWhenNoLeft() {
+	void addNonByteEncoderWhenNoLeft() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
@@ -275,7 +275,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteEncoderWhenNoRight() {
+	void addNonByteEncoderWhenNoRight() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
@@ -290,7 +290,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteEncoderWhenEmptyPipeline() {
+	void addNonByteEncoderWhenEmptyPipeline() {
 
 		ChannelHandler encoder = new ChannelHandlerAdapter() {
 		};
@@ -302,7 +302,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteEncoderWhenFullReactorPipeline() {
+	void addNonByteEncoderWhenFullReactorPipeline() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
@@ -320,7 +320,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addSeveralByteEncodersWhenCodec() {
+	void addSeveralByteEncodersWhenCodec() {
 		ChannelHandler encoder1 = new LineBasedFrameDecoder(12);
 		ChannelHandler encoder2 = new LineBasedFrameDecoder(13);
 
@@ -339,7 +339,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void encoderSupportSkipsOnCloseIfAttributeClosedChannel() {
+	void encoderSupportSkipsOnCloseIfAttributeClosedChannel() {
 		AtomicLong closeCount = new AtomicLong();
 		Connection c = new Connection() {
 			@Override
@@ -369,7 +369,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void decoderSupportSkipsOnCloseIfAttributeClosedChannel() {
+	void decoderSupportSkipsOnCloseIfAttributeClosedChannel() {
 		AtomicLong closeCount = new AtomicLong();
 		Connection c = new Connection() {
 			@Override
@@ -399,7 +399,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addDecoderSkipsIfExist() {
+	void addDecoderSkipsIfExist() {
 		channel.pipeline()
 		       .addFirst("foo", new Utf8FrameValidator());
 
@@ -411,7 +411,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addEncoderSkipsIfExist() {
+	void addEncoderSkipsIfExist() {
 		channel.pipeline()
 		       .addFirst("foo", new Utf8FrameValidator());
 
@@ -423,12 +423,12 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void testSenderUnavailable() {
+	void testSenderUnavailable() {
 		doTestUnavailable(testContext.outbound().sendObject("test").then(), "Sender Unavailable");
 	}
 
 	@Test
-	public void testReceiverUnavailable() {
+	void testReceiverUnavailable() {
 		doTestUnavailable(testContext.inbound().receive().then(), "Receiver Unavailable");
 
 		doTestUnavailable(testContext.inbound().receiveObject().then(), "Receiver Unavailable");

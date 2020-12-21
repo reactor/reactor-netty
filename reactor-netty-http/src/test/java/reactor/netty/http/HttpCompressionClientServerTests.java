@@ -49,7 +49,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author smaldini
  * @author Violeta Georgieva
  */
-public class HttpCompressionClientServerTests {
+class HttpCompressionClientServerTests {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
@@ -60,7 +60,7 @@ public class HttpCompressionClientServerTests {
 
 	DisposableServer disposableServer;
 
-	public static Object[][] data() throws Exception {
+	static Object[][] data() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
@@ -100,7 +100,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void trueEnabledIncludeContentEncoding(HttpServer server, HttpClient client) {
+	void trueEnabledIncludeContentEncoding(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(true)
 				      .handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -116,7 +116,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void serverCompressionDefault(HttpServer server, HttpClient client) {
+	void serverCompressionDefault(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .bindNow(Duration.ofSeconds(10));
@@ -137,7 +137,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void serverCompressionDisabled(HttpServer server, HttpClient client) {
+	void serverCompressionDisabled(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(false)
 				      .handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -161,7 +161,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void serverCompressionAlwaysEnabled(HttpServer server, HttpClient client) throws Exception {
+	void serverCompressionAlwaysEnabled(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.compress(true)
 				      .handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -197,7 +197,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void serverCompressionEnabledSmallResponse(HttpServer server, HttpClient client) {
+	void serverCompressionEnabledSmallResponse(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(25)
 				      .handle((in, out) -> out.header("content-length", "5")
@@ -226,7 +226,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void serverCompressionPredicateTrue(HttpServer server, HttpClient client) throws Exception {
+	void serverCompressionPredicateTrue(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.compress((req, res) -> true)
 				      .handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -264,7 +264,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void serverCompressionPredicateFalse(HttpServer server, HttpClient client) {
+	void serverCompressionPredicateFalse(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress((req, res) -> false)
 				      .handle((in, out) -> out.sendString(Flux.just("reply").hide()))
@@ -292,7 +292,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void serverCompressionEnabledBigResponse(HttpServer server, HttpClient client) throws Exception {
+	void serverCompressionEnabledBigResponse(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.compress(4)
 				      .handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -327,7 +327,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void compressionServerEnabledClientDisabledIsNone(HttpServer server, HttpClient client) {
+	void compressionServerEnabledClientDisabledIsNone(HttpServer server, HttpClient client) {
 		String serverReply = "reply";
 		disposableServer =
 				server.compress(true)
@@ -349,7 +349,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void compressionServerDefaultClientDefaultIsNone(HttpServer server, HttpClient client) {
+	void compressionServerDefaultClientDefaultIsNone(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .bindNow(Duration.ofSeconds(10));
@@ -368,7 +368,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void compressionActivatedOnClientAddsHeader(HttpServer server, HttpClient client) {
+	void compressionActivatedOnClientAddsHeader(HttpServer server, HttpClient client) {
 		AtomicReference<String> zip = new AtomicReference<>("fail");
 
 		disposableServer =
@@ -387,7 +387,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void testIssue282(HttpServer server, HttpClient client) {
+	void testIssue282(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(2048)
 				      .handle((req, res) -> res.sendString(Mono.just("testtesttesttesttest")))
@@ -408,7 +408,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@ParameterizedCompressionTest
-	public void testIssue292(HttpServer server, HttpClient client) {
+	void testIssue292(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(10)
 				      .handle((req, res) ->
@@ -444,7 +444,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@Test
-	public void testIssue825_1() {
+	void testIssue825_1() {
 		int port1 = SocketUtils.findAvailableTcpPort();
 		int port2 = SocketUtils.findAvailableTcpPort();
 
@@ -495,7 +495,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@Test
-	public void testIssue825_2() {
+	void testIssue825_2() {
 		int port1 = SocketUtils.findAvailableTcpPort();
 		int port2 = SocketUtils.findAvailableTcpPort();
 

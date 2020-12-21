@@ -125,18 +125,18 @@ import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 /**
  * @author Stephane Maldini
  */
-public class HttpServerTests {
+class HttpServerTests {
 	private DisposableServer disposableServer;
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
 	}
 
 	@Test
-	public void httpPort() {
+	void httpPort() {
 		disposableServer = HttpServer.create()
 		                             .port(8080)
 		                             .handle((req, resp) -> resp.sendNotFound())
@@ -147,7 +147,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void httpPortWithAddress() {
+	void httpPortWithAddress() {
 		disposableServer = HttpServer.create()
 		                             .port(8080)
 		                             .host("localhost")
@@ -159,7 +159,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void releaseInboundChannelOnNonKeepAliveRequest() {
+	void releaseInboundChannelOnNonKeepAliveRequest() {
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) -> req.receive().then(resp.status(200).send()))
@@ -186,7 +186,7 @@ public class HttpServerTests {
 
 	//from https://github.com/reactor/reactor-netty/issues/90
 	@Test
-	public void testRestart() {
+	void testRestart() {
 		HttpServer server1 = HttpServer.create()
 		                               .host("localhost")
 		                               .port(8080);
@@ -256,7 +256,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void errorResponseAndReturn() {
+	void errorResponseAndReturn() {
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) -> Mono.error(new Exception("returnError")))
@@ -275,7 +275,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void httpPipelining() throws Exception {
+	void httpPipelining() throws Exception {
 
 		AtomicInteger i = new AtomicInteger();
 
@@ -329,7 +329,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void flushOnComplete() {
+	void flushOnComplete() {
 
 		Flux<String> flux = Flux.range(0, 100)
 		                        .map(n -> String.format("%010d", n));
@@ -361,7 +361,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void keepAlive() throws URISyntaxException {
+	void keepAlive() throws URISyntaxException {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
 		disposableServer = HttpServer.create()
 		                             .port(0)
@@ -435,7 +435,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void gettingOptionsDuplicates() {
+	void gettingOptionsDuplicates() {
 		HttpServer server1 = HttpServer.create();
 		HttpServer server2 = server1.port(123)
 		                            .host("example.com")
@@ -446,7 +446,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void startRouter() {
+	void startRouter() {
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .route(routes ->
@@ -476,7 +476,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void startRouterAndAwait() throws InterruptedException {
+	void startRouterAndAwait() throws InterruptedException {
 		ExecutorService ex = Executors.newSingleThreadExecutor();
 		AtomicReference<DisposableServer> ref = new AtomicReference<>();
 
@@ -503,7 +503,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void nonContentStatusCodes() {
+	void nonContentStatusCodes() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -567,7 +567,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testContentLengthHeadRequest() {
+	void testContentLengthHeadRequest() {
 		AtomicReference<HttpHeaders> sentHeaders = new AtomicReference<>();
 		disposableServer =
 				HttpServer.create()
@@ -663,7 +663,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue1153() {
+	void testIssue1153() {
 		AtomicReference<HttpHeaders> sentHeaders = new AtomicReference<>();
 		disposableServer =
 				HttpServer.create()
@@ -738,7 +738,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue186() {
+	void testIssue186() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -769,7 +769,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testConnectionCloseOnServerError() {
+	void testConnectionCloseOnServerError() {
 		Flux<String> content =
 				Flux.range(1, 3)
 				    .doOnNext(i -> {
@@ -803,7 +803,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void contextShouldBeTransferredFromDownStreamToUpStream() {
+	void contextShouldBeTransferredFromDownStreamToUpStream() {
 		AtomicReference<Context> context = new AtomicReference<>();
 		disposableServer =
 				HttpServer.create()
@@ -839,7 +839,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue309() {
+	void testIssue309() {
 		doTestIssue309("/somethingtooolooong",
 				HttpServer.create()
 				          .port(0)
@@ -852,7 +852,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void portBindingException() {
+	void portBindingException() {
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .bindNow();
@@ -888,7 +888,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void httpServerRequestConfigInjectAttributes() {
+	void httpServerRequestConfigInjectAttributes() {
 		AtomicReference<Channel> channelRef = new AtomicReference<>();
 		AtomicReference<Boolean> validate = new AtomicReference<>();
 		AtomicReference<Integer> chunkSize = new AtomicReference<>();
@@ -951,7 +951,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDropPublisherConnectionClose() throws Exception {
+	void testDropPublisherConnectionClose() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
 		CountDownLatch latch = new CountDownLatch(1);
@@ -972,7 +972,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDropMessageConnectionClose() throws Exception {
+	void testDropMessageConnectionClose() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
@@ -986,7 +986,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDropPublisher_1() throws Exception {
+	void testDropPublisher_1() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
@@ -1001,7 +1001,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDropPublisher_2() throws Exception {
+	void testDropPublisher_2() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
@@ -1013,7 +1013,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDropMessage() throws Exception {
+	void testDropMessage() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
@@ -1056,7 +1056,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue525() {
+	void testIssue525() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1096,7 +1096,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testCustomHandlerInvokedBeforeIOHandler() {
+	void testCustomHandlerInvokedBeforeIOHandler() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1129,7 +1129,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue630() {
+	void testIssue630() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1156,7 +1156,7 @@ public class HttpServerTests {
 
 	@Test
 	@SuppressWarnings("FutureReturnValueIgnored")
-	public void testExpectErrorWhenConnectionClosed() throws Exception {
+	void testExpectErrorWhenConnectionClosed() throws Exception {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
@@ -1195,7 +1195,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testNormalConnectionCloseForWebSocketClient() throws Exception {
+	void testNormalConnectionCloseForWebSocketClient() throws Exception {
 		Flux<String> flux = Flux.range(0, 100)
 		                        .map(n -> String.format("%010d", n));
 		AtomicReference<List<String>> receiver = new AtomicReference<>(new ArrayList<>());
@@ -1258,7 +1258,7 @@ public class HttpServerTests {
 
 
 	@Test
-	public void testNormalConnectionCloseForWebSocketServer() throws Exception {
+	void testNormalConnectionCloseForWebSocketServer() throws Exception {
 		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
@@ -1298,7 +1298,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testCancelConnectionCloseForWebSocketClient() throws Exception {
+	void testCancelConnectionCloseForWebSocketClient() throws Exception {
 		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
@@ -1344,7 +1344,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testCancelReceivingForWebSocketClient() throws Exception {
+	void testCancelReceivingForWebSocketClient() throws Exception {
 		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
@@ -1396,7 +1396,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testCancelConnectionCloseForWebSocketServer() throws Exception {
+	void testCancelConnectionCloseForWebSocketServer() throws Exception {
 		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
@@ -1444,7 +1444,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testCancelReceivingForWebSocketServer() throws Exception {
+	void testCancelReceivingForWebSocketServer() throws Exception {
 		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
@@ -1495,7 +1495,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue825() throws Exception {
+	void testIssue825() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1532,7 +1532,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDecodingFailureLastHttpContent() throws Exception {
+	void testDecodingFailureLastHttpContent() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1580,7 +1580,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue891() throws Exception {
+	void testIssue891() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -1629,7 +1629,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue940() {
+	void testIssue940() {
 		AtomicInteger counter = new AtomicInteger();
 		Flux<String> response =
 				Flux.interval(Duration.ofMillis(200))
@@ -1668,7 +1668,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue1001() throws Exception {
+	void testIssue1001() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .host("localhost")
@@ -1718,7 +1718,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testGracefulShutdown() throws Exception {
+	void testGracefulShutdown() throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(2);
 		CountDownLatch latch2 = new CountDownLatch(2);
 		CountDownLatch latch3 = new CountDownLatch(1);
@@ -1776,7 +1776,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testHttpServerWithDomainSocketsNIOTransport() {
+	void testHttpServerWithDomainSocketsNIOTransport() {
 		assertThatExceptionOfType(ChannelBindException.class)
 				.isThrownBy(() -> {
 					LoopResources loop = LoopResources.create("testHttpServerWithDomainSocketsNIOTransport");
@@ -1794,7 +1794,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testHttpServerWithDomainSocketsWithHost() {
+	void testHttpServerWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> HttpServer.create()
 		                                    .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -1803,7 +1803,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testHttpServerWithDomainSocketsWithPort() {
+	void testHttpServerWithDomainSocketsWithPort() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> HttpServer.create()
 		                                    .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -1812,7 +1812,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testHttpServerWithDomainSockets() throws Exception {
+	void testHttpServerWithDomainSockets() throws Exception {
 		HttpServer server = HttpServer.create();
 		HttpClient client = HttpClient.create();
 
@@ -1868,7 +1868,7 @@ public class HttpServerTests {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testTcpConfiguration_1() throws Exception {
+	void testTcpConfiguration_1() throws Exception {
 		CountDownLatch latch = new CountDownLatch(10);
 		LoopResources loop = LoopResources.create("testTcpConfiguration");
 		ChannelGroup group = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
@@ -1886,7 +1886,7 @@ public class HttpServerTests {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testTcpConfiguration_2() throws Exception {
+	void testTcpConfiguration_2() throws Exception {
 		CountDownLatch latch = new CountDownLatch(10);
 		LoopResources loop = LoopResources.create("testTcpConfiguration");
 		ChannelGroup group = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
@@ -1956,7 +1956,7 @@ public class HttpServerTests {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testTcpConfigurationUnsupported_1() {
+	void testTcpConfigurationUnsupported_1() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> HttpServer.create()
 		                                    .tcpConfiguration(tcp -> tcp.doOnBind(TransportConfig::attributes)));
@@ -1964,7 +1964,7 @@ public class HttpServerTests {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testTcpConfigurationUnsupported_2() {
+	void testTcpConfigurationUnsupported_2() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> HttpServer.create()
 		                                    .tcpConfiguration(tcp -> {
@@ -1975,7 +1975,7 @@ public class HttpServerTests {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testTcpConfigurationUnsupported_3() {
+	void testTcpConfigurationUnsupported_3() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> HttpServer.create()
 		                                    .tcpConfiguration(tcp -> {
@@ -1985,7 +1985,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testStatus() {
+	void testStatus() {
 		doTestStatus(HttpResponseStatus.OK);
 		doTestStatus(new HttpResponseStatus(200, "Some custom reason phrase for 200 status code"));
 	}
@@ -2012,7 +2012,7 @@ public class HttpServerTests {
 
 	@Test
 	@Timeout(10)
-	public void testHang() {
+	void testHang() {
 			DisposableServer httpServer =
 					HttpServer.create()
 					          .port(0)
@@ -2027,7 +2027,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testSniSupport() throws Exception {
+	void testSniSupport() throws Exception {
 		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
 		SslContextBuilder defaultSslContextBuilder =
 				SslContextBuilder.forServer(defaultCert.certificate(), defaultCert.privateKey());
@@ -2079,22 +2079,22 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue1286() throws Exception {
+	void testIssue1286() throws Exception {
 		doTestIssue1286(false, false);
 	}
 
 	@Test
-	public void testIssue1286ErrorResponse() throws Exception {
+	void testIssue1286ErrorResponse() throws Exception {
 		doTestIssue1286(false, true);
 	}
 
 	@Test
-	public void testIssue1286ConnectionClose() throws Exception {
+	void testIssue1286ConnectionClose() throws Exception {
 		doTestIssue1286(true, false);
 	}
 
 	@Test
-	public void testIssue1286ConnectionCloseErrorResponse() throws Exception {
+	void testIssue1286ConnectionCloseErrorResponse() throws Exception {
 		doTestIssue1286(true, true);
 	}
 
@@ -2154,7 +2154,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testCustomMetricsRecorderWithUriMapper() throws InterruptedException {
+	void testCustomMetricsRecorderWithUriMapper() throws InterruptedException {
 		CountDownLatch latch = new CountDownLatch(5);
 		List<String> collectedUris = new CopyOnWriteArrayList<>();
 

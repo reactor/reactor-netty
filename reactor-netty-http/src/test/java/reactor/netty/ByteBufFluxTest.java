@@ -42,22 +42,22 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Silvano Riz
  */
-public class ByteBufFluxTest {
+class ByteBufFluxTest {
 
 	private static File temporaryDirectory;
 
 	@BeforeAll
-	public static void createTempDir() {
+	static void createTempDir() {
 		temporaryDirectory = createTemporaryDirectory();
 	}
 
 	@AfterAll
-	public static void deleteTempDir() {
+	static void deleteTempDir() {
 		deleteTemporaryDirectoryRecursively(temporaryDirectory);
 	}
 
 	@Test
-	public void testFromPath() throws Exception {
+	void testFromPath() throws Exception {
 
 		// Create a temporary file with some binary data that will be read in chunks using the ByteBufFlux
 		final int chunkSize = 3;
@@ -112,12 +112,12 @@ public class ByteBufFluxTest {
 	}
 
 	@Test
-	public void testByteBufFluxFromPathWithoutSecurity() throws Exception {
+	void testByteBufFluxFromPathWithoutSecurity() throws Exception {
 		doTestByteBufFluxFromPath(false);
 	}
 
 	@Test
-	public void testByteBufFluxFromPathWithSecurity() throws Exception {
+	void testByteBufFluxFromPathWithSecurity() throws Exception {
 		doTestByteBufFluxFromPath(true);
 	}
 

@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * @author Violeta Georgieva
  */
-public class HttpMetricsHandlerTests {
+class HttpMetricsHandlerTests {
 	HttpServer httpServer;
 	DisposableServer disposableServer;
 	private ConnectionProvider provider;
@@ -56,7 +56,7 @@ public class HttpMetricsHandlerTests {
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		httpServer = customizeServerOptions(
 				HttpServer.create()
 				          .host("127.0.0.1")
@@ -78,7 +78,7 @@ public class HttpMetricsHandlerTests {
 	}
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
@@ -92,7 +92,7 @@ public class HttpMetricsHandlerTests {
 	}
 
 	@Test
-	public void testExistingEndpoint() throws Exception {
+	void testExistingEndpoint() throws Exception {
 		disposableServer = httpServer.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
@@ -146,7 +146,7 @@ public class HttpMetricsHandlerTests {
 	}
 
 	@Test
-	public void testNonExistingEndpoint() throws Exception {
+	void testNonExistingEndpoint() throws Exception {
 		disposableServer = httpServer.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
@@ -198,7 +198,7 @@ public class HttpMetricsHandlerTests {
 	}
 
 	@Test
-	public void testUriTagValueFunction() throws Exception {
+	void testUriTagValueFunction() throws Exception {
 		disposableServer = httpServer.metrics(true, s -> "testUriTagValueResolver").bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();

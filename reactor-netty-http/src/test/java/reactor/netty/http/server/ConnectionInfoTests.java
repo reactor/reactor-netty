@@ -54,7 +54,7 @@ import static org.assertj.core.api.Assertions.fail;
  *
  * @author Brian Clozel
  */
-public class ConnectionInfoTests {
+class ConnectionInfoTests {
 
 	static SelfSignedCertificate ssc;
 
@@ -69,12 +69,12 @@ public class ConnectionInfoTests {
 	}
 
 	@BeforeAll
-	public static void createSelfSignedCertificate() throws CertificateException {
+	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 	}
 
 	@Test
-	public void noHeaders() {
+	void noHeaders() {
 		testClientRequest(
 				clientRequestHeaders -> {},
 				serverRequest -> {
@@ -85,7 +85,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedHost() {
+	void forwardedHost() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=192.168.0.1"),
 				serverRequest -> {
@@ -95,7 +95,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedHostIpV6() {
+	void forwardedHostIpV6() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=[1abc:2abc:3abc::5ABC:6abc]"),
 				serverRequest -> {
@@ -105,7 +105,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedFor() {
+	void xForwardedFor() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-For",
 						"[1abc:2abc:3abc::5ABC:6abc]:8080, 192.168.0.1"),
@@ -116,7 +116,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedHost() {
+	void xForwardedHost() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Host",
 						"[1abc:2abc:3abc::5ABC:6abc], 192.168.0.1"),
@@ -127,7 +127,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedHostAndPort() {
+	void xForwardedHostAndPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -140,7 +140,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedMultipleHeaders() {
+	void xForwardedMultipleHeaders() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -158,7 +158,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedHostAndEmptyPort() {
+	void xForwardedHostAndEmptyPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -174,7 +174,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedHostAndNonNumericPort() {
+	void xForwardedHostAndNonNumericPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -190,7 +190,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedForHostAndPort() {
+	void xForwardedForHostAndPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
@@ -205,7 +205,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedForHostAndPortAndProto() {
+	void xForwardedForHostAndPortAndProto() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
@@ -222,7 +222,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedForMultipleHostAndPortAndProto() {
+	void xForwardedForMultipleHostAndPortAndProto() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1,10.20.30.1,10.20.30.2");
@@ -239,7 +239,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void customForwardedHandlerForMultipleHost() {
+	void customForwardedHandlerForMultipleHost() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com");
@@ -260,7 +260,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void proxyProtocolOn() throws InterruptedException {
+	void proxyProtocolOn() throws InterruptedException {
 		String remoteAddress = "202.112.144.236";
 		ArrayBlockingQueue<String> resultQueue = new ArrayBlockingQueue<>(1);
 
@@ -327,7 +327,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void proxyProtocolAuto() throws InterruptedException {
+	void proxyProtocolAuto() throws InterruptedException {
 		String remoteAddress = "202.112.144.236";
 		ArrayBlockingQueue<String> resultQueue = new ArrayBlockingQueue<>(1);
 
@@ -403,7 +403,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void https() throws SSLException {
+	void https() throws SSLException {
 		SslContext clientSslContext = SslContextBuilder.forClient()
 				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -418,7 +418,7 @@ public class ConnectionInfoTests {
 
 	// Users may add SslHandler themselves, not by using `httpServer.secure`
 	@Test
-	public void httpsUserAddedSslHandler() throws SSLException {
+	void httpsUserAddedSslHandler() throws SSLException {
 		SslContext clientSslContext = SslContextBuilder.forClient()
 				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -437,7 +437,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedMultipleHosts() {
+	void forwardedMultipleHosts() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
 						"host=a.example.com,host=b.example.com, host=c.example.com"),
@@ -448,7 +448,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedAllDirectives() {
+	void forwardedAllDirectives() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=a.example.com:443;proto=https"),
 				serverRequest -> {
@@ -459,7 +459,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedAllDirectivesQuoted() {
+	void forwardedAllDirectivesQuoted() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
 						"host=\"a.example.com:443\";proto=\"https\""),
@@ -471,7 +471,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedMultipleHeaders() {
+	void forwardedMultipleHeaders() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("Forwarded", "host=a.example.com:443;proto=https");
@@ -485,7 +485,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedForHostname() {
+	void forwardedForHostname() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "for=\"_gazonk\""),
 				serverRequest -> {
@@ -495,7 +495,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedForIp() {
+	void forwardedForIp() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
 						"for=192.0.2.60;proto=http;by=203.0.113.43"),
@@ -507,7 +507,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedForIpV6() {
+	void forwardedForIpV6() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "for=\"[2001:db8:cafe::17]:4711\""),
 				serverRequest -> {
@@ -589,7 +589,7 @@ public class ConnectionInfoTests {
 	}
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		if(null != this.connection) {
 			this.connection.disposeNow();
 		}

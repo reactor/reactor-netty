@@ -23,17 +23,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Violeta Georgieva
  */
-public class HttpResponseDecoderSpecTest {
+class HttpResponseDecoderSpecTest {
 
 	private HttpResponseDecoderSpec conf;
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		conf = new HttpResponseDecoderSpec();
 	}
 
 	@Test
-	public void failOnMissingResponse() {
+	void failOnMissingResponse() {
 		conf.failOnMissingResponse(true);
 
 		assertThat(conf.failOnMissingResponse).as("fail on missing response").isTrue();
@@ -53,7 +53,7 @@ public class HttpResponseDecoderSpecTest {
 	}
 
 	@Test
-	public void parseHttpAfterConnectRequest() {
+	void parseHttpAfterConnectRequest() {
 		conf.parseHttpAfterConnectRequest(true);
 
 		assertThat(conf.parseHttpAfterConnectRequest).as("parse http after connect request").isTrue();

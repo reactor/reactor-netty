@@ -40,10 +40,10 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Violeta Georgieva
  */
-public class HttpTests {
+class HttpTests {
 
 	@Test
-	public void httpRespondsEmpty() {
+	void httpRespondsEmpty() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -76,7 +76,7 @@ public class HttpTests {
 	}
 
 	@Test
-	public void httpRespondsToRequestsFromClients() {
+	void httpRespondsToRequestsFromClients() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -116,7 +116,7 @@ public class HttpTests {
 	}
 
 	@Test
-	public void httpErrorWithRequestsFromClients() throws Exception {
+	void httpErrorWithRequestsFromClients() throws Exception {
 		CountDownLatch errored1 = new CountDownLatch(1);
 		CountDownLatch errored2 = new CountDownLatch(1);
 		CountDownLatch errored3 = new CountDownLatch(1);
@@ -311,7 +311,7 @@ public class HttpTests {
 	}*/
 
 	@Test
-	public void test100Continue() throws Exception {
+	void test100Continue() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		DisposableServer server =
 				HttpServer.create()
@@ -347,7 +347,7 @@ public class HttpTests {
 	}
 
 	@Test
-	public void streamAndPoolExplicitCompression() {
+	void streamAndPoolExplicitCompression() {
 		Sinks.Many<String> ep = Sinks.unsafe().many().unicast().onBackpressureBuffer();
 
 		DisposableServer server =
@@ -419,7 +419,7 @@ public class HttpTests {
 
 
 	@Test
-	public void streamAndPoolDefaultCompression() {
+	void streamAndPoolDefaultCompression() {
 		Sinks.Many<String> ep = Sinks.unsafe().many().unicast().onBackpressureBuffer();
 
 		DisposableServer server =
@@ -491,7 +491,7 @@ public class HttpTests {
 	}
 
 	@Test
-	public void testIssue387() {
+	void testIssue387() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> HttpServer.create()
 		                                    .secure(sslContextSpec -> System.out.println())
@@ -499,7 +499,7 @@ public class HttpTests {
 	}
 
 	@Test
-	public void testHttpClientDefaultSslProvider() {
+	void testHttpClientDefaultSslProvider() {
 		HttpClient client = HttpClient.create()
 		                              .wiretap(true);
 

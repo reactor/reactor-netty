@@ -38,11 +38,11 @@ import static reactor.netty.Metrics.URI;
 /**
  * @author Violeta Georgieva
  */
-public class TcpSecureMetricsTests extends TcpMetricsTests {
+class TcpSecureMetricsTests extends TcpMetricsTests {
 	private static SelfSignedCertificate ssc;
 
 	@BeforeAll
-	public static void createSelfSignedCertificate() throws CertificateException {
+	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 	}
 
@@ -79,7 +79,7 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 	}
 
 	@Test
-	public void testFailedTlsHandshake() throws Exception {
+	void testFailedTlsHandshake() throws Exception {
 		disposableServer = tcpServer.bindNow();
 
 		connection = tcpClient.noSSL()

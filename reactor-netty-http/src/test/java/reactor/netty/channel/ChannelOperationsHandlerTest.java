@@ -49,25 +49,25 @@ import reactor.util.Loggers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ChannelOperationsHandlerTest {
+class ChannelOperationsHandlerTest {
 
 	@Test
-	public void publisherSenderOnCompleteFlushInProgress_1() {
+	void publisherSenderOnCompleteFlushInProgress_1() {
 		doTestPublisherSenderOnCompleteFlushInProgress(false, null);
 	}
 
 	@Test
-	public void publisherSenderOnCompleteFlushInProgress_2() {
+	void publisherSenderOnCompleteFlushInProgress_2() {
 		doTestPublisherSenderOnCompleteFlushInProgress(true, null);
 	}
 
 	@Test
-	public void publisherSenderOnCompleteFlushInProgress_3() {
+	void publisherSenderOnCompleteFlushInProgress_3() {
 		doTestPublisherSenderOnCompleteFlushInProgress(false, new WriteTimeoutHandler(1));
 	}
 
 	@Test
-	public void publisherSenderOnCompleteFlushInProgress_4() {
+	void publisherSenderOnCompleteFlushInProgress_4() {
 		doTestPublisherSenderOnCompleteFlushInProgress(true, new WriteTimeoutHandler(1));
 	}
 
@@ -138,7 +138,7 @@ public class ChannelOperationsHandlerTest {
 //	}
 
 	@Test
-	public void testChannelInactiveThrowsIOException() throws Exception {
+	void testChannelInactiveThrowsIOException() throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 
 		int abortServerPort = SocketUtils.findAvailableTcpPort();
@@ -224,7 +224,7 @@ public class ChannelOperationsHandlerTest {
 	}
 
 	@Test
-	public void testIssue196() throws Exception {
+	void testIssue196() throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 
 		int testServerPort = SocketUtils.findAvailableTcpPort();

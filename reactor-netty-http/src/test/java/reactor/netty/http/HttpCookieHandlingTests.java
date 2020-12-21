@@ -35,11 +35,11 @@ import reactor.test.StepVerifier;
 /**
  * @author Violeta Georgieva
  */
-public class HttpCookieHandlingTests {
+class HttpCookieHandlingTests {
 
 	@Test
 	@SuppressWarnings("CollectionUndefinedEquality")
-	public void clientWillIgnoreMalformedCookies() {
+	void clientWillIgnoreMalformedCookies() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -71,7 +71,7 @@ public class HttpCookieHandlingTests {
 
 	@Test
 	@SuppressWarnings("CollectionUndefinedEquality")
-	public void clientWithoutCookieGetsANewOneFromServer() {
+	void clientWithoutCookieGetsANewOneFromServer() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -106,7 +106,7 @@ public class HttpCookieHandlingTests {
 
 	@Test
 	@SuppressWarnings("CollectionUndefinedEquality")
-	public void customCookieEncoderDecoder() {
+	void customCookieEncoderDecoder() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)

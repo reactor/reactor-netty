@@ -28,10 +28,10 @@ import reactor.test.StepVerifier;
 /**
  * @author Violeta Georgieva
  */
-public class HttpResponseStatusCodesHandlingTests {
+class HttpResponseStatusCodesHandlingTests {
 
 	@Test
-	public void httpStatusCode404IsHandledByTheClient() {
+	void httpStatusCode404IsHandledByTheClient() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)

@@ -26,11 +26,11 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
 import reactor.netty.http.client.HttpClient;
 
-public class HttpsSendFileTests extends HttpSendFileTests {
+class HttpsSendFileTests extends HttpSendFileTests {
 	static SelfSignedCertificate ssc;
 
 	@BeforeAll
-	public static void createSelfSignedCertificate() throws CertificateException {
+	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 	}
 

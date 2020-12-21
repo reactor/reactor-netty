@@ -71,7 +71,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author tjreactive
  * @author smaldini
  */
-public class WebsocketTest {
+class WebsocketTest {
 
 	static final String auth = "bearer abc";
 
@@ -80,13 +80,13 @@ public class WebsocketTest {
 	DisposableServer httpServer = null;
 
 	@AfterEach
-	public void disposeHttpServer() {
+	void disposeHttpServer() {
 		if (httpServer != null)
 			httpServer.disposeNow();
 	}
 
 	@Test
-	public void simpleTest() {
+	void simpleTest() {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test"))))
@@ -110,7 +110,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void serverWebSocketFailed() {
+	void serverWebSocketFailed() {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -138,7 +138,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void unidirectional() {
+	void unidirectional() {
 		int c = 10;
 		httpServer = HttpServer.create()
 		                       .port(0)
@@ -174,7 +174,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void webSocketRespondsToRequestsFromClients() {
+	void webSocketRespondsToRequestsFromClients() {
 		AtomicInteger clientRes = new AtomicInteger();
 		AtomicInteger serverRes = new AtomicInteger();
 
@@ -233,7 +233,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void unidirectionalBinary() {
+	void unidirectionalBinary() {
 		int c = 10;
 		httpServer = HttpServer.create()
 		                       .port(0)
@@ -268,7 +268,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void duplexEcho() throws Exception {
+	void duplexEcho() throws Exception {
 
 		int c = 10;
 		CountDownLatch clientLatch = new CountDownLatch(c);
@@ -305,7 +305,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void simpleSubprotocolServerNoSubprotocol() {
+	void simpleSubprotocolServerNoSubprotocol() {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test"))))
@@ -323,7 +323,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void simpleSubprotocolServerNotSupported() {
+	void simpleSubprotocolServerNotSupported() {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
@@ -346,7 +346,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void simpleSubprotocolServerSupported() {
+	void simpleSubprotocolServerSupported() {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
@@ -372,7 +372,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void simpleSubprotocolSelected() {
+	void simpleSubprotocolSelected() {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
@@ -401,7 +401,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void noSubprotocolSelected() {
+	void noSubprotocolSelected() {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
@@ -427,7 +427,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void anySubprotocolSelectsFirstClientProvided() {
+	void anySubprotocolSelectsFirstClientProvided() {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
@@ -454,7 +454,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void sendToWebsocketSubprotocol() throws InterruptedException {
+	void sendToWebsocketSubprotocol() throws InterruptedException {
 		AtomicReference<String> serverSelectedProtocol = new AtomicReference<>();
 		AtomicReference<String> clientSelectedProtocol = new AtomicReference<>();
 		AtomicReference<String> clientSelectedProtocolWhenSimplyUpgrading = new AtomicReference<>();
@@ -494,7 +494,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testMaxFramePayloadLengthFailed() {
+	void testMaxFramePayloadLengthFailed() {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("12345678901"))))
@@ -516,7 +516,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testMaxFramePayloadLengthSuccess() {
+	void testMaxFramePayloadLengthSuccess() {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("12345678901"))))
@@ -538,13 +538,13 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testServerMaxFramePayloadLengthFailed() {
+	void testServerMaxFramePayloadLengthFailed() {
 		doTestServerMaxFramePayloadLength(10,
 				Flux.just("1", "2", "12345678901", "3"), Flux.just("1", "2"), 2);
 	}
 
 	@Test
-	public void testServerMaxFramePayloadLengthSuccess() {
+	void testServerMaxFramePayloadLengthSuccess() {
 		doTestServerMaxFramePayloadLength(11,
 				Flux.just("1", "2", "12345678901", "3"), Flux.just("1", "2", "12345678901", "3"), 4);
 	}
@@ -586,7 +586,7 @@ public class WebsocketTest {
 
 
 	@Test
-	public void closePool() {
+	void closePool() {
 		ConnectionProvider pr = ConnectionProvider.create("closePool", 1);
 		httpServer = HttpServer.create()
 		                       .port(0)
@@ -624,7 +624,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testCloseWebSocketFrameSentByServer() {
+	void testCloseWebSocketFrameSentByServer() {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -653,7 +653,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testCloseWebSocketFrameSentByClient() {
+	void testCloseWebSocketFrameSentByClient() {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -679,7 +679,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testConnectionAliveWhenTransformationErrors_1() {
+	void testConnectionAliveWhenTransformationErrors_1() {
 		doTestConnectionAliveWhenTransformationErrors((in, out) ->
 		        out.sendObject(in.aggregateFrames()
 		                         .receiveFrames()
@@ -696,7 +696,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testConnectionAliveWhenTransformationErrors_2() {
+	void testConnectionAliveWhenTransformationErrors_2() {
 		doTestConnectionAliveWhenTransformationErrors((in, out) ->
 		        out.sendObject(in.aggregateFrames()
 		                         .receiveFrames()
@@ -742,7 +742,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testClientOnCloseIsInvokedClientSendClose() throws Exception {
+	void testClientOnCloseIsInvokedClientSendClose() throws Exception {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -803,7 +803,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testClientOnCloseIsInvokedClientDisposed() throws Exception {
+	void testClientOnCloseIsInvokedClientDisposed() throws Exception {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -865,7 +865,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testClientOnCloseIsInvokedServerInitiatedClose() throws Exception {
+	void testClientOnCloseIsInvokedServerInitiatedClose() throws Exception {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -919,7 +919,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue460() {
+	void testIssue460() {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -941,7 +941,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue444() {
+	void testIssue444() {
 		doTestIssue444((in, out) ->
 				out.sendObject(Flux.error(new Throwable())
 				                   .onErrorResume(ex -> out.sendClose(1001, "Going Away"))
@@ -985,7 +985,7 @@ public class WebsocketTest {
 
 	// https://bugzilla.mozilla.org/show_bug.cgi?id=691300
 	@Test
-	public void firefoxConnectionTest() {
+	void firefoxConnectionTest() {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .route(r -> r.ws("/ws", (in, out) -> out.sendString(Mono.just("test"))))
@@ -1010,7 +1010,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue821() throws Exception {
+	void testIssue821() throws Exception {
 		Scheduler scheduler = Schedulers.newSingle("ws");
 		CountDownLatch latch = new CountDownLatch(1);
 		AtomicReference<Throwable> error = new AtomicReference<>();
@@ -1055,7 +1055,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue900_1() throws Exception {
+	void testIssue900_1() throws Exception {
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
 		httpServer =
@@ -1100,7 +1100,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue900_2() throws Exception {
+	void testIssue900_2() throws Exception {
 		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
 		AtomicReference<String> incomingData = new AtomicReference<>();
 
@@ -1148,7 +1148,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue663_1() throws Exception {
+	void testIssue663_1() throws Exception {
 		AtomicBoolean incomingData = new AtomicBoolean();
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -1183,7 +1183,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue663_2() throws Exception {
+	void testIssue663_2() throws Exception {
 		AtomicBoolean incomingData = new AtomicBoolean();
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -1214,7 +1214,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue663_3() throws Exception {
+	void testIssue663_3() throws Exception {
 		AtomicBoolean incomingData = new AtomicBoolean();
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -1248,7 +1248,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue663_4() throws Exception {
+	void testIssue663_4() throws Exception {
 		AtomicBoolean incomingData = new AtomicBoolean();
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -1281,7 +1281,7 @@ public class WebsocketTest {
 
 
 	@Test
-	public void testIssue967() throws Exception {
+	void testIssue967() throws Exception {
 		Flux<String> somePublisher = Flux.range(1, 10)
 		                                 .map(i -> Integer.toString(i))
 		                                 .delayElements(Duration.ofMillis(50));
@@ -1327,7 +1327,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue970() {
+	void testIssue970() {
 		doTestIssue970(true);
 		doTestIssue970(false);
 	}
@@ -1388,7 +1388,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void websocketOperationsBadValues() throws Exception {
+	void websocketOperationsBadValues() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations parent = new HttpClientOperations(Connection.from(channel),
 				ConnectionObserver.emptyListener(), ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);

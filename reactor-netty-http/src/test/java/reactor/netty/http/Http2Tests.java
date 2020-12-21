@@ -52,7 +52,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-public class Http2Tests {
+class Http2Tests {
 	private DisposableServer disposableServer;
 	private final static String H2_WITHOUT_TLS_SERVER = "Configured H2 protocol without TLS. Use" +
 			" a Clear-Text H2 protocol via HttpServer#protocol or configure TLS" +
@@ -67,14 +67,14 @@ public class Http2Tests {
 			"via HttpClient#noSSL()";
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
 	}
 
 	@Test
-	public void testHttpNoSslH2Fails() {
+	void testHttpNoSslH2Fails() {
 		StepVerifier.create(
 		        HttpServer.create()
 		                  .protocol(HttpProtocol.H2)
@@ -85,7 +85,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testHttpSslH2CFails() throws Exception {
+	void testHttpSslH2CFails() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 
@@ -100,7 +100,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testCustomConnectionProvider() {
+	void testCustomConnectionProvider() {
 		disposableServer =
 				HttpServer.create()
 				          .protocol(HttpProtocol.H2C)
@@ -131,12 +131,12 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testIssue1071MaxContentLengthSpecified() {
+	void testIssue1071MaxContentLengthSpecified() {
 		doTestIssue1071(1024, "doTestIssue1071", 200);
 	}
 
 	@Test
-	public void testIssue1071MaxContentLengthNotSpecified() {
+	void testIssue1071MaxContentLengthNotSpecified() {
 		doTestIssue1071(0, "NO RESPONSE", 413);
 	}
 
@@ -168,7 +168,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testMaxActiveStreams_1() throws Exception {
+	void testMaxActiveStreams_1() throws Exception {
 		ConnectionProvider provider = ConnectionProvider.create("testMaxActiveStreams_1", 1);
 		doTestMaxActiveStreams(HttpClient.create(provider), 1, 1, 1);
 		provider.disposeLater()
@@ -178,7 +178,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testMaxActiveStreams_2() throws Exception {
+	void testMaxActiveStreams_2() throws Exception {
 		doTestMaxActiveStreams(HttpClient.create(), 2, 2, 0);
 
 		ConnectionProvider provider = ConnectionProvider.create("testMaxActiveStreams_2", 1);
@@ -189,7 +189,7 @@ public class Http2Tests {
 		doTestMaxActiveStreams(HttpClient.newConnection(), 2, 2, 0);
 	}
 
-	public void doTestMaxActiveStreams(HttpClient baseClient, int maxActiveStreams, int expectedOnNext, int expectedOnError) throws Exception {
+	void doTestMaxActiveStreams(HttpClient baseClient, int maxActiveStreams, int expectedOnNext, int expectedOnError) throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
@@ -253,7 +253,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testConcurrentStreamsH2() throws Exception {
+	void testConcurrentStreamsH2() throws Exception {
 		doTestConcurrentStreams(HttpClient.create(), true, HttpProtocol.H2);
 
 		ConnectionProvider provider = ConnectionProvider.create("testConcurrentStreams", 1);
@@ -265,7 +265,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testConcurrentStreamsH2C() throws Exception {
+	void testConcurrentStreamsH2C() throws Exception {
 		doTestConcurrentStreams(HttpClient.create(), false, HttpProtocol.H2C);
 
 		ConnectionProvider provider = ConnectionProvider.create("testConcurrentStreams", 1);
@@ -277,7 +277,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testConcurrentStreamsH2CUpgrade() throws Exception {
+	void testConcurrentStreamsH2CUpgrade() throws Exception {
 		doTestConcurrentStreams(HttpClient.create(), false, HttpProtocol.H2C, HttpProtocol.HTTP11);
 
 		ConnectionProvider provider = ConnectionProvider.create("testConcurrentStreamsH2CUpgrade", 1);
@@ -289,7 +289,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testConcurrentStreamsNegotiatedProtocolHTTP11() throws Exception {
+	void testConcurrentStreamsNegotiatedProtocolHTTP11() throws Exception {
 		doTestConcurrentStreams(HttpClient.create(), true, new HttpProtocol[]{HttpProtocol.HTTP11},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
 
@@ -304,7 +304,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testConcurrentStreamsNegotiatedProtocolH2() throws Exception {
+	void testConcurrentStreamsNegotiatedProtocolH2() throws Exception {
 		doTestConcurrentStreams(HttpClient.create(), true, new HttpProtocol[]{HttpProtocol.H2},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
 
@@ -370,7 +370,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testHttp2ForMemoryLeaks() throws Exception {
+	void testHttp2ForMemoryLeaks() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
@@ -417,7 +417,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testHttpClientDefaultSslProvider() {
+	void testHttpClientDefaultSslProvider() {
 		HttpClient client = HttpClient.create()
 		                              .wiretap(true);
 
@@ -447,7 +447,7 @@ public class Http2Tests {
 	}
 
 	@Test
-	public void testMonoRequestBodySentAsFullRequest() throws Exception {
+	void testMonoRequestBodySentAsFullRequest() throws Exception {
 		// sends the message and then last http content
 		doTestMonoRequestBodySentAsFullRequest(ByteBufFlux.fromString(Mono.just("test")), 2);
 		// sends "full" request
