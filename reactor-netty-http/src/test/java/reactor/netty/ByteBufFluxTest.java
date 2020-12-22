@@ -15,22 +15,15 @@
  */
 package reactor.netty;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicLong;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
@@ -43,73 +36,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Silvano Riz
  */
 class ByteBufFluxTest {
-
-	private static File temporaryDirectory;
-
-	@BeforeAll
-	static void createTempDir() {
-		temporaryDirectory = createTemporaryDirectory();
-	}
-
-	@AfterAll
-	static void deleteTempDir() {
-		deleteTemporaryDirectoryRecursively(temporaryDirectory);
-	}
-
-	@Test
-	void testFromPath() throws Exception {
-
-		// Create a temporary file with some binary data that will be read in chunks using the ByteBufFlux
-		final int chunkSize = 3;
-		final Path tmpFile = new File(temporaryDirectory, "content.in").toPath();
-		final byte[] data = new byte[]{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9};
-		Files.write(tmpFile, data);
-		// Make sure the file is 10 bytes (i.e. the same as the data length)
-		assertThat(data.length).isEqualTo(Files.size(tmpFile));
-
-		// Use the ByteBufFlux to read the file in chunks of 3 bytes max and write them into a ByteArrayOutputStream for verification
-		final Iterator<ByteBuf> it = ByteBufFlux.fromPath(tmpFile, chunkSize)
-		                                        .toIterable()
-		                                        .iterator();
-		final ByteArrayOutputStream out = new ByteArrayOutputStream();
-		while (it.hasNext()) {
-			ByteBuf bb = it.next();
-			byte[] read = new byte[bb.readableBytes()];
-			bb.readBytes(read);
-			bb.release();
-			assertThat(bb.readableBytes()).isEqualTo(0);
-			out.write(read);
-		}
-
-		// Verify that we read the file.
-		assertThat(data).isEqualTo(out.toByteArray());
-		System.out.println(Files.exists(tmpFile));
-
-	}
-
-	private static File createTemporaryDirectory() {
-		try {
-			final File tempDir = File.createTempFile("ByteBufFluxTest", "", null);
-			assertThat(tempDir.delete()).isTrue();
-			assertThat(tempDir.mkdir()).isTrue();
-			return tempDir;
-		} catch (Exception e) {
-			throw new RuntimeException("Error creating the temporary directory", e);
-		}
-	}
-
-	private static void deleteTemporaryDirectoryRecursively(final File file) {
-		if (temporaryDirectory == null || !temporaryDirectory.exists()){
-			return;
-		}
-		final File[] files = file.listFiles();
-		if (files != null) {
-			for (File childFile : files) {
-				deleteTemporaryDirectoryRecursively(childFile);
-			}
-		}
-		file.deleteOnExit();
-	}
 
 	@Test
 	void testByteBufFluxFromPathWithoutSecurity() throws Exception {
