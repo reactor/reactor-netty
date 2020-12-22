@@ -18,6 +18,7 @@ package reactor.netty;
 import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -160,6 +161,10 @@ public final class ReactorNetty {
 	 */
 	public static final String ACCESS_LOG_ENABLED = "reactor.netty.http.server.accessLogEnabled";
 
+	/**
+	 *  Specifies the zone id used by the access log
+	 */
+	public static final ZoneId ZONE_ID_SYSTEM = ZoneId.systemDefault();
 
 	/**
 	 * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.

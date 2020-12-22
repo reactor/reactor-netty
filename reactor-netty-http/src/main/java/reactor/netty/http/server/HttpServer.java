@@ -40,6 +40,7 @@ import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.logging.AccessLog;
 import reactor.netty.http.server.logging.AccessLogArgProvider;
+import reactor.netty.http.server.logging.AccessLogFactory;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ServerTransport;
@@ -92,7 +93,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
-	 * Provide customized access log.
+	 * Customize the access log, provided access logging has been enabled through the
+	 * {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
 	 * <p>
 	 * Example:
 	 * <pre>
@@ -109,15 +111,86 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 *           .block();
 	 * }
 	 * </pre>
+	 * <p>
 	 *
-	 * @param accessLog apply an {@link AccessLog} by an {@link AccessLogArgProvider}
+	 * @param accessLogFactory the {@link Function} that creates an {@link AccessLog} given an {@link AccessLogArgProvider}
 	 * @return a new {@link HttpServer}
 	 * @since 1.0.1
+	 * @deprecated as of 1.0.3. Prefer the {@link #accessLog(boolean, AccessLogFactory) variant} with the {@link AccessLogFactory} interface instead
 	 */
-	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLog) {
-		Objects.requireNonNull(accessLog, "accessLog");
+	@Deprecated
+	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLogFactory) {
+		Objects.requireNonNull(accessLogFactory, "accessLogFactory");
 		HttpServer dup = duplicate();
-		dup.configuration().accessLog = accessLog;
+		dup.configuration().accessLog = accessLogFactory;
+		return dup;
+	}
+
+	/**
+	 * Enable or disable the access log. If enabled, the default log system will be used.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .port(8080)
+	 *           .route(r -> r.get("/hello",
+	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                                    .sendString(Mono.just("Hello World!"))))
+	 *           .accessLog(true)
+	 *           .bindNow()
+	 *           .onDispose()
+	 *           .block();
+	 * }
+	 * </pre>
+	 * <p>
+	 *
+	 * Note that this method takes precedence over the {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
+	 *
+	 * @param enable enable or disable the access log
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.3
+	 */
+	public final HttpServer accessLog(boolean enable) {
+		HttpServer dup = duplicate();
+		dup.configuration().accessLog = null;
+		dup.configuration().accessLogEnabled = enable;
+		return dup;
+	}
+
+	/**
+	 * Enable or disable the access log and customize it through an {@link AccessLogFactory}.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .port(8080)
+	 *           .route(r -> r.get("/hello",
+	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                                    .sendString(Mono.just("Hello World!"))))
+	 *           .accessLog(true, AccessLogFactory.create(
+	 *                   args -> AccessLog.create("user-agent={}", args.requestHeader("user-agent"))
+	 *           )
+	 *           .bindNow()
+	 *           .onDispose()
+	 *           .block();
+	 * }
+	 * </pre>
+	 * <p>
+	 *
+	 * Note that this method takes precedence over the {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
+	 *
+	 * @param enable enable or disable the access log
+	 * @param accessLogFactory the {@link AccessLogFactory} that creates an {@link AccessLog} given an {@link AccessLogArgProvider}
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.3
+	 */
+	public final HttpServer accessLog(boolean enable, AccessLogFactory accessLogFactory) {
+		Objects.requireNonNull(accessLogFactory);
+		HttpServer dup = duplicate();
+		dup.configuration().accessLog = enable ? accessLogFactory : null;
+		dup.configuration().accessLogEnabled = enable;
 		return dup;
 	}
 

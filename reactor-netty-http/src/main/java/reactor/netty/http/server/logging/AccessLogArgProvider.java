@@ -23,6 +23,7 @@ import java.net.SocketAddress;
  * A provider of the args required for access log.
  *
  * @author limaoning
+ * @since 1.0.1
  */
 public interface AccessLogArgProvider {
 

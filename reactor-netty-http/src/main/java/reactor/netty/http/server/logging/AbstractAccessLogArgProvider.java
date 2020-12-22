@@ -16,10 +16,10 @@
 package reactor.netty.http.server.logging;
 
 import io.netty.handler.codec.http.HttpMethod;
+import reactor.netty.ReactorNetty;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
@@ -107,7 +107,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	 * Should be called when a new request is received.
 	 */
 	void onRequest() {
-		this.zonedDateTime = ZonedDateTime.now(ZoneId.systemDefault()).format(DATE_TIME_FORMATTER);
+		this.zonedDateTime = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM).format(DATE_TIME_FORMATTER);
 		this.startTime = System.currentTimeMillis();
 	}
 
