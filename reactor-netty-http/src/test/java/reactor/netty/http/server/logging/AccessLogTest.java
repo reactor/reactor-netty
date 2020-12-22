@@ -82,15 +82,9 @@ class AccessLogTest {
 				.wiretap(true)
 				.bindNow();
 
-		HttpClientResponse response = HttpClient.create()
-				.port(disposableServer.port())
-				.wiretap(true)
-				.get()
-				.uri("/test")
-				.response()
-				.block();
+		HttpClientResponse response = getHttpClientResponse("/example/test");
 
-		assertAccessLogging(response, true, null);
+		assertAccessLogging(response, true, false, null);
 	}
 
 	@Test
@@ -108,15 +102,9 @@ class AccessLogTest {
 				.wiretap(true)
 				.bindNow();
 
-		HttpClientResponse response = HttpClient.create()
-				.port(disposableServer.port())
-				.wiretap(true)
-				.get()
-				.uri("/test")
-				.response()
-				.block();
+		HttpClientResponse response = getHttpClientResponse("/example/test");
 
-		assertAccessLogging(response, true, CUSTOM_FORMAT);
+		assertAccessLogging(response, true, false, CUSTOM_FORMAT);
 	}
 
 	@Test
@@ -135,29 +123,83 @@ class AccessLogTest {
 				.wiretap(true)
 				.bindNow();
 
-		HttpClientResponse response = HttpClient.create()
+		HttpClientResponse response = getHttpClientResponse("/example/test");
+
+		assertAccessLogging(response, false, false, null);
+	}
+
+	@Test
+	public void accessLogFiltering(){
+		disposableServer = HttpServer.create()
+				.port(8080)
+				.handle((req, resp) -> {
+					resp.withConnection(conn -> {
+						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
+						resp.header(ACCESS_LOG_HANDLER, handler != null ? FOUND : NOT_FOUND);
+					});
+					return resp.send();
+				})
+				.accessLog(true, AccessLogFactory.create(p -> !String.valueOf(p.uri()).startsWith("/foo/")))
+				.wiretap(true)
+				.bindNow();
+
+		HttpClientResponse response = getHttpClientResponse("/example/test");
+
+		getHttpClientResponse("/foo/test");
+
+		assertAccessLogging(response, true, true, null);
+	}
+
+
+	@Test
+	public void accessLogFilteringAndFormatting(){
+		disposableServer = HttpServer.create()
+				.port(8080)
+				.handle((req, resp) -> {
+					resp.withConnection(conn -> {
+						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
+						resp.header(ACCESS_LOG_HANDLER, handler != null ? FOUND : NOT_FOUND);
+					});
+					return resp.send();
+				})
+				.accessLog(true, AccessLogFactory.create(p -> !String.valueOf(p.uri()).startsWith("/foo/"),
+						args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri())))
+				.wiretap(true)
+				.bindNow();
+
+		HttpClientResponse response = getHttpClientResponse("/example/test");
+
+		HttpClient.create()
 				.port(disposableServer.port())
 				.wiretap(true)
 				.get()
-				.uri("/test")
+				.uri("/foo/test")
 				.response()
 				.block();
 
-		assertAccessLogging(response, false, null);
+		assertAccessLogging(response, true, true, CUSTOM_FORMAT);
 	}
 
-	void assertAccessLogging(@Nullable HttpClientResponse response, boolean enable, @Nullable String loggerFormat) {
+	void assertAccessLogging(HttpClientResponse response,
+	                         boolean enable, boolean filteringEnabled,
+	                         @Nullable String loggerFormat) {
 		if (enable) {
 			Mockito.verify(mockedAppender, Mockito.times(1)).doAppend(loggingEventArgumentCaptor.capture());
+			assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
 			final LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
 
 			if (null == loggerFormat) {
 				assertThat(relevantLog.getMessage()).isEqualTo(BaseAccessLogHandler.DEFAULT_LOG_FORMAT);
-				assertThat(relevantLog.getFormattedMessage()).contains("GET /test HTTP/1.1\" 200");
+				assertThat(relevantLog.getFormattedMessage()).contains("GET /example/test HTTP/1.1\" 200");
+
+				if (filteringEnabled) {
+					assertThat(relevantLog.getFormattedMessage()).doesNotContain("foo");
+				}
 			}
+
 			else {
 				assertThat(relevantLog.getMessage()).isEqualTo(loggerFormat);
-				assertThat(relevantLog.getFormattedMessage()).isEqualTo("method=GET, uri=/test");
+				assertThat(relevantLog.getFormattedMessage()).isEqualTo("method=GET, uri=/example/test");
 			}
 		}
 		else {
@@ -169,4 +211,13 @@ class AccessLogTest {
 		assertThat(response.responseHeaders().get(ACCESS_LOG_HANDLER)).isEqualTo(enable ? FOUND : NOT_FOUND);
 	}
 
+	private HttpClientResponse getHttpClientResponse(String uri) {
+		return HttpClient.create()
+				.port(disposableServer.port())
+				.wiretap(true)
+				.get()
+				.uri(uri)
+				.response()
+				.block();
+	}
 }
