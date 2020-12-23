@@ -19,8 +19,6 @@ import io.netty.resolver.DefaultAddressResolverGroup;
 import reactor.netty.Connection;
 import reactor.netty.tcp.TcpClient;
 
-import java.time.Duration;
-
 public class Application {
 
 	public static void main(String[] args) {

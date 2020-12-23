@@ -93,6 +93,7 @@ import reactor.util.annotation.Nullable;
  *           .responseSingle((res, content) -> Mono.just(res.status().code()))
  *           .block();
  * }
+ * </pre>
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
@@ -224,7 +225,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 * @return a new {@link ResponseReceiver}
 		 */
 		ResponseReceiver<?> sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback,
-				@Nullable Consumer<Flux<Long>>progress);
+				@Nullable Consumer<Flux<Long>> progress);
 	}
 
 	/**
@@ -1373,7 +1374,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		return super.wiretap(enable);
 	}
 
-	static boolean isCompressing(HttpHeaders h){
+	static boolean isCompressing(HttpHeaders h) {
 		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true);
 	}
 

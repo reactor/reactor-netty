@@ -464,7 +464,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		Http11OrH2CleartextCodec
 				upgrader = new Http11OrH2CleartextCodec(compressPredicate, cookieDecoder, cookieEncoder,
 						p.get(NettyPipeline.LoggingHandler) != null, forwardedHeaderHandler, http2Settings, listener,
-						mapHandle, minCompressionSize, opsFactory, decoder.validateHeaders(), accessLogEnabled,accessLog);
+						mapHandle, minCompressionSize, opsFactory, decoder.validateHeaders(), accessLogEnabled, accessLog);
 
 		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader);
 		CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler = new CleartextHttp2ServerUpgradeHandler(
@@ -586,7 +586,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodec)
 			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(upgrader))
 			        .remove(this);
-			if (pipeline.get(NettyPipeline.AccessLogHandler) != null){
+			if (pipeline.get(NettyPipeline.AccessLogHandler) != null) {
 				pipeline.remove(NettyPipeline.AccessLogHandler);
 			}
 			if (pipeline.get(NettyPipeline.CompressionHandler) != null) {

@@ -312,7 +312,7 @@ class HttpSendFileTests {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		Path largeFileParent = largeFile.getParent();
 		assertThat(largeFileParent).isNotNull();
-		Path tempFile = Files.createTempFile(largeFileParent,"temp", ".txt");
+		Path tempFile = Files.createTempFile(largeFileParent, "temp", ".txt");
 		tempFile.toFile().deleteOnExit();
 
 		byte[] fileBytes = Files.readAllBytes(largeFile);
@@ -338,8 +338,8 @@ class HttpSendFileTests {
 		DisposableServer context =
 				customizeServerOptions(HttpServer.create()
 				                                 .host("localhost"))
-//						.wiretap(true)
-//						.tcpConfiguration(tcp -> tcp.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(1024)))
+				          //.wiretap(true)
+				          //.tcpConfiguration(tcp -> tcp.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(1024)))
 				          .handle(fn)
 				          .bindNow();
 
@@ -347,8 +347,8 @@ class HttpSendFileTests {
 			byte[] response =
 					customizeClientOptions(HttpClient.create()
 					                                 .remoteAddress(context::address))
-//							.tcpConfiguration(tcp -> tcp.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1024, 1024)))
-//.wiretap(true)
+					    //.tcpConfiguration(tcp -> tcp.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1024, 1024)))
+					    //.wiretap(true)
 					    .request(HttpMethod.POST)
 					    .uri("/")
 					    .send(content)

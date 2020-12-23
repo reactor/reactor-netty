@@ -258,7 +258,8 @@ public final class SocketUtils {
 					ServerSocket serverSocket = ServerSocketFactory.getDefault().createServerSocket(port);
 					serverSocket.close();
 					return true;
-				} catch(Exception ex) {
+				}
+				catch (Exception ex) {
 					return false;
 				}
 			}
@@ -271,7 +272,8 @@ public final class SocketUtils {
 					DatagramSocket socket = new DatagramSocket(port);
 					socket.close();
 					return true;
-				} catch(Exception ex) {
+				}
+				catch (Exception ex) {
 					return false;
 				}
 			}
@@ -314,13 +316,13 @@ public final class SocketUtils {
 		 * 		if no available port could be found
 		 */
 		int findAvailablePort(int minPort, int maxPort) {
-			if(minPort <= 0){
+			if (minPort <= 0) {
 				throw new IllegalArgumentException("'minPort' must be greater than 0");
 			}
-			else if(minPort > maxPort){
+			else if (minPort > maxPort) {
 				throw new IllegalArgumentException("'maxPort' must be greater than 'minPort'");
 			}
-			else if(maxPort > PORT_RANGE_MAX){
+			else if (maxPort > PORT_RANGE_MAX) {
 				throw new IllegalArgumentException("'maxPort' must be less than or equal to " + PORT_RANGE_MAX);
 			}
 
@@ -328,13 +330,13 @@ public final class SocketUtils {
 			int candidatePort;
 			int searchCounter = 0;
 			do {
-				if(++searchCounter > portRange) {
+				if (++searchCounter > portRange) {
 					throw new IllegalStateException(String.format(
 							"Could not find an available %s port in the range [%d, %d] after %d attempts", name(), minPort,
 							maxPort, searchCounter));
 				}
 				candidatePort = findRandomPort(minPort, maxPort);
-			} while(!isPortAvailable(candidatePort));
+			} while (!isPortAvailable(candidatePort));
 
 			return candidatePort;
 		}
@@ -356,29 +358,29 @@ public final class SocketUtils {
 		 * 		if the requested number of available ports could not be found
 		 */
 		SortedSet<Integer> findAvailablePorts(int numRequested, int minPort, int maxPort) {
-			if(minPort <= 0){
+			if (minPort <= 0) {
 				throw new IllegalArgumentException("'minPort' must be greater than 0");
 			}
-			else if(minPort > maxPort){
+			else if (minPort > maxPort) {
 				throw new IllegalArgumentException("'maxPort' must be greater than 'minPort'");
 			}
-			else if(maxPort > PORT_RANGE_MAX){
+			else if (maxPort > PORT_RANGE_MAX) {
 				throw new IllegalArgumentException("'maxPort' must be less than or equal to " + PORT_RANGE_MAX);
 			}
-			else if(numRequested <= 0){
+			else if (numRequested <= 0) {
 				throw new IllegalArgumentException("'numRequested' must be greater than 0");
 			}
-			else if((maxPort - minPort) < numRequested){
+			else if ((maxPort - minPort) < numRequested) {
 				throw new IllegalArgumentException("'numRequested' must not be greater than 'maxPort' - 'minPort'");
 			}
 
 			final TreeSet<Integer> availablePorts = new TreeSet<>();
 			int attemptCount = 0;
-			while((++attemptCount <= numRequested + 100) && (availablePorts.size() < numRequested)) {
+			while ((++attemptCount <= numRequested + 100) && (availablePorts.size() < numRequested)) {
 				availablePorts.add(findAvailablePort(minPort, maxPort));
 			}
 
-			if(availablePorts.size() != numRequested) {
+			if (availablePorts.size() != numRequested) {
 				throw new IllegalStateException(String.format(
 						"Could not find %d available %s ports in the range [%d, %d]", numRequested, name(), minPort,
 						maxPort));

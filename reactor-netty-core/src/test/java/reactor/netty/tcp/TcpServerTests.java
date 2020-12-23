@@ -530,7 +530,8 @@ class TcpServerTests {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			try {
 				mapper.writeValue(out, pojo);
-			} catch(Exception e) {
+			}
+			catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 			return Unpooled.copiedBuffer(out.toByteArray());
@@ -538,7 +539,8 @@ class TcpServerTests {
 		Function<String, Pojo> jsonDecoder = s -> {
 			try {
 				return mapper.readValue(s, Pojo.class);
-			} catch(Exception e) {
+			}
+			catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		};
@@ -584,7 +586,8 @@ class TcpServerTests {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			try {
 				mapper.writeValue(out, pojo);
-			} catch(Exception e) {
+			}
+			catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 			return Unpooled.copiedBuffer(out.toByteArray());
@@ -592,7 +595,8 @@ class TcpServerTests {
 		Function<String, Pojo[]> jsonDecoder = s -> {
 			try {
 				return mapper.readValue(s, Pojo[].class);
-			} catch(Exception e) {
+			}
+			catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		};
@@ -651,7 +655,8 @@ class TcpServerTests {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			try {
 				mapper.writeValue(out, pojo);
-			} catch(Exception e) {
+			}
+			catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 			return Unpooled.copiedBuffer(out.toByteArray());
@@ -659,7 +664,8 @@ class TcpServerTests {
 		Function<String, Pojo[]> jsonDecoder = s -> {
 			try {
 				return mapper.readValue(s, Pojo[].class);
-			} catch(Exception e) {
+			}
+			catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		};
@@ -1041,13 +1047,14 @@ class TcpServerTests {
 				assertThat(read).isGreaterThan(0);
 				data.flip();
 				latch.countDown();
-			} catch(Exception e) {
+			}
+			catch (Exception e) {
 				this.e = e;
 			}
 		}
 	}
 
-	public static class Pojo {
+	public static final class Pojo {
 
 		private String name;
 

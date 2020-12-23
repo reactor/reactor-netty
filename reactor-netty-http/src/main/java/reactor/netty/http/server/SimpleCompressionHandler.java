@@ -34,7 +34,7 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 			throws Exception {
 
 		if (msg instanceof ByteBuf) {
-			super.write(ctx, new DefaultHttpContent((ByteBuf)msg), promise);
+			super.write(ctx, new DefaultHttpContent((ByteBuf) msg), promise);
 		}
 		else {
 			super.write(ctx, msg, promise);

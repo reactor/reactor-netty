@@ -231,7 +231,7 @@ public final class ReactorNetty {
 		return new InternalNettyException(Objects.requireNonNull(throwable));
 	}
 
-	static void addChunkedWriter(Connection c){
+	static void addChunkedWriter(Connection c) {
 		if (c.channel()
 		     .pipeline()
 		     .get(ChunkedWriteHandler.class) == null) {
@@ -250,7 +250,7 @@ public final class ReactorNetty {
 	 * @param context the {@link Connection} on which to add the decoder.
 	 * @param name the name of the decoder.
 	 * @param handler the decoder to add before the final reactor-specific handlers.
-	 * @see Connection#addHandlerLast(String, ChannelHandler).
+	 * @see Connection#addHandlerLast(String, ChannelHandler)
 	 */
 	static void addHandlerBeforeReactorEndHandlers(Connection context, String
 			name,	ChannelHandler handler) {
@@ -362,12 +362,14 @@ public final class ReactorNetty {
 	static void registerForClose(boolean shouldCleanupOnClose,
 			String name,
 			Connection context) {
-		if (!shouldCleanupOnClose) return;
+		if (!shouldCleanupOnClose) {
+			return;
+		}
 
 		context.onTerminate().subscribe(null, null, () -> context.removeHandler(name));
 	}
 
-	static void removeHandler(Channel channel, String name){
+	static void removeHandler(Channel channel, String name) {
 		if (channel.isActive() && channel.pipeline()
 		                                 .context(name) != null) {
 			channel.pipeline()
@@ -387,7 +389,7 @@ public final class ReactorNetty {
 		}
 	}
 
-	static void replaceHandler(Channel channel, String name, ChannelHandler handler){
+	static void replaceHandler(Channel channel, String name, ChannelHandler handler) {
 		if (channel.isActive() && channel.pipeline()
 		                                 .context(name) != null) {
 			channel.pipeline()
@@ -424,7 +426,7 @@ public final class ReactorNetty {
 		int length = 2;
 
 		if (observer instanceof CompositeConnectionObserver) {
-			thizObservers = ((CompositeConnectionObserver)observer).observers;
+			thizObservers = ((CompositeConnectionObserver) observer).observers;
 			length += thizObservers.length - 1;
 		}
 		else {
@@ -432,7 +434,7 @@ public final class ReactorNetty {
 		}
 
 		if (other instanceof CompositeConnectionObserver) {
-			otherObservers = ((CompositeConnectionObserver)other).observers;
+			otherObservers = ((CompositeConnectionObserver) other).observers;
 			length += otherObservers.length - 1;
 		}
 		else {
@@ -473,7 +475,7 @@ public final class ReactorNetty {
 			return Mono.fromCallable(new ScalarMap<>(publisher, mapper));
 		}
 		else if (publisher instanceof Mono) {
-			return ((Mono<T>)publisher).map(mapper);
+			return ((Mono<T>) publisher).map(mapper);
 		}
 
 		return Flux.from(publisher)
@@ -497,7 +499,7 @@ public final class ReactorNetty {
 		           .map(fluxMapper);
 	}
 
-	ReactorNetty(){
+	ReactorNetty() {
 	}
 
 	static final class ScalarMap<T, V> implements Callable<V> {
@@ -561,7 +563,7 @@ public final class ReactorNetty {
 			}
 
 			if (other instanceof CompositeChannelPipelineConfigurer) {
-				otherConfigurers = ((CompositeChannelPipelineConfigurer)other).configurers;
+				otherConfigurers = ((CompositeChannelPipelineConfigurer) other).configurers;
 				length += otherConfigurers.length - 1;
 			}
 			else {

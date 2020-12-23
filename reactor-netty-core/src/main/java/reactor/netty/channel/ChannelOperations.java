@@ -271,7 +271,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono) {
-			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
+			return then(((Mono<?>) dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
 		}
 		return then(MonoSendMany.byteBufSource(dataStream, channel(), predicate));
@@ -284,7 +284,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono) {
-			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
+			return then(((Mono<?>) dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
 		}
 		return then(MonoSendMany.objectSource(dataStream, channel(), predicate));
@@ -343,13 +343,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public String toString() {
-		return "ChannelOperations{"+connection.toString()+"}";
+		return "ChannelOperations{" + connection.toString() + "}";
 	}
 
 	/**
 	 * Drop pending content and complete inbound
 	 */
-	public final void discard(){
+	public final void discard() {
 		inbound.cancel();
 	}
 

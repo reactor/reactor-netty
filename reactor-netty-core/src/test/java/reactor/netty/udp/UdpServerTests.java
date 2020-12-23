@@ -225,7 +225,7 @@ class UdpServerTests {
 		}
 
 		// Suppressed "JdkObsolete", usage of Enumeration is deliberate
-		for (Enumeration<InetAddress> i = iface.getInetAddresses(); i.hasMoreElements(); ) {
+		for (Enumeration<InetAddress> i = iface.getInetAddresses(); i.hasMoreElements();) {
 			InetAddress address = i.nextElement();
 			if (address.getClass() == Inet4Address.class) {
 				return true;

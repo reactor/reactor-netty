@@ -359,7 +359,8 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 						forceClose(child, future.cause());
 					}
 				});
-			} catch (Throwable t) {
+			}
+			catch (Throwable t) {
 				forceClose(child, t);
 			}
 		}
@@ -397,7 +398,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 		static void forceClose(Channel child, Throwable t) {
 			child.unsafe().closeForcibly();
-			log.warn(format(child,"Failed to register an accepted channel: {}"), child, t);
+			log.warn(format(child, "Failed to register an accepted channel: {}"), child, t);
 		}
 	}
 

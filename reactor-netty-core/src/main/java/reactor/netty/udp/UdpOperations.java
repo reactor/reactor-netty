@@ -44,7 +44,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 
 	UdpOperations(Connection c, ConnectionObserver listener) {
 		super(c, listener);
-		this.datagramChannel = (DatagramChannel)c.channel();
+		this.datagramChannel = (DatagramChannel) c.channel();
 	}
 
 	/**

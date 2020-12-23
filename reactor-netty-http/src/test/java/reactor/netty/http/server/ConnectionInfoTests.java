@@ -198,7 +198,7 @@ class ConnectionInfoTests {
 					clientRequestHeaders.add("X-Forwarded-Port", "8080");
 				},
 				serverRequest -> {
-					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1") ;
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 				});
@@ -567,7 +567,7 @@ class ConnectionInfoTests {
 
 		String uri = "/test";
 		if (useHttps) {
-			uri += ("https://localhost:" + this.connection.port());
+			uri += "https://localhost:" + this.connection.port();
 		}
 
 		String response =
@@ -590,7 +590,7 @@ class ConnectionInfoTests {
 
 	@AfterEach
 	void tearDown() {
-		if(null != this.connection) {
+		if (null != this.connection) {
 			this.connection.disposeNow();
 		}
 	}

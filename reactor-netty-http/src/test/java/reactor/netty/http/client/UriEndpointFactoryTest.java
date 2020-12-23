@@ -69,7 +69,7 @@ class UriEndpointFactoryTest {
 				new String[]{"localhost/:1234", null, "localhost", null, "/:1234"}
 				);
 
-		for(String[] input : inputs) {
+		for (String[] input : inputs) {
 			Matcher matcher = UriEndpointFactory.URL_PATTERN
 					.matcher(input[0]);
 			assertThat(matcher.matches()).isTrue();
@@ -114,7 +114,7 @@ class UriEndpointFactoryTest {
 				new String[]{"http://[::1]:1234", "http://[::1]:1234/"}
 		);
 
-		for(String[] input : inputs) {
+		for (String[] input : inputs) {
 			assertThat(externalForm(this.builder.build(), input[0], false, true)).isEqualTo(input[1]);
 		}
 	}

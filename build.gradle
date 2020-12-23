@@ -125,6 +125,7 @@ subprojects {
 
 	apply plugin: 'java'
 	apply plugin: 'jacoco'
+	apply plugin: 'checkstyle'
 	apply plugin: 'propdeps'
 	apply plugin: 'license'
 	apply plugin: 'org.gradle.test-retry'
@@ -141,6 +142,10 @@ subprojects {
 			xml.enabled = true
 			html.enabled = true
 		}
+	}
+
+	checkstyle {
+		configFile = file("${rootDir}/codequality/checkstyle.xml")
 	}
 
 	[compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",

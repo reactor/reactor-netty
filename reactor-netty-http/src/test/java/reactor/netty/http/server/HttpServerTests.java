@@ -558,7 +558,8 @@ class HttpServerTests {
 		                    return !h.contains("Transfer-Encoding") &&
 		                           h.getInt("Content-Length").equals(0) &&
 		                           "NO BODY".equals(t.getT3());
-		                }else {
+		                }
+		                else {
 		                    return false;
 		                }
 		            })
@@ -720,7 +721,7 @@ class HttpServerTests {
 				            String chunkedReceived = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
 				            String clReceived = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
 				            String chunkedSent = sentHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING);
-				            String clSent =sentHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH);
+				            String clSent = sentHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
 				                return chunkedReceived == null && chunkedSent == null &&
 				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
@@ -863,7 +864,7 @@ class HttpServerTests {
 			          .bindNow();
 			fail("illegal-success");
 		}
-		catch (ChannelBindException e){
+		catch (ChannelBindException e) {
 			assertThat(e.localPort()).isEqualTo(disposableServer.port());
 			e.printStackTrace();
 		}
@@ -945,7 +946,7 @@ class HttpServerTests {
 			field.setAccessible(true);
 			return field.get(obj);
 		}
-		catch(NoSuchFieldException | IllegalAccessException e) {
+		catch (NoSuchFieldException | IllegalAccessException e) {
 			return new RuntimeException(e);
 		}
 	}

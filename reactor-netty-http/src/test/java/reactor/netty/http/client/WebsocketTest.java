@@ -77,12 +77,13 @@ class WebsocketTest {
 
 	static final Logger log = Loggers.getLogger(WebsocketTest.class);
 
-	DisposableServer httpServer = null;
+	DisposableServer httpServer;
 
 	@AfterEach
 	void disposeHttpServer() {
-		if (httpServer != null)
+		if (httpServer != null) {
 			httpServer.disposeNow();
+		}
 	}
 
 	@Test
@@ -117,7 +118,8 @@ class WebsocketTest {
 				          .handle((in, out) -> {
 				              if (!in.requestHeaders().contains("Authorization")) {
 				                  return out.status(401);
-				              } else {
+				              }
+				              else {
 				                  return out.sendWebsocket((i, o) -> o.sendString(Mono.just("test")));
 				              }
 				          })
@@ -1026,8 +1028,8 @@ class WebsocketTest {
 		                                              error.set(t);
 		                                              latch.countDown();
 		                                          },
-		                                          null)
-		                           , 500, TimeUnit.MILLISECONDS);
+		                                          null),
+		                           500, TimeUnit.MILLISECONDS);
 		                           return out.sendString(Mono.just("test"));
 		                       }))
 		                       .wiretap(true)

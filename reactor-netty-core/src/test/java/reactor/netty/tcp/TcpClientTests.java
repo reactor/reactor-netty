@@ -102,28 +102,28 @@ public class TcpClientTests {
 		echoServerPort = SocketUtils.findAvailableTcpPort();
 		echoServer = new EchoServer(echoServerPort);
 		echoServerFuture = threadPool.submit(echoServer);
-		if(!echoServer.await(10, TimeUnit.SECONDS)){
+		if (!echoServer.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("fail to start test server");
 		}
 
 		abortServerPort = SocketUtils.findAvailableTcpPort();
 		abortServer = new ConnectionAbortServer(abortServerPort);
 		abortServerFuture = threadPool.submit(abortServer);
-		if(!abortServer.await(10, TimeUnit.SECONDS)){
+		if (!abortServer.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("fail to start test server");
 		}
 
 		timeoutServerPort = SocketUtils.findAvailableTcpPort();
 		timeoutServer = new ConnectionTimeoutServer(timeoutServerPort);
 		timeoutServerFuture = threadPool.submit(timeoutServer);
-		if(!timeoutServer.await(10, TimeUnit.SECONDS)){
+		if (!timeoutServer.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("fail to start test server");
 		}
 
 		heartbeatServerPort = SocketUtils.findAvailableTcpPort();
 		heartbeatServer = new HeartbeatServer(heartbeatServerPort);
 		heartbeatServerFuture = threadPool.submit(heartbeatServer);
-		if(!heartbeatServer.await(10, TimeUnit.SECONDS)){
+		if (!heartbeatServer.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("fail to start test server");
 		}
 	}
@@ -233,14 +233,14 @@ public class TcpClientTests {
 					        out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
 					                            .subscribeOn(Schedulers.parallel()))
-					            .then( in.receive()
-					                     .asString()
-					                     .take(100)
-					                     .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
-					                     .doOnNext(s -> {
-						                     strings.add(s);
-						                     latch.countDown();
-					                     }).then())
+					            .then(in.receive()
+					                    .asString()
+					                    .take(100)
+					                    .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+					                    .doOnNext(s -> {
+						                    strings.add(s);
+						                    latch.countDown();
+					                    }).then())
 				         )
 				         .wiretap(true)
 				         .connectNow(Duration.ofSeconds(15));
@@ -259,8 +259,7 @@ public class TcpClientTests {
 				.addHandler("codec",
 				            new LineBasedFrameDecoder(8 * 1024));
 
-//		ConnectionProvider p = ConnectionProvider.fixed
-//				("tcpClientHandlesLineFeedDataFixedPool", 1);
+		//ConnectionProvider p = ConnectionProvider.fixed("tcpClientHandlesLineFeedDataFixedPool", 1);
 
 		ConnectionProvider p = ConnectionProvider.newConnection();
 
@@ -296,14 +295,14 @@ public class TcpClientTests {
 					        out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
 					                            .subscribeOn(Schedulers.parallel()))
-					            .then( in.receive()
-					                     .asString()
-					                     .take(100)
-					                     .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
-					                     .doOnNext(s -> {
-						                     strings.add(s);
-						                     latch.countDown();
-					                     }).then())
+					            .then(in.receive()
+					                    .asString()
+					                    .take(100)
+					                    .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+					                    .doOnNext(s -> {
+						                    strings.add(s);
+						                    latch.countDown();
+					                    }).then())
 				         )
 				         .wiretap(true)
 				         .connectNow(Duration.ofSeconds(30));
@@ -423,7 +422,7 @@ public class TcpClientTests {
 			assertThat(connectionLatch.await(5, TimeUnit.SECONDS)).as("Initial connection is made").isTrue();
 			assertThat(reconnectionLatch.await(5, TimeUnit.SECONDS)).as("A reconnect attempt was made").isTrue();
 		}
-		catch (AbortedException e){
+		catch (AbortedException e) {
 			// ignored
 		}
 	}
@@ -810,7 +809,7 @@ public class TcpClientTests {
 
 		Set<String> threadNames = new ConcurrentSkipListSet<>();
 		StepVerifier.create(
-				Flux.range(1,4)
+				Flux.range(1, 4)
 				    .flatMap(i ->
 				            client.handle((in, out) -> {
 				                threadNames.add(Thread.currentThread().getName());

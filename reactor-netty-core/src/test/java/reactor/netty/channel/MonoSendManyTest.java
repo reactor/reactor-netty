@@ -212,7 +212,7 @@ class MonoSendManyTest {
 		ArrayBlockingQueue<ReferenceCounted> discarded = new ArrayBlockingQueue<>(messagesToSend * 2);
 		Hooks.onNextDropped(v -> {
 			ReferenceCountUtil.safeRelease(v);
-			discarded.add((ReferenceCounted)v);
+			discarded.add((ReferenceCounted) v);
 		});
 		for (int i = 0; i < 10000; i++) {
 			//use an extra handler
@@ -250,11 +250,11 @@ class MonoSendManyTest {
 		}
 	}
 
-	static void wait(WeakReference<Subscription> ref){
+	static void wait(WeakReference<Subscription> ref) {
 		int duration = 5_000;
 		int spins = duration / 100;
 		int i = 0;
-		while(ref.get() != null && i < spins) {
+		while (ref.get() != null && i < spins) {
 			try {
 				Thread.sleep(100);
 				i++;

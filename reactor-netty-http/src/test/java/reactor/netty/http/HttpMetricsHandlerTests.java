@@ -16,7 +16,20 @@
 package reactor.netty.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static reactor.netty.Metrics.*;
+import static reactor.netty.Metrics.CONNECT_TIME;
+import static reactor.netty.Metrics.DATA_RECEIVED;
+import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
+import static reactor.netty.Metrics.DATA_SENT;
+import static reactor.netty.Metrics.DATA_SENT_TIME;
+import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
+import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
+import static reactor.netty.Metrics.METHOD;
+import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.RESPONSE_TIME;
+import static reactor.netty.Metrics.STATUS;
+import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty.Metrics.URI;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
@@ -256,7 +269,7 @@ class HttpMetricsHandlerTests {
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, 1, 12);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, 1, 12);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14*index, 151*index);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14 * index, 151 * index);
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 3*index, 84*index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
@@ -286,8 +299,8 @@ class HttpMetricsHandlerTests {
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, index, 0);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, index, 123*index);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 64*index);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, index, 123 * index);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 64 * index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
 

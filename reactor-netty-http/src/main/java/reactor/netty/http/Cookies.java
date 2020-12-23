@@ -70,7 +70,7 @@ public final class Cookies {
 	final CookieDecoder decoder;
 
 	Map<CharSequence, Set<Cookie>> cachedCookies;
-	volatile     int                                state = 0;
+	volatile     int                                state;
 
 	static final AtomicIntegerFieldUpdater<Cookies> STATE =
 			AtomicIntegerFieldUpdater.newUpdater(Cookies.class, "state");
@@ -90,7 +90,7 @@ public final class Cookies {
 	 */
 	public Map<CharSequence, Set<Cookie>> getCachedCookies() {
 		if (!STATE.compareAndSet(this, NOT_READ, READING)) {
-			for (; ; ) {
+			for (;;) {
 				if (state == READ) {
 					return cachedCookies;
 				}

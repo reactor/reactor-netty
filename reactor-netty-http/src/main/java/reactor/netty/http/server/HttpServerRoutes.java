@@ -293,7 +293,7 @@ public interface HttpServerRoutes extends
 	 * @since 0.9.5
 	 */
 	default HttpServerRoutes ws(String path,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound,? extends Publisher<Void>> handler,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			WebsocketServerSpec configurer) {
 		return ws(HttpPredicate.get(path), handler, configurer);
 	}

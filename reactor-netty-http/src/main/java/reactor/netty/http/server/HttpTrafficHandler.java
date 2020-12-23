@@ -419,9 +419,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	}
 
 	final void discard() {
-		if(pipelined != null && !pipelined.isEmpty()){
+		if (pipelined != null && !pipelined.isEmpty()) {
 			Object o;
-			while((o = pipelined.poll()) != null){
+			while ((o = pipelined.poll()) != null) {
 				ReferenceCountUtil.release(o);
 			}
 

@@ -15,7 +15,9 @@
  */
 package reactor.netty;
 
-import io.netty.util.concurrent.*;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import reactor.netty.channel.AbortedException;
 import reactor.test.StepVerifier;

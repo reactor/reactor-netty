@@ -43,7 +43,7 @@ public interface DisposableChannel extends Disposable {
 	 *
 	 * @return {@link SocketAddress}
 	 */
-	default SocketAddress address(){
+	default SocketAddress address() {
 		Channel c = channel();
 		if (c instanceof DatagramChannel) {
 			SocketAddress a = c.remoteAddress();

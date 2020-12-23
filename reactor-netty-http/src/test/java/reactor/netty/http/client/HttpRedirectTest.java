@@ -56,12 +56,12 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 class HttpRedirectTest {
 
 	@Test
-	void deadlockWhenRedirectsToSameUrl(){
+	void deadlockWhenRedirectsToSameUrl() {
 		redirectTests("/login");
 	}
 
 	@Test
-	void okWhenRedirectsToOther(){
+	void okWhenRedirectsToOther() {
 		redirectTests("/other");
 	}
 
@@ -666,7 +666,7 @@ class HttpRedirectTest {
 		              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		                  super.channelRead(ctx, msg);
 
-		                  if(initialPath.equals("/" + r.path()) && msg instanceof HttpContent) {
+		                  if (initialPath.equals("/" + r.path()) && msg instanceof HttpContent) {
 		                      redirectBufferRefCounts.add(ReferenceCountUtil.refCnt(msg));
 		                  }
 		              }

@@ -64,7 +64,7 @@ class ReactorNettyLoggingHandlerTest {
 	}
 
 	@AfterEach
-	void tearDown(){
+	void tearDown() {
 		ROOT.detachAppender(mockedAppender);
 	}
 

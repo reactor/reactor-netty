@@ -57,6 +57,7 @@ import static reactor.netty.ReactorNetty.format;
  *          .bind()
  *          .block()
  * }
+ * </pre>
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva

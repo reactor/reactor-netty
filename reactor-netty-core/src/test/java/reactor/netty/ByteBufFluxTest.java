@@ -143,13 +143,14 @@ class ByteBufFluxTest {
 			assertThat(tempDir.delete()).isTrue();
 			assertThat(tempDir.mkdir()).isTrue();
 			return tempDir;
-		} catch (Exception e) {
+		}
+		catch (Exception e) {
 			throw new RuntimeException("Error creating the temporary directory", e);
 		}
 	}
 
 	private static void deleteTemporaryDirectoryRecursively(final File file) {
-		if (temporaryDirectory == null || !temporaryDirectory.exists()){
+		if (temporaryDirectory == null || !temporaryDirectory.exists()) {
 			return;
 		}
 		final File[] files = file.listFiles();

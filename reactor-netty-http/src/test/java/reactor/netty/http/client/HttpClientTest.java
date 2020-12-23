@@ -244,11 +244,11 @@ class HttpClientTest {
 	}
 
 	@Test
-	void testClientReuseIssue405(){
+	void testClientReuseIssue405() {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
-				          .handle((in,out)->out.sendString(Flux.just("hello")))
+				          .handle((in, out) -> out.sendString(Flux.just("hello")))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -265,8 +265,8 @@ class HttpClientTest {
 				          .responseSingle((r, buf) -> buf.asString())
 				          .log("mono1");
 
-		StepVerifier.create(Flux.zip(mono1,mono2))
-		            .expectNext(Tuples.of("hello","hello"))
+		StepVerifier.create(Flux.zip(mono1, mono2))
+		            .expectNext(Tuples.of("hello", "hello"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(20));
 
@@ -275,7 +275,7 @@ class HttpClientTest {
 
 	@Test
 	//https://github.com/reactor/reactor-pool/issues/82
-	void testConnectionRefusedConcurrentRequests(){
+	void testConnectionRefusedConcurrentRequests() {
 		ConnectionProvider provider = ConnectionProvider.create("testConnectionRefusedConcurrentRequests", 1);
 
 		HttpClient httpClient = HttpClient.create(provider)
@@ -470,14 +470,14 @@ class HttpClientTest {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
-				          .handle((req,res) -> res.sendString(Mono.just(req.requestHeaders()
+				          .handle((req, res) -> res.sendString(Mono.just(req.requestHeaders()
 				                                                           .get(HttpHeaderNames.ACCEPT_ENCODING,
 				                                                                "no gzip"))))
 				          .wiretap(true)
 				          .bindNow();
 		HttpClient client = createHttpClientForContextWithPort();
 
-		if (gzipEnabled){
+		if (gzipEnabled) {
 			client = client.compress(true);
 		}
 
@@ -725,12 +725,10 @@ class HttpClientTest {
 		disposableServer =
 				HttpServer.create()
 				          .host("localhost")
-				          .route(r -> r.get("/201", (req, res) -> res.addHeader
-				                  ("Content-Length", "0")
+				          .route(r -> r.get("/201", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                     .status(HttpResponseStatus.CREATED)
 				                                                     .sendHeaders())
-				                       .get("/204", (req, res) -> res.status
-				                               (HttpResponseStatus.NO_CONTENT)
+				                       .get("/204", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
 				                                                     .sendHeaders())
 				                       .get("/200", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                     .sendHeaders()))
@@ -758,8 +756,7 @@ class HttpClientTest {
 		disposableServer =
 				HttpServer.create()
 				          .host("localhost")
-				          .route(r -> r.get("/201", (req, res) -> res.addHeader
-				                  ("Content-Length", "0")
+				          .route(r -> r.get("/201", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                     .status(HttpResponseStatus.CREATED)
 				                                                     .sendHeaders()))
 				          .bindNow();
@@ -1163,7 +1160,7 @@ class HttpClientTest {
 				            requestError1.set(req.currentContextView().getOrDefault("test", "empty")))
 				        .doOnResponseError((res, err) ->
 				            responseError1.set(res.currentContextView().getOrDefault("test", "empty")))
-				        .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
+				        .mapConnect(c -> c.contextWrite(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
 				        .responseContent()
@@ -1183,10 +1180,10 @@ class HttpClientTest {
 				createHttpClientForContextWithPort()
 				        .headers(h -> h.add("during", "test"))
 				        .doOnError((req, err) ->
-				            requestError2.set(req.currentContextView().getOrDefault("test", "empty"))
-				            ,(res, err) ->
+				            requestError2.set(req.currentContextView().getOrDefault("test", "empty")),
+				            (res, err) ->
 				            responseError2.set(res.currentContextView().getOrDefault("test", "empty")))
-				        .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
+				        .mapConnect(c -> c.contextWrite(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
 				        .responseContent()
@@ -1210,7 +1207,7 @@ class HttpClientTest {
 		                             .bindNow();
 
 		Mono<String> content = createHttpClientForContextWithPort()
-		                               .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
+		                               .mapConnect(c -> c.contextWrite(Context.of("test", "success")))
 		                               .post()
 		                               .uri("/")
 		                               .send((req, out) -> {
@@ -1330,7 +1327,7 @@ class HttpClientTest {
 		int serverPort = SocketUtils.findAvailableTcpPort();
 		ConnectionResetByPeerServer server = new ConnectionResetByPeerServer(serverPort);
 		Future<?> serverFuture = threadPool.submit(server);
-		if(!server.await(10, TimeUnit.SECONDS)){
+		if (!server.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("fail to start test server");
 		}
 
@@ -1465,7 +1462,7 @@ class HttpClientTest {
 
 		Set<String> threadNames = new ConcurrentSkipListSet<>();
 		StepVerifier.create(
-				Flux.range(1,4)
+				Flux.range(1, 4)
 				    .flatMap(i -> client.request(HttpMethod.GET)
 				                        .uri("/")
 				                        .send((req, out) -> out.send(Flux.empty()))
@@ -1598,7 +1595,7 @@ class HttpClientTest {
 
 		HttpClient client = createHttpClientForContextWithPort();
 
-		ByteBufAllocator alloc =ByteBufAllocator.DEFAULT;
+		ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
 
 		ByteBuf buffer1 = alloc.buffer()
 		                       .writeInt(1)
@@ -1635,7 +1632,7 @@ class HttpClientTest {
 				          .bindNow();
 
 		HttpClient client = createHttpClientForContextWithAddress();
-		for(int i = 0; i < 1000; ++i) {
+		for (int i = 0; i < 1000; ++i) {
 			try {
 				client.get()
 				      .uri("/")
@@ -1651,7 +1648,7 @@ class HttpClientTest {
 		}
 
 		System.gc();
-		for(int i = 0; i < 100000; ++i) {
+		for (int i = 0; i < 100000; ++i) {
 			@SuppressWarnings("UnusedVariable")
 			int[] arr = new int[100000];
 		}

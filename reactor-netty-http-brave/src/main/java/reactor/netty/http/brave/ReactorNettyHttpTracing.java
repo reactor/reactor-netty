@@ -30,6 +30,7 @@ import java.util.function.Function;
  *     HttpClient client = reactorNettyHttpTracing.decorateHttpClient(HttpClient.create().port(0)...);
  *     HttpServer server = reactorNettyHttpTracing.decorateHttpServer(HttpServer.create().port(0)...);
  * }
+ * </pre>
  *
  * @author Violeta Georgieva
  * @since 1.0.0

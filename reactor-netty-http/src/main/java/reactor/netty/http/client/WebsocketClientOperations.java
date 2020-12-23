@@ -142,7 +142,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			return;
 		}
 		if (msg instanceof CloseWebSocketFrame &&
-				((CloseWebSocketFrame)msg).isFinalFragment()) {
+				((CloseWebSocketFrame) msg).isFinalFragment()) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
@@ -210,7 +210,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 	@Override
 	@SuppressWarnings("unchecked")
 	public Mono<WebSocketCloseStatus> receiveCloseStatus() {
-		return onCloseState.asMono().or((Mono)onTerminate());
+		return onCloseState.asMono().or((Mono) onTerminate());
 	}
 
 	Mono<Void> sendClose(CloseWebSocketFrame frame) {

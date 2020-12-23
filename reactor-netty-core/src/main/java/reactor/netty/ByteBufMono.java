@@ -211,7 +211,7 @@ public class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 
 		@Override
 		public void close() throws IOException {
-			if(CLOSE.compareAndSet(this, 0, 1)) {
+			if (CLOSE.compareAndSet(this, 0, 1)) {
 				try {
 					super.close();
 				}

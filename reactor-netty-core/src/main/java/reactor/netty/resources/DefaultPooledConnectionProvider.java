@@ -484,7 +484,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		ConnectionObserver owner() {
 			ConnectionObserver obs;
 
-			for (; ; ) {
+			for (;;) {
 				obs = channel.attr(OWNER)
 				             .get();
 				if (obs == null) {

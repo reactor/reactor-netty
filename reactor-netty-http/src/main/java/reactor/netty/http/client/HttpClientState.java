@@ -90,8 +90,7 @@ public enum HttpClientState implements ConnectionObserver.State {
 		public String toString() {
 			return "[upgrade_rejected]";
 		}
-	}
-	,
+	},
 	/**
 	 * The H2C upgrade was successful.
 	 */

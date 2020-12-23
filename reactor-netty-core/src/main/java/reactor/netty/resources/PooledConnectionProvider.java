@@ -24,7 +24,6 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.channel.ChannelOperations;
 import reactor.netty.transport.TransportConfig;
 import reactor.pool.AllocationStrategy;
 import reactor.pool.InstrumentedPool;

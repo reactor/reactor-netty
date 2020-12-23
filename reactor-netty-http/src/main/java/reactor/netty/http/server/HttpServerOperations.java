@@ -332,7 +332,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		//       If decoding a response, just throw an error.
 		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
 			return FutureMono.deferFuture(() -> {
-						if(!hasSentHeaders()) {
+						if (!hasSentHeaders()) {
 							return channel().writeAndFlush(CONTINUE);
 						}
 						return channel().newSucceededFuture();
@@ -497,11 +497,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				try {
 					//Do not invoke handler.channelRead as it will trigger ctx.fireChannelRead
 					handler.decode(channel().pipeline().context(NettyPipeline.ReactiveBridge), nettyRequest, out);
-				} catch (DecoderException e) {
+				}
+				catch (DecoderException e) {
 					throw e;
-				} catch (Exception e) {
+				}
+				catch (Exception e) {
 					throw new DecoderException(e);
-				} finally {
+				}
+				finally {
 					ReferenceCountUtil.release(nettyRequest);
 					out.clear();
 				}
@@ -558,7 +561,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected void afterMarkSentHeaders(){
+	protected void afterMarkSentHeaders() {
 		if (HttpResponseStatus.NOT_MODIFIED.equals(status())) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
 			               .remove(HttpHeaderNames.CONTENT_LENGTH);
@@ -594,7 +597,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else if (markSentBody()) {
 			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
-		else{
+		else {
 			discard();
 			return;
 		}
@@ -607,7 +610,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	}
 
-	static void cleanHandlerTerminate(Channel ch){
+	static void cleanHandlerTerminate(Channel ch) {
 		ChannelOperations<?, ?> ops = get(ch);
 
 		if (ops == null) {
@@ -645,7 +648,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		ReferenceCountUtil.release(msg);
 
 		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,
-				cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE:
+				cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE :
 				                                         HttpResponseStatus.BAD_REQUEST);
 		response.headers()
 		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
@@ -707,7 +710,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			return FutureMono.from(ops.handshakerResult)
 			                 .doOnEach(signal -> {
-			                     if(!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
+			                     if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
 			                         websocketHandler.apply(ops, ops)
 			                                         .subscribe(new WebsocketSubscriber(ops, Context.of(signal.getContextView())));
 			                     }

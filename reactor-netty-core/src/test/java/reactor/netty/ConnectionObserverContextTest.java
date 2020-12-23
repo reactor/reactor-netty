@@ -138,7 +138,7 @@ class ConnectionObserverContextTest {
 	/**
 	 * The main functionality is provided by {@link #asOperator(UnaryOperator)}.
 	 */
-	private static class ContextModifyingSubscriber<T> implements CoreSubscriber<T> {
+	private static final class ContextModifyingSubscriber<T> implements CoreSubscriber<T> {
 		private final Subscriber<? super T> delegate;
 		private final Context context;
 

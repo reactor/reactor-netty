@@ -125,7 +125,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	@Override
 	public HttpClientForm factory(HttpDataFactory factory) {
-		if(!getBodyListAttributes().isEmpty()){
+		if (!getBodyListAttributes().isEmpty()) {
 			throw new IllegalStateException("Cannot set a new HttpDataFactory after " +
 					"starting appending Parts, call factory(f) at the earliest occasion" +
 					" offered");
@@ -320,7 +320,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 			return encoder;
 		}
-		catch(ErrorDataEncoderException ee){
+		catch (ErrorDataEncoderException ee) {
 			throw Exceptions.propagate(ee);
 		}
 	}

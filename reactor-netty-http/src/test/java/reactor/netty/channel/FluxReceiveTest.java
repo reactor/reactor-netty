@@ -41,7 +41,7 @@ class FluxReceiveTest {
 
 	@Test
 	void testByteBufsReleasedWhenTimeout() {
-		byte[] content = new byte[1024*8];
+		byte[] content = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
 
@@ -88,7 +88,7 @@ class FluxReceiveTest {
 
 	@Test
 	void testByteBufsReleasedWhenTimeoutUsingHandlers() {
-		byte[] content = new byte[1024*8];
+		byte[] content = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
 

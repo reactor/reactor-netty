@@ -190,7 +190,7 @@ class ProxyProviderTest {
 	}
 
 	@Test
-	void nonProxyHosts_builderDefault_empty(){
+	void nonProxyHosts_builderDefault_empty() {
 		Predicate<SocketAddress> pred = ProxyProvider.builder().type(ProxyProvider.Proxy.HTTP).host("something").build().getNonProxyHostsPredicate();
 		assertThat(pred.test(someAddress("localhost"))).as("Default should proxy").isFalse();
 	}

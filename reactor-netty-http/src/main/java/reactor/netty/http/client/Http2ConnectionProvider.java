@@ -99,7 +99,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 	static void invalidate(@Nullable ConnectionObserver owner, Channel channel) {
 		if (owner instanceof DisposableAcquire) {
-			DisposableAcquire da = ((DisposableAcquire) owner);
+			DisposableAcquire da = (DisposableAcquire) owner;
 			da.pooledRef
 			  .invalidate()
 			  .subscribe(null, null, () -> {
@@ -151,7 +151,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		ConnectionObserver owner(Channel channel) {
 			ConnectionObserver obs;
 
-			for (; ; ) {
+			for (;;) {
 				obs = channel.attr(OWNER)
 				             .get();
 				if (obs == null) {
@@ -385,7 +385,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		static void release(@Nullable ConnectionObserver owner, Channel channel) {
 			if (owner instanceof DisposableAcquire) {
-				DisposableAcquire da = ((DisposableAcquire) owner);
+				DisposableAcquire da = (DisposableAcquire) owner;
 				da.pooledRef
 				  .release()
 				  .subscribe(null, null, () -> {

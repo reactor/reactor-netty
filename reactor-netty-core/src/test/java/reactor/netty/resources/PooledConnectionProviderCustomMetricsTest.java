@@ -73,7 +73,10 @@ class PooledConnectionProviderCustomMetricsTest {
 	void customRegistrarSupplierNotInvokedWhenMetricsDisabled() {
 		AtomicBoolean used = new AtomicBoolean();
 
-		triggerAcquisition(false, () -> {used.set(true); return null;});
+		triggerAcquisition(false, () -> {
+			used.set(true);
+			return null;
+		});
 		assertThat(used.get()).isFalse();
 	}
 

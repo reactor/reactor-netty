@@ -267,7 +267,7 @@ class HttpClientProxyTest {
 				          .doOnResponse((res, conn) -> {
 				              ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ProxyLoggingHandler);
 				              res.responseHeaders()
-				                 .add("Logging-Handler", handler != null? "FOUND" : "NOT FOUND");
+				                 .add("Logging-Handler", handler != null ? "FOUND" : "NOT FOUND");
 				          });
 
 		if (connectAddressSupplier != null) {

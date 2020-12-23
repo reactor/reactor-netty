@@ -64,7 +64,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof HttpRequest) {
-			ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
+			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpClientOperations) {
 				HttpClientOperations ops = (HttpClientOperations) channelOps;
 				path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);

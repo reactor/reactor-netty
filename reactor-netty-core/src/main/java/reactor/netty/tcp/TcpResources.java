@@ -271,7 +271,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 			BiFunction<LoopResources, ConnectionProvider, T> onNew,
 			String name) {
 		T update;
-		for (; ; ) {
+		for (;;) {
 			T resources = ref.get();
 			if (resources == null || loops != null || provider != null) {
 				update = create(resources, loops, provider, name, onNew);

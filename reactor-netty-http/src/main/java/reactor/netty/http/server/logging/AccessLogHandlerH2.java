@@ -41,7 +41,7 @@ final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof Http2HeadersFrame){
+		if (msg instanceof Http2HeadersFrame) {
 			final Http2HeadersFrame requestHeaders = (Http2HeadersFrame) msg;
 
 			if (accessLogArgProvider == null) {

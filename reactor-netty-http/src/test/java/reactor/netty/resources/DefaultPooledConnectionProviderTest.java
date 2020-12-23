@@ -111,7 +111,7 @@ class DefaultPooledConnectionProviderTest {
 		          })
 		          .wiretap(true)
 		          .get()
-		          .uri("http://localhost:" + server.port() +"/")
+		          .uri("http://localhost:" + server.port() + "/")
 		          .responseContent()
 		          .aggregate()
 		          .block(Duration.ofSeconds(30));

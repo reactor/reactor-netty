@@ -393,7 +393,7 @@ class Http2Tests {
 				          .port(disposableServer.port())
 				          .protocol(HttpProtocol.H2)
 				          .secure(spec -> spec.sslContext(clientCtx));
-		for(int i = 0; i < 1000; ++i) {
+		for (int i = 0; i < 1000; ++i) {
 			try {
 				client.get()
 				      .uri("/")

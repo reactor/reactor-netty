@@ -41,7 +41,7 @@ final class HAProxyMessageDetector extends ByteToMessageDecoder {
 		if (detectionResult.equals(ProtocolDetectionResult.needsMoreData())) {
 			return;
 		}
-		else if(detectionResult.equals(ProtocolDetectionResult.invalid())) {
+		else if (detectionResult.equals(ProtocolDetectionResult.invalid())) {
 			ctx.pipeline()
 			   .remove(this);
 		}

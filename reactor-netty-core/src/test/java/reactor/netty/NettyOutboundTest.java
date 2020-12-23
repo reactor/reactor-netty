@@ -211,13 +211,15 @@ class NettyOutboundTest {
 		};
 		ChannelFuture f = channel.writeOneOutbound(1);
 
-		try{
+		try {
 			outbound.sendFile(Paths.get(getClass().getResource("/largeFile.txt").toURI()))
 			        .then()
 			        .block(Duration.ofSeconds(1)); //TODO investigate why this hangs
-		} catch (IllegalStateException e) {
-			if (!"Timeout on blocking read for 1000 MILLISECONDS".equals(e.getMessage()))
+		}
+		catch (IllegalStateException e) {
+			if (!"Timeout on blocking read for 1000 MILLISECONDS".equals(e.getMessage())) {
 				throw e;
+			}
 			e.printStackTrace();
 		}
 
@@ -324,7 +326,7 @@ class NettyOutboundTest {
 		assertThat(channel.finishAndReleaseAll()).isTrue();
 	}
 
-	static<S> Mono<Void> mockSendUsing(Connection c, Callable<? extends S> sourceInput,
+	static <S> Mono<Void> mockSendUsing(Connection c, Callable<? extends S> sourceInput,
 			BiFunction<? super Connection, ? super S, ?> mappedInput,
 			Consumer<? super S> sourceCleanup) {
 		return Mono.using(

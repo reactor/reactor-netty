@@ -461,9 +461,9 @@ class HttpCompressionClientServerTests {
 				                        .uri("/")
 				                        .responseContent()
 				                        .doOnError(error::set)))
-				                        // .retain() deliberately not invoked
-				                        // so that .release() in FluxReceive.drainReceiver will fail
-				                        //.retain()))
+				          // .retain() deliberately not invoked
+				          // so that .release() in FluxReceive.drainReceiver will fail
+				          //.retain()))
 				          .wiretap(true)
 				          .bindNow();
 

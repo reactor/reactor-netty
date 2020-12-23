@@ -30,7 +30,8 @@ import org.assertj.core.api.ListAssert;
 import org.junit.jupiter.api.Test;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 /**
  * This test must be executed with Gradle because it requires a shadow JAR.
@@ -43,7 +44,7 @@ class JarFileShadingTest extends AbstractJarFileTest {
 		try (Stream<Path> stream = Files.list(root)) {
 			assertThatFileList(stream).containsOnly("reactor", "META-INF");
 		}
-		try(Stream<Path> stream = Files.list(root.resolve("reactor"))) {
+		try (Stream<Path> stream = Files.list(root.resolve("reactor"))) {
 			assertThatFileList(stream).containsOnly("netty");
 		}
 	}

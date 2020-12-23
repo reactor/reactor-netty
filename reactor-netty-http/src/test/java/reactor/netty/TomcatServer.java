@@ -38,7 +38,7 @@ public class TomcatServer {
 
 	final Tomcat tomcat;
 
-	boolean started = false;
+	boolean started;
 
 	public TomcatServer() {
 		this(0);
@@ -54,7 +54,8 @@ public class TomcatServer {
 	public int port() {
 		if (this.started) {
 			return this.tomcat.getConnector().getLocalPort();
-		} else {
+		}
+		else {
 			throw new IllegalStateException("Tomcat is not started.");
 		}
 	}

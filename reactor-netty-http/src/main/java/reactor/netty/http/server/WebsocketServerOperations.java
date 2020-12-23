@@ -107,7 +107,8 @@ final class WebsocketServerOperations extends HttpServerOperations
 							request);
 
 					addHandlerFirst(NettyPipeline.WsCompressionHandler, wsServerCompressionHandler);
-				} catch (Throwable e) {
+				}
+				catch (Throwable e) {
 					log.error(format(channel(), ""), e);
 				}
 			}
@@ -207,7 +208,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	@Override
 	@SuppressWarnings("unchecked")
 	public Mono<WebSocketCloseStatus> receiveCloseStatus() {
-		return onCloseState.asMono().or((Mono)onTerminate());
+		return onCloseState.asMono().or((Mono) onTerminate());
 	}
 
 	Mono<Void> sendClose(CloseWebSocketFrame frame) {

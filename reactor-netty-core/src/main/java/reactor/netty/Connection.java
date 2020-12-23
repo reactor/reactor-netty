@@ -42,7 +42,7 @@ public interface Connection extends DisposableChannel {
 	 */
 	static Connection from(Channel channel) {
 		requireNonNull(channel, "channel");
-		if(channel.hasAttr(ReactorNetty.CONNECTION)) {
+		if (channel.hasAttr(ReactorNetty.CONNECTION)) {
 			return channel.attr(ReactorNetty.CONNECTION)
 			              .get();
 		}
@@ -60,7 +60,7 @@ public interface Connection extends DisposableChannel {
 	@Nullable
 	default  <T extends Connection> T as(Class<T> clazz) {
 		requireNonNull(clazz, "clazz");
-		if(clazz.isAssignableFrom(this.getClass())) {
+		if (clazz.isAssignableFrom(this.getClass())) {
 			@SuppressWarnings("unchecked")
 			T thiz = (T) this;
 			return thiz;
@@ -86,7 +86,7 @@ public interface Connection extends DisposableChannel {
 	 * @return this Connection
 
 	 */
-	default Connection addHandler(ChannelHandler handler){
+	default Connection addHandler(ChannelHandler handler) {
 		return addHandler(handler.getClass().getSimpleName(), handler);
 	}
 
@@ -108,8 +108,8 @@ public interface Connection extends DisposableChannel {
 	 *
 	 * @return this Connection
 	 */
-	default Connection addHandler(String name, ChannelHandler handler){
-		if(handler instanceof ChannelOutboundHandler){
+	default Connection addHandler(String name, ChannelHandler handler) {
+		if (handler instanceof ChannelOutboundHandler) {
 			addHandlerFirst(name, handler);
 		}
 		else {
@@ -135,7 +135,7 @@ public interface Connection extends DisposableChannel {
 	 * @return this Connection
 
 	 */
-	default Connection addHandlerLast(ChannelHandler handler){
+	default Connection addHandlerLast(ChannelHandler handler) {
 		return addHandlerLast(handler.getClass().getSimpleName(), handler);
 	}
 
@@ -156,7 +156,7 @@ public interface Connection extends DisposableChannel {
 	 *
 	 * @return this Connection
 	 */
-	default Connection addHandlerLast(String name, ChannelHandler handler){
+	default Connection addHandlerLast(String name, ChannelHandler handler) {
 		ReactorNetty.addHandlerBeforeReactorEndHandlers(this, name, handler);
 		return this;
 	}
@@ -177,7 +177,7 @@ public interface Connection extends DisposableChannel {
 	 *
 	 * @return this Connection
 	 */
-	default Connection addHandlerFirst(ChannelHandler handler){
+	default Connection addHandlerFirst(ChannelHandler handler) {
 		return addHandlerFirst(handler.getClass().getSimpleName(), handler);
 	}
 
@@ -198,7 +198,7 @@ public interface Connection extends DisposableChannel {
 	 *
 	 * @return this Connection
 	 */
-	default Connection addHandlerFirst(String name, ChannelHandler handler){
+	default Connection addHandlerFirst(String name, ChannelHandler handler) {
 		ReactorNetty.addHandlerAfterReactorCodecs(this, name, handler);
 		return this;
 	}
@@ -256,8 +256,8 @@ public interface Connection extends DisposableChannel {
 	 *
 	 * @return this Connection
 	 */
-	default Connection markPersistent(boolean persist){
-		if(persist && !channel().hasAttr(ReactorNetty.PERSISTENT_CHANNEL)) {
+	default Connection markPersistent(boolean persist) {
+		if (persist && !channel().hasAttr(ReactorNetty.PERSISTENT_CHANNEL)) {
 			return this;
 		}
 		else {
