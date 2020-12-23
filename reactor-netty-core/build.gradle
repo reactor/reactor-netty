@@ -54,7 +54,10 @@ dependencies {
 	compile "io.netty:netty-handler:$nettyVersion"
 	compile "io.netty:netty-handler-proxy:$nettyVersion"
 	compile "io.netty:netty-resolver-dns:$nettyVersion"
-	compile "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
+	// MacOS binaries are not available for Netty SNAPSHOT version
+	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
+		compile "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
+	}
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
