@@ -42,8 +42,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
-import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
@@ -55,13 +55,13 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 /**
  * @author Violeta Georgieva
  */
-class HttpMetricsHandlerTests {
+class HttpMetricsHandlerTests extends BaseHttpTest {
 	HttpServer httpServer;
-	DisposableServer disposableServer;
 	private ConnectionProvider provider;
 	HttpClient httpClient;
 	private MeterRegistry registry;
@@ -71,10 +71,9 @@ class HttpMetricsHandlerTests {
 	@BeforeEach
 	void setUp() {
 		httpServer = customizeServerOptions(
-				HttpServer.create()
+				createServer()
 				          .host("127.0.0.1")
-				          .port(0)
-				          .metrics(true, s -> s)
+				          .metrics(true, Function.identity())
 				          .route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
 				                                                    .send(req.receive().retain().delayElements(Duration.ofMillis(10))))
 				                       .post("/2", (req, res) -> res.header("Connection", "close")
@@ -82,19 +81,17 @@ class HttpMetricsHandlerTests {
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
 		httpClient =
-				customizeClientOptions(HttpClient.create(provider)
-				                                 .remoteAddress(() -> disposableServer.address())
-				                                 .metrics(true, s -> s));
+				customizeClientOptions(createClient(provider, () -> disposableServer.address())
+				                                 .metrics(true, Function.identity()));
 
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
 	}
 
 	@AfterEach
-	void tearDown() {
-		if (disposableServer != null) {
-			disposableServer.disposeNow();
-		}
+	@Override
+	protected void tearDown() throws Exception {
+		super.tearDown();
 
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));

@@ -25,13 +25,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.server.HttpServer;
+import reactor.netty.BaseHttpTest;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.BYTE_BUF_ALLOCATOR_PREFIX;
@@ -49,7 +48,7 @@ import static reactor.netty.Metrics.USED_HEAP_MEMORY;
 /**
  * @author Violeta Georgieva
  */
-class ByteBufAllocatorMetricsTest {
+class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 	private MeterRegistry registry;
 
 	@BeforeEach
@@ -59,7 +58,9 @@ class ByteBufAllocatorMetricsTest {
 	}
 
 	@AfterEach
-	void tearDown() {
+	@Override
+	protected void tearDown() throws Exception {
+		super.tearDown();
 		Metrics.removeRegistry(registry);
 		registry.clear();
 		registry.close();
@@ -67,9 +68,8 @@ class ByteBufAllocatorMetricsTest {
 
 	@Test
 	void test() throws Exception {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .handle((req, res) -> res.header("Connection", "close")
 				                                   .sendString(Mono.just("test")))
 				          .bindNow();
@@ -77,13 +77,12 @@ class ByteBufAllocatorMetricsTest {
 		CountDownLatch latch = new CountDownLatch(1);
 
 		PooledByteBufAllocator alloc = new PooledByteBufAllocator(true);
-		HttpClient.create()
-		          .port(server.port())
+		createClient(disposableServer.port())
 		          .option(ChannelOption.ALLOCATOR, alloc)
 		          .doOnResponse((res, conn) -> conn.channel()
 		                                           .closeFuture()
 		                                           .addListener(f -> latch.countDown()))
-		          .metrics(true, s -> s)
+		          .metrics(true, Function.identity())
 		          .get()
 		          .uri("/")
 		          .responseContent()
@@ -96,8 +95,6 @@ class ByteBufAllocatorMetricsTest {
 		String id = alloc.metric().hashCode() + "";
 		String[] tags = new String[]{ID, id, TYPE, "pooled"};
 		checkExpectations(BYTE_BUF_ALLOCATOR_PREFIX, tags);
-
-		server.disposeNow();
 	}
 
 

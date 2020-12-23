@@ -29,12 +29,12 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
@@ -49,7 +49,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author smaldini
  * @author Violeta Georgieva
  */
-class HttpCompressionClientServerTests {
+class HttpCompressionClientServerTests extends BaseHttpTest {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
@@ -58,17 +58,13 @@ class HttpCompressionClientServerTests {
 	@interface ParameterizedCompressionTest {
 	}
 
-	DisposableServer disposableServer;
-
 	static Object[][] data() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 
-		HttpServer server = HttpServer.create()
-		                              .port(0)
-		                              .wiretap(true);
+		HttpServer server = createServer();
 
 		HttpServer h2Server = server.protocol(HttpProtocol.H2)
 		                            .secure(spec -> spec.sslContext(serverCtx));
@@ -90,13 +86,6 @@ class HttpCompressionClientServerTests {
 				{server.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11), client.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)},
 				{h2Server, h2Client},
 				{h2Http1Server, h2Http1Client}};
-	}
-
-	@AfterEach
-	void tearDown() {
-		if (disposableServer != null) {
-			disposableServer.disposeNow();
-		}
 	}
 
 	@ParameterizedCompressionTest
@@ -450,13 +439,10 @@ class HttpCompressionClientServerTests {
 
 		AtomicReference<Throwable> error = new AtomicReference<>();
 		DisposableServer server1 =
-				HttpServer.create()
-				          .port(port1)
+				createServer(port1)
 				          .compress(true)
 				          .handle((in, out) -> out.send(
-				              HttpClient.create()
-				                        .port(port2)
-				                        .wiretap(true)
+				              createClient(port2)
 				                        .get()
 				                        .uri("/")
 				                        .responseContent()
@@ -464,20 +450,15 @@ class HttpCompressionClientServerTests {
 				          // .retain() deliberately not invoked
 				          // so that .release() in FluxReceive.drainReceiver will fail
 				          //.retain()))
-				          .wiretap(true)
 				          .bindNow();
 
 		DisposableServer server2 =
-				HttpServer.create()
-				          .port(port2)
+				createServer(port2)
 				          .handle((in, out) -> out.sendString(Mono.just("reply")))
-				          .wiretap(true)
 				          .bindNow();
 
 		StepVerifier.create(
-		        HttpClient.create()
-		                  .port(port1)
-		                  .wiretap(true)
+		        createClient(port1)
 		                  .compress(true)
 		                  .get()
 		                  .uri("/")
@@ -501,35 +482,27 @@ class HttpCompressionClientServerTests {
 
 		AtomicReference<Throwable> error = new AtomicReference<>();
 		DisposableServer server1 =
-				HttpServer.create()
-				          .port(port1)
+				createServer(port1)
 				          .compress((req, res) -> {
 				              throw new RuntimeException("testIssue825_2");
 				          })
 				          .handle((in, out) ->
-				              HttpClient.create()
-				                        .port(port2)
-				                        .wiretap(true)
+				              createClient(port2)
 				                        .get()
 				                        .uri("/")
 				                        .responseContent()
 				                        .retain()
 				                        .flatMap(b -> out.send(Mono.just(b)))
 				                        .doOnError(error::set))
-				          .wiretap(true)
 				          .bindNow();
 
 		DisposableServer server2 =
-				HttpServer.create()
-				          .port(port2)
+				createServer(port2)
 				          .handle((in, out) -> out.sendString(Mono.just("reply")))
-				          .wiretap(true)
 				          .bindNow();
 
 		StepVerifier.create(
-		        HttpClient.create()
-		                  .port(port1)
-		                  .wiretap(true)
+		        createClient(port1)
 		                  .compress(true)
 		                  .get()
 		                  .uri("/")

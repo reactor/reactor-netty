@@ -84,13 +84,13 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
@@ -125,22 +125,12 @@ import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 /**
  * @author Stephane Maldini
  */
-class HttpServerTests {
-	private DisposableServer disposableServer;
-
-	@AfterEach
-	void tearDown() {
-		if (disposableServer != null) {
-			disposableServer.disposeNow();
-		}
-	}
+class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void httpPort() {
-		disposableServer = HttpServer.create()
-		                             .port(8080)
+		disposableServer = createServer(8080)
 		                             .handle((req, resp) -> resp.sendNotFound())
-		                             .wiretap(true)
 		                             .bindNow();
 
 		assertThat(disposableServer.port()).isEqualTo(8080);
@@ -148,11 +138,9 @@ class HttpServerTests {
 
 	@Test
 	void httpPortWithAddress() {
-		disposableServer = HttpServer.create()
-		                             .port(8080)
+		disposableServer = createServer(8080)
 		                             .host("localhost")
 		                             .handle((req, resp) -> resp.sendNotFound())
-		                             .wiretap(true)
 		                             .bindNow();
 
 		assertThat(disposableServer.port()).isEqualTo(8080);
@@ -160,10 +148,8 @@ class HttpServerTests {
 
 	@Test
 	void releaseInboundChannelOnNonKeepAliveRequest() {
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .handle((req, resp) -> req.receive().then(resp.status(200).send()))
-		                             .wiretap(true)
 		                             .bindNow();
 
 		Flux<ByteBuf> src = Flux.range(0, 3)
@@ -171,10 +157,8 @@ class HttpServerTests {
 		                                                                .getBytes(Charset.defaultCharset())));
 
 		Flux.range(0, 100)
-		    .concatMap(n -> HttpClient.create()
-		                              .port(disposableServer.port())
+		    .concatMap(n -> createClient(disposableServer.port())
 		                              .noSSL()
-		                              .wiretap(true)
 		                              .keepAlive(false)
 		                              .post()
 		                              .uri("/return")
@@ -187,16 +171,12 @@ class HttpServerTests {
 	//from https://github.com/reactor/reactor-netty/issues/90
 	@Test
 	void testRestart() {
-		HttpServer server1 = HttpServer.create()
-		                               .host("localhost")
-		                               .port(8080);
+		HttpServer server1 = createServer(8080).host("localhost");
 		HttpServer server2 =
 				HttpServer.create()
 				          // Any local address
 				          .bindAddress(() -> new InetSocketAddress(8080));
-		HttpClient client1 = HttpClient.create()
-		                               .port(8080)
-		                               .host("localhost");
+		HttpClient client1 = createClient(8080).host("localhost");
 		HttpClient client2 = HttpClient.create()
 		                               .baseUrl("http://localhost:8080");
 		doTestRestart(server1, client1);
@@ -210,11 +190,9 @@ class HttpServerTests {
 		try {
 			// start a first server with a handler that answers HTTP 200 OK
 			disposableServer = server.handle((req, resp) -> resp.sendString(Mono.just("200")))
-			                         .wiretap(true)
 			                         .bindNow();
 
-			response = client.wiretap(true)
-			                 .get()
+			response = client.get()
 			                 .uri("/")
 			                 .responseContent()
 			                 .aggregate()
@@ -234,11 +212,9 @@ class HttpServerTests {
 		try {
 			// create a totally new server instance, with a different handler that answers HTTP 201
 			disposableServer = server.handle((req, resp) -> resp.sendString(Mono.just("201")))
-			                         .wiretap(true)
 			                         .bindNow();
 
-			response = client.wiretap(true)
-			                 .get()
+			response = client.get()
 			                 .uri("/")
 			                 .responseContent()
 			                 .aggregate()
@@ -257,16 +233,12 @@ class HttpServerTests {
 
 	@Test
 	void errorResponseAndReturn() {
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .handle((req, resp) -> Mono.error(new Exception("returnError")))
-		                             .wiretap(true)
 		                             .bindNow();
 
 		Integer code =
-				HttpClient.create()
-				          .port(disposableServer.port())
-				          .wiretap(true)
+				createClient(disposableServer.port())
 				          .get()
 				          .uri("/return")
 				          .responseSingle((res, buf) -> Mono.just(res.status().code()))
@@ -279,15 +251,13 @@ class HttpServerTests {
 
 		AtomicInteger i = new AtomicInteger();
 
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .handle((req, resp) ->
 		                                     resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
 		                                         .sendString(Mono.just(i.incrementAndGet())
 		                                                         .flatMap(d ->
 		                                                                 Mono.delay(Duration.ofSeconds(4 - d))
 		                                                                     .map(x -> d + "\n"))))
-		                             .wiretap(true)
 		                             .bindNow();
 
 		DefaultFullHttpRequest request =
@@ -338,15 +308,11 @@ class HttpServerTests {
 				    .block();
 		assertThat(test).isNotNull();
 
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .handle((req, resp) -> resp.sendString(flux.map(s -> s + "\n")))
-		                             .wiretap(true)
 		                             .bindNow();
 
-		Flux<String> client = HttpClient.create()
-		                                .port(disposableServer.port())
-		                                .wiretap(true)
+		Flux<String> client = createClient(disposableServer.port())
 		                                .doOnConnected(res ->
 		                                        res.addHandler(new LineBasedFrameDecoder(10)))
 		                                .get()
@@ -363,62 +329,48 @@ class HttpServerTests {
 	@Test
 	void keepAlive() throws URISyntaxException {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .route(routes -> routes.directory("/test", resource))
-		                             .wiretap(true)
 		                             .bindNow();
 
 		ConnectionProvider p = ConnectionProvider.create("keepAlive", 1);
 
-		Channel response0 = HttpClient.create(p)
-		                              .port(disposableServer.port())
-		                              .wiretap(true)
+		Channel response0 = createClient(p, disposableServer.port())
 		                              .get()
 		                              .uri("/test/index.html")
 		                              .responseConnection((res, c) -> Mono.just(c.channel())
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
-		                              .blockLast(Duration.ofSeconds(3099));
+		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response1 = HttpClient.create(p)
-		                              .port(disposableServer.port())
-		                              .wiretap(true)
+		Channel response1 = createClient(p, disposableServer.port())
 		                              .get()
 		                              .uri("/test/test.css")
 		                              .responseConnection((res, c) -> Mono.just(c.channel())
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
-		                              .blockLast(Duration.ofSeconds(3099));
+		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response2 = HttpClient.create(p)
-		                              .port(disposableServer.port())
-		                              .wiretap(true)
+		Channel response2 = createClient(p, disposableServer.port())
 		                              .get()
 		                              .uri("/test/test1.css")
 		                              .responseConnection((res, c) -> Mono.just(c.channel())
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response3 = HttpClient.create(p)
-		                              .port(disposableServer.port())
-		                              .wiretap(true)
+		Channel response3 = createClient(p, disposableServer.port())
 		                              .get()
 		                              .uri("/test/test2.css")
 		                              .responseConnection((res, c) -> Mono.just(c.channel())
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response4 = HttpClient.create(p)
-		                              .port(disposableServer.port())
-		                              .wiretap(true)
+		Channel response4 = createClient(p, disposableServer.port())
 		                              .get()
 		                              .uri("/test/test3.css")
 		                              .responseConnection((res, c) -> Mono.just(c.channel())
 		                                                                         .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response5 = HttpClient.create(p)
-		                              .port(disposableServer.port())
-		                              .wiretap(true)
+		Channel response5 = createClient(p, disposableServer.port())
 		                              .get()
 		                              .uri("/test/test4.css")
 		                              .responseConnection((res, c) -> Mono.just(c.channel())
@@ -447,27 +399,21 @@ class HttpServerTests {
 
 	@Test
 	void startRouter() {
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .route(routes ->
 		                                     routes.get("/hello",
 		                                             (req, resp) -> resp.sendString(Mono.just("hello!"))))
-		                             .wiretap(true)
 		                             .bindNow();
 
 		Integer code =
-				HttpClient.create()
-				          .port(disposableServer.port())
-				          .wiretap(true)
+				createClient(disposableServer.port())
 				          .get()
 				          .uri("/hello")
 				          .responseSingle((res, buf) -> Mono.just(res.status().code()))
 				          .block();
 		assertThat(code).isEqualTo(200);
 
-		code = HttpClient.create()
-		                 .port(disposableServer.port())
-		                 .wiretap(true)
+		code = createClient(disposableServer.port())
 		                 .get()
 		                 .uri("/helloMan")
 		                 .responseSingle((res, buf) -> Mono.just(res.status().code()))
@@ -481,10 +427,8 @@ class HttpServerTests {
 		AtomicReference<DisposableServer> ref = new AtomicReference<>();
 
 		Future<?> f = ex.submit(() ->
-			    HttpServer.create()
-			              .port(0)
+			    createServer()
 			              .route(routes -> routes.get("/hello", (req, resp) -> resp.sendString(Mono.just("hello!"))))
-			              .wiretap(true)
 			              .bindUntilJavaShutdown(Duration.ofSeconds(2), ref::set)
 		);
 
@@ -505,8 +449,7 @@ class HttpServerTests {
 	@Test
 	void nonContentStatusCodes() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .host("localhost")
 				          .route(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
 				                                                       .sendHeaders())
@@ -519,7 +462,6 @@ class HttpServerTests {
 				                       .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED))
 				                       .get("/304-3", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
 				                                                       .send()))
-				          .wiretap(true)
 				          .bindNow();
 
 		InetSocketAddress address = (InetSocketAddress) disposableServer.address();
@@ -534,9 +476,7 @@ class HttpServerTests {
 
 	private void checkResponse(String url, InetSocketAddress address) {
 		Mono<Tuple3<Integer, HttpHeaders, String>> response =
-				HttpClient.create()
-				          .remoteAddress(() -> address)
-				          .wiretap(true)
+				createClient(() -> address)
 				          .get()
 				          .uri(url)
 				          .responseSingle((r, buf) ->
@@ -571,7 +511,7 @@ class HttpServerTests {
 	void testContentLengthHeadRequest() {
 		AtomicReference<HttpHeaders> sentHeaders = new AtomicReference<>();
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .host("localhost")
 				          .route(r -> r.route(req -> req.uri().equals("/1"),
 				                                  (req, res) -> res.sendString(Flux.just("OK").hide()))
@@ -641,7 +581,6 @@ class HttpServerTests {
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                }))
-				          .wiretap(true)
 				          .bindNow();
 
 		InetSocketAddress address = (InetSocketAddress) disposableServer.address();
@@ -667,7 +606,7 @@ class HttpServerTests {
 	void testIssue1153() {
 		AtomicReference<HttpHeaders> sentHeaders = new AtomicReference<>();
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .host("localhost")
 				          .handle((req, res) -> {
 				              res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
@@ -675,7 +614,6 @@ class HttpServerTests {
 				                         .then()
 				                         .doFinally(s -> sentHeaders.set(res.responseHeaders()));
 				          })
-				          .wiretap(true)
 				          .bindNow();
 		InetSocketAddress address = (InetSocketAddress) disposableServer.address();
 		doTestContentLengthHeadRequest("/", address, HttpMethod.HEAD, sentHeaders, false, false);
@@ -684,9 +622,7 @@ class HttpServerTests {
 	private void doTestContentLengthHeadRequest(String url, InetSocketAddress address,
 			HttpMethod method, AtomicReference<HttpHeaders> sentHeaders, boolean chunk, boolean close) {
 		Mono<Tuple2<HttpHeaders, String>> response =
-				HttpClient.create()
-				          .remoteAddress(() -> address)
-				          .wiretap(true)
+				createClient(() -> address)
 				          .request(method)
 				          .uri(url)
 				          .responseSingle((res, buf) -> Mono.zip(Mono.just(res.responseHeaders()),
@@ -741,19 +677,18 @@ class HttpServerTests {
 	@Test
 	void testIssue186() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.status(200).send())
-				          .wiretap(true)
 				          .bindNow();
 
-		HttpClient client =
-				HttpClient.create(ConnectionProvider.create("testIssue186", 1))
-				          .remoteAddress(disposableServer::address)
-				          .wiretap(true);
+		ConnectionProvider provider = ConnectionProvider.create("testIssue186", 1);
+		HttpClient client = createClient(provider, disposableServer::address);
 
 		doTestIssue186(client);
 		doTestIssue186(client);
+
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
 	}
 
 	private void doTestIssue186(HttpClient client) {
@@ -781,16 +716,14 @@ class HttpServerTests {
 				    .map(i -> "foo " + i);
 
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.sendString(content))
 				          .bindNow();
 
 		AtomicReference<Channel> ch = new AtomicReference<>();
 		Flux<ByteBuf> r =
-				HttpClient.create()
+				createClient(disposableServer.port())
 				          .doOnResponse((res, c) -> ch.set(c.channel()))
-				          .port(disposableServer.port())
 				          .get()
 				          .uri("/")
 				          .responseContent();
@@ -807,16 +740,16 @@ class HttpServerTests {
 	void contextShouldBeTransferredFromDownStreamToUpStream() {
 		AtomicReference<Context> context = new AtomicReference<>();
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.status(200).send())
 				          .bindNow();
 
+		ConnectionProvider provider = ConnectionProvider.create("contextShouldBeTransferredFromDownStreamToUpStream", 1);
 		HttpClient client =
-				HttpClient.create(ConnectionProvider.create("contextShouldBeTransferredFromDownStreamToUpStream", 1))
+				HttpClient.create(provider)
 				          .remoteAddress(disposableServer::address);
 
-		for (int i = 0; i < 10000; i++) {
+		for (int i = 0; i < 1000; i++) {
 			Mono<String> content = client.post()
 			                             .uri("/")
 			                             .send(ByteBufFlux.fromString(Mono.just("bodysample")
@@ -837,6 +770,9 @@ class HttpServerTests {
 			                  .get("Hello")
 			                  .equals("World")).isTrue();
 		}
+
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -854,14 +790,10 @@ class HttpServerTests {
 
 	@Test
 	void portBindingException() {
-		disposableServer = HttpServer.create()
-		                             .port(0)
-		                             .bindNow();
+		disposableServer = createServer().bindNow();
 
 		try {
-			HttpServer.create()
-			          .port(disposableServer.port())
-			          .bindNow();
+			createServer(disposableServer.port()).bindNow();
 			fail("illegal-success");
 		}
 		catch (ChannelBindException e) {
@@ -876,8 +808,7 @@ class HttpServerTests {
 				          .bindNow();
 
 		Mono<HttpResponseStatus> status =
-				HttpClient.create()
-				          .port(disposableServer.port())
+				createClient(disposableServer.port())
 				          .get()
 				          .uri(path)
 				          .responseSingle((res, byteBufMono) -> Mono.just(res.status()));
@@ -893,8 +824,8 @@ class HttpServerTests {
 		AtomicReference<Channel> channelRef = new AtomicReference<>();
 		AtomicReference<Boolean> validate = new AtomicReference<>();
 		AtomicReference<Integer> chunkSize = new AtomicReference<>();
-		HttpServer server =
-				HttpServer.create()
+		disposableServer =
+				createServer()
 				          .httpRequestDecoder(opt -> opt.maxInitialLineLength(123)
 				                                        .maxHeaderSize(456)
 				                                        .maxChunkSize(789)
@@ -910,12 +841,9 @@ class HttpServerTests {
 				                      chunkSize.set((Integer) getValueReflection(decoder, "maxChunkSize", 2));
 				                      validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
 				                  })
-				          .wiretap(true);
+				          .bindNow();
 
-		disposableServer = server.bindNow();
-
-		HttpClient.create()
-		          .remoteAddress(disposableServer::address)
+		createClient(disposableServer::address)
 		          .post()
 		          .uri("/")
 		          .send(ByteBufFlux.fromString(Mono.just("bodysample")))
@@ -1030,17 +958,13 @@ class HttpServerTests {
 			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> clientFn)
 			throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle(serverFn)
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		CountDownLatch latch = new CountDownLatch(1);
 		String response =
-				HttpClient.create()
-				          .port(disposableServer.port())
-				          .wiretap(true)
+				createClient(disposableServer.port())
 				          .doOnRequest((req, conn) -> conn.onTerminate()
 				                                          .subscribe(null, null, latch::countDown))
 				          .request(HttpMethod.GET)
@@ -1059,19 +983,15 @@ class HttpServerTests {
 	@Test
 	void testIssue525() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor()))
 				          .handle((req, res) -> res.send(req.receive()
 				                                            .retain()))
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		byte[] bytes = "test".getBytes(Charset.defaultCharset());
 		String response =
-				HttpClient.create()
-				          .port(disposableServer.port())
-				          .wiretap(true)
+				createClient(disposableServer.port())
 				          .headers(h -> h.add("Content-Encoding", "gzip"))
 				          .post()
 				          .uri("/")
@@ -1099,8 +1019,7 @@ class HttpServerTests {
 	@Test
 	void testCustomHandlerInvokedBeforeIOHandler() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .doOnConnection(c -> c.addHandlerFirst("custom", new ChannelInboundHandlerAdapter() {
 				                      @Override
 				                      public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -1112,13 +1031,10 @@ class HttpServerTests {
 				                  }))
 				          .handle((req, res) -> res.sendString(
 				                  Mono.just(req.requestHeaders().get("test", "not found"))))
-				          .wiretap(true)
 				          .bindNow();
 
 		StepVerifier.create(
-		        HttpClient.create()
-		                  .remoteAddress(disposableServer::address)
-		                  .wiretap(true)
+		        createClient(disposableServer::address)
 		                  .get()
 		                  .uri("/")
 		                  .responseContent()
@@ -1164,8 +1080,7 @@ class HttpServerTests {
 		AtomicReference<Throwable> error = new AtomicReference<>();
 		CountDownLatch latch = new CountDownLatch(1);
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .secure(spec -> spec.sslContext(serverCtx))
 				          .handle((req, res) -> {
 				              // "FutureReturnValueIgnored" is suppressed deliberately
@@ -1183,8 +1098,7 @@ class HttpServerTests {
 		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
 		                                        .build();
 		StepVerifier.create(
-				HttpClient.create()
-				          .remoteAddress(disposableServer::address)
+				createClient(disposableServer::address)
 				          .secure(spec -> spec.sslContext(clientCtx))
 				          .get()
 				          .uri("/")
@@ -1209,8 +1123,7 @@ class HttpServerTests {
 		        .block();
 		assertThat(test).isNotNull();
 
-		DisposableServer c = HttpServer.create()
-		                               .port(0)
+		disposableServer = createServer()
 		                               .handle((req, resp) -> resp.sendWebsocket((in, out) ->
 			                               out.sendString(flux)
 			                                  .then(out.sendClose(4404, "test"))
@@ -1221,12 +1134,9 @@ class HttpServerTests {
 			                                          })
 			                                          .then())
 		                               ))
-		                               .wiretap(true)
 		                               .bindNow();
 
-		HttpClient.create()
-		          .port(c.port())
-		          .wiretap(true)
+		createClient(disposableServer.port())
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> {
@@ -1253,8 +1163,6 @@ class HttpServerTests {
 
 		assertThat(statusServer.get()).isNotNull()
 				.isEqualTo(new WebSocketCloseStatus(4404, "test"));
-
-		c.disposeNow();
 	}
 
 
@@ -1264,8 +1172,7 @@ class HttpServerTests {
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
 		CountDownLatch latch = new CountDownLatch(2);
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .handle((req, resp) ->
 		                                 resp.sendWebsocket((in, out) ->
 		                                     in.receiveCloseStatus()
@@ -1274,12 +1181,9 @@ class HttpServerTests {
 		                                           latch.countDown();
 		                                       })
 		                                       .then()))
-		                             .wiretap(true)
 		                             .bindNow();
 
-		HttpClient.create()
-		          .port(disposableServer.port())
-		          .wiretap(true)
+		createClient(disposableServer.port())
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> out.sendClose(4404, "test")
@@ -1304,8 +1208,7 @@ class HttpServerTests {
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
 		CountDownLatch latch = new CountDownLatch(2);
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .handle((req, resp) ->
 		                                 resp.sendWebsocket((in, out) ->
 		                                     in.receiveCloseStatus()
@@ -1314,12 +1217,9 @@ class HttpServerTests {
 		                                           latch.countDown();
 		                                       })
 		                                       .then()))
-		                             .wiretap(true)
 		                             .bindNow();
 
-		HttpClient.create()
-		          .port(disposableServer.port())
-		          .wiretap(true)
+		createClient(disposableServer.port())
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> {
@@ -1350,8 +1250,7 @@ class HttpServerTests {
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
 		CountDownLatch latch = new CountDownLatch(2);
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .handle((req, resp) ->
 		                                 resp.sendWebsocket((in, out) -> {
 		                                     in.receiveCloseStatus()
@@ -1364,12 +1263,9 @@ class HttpServerTests {
 		                                     return out.sendString(Flux.interval(Duration.ofMillis(10))
 		                                                               .map(l -> l + ""));
 		                                 }))
-		                             .wiretap(true)
 		                             .bindNow();
 
-		HttpClient.create()
-		          .port(disposableServer.port())
-		          .wiretap(true)
+		createClient(disposableServer.port())
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> {
@@ -1402,8 +1298,7 @@ class HttpServerTests {
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
 		CountDownLatch latch = new CountDownLatch(2);
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .handle((req, resp) -> resp.sendWebsocket((in, out) -> {
 		                                 in.receiveCloseStatus()
 		                                   .doOnNext(o -> {
@@ -1416,12 +1311,9 @@ class HttpServerTests {
 
 		                                 return Mono.never();
 		                             }))
-		                             .wiretap(true)
 		                             .bindNow();
 
-		HttpClient.create()
-		          .port(disposableServer.port())
-		          .wiretap(true)
+		createClient(disposableServer.port())
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> {
@@ -1450,8 +1342,7 @@ class HttpServerTests {
 		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
 
 		CountDownLatch latch = new CountDownLatch(2);
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .handle((req, resp) -> resp.sendWebsocket((in, out) -> {
 		                                 in.receiveCloseStatus()
 		                                   .doOnNext(o -> {
@@ -1466,12 +1357,9 @@ class HttpServerTests {
 
 		                                 return Mono.never();
 		                             }))
-		                             .wiretap(true)
 		                             .bindNow();
 
-		HttpClient.create()
-		          .port(disposableServer.port())
-		          .wiretap(true)
+		createClient(disposableServer.port())
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> {
@@ -1498,10 +1386,8 @@ class HttpServerTests {
 	@Test
 	void testIssue825() throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, resp) -> resp.sendString(Mono.just("test")))
-				          .wiretap(true)
 				          .bindNow();
 
 		DefaultFullHttpRequest request =
@@ -1535,9 +1421,7 @@ class HttpServerTests {
 	@Test
 	void testDecodingFailureLastHttpContent() throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .route(r -> r.put("/1", (req, res) -> req.receive()
 				                                                   .then(res.sendString(Mono.just("test"))
 				                                                            .then()))
@@ -1583,9 +1467,7 @@ class HttpServerTests {
 	@Test
 	void testIssue891() throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .route(r -> r.get("/", (req, res) -> res.addHeader("Connection", "close")
 				                                                  .sendString(Mono.just("test"))))
 				          .bindNow();
@@ -1642,15 +1524,11 @@ class HttpServerTests {
 				    });
 
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .handle((req, res) -> res.sendString(response))
 				          .bindNow();
 
-		HttpClient client =
-				HttpClient.create()
-				          .port(disposableServer.port());
+		HttpClient client = createClient(disposableServer.port());
 
 		doTestIssue940(client, "0", "1");
 
@@ -1671,10 +1549,8 @@ class HttpServerTests {
 	@Test
 	void testIssue1001() throws Exception {
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .host("localhost")
-				          .port(0)
-				          .wiretap(true)
 				          .handle((req, res) -> res.sendString(Mono.just("testIssue1001")))
 				          .bindNow();
 
@@ -1708,9 +1584,7 @@ class HttpServerTests {
 		assertThat(connection.channel().isActive()).isFalse();
 
 		StepVerifier.create(
-		        HttpClient.create()
-		                  .remoteAddress(disposableServer::address)
-		                  .wiretap(true)
+		        createClient(disposableServer::address)
 		                  .get()
 		                  .uri("/<")
 		                  .response())
@@ -1725,8 +1599,7 @@ class HttpServerTests {
 		CountDownLatch latch3 = new CountDownLatch(1);
 		LoopResources loop = LoopResources.create("testGracefulShutdown");
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .runOn(loop)
 				          .doOnConnection(c -> {
 				              c.onDispose().subscribe(null, null, latch2::countDown);
@@ -1739,12 +1612,9 @@ class HttpServerTests {
 				                                                          .delayElement(Duration.ofMillis(500))))
 				                       .get("/delay1000", (req, res) -> res.sendString(Mono.just("delay1000")
 				                                                           .delayElement(Duration.ofSeconds(1)))))
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
-		HttpClient client = HttpClient.create()
-		                              .remoteAddress(disposableServer::address)
-		                              .wiretap(true);
+		HttpClient client = createClient(disposableServer::address);
 
 		AtomicReference<String> result = new AtomicReference<>();
 		Flux.just("/delay500", "/delay1000")
@@ -1813,58 +1683,52 @@ class HttpServerTests {
 	}
 
 	@Test
-	void testHttpServerWithDomainSockets() throws Exception {
-		HttpServer server = HttpServer.create();
-		HttpClient client = HttpClient.create();
+	void testHttpServerWithDomainSockets_HTTP11() {
+		doTestHttpServerWithDomainSockets(HttpServer.create(), HttpClient.create(), "http");
+	}
 
-		doTestHttpServerWithDomainSockets(server, client, "http");
-
+	@Test
+	void testHttpServerWithDomainSockets_HTTP2() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		doTestHttpServerWithDomainSockets(
-				server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
-				client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				HttpServer.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+				HttpClient.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
 				"https");
 	}
 
 	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client, String expectedScheme) {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
-		try {
-			disposableServer =
-					server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-					      .wiretap(true)
-					      .handle((req, res) -> {
-					          req.withConnection(conn -> {
-					              assertThat(conn.channel().localAddress()).isNull();
-					              assertThat(conn.channel().remoteAddress()).isNull();
-					              assertThat(req.hostAddress()).isNull();
-					              assertThat(req.remoteAddress()).isNull();
-					              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
-					          });
-					          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
-					          return res.send(req.receive().retain());
-					      })
-					      .bindNow();
+		disposableServer =
+				server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				      .wiretap(true)
+				      .handle((req, res) -> {
+				          req.withConnection(conn -> {
+				              assertThat(conn.channel().localAddress()).isNull();
+				              assertThat(conn.channel().remoteAddress()).isNull();
+				              assertThat(req.hostAddress()).isNull();
+				              assertThat(req.remoteAddress()).isNull();
+				              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
+				          });
+				          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
+				          return res.send(req.receive().retain());
+				      })
+				      .bindNow();
 
-			String response =
-					client.remoteAddress(disposableServer::address)
-					      .wiretap(true)
-					      .post()
-					      .uri("/")
-					      .send(ByteBufFlux.fromString(Flux.just("1", "2", "3")))
-					      .responseContent()
-					      .aggregate()
-					      .asString()
-					      .block(Duration.ofSeconds(30));
+		String response =
+				client.remoteAddress(disposableServer::address)
+				      .wiretap(true)
+				      .post()
+				      .uri("/")
+				      .send(ByteBufFlux.fromString(Flux.just("1", "2", "3")))
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .block(Duration.ofSeconds(30));
 
-			assertThat(response).isEqualTo("123");
-		}
-		finally {
-			assertThat(disposableServer).isNotNull();
-			disposableServer.disposeNow();
-		}
+		assertThat(response).isEqualTo("123");
 	}
 
 	@Test
@@ -1914,8 +1778,6 @@ class HttpServerTests {
 				      .aggregate()
 				      .asString()
 				      .block(Duration.ofSeconds(30));
-
-		disposableServer.disposeNow();
 
 		assertThat(response).isEqualTo("testTcpConfiguration");
 	}
@@ -2014,17 +1876,13 @@ class HttpServerTests {
 	@Test
 	@Timeout(10)
 	void testHang() {
-			DisposableServer httpServer =
-					HttpServer.create()
-					          .port(0)
+			disposableServer =
+					createServer()
 					          .host("0.0.0.0")
 					          .route(r -> r.get("/data", (request, response) -> response.send(Mono.empty())))
-					          .wiretap(true)
 					          .bindNow();
 
-			assertThat(httpServer).isNotNull();
-
-			httpServer.disposeNow();
+			assertThat(disposableServer).isNotNull();
 	}
 
 	@Test
@@ -2043,9 +1901,7 @@ class HttpServerTests {
 
 		AtomicReference<String> hostname = new AtomicReference<>();
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .secure(spec -> spec.sslContext(defaultSslContextBuilder)
 				                              .defaultConfiguration(TCP)
 				                              .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(testSslContextBuilder)))
@@ -2063,9 +1919,7 @@ class HttpServerTests {
 				          .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
 				          .bindNow();
 
-		HttpClient.create()
-		          .remoteAddress(disposableServer::address)
-		          .wiretap(true)
+		createClient(disposableServer::address)
 		          .secure(spec -> spec.sslContext(clientSslContextBuilder)
 		                              .defaultConfiguration(TCP)
 		                              .serverNames(new SNIHostName("test.com")))
@@ -2103,9 +1957,7 @@ class HttpServerTests {
 		CountDownLatch latch = new CountDownLatch(1);
 		AtomicReference<List<ByteBuf>> replay = new AtomicReference<>(new ArrayList<>());
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .doOnConnection(conn ->
 				                  conn.addHandlerLast(new ChannelInboundHandlerAdapter() {
 
@@ -2132,10 +1984,7 @@ class HttpServerTests {
 				          })
 				          .bindNow();
 
-		HttpClient client =
-				HttpClient.create()
-				          .port(disposableServer.port())
-				          .wiretap(true);
+		HttpClient client = createClient(disposableServer.port());
 
 		if (connectionClose) {
 			client = client.headers(h -> h.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE));
@@ -2160,10 +2009,8 @@ class HttpServerTests {
 		List<String> collectedUris = new CopyOnWriteArrayList<>();
 
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, resp) -> resp.sendString(Mono.just("OK")))
-				          .wiretap(true)
 				          .metrics(true,
 				              () -> new HttpServerMetricsRecorder() {
 				                  @Override
@@ -2242,21 +2089,23 @@ class HttpServerTests {
 	}
 
 	@Test
-	void testIdleTimeout() throws Exception {
+	void testIdleTimeout_NoTimeout() throws Exception {
 		doTestIdleTimeout(false);
+	}
+
+	@Test
+	void testIdleTimeout() throws Exception {
 		doTestIdleTimeout(true);
 	}
 
 	private void doTestIdleTimeout(boolean applyTimeout) throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		HttpServer server =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, resp) -> {
 				              req.withConnection(conn -> conn.onDispose(latch::countDown));
 				              return resp.sendString(Mono.just("doTestIdleTimeout"));
-				          })
-				          .wiretap(true);
+				          });
 
 		if (applyTimeout) {
 			server = server.idleTimeout(Duration.ofMillis(200));
@@ -2264,9 +2113,7 @@ class HttpServerTests {
 
 		disposableServer = server.bindNow(Duration.ofSeconds(30));
 
-		HttpClient.create()
-		          .port(disposableServer.port())
-		          .wiretap(true)
+		createClient(disposableServer.port())
 		          .get()
 		          .uri("/")
 		          .responseContent()
@@ -2277,23 +2124,23 @@ class HttpServerTests {
 	}
 
 	@Test
-	void testIdleTimeout_DelayFirstRequest() throws Exception {
+	void testIdleTimeout_DelayFirstRequest_NoSSL() throws Exception {
 		doTestIdleTimeout_DelayFirstRequest(false);
+	}
+
+	@Test
+	void testIdleTimeout_DelayFirstRequest() throws Exception {
 		doTestIdleTimeout_DelayFirstRequest(true);
 	}
 
 	private void doTestIdleTimeout_DelayFirstRequest(boolean withSecurity) throws Exception {
 		HttpServer server =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .idleTimeout(Duration.ofMillis(200))
-				          .handle((req, resp) -> resp.send(req.receive().retain()))
-				          .wiretap(true);
+				          .handle((req, resp) -> resp.send(req.receive().retain()));
 
 		HttpClient client =
-				HttpClient.create()
-				          .remoteAddress(() -> disposableServer.address())
-				          .wiretap(true)
+				createClient(() -> disposableServer.address())
 				          .disableRetry(true);
 
 		if (withSecurity) {

@@ -82,16 +82,15 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
-import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
@@ -118,18 +117,9 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Stephane Maldini
  * @since 0.6
  */
-class HttpClientTest {
+class HttpClientTest extends BaseHttpTest {
 
 	static final Logger log = Loggers.getLogger(HttpClientTest.class);
-
-	private DisposableServer disposableServer;
-
-	@AfterEach
-	void tearDown() {
-		if (disposableServer != null) {
-			disposableServer.disposeNow();
-		}
-	}
 
 	@Test
 	void abort() {
@@ -177,8 +167,7 @@ class HttpClientTest {
 	@Test
 	void postVisibleToOnRequest() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(r -> r.post("/foo", (in, out) -> out.sendString(Flux.just("bar"))))
 				          .bindNow();
 
@@ -210,8 +199,7 @@ class HttpClientTest {
 		CountDownLatch latch = new CountDownLatch(3);
 		Set<String> localAddresses = ConcurrentHashMap.newKeySet();
 		disposableServer =
-				HttpServer.create()
-				          .port(8080)
+				createServer()
 				          .route(r -> r.post("/",
 				                  (req, resp) -> req.receive()
 				                                    .asString()
@@ -220,7 +208,6 @@ class HttpClientTest {
 				                                        return resp.status(200)
 				                                                   .send();
 				                                    })))
-				          .wiretap(true)
 				          .bindNow();
 
 		final HttpClient client = createHttpClientForContextWithAddress(pool);
@@ -246,10 +233,8 @@ class HttpClientTest {
 	@Test
 	void testClientReuseIssue405() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((in, out) -> out.sendString(Flux.just("hello")))
-				          .wiretap(true)
 				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.create("testClientReuseIssue405", 1);
@@ -278,8 +263,7 @@ class HttpClientTest {
 	void testConnectionRefusedConcurrentRequests() {
 		ConnectionProvider provider = ConnectionProvider.create("testConnectionRefusedConcurrentRequests", 1);
 
-		HttpClient httpClient = HttpClient.create(provider)
-		                                  .port(8282);
+		HttpClient httpClient = createClient(provider, 8282);
 
 		Mono<String> mono1 =
 				httpClient.get()
@@ -303,10 +287,8 @@ class HttpClientTest {
 	@Test
 	void backpressured() throws Exception {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .route(routes -> routes.directory("/test", resource))
-		                             .wiretap(true)
 		                             .bindNow();
 
 		ByteBufFlux remote =
@@ -333,15 +315,13 @@ class HttpClientTest {
 	void serverInfiniteClientClose() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, resp) -> {
 				          	req.withConnection(cn -> cn.onDispose(latch::countDown));
 
 				                  return Flux.interval(Duration.ofSeconds(1))
 				                             .flatMap(d -> resp.sendObject(Unpooled.EMPTY_BUFFER));
 				          })
-				          .wiretap(true)
 				          .bindNow();
 
 		createHttpClientForContextWithPort()
@@ -406,9 +386,8 @@ class HttpClientTest {
 		String content = "HELLO WORLD";
 
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .compress(true)
-				          .port(0)
 				          .handle((req, res) -> res.sendString(Mono.just(content)))
 				          .bindNow();
 
@@ -468,12 +447,10 @@ class HttpClientTest {
 	private void doTestGzip(boolean gzipEnabled) {
 		String expectedResponse = gzipEnabled ? "gzip" : "no gzip";
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.sendString(Mono.just(req.requestHeaders()
 				                                                           .get(HttpHeaderNames.ACCEPT_ENCODING,
 				                                                                "no gzip"))))
-				          .wiretap(true)
 				          .bindNow();
 		HttpClient client = createHttpClientForContextWithPort();
 
@@ -494,8 +471,7 @@ class HttpClientTest {
 	@Test
 	void testUserAgent() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, resp) -> {
 				                  assertThat(req.requestHeaders()
 				                                .contains(HttpHeaderNames.USER_AGENT) &&
@@ -508,7 +484,6 @@ class HttpClientTest {
 
 				                  return req.receive().then();
 				          })
-				          .wiretap(true)
 				          .bindNow();
 
 		createHttpClientForContextWithPort()
@@ -540,10 +515,9 @@ class HttpClientTest {
 		                                        .build();
 
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .secure(ssl -> ssl.sslContext(sslServer))
 				          .handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
-				          .wiretap(true)
 				          .bindNow();
 
 
@@ -566,10 +540,9 @@ class HttpClientTest {
 		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .secure(ssl -> ssl.sslContext(sslServer))
 				          .handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
-				          .wiretap(true)
 				          .bindNow();
 
 		String responseString = createHttpClientForContextWithAddress()
@@ -593,8 +566,7 @@ class HttpClientTest {
 		AtomicReference<String> uploaded = new AtomicReference<>();
 
 		disposableServer =
-				HttpServer.create()
-				          .port(9090)
+				createServer()
 				          .secure(ssl -> ssl.sslContext(sslServer))
 				          .route(r -> r.post("/upload", (req, resp) ->
 				                  req.receive()
@@ -603,7 +575,6 @@ class HttpClientTest {
 				                     .log()
 				                     .doOnNext(uploaded::set)
 				                     .then(resp.status(201).sendString(Mono.just("Received File")).then())))
-				          .wiretap(true)
 				          .bindNow();
 
 		Tuple2<String, Integer> response =
@@ -633,7 +604,7 @@ class HttpClientTest {
 		AtomicReference<String> uploaded = new AtomicReference<>();
 
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .host("localhost")
 				          .route(r -> r.post("/upload", (req, resp) ->
 				                  req.receive()
@@ -643,7 +614,6 @@ class HttpClientTest {
 				                    .then(resp.status(201)
 				                              .sendString(Mono.just("Received File"))
 				                              .then())))
-				          .wiretap(true)
 				          .bindNow();
 
 		Tuple2<String, Integer> response =
@@ -669,7 +639,7 @@ class HttpClientTest {
 	@Test
 	void test() throws Exception {
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .host("localhost")
 				          .route(r -> r.put("/201", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                     .status(HttpResponseStatus.CREATED)
@@ -723,7 +693,7 @@ class HttpClientTest {
 	@Test
 	void testDeferredUri() {
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .host("localhost")
 				          .route(r -> r.get("/201", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                     .status(HttpResponseStatus.CREATED)
@@ -754,7 +724,7 @@ class HttpClientTest {
 	@Test
 	void testDeferredHeader() {
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .host("localhost")
 				          .route(r -> r.get("/201", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                     .status(HttpResponseStatus.CREATED)
@@ -775,7 +745,7 @@ class HttpClientTest {
 	@SuppressWarnings("CollectionUndefinedEquality")
 	void testCookie() {
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .host("localhost")
 				          .route(r -> r.get("/201",
 				                  (req, res) -> res.addHeader("test",
@@ -802,12 +772,10 @@ class HttpClientTest {
 	void closePool() {
 		ConnectionProvider pr = ConnectionProvider.create("closePool", 1);
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((in, out) ->  out.sendString(Mono.just("test")
 				                                                   .delayElement(Duration.ofMillis(100))
 				                                                   .repeat()))
-				          .wiretap(true)
 				          .bindNow();
 
 		Flux<String> ws = createHttpClientForContextWithPort(pr)
@@ -837,10 +805,8 @@ class HttpClientTest {
 	@Test
 	void testIssue303() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, resp) -> resp.sendString(Mono.just("OK")))
-				          .wiretap(true)
 				          .bindNow();
 
 		Mono<String> content =
@@ -863,15 +829,7 @@ class HttpClientTest {
 	}
 
 	private HttpClient createHttpClientForContextWithAddress(ConnectionProvider pool) {
-		HttpClient client;
-		if (pool == null) {
-			client = HttpClient.create();
-		}
-		else {
-			client = HttpClient.create(pool);
-		}
-		return client.remoteAddress(disposableServer::address)
-		             .wiretap(true);
+		return createClient(pool, disposableServer::address);
 	}
 
 	private HttpClient createHttpClientForContextWithPort() {
@@ -879,22 +837,13 @@ class HttpClientTest {
 	}
 
 	private HttpClient createHttpClientForContextWithPort(ConnectionProvider pool) {
-		HttpClient client;
-		if (pool == null) {
-			client = HttpClient.create();
-		}
-		else {
-			client = HttpClient.create(pool);
-		}
-		return client.port(disposableServer.port())
-		             .wiretap(true);
+		return createClient(pool, disposableServer.port());
 	}
 
 	@Test
 	void testIssue361() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> req.receive()
 				                                   .aggregate()
 				                                   .asString()
@@ -938,9 +887,7 @@ class HttpClientTest {
 		SslContextBuilder serverSslContextBuilder =
 				SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				          .bindNow();
 
@@ -958,12 +905,10 @@ class HttpClientTest {
 	void testIssue407_1() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .secure(spec -> spec.sslContext(
 				                  SslContextBuilder.forServer(cert.certificate(), cert.privateKey())))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		ConnectionProvider provider = ConnectionProvider.create("testIssue407_1", 1);
@@ -1023,12 +968,10 @@ class HttpClientTest {
 	void testIssue407_2() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .secure(spec -> spec.sslContext(
 				                  SslContextBuilder.forServer(cert.certificate(), cert.privateKey())))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		SslContextBuilder clientSslContextBuilder =
@@ -1085,8 +1028,12 @@ class HttpClientTest {
 
 
 	@Test
-	void testClientContext() throws Exception {
+	void testClientContext_WithPool() throws Exception {
 		doTestClientContext(HttpClient.create());
+	}
+
+	@Test
+	void testClientContext_NoPool() throws Exception {
 		doTestClientContext(HttpClient.create(ConnectionProvider.newConnection()));
 	}
 
@@ -1094,10 +1041,8 @@ class HttpClientTest {
 		CountDownLatch latch = new CountDownLatch(4);
 
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.send(req.receive().retain()))
-				          .wiretap(true)
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1139,8 +1084,7 @@ class HttpClientTest {
 	@Test
 	void doOnError() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, resp) -> {
 				              if (req.requestHeaders().contains("during")) {
 				                  return resp.sendString(Flux.just("test").hide())
@@ -1199,8 +1143,7 @@ class HttpClientTest {
 
 	@Test
 	void withConnector() {
-		disposableServer = HttpServer.create()
-		                             .port(0)
+		disposableServer = createServer()
 		                             .handle((req, resp) ->
 		                                 resp.sendString(Mono.just(req.requestHeaders()
 		                                                              .get("test"))))
@@ -1229,9 +1172,7 @@ class HttpClientTest {
 	@Test
 	void testPreferContentLengthWhenPost() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .handle((req, res) ->
 				                  res.header(HttpHeaderNames.CONTENT_LENGTH,
 				                             req.requestHeaders()
@@ -1266,9 +1207,8 @@ class HttpClientTest {
 		                                        .build();
 
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .secure(ssl -> ssl.sslContext(sslServer))
-				          .port(0)
 				          .handle((req, res) -> res.send(req.receive().retain()))
 				          .bindNow();
 
@@ -1291,8 +1231,7 @@ class HttpClientTest {
 	@Test
 	void testExplicitSendMonoErrorOnGet() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.send(req.receive().retain()))
 				          .bindNow();
 
@@ -1335,9 +1274,7 @@ class HttpClientTest {
 		AtomicInteger doOnRequestError = new AtomicInteger();
 		AtomicInteger doOnResponseError = new AtomicInteger();
 		HttpClient client =
-				HttpClient.create()
-				          .port(serverPort)
-				          .wiretap(true)
+				createClient(serverPort)
 				          .doOnRequest((req, conn) -> doOnRequest.getAndIncrement())
 				          .doOnError((req, t) -> doOnRequestError.getAndIncrement(),
 				                     (res, t) -> doOnResponseError.getAndIncrement());
@@ -1441,12 +1378,10 @@ class HttpClientTest {
 
 	private void doTestIssue600(boolean withLoop) {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.send(req.receive()
 				                                            .retain()
 				                                            .delaySubscription(Duration.ofSeconds(1))))
-				          .wiretap(true)
 				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.create("doTestIssue600", 10);
@@ -1480,8 +1415,7 @@ class HttpClientTest {
 	@Test
 	void testChannelGroupClosesAllConnections() throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(r -> r.get("/never",
 				                  (req, res) -> res.sendString(Mono.never()))
 				              .get("/delay10",
@@ -1490,7 +1424,6 @@ class HttpClientTest {
 				              .get("/delay1",
 				                  (req, res) -> res.sendString(Mono.just("test")
 				                                                   .delayElement(Duration.ofSeconds(1)))))
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		ConnectionProvider connectionProvider =
@@ -1529,8 +1462,7 @@ class HttpClientTest {
 	@Test
 	void testIssue614() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(routes ->
 				              routes.post("/dump", (req, res) -> {
 				                  if (req.requestHeaders().contains("Transfer-Encoding")) {
@@ -1538,7 +1470,6 @@ class HttpClientTest {
 				                  }
 				                  return res.sendString(Mono.just("OK"));
 				              }))
-				          .wiretap(true)
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1557,9 +1488,7 @@ class HttpClientTest {
 	@Test
 	void testIssue632() throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .handle((req, res) ->
 				              res.header(HttpHeaderNames.CONNECTION,
 				                         HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.CLOSE))
@@ -1583,14 +1512,12 @@ class HttpClientTest {
 	@Test
 	void testIssue694() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> {
 				              req.receive()
 				                 .subscribe();
 				              return Mono.empty();
 				          })
-				          .wiretap(true)
 				          .bindNow();
 
 		HttpClient client = createHttpClientForContextWithPort();
@@ -1662,10 +1589,9 @@ class HttpClientTest {
 		AtomicReference<Integer> chunkSize = new AtomicReference<>();
 
 		disposableServer =
-				HttpServer.create()
+				createServer()
 				          .handle((req, resp) -> req.receive()
 				                                    .then(resp.sendNotFound()))
-				          .wiretap(true)
 				          .bindNow();
 
 		createHttpClientForContextWithAddress()
@@ -1724,11 +1650,9 @@ class HttpClientTest {
 	@Test
 	void testDoOnRequestInvokedBeforeSendingRequest() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.send(req.receive()
 				                                            .retain()))
-				          .wiretap(true)
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1752,24 +1676,49 @@ class HttpClientTest {
 	}
 
 	@Test
-	void testIssue719() throws Exception {
+	void testIssue719_TEWithTextNoSSL() throws Exception {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Transfer-Encoding", "chunked"), false);
+	}
+
+	@Test
+	void testIssue719_CLWithTextNoSSL() throws Exception {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Content-Length", "4"), false);
+	}
 
+	@Test
+	void testIssue719_TENoTextNoSSL() throws Exception {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Transfer-Encoding", "chunked"), false);
+	}
+
+	@Test
+	void testIssue719_CLNoTextNoSSL() throws Exception {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Content-Length", "0"), false);
+	}
 
+	@Test
+	void testIssue719_TEWithTextWithSSL() throws Exception {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Transfer-Encoding", "chunked"), true);
+	}
+
+	@Test
+	void testIssue719_CLWithTextWithSSL() throws Exception {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Content-Length", "4"), true);
+	}
 
+	@Test
+	void testIssue719_TENoTextWithSSL() throws Exception {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Transfer-Encoding", "chunked"), true);
+	}
+
+	@Test
+	void testIssue719_CLNoTextWithSSL() throws Exception {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Content-Length", "0"), true);
 	}
@@ -1777,9 +1726,7 @@ class HttpClientTest {
 	private void doTestIssue719(Publisher<ByteBuf> clientSend,
 			Consumer<HttpHeaders> clientSendHeaders, boolean ssl) throws Exception {
 		HttpServer server =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .handle((req, res) -> req.receive()
 				                                   .then(res.sendString(Mono.just("test"))
 				                                            .then()));
@@ -1826,9 +1773,7 @@ class HttpClientTest {
 
 	@Test
 	void testIssue777() {
-		disposableServer = HttpServer.create()
-		                             .port(0)
-		                             .wiretap(true)
+		disposableServer = createServer()
 		                             .route(r ->
 		                                 r.post("/empty", (req, res) -> {
 		                                     // Just consume the incoming body
@@ -1962,9 +1907,7 @@ class HttpClientTest {
 
 	private ChannelId[] doTestConnectionIdleTime(ConnectionProvider provider) throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .handle((req, res) -> res.sendString(Mono.just("hello")))
 				          .bindNow();
 
@@ -2029,12 +1972,10 @@ class HttpClientTest {
 
 	private ChannelId[] doTestConnectionLifeTime(ConnectionProvider provider) throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, resp) ->
 				              resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30))
 				                                                         .map(Objects::toString))))
-				          .wiretap(true)
 				          .bindNow();
 
 		Flux<ChannelId> id = createHttpClientForContextWithAddress(provider)
@@ -2058,10 +1999,8 @@ class HttpClientTest {
 	@Test
 	void testResourceUrlSetInResponse() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.send())
-				          .wiretap(true)
 				          .bindNow();
 
 		final String requestUri = "http://localhost:" + disposableServer.port() + "/foo";
@@ -2078,8 +2017,7 @@ class HttpClientTest {
 	@Test
 	void testIssue975() throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(routes ->
 				              routes.get("/dispose",
 				                  (req, res) -> res.sendString(
@@ -2111,17 +2049,15 @@ class HttpClientTest {
 	@Test
 	void testIssue988() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		ConnectionProvider provider = ConnectionProvider.create("testIssue988", 1);
 		HttpClient client =
 				createHttpClientForContextWithAddress(provider)
 				        .wiretap("testIssue988", LogLevel.INFO)
-				        .metrics(true, s -> s);
+				        .metrics(true, Function.identity());
 
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
 		StepVerifier.create(client.doOnConnected(c -> ch1.set(c.channel()))
@@ -2168,10 +2104,8 @@ class HttpClientTest {
 	@Test
 	void testDoAfterResponseSuccessDisposeConnection() throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.sendString(Flux.just("test", "test", "test")))
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -2200,9 +2134,8 @@ class HttpClientTest {
 				.isThrownBy(() -> {
 					LoopResources loop = LoopResources.create("testHttpClientWithDomainSocketsNIOTransport");
 					try {
-						HttpClient.create()
+						createClient(() -> new DomainSocketAddress("/tmp/test.sock"))
 						          .runOn(loop, false)
-						          .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
 						          .get()
 						          .uri("/")
 						          .responseContent()
@@ -2219,8 +2152,7 @@ class HttpClientTest {
 	@Test
 	void testHttpClientWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> HttpClient.create()
-		                                    .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				.isThrownBy(() -> createClient(() -> new DomainSocketAddress("/tmp/test.sock"))
 		                                    .host("localhost")
 		                                    .get()
 		                                    .uri("/")
@@ -2232,8 +2164,7 @@ class HttpClientTest {
 	@Test
 	void testHttpClientWithDomainSocketsWithPort() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> HttpClient.create()
-		                                    .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				.isThrownBy(() -> createClient(() -> new DomainSocketAddress("/tmp/test.sock"))
 		                                    .port(1234)
 		                                    .get()
 		                                    .uri("/")
@@ -2317,19 +2248,14 @@ class HttpClientTest {
 
 	private void doTestUriWhenFailedRequest(boolean useUri) throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> {
 				              throw new RuntimeException("doTestUriWhenFailedRequest");
 				          })
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		AtomicReference<String> uriFailedRequest = new AtomicReference<>();
-		HttpClient client =
-				HttpClient.create()
-				          .port(disposableServer.port())
-				          .wiretap(true)
+		HttpClient client = createHttpClientForContextWithPort()
 				          .doOnRequestError((req, t) -> uriFailedRequest.set(req.uri()));
 
 		String uri = "http://localhost:" + disposableServer.port() + "/";
@@ -2355,15 +2281,11 @@ class HttpClientTest {
 	@Test
 	void testIssue1133() throws Exception {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) -> res.sendString(Mono.just("testIssue1133")))
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
-		StepVerifier.create(HttpClient.create()
-		                              .port(disposableServer.port())
-		                              .wiretap(true)
+		StepVerifier.create(createHttpClientForContextWithPort()
 		                              .get()
 		                              .uri(new URI("http://localhost:" + disposableServer.port() + "/"))
 		                              .responseContent()
@@ -2377,10 +2299,8 @@ class HttpClientTest {
 	@Test
 	void testIssue1031() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .host("localhost")
-				          .wiretap(true)
 				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/2"))
 				                       .get("/2", (req, res) -> res.status(200)
 				                                                   .sendString(Mono.just("OK"))))
@@ -2427,9 +2347,7 @@ class HttpClientTest {
 	@Test
 	void testIssue1159() {
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+				createServer()
 				          .handle((req, res) -> res.sendString(Mono.just("testIssue1159")))
 				          .bindNow();
 
@@ -2514,10 +2432,8 @@ class HttpClientTest {
 		CountDownLatch latch = new CountDownLatch(5);
 
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, resp) -> resp.sendString(Mono.just("OK")))
-				          .wiretap(true)
 				          .bindNow();
 
 		List<String> collectedUris = new CopyOnWriteArrayList<>();
@@ -2620,10 +2536,8 @@ class HttpClientTest {
 		}
 
 		disposableServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, resp) -> resp.sendString(Mono.just("testEvictInBackground")))
-				          .wiretap(true)
 				          .bindNow();
 
 		createHttpClientForContextWithAddress(builder.build())

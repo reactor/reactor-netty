@@ -41,6 +41,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.HttpProtocol;
@@ -53,7 +54,7 @@ import reactor.util.function.Tuple2;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
-class HttpRedirectTest {
+class HttpRedirectTest extends BaseHttpTest {
 
 	@Test
 	void deadlockWhenRedirectsToSameUrl() {
@@ -67,9 +68,8 @@ class HttpRedirectTest {
 
 	private void redirectTests(String url) {
 		AtomicInteger counter = new AtomicInteger(1);
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .handle((req, res) -> {
 				              if (req.uri().contains("/login") &&
 				                      req.method().equals(HttpMethod.POST) &&
@@ -81,36 +81,26 @@ class HttpRedirectTest {
 				                            .send();
 				              }
 				          })
-				          .wiretap(true)
 				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.create("redirectTests", 1);
 
-		HttpClient client =
-				HttpClient.create(pool)
-				          .remoteAddress(server::address);
+		HttpClient client = createClient(pool, disposableServer::address);
 
-		try {
-			Flux.range(0, 100)
-			    .concatMap(i -> client.followRedirect(true)
-			                          .post()
-			                          .uri("/login")
-			                          .responseContent()
-			                          .then())
-			    .blockLast(Duration.ofSeconds(30));
-		}
-		finally {
-			server.disposeNow();
-		}
+		Flux.range(0, 100)
+		    .concatMap(i -> client.followRedirect(true)
+		                          .post()
+		                          .uri("/login")
+		                          .responseContent()
+		                          .then())
+		    .blockLast(Duration.ofSeconds(30));
 	}
 
 	@Test
 	void redirectDisabledByDefault() {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .host("localhost")
-				          .wiretap(true)
 				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
 				                       .get("/3", (req, res) -> res.status(200)
 				                                                   .sendString(Mono.just("OK"))))
@@ -118,9 +108,7 @@ class HttpRedirectTest {
 				          .bindNow();
 
 		HttpClientResponse response =
-				HttpClient.create()
-				          .remoteAddress(server::address)
-				          .wiretap(true)
+				createClient(disposableServer::address)
 				          .get()
 				          .uri("/1")
 				          .response()
@@ -129,18 +117,14 @@ class HttpRedirectTest {
 		assertThat(response).isNotNull();
 		assertThat(response.status()).isEqualTo(HttpResponseStatus.FOUND);
 		assertThat(response.responseHeaders().get("location")).isEqualTo("/3");
-
-		server.disposeNow();
 	}
 
 	/** This ensures functionality such as metrics and tracing can accurately count requests. */
 	@Test
 	void redirect_issuesOnRequestForEachAttempt() {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .host("localhost")
-				          .wiretap(true)
 				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
 				                       .get("/3", (req, res) -> res.status(200)
 				                                                   .sendString(Mono.just("OK"))))
@@ -151,9 +135,7 @@ class HttpRedirectTest {
 		AtomicInteger onRedirectCount = new AtomicInteger();
 		AtomicInteger doOnResponseError = new AtomicInteger();
 		Tuple2<String, HttpResponseStatus> response =
-				HttpClient.create()
-				          .remoteAddress(server::address)
-				          .wiretap(true)
+				createClient(disposableServer::address)
 				          .followRedirect(true)
 				          .doOnRequest((r, c) -> onRequestCount.incrementAndGet())
 				          .doOnResponse((r, c) -> onResponseCount.incrementAndGet())
@@ -171,8 +153,6 @@ class HttpRedirectTest {
 		assertThat(onResponseCount.get()).isEqualTo(1);
 		assertThat(onRedirectCount.get()).isEqualTo(1);
 		assertThat(doOnResponseError.get()).isEqualTo(0);
-
-		server.disposeNow();
 	}
 
 
@@ -183,11 +163,9 @@ class HttpRedirectTest {
 	 */
 	@Test
 	void redirect_onResponseBeforeBlockCompletes() throws Exception {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .host("localhost")
-				          .wiretap(true)
 				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
 				                       .get("/3", (req, res) -> res.status(200)
 				                                                   .sendString(Mono.just("OK"))))
@@ -195,9 +173,7 @@ class HttpRedirectTest {
 
 		BlockingQueue<Long> doOnResponseNanos = new LinkedBlockingQueue<>();
 		Long responseNanos =
-				HttpClient.create()
-				          .remoteAddress(server::address)
-				          .wiretap(true)
+				createClient(disposableServer::address)
 				          .followRedirect(true)
 				          .doOnResponse((r, c) -> doOnResponseNanos.add(System.nanoTime()))
 				          .get()
@@ -206,19 +182,15 @@ class HttpRedirectTest {
 				          .block(Duration.ofSeconds(30));
 
 		assertThat(responseNanos).isGreaterThan(doOnResponseNanos.poll(5, TimeUnit.SECONDS));
-
-		server.disposeNow();
 	}
 
 	@Test
 	void testIssue253() {
 		final int serverPort1 = SocketUtils.findAvailableTcpPort();
 
-		DisposableServer server =
-				HttpServer.create()
-				          .port(serverPort1)
+		disposableServer =
+				createServer(serverPort1)
 				          .host("localhost")
-				          .wiretap(true)
 				          .route(r -> r.get("/1",
 				                                   (req, res) -> res.sendRedirect("http://localhost:" + serverPort1 + "/3"))
 				                       .get("/2",
@@ -231,10 +203,7 @@ class HttpRedirectTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		HttpClient client =
-				HttpClient.create()
-				          .remoteAddress(server::address)
-				          .wiretap(true);
+		HttpClient client = createClient(disposableServer::address);
 
 		String value =
 				client.followRedirect(true)
@@ -270,8 +239,6 @@ class HttpRedirectTest {
 		              .asString()
 		              .block(Duration.ofSeconds(30));
 		assertThat(value).isNull();
-
-		server.disposeNow();
 	}
 
 	@Test
@@ -280,22 +247,18 @@ class HttpRedirectTest {
 		final int serverPort2 = SocketUtils.findAvailableTcpPort();
 
 		DisposableServer server1 =
-				HttpServer.create()
+				createServer(serverPort1)
 				          .host("localhost")
-				          .port(serverPort1)
 				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
 				                       .get("/2", (req, res) -> res.sendRedirect("http://localhost:" + serverPort1 + "/3"))
 				                       .get("/3", (req, res) -> res.sendString(Mono.just("OK")))
 				                       .get("/4", (req, res) -> res.sendRedirect("http://localhost:" + serverPort2 + "/1")))
-				          .wiretap(true)
 				          .bindNow();
 
 		DisposableServer server2 =
-				HttpServer.create()
+				createServer(serverPort2)
 				          .host("localhost")
-				          .port(serverPort2)
 				          .route(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
-				          .wiretap(true)
 				          .bindNow();
 
 		HttpClient client = HttpClient.create()
@@ -346,9 +309,8 @@ class HttpRedirectTest {
 	void testIssue522() {
 		final int serverPort = SocketUtils.findAvailableTcpPort();
 
-		DisposableServer server =
-				HttpServer.create()
-				          .port(serverPort)
+		disposableServer =
+				createServer(serverPort)
 				          .host("localhost")
 				          .route(r -> r.get("/301", (req, res) ->
 				                          res.status(301)
@@ -368,13 +330,9 @@ class HttpRedirectTest {
 				                             .status(302)
 				                             .header(HttpHeaderNames.LOCATION, "http://localhost:" + serverPort + "/redirect"))
 				                       .get("/redirect", (req, res) -> res.sendString(Mono.just("OK"))))
-				          .wiretap(true)
 				          .bindNow();
 
-		HttpClient client =
-				HttpClient.create()
-				          .remoteAddress(server::address)
-				          .wiretap(true);
+		HttpClient client = createClient(disposableServer::address);
 
 		StepVerifier.create(client.followRedirect(true)
 		                          .get()
@@ -435,26 +393,20 @@ class HttpRedirectTest {
 		            .expectNextMatches(i -> i == 304)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
-
-		server.disposeNow();
 	}
 
 	@Test
 	void testIssue606() {
 		final int serverPort = SocketUtils.findAvailableTcpPort();
 
-		DisposableServer server =
-				HttpServer.create()
-				          .port(serverPort)
+		disposableServer =
+				createServer(serverPort)
 				          .host("localhost")
 				          .handle((req, res) -> res.sendRedirect("http://localhost:" + serverPort))
-				          .wiretap(true)
 				          .bindNow();
 
 		AtomicInteger followRedirects = new AtomicInteger(0);
-		HttpClient.create()
-		          .remoteAddress(server::address)
-		          .wiretap(true)
+		createClient(disposableServer::address)
 		          .followRedirect((req, res) -> {
 		              boolean result = req.redirectedFrom().length < 4;
 		              if (result) {
@@ -467,8 +419,6 @@ class HttpRedirectTest {
 		          .responseContent()
 		          .blockLast();
 
-		server.disposeNow();
-
 		assertThat(followRedirects.get()).isEqualTo(4);
 	}
 
@@ -476,18 +426,14 @@ class HttpRedirectTest {
 	void testFollowRedirectPredicateThrowsException() {
 		final int serverPort = SocketUtils.findAvailableTcpPort();
 
-		DisposableServer server =
-				HttpServer.create()
-				          .port(serverPort)
+		disposableServer =
+				createServer(serverPort)
 				          .host("localhost")
 				          .handle((req, res) -> res.sendRedirect("http://localhost:" + serverPort))
-				          .wiretap(true)
 				          .bindNow();
 
 		StepVerifier.create(
-		        HttpClient.create()
-		                  .remoteAddress(server::address)
-		                  .wiretap(true)
+		        createClient(disposableServer::address)
 		                  .followRedirect((req, res) -> {
 		                      throw new RuntimeException("testFollowRedirectPredicateThrowsException");
 		                  })
@@ -496,8 +442,6 @@ class HttpRedirectTest {
 		                  .responseContent())
 		            .expectError()
 		            .verify(Duration.ofSeconds(30));
-
-		server.disposeNow();
 	}
 
 	@Test
@@ -506,27 +450,21 @@ class HttpRedirectTest {
 
 		SelfSignedCertificate cert1 = new SelfSignedCertificate();
 		DisposableServer server1 =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert1.certificate(), cert1.privateKey())))
 				          .handle((req, res) -> res.sendRedirect("https://localhost:" + server2Port))
-				          .wiretap(true)
 				          .bindNow();
 
 		SelfSignedCertificate cert2 = new SelfSignedCertificate();
 		DisposableServer server2 =
-				HttpServer.create()
-				          .port(server2Port)
+				createServer(server2Port)
 				          .host("localhost")
 				          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert2.certificate(), cert2.privateKey())))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
-				          .wiretap(true)
 				          .bindNow();
 
 		AtomicInteger peerPort = new AtomicInteger(0);
-		HttpClient.create()
-		          .remoteAddress(server1::address)
-		          .wiretap(true)
+		createClient(server1::address)
 		          .followRedirect(true)
 		          .secure(spec -> spec.sslContext(SslContextBuilder.forClient()
 		                                                           .trustManager(InsecureTrustManagerFactory.INSTANCE)))
@@ -553,13 +491,11 @@ class HttpRedirectTest {
 		final String redirectPath = "/redirect";
 		final String responseContent = "Success";
 
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .route(r ->
 				                  r.get(requestPath, (req, res) -> res.sendRedirect(redirectPath))
 				                   .get(redirectPath, (req, res) -> res.sendString(Mono.just(responseContent))))
-				          .wiretap(true)
 				          .bindNow();
 
 		final Mono<String> responseMono =
@@ -570,7 +506,7 @@ class HttpRedirectTest {
 				                  SslContextBuilder.forClient()
 				                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)))
 				          .get()
-				          .uri("http://localhost:" + server.port() + requestPath)
+				          .uri("http://localhost:" + disposableServer.port() + requestPath)
 				          .responseContent()
 				          .aggregate()
 				          .asString();
@@ -579,8 +515,6 @@ class HttpRedirectTest {
 		            .expectNext(responseContent)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(5));
-
-		server.disposeNow();
 	}
 
 	@Test
@@ -593,23 +527,19 @@ class HttpRedirectTest {
 		SslContextBuilder serverSslCtxBuilder =
 				SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		DisposableServer redirectServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(r ->
 				                  r.get(redirectPath, (req, res) -> res.sendRedirect(destinationPath))
 				                   .get(destinationPath, (req, res) -> res.sendString(Mono.just(responseContent)))
 				          )
 				          .secure(spec -> spec.sslContext(serverSslCtxBuilder))
-				          .wiretap(true)
 				          .bindNow();
 
 		DisposableServer initialServer =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .handle((req, res) ->
 				              res.sendRedirect("https://localhost:" + redirectServer.port() + destinationPath)
 				          )
-				          .wiretap(true)
 				          .bindNow();
 
 		SslContextBuilder clientSslCtxBuilder =
@@ -646,15 +576,13 @@ class HttpRedirectTest {
 		final String initialPath = "/initial";
 		final String redirectPath = "/redirect";
 
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .route(r -> r.get(initialPath,
 				                            (req, res) -> res.status(HttpResponseStatus.MOVED_PERMANENTLY)
 				                                             .header(HttpHeaderNames.LOCATION, redirectPath)
 				                                             .sendString(Mono.just(redirectResponseContent)))
 				                       .get(redirectPath, (req, res) -> res.send()))
-				          .wiretap(true)
 				          .bindNow();
 
 		ConnectionProvider provider = ConnectionProvider.create("doTestBuffersForRedirectWithContentShouldBeReleased", 1);
@@ -674,7 +602,7 @@ class HttpRedirectTest {
 		          .wiretap(true)
 		          .followRedirect(true)
 		          .get()
-		          .uri("http://localhost:" + server.port() + initialPath)
+		          .uri("http://localhost:" + disposableServer.port() + initialPath)
 		          .response()
 		          .block(Duration.ofSeconds(30));
 
@@ -685,53 +613,45 @@ class HttpRedirectTest {
 
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
-		server.disposeNow();
 	}
 
 	@Test
-	void testHttpServerWithDomainSockets() throws Exception {
-		HttpServer server = HttpServer.create();
-		HttpClient client = HttpClient.create();
+	void testHttpServerWithDomainSockets_HTTP11() {
+		doTestHttpServerWithDomainSockets(HttpServer.create(), HttpClient.create());
+	}
 
-		doTestHttpServerWithDomainSockets(server, client);
-
+	@Test
+	void testHttpServerWithDomainSockets_HTTP2() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		doTestHttpServerWithDomainSockets(
-				server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
-				client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
+				HttpServer.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+				HttpClient.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
 	}
 
 	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client) {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
-		DisposableServer disposableServer = null;
-		try {
-			disposableServer =
-					server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-					      .wiretap(true)
-					      .route(r -> r.get("/redirect", (req, res) -> res.sendRedirect("/end"))
-					                   .get("/end", (req, res) -> res.sendString(Mono.just("END"))))
-					      .bindNow();
+		disposableServer =
+				server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				      .wiretap(true)
+				      .route(r -> r.get("/redirect", (req, res) -> res.sendRedirect("/end"))
+				                   .get("/end", (req, res) -> res.sendString(Mono.just("END"))))
+				      .bindNow();
 
-			String response =
-					client.remoteAddress(disposableServer::address)
-					      .wiretap(true)
-					      .followRedirect(true)
-					      .get()
-					      .uri("/redirect")
-					      .responseContent()
-					      .aggregate()
-					      .asString()
-					      .block(Duration.ofSeconds(30));
+		String response =
+				client.remoteAddress(disposableServer::address)
+				      .wiretap(true)
+				      .followRedirect(true)
+				      .get()
+				      .uri("/redirect")
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .block(Duration.ofSeconds(30));
 
-			assertThat(response).isEqualTo("END");
-		}
-		finally {
-			assertThat(disposableServer).isNotNull();
-			disposableServer.disposeNow();
-		}
+		assertThat(response).isEqualTo("END");
 	}
 
 	@Test
@@ -740,11 +660,9 @@ class HttpRedirectTest {
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .host("localhost")
-				          .wiretap(true)
 				          .protocol(HttpProtocol.H2)
 				          .secure(spec -> spec.sslContext(serverCtx))
 				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
@@ -754,9 +672,7 @@ class HttpRedirectTest {
 				          .bindNow();
 
 		Tuple2<String, Integer> response =
-				HttpClient.create()
-				          .remoteAddress(server::address)
-				          .wiretap(true)
+				createClient(disposableServer::address)
 				          .followRedirect(true)
 				          .protocol(HttpProtocol.H2)
 				          .secure(spec -> spec.sslContext(clientCtx))
@@ -769,7 +685,5 @@ class HttpRedirectTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getT2()).isEqualTo(200);
 		assertThat(response.getT1()).isEqualTo("OK");
-
-		server.disposeNow();
 	}
 }

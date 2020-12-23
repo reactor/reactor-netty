@@ -23,13 +23,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.server.HttpServer;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
@@ -39,7 +39,7 @@ import static reactor.netty.Metrics.SUCCESS;
 /**
  * @author Violeta Georgieva
  */
-class AddressResolverGroupMetricsTest {
+class AddressResolverGroupMetricsTest extends BaseHttpTest {
 	private MeterRegistry registry;
 
 	@BeforeEach
@@ -49,7 +49,9 @@ class AddressResolverGroupMetricsTest {
 	}
 
 	@AfterEach
-	void tearDown() {
+	@Override
+	protected void tearDown() throws Exception {
+		super.tearDown();
 		Metrics.removeRegistry(registry);
 		registry.clear();
 		registry.close();
@@ -57,10 +59,9 @@ class AddressResolverGroupMetricsTest {
 
 	@Test
 	void test() throws Exception {
-		DisposableServer server =
-				HttpServer.create()
+		disposableServer =
+				createServer()
 				          .host("localhost")
-				          .port(0)
 				          .handle((req, res) -> res.header("Connection", "close")
 				                                   .sendString(Mono.just("test")))
 				          .bindNow();
@@ -71,9 +72,9 @@ class AddressResolverGroupMetricsTest {
 		              conn.channel()
 		                  .closeFuture()
 		                  .addListener(f -> latch.countDown()))
-		          .metrics(true, s -> s)
+		          .metrics(true, Function.identity())
 		          .get()
-		          .uri("http://localhost:" + server.port())
+		          .uri("http://localhost:" + disposableServer.port())
 		          .responseContent()
 		          .aggregate()
 		          .asString()
@@ -81,9 +82,7 @@ class AddressResolverGroupMetricsTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		assertThat(getTimerValue("localhost:" + server.port())).isGreaterThan(0);
-
-		server.disposeNow();
+		assertThat(getTimerValue("localhost:" + disposableServer.port())).isGreaterThan(0);
 	}
 
 

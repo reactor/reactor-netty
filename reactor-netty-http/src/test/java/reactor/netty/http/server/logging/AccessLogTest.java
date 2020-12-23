@@ -27,17 +27,17 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
-import reactor.netty.DisposableServer;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyPipeline;
-import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientResponse;
-import reactor.netty.http.server.HttpServer;
 import reactor.util.annotation.Nullable;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.server.logging.AccessLog.LOG;
 
-class AccessLogTest {
+class AccessLogTest extends BaseHttpTest {
 
 	static final String ACCESS_LOG_HANDLER = "AccessLogHandler";
 	static final Logger ROOT = (Logger) LoggerFactory.getLogger(LOG.getName());
@@ -47,8 +47,6 @@ class AccessLogTest {
 
 	private Appender<ILoggingEvent> mockedAppender;
 	private ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor;
-
-	private DisposableServer disposableServer;
 
 	@BeforeEach
 	@SuppressWarnings("unchecked")
@@ -60,17 +58,15 @@ class AccessLogTest {
 	}
 
 	@AfterEach
-	void tearDown() {
-		if (disposableServer != null) {
-			disposableServer.disposeNow();
-		}
+	@Override
+	protected void tearDown() throws Exception {
+		super.tearDown();
 		ROOT.detachAppender(mockedAppender);
 	}
 
 	@Test
 	void accessLogDefaultFormat() {
-		disposableServer = HttpServer.create()
-				.port(0)
+		disposableServer = createServer()
 				.handle((req, resp) -> {
 					resp.withConnection(conn -> {
 						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
@@ -79,7 +75,6 @@ class AccessLogTest {
 					return resp.send();
 				})
 				.accessLog(true)
-				.wiretap(true)
 				.bindNow();
 
 		HttpClientResponse response = getHttpClientResponse("/example/test");
@@ -89,8 +84,7 @@ class AccessLogTest {
 
 	@Test
 	void accessLogCustomFormat() {
-		disposableServer = HttpServer.create()
-				.port(8080)
+		disposableServer = createServer()
 				.handle((req, resp) -> {
 					resp.withConnection(conn -> {
 						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
@@ -99,7 +93,6 @@ class AccessLogTest {
 					return resp.send();
 				})
 				.accessLog(true, args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri()))
-				.wiretap(true)
 				.bindNow();
 
 		HttpClientResponse response = getHttpClientResponse("/example/test");
@@ -109,8 +102,7 @@ class AccessLogTest {
 
 	@Test
 	void secondCallToAccessLogOverridesPreviousOne() {
-		disposableServer = HttpServer.create()
-				.port(8080)
+		disposableServer = createServer()
 				.handle((req, resp) -> {
 					resp.withConnection(conn -> {
 						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
@@ -120,7 +112,6 @@ class AccessLogTest {
 				})
 				.accessLog(true, args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri()))
 				.accessLog(false)
-				.wiretap(true)
 				.bindNow();
 
 		HttpClientResponse response = getHttpClientResponse("/example/test");
@@ -130,8 +121,7 @@ class AccessLogTest {
 
 	@Test
 	public void accessLogFiltering() {
-		disposableServer = HttpServer.create()
-				.port(8080)
+		disposableServer = createServer()
 				.handle((req, resp) -> {
 					resp.withConnection(conn -> {
 						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
@@ -140,7 +130,6 @@ class AccessLogTest {
 					return resp.send();
 				})
 				.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/")))
-				.wiretap(true)
 				.bindNow();
 
 		HttpClientResponse response = getHttpClientResponse("/example/test");
@@ -153,8 +142,7 @@ class AccessLogTest {
 
 	@Test
 	public void accessLogFilteringAndFormatting() {
-		disposableServer = HttpServer.create()
-				.port(8080)
+		disposableServer = createServer()
 				.handle((req, resp) -> {
 					resp.withConnection(conn -> {
 						ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
@@ -164,7 +152,6 @@ class AccessLogTest {
 				})
 				.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/"),
 						args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri())))
-				.wiretap(true)
 				.bindNow();
 
 		HttpClientResponse response = getHttpClientResponse("/example/test");
@@ -206,12 +193,10 @@ class AccessLogTest {
 	}
 
 	private HttpClientResponse getHttpClientResponse(String uri) {
-		return HttpClient.create()
-				.port(disposableServer.port())
-				.wiretap(true)
+		return createClient(disposableServer.port())
 				.get()
 				.uri(uri)
 				.response()
-				.block();
+				.block(Duration.ofSeconds(30));
 	}
 }
