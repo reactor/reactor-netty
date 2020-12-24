@@ -32,6 +32,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_MAX_TIME_TO_LIVE;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_MIN_TIME_TO_LIVE;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE;
@@ -250,6 +251,8 @@ class NameResolverProviderTest {
 	@Test
 	@EnabledOnOs(OS.MAC)
 	void testMacOsResolver() {
+		// MacOS binaries are not available for Netty SNAPSHOT version
+		assumeThat(MacOSDnsServerAddressStreamProvider.isAvailable()).isTrue();
 		assertThat(DnsServerAddressStreamProviders.platformDefault())
 				.isInstanceOf(MacOSDnsServerAddressStreamProvider.class);
 	}
