@@ -26,6 +26,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -73,6 +74,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	// same stack
 	int wip;
 
+	static final AttributeKey<Boolean> INBOUND_CANCELED = AttributeKey.newInstance("$INBOUND_CANCELED");
 
 	FluxReceive(ChannelOperations<?, ?> parent) {
 
@@ -95,6 +97,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public void cancel() {
+		channel.attr(INBOUND_CANCELED).set(true);
 		cancelReceiver();
 		if (eventLoop.inEventLoop()) {
 			drainReceiver();
@@ -110,6 +113,13 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	final boolean isCancelled() {
 		return receiverCancel == CANCELLED;
+	}
+
+	final boolean isChannelInboundEverCanceled(){
+		if(channel.hasAttr(INBOUND_CANCELED)) {
+			return true;
+		}
+		return false;
 	}
 
 	@Override
