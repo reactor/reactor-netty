@@ -15,11 +15,13 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.DisposableChannel;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.WebsocketServerSpec;
@@ -129,4 +131,26 @@ class WebsocketClientOperationsTest {
 		assertThatIllegalArgumentException().isThrownBy(() -> WebsocketClientSpec.builder().version(WebSocketVersion.UNKNOWN).build());
 	}
 
+	@Test
+	void testExceptionThrownWhenConnectionClosedBeforeHandshakeCompleted() {
+		DisposableServer disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) -> res.withConnection(DisposableChannel::dispose))
+				          .bindNow();
+
+		HttpClient.create()
+		          .port(disposableServer.port())
+		          .wiretap(true)
+		          .websocket()
+		          .uri("/")
+		          .receive()
+		          .as(StepVerifier::create)
+		          .expectErrorMatches(t -> t instanceof WebSocketClientHandshakeException &&
+		                  "Connection prematurely closed BEFORE opening handshake is complete.".equals(t.getMessage()))
+		          .verify(Duration.ofSeconds(30));
+
+		disposableServer.disposeNow();
+	}
 }

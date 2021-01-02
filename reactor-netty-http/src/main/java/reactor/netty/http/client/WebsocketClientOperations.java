@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
@@ -165,7 +166,13 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	protected void onInboundClose() {
-		terminate();
+		if (handshaker.isHandshakeComplete()) {
+			terminate();
+		}
+		else {
+			onInboundError(new WebSocketClientHandshakeException("Connection prematurely closed BEFORE " +
+					"opening handshake is complete."));
+		}
 	}
 
 	@Override
