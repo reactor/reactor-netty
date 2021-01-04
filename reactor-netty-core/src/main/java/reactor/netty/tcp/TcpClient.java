@@ -129,12 +129,52 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	/**
 	 * Apply a {@link Bootstrap} mapping function to update {@link TcpClient} configuration and
 	 * return an enriched {@link TcpClient} to use.
+	 * <p>
+	 * <strong>Note:</strong>
+	 * There isn't only one method that replaces this deprecated method.
+	 * The configuration that can be done with this deprecated method,
+	 * can also be done with the other methods exposed by {@link TcpClient}.
+	 * </p>
+	 * <p>Examples:</p>
+	 * <p>Configuration via the deprecated '.bootstrap(...)' method</p>
+	 * <pre>
+	 * {@code
+	 * TcpClient.bootstrap(b ->
+	 *     b.attr(...) // configures the channel attributes
+	 *      .group(...) // configures the event loop group
+	 *      .handler(...) // configures the channel handler
+	 *      .localAddress(...) // configures the bind (local) address
+	 *      .option(...) // configures the channel options
+	 *      .remoteAddress(...) // configures the remote address
+	 *      .resolver(...)) // configures the host names resolver
+	 * }
+	 * </pre>
+	 *
+	 * <p>Configuration via the other methods exposed by {@link TcpClient}</p>
+	 * <pre>
+	 * {@code
+	 * TcpClient.attr(...) // configures the channel attributes
+	 *          .runOn(...) // configures the event loop group
+	 *          .doOnChannelInit(...) // configures the channel handler
+	 *          .bindAddress(...) // configures the bind (local) address
+	 *          .option(...) // configures the channel options
+	 *          .remoteAddress(...) // configures the remote address
+	 *          .resolver(...) // configures the host names resolver
+	 * }
+	 * </pre>
+	 *
+	 * <p>Wire logging in plain text</p>
+	 * <pre>
+	 * {@code
+	 * TcpClient.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
+	 * }
+	 * </pre>
 	 *
 	 * @param bootstrapMapper A {@link Bootstrap} mapping function to update {@link TcpClient} configuration and
 	 * return an enriched {@link TcpClient} to use.
 	 * @return a new {@link TcpClient}
-	 * @deprecated as of 0.9.10. Use the methods exposed on {@link TcpClient} level. The method
-	 * will be removed in version 1.1.0.
+	 * @deprecated as of 0.9.10. Use the other methods exposed by {@link TcpClient} to achieve the same configurations.
+	 * The method will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	@SuppressWarnings("ReturnValueIgnored")

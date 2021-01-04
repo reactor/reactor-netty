@@ -150,6 +150,23 @@ include::{examplesdir}/wiretap/Application.java[lines=18..32]
 <1> Enables the wire logging
 ====
 
+By default, the wire logging uses {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP]
+when printing the content.
+When you need to change this to {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
+or {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL],
+you can configure the `TcpServer` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/wiretap/custom/Application.java
+----
+include::{examplesdir}/wiretap/custom/Application.java[lines=18..34]
+----
+<1> Enables the wire logging,
+{javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
+printing the content.
+====
+
 [[server-tcp-level-configurations-event-loop-group]]
 === Using an Event Loop Group
 

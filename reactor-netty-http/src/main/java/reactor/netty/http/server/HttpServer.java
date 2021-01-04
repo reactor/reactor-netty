@@ -81,10 +81,68 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 
 	/**
 	 * Prepare an {@link HttpServer}
+	 * <p>
+	 * <strong>Note:</strong>
+	 * There isn't only one method that replaces this deprecated method.
+	 * The configuration that can be done with this deprecated method,
+	 * can also be done with the other methods exposed by {@link HttpServer}.
+	 * </p>
+	 * <p>Examples:</p>
+	 * <p>Configuration via the deprecated '.from(...)' method</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.from(
+	 *     TcpServer.attr(...) // configures the channel attributes
+	 *              .bindAddress(...) // configures the bind (local) address
+	 *              .childAttr(...) // configures the child channel attributes
+	 *              .childObserve() // configures the child channel connection observer
+	 *              .childOption(...) // configures the child channel options
+	 *              .channelGroup(...) // configures the channel group
+	 *              .doOnBound(...) // configures the doOnBound callback
+	 *              .doOnChannelInit(...) // configures the channel handler
+	 *              .doOnConnection(...) // configures the doOnConnection callback
+	 *              .doOnUnbound(...) // configures the doOnUnbound callback
+	 *              .metrics(...) // configures the metrics
+	 *              .observe() // configures the connection observer
+	 *              .option(...) // configures the channel options
+	 *              .runOn(...) // configures the event loop group
+	 *              .secure() // configures the SSL
+	 *              .wiretap()) // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Configuration via the other methods exposed by {@link HttpServer}</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.attr(...) // configures the channel attributes
+	 *           .bindAddress(...) // configures the bind (local) address
+	 *           .childAttr(...) // configures the child channel attributes
+	 *           .childObserve() // configures the child channel connection observer
+	 *           .childOption(...) // configures the child channel options
+	 *           .channelGroup(...) // configures the channel group
+	 *           .doOnBound(...) // configures the doOnBound callback
+	 *           .doOnChannelInit(...) // configures the channel handler
+	 *           .doOnConnection(...) // configures the doOnConnection callback
+	 *           .doOnUnbound(...) // configures the doOnUnbound callback
+	 *           .metrics(...) // configures the metrics
+	 *           .observe() // configures the connection observer
+	 *           .option(...) // configures the channel options
+	 *           .runOn(...) // configures the event loop group
+	 *           .secure() // configures the SSL
+	 *           .wiretap() // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Wire logging in plain text</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
+	 * }
+	 * </pre>
 	 *
 	 * @return a new {@link HttpServer}
-	 * @deprecated Use {@link HttpServer} methods for TCP level configurations. This method
-	 * will be removed in version 1.1.0.
+	 * @deprecated Use the other methods exposed by {@link HttpServer} to achieve the same configurations.
+	 * This method will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	public static HttpServer from(TcpServer tcpServer) {
@@ -657,12 +715,78 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Apply a {@link TcpServer} mapping function to update TCP configuration and
 	 * return an enriched {@link HttpServer} to use.
+	 * <p>
+	 * <strong>Note:</strong>
+	 * There isn't only one method that replaces this deprecated method.
+	 * The configuration that can be done with this deprecated method,
+	 * can also be done with the other methods exposed by {@link HttpServer}.
+	 * </p>
+	 * <p>Examples:</p>
+	 * <p>Configuration via the deprecated '.tcpConfiguration(...)' method</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.tcpConfiguration(tcpServer ->
+	 *     tcpServer.attr(...) // configures the channel attributes
+	 *              .bindAddress(...) // configures the bind (local) address
+	 *              .channelGroup(...) // configures the channel group
+	 *              .childAttr(...) // configures the child channel attributes
+	 *              .childObserve(...) // configures the child channel connection observer
+	 *              .childOption(...) // configures the child channel options
+	 *              .doOnBound(...) // configures the doOnBound callback
+	 *              .doOnChannelInit(...) // configures the channel handler
+	 *              .doOnConnection(...) // configures the doOnConnection callback
+	 *              .doOnUnbound(...) // configures the doOnUnbound callback
+	 *              .handle(...) // configures the I/O handler
+	 *              .host(...) // configures the host name
+	 *              .metrics(...) // configures the metrics
+	 *              .noSSL() // removes SSL configuration
+	 *              .observe() // configures the connection observer
+	 *              .option(...) // configures the channel options
+	 *              .port(...) // configures the port
+	 *              .runOn(...) // configures the event loop group
+	 *              .secure() // configures the SSL
+	 *              .wiretap()) // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Configuration via the other methods exposed by {@link HttpServer}</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.attr(...) // configures the channel attributes
+	 *           .bindAddress(...) // configures the bind (local) address
+	 *           .channelGroup(...) // configures the channel group
+	 *           .childAttr(...) // configures the child channel attributes
+	 *           .childObserve(...) // configures the child channel connection observer
+	 *           .childOption(...) // configures the child channel options
+	 *           .doOnBound(...) // configures the doOnBound callback
+	 *           .doOnChannelInit(...) // configures the channel handler
+	 *           .doOnConnection(...) // configures the doOnConnection callback
+	 *           .doOnUnbound(...) // configures the doOnUnbound callback
+	 *           .handle(...) // configures the I/O handler
+	 *           .host(...) // configures the host name
+	 *           .metrics(...) // configures the metrics
+	 *           .noSSL() // removes SSL configuration
+	 *           .observe() // configures the connection observer
+	 *           .option(...) // configures the channel options
+	 *           .port(...) // configures the port
+	 *           .runOn(...) // configures the event loop group
+	 *           .secure() // configures the SSL
+	 *           .wiretap() // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Wire logging in plain text</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
+	 * }
+	 * </pre>
 	 *
 	 * @param tcpMapper A {@link TcpServer} mapping function to update TCP configuration and
 	 * return an enriched {@link HttpServer} to use.
 	 * @return a new {@link HttpServer}
-	 * @deprecated Use {@link HttpServer} methods for TCP level configurations. This method
-	 * will be removed in version 1.1.0.
+	 * @deprecated Use the other methods exposed by {@link HttpServer} to achieve the same configurations.
+	 * This method will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	@SuppressWarnings("ReturnValueIgnored")
