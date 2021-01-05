@@ -228,7 +228,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 *           .route(r -> r.get("/hello",
 	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
 	 *                                    .sendString(Mono.just("Hello World!"))))
-	 *           .accessLog(AccessLogFactory.create(
+	 *           .accessLog(true, AccessLogFactory.createFilter(
 	 *                   args -> String.valueOf(args.uri()).startsWith("/health"),
 	 *                   args -> AccessLog.create("user-agent={}", args.requestHeader("user-agent"))
 	 *            )
@@ -239,7 +239,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * </pre>
 	 * <p>
 	 * The {@link AccessLogFactory} class offers several helper methods to generate such a function,
-	 * notably if one wants to {@link AccessLogFactory#create(Predicate) filter} some requests out of the access log.
+	 * notably if one wants to {@link AccessLogFactory#createFilter(Predicate) filter} some requests out of the access log.
 	 *
 	 * Note that this method takes precedence over the {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
 	 *

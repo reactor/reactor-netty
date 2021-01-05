@@ -19,6 +19,11 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
  /**
+ * An interface to declare more concisely a {@link Function} that apply an {@link AccessLog} by an
+ * {@link AccessLogArgProvider}.
+ * <p>
+ * Can be used in {@link reactor.netty.http.server.HttpServer#accessLog(boolean, AccessLogFactory) accessLog} method for example.
+ *
  * @author Simon Baslé
  * @author Audrey Neveu
  * @since 1.0.3
@@ -37,7 +42,7 @@ public interface AccessLogFactory extends Function<AccessLogArgProvider, AccessL
 	 * {@link reactor.netty.http.server.HttpServer#accessLog(boolean, AccessLogFactory)}
 	 * @since 1.0.3
 	 */
-	static AccessLogFactory create(Predicate<AccessLogArgProvider> predicate) {
+	static AccessLogFactory createFilter(Predicate<AccessLogArgProvider> predicate) {
 		return input -> predicate.test(input) ? BaseAccessLogHandler.DEFAULT_ACCESS_LOG.apply(input) : null;
 	}
 
@@ -60,8 +65,7 @@ public interface AccessLogFactory extends Function<AccessLogArgProvider, AccessL
 	 * {@link reactor.netty.http.server.HttpServer#accessLog(boolean, AccessLogFactory)}
 	 * @since 1.0.3
 	 */
-	static AccessLogFactory create(Predicate<AccessLogArgProvider> predicate,
-			Function<AccessLogArgProvider, AccessLog> formatFunction) {
+	static AccessLogFactory createFilter(Predicate<AccessLogArgProvider> predicate, AccessLogFactory formatFunction) {
 		return input -> predicate.test(input) ? formatFunction.apply(input) : null;
 	}
 

@@ -139,13 +139,13 @@ class AccessLogTest {
 					});
 					return resp.send();
 				})
-				.accessLog(true, AccessLogFactory.create(p -> !String.valueOf(p.uri()).startsWith("/foo/")))
+				.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/")))
 				.wiretap(true)
 				.bindNow();
 
 		HttpClientResponse response = getHttpClientResponse("/example/test");
 
-		getHttpClientResponse("/foo/test");
+		getHttpClientResponse("/filtered/test");
 
 		assertAccessLogging(response, true, true, null);
 	}
@@ -162,7 +162,7 @@ class AccessLogTest {
 					});
 					return resp.send();
 				})
-				.accessLog(true, AccessLogFactory.create(p -> !String.valueOf(p.uri()).startsWith("/foo/"),
+				.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/"),
 						args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri())))
 				.wiretap(true)
 				.bindNow();
@@ -173,7 +173,7 @@ class AccessLogTest {
 				.port(disposableServer.port())
 				.wiretap(true)
 				.get()
-				.uri("/foo/test")
+				.uri("/filtered/test")
 				.response()
 				.block();
 
@@ -193,7 +193,7 @@ class AccessLogTest {
 				assertThat(relevantLog.getFormattedMessage()).contains("GET /example/test HTTP/1.1\" 200");
 
 				if (filteringEnabled) {
-					assertThat(relevantLog.getFormattedMessage()).doesNotContain("foo");
+					assertThat(relevantLog.getFormattedMessage()).doesNotContain("filtered");
 				}
 			}
 
