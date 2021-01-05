@@ -18,7 +18,7 @@ package reactor.netty.http.server.logging;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
- /**
+/**
  * An interface to declare more concisely a {@link Function} that apply an {@link AccessLog} by an
  * {@link AccessLogArgProvider}.
  * <p>
@@ -38,7 +38,7 @@ public interface AccessLogFactory extends Function<AccessLogArgProvider, AccessL
 	 * using the default format.
 	 *
 	 * @param predicate the filter that returns {@code true} if the request should be logged, {@code false} otherwise
-	 * @return an access log factory {@link Function} to be used in
+	 * @return an {@link AccessLogFactory} to be used in
 	 * {@link reactor.netty.http.server.HttpServer#accessLog(boolean, AccessLogFactory)}
 	 * @since 1.0.3
 	 */
@@ -57,14 +57,15 @@ public interface AccessLogFactory extends Function<AccessLogArgProvider, AccessL
 	 * defining both the String format and a vararg of the relevant arguments, extracted from the
 	 * {@link AccessLogArgProvider}.
 	 * <p>
-	 *
+ 	 *
 	 * @param predicate the filter that returns {@code true} if the request should be logged, {@code false} otherwise
-	 * @param formatFunction the {@link Function} that creates {@link AccessLog} instances, encapsulating the format
+	 * @param formatFunction the {@link AccessLogFactory} that creates {@link AccessLog} instances, encapsulating the
+	 * format
 	 * and the extraction of relevant arguments
-	 * @return an access log factory {@link Function} to be used in
+	 * @return an {@link AccessLogFactory} to be used in
 	 * {@link reactor.netty.http.server.HttpServer#accessLog(boolean, AccessLogFactory)}
 	 * @since 1.0.3
-	 */
+ 	 */
 	static AccessLogFactory createFilter(Predicate<AccessLogArgProvider> predicate, AccessLogFactory formatFunction) {
 		return input -> predicate.test(input) ? formatFunction.apply(input) : null;
 	}

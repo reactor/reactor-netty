@@ -46,7 +46,6 @@ public final class AccessLog {
 		return new AccessLog(logFormat, args);
 	}
 
-
 	void log() {
 		if (LOG.isInfoEnabled()) {
 			LOG.info(logFormat, args);

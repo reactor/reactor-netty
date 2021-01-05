@@ -129,7 +129,7 @@ class AccessLogTest {
 	}
 
 	@Test
-	public void accessLogFiltering(){
+	public void accessLogFiltering() {
 		disposableServer = HttpServer.create()
 				.port(8080)
 				.handle((req, resp) -> {
@@ -152,7 +152,7 @@ class AccessLogTest {
 
 
 	@Test
-	public void accessLogFilteringAndFormatting(){
+	public void accessLogFilteringAndFormatting() {
 		disposableServer = HttpServer.create()
 				.port(8080)
 				.handle((req, resp) -> {
