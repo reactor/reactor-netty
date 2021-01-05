@@ -266,7 +266,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	/**
 	 * Apply or remove a wire logger configuration using {@link Transport} category (logger),
 	 * {@code DEBUG} logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link ByteBuf} format,
-	 * which means all events will be logged and the content will be in hex format.
+	 * which means both events and content will be logged and the content will be in hex format.
 	 *
 	 * @param enable specifies whether the wire logger configuration will be added to the pipeline
 	 * @return a new {@link Transport} reference
@@ -292,7 +292,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	/**
 	 * Apply a wire logger configuration using the specified category (logger),
 	 * {@code DEBUG} logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link ByteBuf} format,
-	 * which means all events will be logged and the content will be in hex format.
+	 * which means both events and content will be logged and the content will be in hex format.
 	 *
 	 * @param category the logger category
 	 * @return a new {@link Transport} reference
@@ -305,7 +305,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	/**
 	 * Apply a wire logger configuration using the specified category (logger),
 	 * logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link ByteBuf} format,
-	 * which means all events will be logged and the content will be in hex format.
+	 * which means both events and content will be logged and the content will be in hex format.
 	 *
 	 * @param category the logger category
 	 * @param level the logger level
@@ -323,8 +323,10 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * Depending on the format:
 	 * <ul>
 	 *     <li>{@link AdvancedByteBufFormat#SIMPLE} - only the events will be logged</li>
-	 *     <li>{@link AdvancedByteBufFormat#HEX_DUMP} - the events will be logged and the content in hex format</li>
-	 *     <li>{@link AdvancedByteBufFormat#TEXTUAL} - the events will be logged and the content in plain text format</li>
+	 *     <li>{@link AdvancedByteBufFormat#HEX_DUMP} - both events and content will be logged,
+	 *     with content in hex format</li>
+	 *     <li>{@link AdvancedByteBufFormat#TEXTUAL} - both events and content will be logged,
+	 *     with content in plain text format</li>
 	 * </ul>
 	 * When {@link AdvancedByteBufFormat#TEXTUAL} is specified, {@link Charset#defaultCharset()} will be used.
 	 *
@@ -341,15 +343,17 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	}
 
 	/**
-	 * Apply a wire logger configuration using the specific category,
+	 * Apply a wire logger configuration using the specific category (logger),
 	 * logger level, {@link ByteBuf} format and charset.
 	 * The charset is relevant in case of {@link AdvancedByteBufFormat#TEXTUAL}
 	 * and a different charset than {@link Charset#defaultCharset()} is required.
 	 * Depending on the format:
 	 * <ul>
 	 *     <li>{@link AdvancedByteBufFormat#SIMPLE} - only the events will be logged</li>
-	 *     <li>{@link AdvancedByteBufFormat#HEX_DUMP} - the events will be logged and the content in hex format</li>
-	 *     <li>{@link AdvancedByteBufFormat#TEXTUAL} - the events will be logged and the content in plain text format</li>
+	 *     <li>{@link AdvancedByteBufFormat#HEX_DUMP} - both events and content will be logged,
+	 *     with content in hex format</li>
+	 *     <li>{@link AdvancedByteBufFormat#TEXTUAL} - both events and content will be logged,
+	 *     with content in plain text format</li>
 	 * </ul>
 	 *
 	 * @param category the logger category

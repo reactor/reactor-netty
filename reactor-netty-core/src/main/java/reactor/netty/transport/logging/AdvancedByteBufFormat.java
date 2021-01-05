@@ -45,7 +45,8 @@ public enum AdvancedByteBufFormat {
 	 */
 	SIMPLE,
 	/**
-	 * When wire logging is enabled with this format, the events will be logged and the content in hex format.
+	 * When wire logging is enabled with this format, both events and content will be logged.
+	 * The content will be in hex format.
 	 * <p>Examples:</p>
 	 * <pre>
 	 * {@code
@@ -74,7 +75,8 @@ public enum AdvancedByteBufFormat {
 	 */
 	HEX_DUMP,
 	/**
-	 * When wire logging is enabled with this format, the events will be logged and the content in plain text format.
+	 * When wire logging is enabled with this format, both events and content will be logged.
+	 * The content will be in plain text format.
 	 * <p>Examples:</p>
 	 * <pre>
 	 * {@code
