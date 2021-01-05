@@ -405,10 +405,66 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 
 	/**
 	 * Prepare an {@link HttpClient}
+	 * <p>
+	 * <strong>Note:</strong>
+	 * There isn't only one method that replaces this deprecated method.
+	 * The configuration that can be done with this deprecated method,
+	 * can also be done with the other methods exposed by {@link HttpClient}.
+	 * </p>
+	 * <p>Examples:</p>
+	 * <p>Configuration via the deprecated '.from(...)' method</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient.from(
+	 *     TcpClient.attr(...) // configures the channel attributes
+	 *              .bindAddress(...) // configures the bind (local) address
+	 *              .channelGroup(...) // configures the channel group
+	 *              .doOnChannelInit(...) // configures the channel handler
+	 *              .doOnConnected(...) // configures the doOnConnected callback
+	 *              .doOnDisconnected(...) // configures the doOnDisconnected callback
+	 *              .metrics(...) // configures the metrics
+	 *              .observe() // configures the connection observer
+	 *              .option(...) // configures the channel options
+	 *              .proxy(...) // configures the proxy
+	 *              .remoteAddress(...) // configures the remote address
+	 *              .resolver(...) // configures the host names resolver
+	 *              .runOn(...) // configures the event loop group
+	 *              .secure() // configures the SSL
+	 *              .wiretap()) // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Configuration via the other methods exposed by {@link HttpClient}</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient.attr(...) // configures the channel attributes
+	 *           .bindAddress(...) // configures the bind (local) address
+	 *           .channelGroup(...) // configures the channel group
+	 *           .doOnChannelInit(...) // configures the channel handler
+	 *           .doOnConnected(...) // configures the doOnConnected callback
+	 *           .doOnDisconnected(...) // configures the doOnDisconnected callback
+	 *           .metrics(...) // configures the metrics
+	 *           .observe() // configures the connection observer
+	 *           .option(...) // configures the channel options
+	 *           .proxy(...) // configures the proxy
+	 *           .remoteAddress(...) // configures the remote address
+	 *           .resolver(...) // configures the host names resolver
+	 *           .runOn(...) // configures the event loop group
+	 *           .secure() // configures the SSL
+	 *           .wiretap() // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Wire logging in plain text</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
+	 * }
+	 * </pre>
 	 *
 	 * @return a new {@link HttpClient}
-	 * @deprecated Use {@link HttpClient} methods for TCP level configurations. This method
-	 * will be removed in version 1.1.0.
+	 * @deprecated Use the other methods exposed by {@link HttpClient} to achieve the same configurations.
+	 * This method will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	public static HttpClient from(TcpClient tcpClient) {
@@ -1328,12 +1384,76 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	/**
 	 * Apply a {@link TcpClient} mapping function to update TCP configuration and
 	 * return an enriched {@link HttpClient} to use.
+	 * <p>
+	 * <strong>Note:</strong>
+	 * There isn't only one method that replaces this deprecated method.
+	 * The configuration that can be done with this deprecated method,
+	 * can also be done with the other methods exposed by {@link HttpClient}.
+	 * </p>
+	 * <p>Examples:</p>
+	 * <p>Configuration via the deprecated '.tcpConfiguration(...)' method</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient.tcpConfiguration(tcpClient ->
+	 *     tcpClient.attr(...) // configures the channel attributes
+	 *              .bindAddress(...) // configures the bind (local) address
+	 *              .channelGroup(...) // configures the channel group
+	 *              .doOnChannelInit(...) // configures the channel handler
+	 *              .doOnConnected(...) // configures the doOnConnected callback
+	 *              .doOnDisconnected(...) // configures the doOnDisconnected callback
+	 *              .host(...) // configures the host name
+	 *              .metrics(...) // configures the metrics
+	 *              .noProxy() // removes proxy configuration
+	 *              .noSSL() // removes SSL configuration
+	 *              .observe() // configures the connection observer
+	 *              .option(...) // configures the channel options
+	 *              .port(...) // configures the port
+	 *              .proxy(...) // configures the proxy
+	 *              .remoteAddress(...) // configures the remote address
+	 *              .resolver(...) // configures the host names resolver
+	 *              .runOn(...) // configures the event loop group
+	 *              .secure() // configures the SSL
+	 *              .wiretap()) // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Configuration via the other methods exposed by {@link HttpClient}</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient.attr(...) // configures the channel attributes
+	 *           .bindAddress(...) // configures the bind (local) address
+	 *           .channelGroup(...) // configures the channel group
+	 *           .doOnChannelInit(...) // configures the channel handler
+	 *           .doOnConnected(...) // configures the doOnConnected callback
+	 *           .doOnDisconnected(...) // configures the doOnDisconnected callback
+	 *           .host(...) // configures the host name
+	 *           .metrics(...) // configures the metrics
+	 *           .noProxy() // removes proxy configuration
+	 *           .noSSL() // removes SSL configuration
+	 *           .observe() // configures the connection observer
+	 *           .option(...) // configures the channel options
+	 *           .port(...) // configures the port
+	 *           .proxy(...) // configures the proxy
+	 *           .remoteAddress(...) // configures the remote address
+	 *           .resolver(...) // configures the host names resolver
+	 *           .runOn(...) // configures the event loop group
+	 *           .secure() // configures the SSL
+	 *           .wiretap() // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Wire logging in plain text</p>
+	 * <pre>
+	 * {@code
+	 * HttpClient.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
+	 * }
+	 * </pre>
 	 *
 	 * @param tcpMapper A {@link TcpClient} mapping function to update TCP configuration and
 	 * return an enriched {@link HttpClient} to use.
 	 * @return a new {@link HttpClient}
-	 * @deprecated Use {@link HttpClient} methods for TCP level configurations. This method
-	 * will be removed in version 1.1.0.
+	 * @deprecated Use the other methods exposed by {@link HttpClient} to achieve the same configurations.
+	 * This method will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	@SuppressWarnings("ReturnValueIgnored")
