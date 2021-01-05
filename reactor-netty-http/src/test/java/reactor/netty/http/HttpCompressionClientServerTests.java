@@ -438,41 +438,50 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		int port2 = SocketUtils.findAvailableTcpPort();
 
 		AtomicReference<Throwable> error = new AtomicReference<>();
-		DisposableServer server1 =
-				createServer(port1)
-				          .compress(true)
-				          .handle((in, out) -> out.send(
-				              createClient(port2)
-				                        .get()
-				                        .uri("/")
-				                        .responseContent()
-				                        .doOnError(error::set)))
-				          // .retain() deliberately not invoked
-				          // so that .release() in FluxReceive.drainReceiver will fail
-				          //.retain()))
-				          .bindNow();
+		DisposableServer server1 = null;
+		DisposableServer server2 = null;
+		try {
+			server1 =
+					createServer(port1)
+					          .compress(true)
+					          .handle((in, out) -> out.send(
+					              createClient(port2)
+					                        .get()
+					                        .uri("/")
+					                        .responseContent()
+					                        .doOnError(error::set)))
+					          // .retain() deliberately not invoked
+					          // so that .release() in FluxReceive.drainReceiver will fail
+					          //.retain()))
+					          .bindNow();
 
-		DisposableServer server2 =
-				createServer(port2)
-				          .handle((in, out) -> out.sendString(Mono.just("reply")))
-				          .bindNow();
+			server2 =
+					createServer(port2)
+					          .handle((in, out) -> out.sendString(Mono.just("reply")))
+					          .bindNow();
 
-		StepVerifier.create(
-		        createClient(port1)
-		                  .compress(true)
-		                  .get()
-		                  .uri("/")
-		                  .responseContent()
-		                  .aggregate()
-		                  .asString())
-		            .expectError()
-		            .verify(Duration.ofSeconds(30));
+			StepVerifier.create(
+			        createClient(port1)
+			                  .compress(true)
+			                  .get()
+			                  .uri("/")
+			                  .responseContent()
+			                  .aggregate()
+			                  .asString())
+			            .expectError()
+			            .verify(Duration.ofSeconds(30));
 
-		assertThat(error.get()).isNotNull()
-		                       .isInstanceOf(RuntimeException.class);
-
-		server1.disposeNow();
-		server2.disposeNow();
+			assertThat(error.get()).isNotNull()
+			                       .isInstanceOf(RuntimeException.class);
+		}
+		finally {
+			if (server1 != null) {
+				server1.disposeNow();
+			}
+			if (server2 != null) {
+				server2.disposeNow();
+			}
+		}
 	}
 
 	@Test
@@ -481,39 +490,48 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		int port2 = SocketUtils.findAvailableTcpPort();
 
 		AtomicReference<Throwable> error = new AtomicReference<>();
-		DisposableServer server1 =
-				createServer(port1)
-				          .compress((req, res) -> {
-				              throw new RuntimeException("testIssue825_2");
-				          })
-				          .handle((in, out) ->
-				              createClient(port2)
-				                        .get()
-				                        .uri("/")
-				                        .responseContent()
-				                        .retain()
-				                        .flatMap(b -> out.send(Mono.just(b)))
-				                        .doOnError(error::set))
-				          .bindNow();
+		DisposableServer server1 = null;
+		DisposableServer server2 = null;
+		try {
+			server1 =
+					createServer(port1)
+					          .compress((req, res) -> {
+					              throw new RuntimeException("testIssue825_2");
+					          })
+					          .handle((in, out) ->
+					              createClient(port2)
+					                        .get()
+					                        .uri("/")
+					                        .responseContent()
+					                        .retain()
+					                        .flatMap(b -> out.send(Mono.just(b)))
+					                        .doOnError(error::set))
+					          .bindNow();
 
-		DisposableServer server2 =
-				createServer(port2)
-				          .handle((in, out) -> out.sendString(Mono.just("reply")))
-				          .bindNow();
+			server2 =
+					createServer(port2)
+					          .handle((in, out) -> out.sendString(Mono.just("reply")))
+					          .bindNow();
 
-		StepVerifier.create(
-		        createClient(port1)
-		                  .compress(true)
-		                  .get()
-		                  .uri("/")
-		                  .responseContent())
-		            .expectError()
-		            .verify(Duration.ofSeconds(30));
+			StepVerifier.create(
+			        createClient(port1)
+			                  .compress(true)
+			                  .get()
+			                  .uri("/")
+			                  .responseContent())
+			            .expectError()
+			            .verify(Duration.ofSeconds(30));
 
-		assertThat(error.get()).isNotNull()
-		                       .isInstanceOf(RuntimeException.class);
-
-		server1.disposeNow();
-		server2.disposeNow();
+			assertThat(error.get()).isNotNull()
+			                       .isInstanceOf(RuntimeException.class);
+		}
+		finally {
+			if (server1 != null) {
+				server1.disposeNow();
+			}
+			if (server2 != null) {
+				server2.disposeNow();
+			}
+		}
 	}
 }

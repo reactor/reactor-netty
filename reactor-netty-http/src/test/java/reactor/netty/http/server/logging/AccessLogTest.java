@@ -58,9 +58,7 @@ class AccessLogTest extends BaseHttpTest {
 	}
 
 	@AfterEach
-	@Override
-	protected void tearDown() throws Exception {
-		super.tearDown();
+	void tearDown() {
 		ROOT.detachAppender(mockedAppender);
 	}
 

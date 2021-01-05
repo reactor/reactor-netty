@@ -89,10 +89,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	@AfterEach
-	@Override
-	protected void tearDown() throws Exception {
-		super.tearDown();
-
+	void tearDown() {
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
 

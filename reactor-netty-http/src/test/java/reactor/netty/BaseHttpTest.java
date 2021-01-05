@@ -19,6 +19,7 @@ import org.junit.jupiter.api.AfterEach;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.util.function.Supplier;
@@ -35,7 +36,7 @@ public class BaseHttpTest {
 	protected DisposableServer disposableServer;
 
 	@AfterEach
-	protected void tearDown() throws Exception {
+	void disposeServer() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
@@ -81,7 +82,7 @@ public class BaseHttpTest {
 	 * @param port the port to connect to
 	 * @return a new {@link HttpClient}
 	 */
-	public static HttpClient createClient(ConnectionProvider pool, int port) {
+	public static HttpClient createClient(@Nullable ConnectionProvider pool, int port) {
 		HttpClient client = pool == null ? HttpClient.create() : HttpClient.create(pool);
 		return client.port(port)
 		             .wiretap(true);
@@ -106,7 +107,7 @@ public class BaseHttpTest {
 	 * @param remoteAddress a supplier of the address to connect to
 	 * @return a new {@link HttpClient}
 	 */
-	public static HttpClient createClient(ConnectionProvider pool, Supplier<SocketAddress> remoteAddress) {
+	public static HttpClient createClient(@Nullable ConnectionProvider pool, Supplier<SocketAddress> remoteAddress) {
 		HttpClient client = pool == null ? HttpClient.create() : HttpClient.create(pool);
 		return client.remoteAddress(remoteAddress)
 		             .wiretap(true);
@@ -119,7 +120,7 @@ public class BaseHttpTest {
 	 * @param port the port to connect to
 	 * @return a new {@link HttpClient}
 	 */
-	public static HttpClient createNewConnection(int port) {
+	public static HttpClient createClientNewConnection(int port) {
 		return HttpClient.newConnection()
 		                 .port(port)
 		                 .wiretap(true);

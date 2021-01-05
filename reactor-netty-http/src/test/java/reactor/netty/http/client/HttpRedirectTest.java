@@ -246,63 +246,72 @@ class HttpRedirectTest extends BaseHttpTest {
 		final int serverPort1 = SocketUtils.findAvailableTcpPort();
 		final int serverPort2 = SocketUtils.findAvailableTcpPort();
 
-		DisposableServer server1 =
-				createServer(serverPort1)
-				          .host("localhost")
-				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
-				                       .get("/2", (req, res) -> res.sendRedirect("http://localhost:" + serverPort1 + "/3"))
-				                       .get("/3", (req, res) -> res.sendString(Mono.just("OK")))
-				                       .get("/4", (req, res) -> res.sendRedirect("http://localhost:" + serverPort2 + "/1")))
-				          .bindNow();
+		DisposableServer server1 = null;
+		DisposableServer server2 = null;
+		try {
+			server1 =
+					createServer(serverPort1)
+					          .host("localhost")
+					          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+					                       .get("/2", (req, res) -> res.sendRedirect("http://localhost:" + serverPort1 + "/3"))
+					                       .get("/3", (req, res) -> res.sendString(Mono.just("OK")))
+					                       .get("/4", (req, res) -> res.sendRedirect("http://localhost:" + serverPort2 + "/1")))
+					          .bindNow();
 
-		DisposableServer server2 =
-				createServer(serverPort2)
-				          .host("localhost")
-				          .route(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
-				          .bindNow();
+			server2 =
+					createServer(serverPort2)
+					          .host("localhost")
+					          .route(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
+					          .bindNow();
 
-		HttpClient client = HttpClient.create()
-		                              .baseUrl("http://localhost:" + serverPort1);
+			HttpClient client = HttpClient.create()
+			                              .baseUrl("http://localhost:" + serverPort1);
 
-		Mono<String> response =
-				client.followRedirect(true)
-				      .get()
-				      .uri("/1")
-				      .responseContent()
-				      .aggregate()
-				      .asString();
+			Mono<String> response =
+					client.followRedirect(true)
+					      .get()
+					      .uri("/1")
+					      .responseContent()
+					      .aggregate()
+					      .asString();
 
-		StepVerifier.create(response)
-		            .expectNextMatches("OK"::equals)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+			StepVerifier.create(response)
+			            .expectNextMatches("OK"::equals)
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(30));
 
-		response = client.followRedirect(true)
-		                 .get()
-		                 .uri("/2")
-		                 .responseContent()
-		                 .aggregate()
-		                 .asString();
+			response = client.followRedirect(true)
+			                 .get()
+			                 .uri("/2")
+			                 .responseContent()
+			                 .aggregate()
+			                 .asString();
 
-		StepVerifier.create(response)
-		            .expectNextMatches("OK"::equals)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+			StepVerifier.create(response)
+			            .expectNextMatches("OK"::equals)
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(30));
 
-		response = client.followRedirect(true)
-		                 .get()
-		                 .uri("/4")
-		                 .responseContent()
-		                 .aggregate()
-		                 .asString();
+			response = client.followRedirect(true)
+			                 .get()
+			                 .uri("/4")
+			                 .responseContent()
+			                 .aggregate()
+			                 .asString();
 
-		StepVerifier.create(response)
-		            .expectNextMatches("Other"::equals)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-
-		server1.disposeNow();
-		server2.disposeNow();
+			StepVerifier.create(response)
+			            .expectNextMatches("Other"::equals)
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(30));
+		}
+		finally {
+			if (server1 != null) {
+				server1.disposeNow();
+			}
+			if (server2 != null) {
+				server2.disposeNow();
+			}
+		}
 	}
 
 	@Test
@@ -449,40 +458,49 @@ class HttpRedirectTest extends BaseHttpTest {
 		final int server2Port = SocketUtils.findAvailableTcpPort();
 
 		SelfSignedCertificate cert1 = new SelfSignedCertificate();
-		DisposableServer server1 =
-				createServer()
-				          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert1.certificate(), cert1.privateKey())))
-				          .handle((req, res) -> res.sendRedirect("https://localhost:" + server2Port))
-				          .bindNow();
+		DisposableServer server1 = null;
+		DisposableServer server2 = null;
+		try {
+			server1 =
+					createServer()
+					          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert1.certificate(), cert1.privateKey())))
+					          .handle((req, res) -> res.sendRedirect("https://localhost:" + server2Port))
+					          .bindNow();
 
-		SelfSignedCertificate cert2 = new SelfSignedCertificate();
-		DisposableServer server2 =
-				createServer(server2Port)
-				          .host("localhost")
-				          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert2.certificate(), cert2.privateKey())))
-				          .handle((req, res) -> res.sendString(Mono.just("test")))
-				          .bindNow();
+			SelfSignedCertificate cert2 = new SelfSignedCertificate();
+			server2 =
+					createServer(server2Port)
+					          .host("localhost")
+					          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert2.certificate(), cert2.privateKey())))
+					          .handle((req, res) -> res.sendString(Mono.just("test")))
+					          .bindNow();
 
-		AtomicInteger peerPort = new AtomicInteger(0);
-		createClient(server1::address)
-		          .followRedirect(true)
-		          .secure(spec -> spec.sslContext(SslContextBuilder.forClient()
-		                                                           .trustManager(InsecureTrustManagerFactory.INSTANCE)))
-		          .doOnRequest((req, conn) ->
-		                  peerPort.set(conn.channel()
-		                                   .pipeline()
-		                                   .get(SslHandler.class)
-		                                   .engine()
-		                                   .getPeerPort()))
-		          .get()
-		          .uri("/")
-		          .responseContent()
-		          .blockLast(Duration.ofSeconds(30));
+			AtomicInteger peerPort = new AtomicInteger(0);
+			createClient(server1::address)
+			          .followRedirect(true)
+			          .secure(spec -> spec.sslContext(SslContextBuilder.forClient()
+			                                                           .trustManager(InsecureTrustManagerFactory.INSTANCE)))
+			          .doOnRequest((req, conn) ->
+			                  peerPort.set(conn.channel()
+			                                   .pipeline()
+			                                   .get(SslHandler.class)
+			                                   .engine()
+			                                   .getPeerPort()))
+			          .get()
+			          .uri("/")
+			          .responseContent()
+			          .blockLast(Duration.ofSeconds(30));
 
-		assertThat(peerPort.get()).isEqualTo(server2Port);
-
-		server1.disposeNow();
-		server2.disposeNow();
+			assertThat(peerPort.get()).isEqualTo(server2Port);
+		}
+		finally {
+			if (server1 != null) {
+				server1.disposeNow();
+			}
+			if (server2 != null) {
+				server2.disposeNow();
+			}
+		}
 	}
 
 	@Test
@@ -526,40 +544,50 @@ class HttpRedirectTest extends BaseHttpTest {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverSslCtxBuilder =
 				SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-		DisposableServer redirectServer =
-				createServer()
-				          .route(r ->
-				                  r.get(redirectPath, (req, res) -> res.sendRedirect(destinationPath))
-				                   .get(destinationPath, (req, res) -> res.sendString(Mono.just(responseContent)))
-				          )
-				          .secure(spec -> spec.sslContext(serverSslCtxBuilder))
-				          .bindNow();
+		DisposableServer redirectServer = null;
+		DisposableServer initialServer = null;
+		try {
+			redirectServer =
+					createServer()
+					          .route(r ->
+					                  r.get(redirectPath, (req, res) -> res.sendRedirect(destinationPath))
+					                   .get(destinationPath, (req, res) -> res.sendString(Mono.just(responseContent)))
+					          )
+					          .secure(spec -> spec.sslContext(serverSslCtxBuilder))
+					          .bindNow();
 
-		DisposableServer initialServer =
-				createServer()
-				          .handle((req, res) ->
-				              res.sendRedirect("https://localhost:" + redirectServer.port() + destinationPath)
-				          )
-				          .bindNow();
+			final int redirectServerPort = redirectServer.port();
+			initialServer =
+					createServer()
+					          .handle((req, res) ->
+					              res.sendRedirect("https://localhost:" + redirectServerPort + destinationPath)
+					          )
+					          .bindNow();
 
-		SslContextBuilder clientSslCtxBuilder =
-				SslContextBuilder.forClient()
-				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
-		final String requestUri = "http://localhost:" + initialServer.port();
-		StepVerifier.create(
-		        HttpClient.create()
-		                  .wiretap(true)
-		                  .followRedirect(true)
-		                  .secure(spec -> spec.sslContext(clientSslCtxBuilder))
-		                  .get()
-		                  .uri(requestUri)
-		                  .response((res, conn) -> Mono.justOrEmpty(res.resourceUrl())))
-		            .expectNext("https://localhost:" + redirectServer.port() + destinationPath)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-
-		initialServer.disposeNow();
-		redirectServer.disposeNow();
+			SslContextBuilder clientSslCtxBuilder =
+					SslContextBuilder.forClient()
+					                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+			final String requestUri = "http://localhost:" + initialServer.port();
+			StepVerifier.create(
+			        HttpClient.create()
+			                  .wiretap(true)
+			                  .followRedirect(true)
+			                  .secure(spec -> spec.sslContext(clientSslCtxBuilder))
+			                  .get()
+			                  .uri(requestUri)
+			                  .response((res, conn) -> Mono.justOrEmpty(res.resourceUrl())))
+			            .expectNext("https://localhost:" + redirectServer.port() + destinationPath)
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(30));
+		}
+		finally {
+			if (redirectServer != null) {
+				redirectServer.disposeNow();
+			}
+			if (initialServer != null) {
+				initialServer.disposeNow();
+			}
+		}
 	}
 
 	@Test

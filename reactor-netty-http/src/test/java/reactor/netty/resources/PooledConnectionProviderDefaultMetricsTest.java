@@ -56,9 +56,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	}
 
 	@AfterEach
-	@Override
-	protected void tearDown() throws Exception {
-		super.tearDown();
+	void tearDown() {
 		Metrics.removeRegistry(registry);
 		registry.clear();
 		registry.close();

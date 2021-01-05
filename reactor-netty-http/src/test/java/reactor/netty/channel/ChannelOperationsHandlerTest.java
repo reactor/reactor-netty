@@ -227,7 +227,7 @@ class ChannelOperationsHandlerTest extends BaseHttpTest {
 			throw new IOException("Fail to start test server");
 		}
 
-		HttpClient client = createNewConnection(testServerPort);
+		HttpClient client = createClientNewConnection(testServerPort);
 
 		Flux.range(0, 2)
 		    .concatMap(i -> client.get()

@@ -684,11 +684,14 @@ class HttpServerTests extends BaseHttpTest {
 		ConnectionProvider provider = ConnectionProvider.create("testIssue186", 1);
 		HttpClient client = createClient(provider, disposableServer::address);
 
-		doTestIssue186(client);
-		doTestIssue186(client);
-
-		provider.disposeLater()
-		        .block(Duration.ofSeconds(30));
+		try {
+			doTestIssue186(client);
+			doTestIssue186(client);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(30));
+		}
 	}
 
 	private void doTestIssue186(HttpClient client) {
@@ -749,30 +752,33 @@ class HttpServerTests extends BaseHttpTest {
 				HttpClient.create(provider)
 				          .remoteAddress(disposableServer::address);
 
-		for (int i = 0; i < 1000; i++) {
-			Mono<String> content = client.post()
-			                             .uri("/")
-			                             .send(ByteBufFlux.fromString(Mono.just("bodysample")
-			                                                              .contextWrite(
-			                                                                      c -> {
-			                                                                          context.set(c);
-			                                                                          return c;
-			                                                                      })))
-			                             .responseContent()
-			                             .aggregate()
-			                             .asString()
-			                             .contextWrite(c -> c.put("Hello", "World"));
+		try {
+			for (int i = 0; i < 1000; i++) {
+				Mono<String> content = client.post()
+				                             .uri("/")
+				                             .send(ByteBufFlux.fromString(Mono.just("bodysample")
+				                                                              .contextWrite(
+				                                                                      c -> {
+				                                                                          context.set(c);
+				                                                                          return c;
+				                                                                      })))
+				                             .responseContent()
+				                             .aggregate()
+				                             .asString()
+				                             .contextWrite(c -> c.put("Hello", "World"));
 
-			StepVerifier.create(content)
-			            .expectComplete()
-			            .verify(Duration.ofSeconds(30));
-			assertThat(context.get()
-			                  .get("Hello")
-			                  .equals("World")).isTrue();
+				StepVerifier.create(content)
+				            .expectComplete()
+				            .verify(Duration.ofSeconds(30));
+				assertThat(context.get()
+				                  .get("Hello")
+				                  .equals("World")).isTrue();
+			}
 		}
-
-		provider.disposeLater()
-		        .block(Duration.ofSeconds(30));
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(30));
+		}
 	}
 
 	@Test
