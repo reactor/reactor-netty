@@ -55,6 +55,7 @@ import reactor.core.publisher.Operators;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
+import reactor.netty.ReactorNetty;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.pool.InstrumentedPool;
@@ -62,6 +63,7 @@ import reactor.pool.PoolBuilder;
 import reactor.pool.PoolConfig;
 import reactor.pool.PooledRef;
 import reactor.pool.PooledRefMetadata;
+import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.NonNull;
@@ -710,6 +712,11 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 
 	final static class PoolFactory {
+		static final double DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE =
+				Double.parseDouble(System.getProperty(ReactorNetty.POOL_GET_PERMITS_SAMPLING_RATE, "0"));
+		static final double DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE =
+				Double.parseDouble(System.getProperty(ReactorNetty.POOL_RETURN_PERMITS_SAMPLING_RATE, "0"));
+
 		final Duration    evictionInterval;
 		final int         maxConnections;
 		final int         pendingAcquireMaxCount;
@@ -741,12 +748,25 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
 					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
 					           .maxPendingAcquire(pendingAcquireMaxCount)
-					           .sizeBetween(0, maxConnections)
 					           .evictInBackground(evictionInterval);
+
+			if (DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE < 1d
+					&& DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE < 1d) {
+				poolBuilder = poolBuilder.allocationStrategy(SamplingAllocationStrategy.sizeBetweenWithSampling(
+						0,
+						maxConnections,
+						DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE,
+						DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE));
+			}
+			else {
+				poolBuilder = poolBuilder.sizeBetween(0, maxConnections);
+			}
+
 			if (LEASING_STRATEGY_FIFO.equals(leasingStrategy)) {
 				return poolBuilder.idleResourceReuseLruOrder()
 				                  .buildPool();
 			}
+
 			return poolBuilder.idleResourceReuseMruOrder()
 			                  .buildPool();
 		}

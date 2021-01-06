@@ -52,6 +52,9 @@ import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
+import reactor.pool.AllocationStrategy;
+import reactor.pool.PoolBuilder;
+import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
@@ -132,6 +135,22 @@ public final class ReactorNetty {
 	 * </ul>
 	 */
 	public static final String POOL_LEASING_STRATEGY = "reactor.netty.pool.leasingStrategy";
+	/**
+	 * Default {@code getPermitsSamplingRate} (between 0d and 1d (percentage))
+	 * to be used with a {@link SamplingAllocationStrategy}.
+	 * This strategy wraps a {@link PoolBuilder#sizeBetween(int, int) sizeBetween} {@link AllocationStrategy}
+	 * and samples calls to {@link AllocationStrategy#getPermits(int)}.
+	 * Fallback - sampling is not enabled.
+	 */
+	public static final String POOL_GET_PERMITS_SAMPLING_RATE = "reactor.netty.pool.getPermitsSamplingRate";
+	/**
+	 * Default {@code returnPermitsSamplingRate} (between 0d and 1d (percentage))
+	 * to be used with a {@link SamplingAllocationStrategy}.
+	 * This strategy wraps a {@link PoolBuilder#sizeBetween(int, int) sizeBetween} {@link AllocationStrategy}
+	 * and samples calls to {@link AllocationStrategy#returnPermits(int)}.
+	 * Fallback - sampling is not enabled.
+	 */
+	public static final String POOL_RETURN_PERMITS_SAMPLING_RATE = "reactor.netty.pool.returnPermitsSamplingRate";
 
 
 	/**
