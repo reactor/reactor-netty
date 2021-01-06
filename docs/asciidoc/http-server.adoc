@@ -339,10 +339,9 @@ include::{examplesdir}/sni/Application.java[lines=18..47]
 
 == HTTP Access Log
 
-The current logging support provides only the https://en.wikipedia.org/wiki/Common_Log_Format[Common Log Format].
+You can enable the `HTTP` access log either programmatically or by configuration. By default, it is disabled.
 
-You can use `-Dreactor.netty.http.server.accessLogEnabled=true` to enable the `HTTP` access log.
-By default, it is disabled.
+You can use `-Dreactor.netty.http.server.accessLogEnabled=true` to enable the `HTTP` access log by configuration.
 
 You can use the following configuration (for Logback or similar logging frameworks) to have a separate
 `HTTP` access log file:
@@ -364,6 +363,48 @@ You can use the following configuration (for Logback or similar logging framewor
     <appender-ref ref="async"/>
 </logger>
 ----
+====
+
+The following example enables it programmatically:
+====
+[source,java,indent=0]
+.{examplesdir}/accessLog/Application.java
+----
+include::{examplesdir}/accessLog/Application.java[lines=18..32]
+----
+====
+
+Calling this method takes precedence over the system property configuration.
+
+By default, the logging format is https://en.wikipedia.org/wiki/Common_Log_Format[Common Log Format], but you can
+specify a custom one as a parameter, as in the following example:
+====
+[source,java,indent=0]
+.{examplesdir}/accessLog/CustomLogAccessFormatApplication.java
+----
+include::{examplesdir}/accessLog/CustomLogAccessFormatApplication.java[lines=18..33]
+----
+====
+
+You can also filter `HTTP` access logs by using the `AccessLogFactory#createFilter` method, as in the following example:
+====
+[source,java,indent=0]
+.{examplesdir}/accessLog/FilterLogAccessApplication.java
+----
+include::{examplesdir}/accessLog/FilterLogAccessApplication.java[lines=18..34]
+----
+====
+
+Note that this method can take a custom format parameter too, as in this example:
+====
+[source,java,indent=0]
+.{examplesdir}/accessLog/CustomFormatAndFilterAccessLogApplication.java.java
+----
+include::{examplesdir}/accessLog/CustomFormatAndFilterAccessLogApplication.java[lines=18..35]
+----
+<1> Specifies the filter predicate to use
+<2> Specifies the custom format to apply
+
 ====
 
 == HTTP/2
