@@ -57,7 +57,7 @@ public interface AccessLogFactory extends Function<AccessLogArgProvider, AccessL
 	 * defining both the String format and a vararg of the relevant arguments, extracted from the
 	 * {@link AccessLogArgProvider}.
 	 * <p>
- 	 *
+	 *
 	 * @param predicate the filter that returns {@code true} if the request should be logged, {@code false} otherwise
 	 * @param formatFunction the {@link AccessLogFactory} that creates {@link AccessLog} instances, encapsulating the
 	 * format
@@ -65,7 +65,7 @@ public interface AccessLogFactory extends Function<AccessLogArgProvider, AccessL
 	 * @return an {@link AccessLogFactory} to be used in
 	 * {@link reactor.netty.http.server.HttpServer#accessLog(boolean, AccessLogFactory)}
 	 * @since 1.0.3
- 	 */
+	 */
 	static AccessLogFactory createFilter(Predicate<AccessLogArgProvider> predicate, AccessLogFactory formatFunction) {
 		return input -> predicate.test(input) ? formatFunction.apply(input) : null;
 	}

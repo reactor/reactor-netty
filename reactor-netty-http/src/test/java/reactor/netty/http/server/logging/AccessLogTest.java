@@ -169,13 +169,7 @@ class AccessLogTest {
 
 		HttpClientResponse response = getHttpClientResponse("/example/test");
 
-		HttpClient.create()
-				.port(disposableServer.port())
-				.wiretap(true)
-				.get()
-				.uri("/filtered/test")
-				.response()
-				.block();
+		getHttpClientResponse("/filtered/test");
 
 		assertAccessLogging(response, true, true, CUSTOM_FORMAT);
 	}
