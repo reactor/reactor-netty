@@ -23,6 +23,7 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import io.netty.channel.group.ChannelGroup;
@@ -227,15 +228,18 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 *           .route(r -> r.get("/hello",
 	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
 	 *                                    .sendString(Mono.just("Hello World!"))))
-	 *           .accessLog(true, AccessLogFactory.create(
+	 *           .accessLog(true, AccessLogFactory.createFilter(
+	 *                   args -> String.valueOf(args.uri()).startsWith("/health"),
 	 *                   args -> AccessLog.create("user-agent={}", args.requestHeader("user-agent"))
-	 *           )
+	 *            )
 	 *           .bindNow()
 	 *           .onDispose()
 	 *           .block();
 	 * }
 	 * </pre>
 	 * <p>
+	 * The {@link AccessLogFactory} class offers several helper methods to generate such a function,
+	 * notably if one wants to {@link AccessLogFactory#createFilter(Predicate) filter} some requests out of the access log.
 	 *
 	 * Note that this method takes precedence over the {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
 	 *

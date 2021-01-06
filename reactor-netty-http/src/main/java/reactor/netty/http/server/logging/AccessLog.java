@@ -22,6 +22,9 @@ import java.util.Objects;
 
 /**
  * Log the http access information into a Logger named {@code reactor.netty.http.server.AccessLog} at INFO level.
+ * <p>
+ * See {@link AccessLogFactory} for convenience methods to create an access log factory to be passed to
+ * {@link reactor.netty.http.server.HttpServer#accessLog(boolean, AccessLogFactory)} during server configuration.
  *
  * @author limaoning
  * @since 1.0.1
