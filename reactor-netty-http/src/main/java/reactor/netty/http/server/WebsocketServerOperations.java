@@ -123,7 +123,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			                  markPersistent(false);
 			              }
 			              else {
-			                  log.debug("Cannot bind WebsocketServerOperations after the handshake.");
+			                  log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
 			              }
 			          });
 		}
