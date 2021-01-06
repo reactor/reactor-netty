@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Silvano Riz
  */
-class ByteBufFluxTest {
+class ByteBufFluxTest extends BaseHttpTest {
 
 	@Test
 	void testByteBufFluxFromPathWithoutSecurity() throws Exception {
@@ -48,13 +48,8 @@ class ByteBufFluxTest {
 	}
 
 	private void doTestByteBufFluxFromPath(boolean withSecurity) throws Exception {
-		final int serverPort = SocketUtils.findAvailableTcpPort();
-		HttpServer server = HttpServer.create()
-		                              .port(serverPort)
-		                              .wiretap(true);
-		HttpClient client = HttpClient.create()
-		                              .port(serverPort)
-		                              .wiretap(true);
+		HttpServer server = createServer();
+		HttpClient client = createClient(() -> disposableServer.address());
 		if (withSecurity) {
 			SelfSignedCertificate ssc = new SelfSignedCertificate();
 			SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -65,10 +60,10 @@ class ByteBufFluxTest {
 		}
 
 		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-		DisposableServer c = server.handle((req, res) ->
-		                                      res.send(ByteBufFlux.fromPath(path))
-		                                         .then())
-		                           .bindNow();
+		disposableServer = server.handle((req, res) ->
+		                                   res.send(ByteBufFlux.fromPath(path))
+		                                      .then())
+		                        .bindNow();
 
 		AtomicLong counter = new AtomicLong(0);
 		client.get()
@@ -78,7 +73,5 @@ class ByteBufFluxTest {
 		      .blockLast(Duration.ofSeconds(30));
 
 		assertThat(counter.get()).isEqualTo(1245);
-
-		c.disposeNow();
 	}
 }

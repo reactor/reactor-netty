@@ -38,18 +38,17 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
-import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ChannelOperationsHandlerTest {
+class ChannelOperationsHandlerTest extends BaseHttpTest {
 
 	@Test
 	void publisherSenderOnCompleteFlushInProgress_1() {
@@ -73,9 +72,8 @@ class ChannelOperationsHandlerTest {
 
 	private void doTestPublisherSenderOnCompleteFlushInProgress(boolean useScheduler, ChannelHandler handler) {
 		AtomicInteger counter = new AtomicInteger();
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .doOnConnection(conn -> conn.addHandler(new LineBasedFrameDecoder(10)))
 				          .handle((req, res) ->
 				                  req.receive()
@@ -83,7 +81,6 @@ class ChannelOperationsHandlerTest {
 				                     .doOnNext(s -> counter.incrementAndGet())
 				                     .log("receive")
 				                     .then(res.status(200).sendHeaders().then()))
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		Flux<String> flux = Flux.range(1, 257).map(count -> count + "\n");
@@ -91,14 +88,12 @@ class ChannelOperationsHandlerTest {
 			flux.publishOn(Schedulers.single());
 		}
 		Mono<Integer> code =
-				HttpClient.create()
+				createClient(disposableServer.port())
 				          .doOnConnected(conn -> {
 				              if (handler != null) {
 				                  conn.addHandlerLast(handler);
 				              }
 				          })
-				          .port(server.port())
-				          .wiretap(true)
 				          .post()
 				          .uri("/")
 				          .send(ByteBufFlux.fromString(flux)
@@ -111,8 +106,6 @@ class ChannelOperationsHandlerTest {
 		            .verify(Duration.ofSeconds(30));
 
 		assertThat(counter.get()).isEqualTo(257);
-
-		server.disposeNow();
 	}
 
 	//@Test
@@ -151,9 +144,7 @@ class ChannelOperationsHandlerTest {
 		}
 
 		ByteBufFlux response =
-				HttpClient.create()
-				          .port(abortServerPort)
-				          .wiretap(true)
+				createClient(abortServerPort)
 				          .request(HttpMethod.GET)
 				          .uri("/")
 				          .send((req, out) -> out.sendString(Flux.just("a", "b", "c")))
@@ -236,10 +227,7 @@ class ChannelOperationsHandlerTest {
 			throw new IOException("Fail to start test server");
 		}
 
-		HttpClient client =
-		        HttpClient.newConnection()
-		                  .port(testServerPort)
-		                  .wiretap(true);
+		HttpClient client = createClientNewConnection(testServerPort);
 
 		Flux.range(0, 2)
 		    .concatMap(i -> client.get()

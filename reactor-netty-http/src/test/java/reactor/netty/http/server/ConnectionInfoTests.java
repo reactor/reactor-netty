@@ -35,12 +35,11 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.Connection;
-import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
@@ -54,11 +53,9 @@ import static org.assertj.core.api.Assertions.fail;
  *
  * @author Brian Clozel
  */
-class ConnectionInfoTests {
+class ConnectionInfoTests extends BaseHttpTest {
 
 	static SelfSignedCertificate ssc;
-
-	private DisposableServer connection;
 
 	protected HttpClient customizeClientOptions(HttpClient httpClient) {
 		return httpClient;
@@ -80,7 +77,7 @@ class ConnectionInfoTests {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString())
 					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
@@ -90,7 +87,7 @@ class ConnectionInfoTests {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=192.168.0.1"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
@@ -100,7 +97,7 @@ class ConnectionInfoTests {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=[1abc:2abc:3abc::5ABC:6abc]"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
@@ -122,7 +119,7 @@ class ConnectionInfoTests {
 						"[1abc:2abc:3abc::5ABC:6abc], 192.168.0.1"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
@@ -269,9 +266,8 @@ class ConnectionInfoTests {
 			resultQueue.add(remoteAddrFromRequest);
 		};
 
-		this.connection =
-				HttpServer.create()
-				          .port(0)
+		this.disposableServer =
+				createServer()
 				          .proxyProtocol(ProxyProtocolSupportType.ON)
 				          .handle((req, res) -> {
 				              try {
@@ -284,12 +280,11 @@ class ConnectionInfoTests {
 				                            .sendString(Mono.just(e.getMessage()));
 				              }
 				          })
-				          .wiretap(true)
 				          .bindNow();
 
 		Connection clientConn =
 				TcpClient.create()
-				         .port(this.connection.port())
+				         .port(this.disposableServer.port())
 				         .connectNow();
 
 		ByteBuf proxyProtocolMsg = clientConn.channel()
@@ -336,9 +331,8 @@ class ConnectionInfoTests {
 			resultQueue.add(remoteAddrFromRequest);
 		};
 
-		this.connection =
-				HttpServer.create()
-				          .port(0)
+		this.disposableServer =
+				createServer()
 				          .proxyProtocol(ProxyProtocolSupportType.AUTO)
 				          .handle((req, res) -> {
 				              try {
@@ -351,12 +345,11 @@ class ConnectionInfoTests {
 				                            .sendString(Mono.just(e.getMessage()));
 				              }
 				          })
-				          .wiretap(true)
 				          .bindNow();
 
 		Connection clientConn =
 				TcpClient.create()
-				         .port(this.connection.port())
+				         .port(this.disposableServer.port())
 				         .connectNow();
 
 		ByteBuf proxyProtocolMsg = clientConn.channel()
@@ -380,7 +373,7 @@ class ConnectionInfoTests {
 
 		clientConn =
 				TcpClient.create()
-				          .port(this.connection.port())
+				          .port(this.disposableServer.port())
 				          .connectNow();
 
 		// Send a http request without proxy protocol in a new connection,
@@ -443,7 +436,7 @@ class ConnectionInfoTests {
 						"host=a.example.com,host=b.example.com, host=c.example.com"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
@@ -542,15 +535,12 @@ class ConnectionInfoTests {
 			Function<HttpServer, HttpServer> serverConfigFunction,
 			boolean useHttps) {
 
-		HttpServer server = HttpServer.create()
-				.forwarded(true)
-				.port(0);
+		HttpServer server = createServer().forwarded(true);
 		if (forwardedHeaderHandler != null) {
 			server = server.forwarded(forwardedHeaderHandler);
 		}
-		this.connection =
-				customizeServerOptions(
-						serverConfigFunction.apply(server))
+		this.disposableServer =
+				customizeServerOptions(serverConfigFunction.apply(server))
 				        .handle((req, res) -> {
 				            try {
 				                serverRequestConsumer.accept(req);
@@ -562,21 +552,15 @@ class ConnectionInfoTests {
 				                          .sendString(Mono.just(e.getMessage()));
 				            }
 				        })
-				        .wiretap(true)
 				        .bindNow();
 
 		String uri = "/test";
 		if (useHttps) {
-			uri += "https://localhost:" + this.connection.port();
+			uri += "https://localhost:" + this.disposableServer.port();
 		}
 
 		String response =
-				customizeClientOptions(
-						clientConfigFunction.apply(
-						    HttpClient.create()
-						              .port(this.connection.port())
-						              .wiretap(true)
-						))
+				customizeClientOptions(clientConfigFunction.apply(createClient(this.disposableServer.port())))
 				        .headers(clientRequestHeadersConsumer)
 				        .get()
 				        .uri(uri)
@@ -587,12 +571,4 @@ class ConnectionInfoTests {
 
 		assertThat(response).isEqualTo("OK");
 	}
-
-	@AfterEach
-	void tearDown() {
-		if (null != this.connection) {
-			this.connection.disposeNow();
-		}
-	}
-
 }

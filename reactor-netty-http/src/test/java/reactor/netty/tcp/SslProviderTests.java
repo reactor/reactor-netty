@@ -33,14 +33,12 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.Mapping;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.http.HttpProtocol;
-import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 
@@ -54,7 +52,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Violeta Georgieva
  */
-class SslProviderTests {
+class SslProviderTests extends BaseHttpTest {
 	static SelfSignedCertificate cert;
 	static SelfSignedCertificate localhostCert;
 	static SelfSignedCertificate anotherCert;
@@ -66,7 +64,6 @@ class SslProviderTests {
 	private SslContext localhostSslContext;
 	private SslContext anotherSslContext;
 	private SslContextBuilder clientSslContextBuilder;
-	private DisposableServer disposableServer;
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws Exception {
@@ -90,8 +87,7 @@ class SslProviderTests {
 		clientSslContextBuilder = SslContextBuilder.forClient()
 		                                           .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		protocols = new ArrayList<>();
-		server = HttpServer.create()
-		                   .port(0)
+		server = createServer()
 		                   .doOnBind(conf -> {
 		                       SslProvider ssl = conf.sslProvider();
 		                       if (ssl != null) {
@@ -99,13 +95,6 @@ class SslProviderTests {
 		                           sslContext = ssl.sslContext;
 		                       }
 		                   });
-	}
-
-	@AfterEach
-	void tearDown() {
-		if (disposableServer != null) {
-			disposableServer.disposeNow();
-		}
 	}
 
 	@Test
@@ -190,8 +179,7 @@ class SslProviderTests {
 				      .bindNow();
 
 		StepVerifier.create(
-		        HttpClient.create()
-		                  .port(disposableServer.port())
+		        createClient(disposableServer.port())
 		                  .secure(spec -> spec.sslContext(clientSslContextBuilder.protocols("TLSv1.3")))
 		                  .get()
 		                  .uri("/")
@@ -232,8 +220,7 @@ class SslProviderTests {
 			clientSslContextBuilder.protocols("TLSv1.2");
 		}
 		StepVerifier.create(
-		        HttpClient.create()
-		                  .port(disposableServer.port())
+		        createClient(disposableServer.port())
 		                  .secure(spec -> spec.sslContext(clientSslContextBuilder))
 		                  .get()
 		                  .uri("/")

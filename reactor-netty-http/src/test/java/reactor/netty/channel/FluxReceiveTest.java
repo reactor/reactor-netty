@@ -29,15 +29,14 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.server.HttpServer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class FluxReceiveTest {
+class FluxReceiveTest extends BaseHttpTest {
 
 	@Test
 	void testByteBufsReleasedWhenTimeout() {
@@ -46,8 +45,7 @@ class FluxReceiveTest {
 		rndm.nextBytes(content);
 
 		DisposableServer server1 =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(routes ->
 				                     routes.get("/target", (req, res) ->
 				                           req.receive()
@@ -56,12 +54,10 @@ class FluxReceiveTest {
 				          .bindNow();
 
 		DisposableServer server2 =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(routes ->
 				                     routes.get("/forward", (req, res) ->
-				                           HttpClient.create()
-				                                     .port(server1.port())
+				                           createClient(server1.port())
 				                                     .get()
 				                                     .uri("/target")
 				                                     .responseContent()
@@ -73,8 +69,7 @@ class FluxReceiveTest {
 				          .bindNow();
 
 		Flux.range(0, 50)
-		    .flatMap(i -> HttpClient.create()
-		                            .port(server2.port())
+		    .flatMap(i -> createClient(server2.port())
 		                            .get()
 		                            .uri("/forward")
 		                            .responseContent()
@@ -93,8 +88,7 @@ class FluxReceiveTest {
 		rndm.nextBytes(content);
 
 		DisposableServer server1 =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(routes ->
 				                     routes.get("/target", (req, res) ->
 				                           req.receive()
@@ -103,12 +97,10 @@ class FluxReceiveTest {
 				          .bindNow();
 
 		DisposableServer server2 =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(routes ->
 				                     routes.get("/forward", (req, res) ->
-				                           HttpClient.create()
-				                                     .port(server1.port())
+				                           createClient(server1.port())
 				                                     .doOnConnected(c ->
 				                                             c.addHandlerFirst(new ReadTimeoutHandler(50, TimeUnit.MILLISECONDS)))
 				                                     .get()
@@ -121,8 +113,7 @@ class FluxReceiveTest {
 				          .bindNow();
 
 		Flux.range(0, 50)
-		    .flatMap(i -> HttpClient.create()
-		                            .port(server2.port())
+		    .flatMap(i -> createClient(server2.port())
 		                            .get()
 		                            .uri("/forward")
 		                            .responseContent()

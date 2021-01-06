@@ -50,13 +50,13 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
-import reactor.netty.DisposableServer;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyOutbound;
 import reactor.netty.http.client.HttpClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class HttpSendFileTests {
+class HttpSendFileTests extends BaseHttpTest {
 	protected HttpClient customizeClientOptions(HttpClient httpClient) {
 		return httpClient;
 	}
@@ -243,28 +243,21 @@ class HttpSendFileTests {
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression, int compressionSize,
 			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate, Consumer<String> bodyAssertion) {
-		HttpServer server = HttpServer.create();
+		HttpServer server = createServer();
 		if (compressionPredicate != null) {
 			server = server.compress(compressionPredicate);
 		}
         if (compressionSize > -1) {
 			server = server.compress(compressionSize);
 		}
-		DisposableServer context =
+		disposableServer =
 				customizeServerOptions(server)
 				          .handle((req, resp) -> fn.apply(resp))
-				          .wiretap(true)
 				          .bindNow();
 
-		HttpClient client;
+		HttpClient client = createClient(disposableServer::address);
 		if (compression) {
-			client = HttpClient.create()
-			                   .remoteAddress(context::address)
-			                   .compress(true);
-		}
-		else {
-			client = HttpClient.create()
-			                   .remoteAddress(context::address);
+			client = client.compress(true);
 		}
 		Mono<String> response =
 				customizeClientOptions(client)
@@ -274,8 +267,6 @@ class HttpSendFileTests {
 				          .responseSingle((res, byteBufMono) -> byteBufMono.asString(StandardCharsets.UTF_8));
 
 		String body = response.block(Duration.ofSeconds(5));
-
-		context.disposeNow();
 
 		bodyAssertion.accept(body);
 	}
@@ -335,7 +326,7 @@ class HttpSendFileTests {
 				    .doOnDiscard(ByteBuf.class, ByteBuf::release)
 				    .log("send", Level.INFO, SignalType.REQUEST, SignalType.ON_COMPLETE);
 
-		DisposableServer context =
+		disposableServer =
 				customizeServerOptions(HttpServer.create()
 				                                 .host("localhost"))
 				          //.wiretap(true)
@@ -343,26 +334,21 @@ class HttpSendFileTests {
 				          .handle(fn)
 				          .bindNow();
 
-		try {
-			byte[] response =
-					customizeClientOptions(HttpClient.create()
-					                                 .remoteAddress(context::address))
-					    //.tcpConfiguration(tcp -> tcp.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1024, 1024)))
-					    //.wiretap(true)
-					    .request(HttpMethod.POST)
-					    .uri("/")
-					    .send(content)
-					    .responseContent()
-					    .aggregate()
-					    .asByteArray()
-					    .onErrorReturn(IOException.class, expectedContent == null ? new byte[0] :  expectedContent)
-					    .block();
+		byte[] response =
+				customizeClientOptions(HttpClient.create()
+				                                 .remoteAddress(disposableServer::address))
+				    //.tcpConfiguration(tcp -> tcp.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1024, 1024)))
+				    //.wiretap(true)
+				    .request(HttpMethod.POST)
+				    .uri("/")
+				    .send(content)
+				    .responseContent()
+				    .aggregate()
+				    .asByteArray()
+				    .onErrorReturn(IOException.class, expectedContent == null ? new byte[0] :  expectedContent)
+				    .block();
 
-			assertThat(response).isEqualTo(expectedContent == null ? Files.readAllBytes(tempFile) : expectedContent);
-		}
-		finally {
-			context.disposeNow();
-		}
+		assertThat(response).isEqualTo(expectedContent == null ? Files.readAllBytes(tempFile) : expectedContent);
 	}
 
 	private static void closeChannel(Channel channel) {

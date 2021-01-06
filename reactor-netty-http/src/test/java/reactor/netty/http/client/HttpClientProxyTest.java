@@ -24,14 +24,12 @@ import io.specto.hoverfly.junit.core.HoverflyMode;
 import io.specto.hoverfly.junit5.HoverflyExtension;
 import io.specto.hoverfly.junit5.api.HoverflyConfig;
 import io.specto.hoverfly.junit5.api.HoverflyCore;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyPipeline;
-import reactor.netty.http.server.HttpServer;
 import reactor.netty.transport.ProxyProvider;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
@@ -52,23 +50,20 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @HoverflyCore(mode = HoverflyMode.SIMULATE, config = @HoverflyConfig(plainHttpTunneling = true))
 @ExtendWith(HoverflyExtension.class)
-class HttpClientProxyTest {
+class HttpClientProxyTest extends BaseHttpTest {
 
-	private DisposableServer server;
 	private int port;
 	private static final String LOCALLY_NOT_RESOLVABLE_ADDRESS =
 			"http://some-random-address-that-is-only-resolvable-by-the-proxy-1234.com";
 
 	@BeforeEach
 	void setUp(Hoverfly hoverfly) {
-		server = HttpServer.create()
-		                   .port(port)
+		disposableServer = createServer()
 		                   .host("localhost")
 		                   .handle((req, res) -> res.sendString(Mono.just("test")))
-		                   .wiretap(true)
 		                   .bindNow();
 
-		port = server.port();
+		port = disposableServer.port();
 
 		hoverfly.simulate(
 				dsl(service("http://127.0.0.1:" + port)
@@ -81,20 +76,13 @@ class HttpClientProxyTest {
 				        .willReturn(success().body("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS))));
 	}
 
-	@AfterEach
-	void tearDown() {
-		if (server != null) {
-			server.disposeNow();
-		}
-	}
-
 	@Test
 	void proxy_1(Hoverfly hoverfly) {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                      .host("localhost")
 				                      .port(hoverfly.getHoverflyConfig().getProxyPort()),
-				            server::address,
+				            disposableServer::address,
 				            "/",
 				            true))
 				    .expectNextMatches(t ->
@@ -129,7 +117,7 @@ class HttpClientProxyTest {
 				                      .host("localhost")
 				                      .port(hoverfly.getHoverflyConfig().getProxyPort())
 				                      .nonProxyHosts("127.0.0.1"),
-				            server::address,
+				            disposableServer::address,
 				            "/",
 				            true))
 				    .expectNextMatches(t ->
@@ -162,7 +150,7 @@ class HttpClientProxyTest {
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                      .host("localhost")
 				                      .port(hoverfly.getHoverflyConfig().getProxyPort()),
-				            server::address,
+				            disposableServer::address,
 				            "/",
 				            false))
 				    .expectNextMatches(t ->
@@ -206,10 +194,8 @@ class HttpClientProxyTest {
 	@Test
 	void shouldUseDifferentResolvers(Hoverfly hoverfly) {
 		HttpClient client =
-				HttpClient.create()
-				          .remoteAddress(server::address)
-				          .metrics(true, () -> MicrometerHttpClientMetricsRecorder.INSTANCE)
-				          .wiretap(true);
+				createClient(disposableServer::address)
+				          .metrics(true, () -> MicrometerHttpClientMetricsRecorder.INSTANCE);
 
 		AtomicReference<AddressResolverGroup<?>> resolver1 = new AtomicReference<>();
 		client.doOnConnect(config -> resolver1.set(config.resolver()))
@@ -271,7 +257,7 @@ class HttpClientProxyTest {
 				          });
 
 		if (connectAddressSupplier != null) {
-			client = client.remoteAddress(server::address);
+			client = client.remoteAddress(disposableServer::address);
 		}
 
 		return client.wiretap(wiretap)
