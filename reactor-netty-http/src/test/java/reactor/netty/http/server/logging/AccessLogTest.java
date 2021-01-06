@@ -118,7 +118,7 @@ class AccessLogTest extends BaseHttpTest {
 	}
 
 	@Test
-	public void accessLogFiltering() {
+	void accessLogFiltering() {
 		disposableServer = createServer()
 				.handle((req, resp) -> {
 					resp.withConnection(conn -> {
@@ -139,7 +139,7 @@ class AccessLogTest extends BaseHttpTest {
 
 
 	@Test
-	public void accessLogFilteringAndFormatting() {
+	void accessLogFilteringAndFormatting() {
 		disposableServer = createServer()
 				.handle((req, resp) -> {
 					resp.withConnection(conn -> {
