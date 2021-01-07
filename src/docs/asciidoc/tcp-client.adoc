@@ -269,7 +269,7 @@ The following listing shows the default configuration for the Event Loop Group:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=76..105]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=79..108]
 ----
 ====
 
@@ -311,7 +311,7 @@ until a channel is returned to the pool again.
 [source,java,indent=0]
 ./../../main/java/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=113..134]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=111..153]
 ----
 ====
 
