@@ -28,7 +28,7 @@
 
 	<!-- AssertJ Requirement -->
 	<module name="RegexpSingleline">
-		<property name="format" value="org\.junit\.Assert\.assert"/>
+		<property name="format" value="org\.junit\.jupiter\.api\.Assertions\.assert"/>
 		<property name="message" value="Please use AssertJ imports."/>
 	</module>
 
