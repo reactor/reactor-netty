@@ -192,7 +192,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 					threadFactory(this, "select-nio"));
 			if (!serverSelectLoops.compareAndSet(null, newEventLoopGroup)) {
 				//"FutureReturnValueIgnored" this is deliberate
-				newEventLoopGroup.shutdownGracefully();
+				newEventLoopGroup.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 			}
 			eventLoopGroup = cacheNioSelectLoops();
 		}
@@ -207,7 +207,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 					threadFactory(this, "nio"));
 			if (!serverLoops.compareAndSet(null, newEventLoopGroup)) {
 				//"FutureReturnValueIgnored" this is deliberate
-				newEventLoopGroup.shutdownGracefully();
+				newEventLoopGroup.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 			}
 			eventLoopGroup = cacheNioServerLoops();
 		}
@@ -240,7 +240,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 					threadFactory(this, "select-" + defaultLoop.getName()));
 			if (!cacheNativeSelectLoops.compareAndSet(null, newEventLoopGroup)) {
 				//"FutureReturnValueIgnored" this is deliberate
-				newEventLoopGroup.shutdownGracefully();
+				newEventLoopGroup.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 			}
 			eventLoopGroup = cacheNativeSelectLoops();
 		}
@@ -257,7 +257,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 					threadFactory(this, defaultLoop.getName()));
 			if (!cacheNativeServerLoops.compareAndSet(null, newEventLoopGroup)) {
 				//"FutureReturnValueIgnored" this is deliberate
-				newEventLoopGroup.shutdownGracefully();
+				newEventLoopGroup.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 			}
 			eventLoopGroup = cacheNativeServerLoops();
 		}
