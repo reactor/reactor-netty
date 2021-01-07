@@ -180,6 +180,8 @@ configure(rootProject) { project ->
 	systemProperty("reactor.trace.nocapacity", "true")
 	systemProperty("testGroups", project.properties.get("testGroups"))
 	systemProperty("io.netty.leakDetection.level", "paranoid")
+	systemProperty("reactor.netty.pool.getPermitsSamplingRate", "0.5")
+	systemProperty("reactor.netty.pool.returnPermitsSamplingRate", "0.5")
 	scanForTestClasses = false
 	include '**/*Tests.*'
 	include '**/*Test.*'
