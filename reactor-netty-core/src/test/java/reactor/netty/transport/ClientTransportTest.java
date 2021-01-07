@@ -25,6 +25,7 @@ import reactor.netty.Connection;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -100,17 +101,51 @@ class ClientTransportTest {
 		}
 	}
 
+	@Test
+	void testClientTransportWarmup() {
+		final LoopResources loop = LoopResources.create("testClientTransportWarmup", 1, true);
+		final ConnectionProvider provider = ConnectionProvider.create("testClientTransportWarmup");
+		try {
+			TestClientTransportConfig config =
+					new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
+			config.loopResources = loop;
+
+			TestClientTransport transport =
+					new TestClientTransport(Mono.just(EmbeddedChannel::new), config);
+
+			Mono<Void> warmupMono = transport.warmup();
+
+			assertThat(transport.configuration().defaultResolver.get()).isNull();
+
+			warmupMono.block(Duration.ofSeconds(5));
+
+			assertThat(transport.configuration().defaultResolver.get()).isNotNull();
+		}
+		finally {
+			loop.disposeLater()
+			    .block(Duration.ofSeconds(5));
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
 	static final class TestClientTransport extends ClientTransport<TestClientTransport, TestClientTransportConfig> {
 
 		final Mono<? extends Connection> connect;
+		final TestClientTransportConfig config;
 
 		TestClientTransport(Mono<? extends Connection> connect) {
+			this(connect, null);
+		}
+
+		TestClientTransport(Mono<? extends Connection> connect, @Nullable TestClientTransportConfig config) {
 			this.connect = connect;
+			this.config = config;
 		}
 
 		@Override
 		public TestClientTransportConfig configuration() {
-			return null;
+			return config;
 		}
 
 		@Override
@@ -129,10 +164,6 @@ class ClientTransportTest {
 		TestClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 				Supplier<? extends SocketAddress> remoteAddress) {
 			super(connectionProvider, options, remoteAddress);
-		}
-
-		TestClientTransportConfig(ClientTransportConfig<TestClientTransportConfig> parent) {
-			super(parent);
 		}
 
 		@Override

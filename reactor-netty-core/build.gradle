@@ -104,6 +104,10 @@ dependencies {
 	}
 
 	// Testing
+
+	// JSR-305 annotations
+	testCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
+
 	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"

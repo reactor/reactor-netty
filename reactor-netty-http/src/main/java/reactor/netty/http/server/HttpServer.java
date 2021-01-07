@@ -30,6 +30,8 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.reactivestreams.Publisher;
@@ -800,6 +802,27 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		// ReturnValueIgnored is deliberate
 		tcpMapper.apply(tcpServer);
 		return tcpServer.httpServer;
+	}
+
+	/**
+	 * Based on the actual configuration, returns a {@link Mono} that triggers an initialization of
+	 * the event loop groups, loads the necessary native libraries for the transport
+	 * and the necessary native libraries for the security if there is such.
+	 * By default warmup is not performed and all resources are loaded on the first request.
+	 *
+	 * @return a {@link Mono} representing the completion of the warmup
+	 * @since 1.0.3
+	 */
+	@Override
+	public Mono<Void> warmup() {
+		return Mono.when(
+				super.warmup(),
+				Mono.fromRunnable(() -> {
+					SslProvider provider = configuration().sslProvider();
+					if (provider != null && !(provider.getSslContext() instanceof JdkSslContext)) {
+						OpenSsl.version();
+					}
+				}));
 	}
 
 	@Override
