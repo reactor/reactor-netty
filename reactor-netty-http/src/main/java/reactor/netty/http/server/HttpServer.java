@@ -175,7 +175,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @param accessLogFactory the {@link Function} that creates an {@link AccessLog} given an {@link AccessLogArgProvider}
 	 * @return a new {@link HttpServer}
 	 * @since 1.0.1
-	 * @deprecated as of 1.0.3. Prefer the {@link #accessLog(boolean, AccessLogFactory) variant} with the {@link AccessLogFactory} interface instead
+	 * @deprecated as of 1.0.3. Prefer the {@link #accessLog(boolean, AccessLogFactory) variant}
+	 * with the {@link AccessLogFactory} interface instead. This method will be removed in version 1.2.0.
 	 */
 	@Deprecated
 	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLogFactory) {
