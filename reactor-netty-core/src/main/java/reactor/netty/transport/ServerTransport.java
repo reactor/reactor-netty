@@ -323,9 +323,12 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	}
 
 	/**
-	 * Based on the actual configuration, returns a {@link Mono} that triggers an initialization of
-	 * the event loop groups and loads the necessary native libraries for the transport.
-	 * By default warmup is not performed and all resources are loaded on the first request.
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop groups</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code bind operation} absorbs the extra time needed to load resources.
 	 *
 	 * @return a {@link Mono} representing the completion of the warmup
 	 * @since 1.0.3

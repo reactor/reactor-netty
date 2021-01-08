@@ -222,10 +222,13 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	}
 
 	/**
-	 * Based on the actual configuration, returns a {@link Mono} that triggers an initialization of
-	 * the event loop groups, loads the necessary native libraries for the transport
-	 * and the necessary native libraries for the security if there is such.
-	 * By default warmup is not performed and all resources are loaded on the first request.
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop groups</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 *     <li>loads the necessary native libraries for the security if there is such</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code bind operation} absorbs the extra time needed to load resources.
 	 *
 	 * @return a {@link Mono} representing the completion of the warmup
 	 * @since 1.0.3

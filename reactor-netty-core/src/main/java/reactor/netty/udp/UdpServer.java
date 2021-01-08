@@ -265,6 +265,21 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 		return dup;
 	}
 
+	/**
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop group</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code bind operation} absorbs the extra time needed to load resources.
+	 *
+	 * @return a {@link Mono} representing the completion of the warmup
+	 * @since 1.0.3
+	 */
+	public final Mono<Void> warmup() {
+		return Mono.fromRunnable(() -> configuration().eventLoopGroup());
+	}
+
 	@Override
 	public final UdpServer wiretap(boolean enable) {
 		return super.wiretap(enable);
