@@ -38,7 +38,6 @@ import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
-import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import org.reactivestreams.Publisher;
@@ -1480,12 +1479,10 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	public Mono<Void> warmup() {
 		return Mono.when(
 				super.warmup(),
-				Mono.fromRunnable(() -> {
-					SslProvider provider = configuration().sslProvider();
-					if (provider != null && !(provider.getSslContext() instanceof JdkSslContext)) {
-						OpenSsl.version();
-					}
-				}));
+				// When the URL scheme is HTTPS and there is no security configured,
+				// the default security will be used thus always try to load the OpenSsl natives
+				// see HttpClientConnect.MonoHttpConnect#subscribe
+				Mono.fromRunnable(OpenSsl::version));
 	}
 
 	/**
