@@ -46,6 +46,27 @@ include::{examplesdir}/address/Application.java[lines=18..34]
 <2> Configures the `port` to which this client should connect
 ====
 
+== Eager Initialization
+
+By default, the initialization of the `UdpClient` resources happens on demand. This means that the `connect
+operation` absorbs the extra time needed to initialize and load:
+
+ * the event loop group
+ * the host name resolver
+ * the native transport libraries (when native transport is used)
+
+When you need to preload these resources, you can configure the `UdpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/warmup/Application.java
+----
+include::{examplesdir}/warmup/Application.java[lines=18..40]
+----
+<1> Initialize and load the event loop group, the host name resolver, and the native transport libraries
+<2> Host name resolution happens when connecting to the remote peer
+====
+
 == Writing Data
 
 To send data to a given peer, you must attach an I/O handler.

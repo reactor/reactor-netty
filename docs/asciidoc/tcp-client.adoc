@@ -48,6 +48,29 @@ include::{examplesdir}/address/Application.java[lines=18..33]
 <2> Configures the `TCP` port
 ====
 
+== Eager Initialization
+
+By default, the initialization of the `TcpClient` resources happens on demand. This means that the `connect
+operation` absorbs the extra time needed to initialize and load:
+
+ * the event loop group
+ * the host name resolver
+ * the native transport libraries (when native transport is used)
+ * the native libraries for the security (in case of `OpenSsl`)
+
+When you need to preload these resources, you can configure the `TcpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/warmup/Application.java
+----
+include::{examplesdir}/warmup/Application.java[lines=18..39]
+----
+<1> Initialize and load the event loop group, the host name resolver, the native transport libraries and
+the native libraries for the security
+<2> Host name resolution happens when connecting to the remote peer
+====
+
 == Writing Data
 
 To send data to a given endpoint, you must attach an I/O handler.
