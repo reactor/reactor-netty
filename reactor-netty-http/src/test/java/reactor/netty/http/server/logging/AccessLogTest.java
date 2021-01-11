@@ -27,10 +27,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyPipeline;
-import reactor.netty.http.client.HttpClientResponse;
 import reactor.util.annotation.Nullable;
+import reactor.util.function.Tuple2;
 
 import java.time.Duration;
 
@@ -75,7 +76,7 @@ class AccessLogTest extends BaseHttpTest {
 				.accessLog(true)
 				.bindNow();
 
-		HttpClientResponse response = getHttpClientResponse("/example/test");
+		Tuple2<String, String> response = getHttpClientResponse("/example/test");
 
 		assertAccessLogging(response, true, false, null);
 	}
@@ -93,7 +94,7 @@ class AccessLogTest extends BaseHttpTest {
 				.accessLog(true, args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri()))
 				.bindNow();
 
-		HttpClientResponse response = getHttpClientResponse("/example/test");
+		Tuple2<String, String> response = getHttpClientResponse("/example/test");
 
 		assertAccessLogging(response, true, false, CUSTOM_FORMAT);
 	}
@@ -112,7 +113,7 @@ class AccessLogTest extends BaseHttpTest {
 				.accessLog(false)
 				.bindNow();
 
-		HttpClientResponse response = getHttpClientResponse("/example/test");
+		Tuple2<String, String> response = getHttpClientResponse("/example/test");
 
 		assertAccessLogging(response, false, false, null);
 	}
@@ -130,7 +131,7 @@ class AccessLogTest extends BaseHttpTest {
 				.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/")))
 				.bindNow();
 
-		HttpClientResponse response = getHttpClientResponse("/example/test");
+		Tuple2<String, String> response = getHttpClientResponse("/example/test");
 
 		getHttpClientResponse("/filtered/test");
 
@@ -152,16 +153,17 @@ class AccessLogTest extends BaseHttpTest {
 						args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri())))
 				.bindNow();
 
-		HttpClientResponse response = getHttpClientResponse("/example/test");
+		Tuple2<String, String> response = getHttpClientResponse("/example/test");
 
 		getHttpClientResponse("/filtered/test");
 
 		assertAccessLogging(response, true, true, CUSTOM_FORMAT);
 	}
 
-	void assertAccessLogging(HttpClientResponse response,
-	                         boolean enable, boolean filteringEnabled,
-	                         @Nullable String loggerFormat) {
+	void assertAccessLogging(
+			@Nullable Tuple2<String, String> response,
+			boolean enable, boolean filteringEnabled,
+			@Nullable String loggerFormat) {
 		if (enable) {
 			Mockito.verify(mockedAppender, Mockito.times(1)).doAppend(loggingEventArgumentCaptor.capture());
 			assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
@@ -187,14 +189,18 @@ class AccessLogTest extends BaseHttpTest {
 		}
 
 		assertThat(response).isNotNull();
-		assertThat(response.responseHeaders().get(ACCESS_LOG_HANDLER)).isEqualTo(enable ? FOUND : NOT_FOUND);
+		assertThat(response.getT2()).isEqualTo(enable ? FOUND : NOT_FOUND);
 	}
 
-	private HttpClientResponse getHttpClientResponse(String uri) {
+	@Nullable
+	private Tuple2<String, String> getHttpClientResponse(String uri) {
 		return createClient(disposableServer.port())
 				.get()
 				.uri(uri)
-				.response()
+				.responseSingle((res, bytes) ->
+						bytes.asString()
+						     .defaultIfEmpty("")
+						     .zipWith(Mono.just(res.responseHeaders().get(ACCESS_LOG_HANDLER))))
 				.block(Duration.ofSeconds(30));
 	}
 }
