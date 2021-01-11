@@ -1343,6 +1343,61 @@ public class HttpClientTest {
 		doTestRetry(true);
 	}
 
+	@Test
+	public void testForceRetryDisabled() throws Exception {
+		doTestForceRetry(false,false);
+	}
+
+	private void doTestForceRetry(boolean retryDisabled,boolean forceRetryDisabled) throws Exception {
+		ExecutorService threadPool = Executors.newCachedThreadPool();
+		int serverPort = SocketUtils.findAvailableTcpPort();
+		ConnectionResetByPeerServer server = new ConnectionResetByPeerServer(serverPort);
+		Future<?> serverFuture = threadPool.submit(server);
+		if(!server.await(10, TimeUnit.SECONDS)){
+			throw new IOException("fail to start test server");
+		}
+
+		AtomicInteger doOnRequest = new AtomicInteger();
+		AtomicInteger doOnRequestError = new AtomicInteger();
+		AtomicInteger doOnResponseError = new AtomicInteger();
+		HttpClient client =
+				HttpClient.create()
+						.port(serverPort)
+						.wiretap(true)
+						.doOnRequest((req, conn) -> doOnRequest.getAndIncrement())
+						.doOnError((req, t) -> doOnRequestError.getAndIncrement(),
+								(res, t) -> doOnResponseError.getAndIncrement());
+		client = client.disableRetry(retryDisabled);
+		client = client.disableForceRetry(forceRetryDisabled);
+
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		StepVerifier.create(client.get()
+				.uri("/")
+				.responseContent())
+				.expectErrorMatches(t -> {
+					error.set(t);
+					return t.getMessage() != null &&
+							(t.getMessage().contains("Connection reset by peer") ||
+									t.getMessage().contains("Connection prematurely closed BEFORE response"));
+				})
+				.verify(Duration.ofSeconds(30));
+
+		int requestCount = 1;
+		int requestErrorCount = 1;
+		if (!retryDisabled && !(error.get() instanceof PrematureCloseException)) {
+			requestCount = 2;
+			requestErrorCount = 2;
+		}
+		assertThat(doOnRequest.get()).isEqualTo(requestCount);
+		assertThat(doOnRequestError.get()).isEqualTo(requestErrorCount);
+		assertThat(doOnResponseError.get()).isEqualTo(0);
+
+		server.close();
+		assertThat(serverFuture.get()).isNull();
+		threadPool.shutdown();
+		assertThat(threadPool.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+	}
+
 	private void doTestRetry(boolean retryDisabled) throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 		int serverPort = SocketUtils.findAvailableTcpPort();

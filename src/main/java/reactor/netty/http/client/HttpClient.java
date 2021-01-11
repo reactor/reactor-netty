@@ -792,6 +792,27 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Option to disable {@code force retry once} support for the outgoing requests that fail with
+	 * {@link reactor.netty.channel.AbortedException#isConnectionResetWithForcingRetry(Throwable)}.
+	 * <p>By default this is set to true in which case {@code force retry once} is disable.
+	 * <p>If disableForceRetry is set to false, the request may be sent repeatedly.
+	 *
+	 * @param disableForceRetry true to disable {@code retry once}, false to enable it only if
+	 * disableRetry{@link reactor.netty.http.client.HttpClient#disableRetry(boolean)}is alse
+	 * set to false.
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient disableForceRetry(boolean disableForceRetry) {
+		if (disableForceRetry) {
+			return tcpConfiguration(FORCE_RETRY_ATTR_CONFIG);
+		}
+		else {
+			return tcpConfiguration(FORCE_RETRY_ATTR_DISABLE);
+		}
+	}
+
+	/**
 	 * Specifies whether HTTP status 301|302|307|308 auto-redirect support is enabled.
 	 *
 	 * <p><strong>Note:</strong> The sensitive headers {@link #followRedirect(boolean, Consumer) followRedirect}
@@ -1413,6 +1434,14 @@ public abstract class HttpClient {
 	@SuppressWarnings("deprecation")
 	static final Function<TcpClient, TcpClient> RETRY_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_RETRY);
+
+	@SuppressWarnings("deprecation")
+	static final Function<TcpClient, TcpClient> FORCE_RETRY_ATTR_CONFIG =
+			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_FORCE_RETRY);
+
+	@SuppressWarnings("deprecation")
+	static final Function<TcpClient, TcpClient> FORCE_RETRY_ATTR_DISABLE =
+			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_FORCE_RETRY);
 
 	@SuppressWarnings("deprecation")
 	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_DISABLE =

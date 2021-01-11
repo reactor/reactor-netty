@@ -58,6 +58,7 @@ final class HttpClientConfiguration {
 	HttpMethod                    method                         = HttpMethod.GET;
 	WebsocketClientSpec           websocketClientSpec            = null;
 	boolean                       retryDisabled                  = false;
+	boolean                       forceRetryDisabled             = true;
 	int                           protocols                      = h11;
 	HttpResponseDecoderSpec       decoder                        = new HttpResponseDecoderSpec();
 
@@ -94,6 +95,7 @@ final class HttpClientConfiguration {
 		this.method = from.method;
 		this.websocketClientSpec = from.websocketClientSpec;
 		this.retryDisabled = from.retryDisabled;
+		this.forceRetryDisabled = from.forceRetryDisabled;
 		this.body = from.body;
 		this.protocols = from.protocols;
 		this.deferredConf = from.deferredConf;
@@ -169,6 +171,17 @@ final class HttpClientConfiguration {
 
 	static final Function<Bootstrap, Bootstrap> MAP_NO_RETRY = b -> {
 		getOrCreate(b).retryDisabled = true;
+		return b;
+	};
+
+	static final Function<Bootstrap, Bootstrap> MAP_FORCE_RETRY = b -> {
+		getOrCreate(b).forceRetryDisabled = false;
+		return b;
+	};
+
+
+	static final Function<Bootstrap, Bootstrap> MAP_NO_FORCE_RETRY = b -> {
+		getOrCreate(b).forceRetryDisabled = true;
 		return b;
 	};
 

@@ -474,6 +474,7 @@ final class HttpClientConnect extends HttpClient {
 		volatile UriEndpoint        fromURI;
 		volatile Supplier<String>[] redirectedFrom;
 		volatile boolean            shouldRetry;
+		volatile boolean			forceRetry;
 		volatile HttpHeaders        previousRequestHeaders;
 
 		@SuppressWarnings("unchecked")
@@ -519,6 +520,7 @@ final class HttpClientConnect extends HttpClient {
 
 			this.websocketClientSpec = configuration.websocketClientSpec;
 			this.shouldRetry = !configuration.retryDisabled;
+			this.forceRetry  = !configuration.forceRetryDisabled;
 			this.handler = configuration.body;
 
 			if (configuration.uri == null) {
@@ -703,6 +705,11 @@ final class HttpClientConnect extends HttpClient {
 			if (throwable instanceof RedirectClientException) {
 				RedirectClientException re = (RedirectClientException) throwable;
 				redirect(re.location);
+				return true;
+			}
+			if (AbortedException.isConnectionResetWithForcingRetry(throwable) && shouldRetry && forceRetry) {
+				shouldRetry = false;
+				redirect(toURI.toString());
 				return true;
 			}
 			if (AbortedException.isConnectionReset(throwable) && shouldRetry) {
