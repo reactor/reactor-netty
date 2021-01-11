@@ -38,6 +38,7 @@ import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -1463,6 +1464,29 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		// ReturnValueIgnored is deliberate
 		tcpMapper.apply(tcpClient);
 		return tcpClient.httpClient;
+	}
+
+	/**
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop group</li>
+	 *     <li>an initialization of the host name resolver</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 *     <li>loads the necessary native libraries for the security if there is such</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code first request} absorbs the extra time needed to load resources.
+	 *
+	 * @return a {@link Mono} representing the completion of the warmup
+	 * @since 1.0.3
+	 */
+	@Override
+	public Mono<Void> warmup() {
+		return Mono.when(
+				super.warmup(),
+				// When the URL scheme is HTTPS and there is no security configured,
+				// the default security will be used thus always try to load the OpenSsl natives
+				// see HttpClientConnect.MonoHttpConnect#subscribe
+				Mono.fromRunnable(OpenSsl::version));
 	}
 
 	/**

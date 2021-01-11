@@ -309,4 +309,26 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		}
 		return dup;
 	}
+
+	/**
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop group</li>
+	 *     <li>an initialization of the host name resolver</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code connect operation} absorbs the extra time needed to initialize and
+	 * load the resources.
+	 *
+	 * @return a {@link Mono} representing the completion of the warmup
+	 * @since 1.0.3
+	 */
+	public Mono<Void> warmup() {
+		return Mono.fromRunnable(() -> {
+			configuration().eventLoopGroup();
+
+			// By default the host name resolver uses the event loop group configured on client level
+			configuration().resolverInternal();
+		});
+	}
 }

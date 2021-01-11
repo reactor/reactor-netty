@@ -27,6 +27,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.logging.LogLevel;
+import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
@@ -353,6 +355,31 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 		TcpClient dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
 		return dup;
+	}
+
+	/**
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop group</li>
+	 *     <li>an initialization of the host name resolver</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 *     <li>loads the necessary native libraries for the security if there is such</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code connect operation} absorbs the extra time needed to load resources.
+	 *
+	 * @return a {@link Mono} representing the completion of the warmup
+	 * @since 1.0.3
+	 */
+	@Override
+	public Mono<Void> warmup() {
+		return Mono.when(
+				super.warmup(),
+				Mono.fromRunnable(() -> {
+					SslProvider provider = configuration().sslProvider();
+					if (provider != null && !(provider.getSslContext() instanceof JdkSslContext)) {
+						OpenSsl.version();
+					}
+				}));
 	}
 
 	@Override

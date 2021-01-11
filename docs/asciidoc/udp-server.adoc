@@ -46,6 +46,25 @@ include::{examplesdir}/address/Application.java[lines=18..34]
 <2> Configures the `UDP` server port
 ====
 
+== Eager Initialization
+
+By default, the initialization of the `UdpServer` resources happens on demand. This means that the `bind
+operation` absorbs the extra time needed to initialize and load:
+
+ * the event loop group
+ * the native transport libraries (when native transport is used)
+
+When you need to preload these resources, you can configure the `UdpServer` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/warmup/Application.java
+----
+include::{examplesdir}/warmup/Application.java[lines=18..51]
+----
+<1> Initialize and load the event loop group and the native transport libraries
+====
+
 == Writing Data
 
 To send data to the remote peer, you must attach an I/O handler.

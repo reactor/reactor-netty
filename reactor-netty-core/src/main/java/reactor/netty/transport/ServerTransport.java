@@ -322,6 +322,27 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		return bindAddress(() -> AddressUtils.updatePort(configuration().bindAddress(), port));
 	}
 
+	/**
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop groups</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code bind operation} absorbs the extra time needed to load resources.
+	 *
+	 * @return a {@link Mono} representing the completion of the warmup
+	 * @since 1.0.3
+	 */
+	public Mono<Void> warmup() {
+		return Mono.fromRunnable(() -> {
+			// event loop group for the server
+			configuration().childEventLoopGroup();
+
+			// event loop group for the server selector
+			configuration().eventLoopGroup();
+		});
+	}
+
 	static final Logger log = Loggers.getLogger(ServerTransport.class);
 
 	static class Acceptor extends ChannelInboundHandlerAdapter {
