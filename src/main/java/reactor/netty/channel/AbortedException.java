@@ -28,6 +28,10 @@ import java.net.SocketException;
 public class AbortedException extends RuntimeException {
 	static final String CONNECTION_CLOSED_BEFORE_SEND = "Connection has been closed BEFORE send operation";
 
+	static final String CONNECTION_CLOSED_BEFORE_RESPONSE = "Connection has been closed BEFORE response, while sending request body";
+
+	static final String CONNECTION_PREMATURELY_CLOSED_BEFORE_RESPONSE = "Connection prematurely closed BEFORE response";
+
 	public AbortedException(String message) {
 		super(message);
 	}
@@ -56,8 +60,30 @@ public class AbortedException extends RuntimeException {
 		                                             .contains("Connection reset by peer"));
 	}
 
+	public static boolean isConnectionResetWithForcingRetry(Throwable err) {
+		return (err instanceof AbortedException && CONNECTION_CLOSED_BEFORE_SEND.equals(err.getMessage())) ||
+				(err instanceof AbortedException && CONNECTION_CLOSED_BEFORE_RESPONSE.equals(err.getMessage())) ||
+				(err instanceof AbortedException && CONNECTION_PREMATURELY_CLOSED_BEFORE_RESPONSE.equals(err.getMessage())) ||
+				(err instanceof IOException && (err.getMessage() == null ||
+						err.getMessage()
+								.contains("Broken pipe") ||
+						err.getMessage()
+								.contains("Connection reset by peer"))) ||
+				(err instanceof SocketException && err.getMessage() != null &&
+						err.getMessage()
+								.contains("Connection reset by peer"));
+	}
+
 	public static AbortedException beforeSend() {
 		return new AbortedException(CONNECTION_CLOSED_BEFORE_SEND);
+	}
+
+	public static AbortedException beforeResponse() {
+		return new AbortedException(CONNECTION_CLOSED_BEFORE_RESPONSE);
+	}
+
+	public static AbortedException prematurelyBeforeResponse() {
+		return new AbortedException(CONNECTION_PREMATURELY_CLOSED_BEFORE_RESPONSE);
 	}
 
 	private static final long serialVersionUID = 6091789064032301718L;
