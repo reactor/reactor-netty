@@ -15,6 +15,8 @@ jobs:
           java-version: 1.8
       - name: Build with Gradle
         run: ./gradlew clean check --no-daemon
-      - name: Codecov
+      - name: Upload coverage to Codecov
         if: success()
-        run: bash <(curl -s https://codecov.io/bash)
+        uses: codecov/codecov-action@v1
+        with:
+            files: ./reactor-netty-http/build/reports/jacoco/test/jacocoTestReport.xml,./reactor-netty-http-brave/build/reports/jacoco/test/jacocoTestReport.xml,./reactor-netty-core/build/reports/jacoco/test/jacocoTestReport.xml
