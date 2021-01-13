@@ -18,7 +18,11 @@ package reactor.netty.resources;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.kqueue.KQueue;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import reactor.core.publisher.Mono;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpResources;
@@ -26,6 +30,7 @@ import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 class DefaultLoopResourcesTest {
 
@@ -184,5 +189,19 @@ class DefaultLoopResourcesTest {
 			loop.disposeLater()
 			    .block(Duration.ofSeconds(5));
 		}
+	}
+
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	void testEpollIsAvailable() {
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
+		assertThat(Epoll.isAvailable()).isTrue();
+	}
+
+	@Test
+	@EnabledOnOs(OS.MAC)
+	void testKQueueIsAvailable() {
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
+		assertThat(KQueue.isAvailable()).isTrue();
 	}
 }

@@ -209,6 +209,9 @@ subprojects {
 		systemProperty("io.netty.leakDetection.level", "paranoid")
 		systemProperty("reactor.netty.pool.getPermitsSamplingRate", "0.5")
 		systemProperty("reactor.netty.pool.returnPermitsSamplingRate", "0.5")
+		if (project.hasProperty("forceTransport")) {
+			systemProperty("forceTransport", forceTransport)
+		}
 		scanForTestClasses = false
 		include '**/*Tests.*'
 		include '**/*Test.*'
