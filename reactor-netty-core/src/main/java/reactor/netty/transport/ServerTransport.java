@@ -219,6 +219,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * will be available via {@link Channel#config()}.
 	 * If the {@code value} is {@code null}, the attribute of the specified {@code key}
 	 * is removed.
+	 * Note: Setting {@link ChannelOption#AUTO_READ} option will be ignored. It is configured to be {@code false}.
 	 *
 	 * @param key the option key
 	 * @param value the option value - null to remove a key
@@ -231,7 +232,9 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		Objects.requireNonNull(key, "key");
 		// Reference comparison is deliberate
 		if (ChannelOption.AUTO_READ == key) {
-			log.error("ChannelOption.AUTO_READ is configured to be [false], it cannot be set to [{}]", value);
+			if (value instanceof Boolean && Boolean.TRUE.equals(value)) {
+				log.error("ChannelOption.AUTO_READ is configured to be [false], it cannot be set to [true]");
+			}
 			@SuppressWarnings("unchecked")
 			T dup = (T) this;
 			return dup;
