@@ -40,7 +40,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Encapsulate all necessary configuration for UDP client transport. The public API is read-only.
+ * Encapsulate all necessary configuration for UDP server transport. The public API is read-only.
  *
  * @author Violeta Georgieva
  * @since 1.0.0
