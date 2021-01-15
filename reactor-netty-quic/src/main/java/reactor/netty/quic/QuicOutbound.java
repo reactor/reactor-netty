@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-rootProject.name = 'reactor-netty'
-include 'reactor-netty-core'
-include 'reactor-netty-http'
-include 'reactor-netty-http-brave'
-include 'reactor-netty-quic'
-include 'reactor-netty-examples'
-include 'reactor-netty'
+package reactor.netty.quic;
+
+import io.netty.channel.Channel;
+import reactor.netty.NettyOutbound;
+
+/**
+ * An outbound-traffic API delegating to an underlying {@link Channel}.
+ *
+ * @author Violeta Georgieva
+ */
+public interface QuicOutbound extends NettyOutbound {
+}
