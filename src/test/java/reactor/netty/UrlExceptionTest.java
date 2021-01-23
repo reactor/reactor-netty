@@ -21,34 +21,33 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
+import reactor.test.StepVerifier;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.time.Duration;
 
-public class UrlExceptionTest {
+class UrlExceptionTest {
 
 	@Test
-	public void urlExceptionTest() {
-		try {
-			HttpClient.create()
-					.doOnError((httpClientRequest, throwable) -> {
+	void urlExceptionTest() {
+		HttpClient.create()
+				.doOnError((httpClientRequest, throwable) -> {
 
-					}, (httpClientResponse, throwable) -> {
+				}, (httpClientResponse, throwable) -> {
 
-					})
-					.request(HttpMethod.GET)
-					.uri(Mono.error(new IllegalArgumentException("URL cannot be resolved")))
-					.responseSingle((httpClientResponse, byteBufMono) -> {
-						HttpResponseStatus status = httpClientResponse.status();
-						if (status.code() != 200) {
-							return Mono.error(new IllegalStateException(status.toString()));
-						}
-						return byteBufMono.asString();
-					})
-					.block();
+				})
+				.request(HttpMethod.GET)
+				.uri(Mono.error(new IllegalArgumentException("URL cannot be resolved")))
+				.responseSingle((httpClientResponse, byteBufMono) -> {
+					HttpResponseStatus status = httpClientResponse.status();
+					if (status.code() != 200) {
+						return Mono.error(new IllegalStateException(status.toString()));
+					}
+					return byteBufMono.asString();
+				})
 
-		}
-		catch (IllegalArgumentException e){
-			assertThat(e.getMessage()).isEqualTo("URL cannot be resolved");
-		}
+				.as(StepVerifier::create)
+				.expectErrorMatches(t -> t instanceof IllegalArgumentException &&
+						"URL cannot be resolved".equals(t.getMessage()))
+				.verify(Duration.ofSeconds(5));
 	}
 }
