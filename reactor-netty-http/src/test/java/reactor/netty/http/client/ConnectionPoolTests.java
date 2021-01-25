@@ -110,156 +110,170 @@ class ConnectionPoolTests extends BaseHttpTest {
 
 	@Test
 	void testClientWithPort() {
-		HttpClient localClient = client.port(server1.port());
+		HttpClient localClient1 = client.port(server1.port());
+		HttpClient localClient2 = localClient1.port(server2.port());
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server2-ConnectionPoolTests",
-				localClient,
-				localClient.port(server2.port()));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithAddress() {
-		HttpClient localClient = client.remoteAddress(server1::address);
+		HttpClient localClient1 = client.remoteAddress(server1::address);
+		HttpClient localClient2 = localClient1.remoteAddress(server2::address);
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server2-ConnectionPoolTests",
-				localClient,
-				localClient.remoteAddress(server2::address));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithAttributes() {
-		HttpClient localClient =
+		HttpClient localClient1 =
 				client.port(server1.port())
 				      .attr(AttributeKey.valueOf("attr1-ConnectionPoolTests"), "");
+		HttpClient localClient2 = localClient1.attr(AttributeKey.valueOf("attr2-ConnectionPoolTests"), "");
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.attr(AttributeKey.valueOf("attr2-ConnectionPoolTests"), ""));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithChannelGroup() {
-		HttpClient localClient =
+		HttpClient localClient1 =
 				client.port(server1.port())
 				      .channelGroup(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE));
+		HttpClient localClient2 = localClient1.channelGroup(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE));
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.channelGroup(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithDoOnChannelInit() {
-		HttpClient localClient =
+		HttpClient localClient1 =
 				client.port(server1.port())
 				      .doOnChannelInit((observer, channel, address) -> {});
+		HttpClient localClient2 = localClient1.doOnChannelInit((observer, channel, address) -> {});
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.doOnChannelInit((observer, channel, address) -> {}));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithWiretap() {
-		HttpClient localClient =
+		HttpClient localClient1 =
 				client.port(server1.port())
 				      .wiretap(true);
+		HttpClient localClient2 = localClient1.wiretap("reactor.netty.ConnectionPoolTests");
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.wiretap("reactor.netty.ConnectionPoolTests"));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithRunOn() {
-		HttpClient localClient = client.port(server1.port());
+		HttpClient localClient1 = client.port(server1.port());
+		HttpClient localClient2 = localClient1.runOn(loop);
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.runOn(loop));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithRunOnPreferNativeFalse() {
-		HttpClient localClient = client.port(server1.port());
+		HttpClient localClient1 = client.port(server1.port());
+		HttpClient localClient2 = localClient1.runOn(loop, false);
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.runOn(loop, false));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithMetrics() {
-		HttpClient localClient =
+		HttpClient localClient1 =
 				client.port(server1.port())
 				      .metrics(true, Function.identity());
+		HttpClient localClient2 = localClient1.metrics(true, () -> metricsRecorder);
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.metrics(true, () -> metricsRecorder));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithObserver() {
-		HttpClient localClient =
+		HttpClient localClient1 =
 				client.port(server1.port())
 				      .observe((conn, state) -> {});
+		HttpClient localClient2 = localClient1.observe((conn, state) -> {});
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.observe((conn, state) -> {}));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithOptions() {
-		HttpClient localClient =
+		HttpClient localClient1 =
 				client.port(server1.port())
 				      .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
+		HttpClient localClient2 = localClient1.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000);
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithResolver() {
-		HttpClient localClient = client.port(server1.port());
+		HttpClient localClient1 = client.port(server1.port());
+		HttpClient localClient2 = localClient1.resolver(DefaultAddressResolverGroup.INSTANCE);
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.resolver(DefaultAddressResolverGroup.INSTANCE));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithCompress() {
-		HttpClient localClient = client.port(server1.port());
+		HttpClient localClient1 = client.port(server1.port());
+		HttpClient localClient2 = localClient1.compress(true);
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.compress(true));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithDecoder() {
-		HttpClient localClient = client.port(server1.port());
+		HttpClient localClient1 = client.port(server1.port());
+		HttpClient localClient2 = localClient1.httpResponseDecoder(spec -> spec.maxInitialLineLength(256));
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
-				localClient,
-				localClient.httpResponseDecoder(spec -> spec.maxInitialLineLength(256)));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
@@ -268,14 +282,15 @@ class ConnectionPoolTests extends BaseHttpTest {
 				SslContextBuilder.forClient()
 				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
 
-		HttpClient localClient =
+		HttpClient localClient1 =
 				client.port(server3.port())
 				      .secure(spec -> spec.sslContext(sslContextBuilder1));
+		HttpClient localClient2 = localClient1.protocol(HttpProtocol.H2);
 		checkExpectations(
 				"server3-ConnectionPoolTests",
 				"server3-ConnectionPoolTests",
-				localClient,
-				localClient.protocol(HttpProtocol.H2));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
@@ -288,30 +303,33 @@ class ConnectionPoolTests extends BaseHttpTest {
 				SslContextBuilder.forClient()
 				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
 
-		HttpClient localClient =
+		HttpClient localClient1 =
 				client.port(server4.port())
 				      .secure(spec -> spec.sslContext(sslContextBuilder1));
+		HttpClient localClient2 = localClient1.secure(spec -> spec.sslContext(sslContextBuilder2));
 		checkExpectations(
 				"server4-ConnectionPoolTests",
 				"server4-ConnectionPoolTests",
-				localClient,
-				localClient.secure(spec -> spec.sslContext(sslContextBuilder2)));
+				localClient1,
+				localClient2);
 	}
 
 	@Test
 	void testClientWithSecurity_2() {
-		HttpClient localClient =
+		HttpClient localClient1 =
 				client.port(server4.port())
 				      .secure(spec ->
 				          spec.sslContext(SslContextBuilder.forClient()
 				                                           .trustManager(InsecureTrustManagerFactory.INSTANCE)));
+		HttpClient localClient2 =
+				localClient1.secure(spec ->
+				    spec.sslContext(SslContextBuilder.forClient()
+				                                     .trustManager(InsecureTrustManagerFactory.INSTANCE)));
 		checkExpectations(
 				"server4-ConnectionPoolTests",
 				"server4-ConnectionPoolTests",
-				localClient,
-				localClient.secure(spec ->
-				               spec.sslContext(SslContextBuilder.forClient()
-				                                                .trustManager(InsecureTrustManagerFactory.INSTANCE))));
+				localClient1,
+				localClient2);
 	}
 
 	private void checkExpectations(String client1Response, String client2Response, HttpClient client1, HttpClient client2) {
