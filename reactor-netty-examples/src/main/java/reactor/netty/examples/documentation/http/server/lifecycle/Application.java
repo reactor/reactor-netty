@@ -13,28 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.documentation.udp.client.lifecycle;
+package reactor.netty.examples.documentation.http.server.lifecycle;
 
-import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
-import reactor.netty.Connection;
-import reactor.netty.udp.UdpClient;
-import java.time.Duration;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+import java.util.concurrent.TimeUnit;
 
 public class Application {
 
 	public static void main(String[] args) {
-		Connection connection =
-				UdpClient.create()
-				         .host("example.com")
-				         .port(80)
-				         .doOnConnected(conn -> conn.addHandler(new LineBasedFrameDecoder(8192))) //<1>
-				         .doOnChannelInit((observer, channel, remoteAddress) ->
-				             channel.pipeline()
-				                    .addFirst(new LoggingHandler("reactor.netty.examples")))      //<2>
-				         .connectNow(Duration.ofSeconds(30));
+		DisposableServer server =
+				HttpServer.create()
+				          .doOnConnection(conn ->
+				              conn.addHandler(new ReadTimeoutHandler(10, TimeUnit.SECONDS))) //<1>
+				          .doOnChannelInit((observer, channel, remoteAddress) ->
+				              channel.pipeline()
+				                     .addFirst(new LoggingHandler("reactor.netty.examples")))//<2>
+				          .bindNow();
 
-		connection.onDispose()
-		          .block();
+		server.onDispose()
+		      .block();
 	}
 }

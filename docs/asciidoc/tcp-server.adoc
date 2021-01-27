@@ -99,22 +99,28 @@ include::{examplesdir}/read/Application.java[lines=18..32]
 
 == Lifecycle Callbacks
 
-The following lifecycle callbacks are provided to let you extend the `TCP` server:
+The following lifecycle callbacks are provided to let you extend the `TcpServer`:
 
-* `doOnBind`: Invoked when the server channel is about to bind.
-* `doOnBound`: Invoked when the server channel is bound.
-* `doOnConnection`: Invoked when a remote client is connected
-* `doOnUnbound`: Invoked when the server channel is unbound.
+[width="100%",options="header"]
+|=======
+| Callback | Description
+| `doOnBind` | Invoked when the server channel is about to bind.
+| `doOnBound` | Invoked when the server channel is bound.
+| `doOnChannelInit` | Invoked when initializing the channel.
+| `doOnConnection` | Invoked when a remote client is connected
+| `doOnUnbound` | Invoked when the server channel is unbound.
+|=======
 
-The following example uses the `doOnConnection` callback:
+The following example uses the `doOnConnection` and `doOnChannelInit` callbacks:
 
 ====
 [source,java,indent=0]
 .{examplesdir}/lifecycle/Application.java
 ----
-include::{examplesdir}/lifecycle/Application.java[lines=18..35]
+include::{examplesdir}/lifecycle/Application.java[lines=18..39]
 ----
 <1> `Netty` pipeline is extended with `ReadTimeoutHandler` when a remote client is connected.
+<2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
 ====
 
 == TCP-level Configurations

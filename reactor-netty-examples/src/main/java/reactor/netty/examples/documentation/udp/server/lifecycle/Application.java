@@ -16,6 +16,7 @@
 package reactor.netty.examples.documentation.udp.server.lifecycle;
 
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.logging.LoggingHandler;
 import reactor.netty.Connection;
 import reactor.netty.udp.UdpServer;
 import java.time.Duration;
@@ -26,6 +27,9 @@ public class Application {
 		Connection server =
 				UdpServer.create()
 				         .doOnBound(conn -> conn.addHandler(new LineBasedFrameDecoder(8192))) //<1>
+				         .doOnChannelInit((observer, channel, remoteAddress) ->
+				             channel.pipeline()
+				                    .addFirst(new LoggingHandler("reactor.netty.examples")))  //<2>
 				         .bindNow(Duration.ofSeconds(30));
 
 		server.onDispose()

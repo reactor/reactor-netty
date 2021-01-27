@@ -99,21 +99,27 @@ include::{examplesdir}/read/Application.java[lines=18..47]
 
 == Lifecycle Callbacks
 
-The following lifecycle callbacks are provided to let you extend the `UDP` server:
+The following lifecycle callbacks are provided to let you extend the `UdpServer`:
 
-* `doOnBind`: Invoked when the server channel is about to bind.
-* `doOnBound`: Invoked when the server channel is bound.
-* `doOnUnbound`: Invoked when the server channel is unbound.
+[width="100%",options="header"]
+|=======
+| Callback | Description
+| `doOnBind` | Invoked when the server channel is about to bind.
+| `doOnBound` | Invoked when the server channel is bound.
+| `doOnChannelInit` | Invoked when initializing the channel.
+| `doOnUnbound` | Invoked when the server channel is unbound.
+|=======
 
-The following example uses the `doOnBound` method:
+The following example uses the `doOnBound` and `doOnChannelInit` callbacks:
 
 ====
 [source,java,indent=0]
 .{examplesdir}/lifecycle/Application.java
 ----
-include::{examplesdir}/lifecycle/Application.java[lines=18..34]
+include::{examplesdir}/lifecycle/Application.java[lines=18..39]
 ----
 <1> `Netty` pipeline is extended with `LineBasedFrameDecoder` when the server channel is bound.
+<2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
 ====
 
 == Connection Configuration

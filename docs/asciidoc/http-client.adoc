@@ -218,6 +218,42 @@ When this value is exceeded, a
 is raised.
 ====
 
+== Lifecycle Callbacks
+
+The following lifecycle callbacks are provided to let you extend the `HttpClient`.
+
+[width="100%",options="header"]
+|=======
+| Callback | Description
+| `doAfterRequest` | Invoked when the request has been sent.
+| `doAfterResolve` | Invoked after the remote address has been resolved successfully.
+| `doAfterResponseSuccess` | Invoked after the response has been fully received.
+| `doOnChannelInit` | Invoked when initializing the channel.
+| `doOnConnect` | Invoked when the channel is about to connect.
+| `doOnConnected` | Invoked after the channel has been connected.
+| `doOnDisconnected` | Invoked after the channel has been disconnected.
+| `doOnError` | Invoked when the request has not been sent and when the response has not been fully received.
+| `doOnRedirect` | Invoked when the response headers have been received, and the request is about to be redirected.
+| `doOnRequest` | Invoked when the request is about to be sent.
+| `doOnRequestError` | Invoked when the request has not been sent.
+| `doOnResolve` | Invoked when the remote address is about to be resolved.
+| `doOnResolveError` | Invoked in case the remote address hasn't been resolved successfully.
+| `doOnResponse` | Invoked after the response headers have been received.
+| `doOnResponseError` | Invoked when the response has not been fully received.
+|=======
+
+The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
+
+====
+[source,java,indent=0]
+.{examplesdir}/lifecycle/Application.java
+----
+include::{examplesdir}/lifecycle/Application.java[lines=18..39]
+----
+<1> `Netty` pipeline is extended with `ReadTimeoutHandler` when the channel has been connected.
+<2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
+====
+
 == TCP-level Configuration
 
 When you need configurations on a TCP level, you can use the following snippet

@@ -274,6 +274,32 @@ https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLo
 is raised.
 ====
 
+== Lifecycle Callbacks
+
+The following lifecycle callbacks are provided to let you extend the `HttpServer`:
+
+[width="100%",options="header"]
+|=======
+| Callback | Description
+| `doOnBind` | Invoked when the server channel is about to bind.
+| `doOnBound` | Invoked when the server channel is bound.
+| `doOnChannelInit` | Invoked when initializing the channel.
+| `doOnConnection` | Invoked when a remote client is connected
+| `doOnUnbound` | Invoked when the server channel is unbound.
+|=======
+
+The following example uses the `doOnConnection` and `doOnChannelInit` callbacks:
+
+====
+[source,java,indent=0]
+.{examplesdir}/lifecycle/Application.java
+----
+include::{examplesdir}/lifecycle/Application.java[lines=18..39]
+----
+<1> `Netty` pipeline is extended with `ReadTimeoutHandler` when a remote client is connected.
+<2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
+====
+
 == TCP-level Configuration
 
 When you need to change configuration on the TCP level, you can use the following snippet

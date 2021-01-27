@@ -13,28 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.documentation.udp.client.lifecycle;
+package reactor.netty.examples.documentation.http.client.lifecycle;
 
-import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
-import reactor.netty.Connection;
-import reactor.netty.udp.UdpClient;
-import java.time.Duration;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import reactor.netty.http.client.HttpClient;
+import java.util.concurrent.TimeUnit;
 
 public class Application {
 
 	public static void main(String[] args) {
-		Connection connection =
-				UdpClient.create()
-				         .host("example.com")
-				         .port(80)
-				         .doOnConnected(conn -> conn.addHandler(new LineBasedFrameDecoder(8192))) //<1>
-				         .doOnChannelInit((observer, channel, remoteAddress) ->
-				             channel.pipeline()
-				                    .addFirst(new LoggingHandler("reactor.netty.examples")))      //<2>
-				         .connectNow(Duration.ofSeconds(30));
+		HttpClient client =
+				HttpClient.create()
+				          .doOnConnected(conn ->
+				              conn.addHandler(new ReadTimeoutHandler(10, TimeUnit.SECONDS)))   //<1>
+				          .doOnChannelInit((observer, channel, remoteAddress) ->
+				              channel.pipeline()
+				                     .addFirst(new LoggingHandler("reactor.netty.examples"))); //<2>
 
-		connection.onDispose()
-		          .block();
+		client.get()
+		      .uri("http://example.com/")
+		      .response()
+		      .block();
 	}
 }
