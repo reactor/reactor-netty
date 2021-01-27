@@ -27,8 +27,10 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -2551,5 +2553,40 @@ class HttpClientTest extends BaseHttpTest {
 
 		assertThat(m.get()).isNotNull();
 		assertThat(m.get().idleSize()).isEqualTo(expectation);
+	}
+
+	@Test
+	void testIssue1478() throws Exception {
+		disposableServer =
+				HttpServer.create()
+				          .handle((req, res) -> res.addHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+				                                   .status(HttpResponseStatus.BAD_REQUEST)
+				                                   .send(req.receive()
+				                                            .retain()
+				                                            .next()))
+				          .bindNow();
+
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+
+		Path largeFileParent = largeFile.getParent();
+		assertThat(largeFileParent).isNotNull();
+
+		Path tempFile = Files.createTempFile(largeFileParent, "temp", ".txt");
+		tempFile.toFile().deleteOnExit();
+
+		byte[] fileBytes = Files.readAllBytes(largeFile);
+		for (int i = 0; i < 1000; i++) {
+			Files.write(tempFile, fileBytes, StandardOpenOption.APPEND);
+		}
+
+		HttpClient.create()
+		          .port(disposableServer.port())
+		          .post()
+		          .send((req, out) -> out.sendFile(tempFile))
+		          .responseSingle((res, bytes) -> Mono.just(res.status().code()))
+		          .as(StepVerifier::create)
+		          .expectNext(400)
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(5));
 	}
 }

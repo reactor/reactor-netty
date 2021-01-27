@@ -577,6 +577,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	protected void onHeadersSent() {
+		//noop
+	}
+
+	@Override
 	protected void onOutboundComplete() {
 		if (isWebsocket()) {
 			return;

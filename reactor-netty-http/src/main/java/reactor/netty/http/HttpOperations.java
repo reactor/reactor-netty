@@ -197,7 +197,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					throw e;
 				}
 
-				return channel().writeAndFlush(msg);
+				return channel().writeAndFlush(msg)
+				                .addListener(f -> onHeadersSent());
 			}
 			else {
 				return channel().newSucceededFuture();
@@ -208,6 +209,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	protected abstract void beforeMarkSentHeaders();
 
 	protected abstract void afterMarkSentHeaders();
+
+	protected abstract void onHeadersSent();
 
 	protected abstract HttpMessage newFullBodyMessage(ByteBuf body);
 

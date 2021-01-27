@@ -525,6 +525,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	protected void onHeadersSent() {
+		channel().read();
+		if (channel().parent() != null) {
+			channel().parent().read();
+		}
+	}
+
+	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	protected void onOutboundComplete() {
 		if (isWebsocket() || isInboundCancelled()) {
