@@ -88,6 +88,7 @@ If you want to raise an issue, please follow the recommendations below:
   the version of `Reactor Netty` that you are using, as well as your `Operating System` and
   `JVM` version.
 * If you want to raise a security vulnerability, please review our [Security Policy](https://github.com/reactor/reactor-netty/security/policy) for more details.
+* More about [Support and Deprecation policies](https://github.com/reactor/.github/blob/master/SUPPORT.adoc)
 
 ## Building from Source
 You don't need to build from source to use `Reactor Netty` (binaries in
