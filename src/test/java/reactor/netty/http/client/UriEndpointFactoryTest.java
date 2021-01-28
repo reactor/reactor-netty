@@ -149,15 +149,15 @@ public class UriEndpointFactoryTest {
 
 	@Test
 	public void createUriEndpointRelativeNoLeadingSlash() {
-		String test1 = this.builder.build()
-				.createUriEndpoint("example.com:8080/bar", false)
+		String test1 = this.builder.sslSupport().build()
+				.createUriEndpoint("example.com:8443/bar", false)
 				.toExternalForm();
 		String test2 = this.builder.build()
-				.createUriEndpoint("example.com:8080/bar", true)
+				.createUriEndpoint("example.com:8443/bar", true)
 				.toExternalForm();
 
-		assertThat(test1).isEqualTo("http://example.com:8080/bar");
-		assertThat(test2).isEqualTo("ws://example.com:8080/bar");
+		assertThat(test1).isEqualTo("https://example.com:8443/bar");
+		assertThat(test2).isEqualTo("wss://example.com:8443/bar");
 	}
 
 	@Test
@@ -217,12 +217,13 @@ public class UriEndpointFactoryTest {
 	public void createUriEndpointRelativeWithPort() {
 		String test = this.builder
 				.host("example.com")
-				.port(80)
+				.port(443)
+				.sslSupport()
 				.build()
 				.createUriEndpoint("/foo", false)
 				.toExternalForm();
 
-		assertThat(test).isEqualTo("http://example.com/foo");
+		assertThat(test).isEqualTo("https://example.com/foo");
 	}
 
 	@Test

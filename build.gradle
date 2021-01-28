@@ -37,6 +37,7 @@ plugins {
   id "com.jfrog.artifactory" version "4.16.1" apply false
   id "de.undercouch.download" version "4.1.1"
   id 'me.champeau.gradle.japicmp' version '0.2.9'
+  id 'io.spring.nohttp' version '0.0.5.RELEASE'
 }
 
 description = 'Reactive Streams Netty driver'
@@ -97,6 +98,10 @@ ext {
 	]
 }
 
+nohttp {
+	source.exclude "src/docs/asciidoc/highlight/**"
+	source.exclude "**/build/**"
+}
 
 configure(rootProject) { project ->
   group = 'io.projectreactor.netty'

@@ -73,7 +73,7 @@ import reactor.util.Metrics;
  * <pre>
  * {@code
  * HttpClient.create()
- *           .baseUrl("http://example.com")
+ *           .baseUrl("https://example.com")
  *           .get()
  *           .response()
  *           .block();
@@ -81,14 +81,14 @@ import reactor.util.Metrics;
  * {@code
  * HttpClient.create()
  *           .post()
- *           .uri("http://example.com")
+ *           .uri("https://example.com")
  *           .send(Flux.just(bb1, bb2, bb3))
  *           .responseSingle((res, content) -> Mono.just(res.status().code()))
  *           .block();
  * }
  * {@code
  * HttpClient.create()
- *           .baseUri("http://example.com")
+ *           .baseUri("https://example.com")
  *           .post()
  *           .send(ByteBufFlux.fromString(flux))
  *           .responseSingle((res, content) -> Mono.just(res.status().code()))

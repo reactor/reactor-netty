@@ -25,10 +25,10 @@ public class Application {
 
     public static void main(String[] args) {
         HttpClientResponse response =
-                HttpClient.create()                   <1>
-                          .get()                      <2>
-                          .uri("http://example.com/") <3>
-                          .response()                 <4>
+                HttpClient.create()                    <1>
+                          .get()                       <2>
+                          .uri("https://example.com/") <3>
+                          .response()                  <4>
                           .block();
     }
 }
@@ -123,7 +123,7 @@ public class Application {
         HttpClientResponse response =
                 HttpClient.create()
                           .post()
-                          .uri("http://example.com/")
+                          .uri("https://example.com/")
                           .send(ByteBufFlux.fromString(Mono.just("hello"))) <1>
                           .response()
                           .block();
@@ -154,7 +154,7 @@ public class Application {
                 HttpClient.create()
                           .headers(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, 5)) <1>
                           .post()
-                          .uri("http://example.com/")
+                          .uri("https://example.com/")
                           .send(ByteBufFlux.fromString(Mono.just("hello")))
                           .response()
                           .block();
@@ -183,7 +183,7 @@ public class Application {
                 HttpClient.create()
                           .compress(true)
                           .get()
-                          .uri("http://example.com/")
+                          .uri("https://example.com/")
                           .response()
                           .block();
     }
@@ -216,7 +216,7 @@ public class Application {
                 HttpClient.create()
                           .followRedirect(true)
                           .get()
-                          .uri("http://example.com/")
+                          .uri("https://example.com/")
                           .response()
                           .block();
     }
@@ -241,7 +241,7 @@ public class Application {
         String response =
                 HttpClient.create()
                           .get()
-                          .uri("http://example.com/")
+                          .uri("https://example.com/")
                           .responseContent() <1>
                           .aggregate()       <2>
                           .asString()        <3>
@@ -272,7 +272,7 @@ public class Application {
         String response =
                 HttpClient.create()
                           .get()
-                          .uri("http://example.com/")
+                          .uri("https://example.com/")
                           .responseSingle((resp, bytes) -> {
                               System.out.println(resp.status()); <1>
                               return bytes.asString();
@@ -325,7 +325,7 @@ public class Application {
                 HttpClient.create()
                         .httpResponseDecoder(spec -> spec.maxHeaderSize(16384)) <1>
                         .get()
-                        .uri("http://example.com/")
+                        .uri("https://example.com/")
                         .responseContent()
                           .aggregate()
                           .asString()
@@ -359,7 +359,7 @@ public class Application {
                           .tcpConfiguration(tcpClient ->
                                   tcpClient.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000))
                           .get()
-                          .uri("http://example.com/")
+                          .uri("https://example.com/")
                           .response()
                           .block();
     }
@@ -389,7 +389,7 @@ public class Application {
                 HttpClient.create()
                           .wiretap(true) <1>
                           .get()
-                          .uri("http://example.com/")
+                          .uri("https://example.com/")
                           .response()
                           .block();
     }
@@ -525,12 +525,12 @@ public class Application {
                           }); <3>
 
         client.get()
-              .uri("http://httpbin.org/stream/2")
+              .uri("https://httpbin.org/stream/2")
               .responseContent()
               .blockLast();
 
         client.get()
-              .uri("http://httpbin.org/bytes/1024")
+              .uri("https://httpbin.org/bytes/1024")
               .responseContent()
               .blockLast();
     }
