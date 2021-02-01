@@ -30,6 +30,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.TransportConfig;
+import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -66,8 +67,8 @@ class HttpResourcesTest {
 			@Override
 			public Mono<? extends Connection> acquire(TransportConfig config,
 					ConnectionObserver observer,
-					Supplier<? extends SocketAddress> remoteAddress,
-					AddressResolverGroup<?> resolverGroup) {
+					@Nullable Supplier<? extends SocketAddress> remoteAddress,
+					@Nullable AddressResolverGroup<?> resolverGroup) {
 				return Mono.never();
 			}
 

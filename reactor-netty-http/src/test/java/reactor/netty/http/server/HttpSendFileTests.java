@@ -53,6 +53,7 @@ import reactor.core.publisher.SignalType;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyOutbound;
 import reactor.netty.http.client.HttpClient;
+import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -232,7 +233,7 @@ class HttpSendFileTests extends BaseHttpTest {
 	}
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression,
-			int compressionSize, BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate) {
+			int compressionSize, @Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate) {
 		assertSendFile(fn, compression, compressionSize, compressionPredicate,
 		               body ->
 		                   assertThat(body).startsWith("This is an UTF-8 file that is larger than 1024 bytes. "
@@ -242,7 +243,7 @@ class HttpSendFileTests extends BaseHttpTest {
 	}
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression, int compressionSize,
-			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate, Consumer<String> bodyAssertion) {
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate, Consumer<String> bodyAssertion) {
 		HttpServer server = createServer();
 		if (compressionPredicate != null) {
 			server = server.compress(compressionPredicate);
@@ -299,7 +300,7 @@ class HttpSendFileTests extends BaseHttpTest {
 	}
 
 	private void doTestSendFileAsync(BiFunction<? super HttpServerRequest, ? super
-			HttpServerResponse, ? extends Publisher<Void>> fn, int chunk, byte[] expectedContent) throws IOException, URISyntaxException {
+			HttpServerResponse, ? extends Publisher<Void>> fn, int chunk, @Nullable byte[] expectedContent) throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		Path largeFileParent = largeFile.getParent();
 		assertThat(largeFileParent).isNotNull();

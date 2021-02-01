@@ -292,9 +292,7 @@ class WebsocketTest extends BaseHttpTest {
 	void simpleSubprotocolServerNotSupported() {
 		disposableServer = createServer()
 		                       .handle((in, out) -> out.sendWebsocket(
-		                               (i, o) -> {
-		                                   return o.sendString(Mono.just("test"));
-		                               },
+		                               (i, o) -> o.sendString(Mono.just("test")),
 		                               WebsocketServerSpec.builder().protocols("protoA,protoB").build()))
 		                       .bindNow();
 

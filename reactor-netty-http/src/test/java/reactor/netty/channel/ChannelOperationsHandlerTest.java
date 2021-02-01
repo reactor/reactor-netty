@@ -45,6 +45,7 @@ import reactor.netty.http.client.HttpClient;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -70,7 +71,7 @@ class ChannelOperationsHandlerTest extends BaseHttpTest {
 		doTestPublisherSenderOnCompleteFlushInProgress(true, new WriteTimeoutHandler(1));
 	}
 
-	private void doTestPublisherSenderOnCompleteFlushInProgress(boolean useScheduler, ChannelHandler handler) {
+	private void doTestPublisherSenderOnCompleteFlushInProgress(boolean useScheduler, @Nullable ChannelHandler handler) {
 		AtomicInteger counter = new AtomicInteger();
 		disposableServer =
 				createServer()
@@ -85,7 +86,7 @@ class ChannelOperationsHandlerTest extends BaseHttpTest {
 
 		Flux<String> flux = Flux.range(1, 257).map(count -> count + "\n");
 		if (useScheduler) {
-			flux.publishOn(Schedulers.single());
+			flux = flux.publishOn(Schedulers.single());
 		}
 		Mono<Integer> code =
 				createClient(disposableServer.port())

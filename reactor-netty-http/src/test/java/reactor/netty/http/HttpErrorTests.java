@@ -36,10 +36,9 @@ class HttpErrorTests extends BaseHttpTest {
 		disposableServer = createServer()
 		                              .route(httpServerRoutes -> httpServerRoutes.get(
 				                                "/",
-				                                (httpServerRequest, httpServerResponse) -> {
-					                                return httpServerResponse.sendString(
-							                                Mono.error(new IllegalArgumentException("test")));
-				                                }))
+				                                (httpServerRequest, httpServerResponse) ->
+					                                httpServerResponse.sendString(
+							                                Mono.error(new IllegalArgumentException("test")))))
 		                                    .bindNow(Duration.ofSeconds(30));
 
 		HttpClient client = createClient(disposableServer.port());

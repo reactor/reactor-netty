@@ -44,6 +44,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.AddressUtils;
+import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -238,12 +239,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 	@Test
 	void customForwardedHandlerForMultipleHost() {
 		testClientRequest(
-				clientRequestHeaders -> {
-					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com");
-				},
-				serverRequest -> {
-					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com");
-				},
+				clientRequestHeaders ->
+					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com"),
+				serverRequest ->
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com"),
 				(connectionInfo, request) -> {
 					String hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
 					if (hostHeader != null) {
@@ -530,7 +529,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverRequestConsumer,
-			BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Function<HttpClient, HttpClient> clientConfigFunction,
 			Function<HttpServer, HttpServer> serverConfigFunction,
 			boolean useHttps) {

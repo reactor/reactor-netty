@@ -107,6 +107,7 @@ import reactor.netty.transport.TransportConfig;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
@@ -830,7 +831,7 @@ class HttpClientTest extends BaseHttpTest {
 		return createHttpClientForContextWithAddress(null);
 	}
 
-	private HttpClient createHttpClientForContextWithAddress(ConnectionProvider pool) {
+	private HttpClient createHttpClientForContextWithAddress(@Nullable ConnectionProvider pool) {
 		return createClient(pool, disposableServer::address);
 	}
 
@@ -838,7 +839,7 @@ class HttpClientTest extends BaseHttpTest {
 		return createHttpClientForContextWithPort(null);
 	}
 
-	private HttpClient createHttpClientForContextWithPort(ConnectionProvider pool) {
+	private HttpClient createHttpClientForContextWithPort(@Nullable ConnectionProvider pool) {
 		return createClient(pool, disposableServer.port());
 	}
 
@@ -2337,7 +2338,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	private void checkExpectationsIssue1031(HttpClientInfos info, String expectedUri, int expectedRedirections,
-			String expectedResourceUri, String expectedLocation) {
+			String expectedResourceUri, @Nullable String expectedLocation) {
 		assertThat(info).isNotNull();
 		assertThat(info.method()).isEqualTo(HttpMethod.GET);
 		assertThat(info.uri()).isEqualTo(expectedUri);

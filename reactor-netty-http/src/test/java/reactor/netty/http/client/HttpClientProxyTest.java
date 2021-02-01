@@ -32,6 +32,7 @@ import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyPipeline;
 import reactor.netty.transport.ProxyProvider;
 import reactor.test.StepVerifier;
+import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import java.net.SocketAddress;
@@ -234,7 +235,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 
 	private Mono<Tuple2<String, HttpHeaders>>  sendRequest(
 			Consumer<? super ProxyProvider.TypeSpec> proxyOptions,
-			Supplier<? extends SocketAddress> connectAddressSupplier,
+			@Nullable Supplier<? extends SocketAddress> connectAddressSupplier,
 			String uri,
 			boolean wiretap) {
 		return sendRequest(proxyOptions, connectAddressSupplier, uri, wiretap, false);
@@ -242,7 +243,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 
 	private Mono<Tuple2<String, HttpHeaders>>  sendRequest(
 			Consumer<? super ProxyProvider.TypeSpec> proxyOptions,
-			Supplier<? extends SocketAddress> connectAddressSupplier,
+			@Nullable Supplier<? extends SocketAddress> connectAddressSupplier,
 			String uri,
 			boolean wiretap,
 			boolean metricsEnabled) {
