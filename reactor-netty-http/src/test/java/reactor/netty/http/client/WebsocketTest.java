@@ -1286,4 +1286,96 @@ class WebsocketTest extends BaseHttpTest {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> ops.sendString(null, Charset.defaultCharset()));
 	}
+
+	@Test
+	void testIssue1485_CloseFrameSentByClient() throws Exception {
+		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
+		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
+
+		CountDownLatch latch = new CountDownLatch(2);
+		disposableServer =
+				createServer()
+				        .handle((req, res) ->
+				            res.sendWebsocket((in, out) -> {
+				                in.receiveCloseStatus()
+				                  .doOnNext(status -> {
+				                      statusServer.set(status);
+				                      latch.countDown();
+				                  })
+				                  .subscribe();
+				                return in.receive().then();
+				            }))
+				        .bindNow();
+
+		createClient(disposableServer.port())
+		        .websocket()
+		        .uri("/")
+		        .handle((in, out) -> {
+		            in.receiveCloseStatus()
+		              .doOnNext(status -> {
+		                  statusClient.set(status);
+		                  latch.countDown();
+		              })
+		              .subscribe();
+		            return out.sendObject(new CloseWebSocketFrame())
+		                      .then(in.receive().then());
+		        })
+		        .blockLast(Duration.ofSeconds(5));
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+		assertThat(statusClient.get())
+				.isNotNull()
+				.isEqualTo(WebSocketCloseStatus.EMPTY);
+
+		assertThat(statusServer.get())
+				.isNotNull()
+				.isEqualTo(WebSocketCloseStatus.EMPTY);
+	}
+
+	@Test
+	void testIssue1485_CloseFrameSentByServer() throws Exception {
+		AtomicReference<WebSocketCloseStatus> statusServer = new AtomicReference<>();
+		AtomicReference<WebSocketCloseStatus> statusClient = new AtomicReference<>();
+
+		CountDownLatch latch = new CountDownLatch(2);
+		disposableServer =
+				createServer()
+				        .handle((req, res) ->
+				            res.sendWebsocket((in, out) -> {
+				                in.receiveCloseStatus()
+				                  .doOnNext(status -> {
+				                      statusServer.set(status);
+				                      latch.countDown();
+				                  })
+				                  .subscribe();
+				                return out.sendObject(new CloseWebSocketFrame())
+				                          .then(in.receive().then());
+				            }))
+				        .bindNow();
+
+		createClient(disposableServer.port())
+		        .websocket()
+		        .uri("/")
+		        .handle((in, out) -> {
+		            in.receiveCloseStatus()
+		              .doOnNext(status -> {
+		                  statusClient.set(status);
+		                  latch.countDown();
+		              })
+		              .subscribe();
+		            return in.receive();
+		        })
+		        .blockLast(Duration.ofSeconds(5));
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+		assertThat(statusClient.get())
+				.isNotNull()
+				.isEqualTo(WebSocketCloseStatus.EMPTY);
+
+		assertThat(statusServer.get())
+				.isNotNull()
+				.isEqualTo(WebSocketCloseStatus.EMPTY);
+	}
 }
