@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeAll;
 import reactor.netty.http.client.HttpClient;
 
 class HttpsSendFileTests extends HttpSendFileTests {
+
 	static SelfSignedCertificate ssc;
 
 	@BeforeAll

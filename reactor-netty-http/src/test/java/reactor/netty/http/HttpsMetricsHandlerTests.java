@@ -41,7 +41,8 @@ import static reactor.netty.Metrics.URI;
  * @author Violeta Georgieva
  */
 class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
-	private static SelfSignedCertificate ssc;
+
+	static SelfSignedCertificate ssc;
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {

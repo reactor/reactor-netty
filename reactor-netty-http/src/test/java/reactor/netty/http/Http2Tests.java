@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -34,6 +35,7 @@ import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
 import java.io.IOException;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -64,6 +66,13 @@ class Http2Tests extends BaseHttpTest {
 			"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
 			"via HttpClient#noSSL()";
 
+	static SelfSignedCertificate ssc;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
+
 	@Test
 	void testHttpNoSslH2Fails() {
 		StepVerifier.create(
@@ -75,9 +84,8 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testHttpSslH2CFails() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	void testHttpSslH2CFails() {
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 
 		StepVerifier.create(
 		        createServer()
@@ -180,8 +188,7 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	void doTestMaxActiveStreams(HttpClient baseClient, int maxActiveStreams, int expectedOnNext, int expectedOnError) throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		disposableServer =
@@ -241,12 +248,12 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testConcurrentStreamsH2_DefaultPool() throws Exception {
+	void testConcurrentStreamsH2_DefaultPool() {
 		doTestConcurrentStreams(HttpClient.create(), true, HttpProtocol.H2);
 	}
 
 	@Test
-	void testConcurrentStreamsH2_CustomPool() throws Exception {
+	void testConcurrentStreamsH2_CustomPool() {
 		ConnectionProvider provider = ConnectionProvider.create("testConcurrentStreams", 1);
 		doTestConcurrentStreams(HttpClient.create(provider), true, HttpProtocol.H2);
 		provider.disposeLater()
@@ -254,17 +261,17 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testConcurrentStreamsH2_NoPool() throws Exception {
+	void testConcurrentStreamsH2_NoPool() {
 		doTestConcurrentStreams(HttpClient.newConnection(), true, HttpProtocol.H2);
 	}
 
 	@Test
-	void testConcurrentStreamsH2C_DefaultPool() throws Exception {
+	void testConcurrentStreamsH2C_DefaultPool() {
 		doTestConcurrentStreams(HttpClient.create(), false, HttpProtocol.H2C);
 	}
 
 	@Test
-	void testConcurrentStreamsH2C_CustomPool() throws Exception {
+	void testConcurrentStreamsH2C_CustomPool() {
 		ConnectionProvider provider = ConnectionProvider.create("testConcurrentStreams", 1);
 		doTestConcurrentStreams(HttpClient.create(provider), false, HttpProtocol.H2C);
 		provider.disposeLater()
@@ -272,17 +279,17 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testConcurrentStreamsH2C_NoPool() throws Exception {
+	void testConcurrentStreamsH2C_NoPool() {
 		doTestConcurrentStreams(HttpClient.newConnection(), false, HttpProtocol.H2C);
 	}
 
 	@Test
-	void testConcurrentStreamsH2CUpgrade_DefaultPool() throws Exception {
+	void testConcurrentStreamsH2CUpgrade_DefaultPool() {
 		doTestConcurrentStreams(HttpClient.create(), false, HttpProtocol.H2C, HttpProtocol.HTTP11);
 	}
 
 	@Test
-	void testConcurrentStreamsH2CUpgrade_CustomPool() throws Exception {
+	void testConcurrentStreamsH2CUpgrade_CustomPool() {
 		ConnectionProvider provider = ConnectionProvider.create("testConcurrentStreamsH2CUpgrade", 1);
 		doTestConcurrentStreams(HttpClient.create(provider), false, HttpProtocol.H2C, HttpProtocol.HTTP11);
 		provider.disposeLater()
@@ -290,18 +297,18 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testConcurrentStreamsH2CUpgrade_NoPool() throws Exception {
+	void testConcurrentStreamsH2CUpgrade_NoPool() {
 		doTestConcurrentStreams(HttpClient.newConnection(), false, HttpProtocol.H2C, HttpProtocol.HTTP11);
 	}
 
 	@Test
-	void testConcurrentStreamsNegotiatedProtocolHTTP11_DefaultPool() throws Exception {
+	void testConcurrentStreamsNegotiatedProtocolHTTP11_DefaultPool() {
 		doTestConcurrentStreams(HttpClient.create(), true, new HttpProtocol[]{HttpProtocol.HTTP11},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
 	}
 
 	@Test
-	void testConcurrentStreamsNegotiatedProtocolHTTP11_CustomPool() throws Exception {
+	void testConcurrentStreamsNegotiatedProtocolHTTP11_CustomPool() {
 		ConnectionProvider provider = ConnectionProvider.create("testConcurrentStreamsH2CUpgrade", 1);
 		doTestConcurrentStreams(HttpClient.create(provider), true, new HttpProtocol[]{HttpProtocol.HTTP11},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
@@ -310,19 +317,19 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testConcurrentStreamsNegotiatedProtocolHTTP11_NoPool() throws Exception {
+	void testConcurrentStreamsNegotiatedProtocolHTTP11_NoPool() {
 		doTestConcurrentStreams(HttpClient.newConnection(), true, new HttpProtocol[]{HttpProtocol.HTTP11},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
 	}
 
 	@Test
-	void testConcurrentStreamsNegotiatedProtocolH2_DefaultPool() throws Exception {
+	void testConcurrentStreamsNegotiatedProtocolH2_DefaultPool() {
 		doTestConcurrentStreams(HttpClient.create(), true, new HttpProtocol[]{HttpProtocol.H2},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
 	}
 
 	@Test
-	void testConcurrentStreamsNegotiatedProtocolH2_CustomPool() throws Exception {
+	void testConcurrentStreamsNegotiatedProtocolH2_CustomPool() {
 		ConnectionProvider provider = ConnectionProvider.create("testConcurrentStreams", 1);
 		doTestConcurrentStreams(HttpClient.create(provider), true, new HttpProtocol[]{HttpProtocol.H2},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
@@ -331,19 +338,18 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testConcurrentStreamsNegotiatedProtocolH2_NoPool() throws Exception {
+	void testConcurrentStreamsNegotiatedProtocolH2_NoPool() {
 		doTestConcurrentStreams(HttpClient.newConnection(), true, new HttpProtocol[]{HttpProtocol.H2},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
 	}
 
-	private void doTestConcurrentStreams(HttpClient baseClient, boolean isSecured, HttpProtocol... protocols) throws Exception {
+	private void doTestConcurrentStreams(HttpClient baseClient, boolean isSecured, HttpProtocol... protocols) {
 		doTestConcurrentStreams(baseClient, isSecured, protocols, protocols);
 	}
 
 	private void doTestConcurrentStreams(HttpClient baseClient, boolean isSecured,
-			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 
@@ -387,9 +393,8 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testHttp2ForMemoryLeaks() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	void testHttp2ForMemoryLeaks() {
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 
@@ -464,20 +469,19 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testMonoRequestBodySentAsFullRequest_Flux() throws Exception {
+	void testMonoRequestBodySentAsFullRequest_Flux() {
 		// sends the message and then last http content
 		doTestMonoRequestBodySentAsFullRequest(ByteBufFlux.fromString(Mono.just("test")), 2);
 	}
 
 	@Test
-	void testMonoRequestBodySentAsFullRequest_Mono() throws Exception {
+	void testMonoRequestBodySentAsFullRequest_Mono() {
 		// sends "full" request
 		doTestMonoRequestBodySentAsFullRequest(ByteBufMono.fromString(Mono.just("test")), 1);
 	}
 
-	private void doTestMonoRequestBodySentAsFullRequest(Publisher<? extends ByteBuf> body, int expectedMsg) throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	private void doTestMonoRequestBodySentAsFullRequest(Publisher<? extends ByteBuf> body, int expectedMsg) {
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 

@@ -84,6 +84,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -123,6 +124,13 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 class HttpClientTest extends BaseHttpTest {
 
 	static final Logger log = Loggers.getLogger(HttpClientTest.class);
+
+	static SelfSignedCertificate ssc;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
 
 	@Test
 	void abort() {
@@ -509,8 +517,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void sslExchangeRelativeGet() throws CertificateException, SSLException {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
+	void sslExchangeRelativeGet() throws SSLException {
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
 		SslContext sslClient = SslContextBuilder.forClient()
@@ -536,8 +543,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void sslExchangeAbsoluteGet() throws CertificateException, SSLException {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
+	void sslExchangeAbsoluteGet() throws SSLException {
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient()
 		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
@@ -559,10 +565,8 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void secureSendFile()
-			throws CertificateException, SSLException, URISyntaxException {
+	void secureSendFile() throws SSLException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient()
 		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
@@ -885,10 +889,9 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue473() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
+	void testIssue473() {
 		SslContextBuilder serverSslContextBuilder =
-				SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+				SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 		disposableServer =
 				createServer()
 				          .secure(spec -> spec.sslContext(serverSslContextBuilder))
@@ -905,12 +908,11 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue407_1() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
+	void testIssue407_1() {
 		disposableServer =
 				createServer()
 				          .secure(spec -> spec.sslContext(
-				                  SslContextBuilder.forServer(cert.certificate(), cert.privateKey())))
+				                  SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
 				          .bindNow(Duration.ofSeconds(30));
 
@@ -968,12 +970,11 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue407_2() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
+	void testIssue407_2() {
 		disposableServer =
 				createServer()
 				          .secure(spec -> spec.sslContext(
-				                  SslContextBuilder.forServer(cert.certificate(), cert.privateKey())))
+				                  SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
 				          .bindNow(Duration.ofSeconds(30));
 
@@ -1201,7 +1202,6 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	void testExplicitEmptyBodyOnGetWorks() throws Exception {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
 
@@ -1679,55 +1679,55 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue719_TEWithTextNoSSL() throws Exception {
+	void testIssue719_TEWithTextNoSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Transfer-Encoding", "chunked"), false);
 	}
 
 	@Test
-	void testIssue719_CLWithTextNoSSL() throws Exception {
+	void testIssue719_CLWithTextNoSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Content-Length", "4"), false);
 	}
 
 	@Test
-	void testIssue719_TENoTextNoSSL() throws Exception {
+	void testIssue719_TENoTextNoSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Transfer-Encoding", "chunked"), false);
 	}
 
 	@Test
-	void testIssue719_CLNoTextNoSSL() throws Exception {
+	void testIssue719_CLNoTextNoSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Content-Length", "0"), false);
 	}
 
 	@Test
-	void testIssue719_TEWithTextWithSSL() throws Exception {
+	void testIssue719_TEWithTextWithSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Transfer-Encoding", "chunked"), true);
 	}
 
 	@Test
-	void testIssue719_CLWithTextWithSSL() throws Exception {
+	void testIssue719_CLWithTextWithSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
 				h -> h.set("Content-Length", "4"), true);
 	}
 
 	@Test
-	void testIssue719_TENoTextWithSSL() throws Exception {
+	void testIssue719_TENoTextWithSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Transfer-Encoding", "chunked"), true);
 	}
 
 	@Test
-	void testIssue719_CLNoTextWithSSL() throws Exception {
+	void testIssue719_CLNoTextWithSSL() {
 		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
 				h -> h.set("Content-Length", "0"), true);
 	}
 
 	private void doTestIssue719(Publisher<ByteBuf> clientSend,
-			Consumer<HttpHeaders> clientSendHeaders, boolean ssl) throws Exception {
+			Consumer<HttpHeaders> clientSendHeaders, boolean ssl) {
 		HttpServer server =
 				createServer()
 				          .handle((req, res) -> req.receive()
@@ -1735,9 +1735,8 @@ class HttpClientTest extends BaseHttpTest {
 				                                            .then()));
 
 		if (ssl) {
-			SelfSignedCertificate cert = new SelfSignedCertificate();
 			server = server.secure(spec -> spec.sslContext(
-					SslContextBuilder.forServer(cert.certificate(), cert.privateKey())));
+					SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())));
 		}
 
 		disposableServer = server.bindNow();

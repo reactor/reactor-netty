@@ -29,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -61,6 +62,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.reactivestreams.Publisher;
@@ -93,12 +95,18 @@ class TcpServerTests {
 
 	final Logger log     = Loggers.getLogger(TcpServerTests.class);
 
+	static SelfSignedCertificate ssc;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
+
 	@Test
 	void tcpServerHandlesJsonPojosOverSsl() throws Exception {
 		final CountDownLatch latch = new CountDownLatch(2);
 
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                                   .sslProvider(SslProvider.JDK);
 		SslContext clientOptions = SslContextBuilder.forClient()
 		                                            .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -305,7 +313,6 @@ class TcpServerTests {
 	@Test
 	void sendFileSecure() throws Exception {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 

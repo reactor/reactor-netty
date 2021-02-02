@@ -27,6 +27,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -53,10 +54,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
+	static SelfSignedCertificate ssc;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
+
 	@Test
-	void testIssue903() throws CertificateException {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.key(), cert.cert());
+	void testIssue903() {
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.key(), ssc.cert());
 		disposableServer =
 				createServer()
 				          .secure(s -> s.sslContext(serverCtx))

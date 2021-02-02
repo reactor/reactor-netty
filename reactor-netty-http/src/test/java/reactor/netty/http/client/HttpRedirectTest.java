@@ -38,6 +38,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -55,6 +56,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 class HttpRedirectTest extends BaseHttpTest {
+
+	static SelfSignedCertificate ssc;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
 
 	@Test
 	void deadlockWhenRedirectsToSameUrl() {
@@ -454,24 +462,22 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue843() throws Exception {
+	void testIssue843() {
 		final int server2Port = SocketUtils.findAvailableTcpPort();
 
-		SelfSignedCertificate cert1 = new SelfSignedCertificate();
 		DisposableServer server1 = null;
 		DisposableServer server2 = null;
 		try {
 			server1 =
 					createServer()
-					          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert1.certificate(), cert1.privateKey())))
+					          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())))
 					          .handle((req, res) -> res.sendRedirect("https://localhost:" + server2Port))
 					          .bindNow();
 
-			SelfSignedCertificate cert2 = new SelfSignedCertificate();
 			server2 =
 					createServer(server2Port)
 					          .host("localhost")
-					          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert2.certificate(), cert2.privateKey())))
+					          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())))
 					          .handle((req, res) -> res.sendString(Mono.just("test")))
 					          .bindNow();
 
@@ -536,14 +542,13 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testLastLocationSetToResourceUrlOnRedirect() throws CertificateException {
+	void testLastLocationSetToResourceUrlOnRedirect() {
 		final String redirectPath = "/redirect";
 		final String destinationPath = "/destination";
 		final String responseContent = "Success";
 
-		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverSslCtxBuilder =
-				SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+				SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 		DisposableServer redirectServer = null;
 		DisposableServer initialServer = null;
 		try {
@@ -649,9 +654,8 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testHttpServerWithDomainSockets_HTTP2() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	void testHttpServerWithDomainSockets_HTTP2() {
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		doTestHttpServerWithDomainSockets(
@@ -683,9 +687,8 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testHttp2Redirect() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	void testHttp2Redirect() {
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		disposableServer =

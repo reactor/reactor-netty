@@ -50,6 +50,7 @@ import io.netty.handler.stream.ChunkedNioFile;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -57,6 +58,13 @@ import reactor.core.publisher.Mono;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class NettyOutboundTest {
+
+	static SelfSignedCertificate ssc;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
 
 	@Test
 	void sendFileWithoutTlsUsesFileRegion() throws URISyntaxException {
@@ -140,8 +148,7 @@ class NettyOutboundTest {
 	}
 
 	@Test
-	void sendFileWithTlsUsesChunkedFile() throws URISyntaxException, SSLException, CertificateException {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
+	void sendFileWithTlsUsesChunkedFile() throws URISyntaxException, SSLException {
 		SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		final SslHandler sslHandler = sslCtx.newHandler(ByteBufAllocator.DEFAULT);
 

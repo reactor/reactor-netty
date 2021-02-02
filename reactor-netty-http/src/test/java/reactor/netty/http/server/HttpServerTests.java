@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,6 +85,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.reactivestreams.Publisher;
@@ -126,6 +128,13 @@ import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
  * @author Stephane Maldini
  */
 class HttpServerTests extends BaseHttpTest {
+
+	static SelfSignedCertificate ssc;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
 
 	@Test
 	void httpPort() {
@@ -1080,7 +1089,6 @@ class HttpServerTests extends BaseHttpTest {
 	@Test
 	@SuppressWarnings("FutureReturnValueIgnored")
 	void testExpectErrorWhenConnectionClosed() throws Exception {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
 		AtomicReference<Throwable> error = new AtomicReference<>();
@@ -1694,9 +1702,8 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testHttpServerWithDomainSockets_HTTP2() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	void testHttpServerWithDomainSockets_HTTP2() {
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		doTestHttpServerWithDomainSockets(
@@ -2130,16 +2137,16 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testIdleTimeout_DelayFirstRequest_NoSSL() throws Exception {
+	void testIdleTimeout_DelayFirstRequest_NoSSL() {
 		doTestIdleTimeout_DelayFirstRequest(false);
 	}
 
 	@Test
-	void testIdleTimeout_DelayFirstRequest() throws Exception {
+	void testIdleTimeout_DelayFirstRequest() {
 		doTestIdleTimeout_DelayFirstRequest(true);
 	}
 
-	private void doTestIdleTimeout_DelayFirstRequest(boolean withSecurity) throws Exception {
+	private void doTestIdleTimeout_DelayFirstRequest(boolean withSecurity) {
 		HttpServer server =
 				createServer()
 				          .idleTimeout(Duration.ofMillis(200))
@@ -2150,8 +2157,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .disableRetry(true);
 
 		if (withSecurity) {
-			SelfSignedCertificate cert = new SelfSignedCertificate();
-			SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+			SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
 			SslContextBuilder clientCtx = SslContextBuilder.forClient()
 			                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 			server = server.secure(spec -> spec.sslContext(serverCtx));

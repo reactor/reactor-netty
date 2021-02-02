@@ -17,6 +17,7 @@ package reactor.netty;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -24,6 +25,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
@@ -36,6 +38,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Silvano Riz
  */
 class ByteBufFluxTest extends BaseHttpTest {
+
+	static SelfSignedCertificate ssc;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
 
 	@Test
 	void testByteBufFluxFromPathWithoutSecurity() throws Exception {
@@ -51,7 +60,6 @@ class ByteBufFluxTest extends BaseHttpTest {
 		HttpServer server = createServer();
 		HttpClient client = createClient(() -> disposableServer.address());
 		if (withSecurity) {
-			SelfSignedCertificate ssc = new SelfSignedCertificate();
 			SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 			SslContext sslClient = SslContextBuilder.forClient()
 			                                        .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
