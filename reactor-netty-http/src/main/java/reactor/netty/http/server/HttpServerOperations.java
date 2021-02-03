@@ -686,10 +686,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			log.error(format(channel(), "Error starting response. Replying error status"), err);
 
 			nettyResponse.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-			               .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
-			               .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-			channel().writeAndFlush(outboundHttpMessage())
+			responseHeaders.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+			channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER))
 			         .addListener(ChannelFutureListener.CLOSE);
 			return;
 		}
