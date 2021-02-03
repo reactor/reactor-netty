@@ -97,6 +97,7 @@ import reactor.netty.Connection;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionPoolMetrics;
 import reactor.netty.resources.ConnectionProvider;
@@ -2588,5 +2589,57 @@ class HttpClientTest extends BaseHttpTest {
 		          .expectNext(400)
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void testConfigurationSecurityThenProtocols_DefaultHTTP11SslProvider() {
+		HttpClient client = HttpClient.create().secure();
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.HTTP11),
+				HttpClientSecure.DEFAULT_HTTP_SSL_PROVIDER);
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C),
+				HttpClientSecure.DEFAULT_HTTP_SSL_PROVIDER);
+	}
+
+	@Test
+	void testConfigurationSecurityThenProtocols_DefaultH2SslProvider() {
+		HttpClient client = HttpClient.create().secure();
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.HTTP11, HttpProtocol.H2),
+				HttpClientSecure.DEFAULT_HTTP2_SSL_PROVIDER);
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C),
+				HttpClientSecure.DEFAULT_HTTP2_SSL_PROVIDER);
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.H2),
+				HttpClientSecure.DEFAULT_HTTP2_SSL_PROVIDER);
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.H2, HttpProtocol.H2C),
+				HttpClientSecure.DEFAULT_HTTP2_SSL_PROVIDER);
+	}
+
+	@Test
+	void testConfigurationOnlyProtocols_NoDefaultSslProvider() {
+		HttpClient client = HttpClient.create();
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.HTTP11), null);
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C), null);
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.HTTP11, HttpProtocol.H2), null);
+
+		doTestProtocolsAndDefaultSslProviderAvailability(
+				client.protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C), null);
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.H2), null);
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.H2, HttpProtocol.H2C), null);
+
+		doTestProtocolsAndDefaultSslProviderAvailability(client.protocol(HttpProtocol.H2C), null);
+	}
+
+	private void doTestProtocolsAndDefaultSslProviderAvailability(HttpClient client, @Nullable SslProvider sslProvider) {
+		assertThat(client.configuration().sslProvider()).isSameAs(sslProvider);
 	}
 }

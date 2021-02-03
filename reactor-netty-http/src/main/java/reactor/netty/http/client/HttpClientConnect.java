@@ -211,13 +211,13 @@ class HttpClientConnect extends HttpClient {
 				if (handler.toURI.isSecure()) {
 					if (_config.sslProvider == null) {
 						_config = new HttpClientConfig(config);
-						if (checkProtocol(_config, HttpClientConfig.h2c) && _config.protocols.length > 1) {
+						if (_config.checkProtocol(HttpClientConfig.h2c) && _config.protocols.length > 1) {
 							removeIncompatibleProtocol(_config, HttpProtocol.H2C);
 						}
 						_config.sslProvider = HttpClientSecure.defaultSslProvider(_config);
 					}
 
-					if (checkProtocol(_config, HttpClientConfig.h2c)) {
+					if (_config.checkProtocol(HttpClientConfig.h2c)) {
 						sink.error(new IllegalArgumentException(
 								"Configured H2 Clear-Text protocol with TLS. " +
 										"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
@@ -226,7 +226,7 @@ class HttpClientConnect extends HttpClient {
 					}
 
 					if (_config.sslProvider.getDefaultConfigurationType() == null) {
-						if (checkProtocol(_config, HttpClientConfig.h2)) {
+						if (_config.checkProtocol(HttpClientConfig.h2)) {
 							_config.sslProvider = SslProvider.updateDefaultConfiguration(_config.sslProvider,
 									SslProvider.DefaultConfigurationType.H2);
 						}
@@ -239,13 +239,13 @@ class HttpClientConnect extends HttpClient {
 				else {
 					if (_config.sslProvider != null) {
 						_config = new HttpClientConfig(config);
-						if (checkProtocol(_config, HttpClientConfig.h2) && _config.protocols.length > 1) {
+						if (_config.checkProtocol(HttpClientConfig.h2) && _config.protocols.length > 1) {
 							removeIncompatibleProtocol(_config, HttpProtocol.H2);
 						}
 						_config.sslProvider = null;
 					}
 
-					if (checkProtocol(_config, HttpClientConfig.h2)) {
+					if (_config.checkProtocol(HttpClientConfig.h2)) {
 						sink.error(new IllegalArgumentException(
 								"Configured H2 protocol without TLS. Use H2 Clear-Text " +
 										"protocol via HttpClient#protocol or configure TLS via HttpClient#secure"));
@@ -277,10 +277,6 @@ class HttpClientConnect extends HttpClient {
 				}
 			}
 			config.protocols(newProtocols.toArray(new HttpProtocol[0]));
-		}
-
-		private boolean checkProtocol(HttpClientConfig config, int protocol) {
-			return (config._protocols & protocol) == protocol;
 		}
 
 		static final class ClientTransportSubscriber implements CoreSubscriber<Connection> {

@@ -448,6 +448,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this._protocols = _protocols;
 	}
 
+	boolean checkProtocol(int protocol) {
+		return (_protocols & protocol) == protocol;
+	}
+
 	Http2Settings http2Settings() {
 		Http2Settings settings = Http2Settings.defaultSettings();
 

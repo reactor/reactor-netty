@@ -1271,7 +1271,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		HttpClientConfig config = dup.configuration();
 		config.protocols(supportedProtocols);
 
-		if (HttpClientSecure.hasDefaultSslProvider(config)) {
+		boolean isH2c = config.checkProtocol(HttpClientConfig.h2c);
+		if ((!isH2c || config._protocols > 1) && HttpClientSecure.hasDefaultSslProvider(config)) {
 			dup.configuration().sslProvider = HttpClientSecure.defaultSslProvider(config);
 		}
 		return dup;
