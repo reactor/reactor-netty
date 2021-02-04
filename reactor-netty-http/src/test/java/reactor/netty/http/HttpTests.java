@@ -23,6 +23,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -33,6 +35,7 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
+import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -302,26 +305,27 @@ class HttpTests extends BaseHttpTest {
 				                                   .aggregate()
 				                                   .asString()
 				                                   .flatMap(s -> {
-					                                       latch.countDown();
-					                                       return res.sendString(Mono.just(s))
-					                                                 .then();
-				                                       }))
+				                                           latch.countDown();
+				                                           return res.sendString(Mono.just(s))
+				                                                     .then();
+				                                   }))
 				          .bindNow();
 
-		String content =
+		Tuple2<String, Integer> content =
 				createClient(disposableServer.port())
-				          .headers(h -> h.add("Expect", "100-continue"))
+				          .headers(h -> h.add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE))
 				          .post()
 				          .uri("/")
 				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-				          .block();
-
-		System.out.println(content);
+				          .responseSingle((res, bytes) -> bytes.asString()
+				                                               .zipWith(Mono.just(res.status().code())))
+				          .block(Duration.ofSeconds(5));
 
 		Assertions.assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		Assertions.assertThat(content).isNotNull();
+		Assertions.assertThat(content.getT1()).isEqualTo("12345");
+		Assertions.assertThat(content.getT2()).isEqualTo(200);
 	}
 
 	@Test
