@@ -22,9 +22,9 @@ public class Application {
 	public static void main(String[] args) {
 		HttpClient client = HttpClient.create();  //<1>
 
-		client.get()                      //<2>
-		      .uri("http://example.com/") //<3>
-		      .response()                 //<4>
+		client.get()                       //<2>
+		      .uri("https://example.com/") //<3>
+		      .response()                  //<4>
 		      .block();
 	}
 }

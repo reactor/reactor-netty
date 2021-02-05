@@ -25,7 +25,7 @@ public class Application {
 				          .compress(true);
 
 		client.get()
-		      .uri("http://example.com/")
+		      .uri("https://example.com/")
 		      .response()
 		      .block();
 	}

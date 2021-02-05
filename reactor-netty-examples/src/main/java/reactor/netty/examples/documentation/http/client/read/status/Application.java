@@ -23,7 +23,7 @@ public class Application {
 		HttpClient client = HttpClient.create();
 
 		client.get()
-		      .uri("http://example.com/")
+		      .uri("https://example.com/")
 		      .responseSingle((resp, bytes) -> {
 		          System.out.println(resp.status()); //<1>
 		          return bytes.asString();

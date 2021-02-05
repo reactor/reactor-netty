@@ -32,7 +32,7 @@ public class Application {
 				                     .addFirst(new LoggingHandler("reactor.netty.examples"))); //<2>
 
 		client.get()
-		      .uri("http://example.com/")
+		      .uri("https://example.com/")
 		      .response()
 		      .block();
 	}

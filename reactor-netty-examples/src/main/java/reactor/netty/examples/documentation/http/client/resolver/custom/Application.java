@@ -27,7 +27,7 @@ public class Application {
 
 		String response =
 				client.get()
-				      .uri("http://example.com/")
+				      .uri("https://example.com/")
 				      .responseContent()
 				      .aggregate()
 				      .asString()
