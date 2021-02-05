@@ -220,6 +220,11 @@ subprojects {
 		exclude '**/*Abstract*.*'
 
 		useJUnitPlatform()
+
+		retry {
+			maxFailures = 10
+			maxRetries = 1
+		}
 	}
 
 	test {
@@ -233,11 +238,6 @@ subprojects {
 			if (event.message.contains("ResourceLeakDetector")) {
 				logger.error("ERROR: Test: " + descriptor + " produced resource leak: " + event.message)
 			}
-		}
-
-		retry {
-			maxFailures = 10
-			maxRetries = 1
 		}
 	}
 
