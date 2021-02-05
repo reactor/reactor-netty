@@ -190,6 +190,11 @@ configure(rootProject) { project ->
 	exclude '**/*Abstract*.*'
 
 	useJUnitPlatform()
+
+	retry {
+		maxFailures = 10
+		maxRetries = 1
+	}
   }
 
   test {
@@ -204,11 +209,6 @@ configure(rootProject) { project ->
 	  if (event.message.contains("ResourceLeakDetector")) {
 		logger.error("ERROR: Test: " + descriptor + " produced resource leak: " + event.message )
 	  }
-	}
-
-	retry {
-	  maxFailures = 10
-	  maxRetries = 1
 	}
   }
 
