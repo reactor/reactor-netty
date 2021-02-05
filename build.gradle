@@ -124,6 +124,7 @@ ext {
 
 nohttp {
 	source.exclude "docs/asciidoc/highlight/**"
+	source.exclude "**/build/**"
 }
 
 subprojects {
