@@ -2411,4 +2411,41 @@ class HttpServerTests extends BaseHttpTest {
 		      .expectErrorMatches(t -> t instanceof IOException || t instanceof AbortedException)
 		      .verify(Duration.ofSeconds(30));
 	}
+
+	@Test
+	void testServerSelectorChannelClosedOnServerDispose() throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, resp) ->
+				                resp.sendString(Mono.just("testServerSelectorChannelClosedOnServerDispose")))
+				        .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		disposableServer.onDispose(latch::countDown);
+
+		try {
+			createClient(disposableServer.port())
+			        .get()
+			        .uri("/")
+			        .responseContent()
+			        .aggregate()
+			        .asString()
+			        .as(StepVerifier::create)
+			        .expectNext("testServerSelectorChannelClosedOnServerDispose")
+			        .expectComplete()
+			        .verify(Duration.ofSeconds(5));
+		}
+		finally {
+			assertThat(disposableServer.isDisposed()).isFalse();
+			assertThat(disposableServer.channel().isActive()).isTrue();
+			assertThat(disposableServer.channel().isOpen()).isTrue();
+
+			disposableServer.disposeNow();
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(disposableServer.isDisposed()).isTrue();
+			assertThat(disposableServer.channel().isActive()).isFalse();
+			assertThat(disposableServer.channel().isOpen()).isFalse();
+		}
+	}
 }
