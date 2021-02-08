@@ -17,6 +17,8 @@ package reactor.netty.http.client;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.specto.hoverfly.junit.core.Hoverfly;
@@ -55,7 +57,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 
 	private int port;
 	private static final String LOCALLY_NOT_RESOLVABLE_ADDRESS =
-			"http://some-random-address-that-is-only-resolvable-by-the-proxy-1234.com";
+			"https://some-random-address-that-is-only-resolvable-by-the-proxy-1234.com";
 
 	@BeforeEach
 	void setUp(Hoverfly hoverfly) {
@@ -171,6 +173,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 				            null,
 				            LOCALLY_NOT_RESOLVABLE_ADDRESS,
 				            true,
+				            true,
 				            true))
 				    .expectNextMatches(t -> ("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS).equals(t.getT1()))
 				    .expectComplete()
@@ -186,7 +189,8 @@ class HttpClientProxyTest extends BaseHttpTest {
 				            null,
 				            LOCALLY_NOT_RESOLVABLE_ADDRESS,
 				            true,
-				            false))
+				            false,
+				            true))
 				    .expectNextMatches(t -> ("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS).equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -196,6 +200,9 @@ class HttpClientProxyTest extends BaseHttpTest {
 	void shouldUseDifferentResolvers(Hoverfly hoverfly) {
 		HttpClient client =
 				createClient(disposableServer::address)
+				          .secure(spec ->
+				                  spec.sslContext(SslContextBuilder.forClient()
+				                                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)))
 				          .metrics(true, () -> MicrometerHttpClientMetricsRecorder.INSTANCE);
 
 		AtomicReference<AddressResolverGroup<?>> resolver1 = new AtomicReference<>();
@@ -238,7 +245,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 			@Nullable Supplier<? extends SocketAddress> connectAddressSupplier,
 			String uri,
 			boolean wiretap) {
-		return sendRequest(proxyOptions, connectAddressSupplier, uri, wiretap, false);
+		return sendRequest(proxyOptions, connectAddressSupplier, uri, wiretap, false, false);
 	}
 
 	private Mono<Tuple2<String, HttpHeaders>>  sendRequest(
@@ -246,7 +253,8 @@ class HttpClientProxyTest extends BaseHttpTest {
 			@Nullable Supplier<? extends SocketAddress> connectAddressSupplier,
 			String uri,
 			boolean wiretap,
-			boolean metricsEnabled) {
+			boolean metricsEnabled,
+			boolean securityEnabled) {
 		HttpClient client =
 				HttpClient.create()
 				          .proxy(proxyOptions)
@@ -259,6 +267,12 @@ class HttpClientProxyTest extends BaseHttpTest {
 
 		if (connectAddressSupplier != null) {
 			client = client.remoteAddress(disposableServer::address);
+		}
+
+		if (securityEnabled) {
+			client = client.secure(spec ->
+			        spec.sslContext(SslContextBuilder.forClient()
+			                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)));
 		}
 
 		return client.wiretap(wiretap)

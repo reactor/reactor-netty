@@ -25,7 +25,7 @@ public class Application {
 				          .httpResponseDecoder(spec -> spec.maxHeaderSize(16384)); //<1>
 
 		client.get()
-		      .uri("http://example.com/")
+		      .uri("https://example.com/")
 		      .responseContent()
 		      .aggregate()
 		      .asString()

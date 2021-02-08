@@ -27,7 +27,7 @@ public class Application {
 				          .wiretap("logger-name", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL); //<1>
 
 		client.get()
-		      .uri("http://example.com/")
+		      .uri("https://example.com/")
 		      .response()
 		      .block();
 	}

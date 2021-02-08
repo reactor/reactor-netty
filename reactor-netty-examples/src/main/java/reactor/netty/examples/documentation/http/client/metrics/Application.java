@@ -39,12 +39,12 @@ public class Application {
 				          }); //<3>
 
 		client.get()
-		      .uri("http://httpbin.org/stream/2")
+		      .uri("https://httpbin.org/stream/2")
 		      .responseContent()
 		      .blockLast();
 
 		client.get()
-		      .uri("http://httpbin.org/bytes/1024")
+		      .uri("https://httpbin.org/bytes/1024")
 		      .responseContent()
 		      .blockLast();
 	}
