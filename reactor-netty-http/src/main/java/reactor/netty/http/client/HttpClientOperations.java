@@ -112,6 +112,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	boolean started;
 	boolean retrying;
+	boolean is100Continue;
 	RedirectClientException redirecting;
 
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
@@ -588,6 +589,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				ReferenceCountUtil.release(msg);
 				return;
 			}
+			if (HttpResponseStatus.CONTINUE.equals(response.status())) {
+				is100Continue = true;
+				ReferenceCountUtil.release(msg);
+				return;
+			}
 			if (started) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(channel(), "HttpClientOperations cannot proceed more than one response {}"),
@@ -597,6 +603,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				ReferenceCountUtil.release(msg);
 				return;
 			}
+			is100Continue = false;
 			started = true;
 			setNettyResponse(response);
 
@@ -645,6 +652,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 
 		if (msg instanceof LastHttpContent) {
+			if (is100Continue) {
+				ReferenceCountUtil.release(msg);
+				channel().read();
+				return;
+			}
 			if (!started) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(channel(), "HttpClientOperations received an incorrect end " +
