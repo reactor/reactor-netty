@@ -35,8 +35,8 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.Operators;
+import reactor.core.publisher.Sinks;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -115,8 +115,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final Connection          connection;
 	final FluxReceive         inbound;
 	final ConnectionObserver  listener;
-	@SuppressWarnings("deprecation")
-	final MonoProcessor<Void> onTerminate;
+	final Sinks.Empty<Void> onTerminate;
 
 	volatile Subscription outboundSubscription;
 
@@ -133,11 +132,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param connection the new {@link Connection} connection
 	 * @param listener the events callback
 	 */
-	@SuppressWarnings("deprecation")
 	public ChannelOperations(Connection connection, ConnectionObserver listener) {
 		this.connection = requireNonNull(connection, "connection");
 		this.listener = requireNonNull(listener, "listener");
-		this.onTerminate = MonoProcessor.create();
+		this.onTerminate = Sinks.unsafe().empty();
 		this.inbound = new FluxReceive(this);
 	}
 
@@ -273,7 +271,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono) {
-			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
+			return then(((Mono<?>) dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
 		}
 		return then(MonoSendMany.byteBufSource(dataStream, channel(), predicate));
@@ -286,7 +284,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono) {
-			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
+			return then(((Mono<?>) dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
 		}
 		return then(MonoSendMany.objectSource(dataStream, channel(), predicate));
@@ -329,7 +327,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (!isPersistent()) {
 			return connection.onDispose();
 		}
-		return onTerminate.or(connection.onDispose());
+		return onTerminate.asMono().or(connection.onDispose());
 	}
 
 	/**
@@ -345,13 +343,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public String toString() {
-		return "ChannelOperations{"+connection.toString()+"}";
+		return "ChannelOperations{" + connection.toString() + "}";
 	}
 
 	/**
 	 * Drop pending content and complete inbound
 	 */
-	public final void discard(){
+	public final void discard() {
 		inbound.cancel();
 	}
 
@@ -453,7 +451,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			// when there is no response state
 			onInboundComplete();
 			afterInboundComplete();
-			onTerminate.onComplete();
+			// EmitResult is ignored as it is guaranteed that this call happens in an event loop
+			// and it is guarded by rebind(connection), so tryEmitEmpty() should happen just once
+			onTerminate.tryEmitEmpty();
 			listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 		}
 	}

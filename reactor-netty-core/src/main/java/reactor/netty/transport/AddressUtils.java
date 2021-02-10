@@ -200,7 +200,7 @@ public final class AddressUtils {
 			throw new IllegalArgumentException("Cannot update DomainSocketAddress with post number [" + port + "].");
 		}
 
-		if(!(address.get() instanceof InetSocketAddress)) {
+		if (!(address.get() instanceof InetSocketAddress)) {
 			return createUnresolved(NetUtil.LOCALHOST.getHostAddress(), port);
 		}
 

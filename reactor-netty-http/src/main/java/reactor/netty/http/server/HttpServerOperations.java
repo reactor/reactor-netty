@@ -56,6 +56,8 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
@@ -99,6 +101,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final ConnectionInfo connectionInfo;
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookieDecoder cookieDecoder;
+	final String scheme;
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 
@@ -119,17 +122,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.mapHandle = replaced.mapHandle;
-	}
-
-	HttpServerOperations(Connection c,
-			ConnectionObserver listener,
-			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			HttpRequest nettyRequest,
-			@Nullable ConnectionInfo connectionInfo,
-			ServerCookieEncoder encoder,
-			ServerCookieDecoder decoder,
-			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
-		this(c, listener, compressionPredicate, nettyRequest, connectionInfo, encoder, decoder, mapHandle, true);
+		this.scheme = replaced.scheme;
 	}
 
 	HttpServerOperations(Connection c,
@@ -140,6 +133,19 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ServerCookieEncoder encoder,
 			ServerCookieDecoder decoder,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			boolean secured) {
+		this(c, listener, compressionPredicate, nettyRequest, connectionInfo, encoder, decoder, mapHandle, secured, true);
+	}
+
+	HttpServerOperations(Connection c,
+			ConnectionObserver listener,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
+			HttpRequest nettyRequest,
+			@Nullable ConnectionInfo connectionInfo,
+			ServerCookieEncoder encoder,
+			ServerCookieDecoder decoder,
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			boolean secured,
 			boolean resolvePath) {
 		super(c, listener);
 		this.nettyRequest = nettyRequest;
@@ -158,6 +164,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
 		this.mapHandle = mapHandle;
+		this.scheme = secured ? "https" : "http";
 	}
 
 	@Override
@@ -325,7 +332,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		//       If decoding a response, just throw an error.
 		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
 			return FutureMono.deferFuture(() -> {
-						if(!hasSentHeaders()) {
+						if (!hasSentHeaders()) {
 							return channel().writeAndFlush(CONTINUE);
 						}
 						return channel().newSucceededFuture();
@@ -370,7 +377,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public String scheme() {
-		return this.connectionInfo.getScheme();
+		if (connectionInfo != null) {
+			return this.connectionInfo.getScheme();
+		}
+		else {
+			return scheme;
+		}
 	}
 
 	@Override
@@ -485,11 +497,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				try {
 					//Do not invoke handler.channelRead as it will trigger ctx.fireChannelRead
 					handler.decode(channel().pipeline().context(NettyPipeline.ReactiveBridge), nettyRequest, out);
-				} catch (DecoderException e) {
+				}
+				catch (DecoderException e) {
 					throw e;
-				} catch (Exception e) {
+				}
+				catch (Exception e) {
 					throw new DecoderException(e);
-				} finally {
+				}
+				finally {
 					ReferenceCountUtil.release(nettyRequest);
 					out.clear();
 				}
@@ -546,7 +561,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected void afterMarkSentHeaders(){
+	protected void afterMarkSentHeaders() {
 		if (HttpResponseStatus.NOT_MODIFIED.equals(status())) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
 			               .remove(HttpHeaderNames.CONTENT_LENGTH);
@@ -558,6 +573,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void beforeMarkSentHeaders() {
+		//noop
+	}
+
+	@Override
+	protected void onHeadersSent() {
 		//noop
 	}
 
@@ -582,7 +602,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else if (markSentBody()) {
 			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
-		else{
+		else {
 			discard();
 			return;
 		}
@@ -595,7 +615,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	}
 
-	static void cleanHandlerTerminate(Channel ch){
+	static void cleanHandlerTerminate(Channel ch) {
 		ChannelOperations<?, ?> ops = get(ch);
 
 		if (ops == null) {
@@ -618,6 +638,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	static void sendDecodingFailures(
 			ChannelHandlerContext ctx,
 			ConnectionObserver listener,
+			boolean secure,
 			Throwable t,
 			Object msg) {
 
@@ -632,7 +653,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		ReferenceCountUtil.release(msg);
 
 		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,
-				cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE:
+				cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE :
 				                                         HttpResponseStatus.BAD_REQUEST);
 		response.headers()
 		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
@@ -644,7 +665,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (msg instanceof HttpRequest) {
 			request = (HttpRequest) msg;
 		}
-		listener.onStateChange(new FailedHttpServerRequest(conn, listener, request, response), REQUEST_DECODING_FAILED);
+		listener.onStateChange(new FailedHttpServerRequest(conn, listener, request, response, secure), REQUEST_DECODING_FAILED);
 	}
 
 	/**
@@ -665,10 +686,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			log.error(format(channel(), "Error starting response. Replying error status"), err);
 
 			nettyResponse.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-			               .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
-			               .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-			channel().writeAndFlush(outboundHttpMessage())
+			responseHeaders.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+			channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER))
 			         .addListener(ChannelFutureListener.CLOSE);
 			return;
 		}
@@ -694,7 +713,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			return FutureMono.from(ops.handshakerResult)
 			                 .doOnEach(signal -> {
-			                     if(!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
+			                     if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
 			                         websocketHandler.apply(ops, ops)
 			                                         .subscribe(new WebsocketSubscriber(ops, Context.of(signal.getContextView())));
 			                     }
@@ -739,7 +758,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		public void onComplete() {
 			if (ops.channel()
 			       .isActive()) {
-				ops.sendCloseNow(null, this);
+				ops.sendCloseNow(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE), this);
 			}
 		}
 
@@ -765,8 +784,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				Connection c,
 				ConnectionObserver listener,
 				@Nullable HttpRequest nettyRequest,
-				HttpResponse nettyResponse) {
-			super(c, listener, null, nettyRequest, null, ServerCookieEncoder.STRICT, ServerCookieDecoder.STRICT, null, false);
+				HttpResponse nettyResponse,
+				boolean secure) {
+			super(c, listener, null, nettyRequest, null, ServerCookieEncoder.STRICT, ServerCookieDecoder.STRICT, null, secure, false);
 			this.customResponse = nettyResponse;
 		}
 

@@ -98,38 +98,38 @@ public class TcpClientTests {
 	Future<?>               heartbeatServerFuture;
 
 	@BeforeEach
-	public void setup() throws Exception {
+	void setup() throws Exception {
 		echoServerPort = SocketUtils.findAvailableTcpPort();
 		echoServer = new EchoServer(echoServerPort);
 		echoServerFuture = threadPool.submit(echoServer);
-		if(!echoServer.await(10, TimeUnit.SECONDS)){
+		if (!echoServer.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("fail to start test server");
 		}
 
 		abortServerPort = SocketUtils.findAvailableTcpPort();
 		abortServer = new ConnectionAbortServer(abortServerPort);
 		abortServerFuture = threadPool.submit(abortServer);
-		if(!abortServer.await(10, TimeUnit.SECONDS)){
+		if (!abortServer.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("fail to start test server");
 		}
 
 		timeoutServerPort = SocketUtils.findAvailableTcpPort();
 		timeoutServer = new ConnectionTimeoutServer(timeoutServerPort);
 		timeoutServerFuture = threadPool.submit(timeoutServer);
-		if(!timeoutServer.await(10, TimeUnit.SECONDS)){
+		if (!timeoutServer.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("fail to start test server");
 		}
 
 		heartbeatServerPort = SocketUtils.findAvailableTcpPort();
 		heartbeatServer = new HeartbeatServer(heartbeatServerPort);
 		heartbeatServerFuture = threadPool.submit(heartbeatServer);
-		if(!heartbeatServer.await(10, TimeUnit.SECONDS)){
+		if (!heartbeatServer.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("fail to start test server");
 		}
 	}
 
 	@AfterEach
-	public void cleanup() throws Exception {
+	void cleanup() throws Exception {
 		echoServer.close();
 		abortServer.close();
 		timeoutServer.close();
@@ -144,7 +144,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void disableSsl() {
+	void disableSsl() {
 		TcpClient secureClient = TcpClient.create()
 		                                  .secure();
 
@@ -153,7 +153,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testTcpClient() throws InterruptedException {
+	void testTcpClient() throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 
 		Connection client = TcpClient.create()
@@ -177,7 +177,7 @@ public class TcpClientTests {
 
 
 	@Test
-	public void testTcpClient1ThreadAcquire() {
+	void testTcpClient1ThreadAcquire() {
 
 		LoopResources resources = LoopResources.create("test", 1, true);
 
@@ -196,7 +196,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testTcpClientWithInetSocketAddress() throws InterruptedException {
+	void testTcpClientWithInetSocketAddress() throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 
 		TcpClient client =
@@ -218,7 +218,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void tcpClientHandlesLineFeedData() throws InterruptedException {
+	void tcpClientHandlesLineFeedData() throws InterruptedException {
 		final int messages = 100;
 		final CountDownLatch latch = new CountDownLatch(messages);
 		final List<String> strings = new ArrayList<>();
@@ -233,14 +233,14 @@ public class TcpClientTests {
 					        out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
 					                            .subscribeOn(Schedulers.parallel()))
-					            .then( in.receive()
-					                     .asString()
-					                     .take(100)
-					                     .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
-					                     .doOnNext(s -> {
-						                     strings.add(s);
-						                     latch.countDown();
-					                     }).then())
+					            .then(in.receive()
+					                    .asString()
+					                    .take(100)
+					                    .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+					                    .doOnNext(s -> {
+						                    strings.add(s);
+						                    latch.countDown();
+					                    }).then())
 				         )
 				         .wiretap(true)
 				         .connectNow(Duration.ofSeconds(15));
@@ -254,13 +254,12 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void tcpClientHandlesLineFeedDataFixedPool() throws InterruptedException {
+	void tcpClientHandlesLineFeedDataFixedPool() throws InterruptedException {
 		Consumer<? super Connection> channelInit = c -> c
 				.addHandler("codec",
 				            new LineBasedFrameDecoder(8 * 1024));
 
-//		ConnectionProvider p = ConnectionProvider.fixed
-//				("tcpClientHandlesLineFeedDataFixedPool", 1);
+		//ConnectionProvider p = ConnectionProvider.fixed("tcpClientHandlesLineFeedDataFixedPool", 1);
 
 		ConnectionProvider p = ConnectionProvider.newConnection();
 
@@ -274,7 +273,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void tcpClientHandlesLineFeedDataElasticPool() throws InterruptedException {
+	void tcpClientHandlesLineFeedDataElasticPool() throws InterruptedException {
 		Consumer<? super Connection> channelInit = c -> c
 				.addHandler("codec",
 				            new LineBasedFrameDecoder(8 * 1024));
@@ -296,14 +295,14 @@ public class TcpClientTests {
 					        out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
 					                            .subscribeOn(Schedulers.parallel()))
-					            .then( in.receive()
-					                     .asString()
-					                     .take(100)
-					                     .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
-					                     .doOnNext(s -> {
-						                     strings.add(s);
-						                     latch.countDown();
-					                     }).then())
+					            .then(in.receive()
+					                    .asString()
+					                    .take(100)
+					                    .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+					                    .doOnNext(s -> {
+						                    strings.add(s);
+						                    latch.countDown();
+					                    }).then())
 				         )
 				         .wiretap(true)
 				         .connectNow(Duration.ofSeconds(30));
@@ -322,7 +321,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void closingPromiseIsFulfilled() {
+	void closingPromiseIsFulfilled() {
 		TcpClient client =
 				TcpClient.newConnection()
 				         .host("localhost")
@@ -371,7 +370,7 @@ public class TcpClientTests {
 
 	/*Check in details*/
 	@Test
-	public void connectionWillRetryConnectionAttemptWhenItFailsElastic()
+	void connectionWillRetryConnectionAttemptWhenItFailsElastic()
 			throws InterruptedException {
 		connectionWillRetryConnectionAttemptWhenItFails(
 				TcpClient.create()
@@ -382,7 +381,7 @@ public class TcpClientTests {
 
 	//see https://github.com/reactor/reactor-netty/issues/289
 	@Test
-	public void connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool()
+	void connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool()
 			throws InterruptedException {
 		connectionWillRetryConnectionAttemptWhenItFails(
 				TcpClient.create(ConnectionProvider.create("connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool", 1))
@@ -392,7 +391,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void connectionWillAttemptToReconnectWhenItIsDropped()
+	void connectionWillAttemptToReconnectWhenItIsDropped()
 			throws InterruptedException {
 		final CountDownLatch connectionLatch = new CountDownLatch(1);
 		final CountDownLatch reconnectionLatch = new CountDownLatch(1);
@@ -423,13 +422,13 @@ public class TcpClientTests {
 			assertThat(connectionLatch.await(5, TimeUnit.SECONDS)).as("Initial connection is made").isTrue();
 			assertThat(reconnectionLatch.await(5, TimeUnit.SECONDS)).as("A reconnect attempt was made").isTrue();
 		}
-		catch (AbortedException e){
+		catch (AbortedException e) {
 			// ignored
 		}
 	}
 
 	@Test
-	public void testCancelSend() throws InterruptedException {
+	void testCancelSend() throws InterruptedException {
 		final CountDownLatch connectionLatch = new CountDownLatch(3);
 
 		TcpClient tcpClient =
@@ -470,8 +469,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void consumerSpecAssignsEventHandlers()
-			throws InterruptedException {
+	void consumerSpecAssignsEventHandlers() throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(2);
 		final CountDownLatch close = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();
@@ -506,8 +504,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void readIdleDoesNotFireWhileDataIsBeingRead()
-			throws InterruptedException, IOException {
+	void readIdleDoesNotFireWhileDataIsBeingRead() throws InterruptedException, IOException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		long start = System.currentTimeMillis();
 
@@ -532,8 +529,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void writeIdleDoesNotFireWhileDataIsBeingSent()
-			throws InterruptedException {
+	void writeIdleDoesNotFireWhileDataIsBeingSent() throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		long start = System.currentTimeMillis();
 
@@ -566,7 +562,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void gettingOptionsDuplicates() {
+	void gettingOptionsDuplicates() {
 		TcpClient client1 = TcpClient.create();
 		TcpClient client2 = client1.host("example.com").port(123);
 		assertThat(client2)
@@ -777,12 +773,12 @@ public class TcpClientTests {
 
 
 	@Test
-	public void testIssue600_1() {
+	void testIssue600_1() {
 		doTestIssue600(true);
 	}
 
 	@Test
-	public void testIssue600_2() {
+	void testIssue600_2() {
 		doTestIssue600(false);
 	}
 
@@ -813,7 +809,7 @@ public class TcpClientTests {
 
 		Set<String> threadNames = new ConcurrentSkipListSet<>();
 		StepVerifier.create(
-				Flux.range(1,4)
+				Flux.range(1, 4)
 				    .flatMap(i ->
 				            client.handle((in, out) -> {
 				                threadNames.add(Thread.currentThread().getName());
@@ -832,7 +828,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testRetryOnDifferentAddress() throws Exception {
+	void testRetryOnDifferentAddress() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
@@ -870,7 +866,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testReconnectWhenDisconnected() throws Exception {
+	void testReconnectWhenDisconnected() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
@@ -908,7 +904,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testIssue585_1() throws Exception {
+	void testIssue585_1() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
@@ -968,7 +964,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testIssue585_2() throws Exception {
+	void testIssue585_2() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
@@ -1035,7 +1031,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testTcpClientWithDomainSocketsNIOTransport() {
+	void testTcpClientWithDomainSocketsNIOTransport() {
 		LoopResources loop = LoopResources.create("testTcpClientWithDomainSocketsNIOTransport");
 		try {
 			assertThatExceptionOfType(IllegalArgumentException.class)
@@ -1052,7 +1048,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testTcpClientWithDomainSocketsWithHost() {
+	void testTcpClientWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> TcpClient.create()
 		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -1061,7 +1057,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testTcpClientWithDomainSocketsWithPort() {
+	void testTcpClientWithDomainSocketsWithPort() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> TcpClient.create()
 		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -1071,7 +1067,7 @@ public class TcpClientTests {
 
 	@Test
 	@SuppressWarnings({"deprecation", "FutureReturnValueIgnored"})
-	public void testBootstrapUnsupported() {
+	void testBootstrapUnsupported() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
 					// FutureReturnValueIgnored is deliberate
@@ -1179,7 +1175,7 @@ public class TcpClientTests {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testBootstrap() {
+	void testBootstrap() {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
@@ -1226,7 +1222,7 @@ public class TcpClientTests {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void testAddressSupplier() {
+	void testAddressSupplier() {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)

@@ -219,6 +219,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * will be available via {@link Channel#config()}.
 	 * If the {@code value} is {@code null}, the attribute of the specified {@code key}
 	 * is removed.
+	 * Note: Setting {@link ChannelOption#AUTO_READ} option will be ignored. It is configured to be {@code false}.
 	 *
 	 * @param key the option key
 	 * @param value the option value - null to remove a key
@@ -231,7 +232,9 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		Objects.requireNonNull(key, "key");
 		// Reference comparison is deliberate
 		if (ChannelOption.AUTO_READ == key) {
-			log.error("ChannelOption.AUTO_READ is configured to be [false], it cannot be set to [{}]", value);
+			if (value instanceof Boolean && Boolean.TRUE.equals(value)) {
+				log.error("ChannelOption.AUTO_READ is configured to be [false], it cannot be set to [true]");
+			}
 			@SuppressWarnings("unchecked")
 			T dup = (T) this;
 			return dup;
@@ -322,6 +325,27 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		return bindAddress(() -> AddressUtils.updatePort(configuration().bindAddress(), port));
 	}
 
+	/**
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop groups</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code bind operation} absorbs the extra time needed to load resources.
+	 *
+	 * @return a {@link Mono} representing the completion of the warmup
+	 * @since 1.0.3
+	 */
+	public Mono<Void> warmup() {
+		return Mono.fromRunnable(() -> {
+			// event loop group for the server
+			configuration().childEventLoopGroup();
+
+			// event loop group for the server selector
+			configuration().eventLoopGroup();
+		});
+	}
+
 	static final Logger log = Loggers.getLogger(ServerTransport.class);
 
 	static class Acceptor extends ChannelInboundHandlerAdapter {
@@ -359,7 +383,8 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 						forceClose(child, future.cause());
 					}
 				});
-			} catch (Throwable t) {
+			}
+			catch (Throwable t) {
 				forceClose(child, t);
 			}
 		}
@@ -371,7 +396,14 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				// stop accept new connections for 1 second to allow the channel to recover
 				// See https://github.com/netty/netty/issues/1328
 				config.setAutoRead(false);
-				ctx.channel().eventLoop().schedule(enableAutoReadTask, 1, TimeUnit.SECONDS);
+				ctx.channel()
+				   .eventLoop()
+				   .schedule(enableAutoReadTask, 1, TimeUnit.SECONDS)
+				   .addListener(future -> {
+				       if (!future.isSuccess()) {
+				           log.debug(format(ctx.channel(), "Cannot enable auto-read"), future.cause());
+				       }
+				   });
 			}
 			// still let the exceptionCaught event flow through the pipeline to give the user
 			// a chance to do something with it
@@ -390,7 +422,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 		static void forceClose(Channel child, Throwable t) {
 			child.unsafe().closeForcibly();
-			log.warn(format(child,"Failed to register an accepted channel: {}"), child, t);
+			log.warn(format(child, "Failed to register an accepted channel: {}"), child, t);
 		}
 	}
 

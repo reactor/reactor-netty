@@ -15,40 +15,49 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
+import reactor.netty.DisposableChannel;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.http.server.WebsocketServerSpec;
 import reactor.test.StepVerifier;
+
+import java.time.Duration;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 /**
  * @author Violeta Georgieva
  */
-public class WebsocketClientOperationsTest {
+class WebsocketClientOperationsTest extends BaseHttpTest {
 
 	@Test
-	public void requestError() {
+	void requestError() {
 		failOnClientServerError(401, "", "");
 	}
 
 	@Test
-	public void serverError() {
+	void serverError() {
 		failOnClientServerError(500, "", "");
 	}
 
 	@Test
-	public void failedNegotiation() {
+	void failedNegotiation() {
 		failOnClientServerError(200, "Server-Protocol", "Client-Protocol");
 	}
 
 	private void failOnClientServerError(
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
-		DisposableServer httpServer =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .route(routes ->
 				              routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
 				                    .get("/ws", (req, res) -> {
@@ -59,14 +68,11 @@ public class WebsocketClientOperationsTest {
 				                        return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
 				                                WebsocketServerSpec.builder().protocols(serverSubprotocol).build());
 				                    }))
-				          .wiretap(true)
 				          .bindNow();
 
 		Flux<String> response =
-				HttpClient.create()
-				          .port(httpServer.port())
-				          .wiretap(true)
-				          .headersWhen(h -> login(httpServer.port()).map(token -> h.set("Authorization", token)))
+				createClient(disposableServer.port())
+				          .headersWhen(h -> login(disposableServer.port()).map(token -> h.set("Authorization", token)))
 				          .websocket(WebsocketClientSpec.builder().protocols(clientSubprotocol).build())
 				          .uri("/ws")
 				          .handle((i, o) -> i.receive().asString())
@@ -76,16 +82,61 @@ public class WebsocketClientOperationsTest {
 		StepVerifier.create(response)
 		            .expectError(WebSocketHandshakeException.class)
 		            .verify();
-
-		httpServer.disposeNow();
 	}
 
 	private Mono<String> login(int port) {
-		return HttpClient.create()
-		                 .port(port)
-		                 .wiretap(true)
+		return createClient(port)
 		                 .post()
 		                 .uri("/login")
 		                 .responseSingle((res, buf) -> Mono.just(res.status().code() + ""));
+	}
+
+	@Test
+	void testConfigureWebSocketVersion() {
+		disposableServer = createServer()
+				.handle((in, out) -> out.sendWebsocket((i, o) ->
+						o.sendString(Mono.just(in.requestHeaders().get("sec-websocket-version")))))
+				.bindNow();
+
+		List<String> response = createClient(disposableServer.port())
+				.websocket(WebsocketClientSpec.builder().version(WebSocketVersion.V08).build())
+				.uri("/test")
+				.handle((in, out) -> in.receive().aggregate().asString())
+				.collectList()
+				.block(Duration.ofSeconds(10));
+
+		assertThat(response).hasSize(1);
+		assertThat(response.get(0)).isEqualTo("8");
+	}
+
+	@Test
+	void testNullWebSocketVersionShouldFail() {
+		assertThatNullPointerException().isThrownBy(() -> WebsocketClientSpec.builder().version(null).build());
+	}
+
+	@Test
+	void testUnknownWebSocketVersionShouldFail() {
+		assertThatIllegalArgumentException().isThrownBy(() -> WebsocketClientSpec.builder().version(WebSocketVersion.UNKNOWN).build());
+	}
+
+	@Test
+	void testExceptionThrownWhenConnectionClosedBeforeHandshakeCompleted() {
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) -> res.withConnection(DisposableChannel::dispose))
+				          .bindNow();
+
+		HttpClient.create()
+		          .port(disposableServer.port())
+		          .wiretap(true)
+		          .websocket()
+		          .uri("/")
+		          .receive()
+		          .as(StepVerifier::create)
+		          .expectErrorMatches(t -> t instanceof WebSocketClientHandshakeException &&
+		                  "Connection prematurely closed BEFORE opening handshake is complete.".equals(t.getMessage()))
+		          .verify(Duration.ofSeconds(30));
 	}
 }

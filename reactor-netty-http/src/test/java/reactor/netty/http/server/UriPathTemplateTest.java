@@ -21,17 +21,17 @@ import reactor.netty.http.server.HttpPredicate.UriPathTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class UriPathTemplateTest {
+class UriPathTemplateTest {
 
     @Test
-    public void patternShouldMatchPathWithOnlyLetters() {
+    void patternShouldMatchPathWithOnlyLetters() {
         UriPathTemplate uriPathTemplate = new UriPathTemplate("/test/{order}");
         // works as expected
         assertThat(uriPathTemplate.match("/test/1").get("order")).isEqualTo("1");
     }
 
     @Test
-    public void patternShouldMatchPathWithDots() {
+    void patternShouldMatchPathWithDots() {
         UriPathTemplate uriPathTemplate = new UriPathTemplate("/test/{order}");
         // does not match, the dot in the segment parameter breaks matching
         // expected: a map containing {"order": "2.0"}, found: empty map
@@ -39,7 +39,7 @@ public class UriPathTemplateTest {
     }
 
     @Test
-    public void staticPatternShouldMatchPathWithQueryParams() {
+    void staticPatternShouldMatchPathWithQueryParams() {
         UriPathTemplate uriPathTemplate = new UriPathTemplate("/test/3");
         // does not match, the query parameter breaks matching
         // expected: true, found: false
@@ -47,7 +47,7 @@ public class UriPathTemplateTest {
     }
 
     @Test
-    public void parameterizedPatternShouldMatchPathWithQueryParams() {
+    void parameterizedPatternShouldMatchPathWithQueryParams() {
         UriPathTemplate uriPathTemplate = new UriPathTemplate("/test/{order}");
         // does not match, the query parameter breaks matching
         // expected: a map containing {"order": "3"}, found: a map containing {"order": "3?q=reactor"}
@@ -56,34 +56,34 @@ public class UriPathTemplateTest {
     }
 
     @Test
-    public void staticPathShouldBeMatched() {
+    void staticPathShouldBeMatched() {
         UriPathTemplate template = new UriPathTemplate("/comments");
         assertThat(template.matches("/comments")).isTrue();
         assertThat(template.match("/comments").entrySet()).isEmpty();
     }
     @Test
-    public void staticPathWithDotShouldBeMatched() {
+    void staticPathWithDotShouldBeMatched() {
         UriPathTemplate template = new UriPathTemplate("/1.0/comments");
         assertThat(template.matches("/1.0/comments")).isTrue();
         assertThat(template.match("/1.0/comments").entrySet()).isEmpty();
     }
 
     @Test
-    public void parametrizedPathShouldBeMatched() {
+    void parametrizedPathShouldBeMatched() {
         UriPathTemplate template = new UriPathTemplate("/comments/{id}");
         assertThat(template.matches("/comments/1")).isTrue();
         assertThat(template.match("/comments/1")).hasEntrySatisfying("id", s -> assertThat(s).isEqualTo("1"));
     }
 
     @Test
-    public void parametrizedPathWithStaticSuffixShouldBeMatched() {
+    void parametrizedPathWithStaticSuffixShouldBeMatched() {
         UriPathTemplate template = new UriPathTemplate("/comments/{id}/author");
         assertThat(template.matches("/comments/1/author")).isTrue();
         assertThat(template.match("/comments/1/author")).hasEntrySatisfying("id", s -> assertThat(s).isEqualTo("1"));
     }
 
     @Test
-    public void parametrizedPathWithMultipleParametersShouldBeMatched() {
+    void parametrizedPathWithMultipleParametersShouldBeMatched() {
         UriPathTemplate template = new UriPathTemplate("/{collection}/{id}");
         assertThat(template.matches("/comments/1")).isTrue();
         assertThat(template.match("/comments/1")).hasEntrySatisfying("id", s -> assertThat(s).isEqualTo("1"));
@@ -91,14 +91,14 @@ public class UriPathTemplateTest {
     }
 
     @Test
-    public void pathWithDotShouldBeMatched() {
+    void pathWithDotShouldBeMatched() {
         UriPathTemplate template = new UriPathTemplate("/tags/{tag}");
         assertThat(template.matches("/tags/v1.0.0")).isTrue();
         assertThat(template.match("/tags/v1.0.0")).hasEntrySatisfying("tag", s -> assertThat(s).isEqualTo("v1.0.0"));
     }
 
     @Test
-    public void pathVariableShouldNotMatchTrailingSegments() {
+    void pathVariableShouldNotMatchTrailingSegments() {
         UriPathTemplate template = new UriPathTemplate("/tags/{tag}/commits");
         assertThat(template.matches("/tags/v1.0.0")).isFalse();
         assertThat(template.match("/tags/v1.0.0").entrySet()).isEmpty();

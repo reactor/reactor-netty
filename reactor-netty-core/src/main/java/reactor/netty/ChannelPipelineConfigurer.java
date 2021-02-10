@@ -36,7 +36,7 @@ public interface ChannelPipelineConfigurer {
 	 *
 	 * @return a noop configurer
 	 */
-	static ChannelPipelineConfigurer emptyConfigurer(){
+	static ChannelPipelineConfigurer emptyConfigurer() {
 		return ReactorNetty.NOOP_CONFIGURER;
 	}
 

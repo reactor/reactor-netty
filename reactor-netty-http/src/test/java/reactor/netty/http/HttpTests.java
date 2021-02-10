@@ -23,16 +23,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
-import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
+import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -40,22 +43,17 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Violeta Georgieva
  */
-public class HttpTests {
+class HttpTests extends BaseHttpTest {
 
 	@Test
-	public void httpRespondsEmpty() {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+	void httpRespondsEmpty() {
+		disposableServer =
+				createServer()
 				          .route(r ->
 				              r.post("/test/{param}", (req, res) -> Mono.empty()))
-				          .wiretap(true)
 				          .bindNow();
 
-		HttpClient client =
-				HttpClient.create()
-				          .port(server.port())
-				          .wiretap(true);
+		HttpClient client = createClient(disposableServer.port());
 
 		Mono<ByteBuf> content =
 				client.headers(h -> h.add("Content-Type", "text/plain"))
@@ -71,15 +69,12 @@ public class HttpTests {
 		StepVerifier.create(content)
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
-
-		server.disposeNow();
 	}
 
 	@Test
-	public void httpRespondsToRequestsFromClients() {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+	void httpRespondsToRequestsFromClients() {
+		disposableServer =
+				createServer()
 				          .route(r ->
 				              r.post("/test/{param}", (req, res) ->
 				                  res.sendString(req.receive()
@@ -87,13 +82,9 @@ public class HttpTests {
 				                                    .log("server-received")
 				                                    .map(it -> it + ' ' + req.param("param") + '!')
 				                                    .log("server-reply"))))
-				          .wiretap(true)
 				          .bindNow();
 
-		HttpClient client =
-				HttpClient.create()
-				          .port(server.port())
-				          .wiretap(true);
+		HttpClient client = createClient(disposableServer.port());
 
 		Mono<String> content =
 				client.headers(h -> h.add("Content-Type", "text/plain"))
@@ -111,12 +102,10 @@ public class HttpTests {
 				    .expectNextMatches(s -> s.equals("Hello World!"))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
-
-		server.disposeNow();
 	}
 
 	@Test
-	public void httpErrorWithRequestsFromClients() throws Exception {
+	void httpErrorWithRequestsFromClients() throws Exception {
 		CountDownLatch errored1 = new CountDownLatch(1);
 		CountDownLatch errored2 = new CountDownLatch(1);
 		CountDownLatch errored3 = new CountDownLatch(1);
@@ -140,10 +129,11 @@ public class HttpTests {
 			                          return Mono.just(Unpooled.copyInt(i));
 		                          });
 
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
-						  .route(r -> r.get("/test", (req, res) -> {throw new RuntimeException("test");})
+		disposableServer =
+				createServer()
+						  .route(r -> r.get("/test", (req, res) -> {
+						                   throw new RuntimeException("test");
+						               })
 						               .get("/test2", (req, res) -> res.send(Flux.error(new Exception("test2")))
 						                                                 .then()
 						                                                 .log("send-1")
@@ -165,13 +155,9 @@ public class HttpTests {
 						                                                      .then()
 						                                                      .log("send-5")
 						                                                      .doOnError(t -> errored5.countDown())))
-						  .wiretap(true)
 						  .bindNow();
 
-		HttpClient client =
-				HttpClient.create()
-				          .port(server.port())
-				          .wiretap(true);
+		HttpClient client = createClient(disposableServer.port());
 
 		Mono<Integer> code =
 				client.get()
@@ -246,11 +232,10 @@ public class HttpTests {
 		StepVerifier.create(code)
 		            .expectNext(500)
 		            .verifyComplete();
-
-		server.disposeNow();
 	}
 
-/*	@Test
+	/*
+	@Test
 	public void webSocketRespondsToRequestsFromClients() {
 		AtomicInteger clientRes = new AtomicInteger();
 		AtomicInteger serverRes = new AtomicInteger();
@@ -308,52 +293,47 @@ public class HttpTests {
 		System.out.println("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
 
 		server.dispose();
-	}*/
+	}
+	*/
 
 	@Test
-	public void test100Continue() throws Exception {
+	void test100Continue() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .handle((req, res) -> req.receive()
 				                                   .aggregate()
 				                                   .asString()
 				                                   .flatMap(s -> {
-					                                       latch.countDown();
-					                                       return res.sendString(Mono.just(s))
-					                                                 .then();
-				                                       }))
-				          .wiretap(true)
+				                                           latch.countDown();
+				                                           return res.sendString(Mono.just(s))
+				                                                     .then();
+				                                   }))
 				          .bindNow();
 
-		String content =
-				HttpClient.create()
-				          .port(server.port())
-				          .headers(h -> h.add("Expect", "100-continue"))
+		Tuple2<String, Integer> content =
+				createClient(disposableServer.port())
+				          .headers(h -> h.add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE))
 				          .post()
 				          .uri("/")
 				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-				          .block();
-
-		System.out.println(content);
+				          .responseSingle((res, bytes) -> bytes.asString()
+				                                               .zipWith(Mono.just(res.status().code())))
+				          .block(Duration.ofSeconds(5));
 
 		Assertions.assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		server.disposeNow();
+		Assertions.assertThat(content).isNotNull();
+		Assertions.assertThat(content.getT1()).isEqualTo("12345");
+		Assertions.assertThat(content.getT2()).isEqualTo(200);
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void streamAndPoolExplicitCompression() {
-		EmitterProcessor<String> ep = EmitterProcessor.create();
+	void streamAndPoolExplicitCompression() {
+		Sinks.Many<String> ep = Sinks.unsafe().many().unicast().onBackpressureBuffer();
 
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .route(r -> r.post("/hi", (req, res) -> req.receive()
 				                                                     .aggregate()
 				                                                     .asString()
@@ -362,14 +342,12 @@ public class HttpTests {
 				                       .get("/stream", (req, res) ->
 						                           req.receive()
 						                              .then(res.compression(true)
-						                                       .sendString(ep.log()).then())))
-				          .wiretap(true)
+						                                       .sendString(ep.asFlux().log()).then())))
 				          .bindNow();
 
 
 		String content =
-				HttpClient.create()
-				          .port(server.port())
+				createClient(disposableServer.port())
 				          .compress(true)
 				          .post()
 				          .uri("/hi")
@@ -380,8 +358,7 @@ public class HttpTests {
 				          .log()
 				          .block();
 
-		Flux<String> f = HttpClient.create()
-		                           .port(server.port())
+		Flux<String> f = createClient(disposableServer.port())
 		                           .compress(true)
 		                           .get()
 		                           .uri("/stream")
@@ -390,20 +367,19 @@ public class HttpTests {
 		System.out.println(content);
 
 		StepVerifier.create(f)
-		            .then(() -> ep.onNext("test1"))
+		            .then(() -> ep.tryEmitNext("test1").orThrow())
 		            .expectNext("test1")
 		            .thenAwait(Duration.ofMillis(30))
-		            .then(() -> ep.onNext("test2"))
+		            .then(() -> ep.tryEmitNext("test2").orThrow())
 		            .thenAwait(Duration.ofMillis(30))
 		            .expectNext("test2")
 		            .thenAwait(Duration.ofMillis(30))
-		            .then(ep::onComplete)
+		            .then(() -> ep.tryEmitComplete().orThrow())
 		            .verifyComplete();
 
 
 
-		HttpClient.create()
-		          .port(server.port())
+		createClient(disposableServer.port())
 		          .compress(true)
 		          .post()
 		          .uri("/hi")
@@ -413,20 +389,15 @@ public class HttpTests {
 		          .asString()
 		          .log()
 		          .block();
-
-
-		server.disposeNow();
 	}
 
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void streamAndPoolDefaultCompression() {
-		EmitterProcessor<String> ep = EmitterProcessor.create();
+	void streamAndPoolDefaultCompression() {
+		Sinks.Many<String> ep = Sinks.unsafe().many().unicast().onBackpressureBuffer();
 
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .compress(true)
 				          .route(r -> r.post("/hi", (req, res) -> req.receive()
 				                                                     .aggregate()
@@ -436,14 +407,12 @@ public class HttpTests {
 				                                                                  .sendString(Flux.just("test")).then()))
 				                       .get("/stream", (req, res) ->
 						                           req.receive()
-						                              .then(res.sendString(ep.log()).then())))
-				          .wiretap(true)
+						                              .then(res.sendString(ep.asFlux().log()).then())))
 				          .bindNow();
 
 
 		String content =
-				HttpClient.create()
-				          .port(server.port())
+				createClient(disposableServer.port())
 				          .compress(true)
 				          .post()
 				          .uri("/hi")
@@ -454,8 +423,7 @@ public class HttpTests {
 				          .log()
 				          .block();
 
-		Flux<String> f = HttpClient.create()
-		                           .port(server.port())
+		Flux<String> f = createClient(disposableServer.port())
 		                           .compress(true)
 		                           .get()
 		                           .uri("/stream")
@@ -464,20 +432,19 @@ public class HttpTests {
 		System.out.println(content);
 
 		StepVerifier.create(f)
-		            .then(() -> ep.onNext("test1"))
+		            .then(() -> ep.tryEmitNext("test1").orThrow())
 		            .expectNext("test1")
 		            .thenAwait(Duration.ofMillis(30))
-		            .then(() -> ep.onNext("test2"))
+		            .then(() -> ep.tryEmitNext("test2").orThrow())
 		            .thenAwait(Duration.ofMillis(30))
 		            .expectNext("test2")
 		            .thenAwait(Duration.ofMillis(30))
-		            .then(ep::onComplete)
+		            .then(() -> ep.tryEmitComplete().orThrow())
 		            .verifyComplete();
 
 
 
-		HttpClient.create()
-		          .port(server.port())
+		createClient(disposableServer.port())
 		          .compress(true)
 		          .post()
 		          .uri("/hi")
@@ -487,13 +454,10 @@ public class HttpTests {
 		          .asString()
 		          .log()
 		          .block();
-
-
-		server.disposeNow();
 	}
 
 	@Test
-	public void testIssue387() {
+	void testIssue387() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> HttpServer.create()
 		                                    .secure(sslContextSpec -> System.out.println())
@@ -501,7 +465,7 @@ public class HttpTests {
 	}
 
 	@Test
-	public void testHttpClientDefaultSslProvider() {
+	void testHttpClientDefaultSslProvider() {
 		HttpClient client = HttpClient.create()
 		                              .wiretap(true);
 

@@ -27,33 +27,27 @@ import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.server.HttpServer;
+import reactor.netty.BaseHttpTest;
 import reactor.test.StepVerifier;
 
 /**
  * @author Violeta Georgieva
  */
-public class HttpCookieHandlingTests {
+class HttpCookieHandlingTests extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("CollectionUndefinedEquality")
-	public void clientWillIgnoreMalformedCookies() {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+	void clientWillIgnoreMalformedCookies() {
+		disposableServer =
+				createServer()
 				          .route(r -> r.get("/test", (req, resp) ->
 				                resp.addHeader("Set-Cookie", "name:with_colon=value")
 				                    .send(req.receive()
 				                             .log("server received"))))
-				          .wiretap(true)
 				          .bindNow();
 
 		Mono<Map<CharSequence, Set<Cookie>>> cookieResponse =
-				HttpClient.create()
-				          .port(server.port())
-				          .wiretap(true)
+				createClient(disposableServer.port())
 				          .get()
 				          .uri("/test")
 				          .responseSingle((res, buf) -> Mono.just(res.cookies()))
@@ -65,27 +59,21 @@ public class HttpCookieHandlingTests {
 		            .expectNextMatches(l -> !l.containsKey("name:with_colon"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
-
-		server.disposeNow();
 	}
 
 	@Test
 	@SuppressWarnings("CollectionUndefinedEquality")
-	public void clientWithoutCookieGetsANewOneFromServer() {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+	void clientWithoutCookieGetsANewOneFromServer() {
+		disposableServer =
+				createServer()
 				          .route(r -> r.get("/test", (req, resp) ->
 				                            resp.addCookie(new DefaultCookie("cookie1", "test_value"))
 				                                .send(req.receive()
 				                                         .log("server received"))))
-				          .wiretap(true)
 				          .bindNow();
 
 		Mono<Map<CharSequence, Set<Cookie>>> cookieResponse =
-				HttpClient.create()
-				          .port(server.port())
-				          .wiretap(true)
+				createClient(disposableServer.port())
 				          .get()
 				          .uri("/test")
 				          .responseSingle((res, buf) -> Mono.just(res.cookies()))
@@ -100,27 +88,21 @@ public class HttpCookieHandlingTests {
 				    })
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
-
-		server.disposeNow();
 	}
 
 	@Test
 	@SuppressWarnings("CollectionUndefinedEquality")
-	public void customCookieEncoderDecoder() {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+	void customCookieEncoderDecoder() {
+		disposableServer =
+				createServer()
 				          .cookieCodec(ServerCookieEncoder.LAX, ServerCookieDecoder.LAX)
 				          .handle((req, res) -> res.addCookie(new DefaultCookie("cookie1", "test_value"))
 				                                   .sendString(Mono.just("test")))
-				          .wiretap(true)
 				          .bindNow();
 
 		Mono<Map<CharSequence, Set<Cookie>>> response =
-				HttpClient.create()
-				          .port(server.port())
+				createClient(disposableServer.port())
 				          .cookieCodec(ClientCookieEncoder.LAX, ClientCookieDecoder.LAX)
-				          .wiretap(true)
 				          .get()
 				          .uri("/")
 				          .responseSingle((res, bytes) -> Mono.just(res.cookies()))
@@ -135,7 +117,5 @@ public class HttpCookieHandlingTests {
 		            })
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
-
-		server.disposeNow();
 	}
 }

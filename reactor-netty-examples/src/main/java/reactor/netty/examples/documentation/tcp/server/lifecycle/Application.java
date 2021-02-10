@@ -15,6 +15,7 @@
  */
 package reactor.netty.examples.documentation.tcp.server.lifecycle;
 
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import reactor.netty.DisposableServer;
 import reactor.netty.tcp.TcpServer;
@@ -27,6 +28,9 @@ public class Application {
 				TcpServer.create()
 				         .doOnConnection(conn ->
 				             conn.addHandler(new ReadTimeoutHandler(10, TimeUnit.SECONDS))) //<1>
+				         .doOnChannelInit((observer, channel, remoteAddress) ->
+				             channel.pipeline()
+				                    .addFirst(new LoggingHandler("reactor.netty.examples")))//<2>
 				         .bindNow();
 
 		server.onDispose()

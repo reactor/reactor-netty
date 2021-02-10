@@ -28,10 +28,10 @@ import org.junit.jupiter.api.Test;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
-public class AdvancedByteBufFormatTest {
+class AdvancedByteBufFormatTest {
 
 	@Test
-	public void createSimpleLoggingHandler() {
+	void createSimpleLoggingHandler() {
 		final LoggingHandler loggingHandler =
 			SIMPLE.toLoggingHandler(
 				AdvancedByteBufFormatTest.class.toString(),
@@ -43,7 +43,7 @@ public class AdvancedByteBufFormatTest {
 	}
 
 	@Test
-	public void createHexDumpLoggingHandler() {
+	void createHexDumpLoggingHandler() {
 		final LoggingHandler loggingHandler =
 			HEX_DUMP.toLoggingHandler(
 				AdvancedByteBufFormatTest.class.toString(),
@@ -55,7 +55,7 @@ public class AdvancedByteBufFormatTest {
 	}
 
 	@Test
-	public void createTextualLoggingHandler() {
+	void createTextualLoggingHandler() {
 		final LoggingHandler loggingHandler =
 			TEXTUAL.toLoggingHandler(
 				AdvancedByteBufFormatTest.class.toString(),
@@ -66,7 +66,7 @@ public class AdvancedByteBufFormatTest {
 	}
 
 	@Test
-	public void simpleToLoggingHandlerBadValues() {
+	void simpleToLoggingHandlerBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SIMPLE.toLoggingHandler(null, LogLevel.DEBUG, Charset.defaultCharset()))
 				.withMessage("name");
@@ -77,7 +77,7 @@ public class AdvancedByteBufFormatTest {
 	}
 
 	@Test
-	public void hexdumpToLoggingHandlerBadValues() {
+	void hexdumpToLoggingHandlerBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> HEX_DUMP.toLoggingHandler(null, LogLevel.DEBUG, Charset.defaultCharset()))
 				.withMessage("name");
@@ -88,7 +88,7 @@ public class AdvancedByteBufFormatTest {
 	}
 
 	@Test
-	public void textualToLoggingHandlerBadValues() {
+	void textualToLoggingHandlerBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> TEXTUAL.toLoggingHandler(null, LogLevel.DEBUG, Charset.defaultCharset()))
 				.withMessage("name");

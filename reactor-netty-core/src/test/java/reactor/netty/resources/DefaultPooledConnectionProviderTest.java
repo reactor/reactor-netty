@@ -62,17 +62,17 @@ import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class DefaultPooledConnectionProviderTest {
+class DefaultPooledConnectionProviderTest {
 
 	private InstrumentedPool<PooledConnection> channelPool;
 
 	@BeforeEach
-	public void before() {
+	void before() {
 		channelPool = new PoolImpl();
 	}
 
 	@Test
-	public void disposeLaterDefers() throws Exception {
+	void disposeLaterDefers() throws Exception {
 		ConnectionProvider.Builder connectionProviderBuilder =
 				ConnectionProvider.builder("disposeLaterDefers")
 				                  .maxConnections(Integer.MAX_VALUE);
@@ -94,7 +94,7 @@ public class DefaultPooledConnectionProviderTest {
 	}
 
 	@Test
-	public void disposeOnlyOnce() throws Exception {
+	void disposeOnlyOnce() throws Exception {
 		ConnectionProvider.Builder connectionProviderBuilder =
 				ConnectionProvider.builder("disposeOnlyOnce")
 				                  .maxConnections(Integer.MAX_VALUE);
@@ -120,7 +120,7 @@ public class DefaultPooledConnectionProviderTest {
 	}
 
 	@Test
-	public void fixedPoolTwoAcquire()
+	void fixedPoolTwoAcquire()
 			throws ExecutionException, InterruptedException, IOException {
 		final ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
 		int echoServerPort = SocketUtils.findAvailableTcpPort();
@@ -218,7 +218,7 @@ public class DefaultPooledConnectionProviderTest {
 	}
 
 	@Test
-	public void testIssue673_TimeoutException() throws InterruptedException {
+	void testIssue673_TimeoutException() throws InterruptedException {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
@@ -287,7 +287,7 @@ public class DefaultPooledConnectionProviderTest {
 	}
 
 	@Test
-	public void testIssue951_MaxPendingAcquire() throws InterruptedException {
+	void testIssue951_MaxPendingAcquire() throws InterruptedException {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)

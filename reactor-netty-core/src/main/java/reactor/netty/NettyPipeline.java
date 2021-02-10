@@ -100,6 +100,7 @@ public interface NettyPipeline {
 	String HttpDecompressor      = LEFT + "httpDecompressor";
 	String HttpMetricsHandler    = LEFT + "httpMetricsHandler";
 	String HttpTrafficHandler    = LEFT + "httpTrafficHandler";
+	String IdleTimeoutHandler    = LEFT + "idleTimeoutHandler";
 	String LoggingHandler        = LEFT + "loggingHandler";
 	String OnChannelReadIdle     = LEFT + "onChannelReadIdle";
 	String OnChannelWriteIdle    = LEFT + "onChannelWriteIdle";

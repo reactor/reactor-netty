@@ -24,8 +24,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
-import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientConfig;
 import reactor.netty.http.server.HttpServer;
@@ -41,8 +41,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 /**
  * Test a combination of {@link HttpServer} + {@link HttpProtocol}
  * with a combination of {@link HttpClient} + {@link HttpProtocol}
@@ -50,7 +48,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-public class HttpProtocolsTests {
+class HttpProtocolsTests extends BaseHttpTest {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
@@ -59,15 +57,13 @@ public class HttpProtocolsTests {
 	@interface ParameterizedHttpProtocolsTest {
 	}
 
-	public static Object[][] data() throws Exception {
+	static Object[][] data() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContextBuilder clientCtx = SslContextBuilder.forClient()
 		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
 
-		HttpServer _server = HttpServer.create()
-		                               .wiretap(true)
-		                               .httpRequestDecoder(spec -> spec.h2cMaxContentLength(256));
+		HttpServer _server = createServer().httpRequestDecoder(spec -> spec.h2cMaxContentLength(256));
 		HttpServer securedServer = _server.secure(spec -> spec.sslContext(serverCtx));
 
 		HttpServer[] servers = new HttpServer[]{
@@ -103,128 +99,112 @@ public class HttpProtocolsTests {
 	}
 
 	@ParameterizedHttpProtocolsTest
-	public void testProtocolVariationsGetRequest(HttpServer server, HttpClient client) {
+	void testProtocolVariationsGetRequest(HttpServer server, HttpClient client) {
 		HttpServerConfig serverConfig = server.configuration();
 		HttpClientConfig clientConfig = client.configuration();
 		List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());
 		List<HttpProtocol> clientProtocols = Arrays.asList(clientConfig.protocols());
 
-		DisposableServer disposableServer = null;
-		try {
-			disposableServer =
-					server.port(0)
-					      .handle((req, res) -> {
-					          boolean secure = "https".equals(req.scheme());
-					          if (serverConfig.isSecure() != secure) {
-					              return res.status(400).send();
-					          }
-					          return res.sendString(Mono.just("Hello"));
-					      })
-					      .bindNow();
+		disposableServer =
+				server.handle((req, res) -> {
+				          boolean secure = "https".equals(req.scheme());
+				          if (serverConfig.isSecure() != secure) {
+				              return res.status(400).send();
+				          }
+				          return res.sendString(Mono.just("Hello"));
+				      })
+				      .bindNow();
 
-			Mono<String> response =
-					client.port(disposableServer.port())
-					      .get()
-					      .uri("/")
-					      .responseContent()
-					      .aggregate()
-					      .asString();
+		Mono<String> response =
+				client.port(disposableServer.port())
+				      .get()
+				      .uri("/")
+				      .responseContent()
+				      .aggregate()
+				      .asString();
 
-			if (serverConfig.isSecure() != clientConfig.isSecure()) {
-				StepVerifier.create(response)
-				            .expectError()
-				            .verify(Duration.ofSeconds(30));
-			}
-			else if (serverProtocols.size() == 1 && serverProtocols.get(0) == HttpProtocol.H2C && clientProtocols.size() == 2) {
-				StepVerifier.create(response)
-				            .expectError()
-				            .verify(Duration.ofSeconds(30));
-			}
-			else if (serverProtocols.containsAll(clientProtocols) || clientProtocols.containsAll(serverProtocols)) {
-				StepVerifier.create(response)
-				            .expectNext("Hello")
-				            .expectComplete()
-				            .verify(Duration.ofSeconds(30));
-			}
-			else {
-				StepVerifier.create(response)
-				            .expectError()
-				            .verify(Duration.ofSeconds(30));
-			}
+		if (serverConfig.isSecure() != clientConfig.isSecure()) {
+			StepVerifier.create(response)
+			            .expectError()
+			            .verify(Duration.ofSeconds(30));
 		}
-		finally {
-			assertThat(disposableServer).isNotNull();
-			disposableServer.disposeNow();
+		else if (serverProtocols.size() == 1 && serverProtocols.get(0) == HttpProtocol.H2C && clientProtocols.size() == 2) {
+			StepVerifier.create(response)
+			            .expectError()
+			            .verify(Duration.ofSeconds(30));
+		}
+		else if (serverProtocols.containsAll(clientProtocols) || clientProtocols.containsAll(serverProtocols)) {
+			StepVerifier.create(response)
+			            .expectNext("Hello")
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(30));
+		}
+		else {
+			StepVerifier.create(response)
+			            .expectError()
+			            .verify(Duration.ofSeconds(30));
 		}
 	}
 
 	@ParameterizedHttpProtocolsTest
-	public void testProtocolVariationsPostRequest_1(HttpServer server, HttpClient client) {
+	void testProtocolVariationsPostRequest_1(HttpServer server, HttpClient client) {
 		doTestProtocolVariationsPostRequest(server, client, false);
 	}
 
 	@ParameterizedHttpProtocolsTest
-	public void testProtocolVariationsPostRequest_2(HttpServer server, HttpClient client) {
+	void testProtocolVariationsPostRequest_2(HttpServer server, HttpClient client) {
 		doTestProtocolVariationsPostRequest(server, client, true);
 	}
 
-	public void doTestProtocolVariationsPostRequest(HttpServer server, HttpClient client, boolean externalThread) {
+	private void doTestProtocolVariationsPostRequest(HttpServer server, HttpClient client, boolean externalThread) {
 		HttpServerConfig serverConfig = server.configuration();
 		HttpClientConfig clientConfig = client.configuration();
 		List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());
 		List<HttpProtocol> clientProtocols = Arrays.asList(clientConfig.protocols());
 
-		DisposableServer disposableServer = null;
-		try {
-			disposableServer =
-					server.port(0)
-					      .handle((req, res) -> {
-					          boolean secure = "https".equals(req.scheme());
-					          if (serverConfig.isSecure() != secure) {
-					              return res.status(400).send();
-					          }
-					          Flux<ByteBuf> publisher = req.receive().retain();
-					          if (externalThread) {
-					              publisher = publisher.subscribeOn(Schedulers.boundedElastic());
-					          }
-					          return res.send(publisher);
-					      })
-					      .bindNow();
+		disposableServer =
+				server.handle((req, res) -> {
+				          boolean secure = "https".equals(req.scheme());
+				          if (serverConfig.isSecure() != secure) {
+				              return res.status(400).send();
+				          }
+				          Flux<ByteBuf> publisher = req.receive().retain();
+				          if (externalThread) {
+				              publisher = publisher.subscribeOn(Schedulers.boundedElastic());
+				          }
+				          return res.send(publisher);
+				      })
+				      .bindNow();
 
-			Mono<String> response =
-					client.port(disposableServer.port())
-					      .post()
-					      .uri("/")
-					      .send(ByteBufFlux.fromString(Mono.just("Hello")))
-					      .responseContent()
-					      .aggregate()
-					      .asString();
+		Mono<String> response =
+				client.port(disposableServer.port())
+				      .post()
+				      .uri("/")
+				      .send(ByteBufFlux.fromString(Mono.just("Hello")))
+				      .responseContent()
+				      .aggregate()
+				      .asString();
 
-			if (serverConfig.isSecure() != clientConfig.isSecure()) {
-					StepVerifier.create(response)
-					            .expectError()
-					            .verify(Duration.ofSeconds(30));
-			}
-			else if (serverProtocols.size() == 1 && serverProtocols.get(0) == HttpProtocol.H2C && clientProtocols.size() == 2) {
+		if (serverConfig.isSecure() != clientConfig.isSecure()) {
 				StepVerifier.create(response)
 				            .expectError()
 				            .verify(Duration.ofSeconds(30));
-			}
-			else if (serverProtocols.containsAll(clientProtocols) || clientProtocols.containsAll(serverProtocols)) {
-				StepVerifier.create(response)
-				            .expectNext("Hello")
-				            .expectComplete()
-				            .verify(Duration.ofSeconds(30));
-			}
-			else {
-				StepVerifier.create(response)
-				            .expectError()
-				            .verify(Duration.ofSeconds(30));
-			}
 		}
-		finally {
-			assertThat(disposableServer).isNotNull();
-			disposableServer.disposeNow();
+		else if (serverProtocols.size() == 1 && serverProtocols.get(0) == HttpProtocol.H2C && clientProtocols.size() == 2) {
+			StepVerifier.create(response)
+			            .expectError()
+			            .verify(Duration.ofSeconds(30));
+		}
+		else if (serverProtocols.containsAll(clientProtocols) || clientProtocols.containsAll(serverProtocols)) {
+			StepVerifier.create(response)
+			            .expectNext("Hello")
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(30));
+		}
+		else {
+			StepVerifier.create(response)
+			            .expectError()
+			            .verify(Duration.ofSeconds(30));
 		}
 	}
 }

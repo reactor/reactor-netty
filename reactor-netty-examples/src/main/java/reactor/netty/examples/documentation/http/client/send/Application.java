@@ -25,7 +25,7 @@ public class Application {
 		HttpClient client = HttpClient.create();
 
 		client.post()
-		      .uri("http://example.com/")
+		      .uri("https://example.com/")
 		      .send(ByteBufFlux.fromString(Mono.just("hello"))) //<1>
 		      .response()
 		      .block();

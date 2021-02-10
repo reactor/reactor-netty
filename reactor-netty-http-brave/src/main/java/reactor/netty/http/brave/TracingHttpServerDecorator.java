@@ -75,6 +75,7 @@ final class TracingHttpServerDecorator {
 			this.path = initPath();
 		}
 
+		@Nullable
 		String initPath() {
 			try {
 				return delegate.fullPath();

@@ -27,6 +27,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.logging.LogLevel;
+import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
@@ -65,6 +67,7 @@ import static reactor.netty.ReactorNetty.format;
  *          .connect()
  *          .block()
  * }
+ * </pre>
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
@@ -128,12 +131,52 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	/**
 	 * Apply a {@link Bootstrap} mapping function to update {@link TcpClient} configuration and
 	 * return an enriched {@link TcpClient} to use.
+	 * <p>
+	 * <strong>Note:</strong>
+	 * There isn't only one method that replaces this deprecated method.
+	 * The configuration that can be done with this deprecated method,
+	 * can also be done with the other methods exposed by {@link TcpClient}.
+	 * </p>
+	 * <p>Examples:</p>
+	 * <p>Configuration via the deprecated '.bootstrap(...)' method</p>
+	 * <pre>
+	 * {@code
+	 * TcpClient.bootstrap(b ->
+	 *     b.attr(...) // configures the channel attributes
+	 *      .group(...) // configures the event loop group
+	 *      .handler(...) // configures the channel handler
+	 *      .localAddress(...) // configures the bind (local) address
+	 *      .option(...) // configures the channel options
+	 *      .remoteAddress(...) // configures the remote address
+	 *      .resolver(...)) // configures the host names resolver
+	 * }
+	 * </pre>
+	 *
+	 * <p>Configuration via the other methods exposed by {@link TcpClient}</p>
+	 * <pre>
+	 * {@code
+	 * TcpClient.attr(...) // configures the channel attributes
+	 *          .runOn(...) // configures the event loop group
+	 *          .doOnChannelInit(...) // configures the channel handler
+	 *          .bindAddress(...) // configures the bind (local) address
+	 *          .option(...) // configures the channel options
+	 *          .remoteAddress(...) // configures the remote address
+	 *          .resolver(...) // configures the host names resolver
+	 * }
+	 * </pre>
+	 *
+	 * <p>Wire logging in plain text</p>
+	 * <pre>
+	 * {@code
+	 * TcpClient.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
+	 * }
+	 * </pre>
 	 *
 	 * @param bootstrapMapper A {@link Bootstrap} mapping function to update {@link TcpClient} configuration and
 	 * return an enriched {@link TcpClient} to use.
 	 * @return a new {@link TcpClient}
-	 * @deprecated as of 0.9.10. Use the methods exposed on {@link TcpClient} level. The method
-	 * will be removed in version 1.1.0.
+	 * @deprecated as of 0.9.10. Use the other methods exposed by {@link TcpClient} to achieve the same configurations.
+	 * The method will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	@SuppressWarnings("ReturnValueIgnored")
@@ -312,6 +355,31 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 		TcpClient dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
 		return dup;
+	}
+
+	/**
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop group</li>
+	 *     <li>an initialization of the host name resolver</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 *     <li>loads the necessary native libraries for the security if there is such</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code connect operation} absorbs the extra time needed to load resources.
+	 *
+	 * @return a {@link Mono} representing the completion of the warmup
+	 * @since 1.0.3
+	 */
+	@Override
+	public Mono<Void> warmup() {
+		return Mono.when(
+				super.warmup(),
+				Mono.fromRunnable(() -> {
+					SslProvider provider = configuration().sslProvider();
+					if (provider != null && !(provider.getSslContext() instanceof JdkSslContext)) {
+						OpenSsl.version();
+					}
+				}));
 	}
 
 	@Override

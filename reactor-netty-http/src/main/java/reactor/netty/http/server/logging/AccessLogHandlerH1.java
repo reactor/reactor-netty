@@ -14,39 +14,45 @@
  * limitations under the License.
  */
 
-package reactor.netty.http.server;
+package reactor.netty.http.server.logging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
+import reactor.util.annotation.Nullable;
+
+import java.util.function.Function;
 
 /**
+ * {@link ChannelHandler} for access log of HTTP/1.1.
+ *
  * @author Violeta Georgieva
+ * @author limaoning
  */
-final class AccessLogHandler extends ChannelDuplexHandler {
+final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 
-	AccessLog accessLog = new AccessLog();
+	AccessLogArgProviderH1 accessLogArgProvider;
+
+	AccessLogHandlerH1(@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+		super(accessLog);
+	}
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
 			final HttpRequest request = (HttpRequest) msg;
-			final SocketChannel channel = (SocketChannel) ctx.channel();
 
-			accessLog = new AccessLog()
-			        .address(channel.remoteAddress().getHostString())
-			        .port(channel.localAddress().getPort())
-			        .method(request.method().name())
-			        .uri(request.uri())
-			        .protocol(request.protocolVersion().text());
+			if (accessLogArgProvider == null) {
+				accessLogArgProvider = new AccessLogArgProviderH1(ctx.channel().remoteAddress());
+			}
+			accessLogArgProvider.request(request);
 		}
 		ctx.fireChannelRead(msg);
 	}
@@ -65,27 +71,31 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 			}
 
 			final boolean chunked = HttpUtil.isTransferEncodingChunked(response);
-			accessLog.status(status.codeAsText())
-			         .chunked(chunked);
+			accessLogArgProvider.status(status.codeAsText())
+					.chunked(chunked);
 			if (!chunked) {
-				accessLog.contentLength(HttpUtil.getContentLength(response, -1));
+				accessLogArgProvider.contentLength(HttpUtil.getContentLength(response, -1));
 			}
 		}
 		if (msg instanceof LastHttpContent) {
-			accessLog.increaseContentLength(((LastHttpContent) msg).content().readableBytes());
+			accessLogArgProvider.increaseContentLength(((LastHttpContent) msg).content().readableBytes());
 			ctx.write(msg, promise.unvoid())
 			   .addListener(future -> {
 			       if (future.isSuccess()) {
-			           accessLog.log();
+				       AccessLog log = accessLog.apply(accessLogArgProvider);
+				       if (log != null) {
+					       log.log();
+				       }
+				       accessLogArgProvider.clear();
 			       }
 			   });
 			return;
 		}
 		if (msg instanceof ByteBuf) {
-			accessLog.increaseContentLength(((ByteBuf) msg).readableBytes());
+			accessLogArgProvider.increaseContentLength(((ByteBuf) msg).readableBytes());
 		}
 		if (msg instanceof ByteBufHolder) {
-			accessLog.increaseContentLength(((ByteBufHolder) msg).content().readableBytes());
+			accessLogArgProvider.increaseContentLength(((ByteBufHolder) msg).content().readableBytes());
 		}
 		//"FutureReturnValueIgnored" this is deliberate
 		ctx.write(msg, promise);

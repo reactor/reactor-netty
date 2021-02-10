@@ -17,7 +17,16 @@ package reactor.netty.tcp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
-import static reactor.netty.Metrics.*;
+import static reactor.netty.Metrics.CONNECT_TIME;
+import static reactor.netty.Metrics.DATA_RECEIVED;
+import static reactor.netty.Metrics.DATA_SENT;
+import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.STATUS;
+import static reactor.netty.Metrics.TCP_CLIENT_PREFIX;
+import static reactor.netty.Metrics.TCP_SERVER_PREFIX;
+import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty.Metrics.URI;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
@@ -44,7 +53,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Violeta Georgieva
  */
-public class TcpMetricsTests {
+class TcpMetricsTests {
 	TcpServer tcpServer;
 	DisposableServer disposableServer;
 	TcpClient tcpClient;
@@ -53,7 +62,7 @@ public class TcpMetricsTests {
 	private MeterRegistry registry;
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		tcpServer =
 				customizeServerOptions(TcpServer.create()
 				                                .host("127.0.0.1")
@@ -71,7 +80,7 @@ public class TcpMetricsTests {
 	}
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
@@ -89,7 +98,7 @@ public class TcpMetricsTests {
 	}
 
 	@Test
-	public void testSuccessfulCommunication() throws Exception {
+	void testSuccessfulCommunication() throws Exception {
 		CountDownLatch latch = new CountDownLatch(2);
 		disposableServer =
 				tcpServer.handle((in, out) -> {
@@ -127,7 +136,7 @@ public class TcpMetricsTests {
 	}
 
 	@Test
-	public void testFailedConnect() throws Exception {
+	void testFailedConnect() throws Exception {
 		disposableServer = tcpServer.bindNow();
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -148,7 +157,7 @@ public class TcpMetricsTests {
 			                      .connectNow();
 			fail("Connect should fail.");
 		}
-		catch(Exception e) {
+		catch (Exception e) {
 			// expected
 		}
 

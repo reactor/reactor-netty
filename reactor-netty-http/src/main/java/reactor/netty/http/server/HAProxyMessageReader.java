@@ -42,10 +42,10 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 
 	static {
 		boolean proxyProtocolCheck = true;
-		try{
+		try {
 			Class.forName("io.netty.handler.codec.haproxy.HAProxyMessageDecoder");
 		}
-		catch (ClassNotFoundException cnfe){
+		catch (ClassNotFoundException cnfe) {
 			proxyProtocolCheck = false;
 		}
 		hasProxyProtocol = proxyProtocolCheck;
@@ -83,7 +83,8 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 			   .remove(this);
 
 			ctx.read();
-		} else {
+		}
+		else {
 			super.channelRead(ctx, msg);
 		}
 	}

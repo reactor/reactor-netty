@@ -47,8 +47,8 @@ public abstract class FutureMono extends Mono<Void> {
 	 */
 	public static <F extends Future<Void>> Mono<Void> from(F future) {
 		Objects.requireNonNull(future, "future");
-		if(future.isDone()){
-			if(!future.isSuccess()){
+		if (future.isDone()) {
+			if (!future.isSuccess()) {
 				return Mono.error(FutureSubscription.wrapError(future.cause()));
 			}
 			return Mono.empty();
@@ -81,11 +81,11 @@ public abstract class FutureMono extends Mono<Void> {
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public final void subscribe(final CoreSubscriber<? super Void> s) {
-			if(future.isDone()){
-				if(future.isSuccess()){
+			if (future.isDone()) {
+				if (future.isSuccess()) {
 					Operators.complete(s);
 				}
-				else{
+				else {
 					Operators.error(s, FutureSubscription.wrapError(future.cause()));
 				}
 				return;
@@ -114,7 +114,7 @@ public abstract class FutureMono extends Mono<Void> {
 			try {
 				f = deferredFuture.get();
 			}
-			catch(Throwable t) {
+			catch (Throwable t) {
 				Operators.error(s, t);
 				return;
 			}

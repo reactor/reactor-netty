@@ -47,25 +47,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Violeta Georgieva
  */
-public class HttpClientWithTomcatTest {
+class HttpClientWithTomcatTest {
 	private static TomcatServer tomcat;
 
 	@BeforeAll
-	public static void startTomcat() throws Exception {
+	static void startTomcat() throws Exception {
 		tomcat = new TomcatServer();
 		tomcat.createDefaultContext();
 		tomcat.start();
 	}
 
 	@AfterAll
-	public static void stopTomcat() throws Exception {
+	static void stopTomcat() throws Exception {
 		if (tomcat != null) {
 			tomcat.stop();
 		}
 	}
 
 	@Test
-	public void nettyNetChannelAcceptsNettyChannelHandlers() throws Exception {
+	void nettyNetChannelAcceptsNettyChannelHandlers() throws Exception {
 		HttpClient client = HttpClient.create()
 		                              .port(getPort())
 		                              .wiretap(true);
@@ -86,7 +86,7 @@ public class HttpClientWithTomcatTest {
 	}
 
 	@Test
-	public void postUpload() throws Exception {
+	void postUpload() throws Exception {
 		HttpClient client =
 				HttpClient.create()
 				          .host("localhost")
@@ -112,13 +112,13 @@ public class HttpClientWithTomcatTest {
 	}
 
 	@Test
-	public void simpleTest404() {
+	void simpleTest404() {
 		doSimpleTest404(HttpClient.create()
 		                          .baseUrl(getURL()));
 	}
 
 	@Test
-	public void simpleTest404_1() {
+	void simpleTest404_1() {
 		ConnectionProvider pool = ConnectionProvider.create("simpleTest404_1", 1);
 		HttpClient client =
 				HttpClient.create(pool)
@@ -145,7 +145,7 @@ public class HttpClientWithTomcatTest {
 	}
 
 	@Test
-	public void disableChunkForced() {
+	void disableChunkForced() {
 		AtomicReference<HttpHeaders> headers = new AtomicReference<>();
 		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
@@ -169,7 +169,7 @@ public class HttpClientWithTomcatTest {
 	}
 
 	@Test
-	public void disableChunkForced2() {
+	void disableChunkForced2() {
 		AtomicReference<HttpHeaders> headers = new AtomicReference<>();
 		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
@@ -192,7 +192,7 @@ public class HttpClientWithTomcatTest {
 	}
 
 	@Test
-	public void simpleClientPooling() {
+	void simpleClientPooling() {
 		ConnectionProvider p = ConnectionProvider.create("simpleClientPooling", 1);
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
 		AtomicReference<Channel> ch2 = new AtomicReference<>();
@@ -225,7 +225,7 @@ public class HttpClientWithTomcatTest {
 	}
 
 	@Test
-	public void disableChunkImplicitDefault() {
+	void disableChunkImplicitDefault() {
 		ConnectionProvider p = ConnectionProvider.create("disableChunkImplicitDefault", 1);
 		HttpClient client =
 				HttpClient.create(p)
@@ -259,7 +259,7 @@ public class HttpClientWithTomcatTest {
 	}
 
 	@Test
-	public void contentHeader() {
+	void contentHeader() {
 		ConnectionProvider fixed = ConnectionProvider.create("contentHeader", 1);
 		HttpClient client =
 				HttpClient.create(fixed)

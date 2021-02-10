@@ -37,10 +37,10 @@ import reactor.netty.resources.LoopResources;
 /**
  * @author Violeta Georgieva
  */
-public class TransportTest {
+class TransportTest {
 
 	@Test
-	public void testWiretap() {
+	void testWiretap() {
 		TestTransportConfig config = new TestTransportConfig(Collections.emptyMap());
 		TestTransport transport = new TestTransport(config);
 

@@ -21,44 +21,49 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 
-public class ByteBufMonoTest {
+class ByteBufMonoTest {
 
 	@Test
-	public void testFromString_EmptyFlux() {
+	void testFromString_EmptyFlux() {
 		doTestFromStringEmptyPublisher(Flux.empty());
 	}
 
 	@Test
-	public void testFromString_EmptyMono() {
+	void testFromString_EmptyMono() {
 		doTestFromStringEmptyPublisher(Mono.empty());
 	}
 
 	@Test
-	public void testFromString_Callable() {
+	void testFromString_Callable() {
 		doTestFromString(Mono.fromCallable(() -> "123"));
 	}
 
 	@Test
-	public void testFromString_Flux() {
+	void testFromString_Flux() {
 		doTestFromString(Flux.just("1", "2", "3"));
 	}
 
 	@Test
-	public void testFromString_Mono() {
+	void testFromString_Mono() {
 		doTestFromString(Mono.just("123"));
 	}
 
 	private void doTestFromString(Publisher<? extends String> source) {
-		StepVerifier.create(ByteBufMono.fromString(source).asString())
-		            .expectNext("123")
+		StepVerifier.create(ByteBufMono.fromString(source))
+		            .expectNextMatches(b -> {
+		                String result = b.toString(Charset.defaultCharset());
+		                b.release();
+		                return "123".equals(result);
+		            })
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
 
 	private void doTestFromStringEmptyPublisher(Publisher<? extends String> source) {
-		StepVerifier.create(ByteBufMono.fromString(source).asString())
+		StepVerifier.create(ByteBufMono.fromString(source))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}

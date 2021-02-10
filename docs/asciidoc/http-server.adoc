@@ -47,6 +47,26 @@ include::{examplesdir}/address/Application.java[lines=18..33]
 <2> Configures the `HTTP` server port
 ====
 
+== Eager Initialization
+
+By default, the initialization of the `HttpServer` resources happens on demand. This means that the `bind
+operation` absorbs the extra time needed to initialize and load:
+
+ * the event loop groups
+ * the native transport libraries (when native transport is used)
+ * the native libraries for the security (in case of `OpenSsl`)
+
+When you need to preload these resources, you can configure the `HttpServer` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/warmup/Application.java
+----
+include::{examplesdir}/warmup/Application.java[lines=18..36]
+----
+<1> Initialize and load the event loop groups, the native transport libraries and the native libraries for the security
+====
+
 == Routing HTTP
 
 Defining routes for the `HTTP` server requires configuring the provided
@@ -254,6 +274,32 @@ https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLo
 is raised.
 ====
 
+== Lifecycle Callbacks
+
+The following lifecycle callbacks are provided to let you extend the `HttpServer`:
+
+[width="100%",options="header"]
+|=======
+| Callback | Description
+| `doOnBind` | Invoked when the server channel is about to bind.
+| `doOnBound` | Invoked when the server channel is bound.
+| `doOnChannelInit` | Invoked when initializing the channel.
+| `doOnConnection` | Invoked when a remote client is connected
+| `doOnUnbound` | Invoked when the server channel is unbound.
+|=======
+
+The following example uses the `doOnConnection` and `doOnChannelInit` callbacks:
+
+====
+[source,java,indent=0]
+.{examplesdir}/lifecycle/Application.java
+----
+include::{examplesdir}/lifecycle/Application.java[lines=18..39]
+----
+<1> `Netty` pipeline is extended with `ReadTimeoutHandler` when a remote client is connected.
+<2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
+====
+
 == TCP-level Configuration
 
 When you need to change configuration on the TCP level, you can use the following snippet
@@ -283,6 +329,23 @@ and apply the following configuration:
 include::{examplesdir}/wiretap/Application.java[lines=18..32]
 ----
 <1> Enables the wire logging
+====
+
+By default, the wire logging uses {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP]
+when printing the content.
+When you need to change this to {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
+or {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL],
+you can configure the `HttpServer` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/wiretap/custom/Application.java
+----
+include::{examplesdir}/wiretap/custom/Application.java[lines=18..34]
+----
+<1> Enables the wire logging,
+{javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
+printing the content.
 ====
 
 == SSL and TLS
@@ -322,10 +385,9 @@ include::{examplesdir}/sni/Application.java[lines=18..47]
 
 == HTTP Access Log
 
-The current logging support provides only the https://en.wikipedia.org/wiki/Common_Log_Format[Common Log Format].
+You can enable the `HTTP` access log either programmatically or by configuration. By default, it is disabled.
 
-You can use `-Dreactor.netty.http.server.accessLogEnabled=true` to enable the `HTTP` access log.
-By default, it is disabled.
+You can use `-Dreactor.netty.http.server.accessLogEnabled=true` to enable the `HTTP` access log by configuration.
 
 You can use the following configuration (for Logback or similar logging frameworks) to have a separate
 `HTTP` access log file:
@@ -347,6 +409,48 @@ You can use the following configuration (for Logback or similar logging framewor
     <appender-ref ref="async"/>
 </logger>
 ----
+====
+
+The following example enables it programmatically:
+====
+[source,java,indent=0]
+.{examplesdir}/accessLog/Application.java
+----
+include::{examplesdir}/accessLog/Application.java[lines=18..32]
+----
+====
+
+Calling this method takes precedence over the system property configuration.
+
+By default, the logging format is https://en.wikipedia.org/wiki/Common_Log_Format[Common Log Format], but you can
+specify a custom one as a parameter, as in the following example:
+====
+[source,java,indent=0]
+.{examplesdir}/accessLog/CustomLogAccessFormatApplication.java
+----
+include::{examplesdir}/accessLog/CustomLogAccessFormatApplication.java[lines=18..33]
+----
+====
+
+You can also filter `HTTP` access logs by using the `AccessLogFactory#createFilter` method, as in the following example:
+====
+[source,java,indent=0]
+.{examplesdir}/accessLog/FilterLogAccessApplication.java
+----
+include::{examplesdir}/accessLog/FilterLogAccessApplication.java[lines=18..34]
+----
+====
+
+Note that this method can take a custom format parameter too, as in this example:
+====
+[source,java,indent=0]
+.{examplesdir}/accessLog/CustomFormatAndFilterAccessLogApplication.java.java
+----
+include::{examplesdir}/accessLog/CustomFormatAndFilterAccessLogApplication.java[lines=18..35]
+----
+<1> Specifies the filter predicate to use
+<2> Specifies the custom format to apply
+
 ====
 
 == HTTP/2

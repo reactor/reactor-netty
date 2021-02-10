@@ -23,10 +23,10 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class AddressUtilsTest {
+class AddressUtilsTest {
 
 	@Test
-	public void shouldCreateResolvedNumericIPv4Address() {
+	void shouldCreateResolvedNumericIPv4Address() {
 		InetSocketAddress socketAddress = AddressUtils.createResolved("127.0.0.1", 8080);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("127.0.0.1");
@@ -35,7 +35,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldCreateResolvedNumericIPv6Address() {
+	void shouldCreateResolvedNumericIPv6Address() {
 		InetSocketAddress socketAddress = AddressUtils.createResolved("::1", 8080);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("0:0:0:0:0:0:0:1");
@@ -44,7 +44,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldCreateUnresolvedAddressByHostName() {
+	void shouldCreateUnresolvedAddressByHostName() {
 		InetSocketAddress socketAddress = AddressUtils.createUnresolved("example.com", 80);
 		assertThat(socketAddress.isUnresolved()).isTrue();
 		assertThat(socketAddress.getPort()).isEqualTo(80);
@@ -52,7 +52,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldAlwaysCreateResolvedNumberIPAddress() {
+	void shouldAlwaysCreateResolvedNumberIPAddress() {
 		InetSocketAddress socketAddress = AddressUtils.createUnresolved("127.0.0.1", 8080);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("127.0.0.1");
@@ -61,7 +61,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldReplaceNumericIPAddressWithResolvedInstance() {
+	void shouldReplaceNumericIPAddressWithResolvedInstance() {
 		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("127.0.0.1", 8080);
 		InetSocketAddress replacedAddress = AddressUtils.replaceUnresolvedNumericIp(socketAddress);
 		assertThat(replacedAddress).isNotSameAs(socketAddress);
@@ -73,21 +73,21 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldNotReplaceIfNonNumeric() {
+	void shouldNotReplaceIfNonNumeric() {
 		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("example.com", 80);
 		InetSocketAddress processedAddress = AddressUtils.replaceUnresolvedNumericIp(socketAddress);
 		assertThat(processedAddress).isSameAs(socketAddress);
 	}
 
 	@Test
-	public void shouldNotReplaceIfAlreadyResolvedWhenCallingReplaceUnresolvedNumericIp() {
+	void shouldNotReplaceIfAlreadyResolvedWhenCallingReplaceUnresolvedNumericIp() {
 		InetSocketAddress socketAddress = new InetSocketAddress("127.0.0.1", 80);
 		InetSocketAddress processedAddress = AddressUtils.replaceUnresolvedNumericIp(socketAddress);
 		assertThat(processedAddress).isSameAs(socketAddress);
 	}
 
 	@Test
-	public void shouldResolveUnresolvedAddress() {
+	void shouldResolveUnresolvedAddress() {
 		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("example.com", 80);
 		InetSocketAddress processedAddress = AddressUtils.replaceWithResolved(socketAddress);
 		assertThat(processedAddress).isNotSameAs(socketAddress);
@@ -95,14 +95,14 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldNotReplaceIfAlreadyResolved() {
+	void shouldNotReplaceIfAlreadyResolved() {
 		InetSocketAddress socketAddress = new InetSocketAddress("example.com", 80);
 		InetSocketAddress processedAddress = AddressUtils.replaceWithResolved(socketAddress);
 		assertThat(processedAddress).isSameAs(socketAddress);
 	}
 
 	@Test
-	public void shouldParseAddressForIPv4() {
+	void shouldParseAddressForIPv4() {
 		InetSocketAddress socketAddress = AddressUtils.parseAddress("127.0.0.1", 80);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("127.0.0.1");
@@ -111,7 +111,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldParseAddressForIPv4WithPort() {
+	void shouldParseAddressForIPv4WithPort() {
 		InetSocketAddress socketAddress = AddressUtils.parseAddress("127.0.0.1:8080", 80);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("127.0.0.1");
@@ -120,7 +120,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldParseAddressForIPv6() {
+	void shouldParseAddressForIPv6() {
 		InetSocketAddress socketAddress = AddressUtils.parseAddress("[1abc:2abc:3abc::5ABC:6abc]", 80);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
@@ -129,7 +129,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldParseAddressForIPv6WithPort() {
+	void shouldParseAddressForIPv6WithPort() {
 		InetSocketAddress socketAddress = AddressUtils.parseAddress("[1abc:2abc:3abc::5ABC:6abc]:8080", 80);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
@@ -138,7 +138,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldParseAddressForIPv6WithoutBrackets() {
+	void shouldParseAddressForIPv6WithoutBrackets() {
 		InetSocketAddress socketAddress = AddressUtils.parseAddress("1abc:2abc:3abc:0:0:0:5abc:6abc", 80);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
@@ -147,7 +147,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldParseAddressForIPv6WithNotNumericPort() {
+	void shouldParseAddressForIPv6WithNotNumericPort() {
 		InetSocketAddress socketAddress = AddressUtils.parseAddress("[1abc:2abc:3abc::5ABC:6abc]:abc42", 80);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
@@ -156,7 +156,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldParseAddressForHostName() {
+	void shouldParseAddressForHostName() {
 		InetSocketAddress socketAddress = AddressUtils.parseAddress("example.com", 80);
 		assertThat(socketAddress.isUnresolved()).isTrue();
 		assertThat(socketAddress.getPort()).isEqualTo(80);
@@ -164,7 +164,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void shouldParseAddressForHostNameWithPort() {
+	void shouldParseAddressForHostNameWithPort() {
 		InetSocketAddress socketAddress = AddressUtils.parseAddress("example.com:8080", 80);
 		assertThat(socketAddress.isUnresolved()).isTrue();
 		assertThat(socketAddress.getPort()).isEqualTo(8080);
@@ -172,7 +172,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void createInetSocketAddressBadValues() {
+	void createInetSocketAddressBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> AddressUtils.createInetSocketAddress(null, 0, true))
 				.withMessage("hostname");
@@ -183,7 +183,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void createResolvedBadValues() {
+	void createResolvedBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> AddressUtils.createResolved(null, 0))
 				.withMessage("hostname");
@@ -194,7 +194,7 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void createUnresolvedBadValues() {
+	void createUnresolvedBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> AddressUtils.createUnresolved(null, 0))
 				.withMessage("hostname");
@@ -205,35 +205,35 @@ public class AddressUtilsTest {
 	}
 
 	@Test
-	public void replaceUnresolvedNumericIpBadValues() {
+	void replaceUnresolvedNumericIpBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> AddressUtils.replaceUnresolvedNumericIp(null))
 				.withMessage("inetSocketAddress");
 	}
 
 	@Test
-	public void replaceWithResolvedBadValues() {
+	void replaceWithResolvedBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> AddressUtils.replaceWithResolved(null))
 				.withMessage("inetSocketAddress");
 	}
 
 	@Test
-	public void updateHostBadValues() {
+	void updateHostBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> AddressUtils.updateHost(null, null))
 				.withMessage("hostname");
 	}
 
 	@Test
-	public void updatePortBadValues() {
+	void updatePortBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> AddressUtils.updatePort(null, -1))
 				.withMessage("port out of range:-1");
 	}
 
 	@Test
-	public void parseAddressBadValues() {
+	void parseAddressBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> AddressUtils.parseAddress(null, 0))
 				.withMessage("address");

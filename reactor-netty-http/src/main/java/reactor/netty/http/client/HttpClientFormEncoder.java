@@ -36,7 +36,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.multipart.MemoryFileUpload;
 import io.netty.handler.stream.ChunkedInput;
 import reactor.core.Exceptions;
-import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.Sinks;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -48,8 +48,7 @@ import reactor.util.annotation.Nullable;
 final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		implements ChunkedInput<HttpContent>, Runnable, HttpClientForm {
 
-	@SuppressWarnings("deprecation")
-	final DirectProcessor<Long> progressFlux;
+	final Sinks.Many<Long> progressSink;
 	final HttpRequest request;
 
 	boolean         needNewEncoder;
@@ -70,7 +69,6 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	 * @throws NullPointerException      for request or charset or factory
 	 * @throws ErrorDataEncoderException if the request is not a POST
 	 */
-	@SuppressWarnings("deprecation")
 	HttpClientFormEncoder(HttpDataFactory factory,
 			HttpRequest request,
 			boolean multipart,
@@ -80,7 +78,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		this.newCharset = charset;
 		this.request = request;
 		this.cleanOnTerminate = true;
-		this.progressFlux = DirectProcessor.create();
+		this.progressSink = Sinks.many().unicast().onBackpressureError();
 		this.newMode = encoderMode;
 		this.newFactory = factory;
 		this.newMultipart = multipart;
@@ -90,12 +88,12 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	public HttpContent readChunk(ByteBufAllocator allocator) throws Exception {
 		HttpContent c = super.readChunk(allocator);
 		if (c == null) {
-			progressFlux.onComplete();
+			progressSink.emitComplete(Sinks.EmitFailureHandler.FAIL_FAST);
 		}
 		else {
-			progressFlux.onNext(progress());
+			progressSink.emitNext(progress(), Sinks.EmitFailureHandler.FAIL_FAST);
 			if (isEndOfInput()) {
-				progressFlux.onComplete();
+				progressSink.emitComplete(Sinks.EmitFailureHandler.FAIL_FAST);
 			}
 		}
 		return c;
@@ -127,7 +125,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	@Override
 	public HttpClientForm factory(HttpDataFactory factory) {
-		if(!getBodyListAttributes().isEmpty()){
+		if (!getBodyListAttributes().isEmpty()) {
 			throw new IllegalStateException("Cannot set a new HttpDataFactory after " +
 					"starting appending Parts, call factory(f) at the earliest occasion" +
 					" offered");
@@ -322,7 +320,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 			return encoder;
 		}
-		catch(ErrorDataEncoderException ee){
+		catch (ErrorDataEncoderException ee) {
 			throw Exceptions.propagate(ee);
 		}
 	}

@@ -18,17 +18,24 @@ package reactor.netty.resources;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.kqueue.KQueue;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import reactor.core.publisher.Mono;
+import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpResources;
+import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
-public class DefaultLoopResourcesTest {
+class DefaultLoopResourcesTest {
 
 	@Test
-	public void disposeLaterDefers() {
+	void disposeLaterDefers() {
 		DefaultLoopResources loopResources = new DefaultLoopResources(
 				"test", 0, false);
 
@@ -40,7 +47,7 @@ public class DefaultLoopResourcesTest {
 	}
 
 	@Test
-	public void disposeLaterSubsequentIsQuick() {
+	void disposeLaterSubsequentIsQuick() {
 		DefaultLoopResources loopResources = new DefaultLoopResources(
 				"test", 0, false);
 		loopResources.onServer(true);
@@ -64,7 +71,7 @@ public class DefaultLoopResourcesTest {
 	}
 
 	@Test
-	public void testIssue416() {
+	void testIssue416() {
 		TestResources resources = TestResources.get();
 
 		TestResources.set(ConnectionProvider.create("testIssue416"));
@@ -98,5 +105,103 @@ public class DefaultLoopResourcesTest {
 		}
 
 		static final AtomicReference<TestResources> testResources = new AtomicReference<>();
+	}
+
+	@Test
+	void testClientTransportWarmupNative() {
+		testClientTransportWarmup(true);
+	}
+
+	@Test
+	void testClientTransportWarmupNio() {
+		testClientTransportWarmup(false);
+	}
+
+	private void testClientTransportWarmup(boolean preferNative) {
+		final DefaultLoopResources loop =
+				(DefaultLoopResources) LoopResources.create("testClientTransportWarmup", 1, true);
+		try {
+			TcpClient tcpClient = TcpClient.create()
+			                               .runOn(loop, preferNative);
+
+			Mono<Void> warmupMono = tcpClient.warmup();
+
+			assertThat(loop.cacheNativeClientLoops.get()).isNull();
+			assertThat(loop.clientLoops.get()).isNull();
+
+			warmupMono.block(Duration.ofSeconds(5));
+
+			if (preferNative && LoopResources.hasNativeSupport()) {
+				assertThat(loop.cacheNativeClientLoops.get()).isNotNull();
+				assertThat(loop.clientLoops.get()).isNull();
+			}
+			else {
+				assertThat(loop.cacheNativeClientLoops.get()).isNull();
+				assertThat(loop.clientLoops.get()).isNotNull();
+			}
+		}
+		finally {
+			loop.disposeLater()
+			    .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testServerTransportWarmupNative() {
+		testServerTransportWarmup(true);
+	}
+
+	@Test
+	void testServerTransportWarmupNio() {
+		testServerTransportWarmup(false);
+	}
+
+	private void testServerTransportWarmup(boolean preferNative) {
+		final DefaultLoopResources loop =
+				(DefaultLoopResources) LoopResources.create("testServerTransportWarmup", 1, true);
+		try {
+			TcpServer tcpServer = TcpServer.create()
+			                               .runOn(loop, preferNative);
+
+			Mono<Void> warmupMono = tcpServer.warmup();
+
+			assertThat(loop.cacheNativeServerLoops.get()).isNull();
+			assertThat(loop.cacheNativeSelectLoops.get()).isNull();
+			assertThat(loop.serverLoops.get()).isNull();
+			assertThat(loop.serverSelectLoops.get()).isNull();
+
+			warmupMono.block(Duration.ofSeconds(5));
+
+			if (preferNative && LoopResources.hasNativeSupport()) {
+				assertThat(loop.cacheNativeServerLoops.get()).isNotNull();
+				assertThat(loop.cacheNativeSelectLoops.get()).isNotNull();
+				assertThat(loop.serverLoops.get()).isNull();
+				assertThat(loop.serverSelectLoops.get()).isNull();
+			}
+			else {
+				assertThat(loop.cacheNativeServerLoops.get()).isNull();
+				assertThat(loop.cacheNativeSelectLoops.get()).isNull();
+				assertThat(loop.serverLoops.get()).isNotNull();
+				assertThat(loop.serverSelectLoops.get()).isNotNull();
+			}
+		}
+		finally {
+			loop.disposeLater()
+			    .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	@EnabledOnOs(OS.LINUX)
+	void testEpollIsAvailable() {
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
+		assertThat(Epoll.isAvailable()).isTrue();
+	}
+
+	@Test
+	@EnabledOnOs(OS.MAC)
+	void testKQueueIsAvailable() {
+		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
+		assertThat(KQueue.isAvailable()).isTrue();
 	}
 }

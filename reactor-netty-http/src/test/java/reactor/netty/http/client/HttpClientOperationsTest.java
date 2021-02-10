@@ -39,10 +39,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Simon Baslé
  */
-public class HttpClientOperationsTest {
+class HttpClientOperationsTest {
 
 	@Test
-	public void addDecoderReplaysLastHttp() {
+	void addDecoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
@@ -65,7 +65,7 @@ public class HttpClientOperationsTest {
 	}
 
 	@Test
-	public void addNamedDecoderReplaysLastHttp() {
+	void addNamedDecoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
@@ -88,7 +88,7 @@ public class HttpClientOperationsTest {
 	}
 
 	@Test
-	public void addEncoderReplaysLastHttp() {
+	void addEncoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
@@ -111,7 +111,7 @@ public class HttpClientOperationsTest {
 	}
 
 	@Test
-	public void addNamedEncoderReplaysLastHttp() {
+	void addNamedEncoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
@@ -134,7 +134,7 @@ public class HttpClientOperationsTest {
 	}
 
 	@Test
-	public void testConstructorWithProvidedReplacement() {
+	void testConstructorWithProvidedReplacement() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		channel.pipeline().addFirst(NettyPipeline.SslHandler, new ChannelHandlerAdapter() {
 		});
@@ -162,7 +162,7 @@ public class HttpClientOperationsTest {
 	}
 
 	@Test
-	public void testStatus() {
+	void testStatus() {
 		doTestStatus(HttpResponseStatus.OK);
 		doTestStatus(new HttpResponseStatus(200, "Some custom reason phrase for 200 status code"));
 	}

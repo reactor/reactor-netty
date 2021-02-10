@@ -18,6 +18,7 @@ package reactor.netty;
 import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -53,6 +54,9 @@ import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
+import reactor.pool.AllocationStrategy;
+import reactor.pool.PoolBuilder;
+import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -136,6 +140,22 @@ public final class ReactorNetty {
 	 * </ul>
 	 */
 	public static final String POOL_LEASING_STRATEGY = "reactor.netty.pool.leasingStrategy";
+	/**
+	 * Default {@code getPermitsSamplingRate} (between 0d and 1d (percentage))
+	 * to be used with a {@link SamplingAllocationStrategy}.
+	 * This strategy wraps a {@link PoolBuilder#sizeBetween(int, int) sizeBetween} {@link AllocationStrategy}
+	 * and samples calls to {@link AllocationStrategy#getPermits(int)}.
+	 * Fallback - sampling is not enabled.
+	 */
+	public static final String POOL_GET_PERMITS_SAMPLING_RATE = "reactor.netty.pool.getPermitsSamplingRate";
+	/**
+	 * Default {@code returnPermitsSamplingRate} (between 0d and 1d (percentage))
+	 * to be used with a {@link SamplingAllocationStrategy}.
+	 * This strategy wraps a {@link PoolBuilder#sizeBetween(int, int) sizeBetween} {@link AllocationStrategy}
+	 * and samples calls to {@link AllocationStrategy#returnPermits(int)}.
+	 * Fallback - sampling is not enabled.
+	 */
+	public static final String POOL_RETURN_PERMITS_SAMPLING_RATE = "reactor.netty.pool.returnPermitsSamplingRate";
 
 
 	/**
@@ -160,6 +180,10 @@ public final class ReactorNetty {
 	 */
 	public static final String ACCESS_LOG_ENABLED = "reactor.netty.http.server.accessLogEnabled";
 
+	/**
+	 *  Specifies the zone id used by the access log
+	 */
+	public static final ZoneId ZONE_ID_SYSTEM = ZoneId.systemDefault();
 
 	/**
 	 * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
@@ -226,7 +250,7 @@ public final class ReactorNetty {
 		return new InternalNettyException(Objects.requireNonNull(throwable));
 	}
 
-	static void addChunkedWriter(Connection c){
+	static void addChunkedWriter(Connection c) {
 		if (c.channel()
 		     .pipeline()
 		     .get(ChunkedWriteHandler.class) == null) {
@@ -245,7 +269,7 @@ public final class ReactorNetty {
 	 * @param context the {@link Connection} on which to add the decoder.
 	 * @param name the name of the decoder.
 	 * @param handler the decoder to add before the final reactor-specific handlers.
-	 * @see Connection#addHandlerLast(String, ChannelHandler).
+	 * @see Connection#addHandlerLast(String, ChannelHandler)
 	 */
 	static void addHandlerBeforeReactorEndHandlers(Connection context, String
 			name,	ChannelHandler handler) {
@@ -357,12 +381,14 @@ public final class ReactorNetty {
 	static void registerForClose(boolean shouldCleanupOnClose,
 			String name,
 			Connection context) {
-		if (!shouldCleanupOnClose) return;
+		if (!shouldCleanupOnClose) {
+			return;
+		}
 
 		context.onTerminate().subscribe(null, null, () -> context.removeHandler(name));
 	}
 
-	static void removeHandler(Channel channel, String name){
+	static void removeHandler(Channel channel, String name) {
 		if (channel.isActive() && channel.pipeline()
 		                                 .context(name) != null) {
 			channel.pipeline()
@@ -382,7 +408,7 @@ public final class ReactorNetty {
 		}
 	}
 
-	static void replaceHandler(Channel channel, String name, ChannelHandler handler){
+	static void replaceHandler(Channel channel, String name, ChannelHandler handler) {
 		if (channel.isActive() && channel.pipeline()
 		                                 .context(name) != null) {
 			channel.pipeline()
@@ -419,7 +445,7 @@ public final class ReactorNetty {
 		int length = 2;
 
 		if (observer instanceof CompositeConnectionObserver) {
-			thizObservers = ((CompositeConnectionObserver)observer).observers;
+			thizObservers = ((CompositeConnectionObserver) observer).observers;
 			length += thizObservers.length - 1;
 		}
 		else {
@@ -427,7 +453,7 @@ public final class ReactorNetty {
 		}
 
 		if (other instanceof CompositeConnectionObserver) {
-			otherObservers = ((CompositeConnectionObserver)other).observers;
+			otherObservers = ((CompositeConnectionObserver) other).observers;
 			length += otherObservers.length - 1;
 		}
 		else {
@@ -468,7 +494,7 @@ public final class ReactorNetty {
 			return Mono.fromCallable(new ScalarMap<>(publisher, mapper));
 		}
 		else if (publisher instanceof Mono) {
-			return ((Mono<T>)publisher).map(mapper);
+			return ((Mono<T>) publisher).map(mapper);
 		}
 
 		return Flux.from(publisher)
@@ -492,7 +518,7 @@ public final class ReactorNetty {
 		           .map(fluxMapper);
 	}
 
-	ReactorNetty(){
+	ReactorNetty() {
 	}
 
 	static final class ScalarMap<T, V> implements Callable<V> {
@@ -556,7 +582,7 @@ public final class ReactorNetty {
 			}
 
 			if (other instanceof CompositeChannelPipelineConfigurer) {
-				otherConfigurers = ((CompositeChannelPipelineConfigurer)other).configurers;
+				otherConfigurers = ((CompositeChannelPipelineConfigurer) other).configurers;
 				length += otherConfigurers.length - 1;
 			}
 			else {

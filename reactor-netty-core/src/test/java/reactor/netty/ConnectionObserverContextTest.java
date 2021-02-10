@@ -55,7 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * https://github.com/reactor/reactor-netty/issues/1327#issuecomment-707849473
  * https://github.com/reactor/reactor-pool/issues/103
  */
-public class ConnectionObserverContextTest {
+class ConnectionObserverContextTest {
 
 	private static final String CONTEXT_KEY = "marcels-key";
 	private static final String CONTEXT_VALUE_1 = "marcels-context-1";
@@ -65,29 +65,29 @@ public class ConnectionObserverContextTest {
 	private static final DisposableServer server = TcpServer.create().port(0).bindNow();
 
 	@BeforeEach
-	public void before() {
+	void before() {
 		helloWorld.set(CONTEXT_VALUE_1);
 		Hooks.onLastOperator(HelloWorldPropagatorSubscriber.class.getName(), HelloWorldPropagatorSubscriber.asOperator());
 	}
 
 	@AfterEach
-	public void after() {
+	void after() {
 		helloWorld.remove();
 		Hooks.resetOnLastOperator(HelloWorldPropagatorSubscriber.class.getName());
 	}
 
 	@AfterAll
-	public static void afterClass() {
+	static void afterClass() {
 		server.disposeNow();
 	}
 
 	@Test
-	public void testContextIsPropagatedToConnectionObserver() throws Exception {
+	void testContextIsPropagatedToConnectionObserver() throws Exception {
 		doTestContextIsPropagatedToConnectionObserver(true);
 	}
 
 	@Test
-	public void testContextIsPropagatedToConnectionObserverViaHooks() throws Exception {
+	void testContextIsPropagatedToConnectionObserverViaHooks() throws Exception {
 		doTestContextIsPropagatedToConnectionObserver(false);
 	}
 
@@ -138,7 +138,7 @@ public class ConnectionObserverContextTest {
 	/**
 	 * The main functionality is provided by {@link #asOperator(UnaryOperator)}.
 	 */
-	private static class ContextModifyingSubscriber<T> implements CoreSubscriber<T> {
+	private static final class ContextModifyingSubscriber<T> implements CoreSubscriber<T> {
 		private final Subscriber<? super T> delegate;
 		private final Context context;
 

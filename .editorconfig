@@ -17,3 +17,6 @@ ij_java_catch_on_new_line = true
 ij_java_else_on_new_line = true
 ij_java_finally_on_new_line = true
 ij_java_keep_indents_on_empty_lines = false
+ij_java_class_count_to_use_import_on_demand = 20
+ij_java_names_count_to_use_import_on_demand = 20
+

@@ -13,8 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import org.gradle.util.VersionNumber
+import java.text.SimpleDateFormat
+
 buildscript {
 	repositories {
+		mavenCentral()
+		jcenter()
+		maven { url "https://plugins.gradle.org/m2/" }
 		maven { url "https://repo.spring.io/plugins-release" }
 	}
 	dependencies {
@@ -25,14 +31,16 @@ buildscript {
 plugins {
 	id 'com.github.hierynomus.license' version '0.15.0'
 	id 'org.asciidoctor.convert' version '2.4.0'
-	id 'com.google.osdetector' version '1.6.2'
-	id 'org.gradle.test-retry' version '1.1.9'
+	id 'com.google.osdetector' version '1.7.0'
+	id 'org.gradle.test-retry' version '1.2.0'
+	id 'io.spring.nohttp' version '0.0.5.RELEASE'
 	id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
 	id 'com.jfrog.artifactory' version '4.16.1' apply false
 	id 'me.champeau.gradle.japicmp' version '0.2.9' apply false
 	id 'de.undercouch.download' version '4.1.1' apply false
 	id 'io.spring.javadoc' version '0.0.1' apply false
 	id 'io.spring.javadoc-aggregate' version '0.0.1' apply false
+	id 'biz.aQute.bnd.builder' version '5.2.0' apply false
 }
 
 description = 'Reactive Streams Netty driver'
@@ -49,6 +57,23 @@ ext {
 		}
 	}
 
+	versionNumber = VersionNumber.parse(version.toString())
+	if (versionNumber.qualifier == null || versionNumber.qualifier.size() == 0) {
+		osgiVersion = "${version}.RELEASE"
+		println "$version is a release, will use $osgiVersion for bnd"
+	}
+	else if (versionNumber.qualifier.equalsIgnoreCase("SNAPSHOT")) {
+		sdf = new SimpleDateFormat("yyyyMMddHHmm");
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		buildTimestamp = sdf.format(new Date())
+		osgiVersion = "${versionNumber.major}.${versionNumber.minor}.${versionNumber.micro}.BUILD-$buildTimestamp"
+		println "$version is a snapshot, will use $osgiVersion for bnd"
+	}
+	else {
+		osgiVersion = "${versionNumber.major}.${versionNumber.minor}.${versionNumber.micro}.${versionNumber.qualifier}"
+		println "$version is neither release nor snapshot, will use $osgiVersion for bnd"
+	}
+
 	os_suffix = ""
 	if (osdetector.classifier in ["linux-x86_64"] || ["osx-x86_64"] || ["windows-x86_64"]) {
 		os_suffix = ":" + osdetector.classifier
@@ -57,7 +82,7 @@ ext {
 	//Metrics
 	micrometerVersion = '1.5.0' //optional baseline: technically could work with 1.2.x, should work with any 1.3.x
 
-	braveVersion = '5.12.7'
+	braveVersion = '5.13.3'
 
 	jsr305Version = '3.0.2'
 
@@ -66,7 +91,7 @@ ext {
 	logbackVersion = '1.2.3'
 
 	// Netty
-	nettyDefaultVersion = '4.1.53.Final'
+	nettyDefaultVersion = '4.1.59.Final'
 	if (!project.hasProperty("forceNettyVersion")) {
 		nettyVersion = nettyDefaultVersion
 	}
@@ -74,16 +99,19 @@ ext {
 		nettyVersion = forceNettyVersion
 		println "Netty version defined from command line: ${forceNettyVersion}"
 	}
+	nettyIoUringVersion = '0.0.3.Final'
 
 	// Testing
-	jacksonDatabindVersion = '2.11.3'
+	jacksonDatabindVersion = '2.12.1'
 	testAddonVersion = reactorCoreVersion
-	assertJVersion = '3.18.0'
-	hoverflyJavaVersion = '0.13.1'
-	tomcatVersion = '9.0.39'
-	boringSslVersion = '2.0.34.Final'
-	junitVersion = '5.7.0'
-	mockitoVersion = '3.6.0'
+	assertJVersion = '3.19.0'
+	hoverflyJavaVersion = '0.14.0'
+	tomcatVersion = '9.0.43'
+	boringSslVersion = '2.0.36.Final'
+	junitVersion = '5.7.1'
+	junitPlatformLauncherVersion = '1.7.1'
+	mockitoVersion = '3.7.7'
+	blockHoundVersion = '1.0.4.RELEASE'
 
 	javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
 					"https://docs.oracle.com/javaee/6/api/",
@@ -94,11 +122,17 @@ ext {
 					"https://projectreactor.io/docs/netty/release/api/",] as String[]
 }
 
+nohttp {
+	source.exclude "docs/asciidoc/highlight/**"
+	source.exclude "**/build/**"
+}
+
 subprojects {
 	group = 'io.projectreactor.netty'
 
 	apply plugin: 'java'
 	apply plugin: 'jacoco'
+	apply plugin: 'checkstyle'
 	apply plugin: 'propdeps'
 	apply plugin: 'license'
 	apply plugin: 'org.gradle.test-retry'
@@ -117,6 +151,10 @@ subprojects {
 		}
 	}
 
+	checkstyle {
+		configFile = file("${rootDir}/codequality/checkstyle.xml")
+	}
+
 	[compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",
 															 "-Xlint:cast",
 															 "-Xlint:classfile",
@@ -133,7 +171,7 @@ subprojects {
 															 "-Xlint:unchecked",
 															 "-Xlint:-serial",      // intentionally disabled
 															 "-Xlint:-options",     // intentionally disabled
-															 "-Xlint:-fallthrough", // intentionally disabled
+															 "-Xlint:fallthrough",
 															 "-Xlint:rawtypes"
 	]
 
@@ -176,6 +214,11 @@ subprojects {
 		systemProperty("reactor.trace.nocapacity", "true")
 		systemProperty("testGroups", project.properties.get("testGroups"))
 		systemProperty("io.netty.leakDetection.level", "paranoid")
+		systemProperty("reactor.netty.pool.getPermitsSamplingRate", "0.5")
+		systemProperty("reactor.netty.pool.returnPermitsSamplingRate", "0.5")
+		if (project.hasProperty("forceTransport")) {
+			systemProperty("forceTransport", forceTransport)
+		}
 		scanForTestClasses = false
 		include '**/*Tests.*'
 		include '**/*Test.*'
@@ -183,6 +226,11 @@ subprojects {
 		exclude '**/*Abstract*.*'
 
 		useJUnitPlatform()
+
+		retry {
+			maxFailures = 10
+			maxRetries = 1
+		}
 	}
 
 	test {
@@ -197,15 +245,13 @@ subprojects {
 				logger.error("ERROR: Test: " + descriptor + " produced resource leak: " + event.message)
 			}
 		}
-
-		retry {
-			maxFailures = 10
-			maxRetries = 1
-		}
 	}
 
 	repositories {
 		mavenCentral()
+		jcenter()
+		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+		maven { url 'https://repo.spring.io/milestone' }
 		if (version.endsWith('-SNAPSHOT') || version.contains('-SNAPSHOT-')) { //classic or customized snapshots
 			if (System.getenv()["bamboo_buildNumber"] == null) {
 				mavenLocal()
@@ -213,13 +259,9 @@ subprojects {
 			else {
 				println 'Bamboo CI detected, avoiding use of mavenLocal()'
 			}
-			maven { url 'https://repo.spring.io/libs-snapshot' }
+			maven { url 'https://repo.spring.io/snapshot' }
 			maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
 		}
-		maven { url 'https://repo.spring.io/libs-milestone' }
-		maven { url 'https://repo.spring.io/libs-release' }
-		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
-		jcenter()
 	}
 
 	tasks.withType(GenerateModuleMetadata) {

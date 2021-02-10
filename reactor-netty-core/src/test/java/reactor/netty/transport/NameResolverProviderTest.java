@@ -17,8 +17,12 @@ package reactor.netty.transport;
 
 import io.netty.handler.logging.LogLevel;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsServerAddressStreamProviders;
+import io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpResources;
 
@@ -28,6 +32,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_MAX_TIME_TO_LIVE;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_MIN_TIME_TO_LIVE;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE;
@@ -39,16 +44,16 @@ import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_QUERY_T
 /**
  * @author Violeta Georgieva
  */
-public class NameResolverProviderTest {
+class NameResolverProviderTest {
 	private NameResolverProvider.Build builder;
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		builder = new NameResolverProvider.Build();
 	}
 
 	@Test
-	public void cacheMaxTimeToLive() {
+	void cacheMaxTimeToLive() {
 		assertThat(builder.build().cacheMaxTimeToLive()).isEqualTo(DEFAULT_CACHE_MAX_TIME_TO_LIVE);
 
 		Duration cacheMaxTimeToLive = Duration.ofSeconds(5);
@@ -57,7 +62,7 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void cacheMaxTimeToLiveBadValues() {
+	void cacheMaxTimeToLiveBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.cacheMaxTimeToLive(null));
 
@@ -67,7 +72,7 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void cacheMinTimeToLive() {
+	void cacheMinTimeToLive() {
 		assertThat(builder.build().cacheMinTimeToLive()).isEqualTo(DEFAULT_CACHE_MIN_TIME_TO_LIVE);
 
 		Duration cacheMinTimeToLive = Duration.ofSeconds(5);
@@ -76,7 +81,7 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void cacheMinTimeToLiveBadValues() {
+	void cacheMinTimeToLiveBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.cacheMinTimeToLive(null));
 
@@ -86,7 +91,7 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void cacheNegativeTimeToLive() {
+	void cacheNegativeTimeToLive() {
 		assertThat(builder.build().cacheNegativeTimeToLive()).isEqualTo(DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE);
 
 		Duration cacheNegativeTimeToLive = Duration.ofSeconds(5);
@@ -95,7 +100,7 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void cacheNegativeTimeToLiveBadValues() {
+	void cacheNegativeTimeToLiveBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.cacheNegativeTimeToLive(null));
 
@@ -105,7 +110,7 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void disableOptionalRecord() {
+	void disableOptionalRecord() {
 		assertThat(builder.build().isDisableOptionalRecord()).isFalse();
 
 		builder.disableOptionalRecord(true);
@@ -113,7 +118,7 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void disableRecursionDesired() {
+	void disableRecursionDesired() {
 		assertThat(builder.build().isDisableRecursionDesired()).isFalse();
 
 		builder.disableRecursionDesired(true);
@@ -121,7 +126,7 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void maxPayloadSize() {
+	void maxPayloadSize() {
 		assertThat(builder.build().maxPayloadSize()).isEqualTo(DEFAULT_MAX_PAYLOAD_SIZE);
 
 		builder.maxPayloadSize(1024);
@@ -129,14 +134,14 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void maxPayloadSizeBadValues() {
+	void maxPayloadSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxPayloadSize(0))
 				.withMessage("maxPayloadSize must be positive");
 	}
 
 	@Test
-	public void maxQueriesPerResolve() {
+	void maxQueriesPerResolve() {
 		assertThat(builder.build().maxQueriesPerResolve()).isEqualTo(DEFAULT_MAX_QUERIES_PER_RESOLVE);
 
 		builder.maxQueriesPerResolve(4);
@@ -144,14 +149,14 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void maxQueriesPerResolveBadValues() {
+	void maxQueriesPerResolveBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxQueriesPerResolve(0))
 				.withMessage("maxQueriesPerResolve must be positive");
 	}
 
 	@Test
-	public void ndots() {
+	void ndots() {
 		assertThat(builder.build().ndots()).isEqualTo(DEFAULT_NDOTS);
 
 		builder.ndots(4);
@@ -159,14 +164,14 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void ndotsBadValues() {
+	void ndotsBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.ndots(-2))
 				.withMessage("ndots must be greater or equal to -1");
 	}
 
 	@Test
-	public void queryTimeout() {
+	void queryTimeout() {
 		assertThat(builder.build().queryTimeout()).isEqualTo(DEFAULT_QUERY_TIMEOUT);
 
 		Duration queryTimeout = Duration.ofSeconds(5);
@@ -175,13 +180,13 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void queryTimeoutBadValues() {
+	void queryTimeoutBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.queryTimeout(null));
 	}
 
 	@Test
-	public void resolvedAddressTypes() {
+	void resolvedAddressTypes() {
 		assertThat(builder.build().resolvedAddressTypes()).isNull();
 
 		builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
@@ -189,13 +194,13 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void resolvedAddressTypesBadValues() {
+	void resolvedAddressTypesBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.resolvedAddressTypes(null));
 	}
 
 	@Test
-	public void roundRobinSelection() {
+	void roundRobinSelection() {
 		assertThat(builder.build().isRoundRobinSelection()).isFalse();
 
 		builder.roundRobinSelection(true);
@@ -203,7 +208,7 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void runOn() {
+	void runOn() {
 		assertThat(builder.build().loopResources()).isNull();
 		assertThat(builder.build().isPreferNative()).isTrue();
 
@@ -214,13 +219,13 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void runOnBadValues() {
+	void runOnBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.runOn(null, false));
 	}
 
 	@Test
-	public void searchDomains() {
+	void searchDomains() {
 		assertThat(builder.build().searchDomains()).isNull();
 
 		List<String> searchDomains = Collections.singletonList("searchDomains");
@@ -229,17 +234,26 @@ public class NameResolverProviderTest {
 	}
 
 	@Test
-	public void searchDomainsBadValues() {
+	void searchDomainsBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.searchDomains(null));
 	}
 
 	@Test
-	public void traceBadValues() {
+	void traceBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.trace(null, LogLevel.DEBUG));
 
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.trace("category", null));
+	}
+
+	@Test
+	@EnabledOnOs(OS.MAC)
+	void testMacOsResolver() {
+		// MacOS binaries are not available for Netty SNAPSHOT version
+		assumeThat(MacOSDnsServerAddressStreamProvider.isAvailable()).isTrue();
+		assertThat(DnsServerAddressStreamProviders.platformDefault())
+				.isInstanceOf(MacOSDnsServerAddressStreamProvider.class);
 	}
 }

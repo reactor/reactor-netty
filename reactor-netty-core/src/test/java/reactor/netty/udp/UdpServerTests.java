@@ -60,26 +60,26 @@ import static org.assertj.core.api.Assertions.fail;
  * @author Jon Brisbin
  * @author Stephane Maldini
  */
-public class UdpServerTests {
+class UdpServerTests {
 
 	final Logger log = Loggers.getLogger(getClass());
 
 	ExecutorService threadPool;
 
 	@BeforeEach
-	public void setup() {
+	void setup() {
 		threadPool = Executors.newCachedThreadPool();
 	}
 
 	@AfterEach
-	public void cleanup() throws InterruptedException {
+	void cleanup() throws InterruptedException {
 		threadPool.shutdown();
 		threadPool.awaitTermination(5, TimeUnit.SECONDS);
 		Schedulers.shutdownNow();
 	}
 
 	@Test
-	public void supportsReceivingDatagrams() throws InterruptedException {
+	void supportsReceivingDatagrams() throws InterruptedException {
 		final Random rndm = new Random();
 		final int port = SocketUtils.findAvailableUdpPort();
 		final CountDownLatch latch = new CountDownLatch(4);
@@ -126,7 +126,7 @@ public class UdpServerTests {
 
 	@Test
 	@SuppressWarnings("JdkObsolete")
-	public void supportsUdpMulticast() throws Exception {
+	void supportsUdpMulticast() throws Exception {
 		final Random rndm = new Random();
 		final int port = SocketUtils.findAvailableUdpPort();
 		final CountDownLatch latch1 = new CountDownLatch(Schedulers.DEFAULT_POOL_SIZE);
@@ -225,7 +225,7 @@ public class UdpServerTests {
 		}
 
 		// Suppressed "JdkObsolete", usage of Enumeration is deliberate
-		for (Enumeration<InetAddress> i = iface.getInetAddresses(); i.hasMoreElements(); ) {
+		for (Enumeration<InetAddress> i = iface.getInetAddresses(); i.hasMoreElements();) {
 			InetAddress address = i.nextElement();
 			if (address.getClass() == Inet4Address.class) {
 				return true;
@@ -254,7 +254,7 @@ public class UdpServerTests {
 	}
 
 	@Test
-	public void portBindingException() {
+	void portBindingException() {
 		Connection conn =
 				UdpServer.create()
 				         .port(0)
@@ -275,7 +275,7 @@ public class UdpServerTests {
 	}
 
 	@Test
-	public void testUdpServerWithDomainSockets() {
+	void testUdpServerWithDomainSockets() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> UdpServer.create()
 		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -283,7 +283,7 @@ public class UdpServerTests {
 	}
 
 	@Test
-	public void testUdpServerWithDomainSocketsWithHost() {
+	void testUdpServerWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> UdpServer.create()
 		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -292,7 +292,7 @@ public class UdpServerTests {
 	}
 
 	@Test
-	public void testUdpServerWithDomainSocketsWithPort() {
+	void testUdpServerWithDomainSocketsWithPort() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> UdpServer.create()
 		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -301,7 +301,7 @@ public class UdpServerTests {
 	}
 
 	@Test
-	public void testBindTimeoutLongOverflow() {
+	void testBindTimeoutLongOverflow() {
 		assertThatExceptionOfType(ArithmeticException.class)
 				.isThrownBy(() -> UdpServer.create()
 		                                   .port(0)

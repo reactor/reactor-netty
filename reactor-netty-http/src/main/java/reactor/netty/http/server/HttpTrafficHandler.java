@@ -17,8 +17,10 @@
 package reactor.netty.http.server;
 
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -26,6 +28,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
@@ -39,15 +42,22 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.NettyPipeline;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 
-import static io.netty.handler.codec.http.HttpUtil.*;
+import static io.netty.handler.codec.http.HttpUtil.isContentLengthSet;
+import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
+import static io.netty.handler.codec.http.HttpUtil.isTransferEncodingChunked;
+import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.toPrettyHexDump;
 
@@ -69,6 +79,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieEncoder                                     cookieEncoder;
 	final ServerCookieDecoder                                     cookieDecoder;
+	final Duration                                                idleTimeout;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
 
 	boolean persistentConnection = true;
@@ -82,16 +93,19 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	boolean overflow;
 	boolean nonInformationalResponse;
 
-	HttpTrafficHandler(ConnectionObserver listener,
+	HttpTrafficHandler(
+			ConnectionObserver listener,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
-			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			@Nullable Duration idleTimeout) {
 		this.listener = listener;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
+		this.idleTimeout = idleTimeout;
 		this.mapHandle = mapHandle;
 	}
 
@@ -106,6 +120,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	}
 
 	@Override
+	public void channelActive(ChannelHandlerContext ctx) {
+		IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
+
+		ctx.fireChannelActive();
+	}
+
+	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (secure == null) {
 			secure = ctx.channel().pipeline().get(SslHandler.class) != null;
@@ -117,6 +138,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		}
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest) {
+			IdleTimeoutHandler.removeIdleTimeoutHandler(ctx.pipeline());
+
 			final HttpRequest request = (HttpRequest) msg;
 
 			if (H2.equals(request.protocolVersion())) {
@@ -173,7 +196,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							                    forwardedHeaderHandler),
 							cookieEncoder,
 							cookieDecoder,
-							mapHandle);
+							mapHandle,
+							secure);
 				}
 				catch (RuntimeException e) {
 					sendDecodingFailures(e, msg);
@@ -231,7 +255,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	void sendDecodingFailures(Throwable t, Object msg) {
 		persistentConnection = false;
-		HttpServerOperations.sendDecodingFailures(ctx, listener, t, msg);
+		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg);
 	}
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
@@ -358,7 +382,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						                    forwardedHeaderHandler),
 						cookieEncoder,
 						cookieDecoder,
-						mapHandle);
+						mapHandle,
+						secure);
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 			}
@@ -382,6 +407,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				        "Last HTTP packet was sent, terminating the channel"));
 			}
 		}
+
+		IdleTimeoutHandler.addIdleTimeoutHandler(future.channel().pipeline(), idleTimeout);
+
 		HttpServerOperations.cleanHandlerTerminate(future.channel());
 	}
 
@@ -391,9 +419,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	}
 
 	final void discard() {
-		if(pipelined != null && !pipelined.isEmpty()){
+		if (pipelined != null && !pipelined.isEmpty()) {
 			Object o;
-			while((o = pipelined.poll()) != null){
+			while ((o = pipelined.poll()) != null) {
 				ReferenceCountUtil.release(o);
 			}
 
@@ -437,5 +465,44 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				MULTIPART_PREFIX,
 				0,
 				MULTIPART_PREFIX.length());
+	}
+
+	static final class IdleTimeoutHandler extends IdleStateHandler {
+
+		final long idleTimeout;
+
+		IdleTimeoutHandler(long idleTimeout) {
+			super(idleTimeout, 0, 0, TimeUnit.MILLISECONDS);
+			this.idleTimeout = idleTimeout;
+		}
+
+		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
+		protected void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) {
+			if (evt.state() == IdleState.READER_IDLE) {
+				if (HttpServerOperations.log.isDebugEnabled()) {
+					HttpServerOperations.log.debug(format(ctx.channel(),
+							"Connection was idle for [{}ms], as per configuration the connection will be closed."),
+							idleTimeout);
+				}
+				// FutureReturnValueIgnored is deliberate
+				ctx.close();
+			}
+			ctx.fireUserEventTriggered(evt);
+		}
+
+		static void addIdleTimeoutHandler(ChannelPipeline pipeline, @Nullable Duration idleTimeout) {
+			if (idleTimeout != null) {
+				pipeline.addBefore(NettyPipeline.HttpCodec,
+				                   NettyPipeline.IdleTimeoutHandler,
+				                   new IdleTimeoutHandler(idleTimeout.toMillis()));
+			}
+		}
+
+		static void removeIdleTimeoutHandler(ChannelPipeline pipeline) {
+			if (pipeline.get(NettyPipeline.IdleTimeoutHandler) != null) {
+				pipeline.remove(NettyPipeline.IdleTimeoutHandler);
+			}
+		}
 	}
 }

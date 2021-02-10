@@ -78,12 +78,14 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 	@Override
 	protected CoreSubscriber<PooledRef<Connection>> createDisposableAcquire(
+			TransportConfig config,
 			ConnectionObserver connectionObserver,
-			ChannelOperations.OnSetup opsFactory,
 			long pendingAcquireTimeout,
 			InstrumentedPool<Connection> pool,
 			MonoSink<Connection> sink) {
-		return new DisposableAcquire(connectionObserver, opsFactory, pendingAcquireTimeout, pool, sink);
+		boolean acceptGzip = config instanceof HttpClientConfig && ((HttpClientConfig) config).acceptGzip;
+		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
+				acceptGzip, pendingAcquireTimeout, pool, sink);
 	}
 
 	@Override
@@ -97,7 +99,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 	static void invalidate(@Nullable ConnectionObserver owner, Channel channel) {
 		if (owner instanceof DisposableAcquire) {
-			DisposableAcquire da = ((DisposableAcquire) owner);
+			DisposableAcquire da = (DisposableAcquire) owner;
 			da.pooledRef
 			  .invalidate()
 			  .subscribe(null, null, () -> {
@@ -149,7 +151,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		ConnectionObserver owner(Channel channel) {
 			ConnectionObserver obs;
 
-			for (; ; ) {
+			for (;;) {
 				obs = channel.attr(OWNER)
 				             .get();
 				if (obs == null) {
@@ -171,6 +173,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final Disposable.Composite cancellations;
 		final ConnectionObserver obs;
 		final ChannelOperations.OnSetup opsFactory;
+		final boolean acceptGzip;
 		final long pendingAcquireTimeout;
 		final InstrumentedPool<Connection> pool;
 		final boolean retried;
@@ -182,12 +185,14 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		DisposableAcquire(
 				ConnectionObserver obs,
 				ChannelOperations.OnSetup opsFactory,
+				boolean acceptGzip,
 				long pendingAcquireTimeout,
 				InstrumentedPool<Connection> pool,
 				MonoSink<Connection> sink) {
 			this.cancellations = Disposables.composite();
 			this.obs = obs;
 			this.opsFactory = opsFactory;
+			this.acceptGzip = acceptGzip;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
 			this.pool = pool;
 			this.retried = false;
@@ -198,6 +203,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.cancellations = parent.cancellations;
 			this.obs = parent.obs;
 			this.opsFactory = parent.opsFactory;
+			this.acceptGzip = parent.acceptGzip;
 			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
 			this.pool = parent.pool;
 			this.retried = true;
@@ -260,7 +266,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				return;
 			}
 
-			HttpClientConfig.openStream(channel, obs, opsFactory)
+			HttpClientConfig.openStream(channel, obs, opsFactory, acceptGzip)
 			                .addListener(this);
 		}
 
@@ -379,7 +385,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		static void release(@Nullable ConnectionObserver owner, Channel channel) {
 			if (owner instanceof DisposableAcquire) {
-				DisposableAcquire da = ((DisposableAcquire) owner);
+				DisposableAcquire da = (DisposableAcquire) owner;
 				da.pooledRef
 				  .release()
 				  .subscribe(null, null, () -> {

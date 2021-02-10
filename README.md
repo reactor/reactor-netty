@@ -4,6 +4,8 @@
 
 [![Reactor Netty](https://img.shields.io/maven-central/v/io.projectreactor.netty/reactor-netty.svg?colorB=brightgreen)](https://mvnrepository.com/artifact/io.projectreactor.netty/reactor-netty) [ ![Download](https://api.bintray.com/packages/spring/jars/io.projectreactor.netty/images/download.svg) ](https://bintray.com/spring/jars/io.projectreactor.netty/_latestVersion)
 
+[![build](https://github.com/reactor/reactor-netty/workflows/Check%20Matrix/badge.svg?event=push)](https://github.com/reactor/reactor-netty/actions?query=workflow%3A%22Check+Matrix%22) [![CodeQL](https://github.com/reactor/reactor-netty/workflows/CodeQL/badge.svg?event=push)](https://github.com/reactor/reactor-netty/actions?query=workflow%3ACodeQL)
+
 `Reactor Netty` offers non-blocking and backpressure-ready `TCP`/`HTTP`/`UDP`
 clients & servers based on `Netty` framework.
 
@@ -15,13 +17,15 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
 ```groovy
     repositories {
       //maven { url 'https://repo.spring.io/snapshot' }
-      maven { url 'https://repo.spring.io/release' }
+      maven { url 'https://repo.spring.io/milestone' }
       mavenCentral()
     }
 
     dependencies {
-      //compile "io.projectreactor.netty:reactor-netty:1.0.1-SNAPSHOT"
-      compile "io.projectreactor.netty:reactor-netty:1.0.0"
+      //compile "io.projectreactor.netty:reactor-netty-core:1.0.4-SNAPSHOT"
+      compile "io.projectreactor.netty:reactor-netty-core:1.0.3"
+      //compile "io.projectreactor.netty:reactor-netty-http:1.0.4-SNAPSHOT"
+      compile "io.projectreactor.netty:reactor-netty-http:1.0.3"
     }
 ```
 
@@ -84,6 +88,7 @@ If you want to raise an issue, please follow the recommendations below:
   the version of `Reactor Netty` that you are using, as well as your `Operating System` and
   `JVM` version.
 * If you want to raise a security vulnerability, please review our [Security Policy](https://github.com/reactor/reactor-netty/security/policy) for more details.
+* More about [Support and Deprecation policies](https://github.com/reactor/.github/blob/master/SUPPORT.adoc)
 
 ## Building from Source
 You don't need to build from source to use `Reactor Netty` (binaries in

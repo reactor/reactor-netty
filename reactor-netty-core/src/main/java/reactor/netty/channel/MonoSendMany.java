@@ -59,7 +59,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 	static final Object KEY_ON_DISCARD;
 
 	static {
-		Context context = Operators.enableOnDiscard(null, (__) -> { });
+		Context context = Operators.enableOnDiscard(null, o -> { });
 
 		Map.Entry<Object, Object> entry = context.stream()
 		                                         .findAny()
@@ -106,8 +106,12 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 	@Nullable
 	@SuppressWarnings("rawtypes")
 	public Object scanUnsafe(Attr key) {
-		if (key == Attr.PREFETCH) return MAX_SIZE;
-		if (key == Attr.PARENT) return source;
+		if (key == Attr.PREFETCH) {
+			return MAX_SIZE;
+		}
+		if (key == Attr.PARENT) {
+			return source;
+		}
 		return null;
 	}
 
@@ -208,7 +212,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				return;
 			}
 
-//			ReferenceCountUtil.touch(t);
+			// ReferenceCountUtil.touch(t);
 			if (!queue.offer(t)) {
 				onError(Operators.onOperatorError(s,
 						Exceptions.failWithOverflow(Exceptions.BACKPRESSURE_ERROR_QUEUE_FULL),
@@ -277,7 +281,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			Queue<I> queue = this.queue;
 			try {
 				int missed = 1;
-				for (; ; ) {
+				for (;;) {
 					int r = requested;
 
 					while (Integer.MAX_VALUE == r || r-- > 0) {
@@ -364,7 +368,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			}
 			catch (Throwable t) {
 				onInterruptionCleanup();
-				if (Operators.terminate(SUBSCRIPTION, this) ) {
+				if (Operators.terminate(SUBSCRIPTION, this)) {
 					actual.onError(t);
 				}
 				else {
@@ -432,14 +436,30 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		@Override
 		@SuppressWarnings("rawtypes")
 		public Object scanUnsafe(Attr key) {
-			if (key == Attr.PARENT) return s;
-			if (key == Attr.ACTUAL) return actual;
-			if (key == Attr.REQUESTED_FROM_DOWNSTREAM) return requested;
-			if (key == Attr.CANCELLED) return Operators.cancelledSubscription() == s;
-			if (key == Attr.TERMINATED) return terminalSignal != null;
-			if (key == Attr.BUFFERED) return queue != null ? queue.size() : 0;
-			if (key == Attr.ERROR) return !hasOnComplete() ? terminalSignal : null;
-			if (key == Attr.PREFETCH) return MAX_SIZE;
+			if (key == Attr.PARENT) {
+				return s;
+			}
+			if (key == Attr.ACTUAL) {
+				return actual;
+			}
+			if (key == Attr.REQUESTED_FROM_DOWNSTREAM) {
+				return requested;
+			}
+			if (key == Attr.CANCELLED) {
+				return Operators.cancelledSubscription() == s;
+			}
+			if (key == Attr.TERMINATED) {
+				return terminalSignal != null;
+			}
+			if (key == Attr.BUFFERED) {
+				return queue != null ? queue.size() : 0;
+			}
+			if (key == Attr.ERROR) {
+				return !hasOnComplete() ? terminalSignal : null;
+			}
+			if (key == Attr.PREFETCH) {
+				return MAX_SIZE;
+			}
 			return null;
 		}
 
@@ -671,7 +691,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		// Context interface impl
 		@Override
-		@SuppressWarnings({"unchecked", "rawtypes"})
+		@SuppressWarnings({"unchecked", "rawtypes", "TypeParameterUnusedInFormals"})
 		public <T> T get(Object key) {
 			if (KEY_ON_DISCARD == key) {
 				return (T) this;
@@ -760,7 +780,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			}
 		}
 
-		boolean hasOnComplete(){
+		boolean hasOnComplete() {
 			return terminalSignal == Completion.INSTANCE;
 		}
 	}

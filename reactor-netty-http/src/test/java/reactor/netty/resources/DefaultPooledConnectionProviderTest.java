@@ -27,14 +27,14 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.server.HttpServer;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 import reactor.test.StepVerifier;
 
@@ -52,23 +52,26 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class DefaultPooledConnectionProviderTest {
+class DefaultPooledConnectionProviderTest extends BaseHttpTest {
+
+	static SelfSignedCertificate ssc;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
 
 	@Test
-	public void testIssue903() throws CertificateException {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.key(), cert.cert());
-		DisposableServer server =
-				HttpServer.create()
+	void testIssue903() {
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.key(), ssc.cert());
+		disposableServer =
+				createServer()
 				          .secure(s -> s.sslContext(serverCtx))
-				          .port(0)
-				          .wiretap(true)
 				          .handle((req, resp) -> resp.sendHeaders())
 				          .bindNow();
 
 		DefaultPooledConnectionProvider provider = (DefaultPooledConnectionProvider) ConnectionProvider.create("testIssue903", 1);
-		HttpClient.create(provider)
-		          .port(server.port())
+		createClient(provider, disposableServer.port())
 		          .get()
 		          .uri("/")
 		          .response()
@@ -79,22 +82,19 @@ public class DefaultPooledConnectionProviderTest {
 
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
-		server.disposeNow();
 	}
 
 	@Test
-	public void testIssue973() {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+	void testIssue973() {
+		disposableServer =
+				createServer()
 				          .handle((req, resp) -> resp.sendHeaders())
 				          .bindNow();
 
 		DefaultPooledConnectionProvider provider =
 				(DefaultPooledConnectionProvider) ConnectionProvider.builder("testIssue973")
 				                                                    .maxConnections(2)
-				                                                    .forRemoteHost(InetSocketAddress.createUnresolved("localhost", server.port()),
+				                                                    .forRemoteHost(InetSocketAddress.createUnresolved("localhost", disposableServer.port()),
 				                                                            spec -> spec.maxConnections(1))
 				                                                    .build();
 		AtomicReference<InstrumentedPool<DefaultPooledConnectionProvider.PooledConnection>> pool1 = new AtomicReference<>();
@@ -111,7 +111,7 @@ public class DefaultPooledConnectionProviderTest {
 		          })
 		          .wiretap(true)
 		          .get()
-		          .uri("http://localhost:" + server.port() +"/")
+		          .uri("http://localhost:" + disposableServer.port() + "/")
 		          .responseContent()
 		          .aggregate()
 		          .block(Duration.ofSeconds(30));
@@ -142,15 +142,12 @@ public class DefaultPooledConnectionProviderTest {
 
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
-		server.disposeNow();
 	}
 
 	@Test
-	public void testIssue1012() throws Exception {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+	void testIssue1012() throws Exception {
+		disposableServer =
+				createServer()
 				          .route(r -> r.get("/1", (req, resp) -> resp.sendString(Mono.just("testIssue1012")))
 				                       .get("/2", (req, res) -> Mono.error(new RuntimeException("testIssue1012"))))
 				          .bindNow();
@@ -158,9 +155,7 @@ public class DefaultPooledConnectionProviderTest {
 		DefaultPooledConnectionProvider provider = (DefaultPooledConnectionProvider) ConnectionProvider.create("testIssue1012", 1);
 		CountDownLatch latch = new CountDownLatch(1);
 		HttpClient client =
-				HttpClient.create(provider)
-				          .port(server.port())
-				          .wiretap(true)
+				createClient(provider, disposableServer.port())
 				          .doOnConnected(conn -> conn.channel().closeFuture().addListener(f -> latch.countDown()));
 
 		client.get()
@@ -182,15 +177,13 @@ public class DefaultPooledConnectionProviderTest {
 
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
-		server.disposeNow();
 	}
 
 	@Test
-	public void connectionReleasedOnRedirect() throws Exception {
+	void connectionReleasedOnRedirect() throws Exception {
 		String redirectedContent = StringUtils.repeat("a", 10000);
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .host("localhost")
 				          .route(r -> r.get("/1", (req, res) -> res.status(HttpResponseStatus.FOUND)
 				                                                   .header(HttpHeaderNames.LOCATION, "/2")
@@ -203,9 +196,7 @@ public class DefaultPooledConnectionProviderTest {
 		DefaultPooledConnectionProvider provider =
 				(DefaultPooledConnectionProvider) ConnectionProvider.create("connectionReleasedOnRedirect", 1);
 		String response =
-				HttpClient.create(provider)
-				          .remoteAddress(server::address)
-				          .wiretap(true)
+				createClient(provider, disposableServer::address)
 				          .followRedirect(true)
 				          .observe((conn, state) -> {
 				              if (ConnectionObserver.State.RELEASED == state) {
@@ -226,26 +217,21 @@ public class DefaultPooledConnectionProviderTest {
 
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
-		server.disposeNow();
 	}
 
 	@Test
 	@Disabled
-	public void testSslEngineClosed() throws Exception {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
-				          .wiretap(true)
+	void testSslEngineClosed() throws Exception {
+		disposableServer =
+				createServer()
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
 				          .bindNow();
 		SslContext ctx = SslContextBuilder.forClient()
 		                                  .sslProvider(SslProvider.JDK)
 		                                  .build();
 		HttpClient client =
-				HttpClient.create()
-				          .port(server.port())
-				          .secure(spec -> spec.sslContext(ctx))
-				          .wiretap(true);
+				createClient(disposableServer.port())
+				          .secure(spec -> spec.sslContext(ctx));
 
 		// Connection close happens after `Channel connected`
 		// Re-acquiring is not possible
@@ -263,8 +249,6 @@ public class DefaultPooledConnectionProviderTest {
 		// Connection close happens between `Initialized pipeline` and `Channel connected`
 		// The IOException will be propagated, Reactor Netty re-acquire only once
 		doTestSslEngineClosed(client, new AtomicInteger(2), IOException.class, "Error while acquiring from");
-
-		server.disposeNow();
 	}
 
 	private void doTestSslEngineClosed(HttpClient client, AtomicInteger closeCount, Class<? extends Throwable> expectedExc, String expectedMsg) {

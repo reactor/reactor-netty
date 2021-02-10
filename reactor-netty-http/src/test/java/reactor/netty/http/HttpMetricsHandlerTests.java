@@ -16,7 +16,20 @@
 package reactor.netty.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static reactor.netty.Metrics.*;
+import static reactor.netty.Metrics.CONNECT_TIME;
+import static reactor.netty.Metrics.DATA_RECEIVED;
+import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
+import static reactor.netty.Metrics.DATA_SENT;
+import static reactor.netty.Metrics.DATA_SENT_TIME;
+import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
+import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
+import static reactor.netty.Metrics.METHOD;
+import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.RESPONSE_TIME;
+import static reactor.netty.Metrics.STATUS;
+import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty.Metrics.URI;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
@@ -29,8 +42,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
-import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
@@ -42,13 +55,13 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 /**
  * @author Violeta Georgieva
  */
-public class HttpMetricsHandlerTests {
+class HttpMetricsHandlerTests extends BaseHttpTest {
 	HttpServer httpServer;
-	DisposableServer disposableServer;
 	private ConnectionProvider provider;
 	HttpClient httpClient;
 	private MeterRegistry registry;
@@ -56,12 +69,11 @@ public class HttpMetricsHandlerTests {
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		httpServer = customizeServerOptions(
-				HttpServer.create()
+				createServer()
 				          .host("127.0.0.1")
-				          .port(0)
-				          .metrics(true, s -> s)
+				          .metrics(true, Function.identity())
 				          .route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
 				                                                    .send(req.receive().retain().delayElements(Duration.ofMillis(10))))
 				                       .post("/2", (req, res) -> res.header("Connection", "close")
@@ -69,20 +81,15 @@ public class HttpMetricsHandlerTests {
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
 		httpClient =
-				customizeClientOptions(HttpClient.create(provider)
-				                                 .remoteAddress(() -> disposableServer.address())
-				                                 .metrics(true, s -> s));
+				customizeClientOptions(createClient(provider, () -> disposableServer.address())
+				                                 .metrics(true, Function.identity()));
 
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
 	}
 
 	@AfterEach
-	public void tearDown() {
-		if (disposableServer != null) {
-			disposableServer.disposeNow();
-		}
-
+	void tearDown() {
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
 
@@ -92,7 +99,7 @@ public class HttpMetricsHandlerTests {
 	}
 
 	@Test
-	public void testExistingEndpoint() throws Exception {
+	void testExistingEndpoint() throws Exception {
 		disposableServer = httpServer.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
@@ -146,7 +153,7 @@ public class HttpMetricsHandlerTests {
 	}
 
 	@Test
-	public void testNonExistingEndpoint() throws Exception {
+	void testNonExistingEndpoint() throws Exception {
 		disposableServer = httpServer.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
@@ -198,7 +205,7 @@ public class HttpMetricsHandlerTests {
 	}
 
 	@Test
-	public void testUriTagValueFunction() throws Exception {
+	void testUriTagValueFunction() throws Exception {
 		disposableServer = httpServer.metrics(true, s -> "testUriTagValueResolver").bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
@@ -256,7 +263,7 @@ public class HttpMetricsHandlerTests {
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, 1, 12);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, 1, 12);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14*index, 151*index);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14 * index, 151 * index);
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 3*index, 84*index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
@@ -286,8 +293,8 @@ public class HttpMetricsHandlerTests {
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, index, 0);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, index, 123*index);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 64*index);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, index, 123 * index);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 64 * index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
 

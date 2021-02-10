@@ -119,7 +119,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public boolean isDisposed() {
-		return (inboundDone && (receiverQueue == null || receiverQueue.isEmpty()));
+		return inboundDone && (receiverQueue == null || receiverQueue.isEmpty());
 	}
 
 	@Override
@@ -140,6 +140,15 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public void subscribe(CoreSubscriber<? super Object> s) {
+		if (eventLoop.inEventLoop()) {
+			startReceiver(s);
+		}
+		else {
+			eventLoop.execute(() -> startReceiver(s));
+		}
+	}
+
+	final void startReceiver(CoreSubscriber<? super Object> s) {
 		if (once == 0 && ONCE.compareAndSet(this, 0, 1)) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel, "{}: subscribing inbound receiver"), this);
@@ -187,7 +196,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		return false;
 	}
 
-	final void cleanQueue(@Nullable Queue<Object> q){
+	final void cleanQueue(@Nullable Queue<Object> q) {
 		if (q != null) {
 			Object o;
 			while ((o = q.poll()) != null) {
@@ -205,7 +214,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			return;
 		}
 		int missed = 1;
-		for(;;) {
+		for (;;) {
 			final Queue<Object> q = receiverQueue;
 			final CoreSubscriber<? super Object> a = receiver;
 			boolean d = inboundDone;
@@ -222,8 +231,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					}
 					return;
 				}
+				//CHECKSTYLE:OFF
 				missed = (wip -= missed);
-				if(missed == 0){
+				//CHECKSTYLE:ON
+				if (missed == 0) {
 					break;
 				}
 				continue;
@@ -259,7 +270,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					try {
 						ReferenceCountUtil.release(v);
 					}
-					catch(Throwable t) {
+					catch (Throwable t) {
 						inboundError = t;
 						cleanQueue(q);
 						terminateReceiver(q, a);
@@ -287,8 +298,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					channel.config()
 					       .setAutoRead(true);
 				}
+				//CHECKSTYLE:OFF
 				missed = (wip -= missed);
-				if(missed == 0){
+				//CHECKSTYLE:ON
+				if (missed == 0) {
 					break;
 				}
 			}
@@ -306,8 +319,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				       .setAutoRead(false);
 			}
 
+			//CHECKSTYLE:OFF
 			missed = (wip -= missed);
-			if(missed == 0){
+			//CHECKSTYLE:ON
+			if (missed == 0) {
 				break;
 			}
 		}
@@ -324,13 +339,13 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 		if (receiverFastpath && receiver != null) {
 			try {
-				if (log.isDebugEnabled()){
-					if(msg instanceof ByteBuf) {
+				if (log.isDebugEnabled()) {
+					if (msg instanceof ByteBuf) {
 						((ByteBuf) msg).touch(format(channel, "Unbounded receiver, bypass inbound " +
 								"buffer queue"));
 					}
-					else if (msg instanceof ByteBufHolder){
-						((ByteBufHolder) msg).touch(format(channel,"Unbounded receiver, bypass inbound " +
+					else if (msg instanceof ByteBufHolder) {
+						((ByteBufHolder) msg).touch(format(channel, "Unbounded receiver, bypass inbound " +
 								"buffer queue"));
 					}
 				}
@@ -349,12 +364,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				q = new ArrayDeque<>();
 				receiverQueue = q;
 			}
-			if (log.isDebugEnabled()){
-				if(msg instanceof ByteBuf) {
-					((ByteBuf) msg).touch(format(channel,"Buffered ByteBuf in Inbound Flux Queue"));
+			if (log.isDebugEnabled()) {
+				if (msg instanceof ByteBuf) {
+					((ByteBuf) msg).touch(format(channel, "Buffered ByteBuf in Inbound Flux Queue"));
 				}
-				else if (msg instanceof ByteBufHolder){
-					((ByteBufHolder) msg).touch(format(channel,"Buffered ByteBufHolder in Inbound Flux" +
+				else if (msg instanceof ByteBufHolder) {
+					((ByteBufHolder) msg).touch(format(channel, "Buffered ByteBufHolder in Inbound Flux" +
 							" Queue"));
 				}
 			}
@@ -387,14 +402,15 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				else {
 					log.warn(format(channel, "An exception has been observed post termination"), err);
 				}
-			} else if (log.isWarnEnabled() && !AbortedException.isConnectionReset(err)) {
+			}
+			else if (log.isWarnEnabled() && !AbortedException.isConnectionReset(err)) {
 				log.warn(format(channel, "An exception has been observed post termination, use DEBUG level to see the full stack: {}"), err.toString());
 			}
 			return;
 		}
 		CoreSubscriber<?> receiver = this.receiver;
 		this.inboundDone = true;
-		if(channel.isActive()){
+		if (channel.isActive()) {
 			parent.markPersistent(false);
 		}
 
@@ -445,7 +461,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	final void unsubscribeReceiver() {
 		receiverDemand = 0L;
 		receiver = null;
-		if(isCancelled()) {
+		if (isCancelled()) {
 			parent.onInboundCancel();
 		}
 	}

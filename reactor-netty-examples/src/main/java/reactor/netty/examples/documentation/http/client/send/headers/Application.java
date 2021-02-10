@@ -28,7 +28,7 @@ public class Application {
 				          .headers(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, 5)); //<1>
 
 		client.post()
-		      .uri("http://example.com/")
+		      .uri("https://example.com/")
 		      .send(ByteBufFlux.fromString(Mono.just("hello")))
 		      .response()
 		      .block();

@@ -38,14 +38,14 @@ import reactor.netty.transport.TransportConfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TcpResourcesTest {
+class TcpResourcesTest {
 
 	private AtomicBoolean      loopDisposed;
 	private AtomicBoolean      poolDisposed;
 	private TcpResources       tcpResources;
 
 	@BeforeEach
-	public void before() {
+	void before() {
 		loopDisposed = new AtomicBoolean();
 		poolDisposed = new AtomicBoolean();
 
@@ -91,7 +91,7 @@ public class TcpResourcesTest {
 	}
 
 	@Test
-	public void shutdownLaterDefers() {
+	void shutdownLaterDefers() {
 		TcpResources oldTcpResources = TcpResources.tcpResources.getAndSet(tcpResources);
 		TcpResources newTcpResources = TcpResources.tcpResources.get();
 
@@ -114,7 +114,7 @@ public class TcpResourcesTest {
 	}
 
 	@Test
-	public void blockShouldFail() throws InterruptedException {
+	void blockShouldFail() throws InterruptedException {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(2);
 
@@ -157,7 +157,7 @@ public class TcpResourcesTest {
 	}
 
 	@Test
-	public void testIssue1227() {
+	void testIssue1227() {
 		TcpResources.get();
 
 		TcpResources old = TcpResources.tcpResources.get();

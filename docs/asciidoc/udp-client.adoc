@@ -46,6 +46,27 @@ include::{examplesdir}/address/Application.java[lines=18..34]
 <2> Configures the `port` to which this client should connect
 ====
 
+== Eager Initialization
+
+By default, the initialization of the `UdpClient` resources happens on demand. This means that the `connect
+operation` absorbs the extra time needed to initialize and load:
+
+ * the event loop group
+ * the host name resolver
+ * the native transport libraries (when native transport is used)
+
+When you need to preload these resources, you can configure the `UdpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/warmup/Application.java
+----
+include::{examplesdir}/warmup/Application.java[lines=18..40]
+----
+<1> Initialize and load the event loop group, the host name resolver, and the native transport libraries
+<2> Host name resolution happens when connecting to the remote peer
+====
+
 == Writing Data
 
 To send data to a given peer, you must attach an I/O handler.
@@ -81,21 +102,30 @@ include::{examplesdir}/read/Application.java[lines=18..35]
 
 == Lifecycle Callbacks
 
-The following lifecycle callbacks are provided to let you extend the `UDP` client:
+The following lifecycle callbacks are provided to let you extend the `UdpClient`:
 
-* `doOnConnect`: Invoked when the channel is about to connect.
-* `doOnConnected`: Invoked after the channel has been connected.
-* `doOnDisconnected`: Invoked after the channel has been disconnected.
+[width="100%",options="header"]
+|=======
+| Callback | Description
+| `doAfterResolve` | Invoked after the remote address has been resolved successfully.
+| `doOnChannelInit` | Invoked when initializing the channel.
+| `doOnConnect` | Invoked when the channel is about to connect.
+| `doOnConnected` | Invoked after the channel has been connected.
+| `doOnDisconnected` | Invoked after the channel has been disconnected.
+| `doOnResolve` | Invoked when the remote address is about to be resolved.
+| `doOnResolveError` | Invoked in case the remote address hasn't been resolved successfully.
+|=======
 
-The following example uses the `doOnConnected` method:
+The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
 
 ====
 [source,java,indent=0]
 .{examplesdir}/lifecycle/Application.java
 ----
-include::{examplesdir}/lifecycle/Application.java[lines=18..36]
+include::{examplesdir}/lifecycle/Application.java[lines=18..40]
 ----
-<1> The Netty pipeline is extended with `LineBasedFrameDecoder` when the channel has been connected.
+<1> `Netty` pipeline is extended with `LineBasedFrameDecoder` when the channel has been connected.
+<2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
 ====
 
 == Connection Configuration
@@ -151,6 +181,23 @@ include::{examplesdir}/wiretap/Application.java[lines=18..35]
 <1> Enables the wire logging
 ====
 
+By default, the wire logging uses {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP]
+when printing the content.
+When you need to change this to {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
+or {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL],
+you can configure the `UdpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/wiretap/custom/Application.java
+----
+include::{examplesdir}/wiretap/custom/Application.java[lines=18..34]
+----
+<1> Enables the wire logging,
+{javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
+printing the content.
+====
+
 [[client-udp-connection-configurations-event-loop-group]]
 === Event Loop Group
 
@@ -165,7 +212,7 @@ The following listing shows the default configuration for the "`Event Loop Group
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=79..108]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=84..113]
 ----
 ====
 

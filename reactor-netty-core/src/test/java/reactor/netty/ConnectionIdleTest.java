@@ -27,10 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Simon Baslé
  */
-public class ConnectionIdleTest {
+class ConnectionIdleTest {
 
 	@Test
-	public void onReadIdleReplaces() {
+	void onReadIdleReplaces() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Connection mockContext = () -> channel;
 
@@ -54,7 +54,7 @@ public class ConnectionIdleTest {
 
 
 	@Test
-	public void onWriteIdleReplaces() {
+	void onWriteIdleReplaces() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Connection mockContext = () -> channel;
 

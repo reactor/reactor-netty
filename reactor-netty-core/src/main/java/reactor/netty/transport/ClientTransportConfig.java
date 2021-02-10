@@ -19,6 +19,7 @@ import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -146,6 +147,9 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	Consumer<? super CONF>                   doOnConnect;
 	Consumer<? super Connection>             doOnConnected;
 	Consumer<? super Connection>             doOnDisconnected;
+	Consumer<? super Connection>                doOnResolve;
+	BiConsumer<? super Connection, ? super SocketAddress> doAfterResolve;
+	BiConsumer<? super Connection, ? super Throwable> doOnResolveError;
 	NameResolverProvider                     nameResolverProvider;
 	ProxyProvider                            proxyProvider;
 	Supplier<? extends SocketAddress>        remoteAddress;
@@ -166,6 +170,9 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.doOnConnect = parent.doOnConnect;
 		this.doOnConnected = parent.doOnConnected;
 		this.doOnDisconnected = parent.doOnDisconnected;
+		this.doOnResolve = parent.doOnResolve;
+		this.doAfterResolve = parent.doAfterResolve;
+		this.doOnResolveError = parent.doOnResolveError;
 		this.nameResolverProvider = parent.nameResolverProvider;
 		this.proxyProvider = parent.proxyProvider;
 		this.remoteAddress = parent.remoteAddress;
@@ -220,7 +227,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		AddressResolverGroup<?> resolverGroup = defaultResolver.get();
 		if (resolverGroup == null) {
 			AddressResolverGroup<?> newResolverGroup =
-					DEFAULT_NAME_RESOLVER_PROVIDER.newNameResolverGroup(defaultLoopResources(), preferNative);
+					DEFAULT_NAME_RESOLVER_PROVIDER.newNameResolverGroup(loopResources(), preferNative);
 			defaultResolver.compareAndSet(null, newResolverGroup);
 			resolverGroup = getOrCreateDefaultResolver();
 		}

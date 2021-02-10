@@ -39,7 +39,7 @@ import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.UnicastProcessor;
+import reactor.core.publisher.Sinks;
 import reactor.test.StepVerifier;
 import reactor.test.publisher.TestPublisher;
 import reactor.test.util.RaceTestUtils;
@@ -49,10 +49,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Stephane Maldini
  */
-public class MonoSendManyTest {
+class MonoSendManyTest {
 
 	@Test
-	public void testPromiseSendTimeout() {
+	void testPromiseSendTimeout() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new WriteTimeoutHandler(1), new ChannelHandlerAdapter() {});
 
@@ -70,7 +70,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void cleanupFuseableSyncCloseFuture() {
+	void cleanupFuseableSyncCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
@@ -91,7 +91,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void cleanupFuseableAsyncCloseFuture() {
+	void cleanupFuseableAsyncCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
@@ -112,7 +112,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void cleanupFuseableErrorCloseFuture() {
+	void cleanupFuseableErrorCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
@@ -133,7 +133,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void cleanupCancelCloseFuture() {
+	void cleanupCancelCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
@@ -151,7 +151,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void cleanupErrorCloseFuture() {
+	void cleanupErrorCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
@@ -168,7 +168,7 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	public void shouldNotLeakOnRacingCancelAndOnNext() {
+	void shouldNotLeakOnRacingCancelAndOnNext() {
 		int messagesToSend = 128;
 
 		for (int i = 0; i < 10000; i++) {
@@ -206,21 +206,20 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void shouldNotLeakIfFusedOnRacingCancelAndOnNext() {
+	void shouldNotLeakIfFusedOnRacingCancelAndOnNext() {
 		int messagesToSend = 128;
 
 		ArrayBlockingQueue<ReferenceCounted> discarded = new ArrayBlockingQueue<>(messagesToSend * 2);
 		Hooks.onNextDropped(v -> {
 			ReferenceCountUtil.safeRelease(v);
-			discarded.add((ReferenceCounted)v);
+			discarded.add((ReferenceCounted) v);
 		});
 		for (int i = 0; i < 10000; i++) {
 			//use an extra handler
 			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
 
-			UnicastProcessor<ByteBuf> source = UnicastProcessor.create();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> false);
+			Sinks.Many<ByteBuf> source = Sinks.many().unicast().onBackpressureBuffer();
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source.asFlux(), channel, b -> false);
 			BaseSubscriber<Void> testSubscriber = m
 					.doOnDiscard(ReferenceCounted.class, discarded::add)
 					.subscribeWith(new BaseSubscriber<Void>() {});
@@ -232,7 +231,7 @@ public class MonoSendManyTest {
 
 			RaceTestUtils.race(testSubscriber::cancel, () -> {
 				for (ByteBuf buf : buffersToSend) {
-					source.onNext(buf);
+					source.emitNext(buf, Sinks.EmitFailureHandler.FAIL_FAST);
 				}
 			});
 
@@ -251,11 +250,11 @@ public class MonoSendManyTest {
 		}
 	}
 
-	static void wait(WeakReference<Subscription> ref){
+	static void wait(WeakReference<Subscription> ref) {
 		int duration = 5_000;
 		int spins = duration / 100;
 		int i = 0;
-		while(ref.get() != null && i < spins) {
+		while (ref.get() != null && i < spins) {
 			try {
 				Thread.sleep(100);
 				i++;

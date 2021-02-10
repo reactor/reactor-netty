@@ -112,6 +112,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	boolean started;
 	boolean retrying;
+	boolean is100Continue;
 	RedirectClientException redirecting;
 
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
@@ -405,7 +406,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (source instanceof Mono) {
 			return super.send(source);
 		}
-		if ((Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD))) {
+		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
 
 			ByteBufAllocator alloc = channel().alloc();
 			return new PostHeadersNettyOutbound(Flux.from(source)
@@ -514,13 +515,21 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	protected void beforeMarkSentHeaders() {
 		if (redirectedFrom.length > 0) {
-			if(redirectRequestConsumer != null) {
+			if (redirectRequestConsumer != null) {
 				redirectRequestConsumer.accept(this);
 			}
 			if (redirectRequestBiConsumer != null && previousRequestHeaders != null) {
 				redirectRequestBiConsumer.accept(previousRequestHeaders, this);
 				previousRequestHeaders = null;
 			}
+		}
+	}
+
+	@Override
+	protected void onHeadersSent() {
+		channel().read();
+		if (channel().parent() != null) {
+			channel().parent().read();
 		}
 	}
 
@@ -580,6 +589,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				ReferenceCountUtil.release(msg);
 				return;
 			}
+			if (HttpResponseStatus.CONTINUE.equals(response.status())) {
+				is100Continue = true;
+				ReferenceCountUtil.release(msg);
+				return;
+			}
 			if (started) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(channel(), "HttpClientOperations cannot proceed more than one response {}"),
@@ -589,6 +603,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				ReferenceCountUtil.release(msg);
 				return;
 			}
+			is100Continue = false;
 			started = true;
 			setNettyResponse(response);
 
@@ -637,6 +652,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 
 		if (msg instanceof LastHttpContent) {
+			if (is100Continue) {
+				ReferenceCountUtil.release(msg);
+				channel().read();
+				return;
+			}
 			if (!started) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(channel(), "HttpClientOperations received an incorrect end " +
@@ -864,7 +884,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				ChannelFuture f = parent.channel()
 				                        .writeAndFlush(r);
 
-				Flux<Long> tail = encoder.progressFlux.onBackpressureLatest();
+				Flux<Long> tail = encoder.progressSink.asFlux().onBackpressureLatest();
 
 				if (encoder.cleanOnTerminate) {
 					tail = tail.doOnCancel(encoder)
@@ -900,7 +920,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	static final int                    MAX_REDIRECTS      = 50;
-	@SuppressWarnings({"unchecked","rawtypes"})
-	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[])new Supplier[0];
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[]) new Supplier[0];
 	static final Logger                 log                = Loggers.getLogger(HttpClientOperations.class);
 }

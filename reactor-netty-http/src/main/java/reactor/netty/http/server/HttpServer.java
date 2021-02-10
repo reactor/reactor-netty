@@ -17,17 +17,21 @@
 package reactor.netty.http.server;
 
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.reactivestreams.Publisher;
@@ -37,6 +41,9 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.server.logging.AccessLog;
+import reactor.netty.http.server.logging.AccessLogArgProvider;
+import reactor.netty.http.server.logging.AccessLogFactory;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ServerTransport;
@@ -77,15 +84,179 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 
 	/**
 	 * Prepare an {@link HttpServer}
+	 * <p>
+	 * <strong>Note:</strong>
+	 * There isn't only one method that replaces this deprecated method.
+	 * The configuration that can be done with this deprecated method,
+	 * can also be done with the other methods exposed by {@link HttpServer}.
+	 * </p>
+	 * <p>Examples:</p>
+	 * <p>Configuration via the deprecated '.from(...)' method</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.from(
+	 *     TcpServer.attr(...) // configures the channel attributes
+	 *              .bindAddress(...) // configures the bind (local) address
+	 *              .childAttr(...) // configures the child channel attributes
+	 *              .childObserve() // configures the child channel connection observer
+	 *              .childOption(...) // configures the child channel options
+	 *              .channelGroup(...) // configures the channel group
+	 *              .doOnBound(...) // configures the doOnBound callback
+	 *              .doOnChannelInit(...) // configures the channel handler
+	 *              .doOnConnection(...) // configures the doOnConnection callback
+	 *              .doOnUnbound(...) // configures the doOnUnbound callback
+	 *              .metrics(...) // configures the metrics
+	 *              .observe() // configures the connection observer
+	 *              .option(...) // configures the channel options
+	 *              .runOn(...) // configures the event loop group
+	 *              .secure() // configures the SSL
+	 *              .wiretap()) // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Configuration via the other methods exposed by {@link HttpServer}</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.attr(...) // configures the channel attributes
+	 *           .bindAddress(...) // configures the bind (local) address
+	 *           .childAttr(...) // configures the child channel attributes
+	 *           .childObserve() // configures the child channel connection observer
+	 *           .childOption(...) // configures the child channel options
+	 *           .channelGroup(...) // configures the channel group
+	 *           .doOnBound(...) // configures the doOnBound callback
+	 *           .doOnChannelInit(...) // configures the channel handler
+	 *           .doOnConnection(...) // configures the doOnConnection callback
+	 *           .doOnUnbound(...) // configures the doOnUnbound callback
+	 *           .metrics(...) // configures the metrics
+	 *           .observe() // configures the connection observer
+	 *           .option(...) // configures the channel options
+	 *           .runOn(...) // configures the event loop group
+	 *           .secure() // configures the SSL
+	 *           .wiretap() // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Wire logging in plain text</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
+	 * }
+	 * </pre>
 	 *
 	 * @return a new {@link HttpServer}
-	 * @deprecated Use {@link HttpServer} methods for TCP level configurations. This method
-	 * will be removed in version 1.1.0.
+	 * @deprecated Use the other methods exposed by {@link HttpServer} to achieve the same configurations.
+	 * This method will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	public static HttpServer from(TcpServer tcpServer) {
 		Objects.requireNonNull(tcpServer, "tcpServer");
 		return HttpServerBind.applyTcpServerConfig(tcpServer.configuration());
+	}
+
+	/**
+	 * Customize the access log, provided access logging has been enabled through the
+	 * {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .port(8080)
+	 *           .route(r -> r.get("/hello",
+	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                                    .sendString(Mono.just("Hello World!"))))
+	 *           .accessLog(argProvider ->
+	 *                   AccessLog.create("user-agent={}", argProvider.requestHeader("user-agent")))
+	 *           .bindNow()
+	 *           .onDispose()
+	 *           .block();
+	 * }
+	 * </pre>
+	 * <p>
+	 *
+	 * @param accessLogFactory the {@link Function} that creates an {@link AccessLog} given an {@link AccessLogArgProvider}
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.1
+	 * @deprecated as of 1.0.3. Prefer the {@link #accessLog(boolean, AccessLogFactory) variant}
+	 * with the {@link AccessLogFactory} interface instead. This method will be removed in version 1.2.0.
+	 */
+	@Deprecated
+	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLogFactory) {
+		Objects.requireNonNull(accessLogFactory, "accessLogFactory");
+		HttpServer dup = duplicate();
+		dup.configuration().accessLog = accessLogFactory;
+		return dup;
+	}
+
+	/**
+	 * Enable or disable the access log. If enabled, the default log system will be used.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .port(8080)
+	 *           .route(r -> r.get("/hello",
+	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                                    .sendString(Mono.just("Hello World!"))))
+	 *           .accessLog(true)
+	 *           .bindNow()
+	 *           .onDispose()
+	 *           .block();
+	 * }
+	 * </pre>
+	 * <p>
+	 *
+	 * Note that this method takes precedence over the {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
+	 *
+	 * @param enable enable or disable the access log
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.3
+	 */
+	public final HttpServer accessLog(boolean enable) {
+		HttpServer dup = duplicate();
+		dup.configuration().accessLog = null;
+		dup.configuration().accessLogEnabled = enable;
+		return dup;
+	}
+
+	/**
+	 * Enable or disable the access log and customize it through an {@link AccessLogFactory}.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .port(8080)
+	 *           .route(r -> r.get("/hello",
+	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                                    .sendString(Mono.just("Hello World!"))))
+	 *           .accessLog(true, AccessLogFactory.createFilter(
+	 *                   args -> String.valueOf(args.uri()).startsWith("/health"),
+	 *                   args -> AccessLog.create("user-agent={}", args.requestHeader("user-agent"))
+	 *            )
+	 *           .bindNow()
+	 *           .onDispose()
+	 *           .block();
+	 * }
+	 * </pre>
+	 * <p>
+	 * The {@link AccessLogFactory} class offers several helper methods to generate such a function,
+	 * notably if one wants to {@link AccessLogFactory#createFilter(Predicate) filter} some requests out of the access log.
+	 *
+	 * Note that this method takes precedence over the {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
+	 *
+	 * @param enable enable or disable the access log
+	 * @param accessLogFactory the {@link AccessLogFactory} that creates an {@link AccessLog} given an {@link AccessLogArgProvider}
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.3
+	 */
+	public final HttpServer accessLog(boolean enable, AccessLogFactory accessLogFactory) {
+		Objects.requireNonNull(accessLogFactory);
+		HttpServer dup = duplicate();
+		dup.configuration().accessLog = enable ? accessLogFactory : null;
+		dup.configuration().accessLogEnabled = enable;
+		return dup;
 	}
 
 	@Override
@@ -194,6 +365,20 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
+	 * Specifies a custom request handler for deriving information about the connection.
+	 *
+	 * @param handler the forwarded header handler
+	 * @return a new {@link HttpServer}
+	 * @since 0.9.12
+	 */
+	public final HttpServer forwarded(BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> handler) {
+		Objects.requireNonNull(handler, "handler");
+		HttpServer dup = duplicate();
+		dup.configuration().forwardedHeaderHandler = handler;
+		return dup;
+	}
+
+	/**
 	 * Specifies whether support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
 	 * HTTP request headers for deriving information about the connection is enabled.
 	 *
@@ -218,20 +403,6 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 			return dup;
 		}
 		return this;
-	}
-
-	/**
-	 * Specifies a custom request handler for deriving information about the connection.
-	 *
-	 * @param handler the forwarded header handler
-	 * @return a new {@link HttpServer}
-	 * @since 0.9.12
-	 */
-	public final HttpServer forwarded(BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> handler) {
-		Objects.requireNonNull(handler, "handler");
-		HttpServer dup = duplicate();
-		dup.configuration().forwardedHeaderHandler = handler;
-		return dup;
 	}
 
 	/**
@@ -302,6 +473,25 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		Objects.requireNonNull(mapHandle, "mapHandle");
 		HttpServer dup = duplicate();
 		dup.configuration().mapHandle = mapHandle;
+		return dup;
+	}
+
+	/**
+	 * Specifies an idle timeout on the connection when it is waiting for an HTTP request (resolution: ms).
+	 * Once the timeout is reached the connection will be closed.
+	 * <p>If an {@code idleTimeout} is not specified, this indicates no timeout (i.e. infinite),
+	 * which means the connection will be closed only if one of the peers decides to close it.
+	 * <p>If the {@code idleTimeout} is less than {@code 1ms}, then {@code 1ms} will be the idle timeout.
+	 * <p>By default {@code idleTimeout} is not specified.
+	 *
+	 * @param idleTimeout an idle timeout on the connection when it is waiting for an HTTP request (resolution: ms)
+	 * @return a new {@link HttpServer}
+	 * @since 0.9.15
+	 */
+	public final HttpServer idleTimeout(Duration idleTimeout) {
+		Objects.requireNonNull(idleTimeout, "idleTimeout");
+		HttpServer dup = duplicate();
+		dup.configuration().idleTimeout = idleTimeout;
 		return dup;
 	}
 
@@ -532,12 +722,78 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Apply a {@link TcpServer} mapping function to update TCP configuration and
 	 * return an enriched {@link HttpServer} to use.
+	 * <p>
+	 * <strong>Note:</strong>
+	 * There isn't only one method that replaces this deprecated method.
+	 * The configuration that can be done with this deprecated method,
+	 * can also be done with the other methods exposed by {@link HttpServer}.
+	 * </p>
+	 * <p>Examples:</p>
+	 * <p>Configuration via the deprecated '.tcpConfiguration(...)' method</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.tcpConfiguration(tcpServer ->
+	 *     tcpServer.attr(...) // configures the channel attributes
+	 *              .bindAddress(...) // configures the bind (local) address
+	 *              .channelGroup(...) // configures the channel group
+	 *              .childAttr(...) // configures the child channel attributes
+	 *              .childObserve(...) // configures the child channel connection observer
+	 *              .childOption(...) // configures the child channel options
+	 *              .doOnBound(...) // configures the doOnBound callback
+	 *              .doOnChannelInit(...) // configures the channel handler
+	 *              .doOnConnection(...) // configures the doOnConnection callback
+	 *              .doOnUnbound(...) // configures the doOnUnbound callback
+	 *              .handle(...) // configures the I/O handler
+	 *              .host(...) // configures the host name
+	 *              .metrics(...) // configures the metrics
+	 *              .noSSL() // removes SSL configuration
+	 *              .observe() // configures the connection observer
+	 *              .option(...) // configures the channel options
+	 *              .port(...) // configures the port
+	 *              .runOn(...) // configures the event loop group
+	 *              .secure() // configures the SSL
+	 *              .wiretap()) // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Configuration via the other methods exposed by {@link HttpServer}</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.attr(...) // configures the channel attributes
+	 *           .bindAddress(...) // configures the bind (local) address
+	 *           .channelGroup(...) // configures the channel group
+	 *           .childAttr(...) // configures the child channel attributes
+	 *           .childObserve(...) // configures the child channel connection observer
+	 *           .childOption(...) // configures the child channel options
+	 *           .doOnBound(...) // configures the doOnBound callback
+	 *           .doOnChannelInit(...) // configures the channel handler
+	 *           .doOnConnection(...) // configures the doOnConnection callback
+	 *           .doOnUnbound(...) // configures the doOnUnbound callback
+	 *           .handle(...) // configures the I/O handler
+	 *           .host(...) // configures the host name
+	 *           .metrics(...) // configures the metrics
+	 *           .noSSL() // removes SSL configuration
+	 *           .observe() // configures the connection observer
+	 *           .option(...) // configures the channel options
+	 *           .port(...) // configures the port
+	 *           .runOn(...) // configures the event loop group
+	 *           .secure() // configures the SSL
+	 *           .wiretap() // configures the wire logging
+	 * }
+	 * </pre>
+	 *
+	 * <p>Wire logging in plain text</p>
+	 * <pre>
+	 * {@code
+	 * HttpServer.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
+	 * }
+	 * </pre>
 	 *
 	 * @param tcpMapper A {@link TcpServer} mapping function to update TCP configuration and
 	 * return an enriched {@link HttpServer} to use.
 	 * @return a new {@link HttpServer}
-	 * @deprecated Use {@link HttpServer} methods for TCP level configurations. This method
-	 * will be removed in version 1.1.0.
+	 * @deprecated Use the other methods exposed by {@link HttpServer} to achieve the same configurations.
+	 * This method will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	@SuppressWarnings("ReturnValueIgnored")
@@ -547,6 +803,30 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		// ReturnValueIgnored is deliberate
 		tcpMapper.apply(tcpServer);
 		return tcpServer.httpServer;
+	}
+
+	/**
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop groups</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 *     <li>loads the necessary native libraries for the security if there is such</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code bind operation} absorbs the extra time needed to load resources.
+	 *
+	 * @return a {@link Mono} representing the completion of the warmup
+	 * @since 1.0.3
+	 */
+	@Override
+	public Mono<Void> warmup() {
+		return Mono.when(
+				super.warmup(),
+				Mono.fromRunnable(() -> {
+					SslProvider provider = configuration().sslProvider();
+					if (provider != null && !(provider.getSslContext() instanceof JdkSslContext)) {
+						OpenSsl.version();
+					}
+				}));
 	}
 
 	@Override

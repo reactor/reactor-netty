@@ -15,6 +15,7 @@
  */
 package reactor.netty.examples.documentation.tcp.client.lifecycle;
 
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import reactor.netty.Connection;
 import reactor.netty.tcp.TcpClient;
@@ -29,6 +30,9 @@ public class Application {
 				         .port(80)
 				         .doOnConnected(conn ->
 				             conn.addHandler(new ReadTimeoutHandler(10, TimeUnit.SECONDS))) //<1>
+				         .doOnChannelInit((observer, channel, remoteAddress) ->
+				             channel.pipeline()
+				                    .addFirst(new LoggingHandler("reactor.netty.examples")))//<2>
 				         .connectNow();
 
 		connection.onDispose()

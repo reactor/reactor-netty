@@ -23,9 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.server.HttpServer;
+import reactor.netty.BaseHttpTest;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -33,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
@@ -47,36 +46,35 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 /**
  * @author Violeta Georgieva
  */
-public class PooledConnectionProviderDefaultMetricsTest {
+class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	private MeterRegistry registry;
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
 	}
 
 	@AfterEach
-	public void tearDown() {
+	void tearDown() {
 		Metrics.removeRegistry(registry);
 		registry.clear();
 		registry.close();
 	}
 
 	@Test
-	public void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabled() throws Exception {
+	void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabled() throws Exception {
 		doTest(ConnectionProvider.create("test", 1), true);
 	}
 
 	@Test
-	public void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabled() throws Exception {
+	void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabled() throws Exception {
 		doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo().build(), false);
 	}
 
 	private void doTest(ConnectionProvider provider, boolean clientMetricsEnabled) throws Exception {
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .handle((req, res) -> res.header("Connection", "close")
 				                                   .sendString(Mono.just("test")))
 				          .bindNow();
@@ -88,8 +86,7 @@ public class PooledConnectionProviderDefaultMetricsTest {
 		DefaultPooledConnectionProvider fixed = (DefaultPooledConnectionProvider) provider;
 		AtomicReference<String[]> tags = new AtomicReference<>();
 
-		HttpClient.create(fixed)
-		          .port(server.port())
+		createClient(fixed, disposableServer.port())
 		          .doOnResponse((res, conn) -> {
 		              conn.channel()
 		                  .closeFuture()
@@ -110,7 +107,7 @@ public class PooledConnectionProviderDefaultMetricsTest {
 		                  metrics.set(true);
 		              }
 		          })
-		          .metrics(clientMetricsEnabled, s -> s)
+		          .metrics(clientMetricsEnabled, Function.identity())
 		          .get()
 		          .uri("/")
 		          .responseContent()
@@ -129,8 +126,6 @@ public class PooledConnectionProviderDefaultMetricsTest {
 
 		fixed.disposeLater()
 		     .block(Duration.ofSeconds(30));
-
-		server.disposeNow();
 	}
 
 

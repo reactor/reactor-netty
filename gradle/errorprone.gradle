@@ -22,13 +22,3 @@ dependencies {
 	errorprone "com.google.guava:guava:$guavaVersion" // prevents conflicts with guava versions of other gradle plugins
 	errorproneJavac "com.google.errorprone:javac:$errorproneJavacVersion"
 }
-
-// Change all errorprone errors to warnings
-// TODO: remove when warning have been resolved
-project.afterEvaluate {
-	tasks.withType(JavaCompile) {
-		options.errorprone {
-			allErrorsAsWarnings = true
-		}
-	}
-}

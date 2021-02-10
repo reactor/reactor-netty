@@ -38,7 +38,7 @@ public interface ConnectionObserver {
 	 *
 	 * @return a noop connection listener
 	 */
-	static ConnectionObserver emptyListener(){
+	static ConnectionObserver emptyListener() {
 		return ReactorNetty.NOOP_LISTENER;
 	}
 
@@ -47,7 +47,7 @@ public interface ConnectionObserver {
 	 *
 	 * @return current {@link Context} or {@link Context#empty()}
 	 */
-	default Context currentContext(){
+	default Context currentContext() {
 		return Context.empty();
 	}
 
@@ -88,6 +88,7 @@ public interface ConnectionObserver {
 	 *     Specific protocol might implement more state type for instance
 	 *     request/response lifecycle.
 	 */
+	//CHECKSTYLE:OFF
 	interface State {
 
 		/**
@@ -118,4 +119,5 @@ public interface ConnectionObserver {
 		 */
 		State DISCONNECTING = ReactorNetty.DISCONNECTING;
 	}
+	//CHECKSTYLE:ON
 }

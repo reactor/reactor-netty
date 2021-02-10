@@ -116,8 +116,14 @@ Next, add your dependencies to the relevant reactor projects, as usual (except w
 <dependencies>
     <dependency>
         <groupId>io.projectreactor.netty</groupId>
-        <artifactId>reactor-netty</artifactId> <1>
+        <artifactId>reactor-netty-core</artifactId> <1>
         <2>
+    </dependency>
+</dependencies>
+<dependencies>
+    <dependency>
+        <groupId>io.projectreactor.netty</groupId>
+        <artifactId>reactor-netty-http</artifactId>
     </dependency>
 </dependencies>
 ----
@@ -138,7 +144,8 @@ dependencies {
     implementation platform('io.projectreactor:reactor-bom:Dysprosium-SR10') <1>
 
     // define dependencies without versions
-    implementation 'io.projectreactor.netty:reactor-netty' <2>
+    implementation 'io.projectreactor.netty:reactor-netty-core' <2>
+    implementation 'io.projectreactor.netty:reactor-netty-http'
 }
 ----
 <1> As of this writing, `Dysprosium-SR10` is the latest version of the `BOM`.
@@ -204,3 +211,10 @@ repositories {
 }
 ----
 ====
+
+[[support]]
+== Support and policies
+
+The entries below are mirroring https://github.com/reactor/.github/blob/master/SUPPORT.adoc
+
+include::https://raw.githubusercontent.com/reactor/.github/master/SUPPORT.adoc[leveloffset=3,lines=1..38]

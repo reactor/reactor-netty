@@ -34,10 +34,10 @@ import reactor.netty.resources.LoopResources;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class UdpClientTest {
+class UdpClientTest {
 
 	@Test
-	public void smokeTest() throws Exception {
+	void smokeTest() throws Exception {
 		LoopResources resources = LoopResources.create("test");
 		CountDownLatch latch = new CountDownLatch(4);
 		Connection server =
@@ -105,7 +105,7 @@ public class UdpClientTest {
 	}
 
 	@Test
-	public void testIssue192() {
+	void testIssue192() {
 		LoopResources resources = LoopResources.create("testIssue192");
 		UdpServer server = UdpServer.create()
 		                            .runOn(resources);
@@ -126,7 +126,7 @@ public class UdpClientTest {
 	}
 
 	@Test
-	public void testUdpClientWithDomainSockets() {
+	void testUdpClientWithDomainSockets() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> UdpClient.create()
 		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -134,7 +134,7 @@ public class UdpClientTest {
 	}
 
 	@Test
-	public void testUdpClientWithDomainSocketsWithHost() {
+	void testUdpClientWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> UdpClient.create()
 		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
@@ -143,7 +143,7 @@ public class UdpClientTest {
 	}
 
 	@Test
-	public void testUdpClientWithDomainSocketsWithPort() {
+	void testUdpClientWithDomainSocketsWithPort() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> UdpClient.create()
 		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))

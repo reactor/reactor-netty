@@ -121,7 +121,6 @@ final class TracingHttpClientDecorator {
 		}
 
 		@Override
-		@Nullable
 		public Object unwrap() {
 			return delegate;
 		}
@@ -156,7 +155,6 @@ final class TracingHttpClientDecorator {
 		}
 
 		@Override
-		@Nullable
 		public Object unwrap() {
 			return delegate;
 		}

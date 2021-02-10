@@ -56,7 +56,7 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 		this.isWebsocket = c.websocketClientSpec != null;
 		this.method = c.method;
 		this.uri = c.uri == null ? c.uriStr : c.uri.toString();
-		this.path = HttpOperations.resolvePath(this.uri);
+		this.path = this.uri != null ? HttpOperations.resolvePath(this.uri) : null;
 		this.responseTimeout = c.responseTimeout;
 	}
 

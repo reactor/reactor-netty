@@ -43,7 +43,7 @@ public interface DisposableChannel extends Disposable {
 	 *
 	 * @return {@link SocketAddress}
 	 */
-	default SocketAddress address(){
+	default SocketAddress address() {
 		Channel c = channel();
 		if (c instanceof DatagramChannel) {
 			SocketAddress a = c.remoteAddress();
@@ -66,7 +66,7 @@ public interface DisposableChannel extends Disposable {
 	 * Releases or closes the underlying {@link Channel}
 	 */
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
+	@SuppressWarnings({"FutureReturnValueIgnored", "FunctionalInterfaceMethodChanged"})
 	default void dispose() {
 		//"FutureReturnValueIgnored" this is deliberate
 		channel().close();

@@ -46,6 +46,25 @@ include::{examplesdir}/address/Application.java[lines=18..34]
 <2> Configures the `UDP` server port
 ====
 
+== Eager Initialization
+
+By default, the initialization of the `UdpServer` resources happens on demand. This means that the `bind
+operation` absorbs the extra time needed to initialize and load:
+
+ * the event loop group
+ * the native transport libraries (when native transport is used)
+
+When you need to preload these resources, you can configure the `UdpServer` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/warmup/Application.java
+----
+include::{examplesdir}/warmup/Application.java[lines=18..51]
+----
+<1> Initialize and load the event loop group and the native transport libraries
+====
+
 == Writing Data
 
 To send data to the remote peer, you must attach an I/O handler.
@@ -80,21 +99,27 @@ include::{examplesdir}/read/Application.java[lines=18..47]
 
 == Lifecycle Callbacks
 
-The following lifecycle callbacks are provided to let you extend the `UDP` server:
+The following lifecycle callbacks are provided to let you extend the `UdpServer`:
 
-* `doOnBind`: Invoked when the server channel is about to bind.
-* `doOnBound`: Invoked when the server channel is bound.
-* `doOnUnbound`: Invoked when the server channel is unbound.
+[width="100%",options="header"]
+|=======
+| Callback | Description
+| `doOnBind` | Invoked when the server channel is about to bind.
+| `doOnBound` | Invoked when the server channel is bound.
+| `doOnChannelInit` | Invoked when initializing the channel.
+| `doOnUnbound` | Invoked when the server channel is unbound.
+|=======
 
-The following example uses the `doOnBound` method:
+The following example uses the `doOnBound` and `doOnChannelInit` callbacks:
 
 ====
 [source,java,indent=0]
 .{examplesdir}/lifecycle/Application.java
 ----
-include::{examplesdir}/lifecycle/Application.java[lines=18..34]
+include::{examplesdir}/lifecycle/Application.java[lines=18..39]
 ----
 <1> `Netty` pipeline is extended with `LineBasedFrameDecoder` when the server channel is bound.
+<2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
 ====
 
 == Connection Configuration
@@ -150,6 +175,23 @@ include::{examplesdir}/wiretap/Application.java[lines=18..33]
 <1> Enables the wire logging
 ====
 
+By default, the wire logging uses {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP]
+when printing the content.
+When you need to change this to {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
+or {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL],
+you can configure the `UdpServer` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/wiretap/custom/Application.java
+----
+include::{examplesdir}/wiretap/custom/Application.java[lines=18..34]
+----
+<1> Enables the wire logging,
+{javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
+printing the content.
+====
+
 [[server-udp-connection-configurations-event-loop-group]]
 === Event Loop Group
 
@@ -164,7 +206,7 @@ The default configuration for the "`Event Loop Group`" is the following:
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=79..108]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=84..113]
 ----
 ====
 

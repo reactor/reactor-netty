@@ -68,7 +68,7 @@ import static reactor.netty.ReactorNetty.toPrettyHexDump;
 public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
 		extends ChannelOperations<INBOUND, OUTBOUND> implements HttpInfos {
 
-	volatile int statusAndHeadersSent = 0;
+	volatile int statusAndHeadersSent;
 
 	static final int READY        = 0;
 	static final int HEADERS_SENT = 1;
@@ -104,7 +104,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (source instanceof Mono) {
-			return new PostHeadersNettyOutbound(((Mono<ByteBuf>)source)
+			return new PostHeadersNettyOutbound(((Mono<ByteBuf>) source)
 					.flatMap(msg -> {
 						if (markSentHeaderAndBody(msg)) {
 							try {
@@ -197,7 +197,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					throw e;
 				}
 
-				return channel().writeAndFlush(msg);
+				return channel().writeAndFlush(msg)
+				                .addListener(f -> onHeadersSent());
 			}
 			else {
 				return channel().newSucceededFuture();
@@ -208,6 +209,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	protected abstract void beforeMarkSentHeaders();
 
 	protected abstract void afterMarkSentHeaders();
+
+	protected abstract void onHeadersSent();
 
 	protected abstract HttpMessage newFullBodyMessage(ByteBuf body);
 
@@ -237,17 +240,17 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	public String toString() {
 		if (isWebsocket()) {
-			return "ws{uri=" + uri()+", connection="+connection()+"}";
+			return "ws{uri=" + uri() + ", connection=" + connection() + "}";
 		}
 
-		return method().name() + "{uri=" + uri()+", connection="+connection()+"}";
+		return method().name() + "{uri=" + uri() + ", connection=" + connection() + "}";
 	}
 
 	@Override
 	public HttpOperations<INBOUND, OUTBOUND> addHandler(String name, ChannelHandler handler) {
 		super.addHandler(name, handler);
 
-		if(channel().pipeline().context(handler) == null){
+		if (channel().pipeline().context(handler) == null) {
 			return this;
 		}
 
@@ -255,20 +258,20 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		return this;
 	}
 
-	static void autoAddHttpExtractor(Connection c, String name, ChannelHandler handler){
+	static void autoAddHttpExtractor(Connection c, String name, ChannelHandler handler) {
 
 		if (handler instanceof ByteToMessageDecoder
 				|| handler instanceof ByteToMessageCodec
 				|| handler instanceof CombinedChannelDuplexHandler) {
-			String extractorName = name+"$extractor";
+			String extractorName = name + "$extractor";
 
-			if(c.channel().pipeline().context(extractorName) != null){
+			if (c.channel().pipeline().context(extractorName) != null) {
 				return;
 			}
 
 			c.channel().pipeline().addBefore(name, extractorName, HTTP_EXTRACTOR);
 
-			if(c.isPersistent()){
+			if (c.isPersistent()) {
 				c.onTerminate().subscribe(null, null, () -> c.removeHandler(extractorName));
 			}
 
@@ -373,7 +376,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	final static ChannelInboundHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
 			(ctx, msg) -> {
 				if (msg instanceof ByteBufHolder) {
-					if(msg instanceof FullHttpMessage){
+					if (msg instanceof FullHttpMessage) {
 						// TODO convert into 2 messages if FullHttpMessage
 						ctx.fireChannelRead(msg);
 					}

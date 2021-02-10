@@ -18,6 +18,7 @@ package reactor.netty.http.server;
 import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -47,6 +48,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
+	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ConnectionObserver                                      listener;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
@@ -55,9 +57,11 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 	Boolean                   secured;
 
 	Http2StreamBridgeServerHandler(ConnectionObserver listener,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
+		this.compress = compress;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
 		this.listener = listener;
@@ -89,7 +93,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 			try {
 				ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
-						null,
+						compress,
 						request,
 						ConnectionInfo.from(ctx.channel().parent(),
 						                    request,
@@ -98,10 +102,11 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 						                    forwardedHeaderHandler),
 						cookieEncoder,
 						cookieDecoder,
-						mapHandle);
+						mapHandle,
+						secured);
 			}
 			catch (RuntimeException e) {
-				HttpServerOperations.sendDecodingFailures(ctx, listener, e, msg);
+				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg);
 				return;
 			}
 			ops.bind();

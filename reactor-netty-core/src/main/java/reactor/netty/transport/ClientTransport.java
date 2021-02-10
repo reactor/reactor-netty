@@ -18,6 +18,7 @@ package reactor.netty.transport;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -141,6 +142,56 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	}
 
 	/**
+	 * Set or add a callback called before {@link SocketAddress} is resolved.
+	 *
+	 * @param doOnResolve a consumer observing resolve events
+	 * @return a new {@link ClientTransport} reference
+	 * @since 1.0.1
+	 */
+	public final T doOnResolve(Consumer<? super Connection> doOnResolve) {
+		Objects.requireNonNull(doOnResolve, "doOnResolve");
+		T dup = duplicate();
+		@SuppressWarnings("unchecked")
+		Consumer<Connection> current = (Consumer<Connection>) configuration().doOnResolve;
+		dup.configuration().doOnResolve = current == null ? doOnResolve : current.andThen(doOnResolve);
+		return dup;
+	}
+
+	/**
+	 * Set or add a callback called after {@link SocketAddress} is resolved successfully.
+	 *
+	 * @param doAfterResolve a consumer observing resolved events
+	 * @return a new {@link ClientTransport} reference
+	 * @since 1.0.1
+	 */
+	public final T doAfterResolve(BiConsumer<? super Connection, ? super SocketAddress> doAfterResolve) {
+		Objects.requireNonNull(doAfterResolve, "doAfterResolve");
+		T dup = duplicate();
+		@SuppressWarnings("unchecked")
+		BiConsumer<Connection, SocketAddress> current =
+				(BiConsumer<Connection, SocketAddress>) configuration().doAfterResolve;
+		dup.configuration().doAfterResolve = current == null ? doAfterResolve : current.andThen(doAfterResolve);
+		return dup;
+	}
+
+	/**
+	 * Set or add a callback called if an exception happens while resolving to a {@link SocketAddress}.
+	 *
+	 * @param doOnResolveError a consumer observing resolve error events
+	 * @return a new {@link ClientTransport} reference
+	 * @since 1.0.1
+	 */
+	public final T doOnResolveError(BiConsumer<? super Connection, ? super Throwable> doOnResolveError) {
+		Objects.requireNonNull(doOnResolveError, "doOnResolveError");
+		T dup = duplicate();
+		@SuppressWarnings("unchecked")
+		BiConsumer<Connection, Throwable> current =
+				(BiConsumer<Connection, Throwable>) configuration().doOnResolveError;
+		dup.configuration().doOnResolveError = current == null ? doOnResolveError : current.andThen(doOnResolveError);
+		return dup;
+	}
+
+	/**
 	 * The host to which this client should connect.
 	 *
 	 * @param host the host to connect to
@@ -257,5 +308,27 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 			conf.resolver = conf.nameResolverProvider.newNameResolverGroup(conf.loopResources(), conf.preferNative);
 		}
 		return dup;
+	}
+
+	/**
+	 * Based on the actual configuration, returns a {@link Mono} that triggers:
+	 * <ul>
+	 *     <li>an initialization of the event loop group</li>
+	 *     <li>an initialization of the host name resolver</li>
+	 *     <li>loads the necessary native libraries for the transport</li>
+	 * </ul>
+	 * By default, when method is not used, the {@code connect operation} absorbs the extra time needed to initialize and
+	 * load the resources.
+	 *
+	 * @return a {@link Mono} representing the completion of the warmup
+	 * @since 1.0.3
+	 */
+	public Mono<Void> warmup() {
+		return Mono.fromRunnable(() -> {
+			configuration().eventLoopGroup();
+
+			// By default the host name resolver uses the event loop group configured on client level
+			configuration().resolverInternal();
+		});
 	}
 }

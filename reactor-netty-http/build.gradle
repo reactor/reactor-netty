@@ -18,6 +18,24 @@ import me.champeau.gradle.japicmp.JapicmpTask
 apply plugin: 'io.spring.javadoc'
 apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
+apply plugin: 'biz.aQute.bnd.builder'
+
+ext {
+	bndOptions = [
+			"Export-Package" : "reactor.netty.http*;version=$osgiVersion;-noimport:=true",
+			"Import-Package": [
+					"!javax.annotation",
+					"io.netty.channel.kqueue;resolution:=optional;version=\"[4.1,5)\"",
+					"io.netty.handler.codec.haproxy;resolution:=optional;version=\"[4.1,5)\"",
+					"io.netty.incubator.channel.uring;resolution:=optional",
+					"io.micrometer.*;resolution:=optional",
+					"*"
+			].join(","),
+			"Bundle-Name" : "reactor-netty-http",
+			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-http",
+			"Bundle-Version" : "$osgiVersion"
+	]
+}
 
 dependencies {
 	compile project(path: ':reactor-netty-core', configuration: 'shadow')
@@ -28,6 +46,10 @@ dependencies {
 	compile "io.netty:netty-codec-http:$nettyVersion"
 	compile "io.netty:netty-codec-http2:$nettyVersion"
 	compile "io.netty:netty-resolver-dns:$nettyVersion"
+	// MacOS binaries are not available for Netty SNAPSHOT version
+	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
+		compile "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
+	}
 	optional "io.netty:netty-codec-haproxy:$nettyVersion"
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
@@ -36,6 +58,7 @@ dependencies {
 		//so that the main code compiles
 		optional "io.netty:netty-transport-native-epoll:$nettyVersion"
 		optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		optional "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
@@ -45,6 +68,9 @@ dependencies {
 				testRuntime "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
 			}
 		}
+		else if (forceTransport == "io_uring" && osdetector.os == "linux") {
+			testRuntime "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
+		}
 		else if (forceTransport != "nio") {
 			throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
 		}
@@ -53,6 +79,7 @@ dependencies {
 		//classic build to be distributed
 		compile "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
 		optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		optional "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	}
 
 	//Metrics
@@ -68,13 +95,20 @@ dependencies {
 	}
 
 	// Testing
+
+	// JSR-305 annotations
+	testCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
+
+	testCompile "org.mockito:mockito-core:$mockitoVersion"
 	testCompile "io.specto:hoverfly-java-junit5:$hoverflyJavaVersion"
 	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"
 	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testCompile "org.junit.jupiter:junit-jupiter-params:$junitVersion"
+	testCompile "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
@@ -89,6 +123,7 @@ jar {
 	manifest {
 		attributes("Automatic-Module-Name": "reactor.netty.http")
 	}
+	bnd(bndOptions)
 }
 
 task downloadBaseline(type: Download) {
@@ -109,7 +144,7 @@ task downloadBaseline(type: Download) {
 
 	onlyIfNewer true
 	compress true
-	src "https://repo.spring.io/libs-release/io/projectreactor/netty/reactor-netty-http/$compatibleVersion/reactor-netty-http-${compatibleVersion}.jar"
+	src "${repositories.jcenter().url}io/projectreactor/netty/reactor-netty-http/$compatibleVersion/reactor-netty-http-${compatibleVersion}.jar"
 	dest "${buildDir}/baselineLibs/reactor-netty-http-${compatibleVersion}.jar"
 }
 

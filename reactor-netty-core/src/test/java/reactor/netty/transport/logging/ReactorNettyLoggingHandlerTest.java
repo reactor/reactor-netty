@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.nio.charset.Charset;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -38,7 +39,9 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
-public class ReactorNettyLoggingHandlerTest {
+class ReactorNettyLoggingHandlerTest {
+
+	private static final Logger ROOT = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 
 	private LoggingHandler defaultCharsetReactorNettyLoggingHandler;
 
@@ -47,29 +50,33 @@ public class ReactorNettyLoggingHandlerTest {
 
 	@BeforeEach
 	@SuppressWarnings("unchecked")
-	public void setUp() {
+	void setUp() {
+		mockedAppender = (Appender<ILoggingEvent>) Mockito.mock(Appender.class);
 		defaultCharsetReactorNettyLoggingHandler =
 			new ReactorNettyLoggingHandler(
 				ReactorNettyLoggingHandlerTest.class.getName(),
 				LogLevel.DEBUG,
 				Charset.defaultCharset());
 
-		mockedAppender = (Appender<ILoggingEvent>) Mockito.mock(Appender.class);
 		loggingEventArgumentCaptor = ArgumentCaptor.forClass(LoggingEvent.class);
 		Mockito.when(mockedAppender.getName()).thenReturn("MOCK");
-		Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-		root.addAppender(mockedAppender);
+		ROOT.addAppender(mockedAppender);
+	}
+
+	@AfterEach
+	void tearDown() {
+		ROOT.detachAppender(mockedAppender);
 	}
 
 	@Test
-	public void shouldLogByteBuf() {
+	void shouldLogByteBuf() {
 		final ByteBuf byteBuf = Unpooled.copiedBuffer("TEST", Charset.defaultCharset());
 
 		sendMessage(byteBuf, "[id: 0xembedded, L:embedded - R:embedded] READ: 4B TEST");
 	}
 
 	@Test
-	public void shouldLogByteBufHolder() {
+	void shouldLogByteBufHolder() {
 		final ByteBufHolder byteBufHolder =
 			new DefaultByteBufHolder(Unpooled.copiedBuffer("TEST", Charset.defaultCharset()));
 
@@ -77,7 +84,7 @@ public class ReactorNettyLoggingHandlerTest {
 	}
 
 	@Test
-	public void shouldLogObject() {
+	void shouldLogObject() {
 		sendMessage("TEST", "[id: 0xembedded, L:embedded - R:embedded] READ: TEST");
 	}
 
@@ -92,7 +99,7 @@ public class ReactorNettyLoggingHandlerTest {
 	}
 
 	@Test
-	public void shouldThrowUnsupportedOperationExceptionWhenByteBufFormatIsCalled() {
+	void shouldThrowUnsupportedOperationExceptionWhenByteBufFormatIsCalled() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> defaultCharsetReactorNettyLoggingHandler.byteBufFormat());
 	}

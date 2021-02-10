@@ -202,7 +202,7 @@ public class UdpResources implements LoopResources {
 	protected static UdpResources getOrCreate(@Nullable LoopResources loops,
 			Function<LoopResources, UdpResources> onNew, String name) {
 		UdpResources update;
-		for (; ; ) {
+		for (;;) {
 			UdpResources resources = udpResources.get();
 			if (resources == null || loops != null) {
 				update = create(resources, loops, name, onNew);

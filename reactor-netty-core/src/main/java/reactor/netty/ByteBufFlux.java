@@ -283,7 +283,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 		                               try {
 		                                   output.addComponents(true, list);
 		                               }
-		                               catch(IllegalReferenceCountException e) {
+		                               catch (IllegalReferenceCountException e) {
 		                                   if (log.isDebugEnabled()) {
 		                                       log.debug("", e);
 		                                   }
@@ -358,7 +358,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 			return ((ByteBufHolder) o).content();
 		}
 		if (o instanceof byte[]) {
-			return Unpooled.wrappedBuffer((byte[])o);
+			return Unpooled.wrappedBuffer((byte[]) o);
 		}
 		throw new IllegalArgumentException("Object " + o + " of type " + o.getClass() + " " + "cannot be converted to ByteBuf");
 	};

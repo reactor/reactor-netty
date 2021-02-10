@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ProxyProviderTest {
+class ProxyProviderTest {
 
 	@SuppressWarnings("UnnecessaryLambda")
 	private static final Function<String, String> PASSWORD_1 = username -> "123";
@@ -48,55 +48,55 @@ public class ProxyProviderTest {
 	private static final long CONNECT_TIMEOUT_2 = 200;
 
 	@Test
-	public void equalProxyProviders() {
+	void equalProxyProviders() {
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1)).isEqualTo(createProxy(ADDRESS_1, PASSWORD_1));
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1).hashCode()).isEqualTo(createProxy(ADDRESS_1, PASSWORD_1).hashCode());
 	}
 
 	@Test
-	public void equalProxyProvidersNoAuth() {
+	void equalProxyProvidersNoAuth() {
 		assertThat(createNoAuthProxy(ADDRESS_1)).isEqualTo(createNoAuthProxy(ADDRESS_1));
 		assertThat(createNoAuthProxy(ADDRESS_1).hashCode()).isEqualTo(createNoAuthProxy(ADDRESS_1).hashCode());
 	}
 
 	@Test
-	public void equalProxyProvidersAuthHeader() {
+	void equalProxyProvidersAuthHeader() {
 		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1)).isEqualTo(createHeaderProxy(ADDRESS_1, HEADER_1));
 		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode()).isEqualTo(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode());
 	}
 
 	@Test
-	public void differentAddresses() {
+	void differentAddresses() {
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1)).isNotEqualTo(createProxy(ADDRESS_2, PASSWORD_1));
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1).hashCode()).isNotEqualTo(createProxy(ADDRESS_2, PASSWORD_1).hashCode());
 	}
 
 	@Test
-	public void differentPasswords() {
+	void differentPasswords() {
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1)).isNotEqualTo(createProxy(ADDRESS_1, PASSWORD_2));
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1).hashCode()).isNotEqualTo(createProxy(ADDRESS_1, PASSWORD_2).hashCode());
 	}
 
 	@Test
-	public void differentAuthHeaders() {
+	void differentAuthHeaders() {
 		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1)).isNotEqualTo(createHeaderProxy(ADDRESS_1, HEADER_2));
 		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode()).isNotEqualTo(createHeaderProxy(ADDRESS_1, HEADER_2).hashCode());
 	}
 
 	@Test
-	public void differentConnectTimeout() {
+	void differentConnectTimeout() {
 		assertThat(createConnectTimeoutProxy(CONNECT_TIMEOUT_1)).isNotEqualTo(createConnectTimeoutProxy(CONNECT_TIMEOUT_2));
 		assertThat(createConnectTimeoutProxy(CONNECT_TIMEOUT_1).hashCode()).isNotEqualTo(createConnectTimeoutProxy(CONNECT_TIMEOUT_2).hashCode());
 	}
 
 	@Test
-	public void connectTimeoutWithNonPositiveValue() {
+	void connectTimeoutWithNonPositiveValue() {
 		assertThat(createConnectTimeoutProxy(0).newProxyHandler().connectTimeoutMillis()).isEqualTo(0);
 		assertThat(createConnectTimeoutProxy(-1).newProxyHandler().connectTimeoutMillis()).isEqualTo(0);
 	}
 
 	@Test
-	public void connectTimeoutWithDefault() {
+	void connectTimeoutWithDefault() {
 		ProxyProvider provider = ProxyProvider.builder()
 		                                      .type(ProxyProvider.Proxy.SOCKS5)
 		                                      .address(ADDRESS_1)
@@ -109,14 +109,14 @@ public class ProxyProviderTest {
 	}
 
 	@Test
-	public void nonProxyHosts_wildcardInitially() {
+	void nonProxyHosts_wildcardInitially() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("*.foo.com");
 		assertThat(pred.test(someAddress("some.other.com"))).as("Should proxy, nothing matching foo").isFalse();
 		assertThat(pred.test(someAddress("some.foo.com"))).as("Should not proxy, prefix in wildcard").isTrue();
 	}
 
 	@Test
-	public void nonProxyHosts_wildcardFinish() {
+	void nonProxyHosts_wildcardFinish() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("foo*");
 		assertThat(pred.test(someAddress("other.foo.com"))).as("Should proxy, nothing matching prefix").isFalse();
 		assertThat(pred.test(someAddress("foo.other.com"))).as("Should not proxy, anything in wildcard").isTrue();
@@ -124,21 +124,21 @@ public class ProxyProviderTest {
 	}
 
 	@Test
-	public void nonProxyHosts_wildcardBoth() {
+	void nonProxyHosts_wildcardBoth() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("*foo*");
 		assertThat(pred.test(someAddress("some.foo.com"))).as("Should not proxy, contains foo").isTrue();
 		assertThat(pred.test(someAddress("some.other.com"))).as("Should proxy, no foo").isFalse();
 	}
 
 	@Test
-	public void nonProxyHosts_wildcardNone() {
+	void nonProxyHosts_wildcardNone() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("foo.com");
 		assertThat(pred.test(someAddress("foo.com"))).as("Should not proxy, exact match").isTrue();
 		assertThat(pred.test(someAddress("other.com"))).as("Should proxy, mismatches").isFalse();
 	}
 
 	@Test
-	public void nonProxyHosts_concatenated() {
+	void nonProxyHosts_concatenated() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("exact.com|*first.com|last.com*|*both.com*");
 		assertThat(pred.test(someAddress("exact.com"))).as("Should not proxy, has exact match").isTrue();
 		assertThat(pred.test(someAddress("other.first.com"))).as("Should not proxy, matches a wildcarded prefix").isTrue();
@@ -148,33 +148,33 @@ public class ProxyProviderTest {
 	}
 
 	@Test
-	public void nonProxyHosts_null_1() {
+	void nonProxyHosts_null_1() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern(null);
 		assertThat(pred.test(someAddress("foo.com"))).as("Should proxy when nonProxyHosts is blanked out").isFalse();
 	}
 
 	@Test
-	public void nonProxyHosts_null_2() {
+	void nonProxyHosts_null_2() {
 		assertThat(createNonProxyHostsProxy(null).nonProxyHostPredicate.test(someAddress(NON_PROXY_HOSTS)))
 				.as("Should proxy when nonProxyHosts is blanked out")
 				.isFalse();
 	}
 
 	@Test
-	public void nonProxyHosts_empty_1() {
+	void nonProxyHosts_empty_1() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("");
 		assertThat(pred.test(someAddress("foo.com"))).as("Should proxy when nonProxyHosts is blanked out").isFalse();
 	}
 
 	@Test
-	public void nonProxyHosts_empty_2() {
+	void nonProxyHosts_empty_2() {
 		assertThat(createNonProxyHostsProxy("").nonProxyHostPredicate.test(someAddress(NON_PROXY_HOSTS)))
 				.as("Should proxy when nonProxyHosts is blanked out")
 				.isFalse();
 	}
 
 	@Test
-	public void nonProxyHosts_javaDefault() {
+	void nonProxyHosts_javaDefault() {
 		ProxyProvider.RegexShouldProxyPredicate defaultPredicate = ProxyProvider.RegexShouldProxyPredicate.DEFAULT_NON_PROXY;
 		assertThat(defaultPredicate.test(someAddress("127.0.0.1"))).as("Should not proxy loopback").isTrue();
 		assertThat(defaultPredicate.test(someAddress("127.0.0.2"))).as("Should not proxy loopback").isTrue();
@@ -183,14 +183,14 @@ public class ProxyProviderTest {
 	}
 
 	@Test
-	public void nonProxyHosts_wildcardInTheMiddle() {
+	void nonProxyHosts_wildcardInTheMiddle() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("some.*.com");
 		assertThat(pred.test(someAddress("some.other.com"))).as("Should proxy, nothing matching other").isFalse();
 		assertThat(pred.test(someAddress("some.foo.com"))).as("Should proxy, nothing matching foo").isFalse();
 	}
 
 	@Test
-	public void nonProxyHosts_builderDefault_empty(){
+	void nonProxyHosts_builderDefault_empty() {
 		Predicate<SocketAddress> pred = ProxyProvider.builder().type(ProxyProvider.Proxy.HTTP).host("something").build().getNonProxyHostsPredicate();
 		assertThat(pred.test(someAddress("localhost"))).as("Default should proxy").isFalse();
 	}

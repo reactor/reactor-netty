@@ -15,7 +15,9 @@
  */
 package reactor.netty;
 
-import io.netty.util.concurrent.*;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import reactor.netty.channel.AbortedException;
 import reactor.test.StepVerifier;
@@ -24,10 +26,10 @@ import java.nio.channels.ClosedChannelException;
 import java.time.Duration;
 import java.util.function.Supplier;
 
-public class FutureMonoTest {
+class FutureMonoTest {
 
 	@Test
-	public void testImmediateFutureMonoImmediate() {
+	void testImmediateFutureMonoImmediate() {
 		ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
 		Future<Void> promise = eventExecutor.newFailedFuture(new ClosedChannelException());
 
@@ -39,7 +41,7 @@ public class FutureMonoTest {
 	// return value of setFailure not needed
 	@SuppressWarnings("FutureReturnValueIgnored")
 	@Test
-	public void testImmediateFutureMonoLater() {
+	void testImmediateFutureMonoLater() {
 		ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
 		Promise<Void> promise = eventExecutor.newPromise();
 
@@ -51,7 +53,7 @@ public class FutureMonoTest {
 	}
 
 	@Test
-	public void testDeferredFutureMonoImmediate() {
+	void testDeferredFutureMonoImmediate() {
 		ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
 		Supplier<Future<Void>> promiseSupplier = () -> eventExecutor.newFailedFuture(new ClosedChannelException());
 
@@ -63,7 +65,7 @@ public class FutureMonoTest {
 	// return value of setFailure not needed
 	@SuppressWarnings("FutureReturnValueIgnored")
 	@Test
-	public void testDeferredFutureMonoLater() {
+	void testDeferredFutureMonoLater() {
 		ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
 		Promise<Void> promise = eventExecutor.newPromise();
 		Supplier<Promise<Void>> promiseSupplier = () -> promise;

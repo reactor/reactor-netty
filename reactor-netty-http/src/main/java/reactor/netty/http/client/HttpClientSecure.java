@@ -39,7 +39,7 @@ final class HttpClientSecure {
 	}
 
 	static SslProvider defaultSslProvider(HttpClientConfig config) {
-		if ((config._protocols & HttpClientConfig.h2) == HttpClientConfig.h2) {
+		if (config.checkProtocol(HttpClientConfig.h2)) {
 			return DEFAULT_HTTP2_SSL_PROVIDER;
 		}
 		else {

@@ -57,11 +57,11 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 				                .get("/exceptionAsync", (req, res) -> Mono.error(new RuntimeException("not ready"))
 				                                                          .publishOn(Schedulers.boundedElastic())
 				                                                          .then())
-				                .get("/items/{itemId}", (req, res) -> res.sendString(Mono.just(req.param("itemId"))))
+				                .get("/items/{itemId}", (req, res) -> res.sendString(Mono.justOrEmpty(req.param("itemId"))))
 				                .get("/async_items/{itemId}", (req, res) ->
-				                        res.sendString(Mono.just(req.param("itemId"))
+				                        res.sendString(Mono.justOrEmpty(req.param("itemId"))
 				                                           .publishOn(Schedulers.boundedElastic())))
-				                .get("/nested/items/{itemId}", (req, res) -> res.sendString(Mono.just(req.param("itemId"))))
+				                .get("/nested/items/{itemId}", (req, res) -> res.sendString(Mono.justOrEmpty(req.param("itemId"))))
 				                .get("/child", (req, res) ->
 				                        Mono.deferContextual(Mono::just)
 				                            .flatMap(ctx -> {

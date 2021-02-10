@@ -75,7 +75,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 
 		if (msg instanceof LastHttpContent) {
 			promise.addListener(future -> {
-				ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
+				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
 					String path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
@@ -122,7 +122,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 		}
 
 		if (msg instanceof LastHttpContent) {
-			ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
+			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpServerOperations) {
 				HttpServerOperations ops = (HttpServerOperations) channelOps;
 				String path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
@@ -141,7 +141,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
+		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 		if (channelOps instanceof HttpServerOperations) {
 			HttpServerOperations ops = (HttpServerOperations) channelOps;
 			// Always take the remote address from the operations in order to consider proxy information

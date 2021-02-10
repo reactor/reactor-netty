@@ -38,44 +38,43 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
-import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ChannelOperationsHandlerTest {
+class ChannelOperationsHandlerTest extends BaseHttpTest {
 
 	@Test
-	public void publisherSenderOnCompleteFlushInProgress_1() {
+	void publisherSenderOnCompleteFlushInProgress_1() {
 		doTestPublisherSenderOnCompleteFlushInProgress(false, null);
 	}
 
 	@Test
-	public void publisherSenderOnCompleteFlushInProgress_2() {
+	void publisherSenderOnCompleteFlushInProgress_2() {
 		doTestPublisherSenderOnCompleteFlushInProgress(true, null);
 	}
 
 	@Test
-	public void publisherSenderOnCompleteFlushInProgress_3() {
+	void publisherSenderOnCompleteFlushInProgress_3() {
 		doTestPublisherSenderOnCompleteFlushInProgress(false, new WriteTimeoutHandler(1));
 	}
 
 	@Test
-	public void publisherSenderOnCompleteFlushInProgress_4() {
+	void publisherSenderOnCompleteFlushInProgress_4() {
 		doTestPublisherSenderOnCompleteFlushInProgress(true, new WriteTimeoutHandler(1));
 	}
 
-	private void doTestPublisherSenderOnCompleteFlushInProgress(boolean useScheduler, ChannelHandler handler) {
+	private void doTestPublisherSenderOnCompleteFlushInProgress(boolean useScheduler, @Nullable ChannelHandler handler) {
 		AtomicInteger counter = new AtomicInteger();
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
+		disposableServer =
+				createServer()
 				          .doOnConnection(conn -> conn.addHandler(new LineBasedFrameDecoder(10)))
 				          .handle((req, res) ->
 				                  req.receive()
@@ -83,22 +82,19 @@ public class ChannelOperationsHandlerTest {
 				                     .doOnNext(s -> counter.incrementAndGet())
 				                     .log("receive")
 				                     .then(res.status(200).sendHeaders().then()))
-				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		Flux<String> flux = Flux.range(1, 257).map(count -> count + "\n");
 		if (useScheduler) {
-			flux.publishOn(Schedulers.single());
+			flux = flux.publishOn(Schedulers.single());
 		}
 		Mono<Integer> code =
-				HttpClient.create()
+				createClient(disposableServer.port())
 				          .doOnConnected(conn -> {
 				              if (handler != null) {
 				                  conn.addHandlerLast(handler);
 				              }
 				          })
-				          .port(server.port())
-				          .wiretap(true)
 				          .post()
 				          .uri("/")
 				          .send(ByteBufFlux.fromString(flux)
@@ -111,34 +107,32 @@ public class ChannelOperationsHandlerTest {
 		            .verify(Duration.ofSeconds(30));
 
 		assertThat(counter.get()).isEqualTo(257);
-
-		server.disposeNow();
 	}
 
-//	@Test
-//	public void keepPrefetchSizeConstantEqualsWriteBufferLowHighWaterMark() {
-//		doTestPrefetchSize(1024, 1024);
-//	}
-//
-//	@Test
-//	public void keepPrefetchSizeConstantDifferentWriteBufferLowHighWaterMark() {
-//		doTestPrefetchSize(0, 1024);
-//	}
-//
-//	private void doTestPrefetchSize(int writeBufferLowWaterMark, int writeBufferHighWaterMark) {
-//		EmbeddedChannel channel = new EmbeddedChannel();
-//		channel.config()
-//		       .setWriteBufferLowWaterMark(writeBufferLowWaterMark)
-//		       .setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-//
-//		StepVerifier.create(FutureMono.deferFuture(() -> channel.writeAndFlush(MonoSendMany.objectSource(Flux.range(0, 70), channel, null))))
-//		            .expectComplete()
-//		            .verify(Duration.ofSeconds(30));
-//
-//	}
+	//@Test
+	//public void keepPrefetchSizeConstantEqualsWriteBufferLowHighWaterMark() {
+	//	doTestPrefetchSize(1024, 1024);
+	//}
+	//
+	//@Test
+	//public void keepPrefetchSizeConstantDifferentWriteBufferLowHighWaterMark() {
+	//	doTestPrefetchSize(0, 1024);
+	//}
+	//
+	//private void doTestPrefetchSize(int writeBufferLowWaterMark, int writeBufferHighWaterMark) {
+	//	EmbeddedChannel channel = new EmbeddedChannel();
+	//	channel.config()
+	//	       .setWriteBufferLowWaterMark(writeBufferLowWaterMark)
+	//	       .setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+	//
+	//	StepVerifier.create(FutureMono.deferFuture(() -> channel.writeAndFlush(MonoSendMany.objectSource(Flux.range(0, 70), channel, null))))
+	//	            .expectComplete()
+	//	            .verify(Duration.ofSeconds(30));
+	//
+	//}
 
 	@Test
-	public void testChannelInactiveThrowsIOException() throws Exception {
+	void testChannelInactiveThrowsIOException() throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 
 		int abortServerPort = SocketUtils.findAvailableTcpPort();
@@ -146,14 +140,12 @@ public class ChannelOperationsHandlerTest {
 
 		Future<?> f = threadPool.submit(abortServer);
 
-		if(!abortServer.await(10, TimeUnit.SECONDS)){
+		if (!abortServer.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("Fail to start test server");
 		}
 
 		ByteBufFlux response =
-				HttpClient.create()
-				          .port(abortServerPort)
-				          .wiretap(true)
+				createClient(abortServerPort)
 				          .request(HttpMethod.GET)
 				          .uri("/")
 				          .send((req, out) -> out.sendString(Flux.just("a", "b", "c")))
@@ -224,7 +216,7 @@ public class ChannelOperationsHandlerTest {
 	}
 
 	@Test
-	public void testIssue196() throws Exception {
+	void testIssue196() throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 
 		int testServerPort = SocketUtils.findAvailableTcpPort();
@@ -232,14 +224,11 @@ public class ChannelOperationsHandlerTest {
 
 		Future<?> f = threadPool.submit(testServer);
 
-		if(!testServer.await(10, TimeUnit.SECONDS)){
+		if (!testServer.await(10, TimeUnit.SECONDS)) {
 			throw new IOException("Fail to start test server");
 		}
 
-		HttpClient client =
-		        HttpClient.newConnection()
-		                  .port(testServerPort)
-		                  .wiretap(true);
+		HttpClient client = createClientNewConnection(testServerPort);
 
 		Flux.range(0, 2)
 		    .concatMap(i -> client.get()
@@ -299,7 +288,7 @@ public class ChannelOperationsHandlerTest {
 				}
 			}
 			catch (IOException e) {
-				log.error("TestServer" ,e);
+				log.error("TestServer", e);
 			}
 		}
 

@@ -40,11 +40,12 @@ import static reactor.netty.Metrics.URI;
 /**
  * @author Violeta Georgieva
  */
-public class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
-	private static SelfSignedCertificate ssc;
+class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
+
+	static SelfSignedCertificate ssc;
 
 	@BeforeAll
-	public static void createSelfSignedCertificate() throws CertificateException {
+	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 	}
 
@@ -82,7 +83,7 @@ public class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 
 
 	@Test
-	public void testIssue896() throws Exception {
+	void testIssue896() throws Exception {
 		disposableServer = httpServer.noSSL()
 		                             .bindNow();
 

@@ -1,6 +1,7 @@
 :sourcedir: ./../../reactor-netty-http/src/main/java
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client
 :javadoc: https://projectreactor.io/docs/netty/release/api
+:nettyjavadoc: https://netty.io/4.1/api
 
 [[http-client]]
 = HTTP Client
@@ -52,6 +53,31 @@ include::{examplesdir}/address/Application.java[lines=18..33]
 ----
 <1> Configures the `HTTP` host
 <2> Configures the `HTTP` port
+====
+
+== Eager Initialization
+
+By default, the initialization of the `HttpClient` resources happens on demand. This means that the `first
+request` absorbs the extra time needed to initialize and load:
+
+ * the event loop group
+ * the host name resolver
+ * the native transport libraries (when native transport is used)
+ * the native libraries for the security (in case of `OpenSsl`)
+
+When you need to preload these resources, you can configure the `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/warmup/Application.java
+----
+include::{examplesdir}/warmup/Application.java[lines=18..36]
+----
+<1> Initialize and load the event loop group, the host name resolver, the native transport libraries and
+the native libraries for the security
+<2> Host name resolution happens with the first request.
+In this example, a connection pool is used, so with the first request the connection to the URL is established,
+the subsequent requests to the same URL reuse the connections from the pool.
 ====
 
 == Writing Data
@@ -159,7 +185,7 @@ By default, `Netty` configures some restrictions for the incoming responses, suc
 * The maximum length of all headers.
 * The maximum length of the content or each chunk.
 
-For more information, see https://netty.io/4.1/api/io/netty/handler/codec/http/HttpResponseDecoder.html[`HttpResponseDecoder`]
+For more information, see {nettyjavadoc}/io/netty/handler/codec/http/HttpResponseDecoder.html[HttpResponseDecoder]
 
 By default, the `HTTP` client is configured with the following settings:
 
@@ -188,8 +214,44 @@ include::{examplesdir}/responsedecoder/Application.java[lines=18..35]
 ----
 <1> The maximum length of all headers will be `16384`.
 When this value is exceeded, a
-https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
+{nettyjavadoc}/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
 is raised.
+====
+
+== Lifecycle Callbacks
+
+The following lifecycle callbacks are provided to let you extend the `HttpClient`.
+
+[width="100%",options="header"]
+|=======
+| Callback | Description
+| `doAfterRequest` | Invoked when the request has been sent.
+| `doAfterResolve` | Invoked after the remote address has been resolved successfully.
+| `doAfterResponseSuccess` | Invoked after the response has been fully received.
+| `doOnChannelInit` | Invoked when initializing the channel.
+| `doOnConnect` | Invoked when the channel is about to connect.
+| `doOnConnected` | Invoked after the channel has been connected.
+| `doOnDisconnected` | Invoked after the channel has been disconnected.
+| `doOnError` | Invoked when the request has not been sent and when the response has not been fully received.
+| `doOnRedirect` | Invoked when the response headers have been received, and the request is about to be redirected.
+| `doOnRequest` | Invoked when the request is about to be sent.
+| `doOnRequestError` | Invoked when the request has not been sent.
+| `doOnResolve` | Invoked when the remote address is about to be resolved.
+| `doOnResolveError` | Invoked in case the remote address hasn't been resolved successfully.
+| `doOnResponse` | Invoked after the response headers have been received.
+| `doOnResponseError` | Invoked when the response has not been fully received.
+|=======
+
+The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
+
+====
+[source,java,indent=0]
+.{examplesdir}/lifecycle/Application.java
+----
+include::{examplesdir}/lifecycle/Application.java[lines=18..39]
+----
+<1> `Netty` pipeline is extended with `ReadTimeoutHandler` when the channel has been connected.
+<2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
 ====
 
 == TCP-level Configuration
@@ -223,14 +285,31 @@ include::{examplesdir}/wiretap/Application.java[lines=18..32]
 <1> Enables the wire logging
 ====
 
+By default, the wire logging uses {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP]
+when printing the content.
+When you need to change this to {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
+or {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL],
+you can configure the `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/wiretap/custom/Application.java
+----
+include::{examplesdir}/wiretap/custom/Application.java[lines=18..34]
+----
+<1> Enables the wire logging,
+{javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
+printing the content.
+====
+
 == SSL and TLS
 When you need SSL or TLS, you can apply the configuration shown in the next example.
 By default, if `OpenSSL` is available, a
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
+{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#OPENSSL[SslProvider.OPENSSL]
 provider is used as a provider. Otherwise a
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#JDK[SslProvider.JDK] provider is used
+{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[SslProvider.JDK] provider is used
 You can switch the provider by using
-https://netty.io/4.1/api/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
+{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[SslContextBuilder]
 or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 The following example uses `SslContextBuilder`:
 
@@ -366,4 +445,70 @@ The following example shows how to use UDS support:
 include::{examplesdir}/uds/Application.java[lines=18..33]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
+====
+== Host Name Resolution
+By default, the `HttpClient` uses Netty's domain name lookup mechanism that resolves a domain name asynchronously.
+This is as an alternative of the JVM's built-in blocking resolver.
+
+When you need to change the default settings, you can configure the `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/resolver/Application.java
+----
+include::{examplesdir}/resolver/Application.java[lines=18..39]
+----
+<1> The timeout of each DNS query performed by this resolver will be 500ms.
+====
+
+The following listing shows the available configurations:
+
+[width="100%",options="header"]
+|=======
+| Configuration name | Description
+| `cacheMaxTimeToLive` | The max time to live of the cached DNS resource records (resolution: seconds).
+If the time to live of the DNS resource record returned by the DNS server is greater
+than this max time to live, this resolver ignores the time to live from
+the DNS server and uses this max time to live.
+Default to `Integer.MAX_VALUE`.
+| `cacheMinTimeToLive` | The min time to live of the cached DNS resource records (resolution: seconds).
+If the time to live of the DNS resource record returned by the DNS server is less
+than this min time to live, this resolver ignores the time to live from
+the DNS server and uses this min time to live.
+Default: 0.
+| `cacheNegativeTimeToLive` | The time to live of the cache for the failed DNS queries (resolution: seconds). Default: 0.
+| `disableOptionalRecord` | Disables the automatic inclusion of an optional record that tries to give a hint to the remote DNS server about
+how much data the resolver can read per response. By default, this setting is enabled.
+| `disableRecursionDesired` | Specifies whether this resolver has to send a DNS query with the recursion desired (RD) flag set.
+By default, this setting is enabled.
+| `maxPayloadSize` | Sets the capacity of the datagram packet buffer (in bytes). Default: 4096.
+| `maxQueriesPerResolve` | Sets the maximum allowed number of DNS queries to send when resolving a host name. Default: 16.
+| `ndots` | Sets the number of dots that must appear in a name before an initial absolute query is made.
+Default: -1 (to determine the value from the OS on Unix or use a value of 1 otherwise).
+| `queryTimeout` | Sets the timeout of each DNS query performed by this resolver (resolution: milliseconds). Default: 5000.
+| `resolvedAddressTypes` | The list of the protocol families of the resolved address.
+| `roundRobinSelection` | Enables an
+{nettyjavadoc}/io/netty/resolver/AddressResolverGroup.html[`AddressResolverGroup`] of
+{nettyjavadoc}/io/netty/resolver/dns/DnsNameResolver.html[`DnsNameResolver`] that supports random selection
+of destination addresses if multiple are provided by the nameserver.
+See {nettyjavadoc}/io/netty/resolver/dns/RoundRobinDnsAddressResolverGroup.html[`RoundRobinDnsAddressResolverGroup`].
+Default: {nettyjavadoc}/io/netty/resolver/dns/DnsAddressResolverGroup.html[`DnsAddressResolverGroup`]
+| `runOn` | Performs the communication with the DNS servers on the given
+{javadoc}/reactor/netty/resources/LoopResources.html[`LoopResources`]. By default, the LoopResources
+specified on the client level are used.
+| `searchDomains` | The list of search domains of the resolver.
+By default, the effective search domain list is populated by using the system DNS search domains.
+| `trace` | A specific logger and log level to be used by this resolver when generating detailed trace
+information in case of resolution failure.
+|=======
+
+Sometimes, you may want to switch to the JVM built-in resolver. To do so, you can configure the `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/resolver/custom/Application.java
+----
+include::{examplesdir}/resolver/custom/Application.java[lines=18..38]
+----
+<1> Sets the JVM built-in resolver.
 ====

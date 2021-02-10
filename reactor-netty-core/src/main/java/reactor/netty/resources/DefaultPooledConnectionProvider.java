@@ -35,9 +35,9 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.Disposables;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.Operators;
+import reactor.core.publisher.Sinks;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
@@ -81,12 +81,13 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 	@Override
 	protected CoreSubscriber<PooledRef<PooledConnection>> createDisposableAcquire(
+			TransportConfig config,
 			ConnectionObserver connectionObserver,
-			ChannelOperations.OnSetup opsFactory,
 			long pendingAcquireTimeout,
 			InstrumentedPool<PooledConnection> pool,
 			MonoSink<Connection> sink) {
-		return new DisposableAcquire(connectionObserver, opsFactory, pendingAcquireTimeout, pool, sink);
+		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
+				pendingAcquireTimeout, pool, sink);
 	}
 
 	@Override
@@ -377,16 +378,14 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 	static final class PooledConnection implements Connection, ConnectionObserver {
 		final Channel channel;
-		@SuppressWarnings("deprecation")
-		final MonoProcessor<Void> onTerminate;
+		final Sinks.Empty<Void> onTerminate;
 		final InstrumentedPool<PooledConnection> pool;
 
 		PooledRef<PooledConnection> pooledRef;
 
-		@SuppressWarnings("deprecation")
 		PooledConnection(Channel channel, InstrumentedPool<PooledConnection> pool) {
 			this.channel = channel;
-			this.onTerminate = MonoProcessor.create();
+			this.onTerminate = Sinks.unsafe().empty();
 			this.pool = pool;
 		}
 
@@ -444,7 +443,9 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				                                 pool.metrics().idleSize(),
 				                                 t);
 				                     }
-				                     onTerminate.onComplete();
+				                     // EmitResult is ignored as it is guaranteed that this call happens in an event loop
+				                     // and it is guarded by release(), so tryEmitEmpty() should happen just once
+				                     onTerminate.tryEmitEmpty();
 				                     obs.onStateChange(connection, State.RELEASED);
 				                 },
 				                 () -> {
@@ -454,7 +455,9 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				                                 pool.metrics().acquiredSize(),
 				                                 pool.metrics().idleSize());
 				                     }
-				                     onTerminate.onComplete();
+				                     // EmitResult is ignored as it is guaranteed that this call happens in an event loop
+				                     // and it is guarded by release(), so tryEmitEmpty() should happen just once
+				                     onTerminate.tryEmitEmpty();
 				                     obs.onStateChange(connection, State.RELEASED);
 				                 });
 				return;
@@ -465,7 +468,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		@Override
 		public Mono<Void> onTerminate() {
-			return onTerminate.or(onDispose());
+			return onTerminate.asMono().or(onDispose());
 		}
 
 		@Override
@@ -481,7 +484,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		ConnectionObserver owner() {
 			ConnectionObserver obs;
 
-			for (; ; ) {
+			for (;;) {
 				obs = channel.attr(OWNER)
 				             .get();
 				if (obs == null) {

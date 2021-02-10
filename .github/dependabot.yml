@@ -13,4 +13,7 @@ updates:
   - dependency-name: io.micrometer:micrometer-core
     versions:
     - "> 1.5.0"
+  - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
+    versions:
+    - ">= 10.0.a"
   rebase-strategy: disabled

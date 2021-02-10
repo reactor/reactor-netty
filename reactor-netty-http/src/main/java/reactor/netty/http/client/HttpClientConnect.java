@@ -18,8 +18,10 @@ package reactor.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.time.Duration;
 import java.util.Objects;
@@ -51,6 +53,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.HttpOperations;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClientConfig;
 import reactor.netty.transport.AddressUtils;
@@ -183,7 +186,7 @@ class HttpClientConnect extends HttpClient {
 		}
 
 		if (config.sslProvider() != null) {
-			httpClient.secure(config.sslProvider());
+			httpClient = httpClient.secure(config.sslProvider());
 		}
 
 		return httpClient;
@@ -208,19 +211,22 @@ class HttpClientConnect extends HttpClient {
 				if (handler.toURI.isSecure()) {
 					if (_config.sslProvider == null) {
 						_config = new HttpClientConfig(config);
+						if (_config.checkProtocol(HttpClientConfig.h2c) && _config.protocols.length > 1) {
+							removeIncompatibleProtocol(_config, HttpProtocol.H2C);
+						}
 						_config.sslProvider = HttpClientSecure.defaultSslProvider(_config);
 					}
-				}
-				else {
-					if (_config.sslProvider != null) {
-						_config = new HttpClientConfig(config);
-						_config.sslProvider = null;
-					}
-				}
 
-				if (_config.sslProvider != null) {
+					if (_config.checkProtocol(HttpClientConfig.h2c)) {
+						sink.error(new IllegalArgumentException(
+								"Configured H2 Clear-Text protocol with TLS. " +
+										"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
+										"via HttpClient#noSSL()"));
+						return;
+					}
+
 					if (_config.sslProvider.getDefaultConfigurationType() == null) {
-						if ((_config._protocols & HttpClientConfig.h2) == HttpClientConfig.h2) {
+						if (_config.checkProtocol(HttpClientConfig.h2)) {
 							_config.sslProvider = SslProvider.updateDefaultConfiguration(_config.sslProvider,
 									SslProvider.DefaultConfigurationType.H2);
 						}
@@ -229,17 +235,17 @@ class HttpClientConnect extends HttpClient {
 									SslProvider.DefaultConfigurationType.TCP);
 						}
 					}
-
-					if ((_config._protocols & HttpClientConfig.h2c) == HttpClientConfig.h2c) {
-						sink.error(new IllegalArgumentException(
-								"Configured H2 Clear-Text protocol with TLS. " +
-										"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
-										"via HttpClient#noSSL()"));
-						return;
-					}
 				}
 				else {
-					if ((_config._protocols & HttpClientConfig.h2) == HttpClientConfig.h2) {
+					if (_config.sslProvider != null) {
+						_config = new HttpClientConfig(config);
+						if (_config.checkProtocol(HttpClientConfig.h2) && _config.protocols.length > 1) {
+							removeIncompatibleProtocol(_config, HttpProtocol.H2);
+						}
+						_config.sslProvider = null;
+					}
+
+					if (_config.checkProtocol(HttpClientConfig.h2)) {
 						sink.error(new IllegalArgumentException(
 								"Configured H2 protocol without TLS. Use H2 Clear-Text " +
 										"protocol via HttpClient#protocol or configure TLS via HttpClient#secure"));
@@ -261,6 +267,16 @@ class HttpClientConnect extends HttpClient {
 
 			}).retryWhen(Retry.indefinitely().filter(handler))
 			  .subscribe(actual);
+		}
+
+		private void removeIncompatibleProtocol(HttpClientConfig config, HttpProtocol protocol) {
+			List<HttpProtocol> newProtocols = new ArrayList<>();
+			for (int i = 0; i < config.protocols.length; i++) {
+				if (config.protocols[i] != protocol) {
+					newProtocols.add(config.protocols[i]);
+				}
+			}
+			config.protocols(newProtocols.toArray(new HttpProtocol[0]));
 		}
 
 		static final class ClientTransportSubscriber implements CoreSubscriber<Connection> {

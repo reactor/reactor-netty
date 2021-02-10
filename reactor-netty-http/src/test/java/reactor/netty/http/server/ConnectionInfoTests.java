@@ -35,16 +35,16 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.Connection;
-import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.AddressUtils;
+import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -54,11 +54,9 @@ import static org.assertj.core.api.Assertions.fail;
  *
  * @author Brian Clozel
  */
-public class ConnectionInfoTests {
+class ConnectionInfoTests extends BaseHttpTest {
 
 	static SelfSignedCertificate ssc;
-
-	private DisposableServer connection;
 
 	protected HttpClient customizeClientOptions(HttpClient httpClient) {
 		return httpClient;
@@ -69,43 +67,43 @@ public class ConnectionInfoTests {
 	}
 
 	@BeforeAll
-	public static void createSelfSignedCertificate() throws CertificateException {
+	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 	}
 
 	@Test
-	public void noHeaders() {
+	void noHeaders() {
 		testClientRequest(
 				clientRequestHeaders -> {},
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString())
 					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
 	@Test
-	public void forwardedHost() {
+	void forwardedHost() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=192.168.0.1"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
 	@Test
-	public void forwardedHostIpV6() {
+	void forwardedHostIpV6() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=[1abc:2abc:3abc::5ABC:6abc]"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
 	@Test
-	public void xForwardedFor() {
+	void xForwardedFor() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-For",
 						"[1abc:2abc:3abc::5ABC:6abc]:8080, 192.168.0.1"),
@@ -116,18 +114,18 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedHost() {
+	void xForwardedHost() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Host",
 						"[1abc:2abc:3abc::5ABC:6abc], 192.168.0.1"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
 	@Test
-	public void xForwardedHostAndPort() {
+	void xForwardedHostAndPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -140,7 +138,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedMultipleHeaders() {
+	void xForwardedMultipleHeaders() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -158,7 +156,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedHostAndEmptyPort() {
+	void xForwardedHostAndEmptyPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -174,7 +172,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedHostAndNonNumericPort() {
+	void xForwardedHostAndNonNumericPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -190,7 +188,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedForHostAndPort() {
+	void xForwardedForHostAndPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
@@ -198,14 +196,14 @@ public class ConnectionInfoTests {
 					clientRequestHeaders.add("X-Forwarded-Port", "8080");
 				},
 				serverRequest -> {
-					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1") ;
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 				});
 	}
 
 	@Test
-	public void xForwardedForHostAndPortAndProto() {
+	void xForwardedForHostAndPortAndProto() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
@@ -222,7 +220,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void xForwardedForMultipleHostAndPortAndProto() {
+	void xForwardedForMultipleHostAndPortAndProto() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1,10.20.30.1,10.20.30.2");
@@ -239,14 +237,12 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void customForwardedHandlerForMultipleHost() {
+	void customForwardedHandlerForMultipleHost() {
 		testClientRequest(
-				clientRequestHeaders -> {
-					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com");
-				},
-				serverRequest -> {
-					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com");
-				},
+				clientRequestHeaders ->
+					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com"),
+				serverRequest ->
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com"),
 				(connectionInfo, request) -> {
 					String hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
 					if (hostHeader != null) {
@@ -260,7 +256,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void proxyProtocolOn() throws InterruptedException {
+	void proxyProtocolOn() throws InterruptedException {
 		String remoteAddress = "202.112.144.236";
 		ArrayBlockingQueue<String> resultQueue = new ArrayBlockingQueue<>(1);
 
@@ -269,9 +265,8 @@ public class ConnectionInfoTests {
 			resultQueue.add(remoteAddrFromRequest);
 		};
 
-		this.connection =
-				HttpServer.create()
-				          .port(0)
+		this.disposableServer =
+				createServer()
 				          .proxyProtocol(ProxyProtocolSupportType.ON)
 				          .handle((req, res) -> {
 				              try {
@@ -284,12 +279,11 @@ public class ConnectionInfoTests {
 				                            .sendString(Mono.just(e.getMessage()));
 				              }
 				          })
-				          .wiretap(true)
 				          .bindNow();
 
 		Connection clientConn =
 				TcpClient.create()
-				         .port(this.connection.port())
+				         .port(this.disposableServer.port())
 				         .connectNow();
 
 		ByteBuf proxyProtocolMsg = clientConn.channel()
@@ -327,7 +321,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void proxyProtocolAuto() throws InterruptedException {
+	void proxyProtocolAuto() throws InterruptedException {
 		String remoteAddress = "202.112.144.236";
 		ArrayBlockingQueue<String> resultQueue = new ArrayBlockingQueue<>(1);
 
@@ -336,9 +330,8 @@ public class ConnectionInfoTests {
 			resultQueue.add(remoteAddrFromRequest);
 		};
 
-		this.connection =
-				HttpServer.create()
-				          .port(0)
+		this.disposableServer =
+				createServer()
 				          .proxyProtocol(ProxyProtocolSupportType.AUTO)
 				          .handle((req, res) -> {
 				              try {
@@ -351,12 +344,11 @@ public class ConnectionInfoTests {
 				                            .sendString(Mono.just(e.getMessage()));
 				              }
 				          })
-				          .wiretap(true)
 				          .bindNow();
 
 		Connection clientConn =
 				TcpClient.create()
-				         .port(this.connection.port())
+				         .port(this.disposableServer.port())
 				         .connectNow();
 
 		ByteBuf proxyProtocolMsg = clientConn.channel()
@@ -380,7 +372,7 @@ public class ConnectionInfoTests {
 
 		clientConn =
 				TcpClient.create()
-				          .port(this.connection.port())
+				          .port(this.disposableServer.port())
 				          .connectNow();
 
 		// Send a http request without proxy protocol in a new connection,
@@ -403,7 +395,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void https() throws SSLException {
+	void https() throws SSLException {
 		SslContext clientSslContext = SslContextBuilder.forClient()
 				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -418,7 +410,7 @@ public class ConnectionInfoTests {
 
 	// Users may add SslHandler themselves, not by using `httpServer.secure`
 	@Test
-	public void httpsUserAddedSslHandler() throws SSLException {
+	void httpsUserAddedSslHandler() throws SSLException {
 		SslContext clientSslContext = SslContextBuilder.forClient()
 				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -437,18 +429,18 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedMultipleHosts() {
+	void forwardedMultipleHosts() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
 						"host=a.example.com,host=b.example.com, host=c.example.com"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
 	@Test
-	public void forwardedAllDirectives() {
+	void forwardedAllDirectives() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=a.example.com:443;proto=https"),
 				serverRequest -> {
@@ -459,7 +451,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedAllDirectivesQuoted() {
+	void forwardedAllDirectivesQuoted() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
 						"host=\"a.example.com:443\";proto=\"https\""),
@@ -471,7 +463,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedMultipleHeaders() {
+	void forwardedMultipleHeaders() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("Forwarded", "host=a.example.com:443;proto=https");
@@ -485,7 +477,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedForHostname() {
+	void forwardedForHostname() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "for=\"_gazonk\""),
 				serverRequest -> {
@@ -495,7 +487,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedForIp() {
+	void forwardedForIp() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
 						"for=192.0.2.60;proto=http;by=203.0.113.43"),
@@ -507,7 +499,7 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void forwardedForIpV6() {
+	void forwardedForIpV6() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "for=\"[2001:db8:cafe::17]:4711\""),
 				serverRequest -> {
@@ -537,20 +529,17 @@ public class ConnectionInfoTests {
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverRequestConsumer,
-			BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Function<HttpClient, HttpClient> clientConfigFunction,
 			Function<HttpServer, HttpServer> serverConfigFunction,
 			boolean useHttps) {
 
-		HttpServer server = HttpServer.create()
-				.forwarded(true)
-				.port(0);
+		HttpServer server = createServer().forwarded(true);
 		if (forwardedHeaderHandler != null) {
 			server = server.forwarded(forwardedHeaderHandler);
 		}
-		this.connection =
-				customizeServerOptions(
-						serverConfigFunction.apply(server))
+		this.disposableServer =
+				customizeServerOptions(serverConfigFunction.apply(server))
 				        .handle((req, res) -> {
 				            try {
 				                serverRequestConsumer.accept(req);
@@ -562,21 +551,15 @@ public class ConnectionInfoTests {
 				                          .sendString(Mono.just(e.getMessage()));
 				            }
 				        })
-				        .wiretap(true)
 				        .bindNow();
 
 		String uri = "/test";
 		if (useHttps) {
-			uri += ("https://localhost:" + this.connection.port());
+			uri += "https://localhost:" + this.disposableServer.port();
 		}
 
 		String response =
-				customizeClientOptions(
-						clientConfigFunction.apply(
-						    HttpClient.create()
-						              .port(this.connection.port())
-						              .wiretap(true)
-						))
+				customizeClientOptions(clientConfigFunction.apply(createClient(this.disposableServer.port())))
 				        .headers(clientRequestHeadersConsumer)
 				        .get()
 				        .uri(uri)
@@ -587,12 +570,4 @@ public class ConnectionInfoTests {
 
 		assertThat(response).isEqualTo("OK");
 	}
-
-	@AfterEach
-	public void tearDown() {
-		if(null != this.connection) {
-			this.connection.disposeNow();
-		}
-	}
-
 }

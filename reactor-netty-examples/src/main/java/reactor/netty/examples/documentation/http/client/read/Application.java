@@ -23,7 +23,7 @@ public class Application {
 		HttpClient client = HttpClient.create();
 
 		client.get()
-		      .uri("http://example.com/")
+		      .uri("https://example.com/")
 		      .responseContent() //<1>
 		      .aggregate()       //<2>
 		      .asString()        //<3>

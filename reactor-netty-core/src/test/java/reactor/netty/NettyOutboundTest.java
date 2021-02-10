@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -51,16 +50,24 @@ import io.netty.handler.stream.ChunkedNioFile;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class NettyOutboundTest {
+class NettyOutboundTest {
+
+	static SelfSignedCertificate ssc;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
 
 	@Test
-	public void sendFileWithoutTlsUsesFileRegion() throws URISyntaxException {
+	void sendFileWithoutTlsUsesFileRegion() throws URISyntaxException {
 		List<Class<?>> messageClasses = new ArrayList<>(2);
 
 		EmbeddedChannel channel = new EmbeddedChannel(
@@ -73,7 +80,7 @@ public class NettyOutboundTest {
 						WritableByteChannel wbc = Channels.newChannel(bais);
 
 						msg.transferTo(wbc, msg.position());
-						out.add(new String(bais.toByteArray(), StandardCharsets.UTF_8));
+						out.add(bais.toString("UTF-8"));
 					}
 				},
 				new MessageToMessageEncoder<Object>() {
@@ -141,10 +148,7 @@ public class NettyOutboundTest {
 	}
 
 	@Test
-	public void sendFileWithTlsUsesChunkedFile()
-			throws URISyntaxException, SSLException,
-			       CertificateException {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
+	void sendFileWithTlsUsesChunkedFile() throws URISyntaxException, SSLException {
 		SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		final SslHandler sslHandler = sslCtx.newHandler(ByteBufAllocator.DEFAULT);
 
@@ -214,13 +218,15 @@ public class NettyOutboundTest {
 		};
 		ChannelFuture f = channel.writeOneOutbound(1);
 
-		try{
+		try {
 			outbound.sendFile(Paths.get(getClass().getResource("/largeFile.txt").toURI()))
 			        .then()
 			        .block(Duration.ofSeconds(1)); //TODO investigate why this hangs
-		} catch (IllegalStateException e) {
-			if (!"Timeout on blocking read for 1000 MILLISECONDS".equals(e.getMessage()))
+		}
+		catch (IllegalStateException e) {
+			if (!"Timeout on blocking read for 1000 MILLISECONDS".equals(e.getMessage())) {
 				throw e;
+			}
 			e.printStackTrace();
 		}
 
@@ -243,7 +249,7 @@ public class NettyOutboundTest {
 	}
 
 	@Test
-	public void sendFileWithForceChunkedFileUsesStrategyChunks()
+	void sendFileWithForceChunkedFileUsesStrategyChunks()
 			throws URISyntaxException, IOException {
 		List<Class<?>> messageWritten = new ArrayList<>(2);
 		EmbeddedChannel channel = new EmbeddedChannel(
@@ -327,7 +333,7 @@ public class NettyOutboundTest {
 		assertThat(channel.finishAndReleaseAll()).isTrue();
 	}
 
-	static<S> Mono<Void> mockSendUsing(Connection c, Callable<? extends S> sourceInput,
+	static <S> Mono<Void> mockSendUsing(Connection c, Callable<? extends S> sourceInput,
 			BiFunction<? super Connection, ? super S, ?> mappedInput,
 			Consumer<? super S> sourceCleanup) {
 		return Mono.using(

@@ -25,7 +25,7 @@ public class Application {
 				          .wiretap(true); //<1>
 
 		client.get()
-		      .uri("http://example.com/")
+		      .uri("https://example.com/")
 		      .response()
 		      .block();
 	}

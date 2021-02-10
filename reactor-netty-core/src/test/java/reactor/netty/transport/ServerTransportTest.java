@@ -30,34 +30,34 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Violeta Georgieva
  */
-public class ServerTransportTest {
+class ServerTransportTest {
 
 	@Test
-	public void testBindMonoEmpty() {
+	void testBindMonoEmpty() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> new TestServerTransport(Mono.empty()).bindNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 
 	@Test
-	public void testBindTimeout() {
+	void testBindTimeout() {
 		assertThatExceptionOfType(IllegalStateException.class)
 				.isThrownBy(() -> new TestServerTransport(Mono.never()).bindNow(Duration.ofMillis(1)));
 	}
 
 	@Test
-	public void testBindTimeoutLongOverflow() {
+	void testBindTimeoutLongOverflow() {
 		assertThatExceptionOfType(ArithmeticException.class)
 				.isThrownBy(() -> new TestServerTransport(Mono.never()).bindNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}
 
 	@Test
-	public void testDisposeTimeout() {
+	void testDisposeTimeout() {
 		assertThatExceptionOfType(IllegalStateException.class)
 				.isThrownBy(() -> new TestServerTransport(Mono.just(EmbeddedChannel::new)).bindNow().disposeNow(Duration.ofMillis(1)));
 	}
 
 	@Test
-	public void testDisposeTimeoutLongOverflow() {
+	void testDisposeTimeoutLongOverflow() {
 		assertThatExceptionOfType(ArithmeticException.class)
 				.isThrownBy(() -> new TestServerTransport(Mono.just(EmbeddedChannel::new)).bindNow().disposeNow(Duration.ofMillis(Long.MAX_VALUE)));
 	}

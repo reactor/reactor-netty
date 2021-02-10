@@ -203,7 +203,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @param status an HTTP status to be sent along with the headers
 	 * @return this {@link HttpServerResponse}
 	 */
-	default HttpServerResponse status(int status){
+	default HttpServerResponse status(int status) {
 		return status(HttpResponseStatus.valueOf(status));
 	}
 

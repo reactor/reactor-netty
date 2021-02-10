@@ -39,7 +39,7 @@ import reactor.netty.transport.ClientTransportConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
-public class PooledConnectionProviderCustomMetricsTest {
+class PooledConnectionProviderCustomMetricsTest {
 
 	private Supplier<? extends SocketAddress> remoteAddress;
 
@@ -48,13 +48,13 @@ public class PooledConnectionProviderCustomMetricsTest {
 	private ConnectionProvider pool;
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 		remoteAddress = () -> InetSocketAddress.createUnresolved("localhost", 0);
 		group = new NioEventLoopGroup(2);
 	}
 
 	@AfterEach
-	public void tearDown() throws Exception {
+	void tearDown() throws Exception {
 		group.shutdownGracefully()
 		     .get(10L, TimeUnit.SECONDS);
 		pool.dispose();
@@ -62,7 +62,7 @@ public class PooledConnectionProviderCustomMetricsTest {
 
 
 	@Test
-	public void customRegistrarIsUsed() {
+	void customRegistrarIsUsed() {
 		AtomicBoolean used = new AtomicBoolean();
 
 		triggerAcquisition(true, () -> (a, b, c, d) -> used.set(true));
@@ -70,10 +70,13 @@ public class PooledConnectionProviderCustomMetricsTest {
 	}
 
 	@Test
-	public void customRegistrarSupplierNotInvokedWhenMetricsDisabled() {
+	void customRegistrarSupplierNotInvokedWhenMetricsDisabled() {
 		AtomicBoolean used = new AtomicBoolean();
 
-		triggerAcquisition(false, () -> {used.set(true); return null;});
+		triggerAcquisition(false, () -> {
+			used.set(true);
+			return null;
+		});
 		assertThat(used.get()).isFalse();
 	}
 

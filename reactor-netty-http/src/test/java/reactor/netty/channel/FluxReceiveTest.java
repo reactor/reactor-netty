@@ -29,25 +29,23 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.BaseHttpTest;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.server.HttpServer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class FluxReceiveTest {
+class FluxReceiveTest extends BaseHttpTest {
 
 	@Test
-	public void testByteBufsReleasedWhenTimeout() {
-		byte[] content = new byte[1024*8];
+	void testByteBufsReleasedWhenTimeout() {
+		byte[] content = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
 
 		DisposableServer server1 =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(routes ->
 				                     routes.get("/target", (req, res) ->
 				                           req.receive()
@@ -56,12 +54,10 @@ public class FluxReceiveTest {
 				          .bindNow();
 
 		DisposableServer server2 =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(routes ->
 				                     routes.get("/forward", (req, res) ->
-				                           HttpClient.create()
-				                                     .port(server1.port())
+				                           createClient(server1.port())
 				                                     .get()
 				                                     .uri("/target")
 				                                     .responseContent()
@@ -73,8 +69,7 @@ public class FluxReceiveTest {
 				          .bindNow();
 
 		Flux.range(0, 50)
-		    .flatMap(i -> HttpClient.create()
-		                            .port(server2.port())
+		    .flatMap(i -> createClient(server2.port())
 		                            .get()
 		                            .uri("/forward")
 		                            .responseContent()
@@ -87,14 +82,13 @@ public class FluxReceiveTest {
 	}
 
 	@Test
-	public void testByteBufsReleasedWhenTimeoutUsingHandlers() {
-		byte[] content = new byte[1024*8];
+	void testByteBufsReleasedWhenTimeoutUsingHandlers() {
+		byte[] content = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
 
 		DisposableServer server1 =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(routes ->
 				                     routes.get("/target", (req, res) ->
 				                           req.receive()
@@ -103,12 +97,10 @@ public class FluxReceiveTest {
 				          .bindNow();
 
 		DisposableServer server2 =
-				HttpServer.create()
-				          .port(0)
+				createServer()
 				          .route(routes ->
 				                     routes.get("/forward", (req, res) ->
-				                           HttpClient.create()
-				                                     .port(server1.port())
+				                           createClient(server1.port())
 				                                     .doOnConnected(c ->
 				                                             c.addHandlerFirst(new ReadTimeoutHandler(50, TimeUnit.MILLISECONDS)))
 				                                     .get()
@@ -121,8 +113,7 @@ public class FluxReceiveTest {
 				          .bindNow();
 
 		Flux.range(0, 50)
-		    .flatMap(i -> HttpClient.create()
-		                            .port(server2.port())
+		    .flatMap(i -> createClient(server2.port())
 		                            .get()
 		                            .uri("/forward")
 		                            .responseContent()
@@ -135,7 +126,7 @@ public class FluxReceiveTest {
 	}
 
 	@Test
-	public void testIssue1016() throws Exception {
+	void testIssue1016() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
 
 		Connection connection = Connection.from(channel);
