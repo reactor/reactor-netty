@@ -2436,16 +2436,16 @@ class HttpServerTests extends BaseHttpTest {
 			        .verify(Duration.ofSeconds(5));
 		}
 		finally {
-			assertThat(disposableServer.isDisposed()).isFalse();
-			assertThat(disposableServer.channel().isActive()).isTrue();
-			assertThat(disposableServer.channel().isOpen()).isTrue();
+			assertThat(disposableServer.isDisposed()).as("Server should not be disposed").isFalse();
+			assertThat(disposableServer.channel().isActive()).as("Channel should be active").isTrue();
+			assertThat(disposableServer.channel().isOpen()).as("Channel should be opened").isTrue();
 
 			disposableServer.disposeNow();
 
-			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
-			assertThat(disposableServer.isDisposed()).isTrue();
-			assertThat(disposableServer.channel().isActive()).isFalse();
-			assertThat(disposableServer.channel().isOpen()).isFalse();
+			assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
+			assertThat(disposableServer.isDisposed()).as("Server should be disposed").isTrue();
+			assertThat(disposableServer.channel().isActive()).as("Channel should not be active").isFalse();
+			assertThat(disposableServer.channel().isOpen()).as("Channel should not be opened").isFalse();
 		}
 	}
 }
