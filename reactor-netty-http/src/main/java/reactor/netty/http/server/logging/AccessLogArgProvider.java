@@ -98,7 +98,8 @@ public interface AccessLogArgProvider {
 	long duration();
 
 	/**
-	 * Returns the value of a request header with the specified name.
+	 * Returns the value of a request header with the specified name
+	 * or {@code null} is case such request header does not exist.
 	 *
 	 * @param name the request header name
 	 * @return the value of the request header
@@ -107,10 +108,12 @@ public interface AccessLogArgProvider {
 	CharSequence requestHeader(CharSequence name);
 
 	/**
-	 * Returns the value of a response header with the specified name.
+	 * Returns the value of a response header with the specified name
+	 * or {@code null} is case such response header does not exist.
 	 *
 	 * @param name the response header name
 	 * @return the value of the response header
+	 * @since 1.0.4
 	 */
 	@Nullable
 	CharSequence responseHeader(CharSequence name);
