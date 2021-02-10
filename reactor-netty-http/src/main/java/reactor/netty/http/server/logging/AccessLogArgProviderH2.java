@@ -29,6 +29,7 @@ final class AccessLogArgProviderH2 extends AbstractAccessLogArgProvider<AccessLo
 	static final String H2_PROTOCOL_NAME = "HTTP/2.0";
 
 	Http2HeadersFrame requestHeaders;
+	Http2HeadersFrame responseHeaders;
 
 	AccessLogArgProviderH2(@Nullable SocketAddress remoteAddress) {
 		super(remoteAddress);
@@ -40,11 +41,29 @@ final class AccessLogArgProviderH2 extends AbstractAccessLogArgProvider<AccessLo
 		return get();
 	}
 
+	AccessLogArgProviderH2 responseHeaders(Http2HeadersFrame responseHeaders) {
+		this.responseHeaders = Objects.requireNonNull(responseHeaders, "responseHeaders");
+		return get();
+	}
+
+	@Override
+	@Nullable
+	public CharSequence status() {
+		return responseHeaders == null ? null : responseHeaders.headers().status();
+	}
+
 	@Override
 	@Nullable
 	public CharSequence requestHeader(CharSequence name) {
 		Objects.requireNonNull(name, "name");
 		return requestHeaders == null ? null : requestHeaders.headers().get(name);
+	}
+
+	@Override
+	@Nullable
+	public CharSequence responseHeader(CharSequence name) {
+		Objects.requireNonNull(name, "name");
+		return responseHeaders == null ? null : responseHeaders.headers().get(name);
 	}
 
 	@Override
@@ -61,6 +80,7 @@ final class AccessLogArgProviderH2 extends AbstractAccessLogArgProvider<AccessLo
 	void clear() {
 		super.clear();
 		this.requestHeaders = null;
+		this.responseHeaders = null;
 	}
 
 	@Override

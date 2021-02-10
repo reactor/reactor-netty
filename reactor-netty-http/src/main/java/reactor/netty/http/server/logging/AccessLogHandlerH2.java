@@ -19,7 +19,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2DataFrame;
-import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import reactor.util.annotation.Nullable;
 
@@ -58,10 +57,9 @@ final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 		boolean lastContent = false;
 		if (msg instanceof Http2HeadersFrame) {
 			final Http2HeadersFrame responseHeaders = (Http2HeadersFrame) msg;
-			final Http2Headers headers = responseHeaders.headers();
 			lastContent = responseHeaders.isEndStream();
 
-			accessLogArgProvider.status(headers.status())
+			accessLogArgProvider.responseHeaders(responseHeaders)
 					.chunked(true);
 		}
 		if (msg instanceof Http2DataFrame) {

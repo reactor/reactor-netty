@@ -106,4 +106,13 @@ public interface AccessLogArgProvider {
 	@Nullable
 	CharSequence requestHeader(CharSequence name);
 
+	/**
+	 * Returns the value of a response header with the specified name.
+	 *
+	 * @param name the response header name
+	 * @return the value of the response header
+	 */
+	@Nullable
+	CharSequence responseHeader(CharSequence name);
+
 }

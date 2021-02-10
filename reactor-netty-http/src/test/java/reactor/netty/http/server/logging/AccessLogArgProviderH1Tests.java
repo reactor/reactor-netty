@@ -17,9 +17,14 @@ package reactor.netty.http.server.logging;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,11 +44,16 @@ import static reactor.netty.http.server.logging.LoggingTests.URI;
 class AccessLogArgProviderH1Tests {
 
 	private static final HttpRequest request;
+	private static final HttpResponse response;
 
 	static {
-		HttpHeaders httpHeaders = new DefaultHttpHeaders();
-		httpHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
-		request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, URI, httpHeaders);
+		HttpHeaders requestHttpHeaders = new DefaultHttpHeaders();
+		requestHttpHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
+		request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, URI, requestHttpHeaders);
+
+		HttpHeaders responseHttpHeaders = new DefaultHttpHeaders();
+		responseHttpHeaders.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+		response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, responseHttpHeaders);
 	}
 
 	private AccessLogArgProviderH1 accessLogArgProvider;
@@ -94,10 +104,14 @@ class AccessLogArgProviderH1Tests {
 	@Test
 	void clear() {
 		assertThat(accessLogArgProvider.request).isNull();
+		assertThat(accessLogArgProvider.response).isNull();
 		accessLogArgProvider.request(request);
+		accessLogArgProvider.response(response);
 		assertThat(accessLogArgProvider.request).isEqualTo(request);
+		assertThat(accessLogArgProvider.response).isEqualTo(response);
 		accessLogArgProvider.clear();
 		assertThat(accessLogArgProvider.request).isNull();
+		assertThat(accessLogArgProvider.response).isNull();
 	}
 
 	@Test
@@ -110,6 +124,21 @@ class AccessLogArgProviderH1Tests {
 		assertThat(accessLogArgProvider.contentLength()).isEqualTo(-1);
 		accessLogArgProvider.contentLength(100);
 		assertThat(accessLogArgProvider.contentLength()).isEqualTo(100);
+	}
+
+	@Test
+	void status() {
+		assertThat(accessLogArgProvider.status()).isNull();
+		accessLogArgProvider.response(response);
+		assertThat(accessLogArgProvider.status()).isEqualTo(HttpResponseStatus.OK.codeAsText());
+	}
+
+	@Test
+	void responseHeader() {
+		assertThat(accessLogArgProvider.responseHeader(HttpHeaderNames.CONTENT_TYPE)).isNull();
+		accessLogArgProvider.response(response);
+		assertThat(accessLogArgProvider.responseHeader(HttpHeaderNames.CONTENT_TYPE))
+				.isEqualTo(HttpHeaderValues.APPLICATION_JSON.toString());
 	}
 
 }

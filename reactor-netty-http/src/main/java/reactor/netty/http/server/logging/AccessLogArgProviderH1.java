@@ -16,6 +16,7 @@
 package reactor.netty.http.server.logging;
 
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -27,6 +28,7 @@ import java.util.Objects;
 final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLogArgProviderH1> {
 
 	HttpRequest request;
+	HttpResponse response;
 
 	AccessLogArgProviderH1(@Nullable SocketAddress remoteAddress) {
 		super(remoteAddress);
@@ -38,11 +40,29 @@ final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLo
 		return get();
 	}
 
+	AccessLogArgProviderH1 response(HttpResponse response) {
+		this.response = Objects.requireNonNull(response, "response");
+		return get();
+	}
+
+	@Override
+	@Nullable
+	public CharSequence status() {
+		return response == null ? null : response.status().codeAsText();
+	}
+
 	@Override
 	@Nullable
 	public CharSequence requestHeader(CharSequence name) {
 		Objects.requireNonNull(name, "name");
 		return request == null ? null : request.headers().get(name);
+	}
+
+	@Override
+	@Nullable
+	public CharSequence responseHeader(CharSequence name) {
+		Objects.requireNonNull(name, "name");
+		return response == null ? null : response.headers().get(name);
 	}
 
 	@Override
@@ -59,6 +79,7 @@ final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLo
 	void clear() {
 		super.clear();
 		this.request = null;
+		this.response = null;
 	}
 
 	AccessLogArgProviderH1 contentLength(long contentLength) {
