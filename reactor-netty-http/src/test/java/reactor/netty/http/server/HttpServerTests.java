@@ -2411,4 +2411,41 @@ class HttpServerTests extends BaseHttpTest {
 		      .expectErrorMatches(t -> t instanceof IOException || t instanceof AbortedException)
 		      .verify(Duration.ofSeconds(30));
 	}
+
+	@Test
+	void testServerSelectorChannelClosedOnServerDispose() throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, resp) ->
+				                resp.sendString(Mono.just("testServerSelectorChannelClosedOnServerDispose")))
+				        .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		disposableServer.onDispose(latch::countDown);
+
+		try {
+			createClient(disposableServer.port())
+			        .get()
+			        .uri("/")
+			        .responseContent()
+			        .aggregate()
+			        .asString()
+			        .as(StepVerifier::create)
+			        .expectNext("testServerSelectorChannelClosedOnServerDispose")
+			        .expectComplete()
+			        .verify(Duration.ofSeconds(5));
+		}
+		finally {
+			assertThat(disposableServer.isDisposed()).as("Server should not be disposed").isFalse();
+			assertThat(disposableServer.channel().isActive()).as("Channel should be active").isTrue();
+			assertThat(disposableServer.channel().isOpen()).as("Channel should be opened").isTrue();
+
+			disposableServer.disposeNow();
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
+			assertThat(disposableServer.isDisposed()).as("Server should be disposed").isTrue();
+			assertThat(disposableServer.channel().isActive()).as("Channel should not be active").isFalse();
+			assertThat(disposableServer.channel().isOpen()).as("Channel should not be opened").isFalse();
+		}
+	}
 }
