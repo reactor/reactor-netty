@@ -837,9 +837,9 @@ public final class ReactorNetty {
 	static final ConnectionObserver NOOP_LISTENER = (connection, newState) -> {};
 
 	static final Logger log                               = Loggers.getLogger(ReactorNetty.class);
-	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("$PERSISTENT_CHANNEL");
+	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.valueOf("$PERSISTENT_CHANNEL");
 
-	static final AttributeKey<Connection> CONNECTION = AttributeKey.newInstance("$CONNECTION");
+	static final AttributeKey<Connection> CONNECTION = AttributeKey.valueOf("$CONNECTION");
 
 	static final Consumer<? super FileChannel> fileCloser = fc -> {
 		try {
