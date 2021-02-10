@@ -71,7 +71,7 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 			}
 
 			final boolean chunked = HttpUtil.isTransferEncodingChunked(response);
-			accessLogArgProvider.status(status.codeAsText())
+			accessLogArgProvider.response(response)
 					.chunked(chunked);
 			if (!chunked) {
 				accessLogArgProvider.contentLength(HttpUtil.getContentLength(response, -1));

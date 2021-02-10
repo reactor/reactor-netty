@@ -15,7 +15,10 @@
  */
 package reactor.netty.http.server.logging;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.Http2Headers;
@@ -38,13 +41,19 @@ import static reactor.netty.http.server.logging.LoggingTests.URI;
 class AccessLogArgProviderH2Tests {
 
 	private static final Http2HeadersFrame requestHeaders;
+	private static final Http2HeadersFrame responseHeaders;
 
 	static {
-		Http2Headers httpHeaders = new DefaultHttp2Headers();
-		httpHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
-		httpHeaders.method(HttpMethod.GET.name());
-		httpHeaders.path(URI);
-		requestHeaders = new DefaultHttp2HeadersFrame(httpHeaders);
+		Http2Headers requestHttpHeaders = new DefaultHttp2Headers();
+		requestHttpHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
+		requestHttpHeaders.method(HttpMethod.GET.name());
+		requestHttpHeaders.path(URI);
+		requestHeaders = new DefaultHttp2HeadersFrame(requestHttpHeaders);
+
+		Http2Headers responseHttpHeaders = new DefaultHttp2Headers();
+		responseHttpHeaders.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+		responseHttpHeaders.status(HttpResponseStatus.OK.codeAsText());
+		responseHeaders = new DefaultHttp2HeadersFrame(responseHttpHeaders);
 	}
 
 	private AccessLogArgProviderH2 accessLogArgProvider;
@@ -94,15 +103,34 @@ class AccessLogArgProviderH2Tests {
 	@Test
 	void clear() {
 		assertThat(accessLogArgProvider.requestHeaders).isNull();
+		assertThat(accessLogArgProvider.responseHeaders).isNull();
 		accessLogArgProvider.requestHeaders(requestHeaders);
+		accessLogArgProvider.responseHeaders(responseHeaders);
 		assertThat(accessLogArgProvider.requestHeaders).isEqualTo(requestHeaders);
+		assertThat(accessLogArgProvider.responseHeaders).isEqualTo(responseHeaders);
 		accessLogArgProvider.clear();
 		assertThat(accessLogArgProvider.requestHeaders).isNull();
+		assertThat(accessLogArgProvider.responseHeaders).isNull();
 	}
 
 	@Test
 	void get() {
 		assertThat(accessLogArgProvider.get()).isEqualTo(accessLogArgProvider);
+	}
+
+	@Test
+	void status() {
+		assertThat(accessLogArgProvider.status()).isNull();
+		accessLogArgProvider.responseHeaders(responseHeaders);
+		assertThat(accessLogArgProvider.status()).isEqualTo(HttpResponseStatus.OK.codeAsText());
+	}
+
+	@Test
+	void responseHeader() {
+		assertThat(accessLogArgProvider.responseHeader(HttpHeaderNames.CONTENT_TYPE)).isNull();
+		accessLogArgProvider.responseHeaders(responseHeaders);
+		assertThat(accessLogArgProvider.responseHeader(HttpHeaderNames.CONTENT_TYPE))
+				.isEqualTo(HttpHeaderValues.APPLICATION_JSON);
 	}
 
 }

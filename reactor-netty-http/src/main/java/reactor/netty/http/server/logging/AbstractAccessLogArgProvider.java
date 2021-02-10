@@ -22,7 +22,6 @@ import reactor.util.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -41,7 +40,6 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	CharSequence method;
 	CharSequence uri;
 	String protocol;
-	CharSequence status;
 	boolean chunked;
 	long contentLength = -1;
 	long startTime;
@@ -87,12 +85,6 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	}
 
 	@Override
-	@Nullable
-	public CharSequence status() {
-		return status;
-	}
-
-	@Override
 	public long contentLength() {
 		return contentLength;
 	}
@@ -119,15 +111,9 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		this.method = null;
 		this.uri = null;
 		this.protocol = null;
-		this.status = null;
 		this.chunked = false;
 		this.contentLength = -1;
 		this.startTime = 0;
-	}
-
-	SELF status(CharSequence status) {
-		this.status = Objects.requireNonNull(status, "status");
-		return get();
 	}
 
 	SELF chunked(boolean chunked) {

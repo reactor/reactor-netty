@@ -24,7 +24,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static reactor.netty.http.server.logging.LoggingTests.URI;
 
 /**
@@ -48,14 +47,6 @@ class AccessLogArgProviderTests {
 	@Test
 	void user() {
 		assertThat(accessLogArgProvider.user()).isEqualTo(AbstractAccessLogArgProvider.MISSING);
-	}
-
-	@Test
-	void status() {
-		assertThat(accessLogArgProvider.status()).isNull();
-		assertThatNullPointerException().isThrownBy(() -> accessLogArgProvider.status(null));
-		accessLogArgProvider.status("200");
-		assertThat(accessLogArgProvider.status()).isEqualTo("200");
 	}
 
 	@Test
@@ -91,13 +82,11 @@ class AccessLogArgProviderTests {
 		accessLogArgProvider.onRequest();
 		accessLogArgProvider
 				.chunked(true)
-				.increaseContentLength(100)
-				.status("200");
+				.increaseContentLength(100);
 		assertThat(accessLogArgProvider.zonedDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.method()).isEqualTo(HttpMethod.POST.name());
 		assertThat(accessLogArgProvider.uri()).isEqualTo(URI);
 		assertThat(accessLogArgProvider.protocol()).isEqualTo(HttpVersion.HTTP_1_1.text());
-		assertThat(accessLogArgProvider.status()).isEqualTo("200");
 		assertThat(accessLogArgProvider.chunked).isTrue();
 		assertThat(accessLogArgProvider.contentLength).isEqualTo(100);
 		assertThat(accessLogArgProvider.startTime).isNotNull();
@@ -110,7 +99,6 @@ class AccessLogArgProviderTests {
 		assertThat(accessLogArgProvider.method()).isNull();
 		assertThat(accessLogArgProvider.uri()).isNull();
 		assertThat(accessLogArgProvider.protocol()).isNull();
-		assertThat(accessLogArgProvider.status()).isNull();
 		assertThat(accessLogArgProvider.chunked).isFalse();
 		assertThat(accessLogArgProvider.contentLength).isEqualTo(-1);
 		assertThat(accessLogArgProvider.startTime).isZero();
@@ -123,8 +111,18 @@ class AccessLogArgProviderTests {
 		}
 
 		@Override
+		public CharSequence status() {
+			return "200";
+		}
+
+		@Override
 		public CharSequence requestHeader(CharSequence name) {
 			return "requestHeader";
+		}
+
+		@Override
+		public CharSequence responseHeader(CharSequence name) {
+			return "responseHeader";
 		}
 
 		@Override
