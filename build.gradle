@@ -31,7 +31,7 @@ buildscript {
 plugins {
 	id 'com.github.hierynomus.license' version '0.15.0'
 	id 'org.asciidoctor.convert' version '2.4.0'
-	id 'com.google.osdetector' version '1.6.2'
+	id 'com.google.osdetector' version '1.7.0'
 	id 'org.gradle.test-retry' version '1.2.0'
 	id 'io.spring.nohttp' version '0.0.5.RELEASE'
 	id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
