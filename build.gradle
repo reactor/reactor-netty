@@ -24,7 +24,7 @@ buildscript {
   }
   dependencies {
 	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
-			'com.google.gradle:osdetector-gradle-plugin:1.6.2',
+			'com.google.gradle:osdetector-gradle-plugin:1.7.0',
 			'biz.aQute.bnd:biz.aQute.bnd.gradle:4.2.0'
   }
 }
