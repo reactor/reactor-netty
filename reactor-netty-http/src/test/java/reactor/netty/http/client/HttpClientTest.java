@@ -85,6 +85,7 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -2557,6 +2558,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	@Disabled
 	void testIssue1478() throws Exception {
 		disposableServer =
 				HttpServer.create()
