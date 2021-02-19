@@ -22,11 +22,14 @@ import java.util.function.BiPredicate;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.SslHandler;
@@ -36,7 +39,14 @@ import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 
-final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
+/**
+ * This handler is intended to work together with {@link Http2StreamFrameToHttpObjectCodec}
+ * it converts the outgoing messages into objects expected by
+ * {@link Http2StreamFrameToHttpObjectCodec}.
+ *
+ * @author Violeta Georgieva
+ */
+final class Http2StreamBridgeHandler extends ChannelDuplexHandler implements ChannelFutureListener {
 
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 
@@ -114,7 +124,29 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 		}
 		else {
 			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(msg, promise);
+			ChannelFuture f = ctx.write(msg, promise);
+			if (msg instanceof LastHttpContent) {
+				f.addListener(this);
+			}
 		}
+	}
+
+	@Override
+	public void operationComplete(ChannelFuture future) {
+		if (!future.isSuccess()) {
+			if (HttpServerOperations.log.isDebugEnabled()) {
+				HttpServerOperations.log.debug(format(future.channel(),
+						"Sending last HTTP packet was not successful, terminating the channel"),
+						future.cause());
+			}
+		}
+		else {
+			if (HttpServerOperations.log.isDebugEnabled()) {
+				HttpServerOperations.log.debug(format(future.channel(),
+						"Last HTTP packet was sent, terminating the channel"));
+			}
+		}
+
+		HttpServerOperations.cleanHandlerTerminate(future.channel());
 	}
 }
