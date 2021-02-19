@@ -2448,4 +2448,54 @@ class HttpServerTests extends BaseHttpTest {
 			assertThat(disposableServer.channel().isOpen()).as("Channel should not be opened").isFalse();
 		}
 	}
+
+	@Test
+	void testConnectionClosePropagatedAsError_CL() throws Exception {
+		doTestConnectionClosePropagatedAsError(
+				"POST http://%s/ HTTP/1.1\r\nHost: %s\r\nContent-Length: 10\r\n\r\nhello");
+	}
+
+	@Test
+	void testConnectionClosePropagatedAsError_TE() throws Exception {
+		doTestConnectionClosePropagatedAsError(
+				"POST http://%s/ HTTP/1.1\r\nHost: %s\r\nTransfer-Encoding: chunked\r\n\r\n10\r\nhello");
+	}
+
+	private void doTestConnectionClosePropagatedAsError(String request) throws Exception {
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		CountDownLatch msgLatch = new CountDownLatch(1);
+		CountDownLatch errLatch = new CountDownLatch(1);
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> req.receive()
+				                                 .doOnNext(b -> msgLatch.countDown())
+				                                 .doOnError(t -> {
+				                                     errLatch.countDown();
+				                                     error.set(t);
+				                                 })
+				                                 .then(res.send()))
+				        .bindNow();
+
+		int port = disposableServer.port();
+		Connection connection =
+				TcpClient.create()
+				         .remoteAddress(disposableServer::address)
+				         .wiretap(true)
+				         .connectNow();
+
+		String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
+		connection.outbound()
+		          .sendString(Mono.just(String.format(request, address, address)))
+		          .then()
+		          .subscribe();
+
+		assertThat(msgLatch.await(5, TimeUnit.SECONDS)).as("Wait for the first message").isTrue();
+
+		connection.dispose();
+
+		assertThat(errLatch.await(5, TimeUnit.SECONDS)).as("Wait for the close connection error").isTrue();
+		assertThat(error.get()).isNotNull()
+				.isInstanceOf(AbortedException.class)
+				.hasMessage("Connection has been closed");
+	}
 }

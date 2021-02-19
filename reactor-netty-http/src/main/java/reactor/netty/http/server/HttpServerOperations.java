@@ -71,6 +71,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
+import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
@@ -558,6 +559,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else {
 			super.onInboundNext(ctx, msg);
 		}
+	}
+
+	@Override
+	protected void onInboundClose() {
+		discardWhenNoReceiver();
+		if (!(isInboundCancelled() || isInboundDisposed())) {
+			onInboundError(new AbortedException("Connection has been closed"));
+		}
+		terminate();
 	}
 
 	@Override

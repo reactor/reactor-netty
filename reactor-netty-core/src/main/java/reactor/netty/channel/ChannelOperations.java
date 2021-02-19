@@ -186,7 +186,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 		OUTBOUND_CLOSE.set(this, Operators.cancelledSubscription());
 		if (!inbound.isDisposed()) {
-			inbound.cancel();
+			discard();
 		}
 		connection.dispose();
 	}
@@ -347,10 +347,21 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Drop pending content and complete inbound
+	 * Drop pending content and complete inbound.
+	 * Always discard content regardless whether there is a receiver.
 	 */
 	public final void discard() {
 		inbound.cancel();
+	}
+
+	/**
+	 * Drop pending content and complete inbound.
+	 * Discard content only in case there is no receiver.
+	 */
+	protected final void discardWhenNoReceiver() {
+		if (inbound.receiver == null) {
+			discard();
+		}
 	}
 
 	/**
@@ -407,9 +418,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * React on inbound close (channel closed prematurely)
 	 */
 	protected void onInboundClose() {
-		if (inbound.receiver == null) {
-			inbound.cancel();
-		}
+		discardWhenNoReceiver();
 		terminate();
 	}
 
