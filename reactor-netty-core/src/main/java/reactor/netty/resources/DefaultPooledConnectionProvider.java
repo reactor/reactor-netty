@@ -104,6 +104,20 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		return poolFactoryPerRemoteHost.getOrDefault(remoteAddress, defaultPoolFactory);
 	}
 
+	static void logPoolState(Channel channel, InstrumentedPool<PooledConnection> pool, String msg) {
+		logPoolState(channel, pool, msg, null);
+	}
+
+	static void logPoolState(Channel channel, InstrumentedPool<PooledConnection> pool, String msg, @Nullable Throwable t) {
+		InstrumentedPool.PoolMetrics metrics = pool.metrics();
+		log.debug(format(channel, msg +
+						", now: {} active connections, {} inactive connections and {} pending acquire requests."),
+				metrics.acquiredSize(),
+				metrics.idleSize(),
+				metrics.pendingAcquireSize(),
+				t == null ? "" : t);
+	}
+
 	static final Logger log = Loggers.getLogger(DefaultPooledConnectionProvider.class);
 
 	static final AttributeKey<ConnectionObserver> OWNER = AttributeKey.valueOf("connectionOwner");
@@ -223,9 +237,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				pooledRef.invalidate()
 				         .subscribe(null, null, () -> {
 				             if (log.isDebugEnabled()) {
-				                 log.debug(format(c, "Channel closed, now {} active connections and {} inactive connections"),
-				                         pool.metrics().acquiredSize(),
-				                         pool.metrics().idleSize());
+				                 logPoolState(c, pool, "Channel closed");
 				             }
 				         });
 				if (!retried) {
@@ -267,9 +279,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 			if (current != null) {
 				if (log.isDebugEnabled()) {
-					log.debug(format(c, "Channel acquired, now {} active connections and {} inactive connections"),
-							pool.metrics().acquiredSize(),
-							pool.metrics().idleSize());
+					logPoolState(c, pool, "Channel acquired");
 				}
 				obs.onStateChange(pooledConnection, State.ACQUIRED);
 
@@ -302,9 +312,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			// Connected, leave onStateChange forward the event if factory
 
 			if (log.isDebugEnabled()) {
-				log.debug(format(c, "Channel connected, now {} active connections and {} inactive connections"),
-						pool.metrics().acquiredSize(),
-						pool.metrics().idleSize());
+				logPoolState(c, pool, "Channel connected");
 			}
 			if (opsFactory == ChannelOperations.OnSetup.empty()) {
 				sink.success(Connection.from(c));
@@ -325,10 +333,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			                       .invalidate()
 			                       .subscribe(null, null, () -> {
 			                           if (log.isDebugEnabled()) {
-			                               log.debug(format(channel, "Channel closed, now {} active connections and " +
-			                                                                 "{} inactive connections"),
-			                                       pool.metrics().acquiredSize(),
-			                                       pool.metrics().idleSize());
+			                               logPoolState(channel, pool, "Channel closed");
 			                           }
 			                       });
 			           }
@@ -437,11 +442,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				                 null,
 				                 t -> {
 				                     if (log.isDebugEnabled()) {
-				                         log.debug(format(pooledRef.poolable().channel, "Failed cleaning the channel from pool" +
-				                                           ", now {} active connections and {} inactive connections"),
-				                                 pool.metrics().acquiredSize(),
-				                                 pool.metrics().idleSize(),
-				                                 t);
+				                         logPoolState(pooledRef.poolable().channel, pool,
+				                                 "Failed cleaning the channel from pool", t);
 				                     }
 				                     // EmitResult is ignored as it is guaranteed that this call happens in an event loop
 				                     // and it is guarded by release(), so tryEmitEmpty() should happen just once
@@ -450,10 +452,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				                 },
 				                 () -> {
 				                     if (log.isDebugEnabled()) {
-				                         log.debug(format(pooledRef.poolable().channel, "Channel cleaned, now {} active connections and " +
-				                                                                                "{} inactive connections"),
-				                                 pool.metrics().acquiredSize(),
-				                                 pool.metrics().idleSize());
+				                         logPoolState(pooledRef.poolable().channel, pool, "Channel cleaned");
 				                     }
 				                     // EmitResult is ignored as it is guaranteed that this call happens in an event loop
 				                     // and it is guarded by release(), so tryEmitEmpty() should happen just once
@@ -538,9 +537,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			@Override
 			protected void initChannel(Channel ch) {
 				if (log.isDebugEnabled()) {
-					log.debug(format(ch, "Created a new pooled channel, now {} active connections and {} inactive connections"),
-							pool.metrics().acquiredSize(),
-							pool.metrics().idleSize());
+					logPoolState(ch, pool, "Created a new pooled channel");
 				}
 
 				PooledConnection pooledConnection = new PooledConnection(ch, pool);
