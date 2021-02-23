@@ -177,6 +177,9 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				Operators.complete(s);
 			}
 			else {
+				if (log.isDebugEnabled()) {
+					log.debug(format(channel, "{}: Only one connection receive subscriber allowed."), this);
+				}
 				Operators.error(s,
 						new IllegalStateException(
 								"Only one connection receive subscriber allowed."));
