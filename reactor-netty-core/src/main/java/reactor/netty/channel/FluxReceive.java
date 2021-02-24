@@ -266,11 +266,11 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				try {
 					if (logLeakDetection.isDebugEnabled()) {
 						if (v instanceof ByteBuf) {
-							((ByteBuf) v).touch(format(channel, "Bounded receiver " + a.getClass().getName() +
+							((ByteBuf) v).touch(format(channel, "Receiver " + a.getClass().getName() +
 									" will handle the message from this point"));
 						}
 						else if (v instanceof ByteBufHolder) {
-							((ByteBufHolder) v).touch(format(channel, "Bounded receiver " + a.getClass().getName() +
+							((ByteBufHolder) v).touch(format(channel, "Receiver " + a.getClass().getName() +
 									" will handle the message from this point"));
 						}
 					}
@@ -351,11 +351,11 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			try {
 				if (logLeakDetection.isDebugEnabled()) {
 					if (msg instanceof ByteBuf) {
-						((ByteBuf) msg).touch(format(channel, "Unbounded receiver " + receiver.getClass().getName() +
+						((ByteBuf) msg).touch(format(channel, "Receiver " + receiver.getClass().getName() +
 								" will handle the message from this point"));
 					}
 					else if (msg instanceof ByteBufHolder) {
-						((ByteBufHolder) msg).touch(format(channel, "Unbounded receiver " + receiver.getClass().getName() +
+						((ByteBufHolder) msg).touch(format(channel, "Receiver " + receiver.getClass().getName() +
 								" will handle the message from this point"));
 					}
 				}
@@ -495,5 +495,5 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	static final Logger log = Loggers.getLogger(FluxReceive.class);
 
-	static final Logger logLeakDetection = Loggers.getLogger("reactor.netty.channel.LeakDetection");
+	static final Logger logLeakDetection = Loggers.getLogger("_reactor.netty.channel.LeakDetection");
 }
