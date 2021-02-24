@@ -264,6 +264,16 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				}
 
 				try {
+					if (logLeakDetection.isDebugEnabled()) {
+						if (v instanceof ByteBuf) {
+							((ByteBuf) v).touch(format(channel, "Bounded receiver " + a.getClass().getName() +
+									" will handle the message from this point"));
+						}
+						else if (v instanceof ByteBufHolder) {
+							((ByteBufHolder) v).touch(format(channel, "Bounded receiver " + a.getClass().getName() +
+									" will handle the message from this point"));
+						}
+					}
 					a.onNext(v);
 				}
 				finally {
@@ -339,14 +349,14 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 		if (receiverFastpath && receiver != null) {
 			try {
-				if (log.isDebugEnabled()) {
+				if (logLeakDetection.isDebugEnabled()) {
 					if (msg instanceof ByteBuf) {
-						((ByteBuf) msg).touch(format(channel, "Unbounded receiver, bypass inbound " +
-								"buffer queue"));
+						((ByteBuf) msg).touch(format(channel, "Unbounded receiver " + receiver.getClass().getName() +
+								" will handle the message from this point"));
 					}
 					else if (msg instanceof ByteBufHolder) {
-						((ByteBufHolder) msg).touch(format(channel, "Unbounded receiver, bypass inbound " +
-								"buffer queue"));
+						((ByteBufHolder) msg).touch(format(channel, "Unbounded receiver " + receiver.getClass().getName() +
+								" will handle the message from this point"));
 					}
 				}
 				receiver.onNext(msg);
@@ -364,13 +374,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				q = new ArrayDeque<>();
 				receiverQueue = q;
 			}
-			if (log.isDebugEnabled()) {
+			if (logLeakDetection.isDebugEnabled()) {
 				if (msg instanceof ByteBuf) {
-					((ByteBuf) msg).touch(format(channel, "Buffered ByteBuf in Inbound Flux Queue"));
+					((ByteBuf) msg).touch(format(channel, "Buffered ByteBuf in the inbound buffer queue"));
 				}
 				else if (msg instanceof ByteBufHolder) {
-					((ByteBufHolder) msg).touch(format(channel, "Buffered ByteBufHolder in Inbound Flux" +
-							" Queue"));
+					((ByteBufHolder) msg).touch(format(channel, "Buffered ByteBufHolder in the inbound buffer queue"));
 				}
 			}
 			q.offer(msg);
@@ -485,4 +494,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	};
 
 	static final Logger log = Loggers.getLogger(FluxReceive.class);
+
+	static final Logger logLeakDetection = Loggers.getLogger("reactor.netty.channel.LeakDetection");
 }
