@@ -110,8 +110,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 	static void logPoolState(Channel channel, InstrumentedPool<PooledConnection> pool, String msg, @Nullable Throwable t) {
 		InstrumentedPool.PoolMetrics metrics = pool.metrics();
-		log.debug(format(channel, msg +
-						", now: {} active connections, {} inactive connections and {} pending acquire requests."),
+		log.debug(format(channel, "{}, now: {} active connections, {} inactive connections and {} pending acquire requests."),
+				msg,
 				metrics.acquiredSize(),
 				metrics.idleSize(),
 				metrics.pendingAcquireSize(),
