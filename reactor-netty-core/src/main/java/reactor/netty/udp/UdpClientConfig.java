@@ -23,6 +23,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.resolver.AddressResolverGroup;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
@@ -92,6 +93,11 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 		else {
 			return () -> new NioDatagramChannel(family());
 		}
+	}
+
+	@Override
+	protected AddressResolverGroup<?> defaultAddressResolverGroup() {
+		return UdpResources.get().getOrCreateDefaultResolver();
 	}
 
 	@Override

@@ -16,10 +16,12 @@
 package reactor.netty.resources;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.nio.NioEventLoopGroup;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -108,41 +110,45 @@ class DefaultLoopResourcesTest {
 	}
 
 	@Test
-	void testClientTransportWarmupNative() {
+	void testClientTransportWarmupNative() throws Exception {
 		testClientTransportWarmup(true);
 	}
 
 	@Test
-	void testClientTransportWarmupNio() {
+	void testClientTransportWarmupNio() throws Exception {
 		testClientTransportWarmup(false);
 	}
 
-	private void testClientTransportWarmup(boolean preferNative) {
-		final DefaultLoopResources loop =
+	private void testClientTransportWarmup(boolean preferNative) throws Exception {
+		final DefaultLoopResources loop1 =
 				(DefaultLoopResources) LoopResources.create("testClientTransportWarmup", 1, true);
+		final NioEventLoopGroup loop2 = new NioEventLoopGroup(1);
 		try {
 			TcpClient tcpClient = TcpClient.create()
-			                               .runOn(loop, preferNative);
+			                               .resolver(spec -> spec.runOn(loop2))
+			                               .runOn(loop1, preferNative);
 
 			Mono<Void> warmupMono = tcpClient.warmup();
 
-			assertThat(loop.cacheNativeClientLoops.get()).isNull();
-			assertThat(loop.clientLoops.get()).isNull();
+			assertThat(loop1.cacheNativeClientLoops.get()).isNull();
+			assertThat(loop1.clientLoops.get()).isNull();
 
 			warmupMono.block(Duration.ofSeconds(5));
 
 			if (preferNative && LoopResources.hasNativeSupport()) {
-				assertThat(loop.cacheNativeClientLoops.get()).isNotNull();
-				assertThat(loop.clientLoops.get()).isNull();
+				assertThat(loop1.cacheNativeClientLoops.get()).isNotNull();
+				assertThat(loop1.clientLoops.get()).isNull();
 			}
 			else {
-				assertThat(loop.cacheNativeClientLoops.get()).isNull();
-				assertThat(loop.clientLoops.get()).isNotNull();
+				assertThat(loop1.cacheNativeClientLoops.get()).isNull();
+				assertThat(loop1.clientLoops.get()).isNotNull();
 			}
 		}
 		finally {
-			loop.disposeLater()
-			    .block(Duration.ofSeconds(5));
+			loop1.disposeLater()
+			     .block(Duration.ofSeconds(5));
+			loop2.shutdownGracefully()
+			     .get(5, TimeUnit.SECONDS);
 		}
 	}
 

@@ -367,6 +367,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	@Override
+	public AddressResolverGroup<?> defaultAddressResolverGroup() {
+		return HttpResources.get().getOrCreateDefaultResolver();
+	}
+
+	@Override
 	protected ConnectionObserver defaultConnectionObserver() {
 		if (doAfterRequest == null && doAfterResponseSuccess == null && doOnRedirect == null &&
 					doOnRequest == null && doOnRequestError == null && doOnResponse == null && doOnResponseError == null) {

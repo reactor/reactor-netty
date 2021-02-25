@@ -82,6 +82,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
@@ -2643,5 +2644,42 @@ class HttpClientTest extends BaseHttpTest {
 
 	private void doTestProtocolsAndDefaultSslProviderAvailability(HttpClient client, @Nullable SslProvider sslProvider) {
 		assertThat(client.configuration().sslProvider()).isSameAs(sslProvider);
+	}
+
+	@Test
+	void testSameNameResolver_WithConnectionPool() {
+		doTestSameNameResolver(true);
+	}
+
+	@Test
+	void testSameNameResolver_NoConnectionPool() {
+		doTestSameNameResolver(false);
+	}
+
+	private void doTestSameNameResolver(boolean useConnectionPool) {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("doTestSameNameResolver")))
+				        .bindNow();
+
+		int port = disposableServer.port();
+		AtomicReference<List<AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
+		Flux.range(0, 2)
+		    .flatMap(i -> {
+		        HttpClient client = useConnectionPool ? createClient(port) : createClientNewConnection(port);
+		        return client.doOnConnect(config -> resolvers.get().add(config.resolverInternal()))
+		                     .get()
+		                     .uri("/")
+		                     .responseContent()
+		                     .aggregate()
+		                     .asString();
+		    })
+		    .as(StepVerifier::create)
+		    .expectNext("doTestSameNameResolver", "doTestSameNameResolver")
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(5));
+
+		assertThat(resolvers.get()).isNotNull();
+		assertThat(resolvers.get().get(0)).isSameAs(resolvers.get().get(1));
 	}
 }

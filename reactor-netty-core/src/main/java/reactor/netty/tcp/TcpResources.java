@@ -31,6 +31,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.NameResolverProvider;
 import reactor.netty.transport.TransportConfig;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -141,12 +142,14 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		return getOrCreate(tcpResources, loops, null, ON_TCP_NEW, "tcp");
 	}
 
-	final ConnectionProvider defaultProvider;
-	final LoopResources      defaultLoops;
+	final LoopResources                            defaultLoops;
+	final ConnectionProvider                       defaultProvider;
+	final AtomicReference<AddressResolverGroup<?>> defaultResolver;
 
 	protected TcpResources(LoopResources defaultLoops, ConnectionProvider defaultProvider) {
 		this.defaultLoops = defaultLoops;
 		this.defaultProvider = defaultProvider;
+		this.defaultResolver = new AtomicReference<>();
 	}
 
 	@Override
@@ -266,6 +269,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	 */
 	protected void _dispose() {
 		defaultProvider.dispose();
+		_disposeResolver();
 		defaultLoops.dispose();
 	}
 
@@ -281,7 +285,37 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	 * @return the Mono that represents the end of disposal
 	 */
 	protected Mono<Void> _disposeLater(Duration quietPeriod, Duration timeout) {
-		return Mono.when(defaultLoops.disposeLater(quietPeriod, timeout), defaultProvider.disposeLater());
+		return Mono.when(
+				_disposeResolverLater(),
+				defaultLoops.disposeLater(quietPeriod, timeout),
+				defaultProvider.disposeLater());
+	}
+
+	protected AddressResolverGroup<?> getOrCreateDefaultResolver() {
+		AddressResolverGroup<?> resolverGroup = defaultResolver.get();
+		if (resolverGroup == null) {
+			AddressResolverGroup<?> newResolverGroup =
+					DEFAULT_NAME_RESOLVER_PROVIDER.newNameResolverGroup(defaultLoops, LoopResources.DEFAULT_NATIVE);
+			defaultResolver.compareAndSet(null, newResolverGroup);
+			resolverGroup = getOrCreateDefaultResolver();
+		}
+		return resolverGroup;
+	}
+
+	void _disposeResolver() {
+		AddressResolverGroup<?> addressResolverGroup = defaultResolver.get();
+		if (addressResolverGroup != null) {
+			addressResolverGroup.close();
+		}
+	}
+
+	Mono<Void> _disposeResolverLater() {
+		Mono<Void> disposeResolver = Mono.empty();
+		AddressResolverGroup<?> addressResolverGroup = defaultResolver.get();
+		if (addressResolverGroup != null) {
+			disposeResolver = Mono.fromRunnable(addressResolverGroup::close);
+		}
+		return disposeResolver;
 	}
 
 	/**
@@ -313,6 +347,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 								log.warn("[{}] resources will use a new LoopResources: {}, " +
 										"the previous LoopResources will be disposed", name, loops);
 							}
+							resources._disposeResolver();
 							resources.defaultLoops.dispose();
 						}
 						if (provider != null) {
@@ -360,6 +395,8 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		return onNew.apply(loops, provider);
 	}
 
+	static final NameResolverProvider                                        DEFAULT_NAME_RESOLVER_PROVIDER;
+
 	static final Logger                                                      log = Loggers.getLogger(TcpResources.class);
 
 	static final BiFunction<LoopResources, ConnectionProvider, TcpResources> ON_TCP_NEW;
@@ -367,6 +404,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	static final AtomicReference<TcpResources>                               tcpResources;
 
 	static {
+		DEFAULT_NAME_RESOLVER_PROVIDER = NameResolverProvider.builder().build();
 		ON_TCP_NEW = TcpResources::new;
 		tcpResources = new AtomicReference<>();
 	}

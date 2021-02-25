@@ -18,6 +18,7 @@ package reactor.netty.tcp;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.resolver.AddressResolverGroup;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
@@ -86,6 +87,11 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 	TcpClientConfig(TcpClientConfig parent) {
 		super(parent);
 		this.sslProvider = parent.sslProvider;
+	}
+
+	@Override
+	protected AddressResolverGroup<?> defaultAddressResolverGroup() {
+		return TcpResources.get().getOrCreateDefaultResolver();
 	}
 
 	@Override

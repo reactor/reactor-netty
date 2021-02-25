@@ -19,6 +19,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.resolver.AddressResolverGroup;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -33,6 +34,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,10 +80,9 @@ class ClientTransportTest {
 		final LoopResources loop1 = LoopResources.create("test", 1, true);
 		final NioEventLoopGroup loop2 = new NioEventLoopGroup(1);
 		final ConnectionProvider provider = ConnectionProvider.create("test");
+		final TestClientTransportConfig config =
+				new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
 		try {
-			TestClientTransportConfig config =
-					new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
-
 			assertThatExceptionOfType(NullPointerException.class)
 					.isThrownBy(config::resolverInternal);
 
@@ -92,6 +93,7 @@ class ClientTransportTest {
 			      .addListener(f -> assertThat(Thread.currentThread().getName()).startsWith("test-"));
 		}
 		finally {
+			config.defaultResolver.get().close();
 			loop1.disposeLater()
 			     .block(Duration.ofSeconds(10));
 			provider.disposeLater()
@@ -105,9 +107,9 @@ class ClientTransportTest {
 	void testClientTransportWarmup() {
 		final LoopResources loop = LoopResources.create("testClientTransportWarmup", 1, true);
 		final ConnectionProvider provider = ConnectionProvider.create("testClientTransportWarmup");
+		TestClientTransportConfig config =
+				new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
 		try {
-			TestClientTransportConfig config =
-					new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
 			config.loopResources = loop;
 
 			TestClientTransport transport =
@@ -122,6 +124,7 @@ class ClientTransportTest {
 			assertThat(transport.configuration().defaultResolver.get()).isNotNull();
 		}
 		finally {
+			config.defaultResolver.get().close();
 			loop.disposeLater()
 			    .block(Duration.ofSeconds(5));
 			provider.disposeLater()
@@ -161,9 +164,16 @@ class ClientTransportTest {
 
 	static final class TestClientTransportConfig extends ClientTransportConfig<TestClientTransportConfig> {
 
+		AtomicReference<AddressResolverGroup<?>> defaultResolver = new AtomicReference<>();
+
 		TestClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 				Supplier<? extends SocketAddress> remoteAddress) {
 			super(connectionProvider, options, remoteAddress);
+		}
+
+		@Override
+		protected AddressResolverGroup<?> defaultAddressResolverGroup() {
+			return NameResolverProvider.builder().build().newNameResolverGroup(loopResources, true);
 		}
 
 		@Override
@@ -179,6 +189,12 @@ class ClientTransportTest {
 		@Override
 		protected ChannelMetricsRecorder defaultMetricsRecorder() {
 			return null;
+		}
+
+		@Override
+		protected AddressResolverGroup<?> resolverInternal() {
+			defaultResolver.compareAndSet(null, defaultAddressResolverGroup());
+			return defaultResolver.get();
 		}
 	}
 }
