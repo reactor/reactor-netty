@@ -38,6 +38,13 @@ public interface HttpInfos {
 	 */
 	Map<CharSequence, Set<Cookie>> cookies();
 
+	/**
+	 * Returns the decoded path portion from the {@link #uri()}
+	 *
+	 * @return the decoded path portion from the {@link #uri()}
+	 * @since 0.9.6
+	 */
+	String fullPath();
 
 	/**
 	 * Is the request keep alive
@@ -80,14 +87,6 @@ public interface HttpInfos {
 		}
 		return path;
 	}
-
-	/**
-	 * Returns the decoded path portion from the {@link #uri()}
-	 *
-	 * @return the decoded path portion from the {@link #uri()}
-	 * @since 0.9.6
-	 */
-	String fullPath();
 
 	/**
 	 * Returns the resolved target address
