@@ -18,6 +18,7 @@ package reactor.netty.transport;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -29,6 +30,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyHandler;
@@ -36,6 +38,7 @@ import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.util.internal.StringUtil;
 import reactor.netty.NettyPipeline;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -218,7 +221,9 @@ public final class ProxyProvider {
 		return password.apply(username);
 	}
 
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler("reactor.netty.proxy");
+	static final LoggingHandler LOGGING_HANDLER =
+			AdvancedByteBufFormat.HEX_DUMP
+					.toLoggingHandler("reactor.netty.proxy", LogLevel.DEBUG, Charset.defaultCharset());
 
 	static final class Build implements TypeSpec, AddressSpec, Builder {
 

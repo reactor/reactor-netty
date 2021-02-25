@@ -99,7 +99,9 @@ class TransportTest {
 
 	static final class TestTransportConfig extends TransportConfig {
 
-		static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(TestTransport.class);
+		static final LoggingHandler LOGGING_HANDLER =
+			AdvancedByteBufFormat.HEX_DUMP
+					.toLoggingHandler(TestTransport.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
 		TestTransportConfig(Map<ChannelOption<?>, ?> options) {
 			super(options);

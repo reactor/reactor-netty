@@ -23,6 +23,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
@@ -32,9 +33,11 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.TransportConfig;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -168,7 +171,9 @@ public final class UdpServerConfig extends TransportConfig {
 
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new UdpOperations(ch, c);
 
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(UdpServer.class);
+	static final LoggingHandler LOGGING_HANDLER =
+			AdvancedByteBufFormat.HEX_DUMP
+					.toLoggingHandler(UdpServer.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
 	static final class MicrometerUdpServerMetricsRecorder extends MicrometerChannelMetricsRecorder {
 

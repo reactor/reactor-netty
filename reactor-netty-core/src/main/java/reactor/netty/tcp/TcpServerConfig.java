@@ -17,6 +17,7 @@ package reactor.netty.tcp;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
@@ -26,9 +27,11 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.ServerTransportConfig;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -109,7 +112,9 @@ public final class TcpServerConfig extends ServerTransportConfig<TcpServerConfig
 
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new ChannelOperations<>(ch, c);
 
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(TcpServer.class);
+	static final LoggingHandler LOGGING_HANDLER =
+			AdvancedByteBufFormat.HEX_DUMP
+					.toLoggingHandler(TcpServer.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
 	/**
 	 * Default value whether the SSL debugging on the server side will be enabled/disabled,

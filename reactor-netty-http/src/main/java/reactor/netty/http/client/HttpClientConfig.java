@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 
 import java.net.SocketAddress;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
@@ -77,6 +78,7 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.transport.ClientTransportConfig;
 import reactor.netty.transport.ProxyProvider;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -616,7 +618,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	static final Logger log = Loggers.getLogger(HttpClientConfig.class);
 
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpClient.class);
+	static final LoggingHandler LOGGING_HANDLER =
+			AdvancedByteBufFormat.HEX_DUMP
+					.toLoggingHandler(HttpClient.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
 	/**
 	 * Default value whether the SSL debugging on the client side will be enabled/disabled,

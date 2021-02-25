@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
@@ -381,7 +382,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		}
 	}
 
-	static final class PooledConnection implements Connection, ConnectionObserver {
+	static final class PooledConnection extends AtomicLong implements Connection, ConnectionObserver {
 		final Channel channel;
 		final Sinks.Empty<Void> onTerminate;
 		final InstrumentedPool<PooledConnection> pool;

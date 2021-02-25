@@ -18,6 +18,7 @@ package reactor.netty.tcp;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,6 +37,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
@@ -51,6 +53,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelMetricsHandler;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -766,7 +769,9 @@ public final class SslProvider {
 
 	static final Logger log = Loggers.getLogger(SslProvider.class);
 
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler("reactor.netty.tcp.ssl");
+	static final LoggingHandler LOGGING_HANDLER =
+			AdvancedByteBufFormat.HEX_DUMP
+					.toLoggingHandler("reactor.netty.tcp.ssl", LogLevel.DEBUG, Charset.defaultCharset());
 
 	/**
 	 * <a href="https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility">Mozilla Modern Cipher

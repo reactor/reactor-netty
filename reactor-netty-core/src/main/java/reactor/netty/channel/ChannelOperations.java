@@ -38,6 +38,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.publisher.Sinks;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.ChannelOperationsId;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
@@ -60,7 +61,7 @@ import static reactor.netty.ReactorNetty.format;
  * @since 0.6
  */
 public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
-		implements NettyInbound, NettyOutbound, Connection, CoreSubscriber<Void> {
+		implements NettyInbound, NettyOutbound, Connection, CoreSubscriber<Void>, ChannelOperationsId {
 
 	/**
 	 * Add {@link NettyPipeline#ReactiveBridge} handler at the end of {@link Channel}
@@ -115,15 +116,22 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final Connection          connection;
 	final FluxReceive         inbound;
 	final ConnectionObserver  listener;
-	final Sinks.Empty<Void> onTerminate;
+	final Sinks.Empty<Void>   onTerminate;
+	final String              shortId;
 
 	volatile Subscription outboundSubscription;
+
+	boolean localActive;
+	String longId;
 
 	protected ChannelOperations(ChannelOperations<INBOUND, OUTBOUND> replaced) {
 		this.connection = replaced.connection;
 		this.listener = replaced.listener;
 		this.onTerminate = replaced.onTerminate;
 		this.inbound = new FluxReceive(this);
+		this.shortId = replaced.shortId;
+		this.longId = replaced.longId;
+		this.localActive = replaced.localActive;
 	}
 
 	/**
@@ -137,6 +145,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.listener = requireNonNull(listener, "listener");
 		this.onTerminate = Sinks.unsafe().empty();
 		this.inbound = new FluxReceive(this);
+		shortId = initShortId();
 	}
 
 	@Nullable
@@ -495,6 +504,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		                 .replace("Operations", "");
 	}
 
+	protected String initShortId() {
+		return channel().id().asShortText();
+	}
+
 	/**
 	 * Wrap an inbound error
 	 *
@@ -520,6 +533,58 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	public Context currentContext() {
 		return listener.currentContext();
+	}
+
+	@Override
+	public String asShortText() {
+		return shortId;
+	}
+
+	@Override
+	public String asLongText() {
+		boolean active = channel().isActive();
+		if (localActive == active && longId != null) {
+			return longId;
+		}
+
+		SocketAddress remoteAddress = channel().remoteAddress();
+		SocketAddress localAddress = channel().localAddress();
+		String shortText = asShortText();
+		if (remoteAddress != null) {
+			String localAddressStr = String.valueOf(localAddress);
+			String remoteAddressStr = String.valueOf(remoteAddress);
+			StringBuilder buf =
+					new StringBuilder(7 + shortText.length() + 4 + localAddressStr.length() + 3 + 2 + remoteAddressStr.length() + 1)
+					.append("[id: 0x")
+					.append(shortText)
+					.append(", L:")
+					.append(localAddressStr)
+					.append(active ? " - " : " ! ")
+					.append("R:")
+					.append(remoteAddressStr)
+					.append(']');
+			longId = buf.toString();
+		}
+		else if (localAddress != null) {
+			String localAddressStr = String.valueOf(localAddress);
+			StringBuilder buf = new StringBuilder(7 + shortText.length() + 4 + localAddressStr.length() + 1)
+					.append("[id: 0x")
+					.append(shortText)
+					.append(", L:")
+					.append(localAddressStr)
+					.append(']');
+			longId = buf.toString();
+		}
+		else {
+			StringBuilder buf = new StringBuilder(7 + shortText.length() + 1)
+					.append("[id: 0x")
+					.append(shortText)
+					.append(']');
+			longId = buf.toString();
+		}
+
+		localActive = active;
+		return longId;
 	}
 
 	/**

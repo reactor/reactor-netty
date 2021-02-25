@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -32,8 +33,10 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.ChannelOperationsId;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
@@ -489,5 +492,117 @@ class HttpTests extends BaseHttpTest {
 		            .verify(Duration.ofSeconds(30));
 
 		assertThat(channel.get()).isTrue();
+	}
+
+	@Test
+	void testIds() throws Exception {
+		CountDownLatch latch = new CountDownLatch(2);
+
+		AtomicReference<String> serverOpsShortId = new AtomicReference<>();
+		AtomicReference<String> serverChannelShortId = new AtomicReference<>();
+		AtomicReference<String> serverOpsLongId = new AtomicReference<>();
+		AtomicReference<String> serverChannelId = new AtomicReference<>();
+		AtomicReference<String> serverRequestId = new AtomicReference<>();
+		disposableServer =
+				HttpServer.create()
+				          .wiretap(true)
+				          .doOnConnection(conn -> {
+				              serverOpsShortId.set(((ChannelOperationsId) conn).asShortText());
+				              serverChannelShortId.set(conn.channel().id().asShortText());
+
+				              serverOpsLongId.set(((ChannelOperationsId) conn).asLongText());
+				              serverChannelId.set(conn.channel().toString());
+
+				              latch.countDown();
+				          })
+				          .handle((req, res) -> {
+				              serverRequestId.set(req.requestId());
+				              return res.sendString(Mono.just("testIds"));
+				          })
+				          .bindNow();
+
+		AtomicReference<String> clientOpsShortId = new AtomicReference<>();
+		AtomicReference<String> clientChannelShortId = new AtomicReference<>();
+		AtomicReference<String> clientOpsLongId = new AtomicReference<>();
+		AtomicReference<String> clientChannelId = new AtomicReference<>();
+		AtomicReference<String> clientRequestId = new AtomicReference<>();
+		ConnectionProvider provider = ConnectionProvider.create("testIds", 1);
+		HttpClient client =
+				createClient(provider, disposableServer.port())
+				        .doOnRequest((req, conn) -> {
+				            clientOpsShortId.set(((ChannelOperationsId) conn).asShortText());
+				            clientChannelShortId.set(conn.channel().id().asShortText());
+
+				            clientOpsLongId.set(((ChannelOperationsId) conn).asLongText());
+				            clientChannelId.set(conn.channel().toString());
+
+				            clientRequestId.set(req.requestId());
+
+				            latch.countDown();
+				        });
+
+		client.get()
+		      .uri("/")
+		      .responseContent()
+		      .aggregate()
+		      .asString()
+		      .as(StepVerifier::create)
+		      .expectNext("testIds")
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+		assertThat(serverChannelShortId.get()).isNotNull();
+		assertThat(serverRequestId.get()).isNotNull();
+		assertThat(serverOpsShortId.get()).isNotNull()
+				.isEqualTo(serverChannelShortId.get() + "-1")
+				.isEqualTo(serverRequestId.get());
+
+		assertThat(serverChannelId.get()).isNotNull();
+		assertThat(serverOpsLongId.get()).isNotNull()
+				.isEqualTo(serverChannelId.get().replace(serverChannelShortId.get(), serverChannelShortId.get() + "-1"));
+
+		assertThat(clientChannelShortId.get()).isNotNull();
+		assertThat(clientRequestId.get()).isNotNull();
+		assertThat(clientOpsShortId.get()).isNotNull()
+				.isEqualTo(clientChannelShortId.get() + "-1")
+				.isEqualTo(clientRequestId.get());
+
+		assertThat(clientChannelId.get()).isNotNull();
+		assertThat(clientOpsLongId.get()).isNotNull()
+				.isEqualTo(clientChannelId.get().replace(clientChannelShortId.get(), clientChannelShortId.get() + "-1"));
+
+		client.get()
+		      .uri("/")
+		      .responseContent()
+		      .aggregate()
+		      .asString()
+		      .as(StepVerifier::create)
+		      .expectNext("testIds")
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+		assertThat(serverChannelShortId.get()).isNotNull();
+		assertThat(serverRequestId.get()).isNotNull();
+		assertThat(serverOpsShortId.get()).isNotNull()
+				.isEqualTo(serverChannelShortId.get() + "-2")
+				.isEqualTo(serverRequestId.get());
+
+		assertThat(serverChannelId.get()).isNotNull();
+		assertThat(serverOpsLongId.get()).isNotNull()
+				.isEqualTo(serverChannelId.get().replace(serverChannelShortId.get(), serverChannelShortId.get() + "-2"));
+
+		assertThat(clientChannelShortId.get()).isNotNull();
+		assertThat(clientRequestId.get()).isNotNull();
+		assertThat(clientOpsShortId.get()).isNotNull()
+				.isEqualTo(clientChannelShortId.get() + "-2")
+				.isEqualTo(clientRequestId.get());
+
+		assertThat(clientChannelId.get()).isNotNull();
+		assertThat(clientOpsLongId.get()).isNotNull()
+				.isEqualTo(clientChannelId.get().replace(clientChannelShortId.get(), clientChannelShortId.get() + "-2"));
 	}
 }

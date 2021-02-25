@@ -60,11 +60,13 @@ import reactor.netty.http.server.logging.AccessLogHandlerFactory;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.transport.ServerTransportConfig;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -564,7 +566,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final Logger log = Loggers.getLogger(HttpServerConfig.class);
 
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpServer.class);
+	static final LoggingHandler LOGGING_HANDLER =
+			AdvancedByteBufFormat.HEX_DUMP
+					.toLoggingHandler(HttpServer.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
 	/**
 	 * Default value whether the SSL debugging on the server side will be enabled/disabled,
