@@ -139,6 +139,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.resourceUrl = replaced.resourceUrl;
 		this.path = replaced.path;
 		this.responseTimeout = replaced.responseTimeout;
+		this.is100Continue = replaced.is100Continue;
 	}
 
 	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
