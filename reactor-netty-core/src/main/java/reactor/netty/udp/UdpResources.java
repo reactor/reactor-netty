@@ -134,6 +134,32 @@ public class UdpResources implements LoopResources {
 		return defaultLoops.daemon();
 	}
 
+	/**
+	 * Use {@link #shutdown()}
+	 */
+	@Override
+	public void dispose() {
+		//noop on global by default
+	}
+
+	/**
+	 * Use {@link #shutdownLater()}
+	 */
+	@Override
+	public Mono<Void> disposeLater() {
+		//noop on global by default
+		return Mono.empty();
+	}
+
+	/**
+	 * Use {@link #shutdownLater(Duration, Duration)}
+	 */
+	@Override
+	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
+		//noop on global by default
+		return Mono.empty();
+	}
+
 	@Override
 	public boolean isDisposed() {
 		return defaultLoops.isDisposed();
