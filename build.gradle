@@ -140,8 +140,11 @@ subprojects {
 	apply from: "${rootDir}/gradle/javadoc.gradle"
 	apply from: "${rootDir}/gradle/errorprone.gradle"
 
+	sourceCompatibility = '1.8'
+	targetCompatibility = '1.8'
+
 	jacoco {
-		toolVersion = '0.8.5'
+		toolVersion = '0.8.6'
 	}
 
 	jacocoTestReport {
@@ -201,6 +204,9 @@ subprojects {
 	}
 
 	project.tasks.withType(Test).all {
+		if (JavaVersion.current() > JavaVersion.VERSION_12) {
+			jvmArgs += "-XX:+AllowRedefinitionToAddDeleteMethods"
+		}
 		// run tests with IPv4 only when IPv6 is available
 		if (project.hasProperty('preferIPv4Stack')) {
 			systemProperty("java.net.preferIPv4Stack", "true")
