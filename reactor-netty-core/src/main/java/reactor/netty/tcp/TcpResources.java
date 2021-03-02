@@ -208,9 +208,10 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	/**
 	 * Dispose all connection pools for the specified remote address.
 	 * <p>
-	 * As an opposite to {@link #dispose()}, this method delegates to the underlying connection provider.
+	 * As opposed to {@link #dispose()}, this method delegates to the underlying connection provider.
 	 * It has a global effect and removes all connection pools for this remote address from the
-	 * global TCP resources similar to {@link #disposeLoopsAndConnections()}.
+	 * global TCP resources (making it closer to {@link #disposeLoopsAndConnections()} than
+	 * to {@link #dispose()}).
 	 *
 	 * @param remoteAddress the remote address
 	 */
