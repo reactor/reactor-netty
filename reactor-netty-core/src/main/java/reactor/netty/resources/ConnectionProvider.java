@@ -175,7 +175,12 @@ public interface ConnectionProvider extends Disposable {
 			@Nullable AddressResolverGroup<?> resolverGroup);
 
 
-	default void disposeWhen(SocketAddress address) {
+	/**
+	 * Dispose all connection pools for the specified remote address.
+	 *
+	 * @param remoteAddress the remote address
+	 */
+	default void disposeWhen(SocketAddress remoteAddress) {
 	}
 
 	/**

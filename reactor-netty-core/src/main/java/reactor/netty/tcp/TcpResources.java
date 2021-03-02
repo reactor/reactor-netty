@@ -205,9 +205,14 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		return Mono.empty();
 	}
 
+	/**
+	 * Dispose all connection pools for the specified remote address.
+	 *
+	 * @param remoteAddress the remote address
+	 */
 	@Override
-	public void disposeWhen(SocketAddress address) {
-		defaultProvider.disposeWhen(address);
+	public void disposeWhen(SocketAddress remoteAddress) {
+		defaultProvider.disposeWhen(remoteAddress);
 	}
 
 	@Override
