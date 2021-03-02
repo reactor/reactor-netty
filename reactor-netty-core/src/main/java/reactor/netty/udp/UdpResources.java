@@ -135,7 +135,12 @@ public class UdpResources implements LoopResources {
 	}
 
 	/**
-	 * Use {@link #shutdown()}
+	 * {@link UdpResources} provides the global UDP resources, as such {@link UdpResources} lifecycle is
+	 * longer than regular {@link LoopResources} implementation lifecycle.
+	 * In order to prevent an unintended disposal of the global UDP resources, {@link #shutdown()}
+	 * is exposed and should be used.
+	 * <p>
+	 * This method has {@code NOOP} implementation.
 	 */
 	@Override
 	public void dispose() {
@@ -143,7 +148,12 @@ public class UdpResources implements LoopResources {
 	}
 
 	/**
-	 * Use {@link #shutdownLater()}
+	 * {@link UdpResources} provides the global UDP resources, as such {@link UdpResources} lifecycle is
+	 * longer than regular {@link LoopResources} implementation lifecycle.
+	 * In order to prevent an unintended disposal of the global UDP resources, {@link #shutdownLater()}
+	 * is exposed and should be used.
+	 * <p>
+	 * This method has {@code NOOP} implementation.
 	 */
 	@Override
 	public Mono<Void> disposeLater() {
@@ -152,7 +162,12 @@ public class UdpResources implements LoopResources {
 	}
 
 	/**
-	 * Use {@link #shutdownLater(Duration, Duration)}
+	 * {@link UdpResources} provides the global UDP resources, as such {@link UdpResources} lifecycle is
+	 * longer than regular {@link LoopResources} implementation lifecycle.
+	 * In order to prevent an unintended disposal of the global UDP resources, {@link #shutdownLater(Duration, Duration)}
+	 * is exposed and should be used.
+	 * <p>
+	 * This method has {@code NOOP} implementation.
 	 */
 	@Override
 	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
