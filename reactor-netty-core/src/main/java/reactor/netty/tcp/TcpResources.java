@@ -165,12 +165,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * {@link TcpResources} provides the global TCP resources, as such {@link TcpResources} lifecycle is
-	 * longer than regular {@link LoopResources} and {@link ConnectionProvider} implementations lifecycle.
-	 * In order to prevent an unintended disposal of the global TCP resources, {@link #disposeLoopsAndConnections()}
-	 * is exposed and should be used.
-	 * <p>
-	 * This method has {@code NOOP} implementation.
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global TCP resources which has a longer lifecycle than regular {@link LoopResources}
+	 * and {@link ConnectionProvider}.
+	 * If a disposal of the global TCP resources is needed,
+	 * {@link #disposeLoopsAndConnections()} should be used instead.
 	 */
 	@Override
 	public void dispose() {
@@ -178,12 +177,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * {@link TcpResources} provides the global TCP resources, as such {@link TcpResources} lifecycle is
-	 * longer than regular {@link LoopResources} and {@link ConnectionProvider} implementations lifecycle.
-	 * In order to prevent an unintended disposal of the global TCP resources, {@link #disposeLoopsAndConnectionsLater()}
-	 * is exposed and should be used.
-	 * <p>
-	 * This method has {@code NOOP} implementation.
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global TCP resources which has a longer lifecycle than regular {@link LoopResources}
+	 * and {@link ConnectionProvider}.
+	 * If a disposal of the global TCP resources is needed,
+	 * {@link #disposeLoopsAndConnectionsLater()} should be used instead.
 	 */
 	@Override
 	public Mono<Void> disposeLater() {
@@ -192,12 +190,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * {@link TcpResources} provides the global TCP resources, as such {@link TcpResources} lifecycle is
-	 * longer than regular {@link LoopResources} and {@link ConnectionProvider} implementations lifecycle.
-	 * In order to prevent an unintended disposal of the global TCP resources,
-	 * {@link #disposeLoopsAndConnectionsLater(Duration, Duration)} is exposed and should be used.
-	 * <p>
-	 * This method has {@code NOOP} implementation.
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global TCP resources which has a longer lifecycle than regular {@link LoopResources}
+	 * and {@link ConnectionProvider}.
+	 * If a disposal of the global TCP resources is needed,
+	 * {@link #disposeLoopsAndConnectionsLater(Duration, Duration)} should be used instead.
 	 */
 	@Override
 	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {

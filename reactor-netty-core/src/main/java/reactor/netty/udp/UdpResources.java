@@ -135,12 +135,9 @@ public class UdpResources implements LoopResources {
 	}
 
 	/**
-	 * {@link UdpResources} provides the global UDP resources, as such {@link UdpResources} lifecycle is
-	 * longer than regular {@link LoopResources} implementation lifecycle.
-	 * In order to prevent an unintended disposal of the global UDP resources, {@link #shutdown()}
-	 * is exposed and should be used.
-	 * <p>
-	 * This method has {@code NOOP} implementation.
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global UDP resources which has a longer lifecycle than regular {@link LoopResources}.
+	 * If a disposal of the global UDP resources is needed, {@link #shutdown()} should be used instead.
 	 */
 	@Override
 	public void dispose() {
@@ -148,12 +145,9 @@ public class UdpResources implements LoopResources {
 	}
 
 	/**
-	 * {@link UdpResources} provides the global UDP resources, as such {@link UdpResources} lifecycle is
-	 * longer than regular {@link LoopResources} implementation lifecycle.
-	 * In order to prevent an unintended disposal of the global UDP resources, {@link #shutdownLater()}
-	 * is exposed and should be used.
-	 * <p>
-	 * This method has {@code NOOP} implementation.
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global UDP resources which has a longer lifecycle than regular {@link LoopResources}.
+	 * If a disposal of the global UDP resources is needed, {@link #shutdownLater()} should be used instead.
 	 */
 	@Override
 	public Mono<Void> disposeLater() {
@@ -162,12 +156,10 @@ public class UdpResources implements LoopResources {
 	}
 
 	/**
-	 * {@link UdpResources} provides the global UDP resources, as such {@link UdpResources} lifecycle is
-	 * longer than regular {@link LoopResources} implementation lifecycle.
-	 * In order to prevent an unintended disposal of the global UDP resources, {@link #shutdownLater(Duration, Duration)}
-	 * is exposed and should be used.
-	 * <p>
-	 * This method has {@code NOOP} implementation.
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global UDP resources which has a longer lifecycle than regular {@link LoopResources}.
+	 * If a disposal of the global UDP resources is needed, {@link #shutdownLater(Duration, Duration)}
+	 * should be used instead.
 	 */
 	@Override
 	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
