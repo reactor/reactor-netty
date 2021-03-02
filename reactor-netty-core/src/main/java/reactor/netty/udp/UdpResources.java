@@ -134,6 +134,39 @@ public class UdpResources implements LoopResources {
 		return defaultLoops.daemon();
 	}
 
+	/**
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global UDP resources which has a longer lifecycle than regular {@link LoopResources}.
+	 * If a disposal of the global UDP resources is needed, {@link #shutdown()} should be used instead.
+	 */
+	@Override
+	public void dispose() {
+		//noop on global by default
+	}
+
+	/**
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global UDP resources which has a longer lifecycle than regular {@link LoopResources}.
+	 * If a disposal of the global UDP resources is needed, {@link #shutdownLater()} should be used instead.
+	 */
+	@Override
+	public Mono<Void> disposeLater() {
+		//noop on global by default
+		return Mono.empty();
+	}
+
+	/**
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global UDP resources which has a longer lifecycle than regular {@link LoopResources}.
+	 * If a disposal of the global UDP resources is needed, {@link #shutdownLater(Duration, Duration)}
+	 * should be used instead.
+	 */
+	@Override
+	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
+		//noop on global by default
+		return Mono.empty();
+	}
+
 	@Override
 	public boolean isDisposed() {
 		return defaultLoops.isDisposed();

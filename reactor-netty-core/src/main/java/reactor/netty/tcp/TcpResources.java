@@ -165,7 +165,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * Use {@link #disposeLoopsAndConnections()}
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global TCP resources which has a longer lifecycle than regular {@link LoopResources}
+	 * and {@link ConnectionProvider}.
+	 * If a disposal of the global TCP resources is needed,
+	 * {@link #disposeLoopsAndConnections()} should be used instead.
 	 */
 	@Override
 	public void dispose() {
@@ -173,7 +177,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * Use {@link #disposeLoopsAndConnectionsLater()}
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global TCP resources which has a longer lifecycle than regular {@link LoopResources}
+	 * and {@link ConnectionProvider}.
+	 * If a disposal of the global TCP resources is needed,
+	 * {@link #disposeLoopsAndConnectionsLater()} should be used instead.
 	 */
 	@Override
 	public Mono<Void> disposeLater() {
@@ -181,9 +189,32 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		return Mono.empty();
 	}
 
+	/**
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global TCP resources which has a longer lifecycle than regular {@link LoopResources}
+	 * and {@link ConnectionProvider}.
+	 * If a disposal of the global TCP resources is needed,
+	 * {@link #disposeLoopsAndConnectionsLater(Duration, Duration)} should be used instead.
+	 */
 	@Override
-	public void disposeWhen(SocketAddress address) {
-		defaultProvider.disposeWhen(address);
+	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
+		//noop on global by default
+		return Mono.empty();
+	}
+
+	/**
+	 * Dispose all connection pools for the specified remote address.
+	 * <p>
+	 * As opposed to {@link #dispose()}, this method delegates to the underlying connection provider.
+	 * It has a global effect and removes all connection pools for this remote address from the
+	 * global TCP resources (making it closer to {@link #disposeLoopsAndConnections()} than
+	 * to {@link #dispose()}).
+	 *
+	 * @param remoteAddress the remote address
+	 */
+	@Override
+	public void disposeWhen(SocketAddress remoteAddress) {
+		defaultProvider.disposeWhen(remoteAddress);
 	}
 
 	@Override

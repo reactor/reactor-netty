@@ -175,7 +175,15 @@ public interface ConnectionProvider extends Disposable {
 			@Nullable AddressResolverGroup<?> resolverGroup);
 
 
-	default void disposeWhen(SocketAddress address) {
+	/**
+	 * Dispose all connection pools for the specified remote address.
+	 * <p>
+	 * This method has {@code NOOP} default implementation.
+	 * {@link ConnectionProvider} implementations may decide to provide more specific implementation.
+	 *
+	 * @param remoteAddress the remote address
+	 */
+	default void disposeWhen(SocketAddress remoteAddress) {
 	}
 
 	/**
@@ -194,6 +202,9 @@ public interface ConnectionProvider extends Disposable {
 
 	/**
 	 * Returns a Mono that triggers the disposal of the ConnectionProvider when subscribed to.
+	 * <p>
+	 * This method has {@code NOOP} default implementation.
+	 * {@link ConnectionProvider} implementations may decide to provide more specific implementation.
 	 *
 	 * @return a Mono representing the completion of the ConnectionProvider disposal.
 	 **/
