@@ -366,6 +366,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.websocketClientSpec = parent.websocketClientSpec;
 	}
 
+	/**
+	 * Provides a global {@link AddressResolverGroup} from {@link HttpResources}
+	 * that is shared amongst all HTTP clients. {@link AddressResolverGroup} uses the global
+	 * {@link LoopResources} from {@link HttpResources}.
+	 *
+	 * @return the global {@link AddressResolverGroup}
+	 */
 	@Override
 	public AddressResolverGroup<?> defaultAddressResolverGroup() {
 		return HttpResources.get().getOrCreateDefaultResolver();

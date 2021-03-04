@@ -95,6 +95,13 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 		}
 	}
 
+	/**
+	 * Provides a global {@link AddressResolverGroup} from {@link UdpResources}
+	 * that is shared amongst all UDP clients. {@link AddressResolverGroup} uses the global
+	 * {@link LoopResources} from {@link UdpResources}.
+	 *
+	 * @return the global {@link AddressResolverGroup}
+	 */
 	@Override
 	protected AddressResolverGroup<?> defaultAddressResolverGroup() {
 		return UdpResources.get().getOrCreateDefaultResolver();

@@ -291,12 +291,22 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 				defaultProvider.disposeLater());
 	}
 
+	/**
+	 * Safely checks whether a name resolver exists and proceed with a creation if it does not exist.
+	 * The name resolver uses as an event loop group the {@link LoopResources} that are configured.
+	 * Guarantees that always one and the same instance is returned for a given {@link LoopResources}
+	 * and if the {@link LoopResources} is updated the name resolver is also updated.
+	 *
+	 * @return an existing or new {@link AddressResolverGroup}
+	 */
 	protected AddressResolverGroup<?> getOrCreateDefaultResolver() {
 		AddressResolverGroup<?> resolverGroup = defaultResolver.get();
 		if (resolverGroup == null) {
 			AddressResolverGroup<?> newResolverGroup =
 					DEFAULT_NAME_RESOLVER_PROVIDER.newNameResolverGroup(defaultLoops, LoopResources.DEFAULT_NATIVE);
-			defaultResolver.compareAndSet(null, newResolverGroup);
+			if (!defaultResolver.compareAndSet(null, newResolverGroup)) {
+				newResolverGroup.close();
+			}
 			resolverGroup = getOrCreateDefaultResolver();
 		}
 		return resolverGroup;

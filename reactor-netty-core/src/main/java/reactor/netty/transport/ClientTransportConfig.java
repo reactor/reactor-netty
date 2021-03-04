@@ -181,6 +181,11 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		return isDomainSocket ? DomainSocketChannel.class : SocketChannel.class;
 	}
 
+	/**
+	 * Provides a global {@link AddressResolverGroup} that is shared amongst all clients.
+	 *
+	 * @return the global {@link AddressResolverGroup}
+	 */
 	protected abstract AddressResolverGroup<?> defaultAddressResolverGroup();
 
 	@Override

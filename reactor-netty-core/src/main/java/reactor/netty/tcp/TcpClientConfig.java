@@ -89,6 +89,13 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 		this.sslProvider = parent.sslProvider;
 	}
 
+	/**
+	 * Provides a global {@link AddressResolverGroup} from {@link TcpResources}
+	 * that is shared amongst all TCP clients. {@link AddressResolverGroup} uses the global
+	 * {@link LoopResources} from {@link TcpResources}.
+	 *
+	 * @return the global {@link AddressResolverGroup}
+	 */
 	@Override
 	protected AddressResolverGroup<?> defaultAddressResolverGroup() {
 		return TcpResources.get().getOrCreateDefaultResolver();
