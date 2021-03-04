@@ -93,6 +93,11 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	}
 
 	@Override
+	public String requestId() {
+		return "";
+	}
+
+	@Override
 	public HttpClientRequest header(CharSequence name, CharSequence value) {
 		throw new UnsupportedOperationException("Should not add Header");
 	}

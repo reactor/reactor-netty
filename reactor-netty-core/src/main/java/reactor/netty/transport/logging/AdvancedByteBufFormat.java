@@ -24,7 +24,7 @@ import io.netty.handler.logging.LoggingHandler;
 
 /**
  * Used to control the format and verbosity of logging for {@link ByteBuf}s and {@link ByteBufHolder}s.
- *
+ * <p>
  * Adds {@link AdvancedByteBufFormat#TEXTUAL} format to io.netty.handler.logging.ByteBufFormat.
  *
  * @author Maximilian Goeke
@@ -103,12 +103,12 @@ public enum AdvancedByteBufFormat {
 	 */
 	public LoggingHandler toLoggingHandler(String category, LogLevel level, Charset charset) {
 		switch (this) {
-		case SIMPLE:
-			return new LoggingHandler(category, level, io.netty.handler.logging.ByteBufFormat.SIMPLE);
-		case HEX_DUMP:
-			return new LoggingHandler(category, level, io.netty.handler.logging.ByteBufFormat.HEX_DUMP);
-		default:
-			return new ReactorNettyLoggingHandler(category, level, charset);
+			case SIMPLE:
+				return new ReactorNettyLoggingHandler(category, level, SIMPLE);
+			case HEX_DUMP:
+				return new ReactorNettyLoggingHandler(category, level, HEX_DUMP);
+			default:
+				return new ReactorNettyLoggingHandler(category, level, charset);
 		}
 	}
 }

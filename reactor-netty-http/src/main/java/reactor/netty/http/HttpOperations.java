@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -95,6 +96,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	public boolean isWebsocket() {
 		return false;
+	}
+
+	@Override
+	public String requestId() {
+		return asShortText();
 	}
 
 	@Override
@@ -335,6 +341,14 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			throw e;
 		}
 		return HTTP_STATE.compareAndSet(this, READY, BODY_SENT);
+	}
+
+	@Override
+	protected final String initShortId() {
+		if (connection() instanceof AtomicLong) {
+			return channel().id().asShortText() + '-' + ((AtomicLong) connection()).incrementAndGet();
+		}
+		return super.initShortId();
 	}
 
 	/**

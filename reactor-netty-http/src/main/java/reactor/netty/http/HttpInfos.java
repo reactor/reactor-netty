@@ -47,6 +47,28 @@ public interface HttpInfos {
 	String fullPath();
 
 	/**
+	 * Return an unique id for the request. The id is a combination
+	 * of the id of the underlying connection and the serial number of the request
+	 * received on that connection.
+	 * <p>Format of the id:
+	 * {@code <CONNECTION_ID>-<REQUEST_NUMBER>}
+	 * </p>
+	 * <p>
+	 * Example:
+	 * {@code
+	 *     <CONNECTION_ID>: 329c6ffd
+	 *     <REQUEST_NUMBER>: 5
+	 *
+	 *     Result: 329c6ffd-5
+	 * }
+	 * </p>
+	 *
+	 * @return an unique id for the request
+	 * @since 1.0.5
+	 */
+	String requestId();
+
+	/**
 	 * Is the request keep alive
 	 *
 	 * @return is keep alive

@@ -209,6 +209,11 @@ class HttpOperationsTest {
 		}
 
 		@Override
+		public String requestId() {
+			return "";
+		}
+
+		@Override
 		public String uri() {
 			return null;
 		}

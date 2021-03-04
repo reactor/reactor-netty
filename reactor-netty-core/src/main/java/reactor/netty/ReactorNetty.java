@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -209,9 +210,16 @@ public final class ReactorNetty {
 		Objects.requireNonNull(channel, "channel");
 		Objects.requireNonNull(msg, "msg");
 		if (LOG_CHANNEL_INFO) {
-			String channelStr = channel.toString();
+			String channelStr;
+			Connection connection = Connection.from(channel);
+			if (connection instanceof ChannelOperationsId) {
+				channelStr = ((ChannelOperationsId) connection).asLongText();
+			}
+			else {
+				channelStr = channel.toString();
+			}
 			return new StringBuilder(channelStr.length() + 1 + msg.length())
-					.append(channel)
+					.append(channelStr)
 					.append(' ')
 					.append(msg)
 					.toString();
@@ -840,7 +848,7 @@ public final class ReactorNetty {
 		}
 	}
 
-	static final class SimpleConnection implements Connection {
+	static final class SimpleConnection extends AtomicLong implements Connection {
 
 		final Channel channel;
 
