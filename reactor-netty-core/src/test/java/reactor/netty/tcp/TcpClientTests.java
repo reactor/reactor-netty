@@ -1252,4 +1252,36 @@ public class TcpClientTests {
 		conn.disposeNow();
 		server.disposeNow();
 	}
+
+
+	@Test
+	void testDefaultResolverWithCustomEventLoop() throws Exception {
+		LoopResources loop1 = LoopResources.create("test", 1, true);
+		NioEventLoopGroup loop2 = new NioEventLoopGroup(1);
+		TcpClient client = TcpClient.create();
+		TcpClient newClient = null;
+		try {
+			assertThat(client.configuration().resolver()).isNull();
+
+			newClient = client.runOn(loop1);
+
+			assertThat(newClient.configuration().resolver()).isNotNull();
+			newClient.configuration()
+			         .resolver()
+			         .getResolver(loop2.next())
+			         .resolve(new InetSocketAddress("example.com", 443))
+			         .addListener(f -> assertThat(Thread.currentThread().getName()).startsWith("test-"));
+		}
+		finally {
+			if (newClient != null && newClient.configuration().resolver() != null) {
+				newClient.configuration()
+				         .resolver()
+				         .close();
+			}
+			loop1.disposeLater()
+			     .block(Duration.ofSeconds(10));
+			loop2.shutdownGracefully()
+			     .get(10, TimeUnit.SECONDS);
+		}
+	}
 }

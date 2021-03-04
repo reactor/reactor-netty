@@ -22,10 +22,12 @@ import java.util.function.Function;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
+import io.netty.resolver.AddressResolverGroup;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ReactorNetty;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.NameResolverProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -123,10 +125,12 @@ public class UdpResources implements LoopResources {
 		});
 	}
 
-	final LoopResources defaultLoops;
+	final LoopResources                            defaultLoops;
+	final AtomicReference<AddressResolverGroup<?>> defaultResolver;
 
 	protected UdpResources(LoopResources defaultLoops) {
 		this.defaultLoops = defaultLoops;
+		this.defaultResolver = new AtomicReference<>();
 	}
 
 	@Override
@@ -205,6 +209,7 @@ public class UdpResources implements LoopResources {
 	 * Dispose underlying resources
 	 */
 	protected void _dispose() {
+		_disposeResolver();
 		defaultLoops.dispose();
 	}
 
@@ -220,7 +225,44 @@ public class UdpResources implements LoopResources {
 	 * @return the Mono that represents the end of disposal
 	 */
 	protected Mono<Void> _disposeLater(Duration quietPeriod, Duration timeout) {
-		return defaultLoops.disposeLater(quietPeriod, timeout);
+		return Mono.when(_disposeResolverLater(), defaultLoops.disposeLater(quietPeriod, timeout));
+	}
+
+	/**
+	 * Safely checks whether a name resolver exists and proceed with a creation if it does not exist.
+	 * The name resolver uses as an event loop group the {@link LoopResources} that are configured.
+	 * Guarantees that always one and the same instance is returned for a given {@link LoopResources}
+	 * and if the {@link LoopResources} is updated the name resolver is also updated.
+	 *
+	 * @return an existing or new {@link AddressResolverGroup}
+	 */
+	AddressResolverGroup<?> getOrCreateDefaultResolver() {
+		AddressResolverGroup<?> resolverGroup = defaultResolver.get();
+		if (resolverGroup == null) {
+			AddressResolverGroup<?> newResolverGroup =
+					DEFAULT_NAME_RESOLVER_PROVIDER.newNameResolverGroup(defaultLoops, LoopResources.DEFAULT_NATIVE);
+			if (!defaultResolver.compareAndSet(null, newResolverGroup)) {
+				newResolverGroup.close();
+			}
+			resolverGroup = getOrCreateDefaultResolver();
+		}
+		return resolverGroup;
+	}
+
+	void _disposeResolver() {
+		AddressResolverGroup<?> addressResolverGroup = defaultResolver.get();
+		if (addressResolverGroup != null) {
+			addressResolverGroup.close();
+		}
+	}
+
+	Mono<Void> _disposeResolverLater() {
+		Mono<Void> disposeResolver = Mono.empty();
+		AddressResolverGroup<?> addressResolverGroup = defaultResolver.get();
+		if (addressResolverGroup != null) {
+			disposeResolver = Mono.fromRunnable(addressResolverGroup::close);
+		}
+		return disposeResolver;
 	}
 
 	/**
@@ -245,6 +287,7 @@ public class UdpResources implements LoopResources {
 							log.warn("[{}] resources will use a new LoopResources: {}," +
 									"the previous LoopResources will be disposed", name, loops);
 						}
+						resources._disposeResolver();
 						resources.defaultLoops.dispose();
 					}
 					else {
@@ -286,6 +329,8 @@ public class UdpResources implements LoopResources {
 			ReactorNetty.UDP_IO_THREAD_COUNT,
 			"" + Schedulers.DEFAULT_POOL_SIZE));
 
+	static final NameResolverProvider                  DEFAULT_NAME_RESOLVER_PROVIDER;
+
 	static final Logger                                log = Loggers.getLogger(UdpResources.class);
 
 	static final Function<LoopResources, UdpResources> ON_UDP_NEW;
@@ -293,6 +338,7 @@ public class UdpResources implements LoopResources {
 	static final AtomicReference<UdpResources>         udpResources;
 
 	static {
+		DEFAULT_NAME_RESOLVER_PROVIDER = NameResolverProvider.builder().build();
 		ON_UDP_NEW = UdpResources::new;
 		udpResources = new AtomicReference<>();
 	}

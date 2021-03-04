@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
+import io.netty.resolver.AddressResolverGroup;
 import reactor.core.publisher.Mono;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
@@ -132,6 +133,11 @@ public final class HttpResources extends TcpResources {
 
 	HttpResources(LoopResources loops, ConnectionProvider provider) {
 		super(loops, provider);
+	}
+
+	@Override
+	public AddressResolverGroup<?> getOrCreateDefaultResolver() {
+		return super.getOrCreateDefaultResolver();
 	}
 
 	static final BiFunction<LoopResources, ConnectionProvider, HttpResources> ON_HTTP_NEW;

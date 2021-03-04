@@ -40,6 +40,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -418,6 +419,11 @@ class DefaultPooledConnectionProviderTest {
 		@Override
 		protected ChannelMetricsRecorder defaultMetricsRecorder() {
 			return null;
+		}
+
+		@Override
+		protected AddressResolverGroup<?> defaultAddressResolverGroup() {
+			return DefaultAddressResolverGroup.INSTANCE;
 		}
 
 		@Override

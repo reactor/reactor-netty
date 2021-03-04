@@ -24,6 +24,7 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.resolver.AddressResolverGroup;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
@@ -95,6 +96,18 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 		else {
 			return () -> new NioDatagramChannel(family());
 		}
+	}
+
+	/**
+	 * Provides a global {@link AddressResolverGroup} from {@link UdpResources}
+	 * that is shared amongst all UDP clients. {@link AddressResolverGroup} uses the global
+	 * {@link LoopResources} from {@link UdpResources}.
+	 *
+	 * @return the global {@link AddressResolverGroup}
+	 */
+	@Override
+	protected AddressResolverGroup<?> defaultAddressResolverGroup() {
+		return UdpResources.get().getOrCreateDefaultResolver();
 	}
 
 	@Override

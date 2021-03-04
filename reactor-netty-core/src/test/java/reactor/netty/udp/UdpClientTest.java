@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.CharsetUtil;
@@ -105,24 +106,38 @@ class UdpClientTest {
 	}
 
 	@Test
-	void testIssue192() {
+	void testIssue192() throws Exception {
 		LoopResources resources = LoopResources.create("testIssue192");
+		NioEventLoopGroup loop = new NioEventLoopGroup(1);
 		UdpServer server = UdpServer.create()
 		                            .runOn(resources);
 		UdpClient client = UdpClient.create()
+		                            .resolver(spec -> spec.runOn(loop))
 		                            .runOn(resources);
 		assertThat(Thread.getAllStackTraces().keySet().stream().noneMatch(t -> t.getName().startsWith("testIssue192"))).isTrue();
 
-		Connection conn1 = server.bindNow();
-		Connection conn2 = client.connectNow();
+		Connection conn1 = null;
+		Connection conn2 = null;
+		try {
+			conn1 = server.bindNow();
+			conn2 = client.connectNow();
 
-		assertThat(conn1).isNotNull();
-		assertThat(conn2).isNotNull();
-		assertThat(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> t.getName().startsWith("testIssue192"))).isTrue();
-
-		conn1.disposeNow();
-		conn2.disposeNow();
-		resources.dispose();
+			assertThat(conn1).isNotNull();
+			assertThat(conn2).isNotNull();
+			assertThat(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> t.getName().startsWith("testIssue192"))).isTrue();
+		}
+		finally {
+			if (conn1 != null) {
+				conn1.disposeNow();
+			}
+			if (conn2 != null) {
+				conn2.disposeNow();
+			}
+			resources.disposeLater()
+			         .block(Duration.ofSeconds(5));
+			loop.shutdownGracefully()
+			    .get(5, TimeUnit.SECONDS);
+		}
 	}
 
 	@Test

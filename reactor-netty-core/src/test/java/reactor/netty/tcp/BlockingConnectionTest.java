@@ -25,6 +25,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -257,6 +259,11 @@ class BlockingConnectionTest {
 		@Override
 		protected ChannelMetricsRecorder defaultMetricsRecorder() {
 			return null;
+		}
+
+		@Override
+		protected AddressResolverGroup<?> defaultAddressResolverGroup() {
+			return DefaultAddressResolverGroup.INSTANCE;
 		}
 
 		@Override

@@ -18,7 +18,6 @@ package reactor.netty.transport;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -154,14 +153,12 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	ProxyProvider                            proxyProvider;
 	Supplier<? extends SocketAddress>        remoteAddress;
 	AddressResolverGroup<?>                  resolver;
-	final AtomicReference<AddressResolverGroup<?>> defaultResolver;
 
 	protected ClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
 		super(options);
 		this.connectionProvider = Objects.requireNonNull(connectionProvider, "connectionProvider");
 		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddress");
-		this.defaultResolver = new AtomicReference<>();
 	}
 
 	protected ClientTransportConfig(ClientTransportConfig<CONF> parent) {
@@ -177,13 +174,19 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.proxyProvider = parent.proxyProvider;
 		this.remoteAddress = parent.remoteAddress;
 		this.resolver = parent.resolver;
-		this.defaultResolver = parent.defaultResolver;
 	}
 
 	@Override
 	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
 		return isDomainSocket ? DomainSocketChannel.class : SocketChannel.class;
 	}
+
+	/**
+	 * Provides a global {@link AddressResolverGroup} that is shared amongst all clients.
+	 *
+	 * @return the global {@link AddressResolverGroup}
+	 */
+	protected abstract AddressResolverGroup<?> defaultAddressResolverGroup();
 
 	@Override
 	protected ConnectionObserver defaultConnectionObserver() {
@@ -213,7 +216,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	protected AddressResolverGroup<?> resolverInternal() {
-		AddressResolverGroup<?> resolverGroup = resolver != null ? resolver : getOrCreateDefaultResolver();
+		AddressResolverGroup<?> resolverGroup = resolver != null ? resolver : defaultAddressResolverGroup();
 		if (metricsRecorder != null) {
 			return new AddressResolverGroupMetrics<>(resolverGroup,
 					Objects.requireNonNull(metricsRecorder.get(), "Metrics recorder supplier returned null"));
@@ -221,17 +224,6 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		else {
 			return resolverGroup;
 		}
-	}
-
-	AddressResolverGroup<?> getOrCreateDefaultResolver() {
-		AddressResolverGroup<?> resolverGroup = defaultResolver.get();
-		if (resolverGroup == null) {
-			AddressResolverGroup<?> newResolverGroup =
-					DEFAULT_NAME_RESOLVER_PROVIDER.newNameResolverGroup(loopResources(), preferNative);
-			defaultResolver.compareAndSet(null, newResolverGroup);
-			resolverGroup = getOrCreateDefaultResolver();
-		}
-		return resolverGroup;
 	}
 
 	static final NameResolverProvider DEFAULT_NAME_RESOLVER_PROVIDER = NameResolverProvider.builder().build();
