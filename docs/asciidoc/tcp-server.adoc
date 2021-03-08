@@ -1,6 +1,7 @@
 :sourcedir: ./../../reactor-netty-core/src/main/java
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server
 :javadoc: https://projectreactor.io/docs/netty/release/api
+:nettyjavadoc: https://netty.io/4.1/api
 
 [[tcp-server]]
 = TCP Server
@@ -156,7 +157,9 @@ include::{examplesdir}/channeloptions/Application.java[lines=18..33]
 
 You can find more about `Netty` channel options at the following links:
 
-* https://netty.io/4.1/api/io/netty/channel/ChannelOption.html[`ChannelOption`]
+* {nettyjavadoc}/io/netty/channel/ChannelOption.html[Common ChannelOption]
+* {nettyjavadoc}/io/netty/channel/epoll/EpollChannelOption.html[Epoll ChannelOption]
+* {nettyjavadoc}/io/netty/channel/kqueue/KQueueChannelOption.html[KQueue ChannelOption]
 * https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[Socket Options]
 
 [[server-tcp-level-configurations-event-wire-logger]]
@@ -225,11 +228,11 @@ include::{examplesdir}/eventloop/Application.java[lines=18..35]
 
 When you need SSL or TLS, you can apply the configuration shown in the next listing.
 By default, if `OpenSSL` is available,
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
+{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
 provider is used as a provider. Otherwise
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
+{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
 Switching the provider can be done through
-https://netty.io/4.1/api/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
+{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
 or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 
 The following example uses `SslContextBuilder`:

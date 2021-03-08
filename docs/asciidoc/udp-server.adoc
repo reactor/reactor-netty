@@ -1,6 +1,7 @@
 :sourcedir: ./../../reactor-netty-core/src/main/java
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/udp/server
 :javadoc: https://projectreactor.io/docs/netty/release/api
+:nettyjavadoc: https://netty.io/4.1/api
 
 [[udp-server]]
 = UDP Server
@@ -155,7 +156,9 @@ include::{examplesdir}/channeloptions/Application.java[lines=18..34]
 
 For more information about Netty channel options, see the following links:
 
-* https://netty.io/4.1/api/io/netty/channel/ChannelOption.html[`ChannelOption`]
+* {nettyjavadoc}/io/netty/channel/ChannelOption.html[Common ChannelOption]
+* {nettyjavadoc}/io/netty/channel/epoll/EpollChannelOption.html[Epoll ChannelOption]
+* {nettyjavadoc}/io/netty/channel/kqueue/KQueueChannelOption.html[KQueue ChannelOption]
 * https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[Socket Options]
 
 [[server-udp-connection-configurations-wire-logger]]
