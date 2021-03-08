@@ -750,7 +750,15 @@ public final class SslProvider {
 								Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
 								SUCCESS);
 					}
-					ctx.fireChannelActive();
+					ctx.fireChannelActive(); // here ,if io.netty.handler.ssl.SslHandler add after connection success
+					// ,then cause reactor.right.reactiveBridge handler duplicate create reactor.netty.channel.ChannelOperations.
+					// downstream that have subscribed old reactor.netty.channel.FluxReceive can't receive data again.
+					// eg : MySQL client protocol do below:
+					// 1. receive one handshake packet from MySQL server.
+					// 2. if both server and client support ssl ,then send a SSL_REQUEST packet to MySQL server.
+					// 3. if '2' client start ssl handshake( need add io.netty.handler.ssl.SslHandler).
+					// 4. if '3' downstream that have subscribed old reactor.netty.channel.FluxReceive can't receive data again,
+					// because reactor.right.reactiveBridge handler create new reactor.netty.channel.ChannelOperations.
 				}
 				else {
 					if (recorder != null) {
