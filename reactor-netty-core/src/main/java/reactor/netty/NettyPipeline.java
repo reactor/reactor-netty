@@ -55,6 +55,7 @@ import io.netty.channel.ChannelInboundHandler;
  * Servers:
  * -> proxy protocol decoder ? [ProxyProtocolDecoder]
  * -> proxy protocol reader ? [ProxyProtocolReader]
+ * -> non ssl redirect detector ? [NonSslRedirectDetector]
  * -> ssl log ? [SslLoggingHandler]
  * -> ssl handler ? [SslHandler]
  * -> log ? [LoggingHandler]
@@ -74,6 +75,7 @@ import io.netty.channel.ChannelInboundHandler;
  * -> websocket frame aggregator ? [WsFrameAggregator]
  * -> onWriteIdle ? [OnChannelWriteIdle]
  * -> onReadIdle ? [OnChannelReadIdle]
+ * -> non ssl redirect handler ? [NonSslRedirectHandler]
  * => [ReactiveBridge]
  * }
  *
@@ -102,6 +104,8 @@ public interface NettyPipeline {
 	String HttpTrafficHandler    = LEFT + "httpTrafficHandler";
 	String IdleTimeoutHandler    = LEFT + "idleTimeoutHandler";
 	String LoggingHandler        = LEFT + "loggingHandler";
+	String NonSslRedirectDetector = LEFT + "nonSslRedirectDetector";
+	String NonSslRedirectHandler = LEFT + "nonSslRedirectHandler";
 	String OnChannelReadIdle     = LEFT + "onChannelReadIdle";
 	String OnChannelWriteIdle    = LEFT + "onChannelWriteIdle";
 	String ProxyHandler          = LEFT + "proxyHandler";
