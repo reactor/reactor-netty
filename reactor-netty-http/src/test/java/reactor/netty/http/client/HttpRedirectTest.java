@@ -249,8 +249,11 @@ class HttpRedirectTest extends BaseHttpTest {
 		assertThat(value).isNull();
 	}
 
+	/**
+	 * https://github.com/reactor/reactor-netty/issues/278
+	 */
 	@Test
-	void testIssue278() {
+	void testAbsoluteAndRelativeLocationRedirection() {
 		final int serverPort1 = SocketUtils.findAvailableTcpPort();
 		final int serverPort2 = SocketUtils.findAvailableTcpPort();
 
@@ -275,42 +278,9 @@ class HttpRedirectTest extends BaseHttpTest {
 			HttpClient client = HttpClient.create()
 			                              .baseUrl("http://localhost:" + serverPort1);
 
-			Mono<String> response =
-					client.followRedirect(true)
-					      .get()
-					      .uri("/1")
-					      .responseContent()
-					      .aggregate()
-					      .asString();
-
-			StepVerifier.create(response)
-			            .expectNextMatches("OK"::equals)
-			            .expectComplete()
-			            .verify(Duration.ofSeconds(30));
-
-			response = client.followRedirect(true)
-			                 .get()
-			                 .uri("/2")
-			                 .responseContent()
-			                 .aggregate()
-			                 .asString();
-
-			StepVerifier.create(response)
-			            .expectNextMatches("OK"::equals)
-			            .expectComplete()
-			            .verify(Duration.ofSeconds(30));
-
-			response = client.followRedirect(true)
-			                 .get()
-			                 .uri("/4")
-			                 .responseContent()
-			                 .aggregate()
-			                 .asString();
-
-			StepVerifier.create(response)
-			            .expectNextMatches("Other"::equals)
-			            .expectComplete()
-			            .verify(Duration.ofSeconds(30));
+			doTestAbsoluteAndRelativeLocationRedirection(client, "/1", "OK");
+			doTestAbsoluteAndRelativeLocationRedirection(client, "/2", "OK");
+			doTestAbsoluteAndRelativeLocationRedirection(client, "/4", "Other");
 		}
 		finally {
 			if (server1 != null) {
@@ -320,6 +290,19 @@ class HttpRedirectTest extends BaseHttpTest {
 				server2.disposeNow();
 			}
 		}
+	}
+
+	private void doTestAbsoluteAndRelativeLocationRedirection(HttpClient client, String uri, String responseExpectation) {
+		client.followRedirect(true)
+		      .get()
+		      .uri(uri)
+		      .responseContent()
+		      .aggregate()
+		      .asString()
+		      .as(StepVerifier::create)
+		      .expectNext(responseExpectation)
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
 	}
 
 	@Test
