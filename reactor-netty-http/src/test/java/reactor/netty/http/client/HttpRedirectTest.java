@@ -25,7 +25,9 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -251,6 +253,7 @@ class HttpRedirectTest extends BaseHttpTest {
 
 	/**
 	 * https://github.com/reactor/reactor-netty/issues/278
+	 * https://github.com/reactor/reactor-netty/issues/1533
 	 */
 	@Test
 	void testAbsoluteAndRelativeLocationRedirection() {
@@ -266,7 +269,10 @@ class HttpRedirectTest extends BaseHttpTest {
 					          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
 					                       .get("/2", (req, res) -> res.sendRedirect("http://localhost:" + serverPort1 + "/3"))
 					                       .get("/3", (req, res) -> res.sendString(Mono.just("OK")))
-					                       .get("/4", (req, res) -> res.sendRedirect("http://localhost:" + serverPort2 + "/1")))
+					                       .get("/4", (req, res) -> res.sendRedirect("http://localhost:" + serverPort2 + "/1"))
+					                       .get("/5", (req, res) -> res.sendRedirect("//localhost:" + serverPort1 + "/3"))
+					                       .get("/6", (req, res) -> res.sendRedirect("./3"))
+					                       .get("/7/1", (req, res) -> res.sendRedirect("../3")))
 					          .bindNow();
 
 			server2 =
@@ -275,12 +281,18 @@ class HttpRedirectTest extends BaseHttpTest {
 					          .route(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
 					          .bindNow();
 
+			String baseUrl1 = "http://localhost:" + serverPort1;
+			String baseUrl2 = "http://localhost:" + serverPort2;
 			HttpClient client = HttpClient.create()
-			                              .baseUrl("http://localhost:" + serverPort1);
+			                              .baseUrl(baseUrl1);
 
-			doTestAbsoluteAndRelativeLocationRedirection(client, "/1", "OK");
-			doTestAbsoluteAndRelativeLocationRedirection(client, "/2", "OK");
-			doTestAbsoluteAndRelativeLocationRedirection(client, "/4", "Other");
+			doTestAbsoluteAndRelativeLocationRedirection(client, "/1", "OK", true, baseUrl1 + "/1", baseUrl1 + "/3");
+			doTestAbsoluteAndRelativeLocationRedirection(client, "/2", "OK", true, baseUrl1 + "/2", baseUrl1 + "/3");
+			doTestAbsoluteAndRelativeLocationRedirection(client, "/3", "OK", false, baseUrl1 + "/3");
+			doTestAbsoluteAndRelativeLocationRedirection(client, "/4", "Other", true, baseUrl1 + "/4", baseUrl2 + "/1");
+			doTestAbsoluteAndRelativeLocationRedirection(client, "/5", "OK", true, baseUrl1 + "/5", baseUrl1 + "/3");
+			doTestAbsoluteAndRelativeLocationRedirection(client, "/6", "OK", true, baseUrl1 + "/6", baseUrl1 + "/3");
+			doTestAbsoluteAndRelativeLocationRedirection(client, "/7/1", "OK", true, baseUrl1 + "/7/1", baseUrl1 + "/3");
 		}
 		finally {
 			if (server1 != null) {
@@ -292,17 +304,25 @@ class HttpRedirectTest extends BaseHttpTest {
 		}
 	}
 
-	private void doTestAbsoluteAndRelativeLocationRedirection(HttpClient client, String uri, String responseExpectation) {
-		client.followRedirect(true)
+	private void doTestAbsoluteAndRelativeLocationRedirection(
+			HttpClient client, String uri, String expectedResponse, boolean expectRedirect, String... expectedResourceUrl) {
+		AtomicBoolean redirected = new AtomicBoolean();
+		AtomicReference<List<String>> resourceUrls = new AtomicReference<>(new ArrayList<>());
+		client.doOnRequest((req, conn) -> resourceUrls.get().add(req.resourceUrl()))
+		      .doOnRedirect((res, conn) -> redirected.set(true))
+		      .followRedirect(true)
 		      .get()
 		      .uri(uri)
 		      .responseContent()
 		      .aggregate()
 		      .asString()
 		      .as(StepVerifier::create)
-		      .expectNext(responseExpectation)
+		      .expectNext(expectedResponse)
 		      .expectComplete()
 		      .verify(Duration.ofSeconds(5));
+
+		assertThat(redirected.get()).isEqualTo(expectRedirect);
+		assertThat(resourceUrls.get().toArray(new String[0])).isEqualTo(expectedResourceUrl);
 	}
 
 	@Test
