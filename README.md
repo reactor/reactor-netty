@@ -77,6 +77,7 @@ Having trouble with `Reactor Netty`? We'd like to help!
   tagged with [`reactor-netty`](https://stackoverflow.com/questions/tagged/reactor-netty). You can also chat
   with the community on [Gitter](https://gitter.im/reactor/reactor-netty).
 * Report bugs with `Reactor Netty` at [github.com/reactor/reactor-netty/issues](https://github.com/reactor/reactor-netty/issues).
+* More about [Support and Deprecation policies](https://github.com/reactor/.github/blob/master/SUPPORT.adoc)
 
 ## Reporting Issues
 `Reactor Netty` uses `GitHub’s` integrated issue tracking system to record bugs and feature requests.
@@ -88,7 +89,6 @@ If you want to raise an issue, please follow the recommendations below:
   the version of `Reactor Netty` that you are using, as well as your `Operating System` and
   `JVM` version.
 * If you want to raise a security vulnerability, please review our [Security Policy](https://github.com/reactor/reactor-netty/security/policy) for more details.
-* More about [Support and Deprecation policies](https://github.com/reactor/.github/blob/master/SUPPORT.adoc)
 
 ## Building from Source
 You don't need to build from source to use `Reactor Netty` (binaries in
