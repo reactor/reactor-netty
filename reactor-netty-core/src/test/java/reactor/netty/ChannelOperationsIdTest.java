@@ -92,7 +92,7 @@ class ChannelOperationsIdTest {
 
 		assertThat(serverOpsLongId.get()).isNotNull();
 		assertThat(serverChannelId.get()).isNotNull()
-				.isEqualTo(serverOpsLongId.get());
+				.isEqualTo('[' + serverOpsLongId.get() + ']');
 
 		assertThat(clientOpsShortId.get()).isNotNull();
 		assertThat(clientChannelShortId.get()).isNotNull()
@@ -100,6 +100,6 @@ class ChannelOperationsIdTest {
 
 		assertThat(clientOpsLongId.get()).isNotNull();
 		assertThat(clientChannelId.get()).isNotNull()
-				.isEqualTo(clientOpsLongId.get());
+				.isEqualTo('[' + clientOpsLongId.get() + ']');
 	}
 }

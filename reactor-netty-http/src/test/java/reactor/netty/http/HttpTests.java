@@ -560,7 +560,7 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(serverRequestId.get());
 
 		assertThat(serverChannelId.get()).isNotNull();
-		assertThat(serverOpsLongId.get()).isNotNull()
+		assertThat('[' + serverOpsLongId.get() + ']').isNotNull()
 				.isEqualTo(serverChannelId.get().replace(serverChannelShortId.get(), serverChannelShortId.get() + "-1"));
 
 		assertThat(clientChannelShortId.get()).isNotNull();
@@ -570,7 +570,7 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(clientRequestId.get());
 
 		assertThat(clientChannelId.get()).isNotNull();
-		assertThat(clientOpsLongId.get()).isNotNull()
+		assertThat('[' + clientOpsLongId.get() + ']').isNotNull()
 				.isEqualTo(clientChannelId.get().replace(clientChannelShortId.get(), clientChannelShortId.get() + "-1"));
 
 		client.get()
@@ -592,7 +592,7 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(serverRequestId.get());
 
 		assertThat(serverChannelId.get()).isNotNull();
-		assertThat(serverOpsLongId.get()).isNotNull()
+		assertThat('[' + serverOpsLongId.get() + ']').isNotNull()
 				.isEqualTo(serverChannelId.get().replace(serverChannelShortId.get(), serverChannelShortId.get() + "-2"));
 
 		assertThat(clientChannelShortId.get()).isNotNull();
@@ -602,7 +602,7 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(clientRequestId.get());
 
 		assertThat(clientChannelId.get()).isNotNull();
-		assertThat(clientOpsLongId.get()).isNotNull()
+		assertThat('[' + clientOpsLongId.get() + ']').isNotNull()
 				.isEqualTo(clientChannelId.get().replace(clientChannelShortId.get(), clientChannelShortId.get() + "-2"));
 	}
 }
