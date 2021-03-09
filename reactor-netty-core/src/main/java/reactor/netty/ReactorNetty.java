@@ -214,15 +214,21 @@ public final class ReactorNetty {
 			Connection connection = Connection.from(channel);
 			if (connection instanceof ChannelOperationsId) {
 				channelStr = ((ChannelOperationsId) connection).asLongText();
+				return new StringBuilder(1 + channelStr.length() + 2 + msg.length())
+						.append('[')
+						.append(channelStr)
+						.append("] ")
+						.append(msg)
+						.toString();
 			}
 			else {
 				channelStr = channel.toString();
+				return new StringBuilder(channelStr.length() + 1 + msg.length())
+						.append(channelStr)
+						.append(' ')
+						.append(msg)
+						.toString();
 			}
-			return new StringBuilder(channelStr.length() + 1 + msg.length())
-					.append(channelStr)
-					.append(' ')
-					.append(msg)
-					.toString();
 		}
 		else {
 			return msg;

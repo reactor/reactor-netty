@@ -554,32 +554,29 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			String localAddressStr = String.valueOf(localAddress);
 			String remoteAddressStr = String.valueOf(remoteAddress);
 			StringBuilder buf =
-					new StringBuilder(7 + shortText.length() + 4 + localAddressStr.length() + 3 + 2 + remoteAddressStr.length() + 1)
-					.append("[id: 0x")
+					new StringBuilder(6 + shortText.length() + 4 + localAddressStr.length() + 3 + 2 + remoteAddressStr.length())
+					.append("id: 0x")
 					.append(shortText)
 					.append(", L:")
 					.append(localAddressStr)
 					.append(active ? " - " : " ! ")
 					.append("R:")
-					.append(remoteAddressStr)
-					.append(']');
+					.append(remoteAddressStr);
 			longId = buf.toString();
 		}
 		else if (localAddress != null) {
 			String localAddressStr = String.valueOf(localAddress);
-			StringBuilder buf = new StringBuilder(7 + shortText.length() + 4 + localAddressStr.length() + 1)
-					.append("[id: 0x")
+			StringBuilder buf = new StringBuilder(6 + shortText.length() + 4 + localAddressStr.length())
+					.append("id: 0x")
 					.append(shortText)
 					.append(", L:")
-					.append(localAddressStr)
-					.append(']');
+					.append(localAddressStr);
 			longId = buf.toString();
 		}
 		else {
-			StringBuilder buf = new StringBuilder(7 + shortText.length() + 1)
-					.append("[id: 0x")
-					.append(shortText)
-					.append(']');
+			StringBuilder buf = new StringBuilder(6 + shortText.length())
+					.append("id: 0x")
+					.append(shortText);
 			longId = buf.toString();
 		}
 

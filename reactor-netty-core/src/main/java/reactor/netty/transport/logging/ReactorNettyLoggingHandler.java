@@ -140,7 +140,12 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 	private String channelString(Channel channel) {
 		Connection connection = Connection.from(channel);
 		if (connection instanceof ChannelOperationsId) {
-			return ((ChannelOperationsId) connection).asLongText();
+			String channelStr = ((ChannelOperationsId) connection).asLongText();
+			return new StringBuilder(1 + channelStr.length() + 1)
+					.append('[')
+					.append(channelStr)
+					.append(']')
+					.toString();
 		}
 		else {
 			return channel.toString();
