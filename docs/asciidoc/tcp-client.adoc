@@ -162,7 +162,9 @@ include::{examplesdir}/channeloptions/Application.java[lines=18..35]
 
 You can find more about `Netty` channel options at the following links:
 
-* {nettyjavadoc}/io/netty/channel/ChannelOption.html[ChannelOption]
+* {nettyjavadoc}/io/netty/channel/ChannelOption.html[Common ChannelOption]
+* {nettyjavadoc}/io/netty/channel/epoll/EpollChannelOption.html[Epoll ChannelOption]
+* {nettyjavadoc}/io/netty/channel/kqueue/KQueueChannelOption.html[KQueue ChannelOption]
 * https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[Socket Options]
 
 [[client-tcp-level-configurations-event-wire-logger]]
