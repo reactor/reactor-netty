@@ -43,8 +43,12 @@ final class SniProvider {
 	 */
 	void addSniHandler(Channel channel, boolean sslDebug) {
 		ChannelPipeline pipeline = channel.pipeline();
-		pipeline.addFirst(NettyPipeline.SslHandler, newSniHandler());
-
+		if (pipeline.get(NettyPipeline.NonSslRedirectDetector) != null) {
+			pipeline.addAfter(NettyPipeline.NonSslRedirectDetector, NettyPipeline.SslHandler, newSniHandler());
+		}
+		else {
+			pipeline.addFirst(NettyPipeline.SslHandler, newSniHandler());
+		}
 		SslProvider.addSslReadHandler(pipeline, sslDebug);
 	}
 

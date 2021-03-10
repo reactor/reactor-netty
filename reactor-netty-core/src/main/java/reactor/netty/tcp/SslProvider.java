@@ -487,6 +487,9 @@ public final class SslProvider {
 		if (pipeline.get(NettyPipeline.ProxyHandler) != null) {
 			pipeline.addAfter(NettyPipeline.ProxyHandler, NettyPipeline.SslHandler, sslHandler);
 		}
+		else if (pipeline.get(NettyPipeline.NonSslRedirectDetector) != null) {
+			pipeline.addAfter(NettyPipeline.NonSslRedirectDetector, NettyPipeline.SslHandler, sslHandler);
+		}
 		else {
 			pipeline.addFirst(NettyPipeline.SslHandler, sslHandler);
 		}

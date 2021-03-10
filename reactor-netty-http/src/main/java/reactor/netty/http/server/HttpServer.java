@@ -686,11 +686,40 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+		return secure(sslProviderBuilder, false);
+	}
+
+	/**
+	 * Apply an SSL configuration customization via the passed builder. The builder
+	 * will produce the {@link SslContext} to be passed to with a default value of
+	 * {@code 10} seconds handshake timeout unless the environment property {@code
+	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 * <p>
+	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
+	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * <pre>
+	 * {@code
+	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     SslContextBuilder sslContextBuilder =
+	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder), true);
+	 * }
+	 * </pre>
+	 *
+	 * @param sslProviderBuilder  builder callback for further customization of SslContext.
+	 * @param redirectHttpToHttps true enables redirecting HTTP to HTTPS by changing the
+	 *                            scheme only but otherwise leaving the port the same.
+	 *                            This configuration is applicable only for HTTP 1.x.
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.5
+	 */
+	public final HttpServer secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder, boolean redirectHttpToHttps) {
 		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
 		HttpServer dup = duplicate();
 		SslProvider.SslContextSpec builder = SslProvider.builder();
 		sslProviderBuilder.accept(builder);
 		dup.configuration().sslProvider = ((SslProvider.Builder) builder).build();
+		dup.configuration().redirectHttpToHttps = redirectHttpToHttps;
 		return dup;
 	}
 
@@ -713,9 +742,35 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer secure(SslProvider sslProvider) {
+		return secure(sslProvider, false);
+	}
+
+	/**
+	 * Applies an SSL configuration via the passed {@link SslProvider}.
+	 * <p>
+	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
+	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * <pre>
+	 * {@code
+	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     SslContextBuilder sslContextBuilder =
+	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder), true);
+	 * }
+	 * </pre>
+	 *
+	 * @param sslProvider         The provider to set when configuring SSL
+	 * @param redirectHttpToHttps true enables redirecting HTTP to HTTPS by changing the
+	 *                            scheme only but otherwise leaving the port the same.
+	 *                            This configuration is applicable only for HTTP 1.x.
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.5
+	 */
+	public final HttpServer secure(SslProvider sslProvider, boolean redirectHttpToHttps) {
 		Objects.requireNonNull(sslProvider, "sslProvider");
 		HttpServer dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
+		dup.configuration().redirectHttpToHttps = redirectHttpToHttps;
 		return dup;
 	}
 

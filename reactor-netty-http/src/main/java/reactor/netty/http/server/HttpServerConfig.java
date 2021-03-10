@@ -191,6 +191,19 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	/**
+	 * Returns true if that {@link HttpServer} will redirect HTTP to HTTPS by changing
+	 * the scheme only but otherwise leaving the port the same when SSL is enabled.
+	 * This configuration is applicable only for HTTP/1.x.
+	 *
+	 * @return true if that {@link HttpServer} will redirect HTTP to HTTPS by changing
+	 * the scheme only but otherwise leaving the port the same when SSL is enabled.
+	 * This configuration is applicable only for HTTP/1.x.
+	 */
+	public boolean redirectHttpToHttps() {
+		return redirectHttpToHttps;
+	}
+
+	/**
 	 * Returns the current {@link SslProvider} if that {@link HttpServer} secured via SSL
 	 * transport or null.
 	 *
@@ -231,6 +244,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	HttpProtocol[]                                          protocols;
 	int                                                     _protocols;
 	ProxyProtocolSupportType                                proxyProtocolSupportType;
+	boolean                                                 redirectHttpToHttps;
 	SslProvider                                             sslProvider;
 	Function<String, String>                                uriTagValue;
 
@@ -262,6 +276,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.protocols = parent.protocols;
 		this._protocols = parent._protocols;
 		this.proxyProtocolSupportType = parent.proxyProtocolSupportType;
+		this.redirectHttpToHttps = parent.redirectHttpToHttps;
 		this.sslProvider = parent.sslProvider;
 		this.uriTagValue = parent.uriTagValue;
 	}
@@ -795,6 +810,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ChannelOperations.OnSetup                               opsFactory;
 		final int                                                     protocols;
 		final ProxyProtocolSupportType                                proxyProtocolSupportType;
+		final boolean                                                 redirectHttpToHttps;
 		final SslProvider                                             sslProvider;
 		final Function<String, String>                                uriTagValue;
 
@@ -814,6 +830,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.opsFactory = config.channelOperationsProvider();
 			this.protocols = config._protocols;
 			this.proxyProtocolSupportType = config.proxyProtocolSupportType;
+			this.redirectHttpToHttps = config.redirectHttpToHttps;
 			this.sslProvider = config.sslProvider;
 			this.uriTagValue = config.uriTagValue;
 		}
@@ -823,7 +840,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			boolean needRead = false;
 
 			if (sslProvider != null) {
-				sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+				ChannelPipeline pipeline = channel.pipeline();
+				if (redirectHttpToHttps && ((protocols & h2) != h2)) {
+					NonSslRedirectDetector nonSslRedirectDetector = new NonSslRedirectDetector(sslProvider,
+							remoteAddress,
+							SSL_DEBUG);
+					pipeline.addFirst(NettyPipeline.NonSslRedirectDetector, nonSslRedirectDetector);
+				}
+				else {
+					sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+				}
 
 				if ((protocols & h11orH2) == h11orH2) {
 					channel.pipeline()

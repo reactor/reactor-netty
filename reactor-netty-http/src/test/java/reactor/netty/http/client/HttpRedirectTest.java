@@ -34,6 +34,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -45,6 +46,7 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
+import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.HttpProtocol;
@@ -510,6 +512,62 @@ class HttpRedirectTest extends BaseHttpTest {
 				server2.disposeNow();
 			}
 		}
+	}
+
+	@Test
+	void testHttpRequestIfRedirectHttpToHttpsEnabled() throws Exception {
+		SslContext sslContext =
+				SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+						.build();
+		disposableServer =
+				createServer()
+						.host("localhost")
+						.secure(spec -> spec.sslContext(sslContext), true)
+						.bindNow();
+		AtomicReference<Connection> connectionRef = new AtomicReference<>();
+		HttpClient client =
+				HttpClient.create()
+						.doOnConnected(connectionRef::set)
+						.host(disposableServer.host())
+						.port(disposableServer.port());
+		String uri = String.format("http://%s:%d/for-test/123", disposableServer.host(), disposableServer.port());
+		StepVerifier
+				.create(client.get().uri(uri).response()
+						.doOnNext(response -> {
+							String location = response.responseHeaders().get(HttpHeaderNames.LOCATION);
+							String expectedLocation = uri.replace("http://", "https://");
+
+							assertThat(response.status()).isEqualTo(HttpResponseStatus.PERMANENT_REDIRECT);
+							assertThat(location).isEqualTo(expectedLocation);
+							assertThat(connectionRef.get().isDisposed()).isTrue();
+						}))
+				.expectNextCount(1)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void testHttpsRequestIfRedirectHttpToHttpsEnabled() {
+		String message = "The client should receive the message";
+		disposableServer =
+				createServer()
+						.host("localhost")
+						.secure(spec -> spec.sslContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())), true)
+						.handle((request, response) -> response.sendString(Mono.just(message)))
+						.bindNow();
+		HttpClient client =
+				HttpClient.create()
+						.secure(spec -> spec.sslContext(SslContextBuilder.forClient()
+								.trustManager(InsecureTrustManagerFactory.INSTANCE)));
+		String uri = String.format("https://%s:%d/for-test/123", disposableServer.host(), disposableServer.port());
+		StepVerifier
+				.create(client.get().uri(uri).response((response, body) -> {
+					assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
+					return body.aggregate().asString();
+				}))
+				.expectNextMatches(message::equals)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 	}
 
 	@Test
