@@ -18,6 +18,8 @@ package reactor.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -418,6 +420,7 @@ class HttpClientConnect extends HttpClient {
 		final Duration                responseTimeout;
 
 		volatile UriEndpoint        toURI;
+		volatile String             resourceUrl;
 		volatile UriEndpoint        fromURI;
 		volatile Supplier<String>[] redirectedFrom;
 		volatile boolean            shouldRetry;
@@ -460,6 +463,7 @@ class HttpClientConnect extends HttpClient {
 			else {
 				this.toURI = uriEndpointFactory.createUriEndpoint(configuration.uri, configuration.websocketClientSpec != null);
 			}
+			this.resourceUrl = toURI.toExternalForm();
 		}
 
 		@Override
@@ -474,7 +478,7 @@ class HttpClientConnect extends HttpClient {
 
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
-				ch.resourceUrl = toURI.toExternalForm();
+				ch.resourceUrl = this.resourceUrl;
 				ch.responseTimeout = responseTimeout;
 
 				UriEndpoint uri = toURI;
@@ -573,22 +577,28 @@ class HttpClientConnect extends HttpClient {
 
 		void redirect(String to) {
 			Supplier<String>[] redirectedFrom = this.redirectedFrom;
+			UriEndpoint toURITemp;
 			UriEndpoint from = toURI;
-			if (to.startsWith("/")) {
-				SocketAddress address = from.getRemoteAddress();
-				if (address instanceof InetSocketAddress) {
-					InetSocketAddress inetSocketAddress = (InetSocketAddress) address;
-					toURI = uriEndpointFactory.createUriEndpoint(from, to,
-							() -> URI_ADDRESS_MAPPER.apply(inetSocketAddress.getHostString(), inetSocketAddress.getPort()));
+			SocketAddress address = from.getRemoteAddress();
+			if (address instanceof InetSocketAddress) {
+				try {
+					URI redirectUri = new URI(to);
+					if (!redirectUri.isAbsolute()) {
+						URI requestUri = new URI(resourceUrl);
+						redirectUri = requestUri.resolve(redirectUri);
+					}
+					toURITemp = uriEndpointFactory.createUriEndpoint(redirectUri, from.isWs());
 				}
-				else {
-					toURI = uriEndpointFactory.createUriEndpoint(from, to, () -> address);
+				catch (URISyntaxException e) {
+					throw new IllegalArgumentException("Cannot resolve location header", e);
 				}
 			}
 			else {
-				toURI = uriEndpointFactory.createUriEndpoint(to, from.isWs());
+				toURITemp = uriEndpointFactory.createUriEndpoint(from, to, () -> address);
 			}
 			fromURI = from;
+			toURI = toURITemp;
+			resourceUrl = toURITemp.toExternalForm();
 			this.redirectedFrom = addToRedirectedFromArray(redirectedFrom, from);
 		}
 
