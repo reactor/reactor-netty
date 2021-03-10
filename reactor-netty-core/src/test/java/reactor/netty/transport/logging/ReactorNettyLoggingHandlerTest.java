@@ -72,7 +72,7 @@ class ReactorNettyLoggingHandlerTest {
 	void shouldLogByteBuf() {
 		final ByteBuf byteBuf = Unpooled.copiedBuffer("TEST", Charset.defaultCharset());
 
-		sendMessage(byteBuf, "[id: 0xembedded, L:embedded - R:embedded] READ: 4B TEST");
+		sendMessage(byteBuf, "[id:embedded, L:embedded - R:embedded] READ: 4B TEST");
 	}
 
 	@Test
@@ -80,12 +80,12 @@ class ReactorNettyLoggingHandlerTest {
 		final ByteBufHolder byteBufHolder =
 			new DefaultByteBufHolder(Unpooled.copiedBuffer("TEST", Charset.defaultCharset()));
 
-		sendMessage(byteBufHolder, "[id: 0xembedded, L:embedded - R:embedded] READ: 4B TEST");
+		sendMessage(byteBufHolder, "[id:embedded, L:embedded - R:embedded] READ: 4B TEST");
 	}
 
 	@Test
 	void shouldLogObject() {
-		sendMessage("TEST", "[id: 0xembedded, L:embedded - R:embedded] READ: TEST");
+		sendMessage("TEST", "[id:embedded, L:embedded - R:embedded] READ: TEST");
 	}
 
 	private void sendMessage(Object input, String expectedResult) {

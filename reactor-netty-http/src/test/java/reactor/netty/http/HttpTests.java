@@ -559,9 +559,12 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(serverChannelShortId.get() + "-1")
 				.isEqualTo(serverRequestId.get());
 
+		int originalChannelIdPrefixLength = "[id: 0x".length();
 		assertThat(serverChannelId.get()).isNotNull();
-		assertThat('[' + serverOpsLongId.get() + ']').isNotNull()
-				.isEqualTo(serverChannelId.get().replace(serverChannelShortId.get(), serverChannelShortId.get() + "-1"));
+		assertThat(serverOpsLongId.get() + ']').isNotNull()
+				.isEqualTo(serverChannelId.get()
+						.substring(originalChannelIdPrefixLength)
+						.replace(serverChannelShortId.get(), serverChannelShortId.get() + "-1"));
 
 		assertThat(clientChannelShortId.get()).isNotNull();
 		assertThat(clientRequestId.get()).isNotNull();
@@ -570,8 +573,10 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(clientRequestId.get());
 
 		assertThat(clientChannelId.get()).isNotNull();
-		assertThat('[' + clientOpsLongId.get() + ']').isNotNull()
-				.isEqualTo(clientChannelId.get().replace(clientChannelShortId.get(), clientChannelShortId.get() + "-1"));
+		assertThat(clientOpsLongId.get() + ']').isNotNull()
+				.isEqualTo(clientChannelId.get()
+						.substring(originalChannelIdPrefixLength)
+						.replace(clientChannelShortId.get(), clientChannelShortId.get() + "-1"));
 
 		client.get()
 		      .uri("/")
@@ -592,8 +597,10 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(serverRequestId.get());
 
 		assertThat(serverChannelId.get()).isNotNull();
-		assertThat('[' + serverOpsLongId.get() + ']').isNotNull()
-				.isEqualTo(serverChannelId.get().replace(serverChannelShortId.get(), serverChannelShortId.get() + "-2"));
+		assertThat(serverOpsLongId.get() + ']').isNotNull()
+				.isEqualTo(serverChannelId.get()
+						.substring(originalChannelIdPrefixLength)
+						.replace(serverChannelShortId.get(), serverChannelShortId.get() + "-2"));
 
 		assertThat(clientChannelShortId.get()).isNotNull();
 		assertThat(clientRequestId.get()).isNotNull();
@@ -602,7 +609,9 @@ class HttpTests extends BaseHttpTest {
 				.isEqualTo(clientRequestId.get());
 
 		assertThat(clientChannelId.get()).isNotNull();
-		assertThat('[' + clientOpsLongId.get() + ']').isNotNull()
-				.isEqualTo(clientChannelId.get().replace(clientChannelShortId.get(), clientChannelShortId.get() + "-2"));
+		assertThat(clientOpsLongId.get() + ']').isNotNull()
+				.isEqualTo(clientChannelId.get()
+						.substring(originalChannelIdPrefixLength)
+						.replace(clientChannelShortId.get(), clientChannelShortId.get() + "-2"));
 	}
 }

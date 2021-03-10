@@ -214,16 +214,18 @@ public final class ReactorNetty {
 			Connection connection = Connection.from(channel);
 			if (connection instanceof ChannelOperationsId) {
 				channelStr = ((ChannelOperationsId) connection).asLongText();
-				return new StringBuilder(1 + channelStr.length() + 2 + msg.length())
-						.append('[')
+				return new StringBuilder(4 + channelStr.length() + 2 + msg.length())
+						.append(CHANNEL_ID_PREFIX)
 						.append(channelStr)
 						.append("] ")
 						.append(msg)
 						.toString();
 			}
 			else {
-				channelStr = channel.toString();
-				return new StringBuilder(channelStr.length() + 1 + msg.length())
+				// Replace "[id: 0x" with "[id:" in order to keep it consistent with ChannelOperationsId#asLongText()
+				channelStr = channel.toString().substring(ORIGINAL_CHANNEL_ID_PREFIX_LENGTH);
+				return new StringBuilder(4 + channelStr.length() + 1 + msg.length())
+						.append(CHANNEL_ID_PREFIX)
 						.append(channelStr)
 						.append(' ')
 						.append(msg)
@@ -975,6 +977,9 @@ public final class ReactorNetty {
 	static final Predicate<Object>         PREDICATE_FLUSH       = o -> false;
 
 	static final ByteBuf                   BOUNDARY              = Unpooled.EMPTY_BUFFER;
+
+	static final int ORIGINAL_CHANNEL_ID_PREFIX_LENGTH = "[id: 0x".length();
+	static final String CHANNEL_ID_PREFIX = "[id:";
 
 	@SuppressWarnings("ReferenceEquality")
 	//Design to use reference comparison here

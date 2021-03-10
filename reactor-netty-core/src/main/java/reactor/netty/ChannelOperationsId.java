@@ -50,7 +50,7 @@ public interface ChannelOperationsId {
 	 * and in case of HTTP, the serial number of the request received on that connection.
 	 * <p>Format of the long string:
 	 * <pre>
-	 * {@code id: 0x<CONNECTION_ID>-<REQUEST_NUMBER>, <LOCAL_ADDRESS> <CONNECTION_OPENED_CLOSED> <REMOTE_ADDRESS>}
+	 * {@code <CONNECTION_ID>-<REQUEST_NUMBER>, L:<LOCAL_ADDRESS> <CONNECTION_OPENED_CLOSED> R:<REMOTE_ADDRESS>}
 	 * </pre>
 	 * </p>
 	 * <p>
@@ -60,20 +60,20 @@ public interface ChannelOperationsId {
 	 * Opened connection
 	 *     <CONNECTION_ID>: 329c6ffd
 	 *     <REQUEST_NUMBER>: 5
-	 *     <LOCAL_ADDRESS>: L:/0:0:0:0:0:0:0:1:64286
+	 *     <LOCAL_ADDRESS>: /0:0:0:0:0:0:0:1:64286
 	 *     <CONNECTION_OPENED_CLOSED>: - (opened)
-	 *     <REMOTE_ADDRESS>: R:/0:0:0:0:0:0:0:1:64284
+	 *     <REMOTE_ADDRESS>: /0:0:0:0:0:0:0:1:64284
 	 *
-	 *     Result: id: 0x329c6ffd-5, L:/0:0:0:0:0:0:0:1:64286 - R:/0:0:0:0:0:0:0:1:64284
+	 *     Result: 329c6ffd-5, L:/0:0:0:0:0:0:0:1:64286 - R:/0:0:0:0:0:0:0:1:64284
 	 *
 	 * Closed connection
 	 *     <CONNECTION_ID>: 329c6ffd
 	 *     <REQUEST_NUMBER>: 5
-	 *     <LOCAL_ADDRESS>: L:/0:0:0:0:0:0:0:1:64286
+	 *     <LOCAL_ADDRESS>: /0:0:0:0:0:0:0:1:64286
 	 *     <CONNECTION_OPENED_CLOSED>: ! (closed)
-	 *     <REMOTE_ADDRESS>: R:/0:0:0:0:0:0:0:1:64284
+	 *     <REMOTE_ADDRESS>: /0:0:0:0:0:0:0:1:64284
 	 *
-	 *     Result: id: 0x329c6ffd-5, L:/0:0:0:0:0:0:0:1:64286 ! R:/0:0:0:0:0:0:0:1:64284
+	 *     Result: 329c6ffd-5, L:/0:0:0:0:0:0:0:1:64286 ! R:/0:0:0:0:0:0:0:1:64284
 	 * }
 	 * </pre>
 	 * </p>
