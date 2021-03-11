@@ -13,25 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.documentation.http.client.channeloptions;
+package reactor.netty.examples.documentation.http.client.pool;
 
-import io.netty.channel.ChannelOption;
-import io.netty.channel.epoll.EpollChannelOption;
 import reactor.netty.http.client.HttpClient;
-import java.net.InetSocketAddress;
+import reactor.netty.resources.ConnectionProvider;
+
+import java.time.Duration;
 
 public class Application {
 
 	public static void main(String[] args) {
-		HttpClient client =
-				HttpClient.create()
-				          .bindAddress(() -> new InetSocketAddress("host", 1234))
-				          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000) //<1>
-				          .option(ChannelOption.SO_KEEPALIVE, true)            //<2>
-				          // The options below are available only when Epoll transport is used
-				          .option(EpollChannelOption.TCP_KEEPIDLE, 300)        //<3>
-				          .option(EpollChannelOption.TCP_KEEPINTVL, 60)        //<4>
-				          .option(EpollChannelOption.TCP_KEEPCNT, 8);          //<5>
+		ConnectionProvider provider =
+				ConnectionProvider.builder("custom")
+				                  .maxConnections(50)
+				                  .maxIdleTime(Duration.ofSeconds(20))           //<1>
+				                  .maxLifeTime(Duration.ofSeconds(60))           //<2>
+				                  .pendingAcquireTimeout(Duration.ofSeconds(60)) //<3>
+				                  .evictInBackground(Duration.ofSeconds(120))    //<4>
+				                  .build();
+
+		HttpClient client = HttpClient.create(provider);
 
 		String response =
 				client.get()
@@ -42,5 +43,8 @@ public class Application {
 				      .block();
 
 		System.out.println("Response " + response);
+
+		provider.disposeLater()
+		        .block();
 	}
 }

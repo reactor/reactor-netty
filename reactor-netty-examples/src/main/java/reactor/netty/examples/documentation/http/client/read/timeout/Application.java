@@ -13,34 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.documentation.http.client.channeloptions;
+package reactor.netty.examples.documentation.http.client.read.timeout;
 
-import io.netty.channel.ChannelOption;
-import io.netty.channel.epoll.EpollChannelOption;
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
-import java.net.InetSocketAddress;
+
+import java.time.Duration;
 
 public class Application {
 
 	public static void main(String[] args) {
 		HttpClient client =
 				HttpClient.create()
-				          .bindAddress(() -> new InetSocketAddress("host", 1234))
-				          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000) //<1>
-				          .option(ChannelOption.SO_KEEPALIVE, true)            //<2>
-				          // The options below are available only when Epoll transport is used
-				          .option(EpollChannelOption.TCP_KEEPIDLE, 300)        //<3>
-				          .option(EpollChannelOption.TCP_KEEPINTVL, 60)        //<4>
-				          .option(EpollChannelOption.TCP_KEEPCNT, 8);          //<5>
+				          .responseTimeout(Duration.ofSeconds(1));    //<1>
 
-		String response =
-				client.get()
+		String response1 =
+				client.post()
 				      .uri("https://example.com/")
+				      .send((req, out) -> {
+				          req.responseTimeout(Duration.ofSeconds(2)); //<2>
+				          return out.sendString(Mono.just("body1"));
+				      })
 				      .responseContent()
 				      .aggregate()
 				      .asString()
 				      .block();
 
-		System.out.println("Response " + response);
+		System.out.println("Response " + response1);
+
+		String response2 =
+				client.post()
+				      .uri("https://example.com/")
+				      .send((req, out) -> out.sendString(Mono.just("body2")))
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .block();
+
+		System.out.println("Response " + response2);
 	}
 }

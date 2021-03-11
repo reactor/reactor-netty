@@ -8,7 +8,7 @@
 
 Reactor Netty provides the easy-to-use and easy-to-configure
 {javadoc}/reactor/netty/http/client/HttpClient.html[`HttpClient`].
-It hides most of the Netty functionality that is required to create a `HTTP` client
+It hides most of the Netty functionality that is required to create an `HTTP` client
 and adds Reactive Streams backpressure.
 
 == Connect
@@ -263,8 +263,13 @@ to extend the default `TCP` client configuration (add an option, bind address et
 [source,java,indent=0]
 .{examplesdir}/channeloptions/Application.java
 ----
-include::{examplesdir}/channeloptions/Application.java[lines=18..40]
+include::{examplesdir}/channeloptions/Application.java[lines=18..46]
 ----
+<1> Configures the connection establishment timeout to 10 seconds.
+<2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
+<3> The connection needs to remain idle for 5 minutes before TCP starts sending `keepalive` probes.
+<4> Configures the time between individual `keepalive` probes to 1 minute.
+<5> Configures the maximum number of TCP `keepalive` probes to 8.
 ====
 
 See <<tcp-client>> for more about `TCP` level configurations.
@@ -306,7 +311,7 @@ printing the content.
 When you need SSL or TLS, you can apply the configuration shown in the next example.
 By default, if `OpenSSL` is available, a
 {nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#OPENSSL[SslProvider.OPENSSL]
-provider is used as a provider. Otherwise a
+provider is used as a provider. Otherwise, a
 {nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[SslProvider.JDK] provider is used
 You can switch the provider by using
 {nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[SslContextBuilder]
@@ -411,7 +416,7 @@ The following example enables that integration:
 include::{examplesdir}/metrics/Application.java[lines=18..51]
 ----
 <1> Applies upper limit for the meters with `URI` tag
-<2> Templated URIs will be used as an URI tag value when possible
+<2> Templated URIs will be used as a URI tag value when possible
 <3> Enables the built-in integration with Micrometer
 ====
 
@@ -446,6 +451,7 @@ include::{examplesdir}/uds/Application.java[lines=18..33]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
 ====
+
 == Host Name Resolution
 By default, the `HttpClient` uses Netty's domain name lookup mechanism that resolves a domain name asynchronously.
 This is as an alternative of the JVM's built-in blocking resolver.
@@ -511,4 +517,189 @@ Sometimes, you may want to switch to the JVM built-in resolver. To do so, you ca
 include::{examplesdir}/resolver/custom/Application.java[lines=18..38]
 ----
 <1> Sets the JVM built-in resolver.
+====
+
+== Timeout Configuration
+This section describes various timeout configuration options that can be used in `HttpClient`.
+Configuring a proper timeout may improve or solve issues in the communication process.
+The configuration options can be grouped as follows:
+
+* <<connection-pool-timeout>>
+* <<http-client-timeout>>
+** <<response-timeout>>
+** <<connection-timeout>>
+** <<ssl-tls-timeout>>
+** <<proxy-timeout>>
+** <<dns-timeout>>
+
+[[connection-pool-timeout]]
+=== Connection Pool Timeout
+By default, `HttpClient` uses a connection pool. When a request is completed successfully and if the connection is not scheduled for closing,
+the connection is returned to the connection pool and can thus be reused for processing another request. The connection may
+be reused immediately for another request or may stay idle in the connection pool for some time.
+
+The following list describes the available timeout configuration options:
+
+* `maxIdleTime` - The maximum time (resolution: ms) that this connection stays idle in the connection pool. By default,
+{javadoc}/reactor/netty/resources/ConnectionProvider.ConnectionPoolSpec.html#maxIdleTime-java.time.Duration-[`maxIdleTime`] is not specified.
+
+NOTE: When you configure `maxIdleTime`, you should consider the idle timeout configuration on the target server.
+Choose a configuration that is equal to or less than the one on the target server. By doing so, you can reduce the I/O
+issues caused by a connection closed by the target server.
+
+* `maxLifeTime` - The maximum time (resolution: ms) that this connection stays alive. By default,
+{javadoc}/reactor/netty/resources/ConnectionProvider.ConnectionPoolSpec.html#maxLifeTime-java.time.Duration-[`maxLifeTime`] is not specified.
+* `pendingAcquireTimeout` - The maximum time (resolution: ms) after which a pending acquire operation must complete, or
+a `PoolAcquireTimeoutException` is thrown. Default: 45s.
+
+By default, these timeouts are checked on connection `release` or `acquire` operations and, if some timeout is reached, the connection is closed and removed from the connection pool.
+However, you can also configure the connection pool, by setting `evictInBackground`, to perform periodic checks on connections.
+
+To customize the default settings, you can configure `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/pool/Application.java
+----
+include::{examplesdir}/pool/Application.java[lines=18..50]
+----
+<1> Configures the maximum time for a connection to stay idle to 20 seconds.
+<2> Configures the maximum time for a connection to stay alive to 60 seconds.
+<3> Configures the maximum time for the pending acquire operation to 60 seconds.
+<4> Every two minutes, the connection pool is regularly checked for connections that are applicable for removal.
+====
+
+[[http-client-timeout]]
+=== HttpClient Timeout
+This section provides information for the various timeout configuration options at the `HttpClient` level.
+
+NOTE: Reactor Netty uses Reactor Core as its Reactive Streams implementation, and you may want to use the `timeout` operator that `Mono` and `Flux` provide.
+Keep in mind, however, that it is better to use the more specific timeout configuration options available in Reactor Netty, since they provide more control for a specific purpose and use case.
+By contrast, the `timeout` operator can only apply to the operation as a whole, from establishing the connection to the remote peer to receiving the response.
+
+[[response-timeout]]
+==== Response Timeout
+`HttpClient` provides an API for configuring a default response timeout for all requests. You can change this default response timeout
+through an API for a specific request. By default,
+{javadoc}/reactor/netty/http/client/HttpClient.html#responseTimeout-java.time.Duration-[`responseTimeout`] is not specified.
+
+NOTE: It is always a good practice to configure a response timeout.
+
+To customize the default settings, you can configure `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/read/timeout/Application.java
+----
+include::{examplesdir}/read/timeout/Application.java[lines=18..55]
+----
+<1> Configures the default response timeout to 1 second.
+<2> Configures a response timeout for a specific request to 2 seconds.
+====
+
+[[connection-timeout]]
+==== Connection Timeout
+The following listing shows all available connection timeout configuration options, but some of them may apply only to a specific transport.
+
+* `CONNECT_TIMEOUT_MILLIS` - If the connection establishment attempt to the remote peer does not finish within the configured connect timeout (resolution: ms),
+the connection establishment attempt fails. Default: 30s.
+* `SO_KEEPALIVE` - When the connection stays idle for some time (the time is implementation dependent, but the default is typically two hours),
+TCP automatically sends a `keepalive` probe to the remote peer.
+By default, https://docs.oracle.com/javase/8/docs/api/java/net/SocketOptions.html#SO_KEEPALIVE[`SO_KEEPALIVE`] is not enabled.
+When you run with `Epoll` transport, you may also configure:
+** `TCP_KEEPIDLE` - The maximum time (resolution: seconds) that this connection stays idle before TCP starts sending `keepalive` probes,
+if `SO_KEEPALIVE` has been set. The maximum time is implementation dependent, but the default is typically two hours.
+** `TCP_KEEPINTVL` - The time (resolution: seconds) between individual `keepalive` probes.
+** `TCP_KEEPCNT` - The maximum number of `keepalive` probes TCP should send before dropping the connection.
+
+NOTE: Sometimes, between the client and the server, you may have a network component that silently drops the idle connections without sending a response.
+From the Reactor Netty point of view, in this use case, the remote peer just does not respond.
+To be able to handle such a use case you may consider configuring
+https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[`SO_KEEPALIVE`].
+
+To customize the default settings, you can configure `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/channeloptions/Application.java
+----
+include::{examplesdir}/channeloptions/Application.java[lines=18..46]
+----
+<1> Configures the connection establishment timeout to 10 seconds.
+<2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
+<3> The connection needs to remain idle for 5 minutes before TCP starts sending `keepalive` probes.
+<4> Configures the time between individual `keepalive` probes to 1 minute.
+<5> Configures the maximum number of TCP `keepalive` probes to 8.
+====
+
+[[ssl-tls-timeout]]
+==== SSL/TLS Timeout
+`HttpClient` supports the SSL/TLS functionality provided by Netty.
+
+The following list describes the available timeout configuration options:
+
+* `handshakeTimeout` - Use this option to configure the SSL handshake timeout (resolution: ms). Default: 10s.
+
+NOTE: You should consider increasing the SSL handshake timeout when expecting slow network connections.
+
+* `closeNotifyFlushTimeout` - Use this option to configure the SSL `close_notify` flush timeout (resolution: ms). Default: 3s.
+* `closeNotifyReadTimeout` - Use this option to configure the SSL `close_notify` read timeout (resolution: ms). Default: 0s.
+
+To customize the default settings, you can configure `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/security/custom/Application.java
+----
+include::{examplesdir}/security/custom/Application.java[lines=18..47]
+----
+<1> Configures the SSL handshake timeout to 30 seconds.
+<2> Configures the SSL `close_notify` flush timeout to 10 seconds.
+<3> Configures the SSL `close_notify` read timeout to 10 seconds.
+====
+
+[[proxy-timeout]]
+==== Proxy Timeout
+`HttpClient` supports the proxy functionality provided by Netty and provides a way to specify the
+{javadoc}/reactor/netty/transport/ProxyProvider.Builder.html#connectTimeoutMillis-long-[connection establishment timeout].
+If the connection establishment attempt to the remote peer does not finish within the timeout,
+the connection establishment attempt fails. Default: 10s.
+
+To customize the default settings, you can configure `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/proxy/Application.java
+----
+include::{examplesdir}/proxy/Application.java[lines=18..41]
+----
+<1> Configures the connection establishment timeout to 20 seconds.
+====
+
+[[dns-timeout]]
+==== Host Name Resolution Timeout
+By default, the `HttpClient` uses Netty’s domain name lookup mechanism to resolve a domain name asynchronously.
+
+The following list describes the available timeout configuration options:
+
+* `cacheMaxTimeToLive` - The maximum time to live of the cached DNS resource records (resolution: seconds).
+If the time to live of the DNS resource record returned by the DNS server is greater
+than this maximum time to live, this resolver ignores the time to live from
+the DNS server and uses this maximum time to live. Default: `Integer.MAX_VALUE`.
+* `cacheMinTimeToLive` - The minimum time to live of the cached DNS resource records (resolution: seconds).
+If the time to live of the DNS resource record returned by the DNS server is less
+than this minimum time to live, this resolver ignores the time to live from
+the DNS server and uses this minimum time to live. Default: 0s.
+* `cacheNegativeTimeToLive` - The time to live of the cache for the failed DNS queries (resolution: seconds). Default: 0s.
+* `queryTimeout` - Sets the timeout of each DNS query performed by this resolver (resolution: milliseconds). Default: 5s.
+
+To customize the default settings, you can configure `HttpClient` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/resolver/Application.java
+----
+include::{examplesdir}/resolver/Application.java[lines=18..39]
+----
+<1> The timeout of each DNS query performed by this resolver will be 500ms.
 ====

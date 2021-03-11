@@ -13,25 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.documentation.http.client.channeloptions;
+package reactor.netty.examples.documentation.http.client.security.custom;
 
-import io.netty.channel.ChannelOption;
-import io.netty.channel.epoll.EpollChannelOption;
+import io.netty.handler.ssl.SslContextBuilder;
 import reactor.netty.http.client.HttpClient;
-import java.net.InetSocketAddress;
+import reactor.netty.tcp.SslProvider;
+
+import java.time.Duration;
 
 public class Application {
 
 	public static void main(String[] args) {
+		SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+
 		HttpClient client =
 				HttpClient.create()
-				          .bindAddress(() -> new InetSocketAddress("host", 1234))
-				          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000) //<1>
-				          .option(ChannelOption.SO_KEEPALIVE, true)            //<2>
-				          // The options below are available only when Epoll transport is used
-				          .option(EpollChannelOption.TCP_KEEPIDLE, 300)        //<3>
-				          .option(EpollChannelOption.TCP_KEEPINTVL, 60)        //<4>
-				          .option(EpollChannelOption.TCP_KEEPCNT, 8);          //<5>
+				          .secure(spec -> spec.sslContext(sslContextBuilder)
+				                              .defaultConfiguration(SslProvider.DefaultConfigurationType.TCP)
+				                              .handshakeTimeout(Duration.ofSeconds(30))         //<1>
+				                              .closeNotifyFlushTimeout(Duration.ofSeconds(10))  //<2>
+				                              .closeNotifyReadTimeout(Duration.ofSeconds(10))); //<3>
 
 		String response =
 				client.get()
