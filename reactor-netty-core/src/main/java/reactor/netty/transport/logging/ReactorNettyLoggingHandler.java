@@ -141,14 +141,19 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		Connection connection = Connection.from(channel);
 		if (connection instanceof ChannelOperationsId) {
 			String channelStr = ((ChannelOperationsId) connection).asLongText();
-			return new StringBuilder(1 + channelStr.length() + 1)
-					.append('[')
+			return new StringBuilder(4 + channelStr.length() + 1)
+					.append(CHANNEL_ID_PREFIX)
 					.append(channelStr)
-					.append(']')
+					.append(CHANNEL_ID_SUFFIX)
 					.toString();
 		}
 		else {
-			return channel.toString();
+			// Replace "[id: 0x" with "[id:" in order to keep it consistent with ChannelOperationsId#asLongText()
+			String channelStr = channel.toString().substring(ORIGINAL_CHANNEL_ID_PREFIX_LENGTH);
+			return new StringBuilder(4 + channelStr.length())
+					.append(CHANNEL_ID_PREFIX)
+					.append(channelStr)
+					.toString();
 		}
 	}
 
@@ -260,4 +265,8 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 				.append(msgStr)
 				.toString();
 	}
+
+	static final int ORIGINAL_CHANNEL_ID_PREFIX_LENGTH = "[id: 0x".length();
+	static final String CHANNEL_ID_PREFIX = "[id:";
+	static final char CHANNEL_ID_SUFFIX = ']';
 }

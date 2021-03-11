@@ -90,16 +90,17 @@ class ChannelOperationsIdTest {
 		assertThat(serverChannelShortId.get()).isNotNull()
 				.isEqualTo(serverOpsShortId.get());
 
+		int originalChannelIdPrefixLength = "[id: 0x".length();
 		assertThat(serverOpsLongId.get()).isNotNull();
-		assertThat(serverChannelId.get()).isNotNull()
-				.isEqualTo('[' + serverOpsLongId.get() + ']');
+		assertThat(serverChannelId.get().substring(originalChannelIdPrefixLength)).isNotNull()
+				.isEqualTo(serverOpsLongId.get() + ']');
 
 		assertThat(clientOpsShortId.get()).isNotNull();
 		assertThat(clientChannelShortId.get()).isNotNull()
 				.isEqualTo(clientOpsShortId.get());
 
 		assertThat(clientOpsLongId.get()).isNotNull();
-		assertThat(clientChannelId.get()).isNotNull()
-				.isEqualTo('[' + clientOpsLongId.get() + ']');
+		assertThat(clientChannelId.get().substring(originalChannelIdPrefixLength)).isNotNull()
+				.isEqualTo(clientOpsLongId.get() + ']');
 	}
 }

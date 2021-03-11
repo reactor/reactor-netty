@@ -554,8 +554,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			String localAddressStr = String.valueOf(localAddress);
 			String remoteAddressStr = String.valueOf(remoteAddress);
 			StringBuilder buf =
-					new StringBuilder(6 + shortText.length() + 4 + localAddressStr.length() + 3 + 2 + remoteAddressStr.length())
-					.append("id: 0x")
+					new StringBuilder(shortText.length() + 4 + localAddressStr.length() + 3 + 2 + remoteAddressStr.length())
 					.append(shortText)
 					.append(", L:")
 					.append(localAddressStr)
@@ -566,18 +565,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 		else if (localAddress != null) {
 			String localAddressStr = String.valueOf(localAddress);
-			StringBuilder buf = new StringBuilder(6 + shortText.length() + 4 + localAddressStr.length())
-					.append("id: 0x")
+			StringBuilder buf = new StringBuilder(shortText.length() + 4 + localAddressStr.length())
 					.append(shortText)
 					.append(", L:")
 					.append(localAddressStr);
 			longId = buf.toString();
 		}
 		else {
-			StringBuilder buf = new StringBuilder(6 + shortText.length())
-					.append("id: 0x")
-					.append(shortText);
-			longId = buf.toString();
+			longId = shortText;
 		}
 
 		localActive = active;
