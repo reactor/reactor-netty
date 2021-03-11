@@ -577,8 +577,8 @@ NOTE: Reactor Netty uses Reactor Core as Reactive Streams implementation, and yo
 Keep in mind however that it is better to use more specific timeout configuration options available in Reactor Netty since they provide more control for a specific purpose and use case.
 By contrast the `timeout` operator can only apply to the operation as a whole, from establishing the connection to the remote peer to receiving the response.
 
-[[response-timeout-configurations]]
-==== Response Timeout Configuration
+[[response-timeout]]
+==== Response Timeout
 `HttpClient` provides an API for configuring a default response timeout for all requests. You may change this default response timeout
 via an API for a specific request. By default,
 {javadoc}/reactor/netty/http/client/HttpClient.html#responseTimeout-java.time.Duration-[responseTimeout] is not specified.
