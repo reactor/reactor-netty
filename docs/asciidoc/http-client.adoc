@@ -267,7 +267,7 @@ include::{examplesdir}/channeloptions/Application.java[lines=18..46]
 ----
 <1> Configures the connection establishment timeout to 10 seconds.
 <2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
-<3> The connection needs to remain idle 5 minutes before TCP starts sending `keepalive` probes.
+<3> The connection needs to remain idle for 5 minutes before TCP starts sending `keepalive` probes.
 <4> Configures the time between individual `keepalive` probes to 1 minute.
 <5> Configures the maximum number of TCP `keepalive` probes to 8.
 ====
@@ -426,7 +426,7 @@ Without a conversion to a template-like form, each distinct URI leads to the cre
 NOTE: Always apply an upper limit for the meters with URI tags. Configuring an upper limit on the number of meters can help in cases when the real URIs cannot be templated.
 You can find more information at https://micrometer.io/docs/concepts#_denyaccept_meters[`maximumAllowableTags`].
 
-When HTTP client metrics are needed for an integration with a system other than `Micrometer`, or you want
+When HTTP client metrics are needed for an integration with a system other than `Micrometer` or you want
 to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
 
 ====
@@ -535,25 +535,25 @@ The configuration options can be grouped as follows:
 [[connection-pool-timeout]]
 === Connection Pool Timeout
 By default, `HttpClient` uses a connection pool. When a request is completed successfully and if the connection is not scheduled for closing,
-the connection is returned to the connection pool and thus it can be reused for processing another request. The connection may
+the connection is returned to the connection pool and can thus be reused for processing another request. The connection may
 be reused immediately for another request or may stay idle in the connection pool for some time.
 
-The below shows the available timeout configuration options:
+The following list describes the available timeout configuration options:
 
-* `maxIdleTime` - the maximum time (resolution: ms) that this connection stays idle in the connection pool. By default,
-{javadoc}/reactor/netty/resources/ConnectionProvider.ConnectionPoolSpec.html#maxIdleTime-java.time.Duration-[maxIdleTime] is not specified.
+* `maxIdleTime` - The maximum time (resolution: ms) that this connection stays idle in the connection pool. By default,
+{javadoc}/reactor/netty/resources/ConnectionProvider.ConnectionPoolSpec.html#maxIdleTime-java.time.Duration-[`maxIdleTime`] is not specified.
 
 NOTE: When you configure `maxIdleTime`, you should consider the idle timeout configuration on the target server.
-Choose a configuration equal or less than the one on the target server thus you will be able to reduce the I/O
+Choose a configuration that is equal to or less than the one on the target server. By doing so, you can reduce the I/O
 issues caused by a connection closed by the target server.
 
-* `maxLifeTime` - the maximum time (resolution: ms) that this connection stays alive. By default,
-{javadoc}/reactor/netty/resources/ConnectionProvider.ConnectionPoolSpec.html#maxLifeTime-java.time.Duration-[maxLifeTime] is not specified.
-* `pendingAcquireTimeout` - the maximum time (resolution: ms) after which a pending acquire operation must complete, or
-a `PoolAcquireTimeoutException` will be thrown. Default: 45s.
+* `maxLifeTime` - The maximum time (resolution: ms) that this connection stays alive. By default,
+{javadoc}/reactor/netty/resources/ConnectionProvider.ConnectionPoolSpec.html#maxLifeTime-java.time.Duration-[`maxLifeTime`] is not specified.
+* `pendingAcquireTimeout` - The maximum time (resolution: ms) after which a pending acquire operation must complete, or
+a `PoolAcquireTimeoutException` is thrown. Default: 45s.
 
-By default, these timeouts are checked on connection `release`/`acquire` operation and if some timeout is reached, the connection is closed and removed from the connection pool.
-However, you can also configure the connection pool, via `evictInBackground`, to perform periodic checks on connections.
+By default, these timeouts are checked on connection `release` or `acquire` operations and, if some timeout is reached, the connection is closed and removed from the connection pool.
+However, you can also configure the connection pool, by setting `evictInBackground`, to perform periodic checks on connections.
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
@@ -566,22 +566,22 @@ include::{examplesdir}/pool/Application.java[lines=18..50]
 <1> Configures the maximum time for a connection to stay idle to 20 seconds.
 <2> Configures the maximum time for a connection to stay alive to 60 seconds.
 <3> Configures the maximum time for the pending acquire operation to 60 seconds.
-<4> Every 2 minutes the connection pool is regularly checked for connections, that are applicable for removal.
+<4> Every two minutes, the connection pool is regularly checked for connections that are applicable for removal.
 ====
 
 [[http-client-timeout]]
 === HttpClient Timeout
 This section provides information for the various timeout configuration options at the `HttpClient` level.
 
-NOTE: Reactor Netty uses Reactor Core as Reactive Streams implementation, and you may want to use the `timeout` operator that `Mono`/`Flux` provide.
-Keep in mind however that it is better to use more specific timeout configuration options available in Reactor Netty since they provide more control for a specific purpose and use case.
-By contrast the `timeout` operator can only apply to the operation as a whole, from establishing the connection to the remote peer to receiving the response.
+NOTE: Reactor Netty uses Reactor Core as its Reactive Streams implementation, and you may want to use the `timeout` operator that `Mono` and `Flux` provide.
+Keep in mind, however, that it is better to use the more specific timeout configuration options available in Reactor Netty, since they provide more control for a specific purpose and use case.
+By contrast, the `timeout` operator can only apply to the operation as a whole, from establishing the connection to the remote peer to receiving the response.
 
 [[response-timeout]]
 ==== Response Timeout
-`HttpClient` provides an API for configuring a default response timeout for all requests. You may change this default response timeout
-via an API for a specific request. By default,
-{javadoc}/reactor/netty/http/client/HttpClient.html#responseTimeout-java.time.Duration-[responseTimeout] is not specified.
+`HttpClient` provides an API for configuring a default response timeout for all requests. You can change this default response timeout
+through an API for a specific request. By default,
+{javadoc}/reactor/netty/http/client/HttpClient.html#responseTimeout-java.time.Duration-[`responseTimeout`] is not specified.
 
 NOTE: It is always a good practice to configure a response timeout.
 
@@ -593,7 +593,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 ----
 include::{examplesdir}/read/timeout/Application.java[lines=18..55]
 ----
-<1> Configures the default response timeout to 1 seconds.
+<1> Configures the default response timeout to 1 second.
 <2> Configures a response timeout for a specific request to 2 seconds.
 ====
 
@@ -601,21 +601,21 @@ include::{examplesdir}/read/timeout/Application.java[lines=18..55]
 ==== Connection Timeout
 The following listing shows all available connection timeout configuration options, but some of them may apply only to a specific transport.
 
-* `CONNECT_TIMEOUT_MILLIS` - if the connection establishment attempt to the remote peer does not finish within the configured connect timeout (resolution: ms),
-the connection establishment attempt will be failed. Default: 30s.
-* `SO_KEEPALIVE` - when the connection stays idle for some time (the time is implementation dependent, but typically 2 hours),
+* `CONNECT_TIMEOUT_MILLIS` - If the connection establishment attempt to the remote peer does not finish within the configured connect timeout (resolution: ms),
+the connection establishment attempt fails. Default: 30s.
+* `SO_KEEPALIVE` - When the connection stays idle for some time (the time is implementation dependent, but the default is typically two hours),
 TCP automatically sends a `keepalive` probe to the remote peer.
-By default, https://docs.oracle.com/javase/8/docs/api/java/net/SocketOptions.html#SO_KEEPALIVE[SO_KEEPALIVE] is not enabled.
-When you run with `Epoll` transport you may also configure:
-** `TCP_KEEPIDLE` - the maximum time (resolution: seconds) that this connection stays idle before TCP starts sending `keepalive` probes,
-if `SO_KEEPALIVE` has been set. The maximum time is implementation dependent, but typically the default is 2 hours.
-** `TCP_KEEPINTVL` - the time (resolution: seconds) between individual `keepalive` probes.
-** `TCP_KEEPCNT` - the maximum number of `keepalive` probes TCP should send before dropping the connection.
+By default, https://docs.oracle.com/javase/8/docs/api/java/net/SocketOptions.html#SO_KEEPALIVE[`SO_KEEPALIVE`] is not enabled.
+When you run with `Epoll` transport, you may also configure:
+** `TCP_KEEPIDLE` - The maximum time (resolution: seconds) that this connection stays idle before TCP starts sending `keepalive` probes,
+if `SO_KEEPALIVE` has been set. The maximum time is implementation dependent, but the default is typically two hours.
+** `TCP_KEEPINTVL` - The time (resolution: seconds) between individual `keepalive` probes.
+** `TCP_KEEPCNT` - The maximum number of `keepalive` probes TCP should send before dropping the connection.
 
-NOTE: Sometimes between the client and the server you may have a network component that silently drops the idle connections without sending a response.
-From Reactor Netty point of view in this use case the remote peer just does not respond.
-In order to be able to handle such use case you may consider configuring
-https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[SO_KEEPALIVE].
+NOTE: Sometimes, between the client and the server, you may have a network component that silently drops the idle connections without sending a response.
+From the Reactor Netty point of view, in this use case, the remote peer just does not respond.
+To be able to handle such a use case you may consider configuring
+https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[`SO_KEEPALIVE`].
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
@@ -627,7 +627,7 @@ include::{examplesdir}/channeloptions/Application.java[lines=18..46]
 ----
 <1> Configures the connection establishment timeout to 10 seconds.
 <2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
-<3> The connection needs to remain idle 5 minutes before TCP starts sending `keepalive` probes.
+<3> The connection needs to remain idle for 5 minutes before TCP starts sending `keepalive` probes.
 <4> Configures the time between individual `keepalive` probes to 1 minute.
 <5> Configures the maximum number of TCP `keepalive` probes to 8.
 ====
@@ -636,14 +636,14 @@ include::{examplesdir}/channeloptions/Application.java[lines=18..46]
 ==== SSL/TLS Timeout
 `HttpClient` supports the SSL/TLS functionality provided by Netty.
 
-The below shows the available timeout configuration options:
+The following list describes the available timeout configuration options:
 
-* `handshakeTimeout` - this option can be used for configuring SSL handshake timeout (resolution: ms). Default: 10s.
+* `handshakeTimeout` - Use this option to configure the SSL handshake timeout (resolution: ms). Default: 10s.
 
 NOTE: You should consider increasing the SSL handshake timeout when expecting slow network connections.
 
-* `closeNotifyFlushTimeout` - this option can be used for configuring SSL `close_notify` flush timeout (resolution: ms). Default: 3s.
-* `closeNotifyReadTimeout` - this option can be used for configuring SSL `close_notify` read timeout (resolution: ms). Default: 0s.
+* `closeNotifyFlushTimeout` - Use this option to configure the SSL `close_notify` flush timeout (resolution: ms). Default: 3s.
+* `closeNotifyReadTimeout` - Use this option to configure the SSL `close_notify` read timeout (resolution: ms). Default: 0s.
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
@@ -660,10 +660,10 @@ include::{examplesdir}/security/custom/Application.java[lines=18..47]
 
 [[proxy-timeout]]
 ==== Proxy Timeout
-`HttpClient` supports the proxy functionality provided by Netty and provides a way to specify
+`HttpClient` supports the proxy functionality provided by Netty and provides a way to specify the
 {javadoc}/reactor/netty/transport/ProxyProvider.Builder.html#connectTimeoutMillis-long-[connection establishment timeout].
 If the connection establishment attempt to the remote peer does not finish within the timeout,
-the connection establishment attempt will be failed. Default: 10s.
+the connection establishment attempt fails. Default: 10s.
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
@@ -678,15 +678,15 @@ include::{examplesdir}/proxy/Application.java[lines=18..41]
 
 [[dns-timeout]]
 ==== Host Name Resolution Timeout
-By default, the `HttpClient` uses Netty’s domain name lookup mechanism that resolves a domain name asynchronously.
+By default, the `HttpClient` uses Netty’s domain name lookup mechanism to resolve a domain name asynchronously.
 
-The below shows the available timeout configuration options:
+The following list describes the available timeout configuration options:
 
-* `cacheMaxTimeToLive` - the maximum time to live of the cached DNS resource records (resolution: seconds).
+* `cacheMaxTimeToLive` - The maximum time to live of the cached DNS resource records (resolution: seconds).
 If the time to live of the DNS resource record returned by the DNS server is greater
 than this maximum time to live, this resolver ignores the time to live from
-the DNS server and uses this maximum time to live. Default to `Integer.MAX_VALUE`.
-* `cacheMinTimeToLive` - the minimum time to live of the cached DNS resource records (resolution: seconds).
+the DNS server and uses this maximum time to live. Default: `Integer.MAX_VALUE`.
+* `cacheMinTimeToLive` - The minimum time to live of the cached DNS resource records (resolution: seconds).
 If the time to live of the DNS resource record returned by the DNS server is less
 than this minimum time to live, this resolver ignores the time to live from
 the DNS server and uses this minimum time to live. Default: 0s.
