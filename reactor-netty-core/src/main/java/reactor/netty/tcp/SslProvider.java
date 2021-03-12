@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -293,7 +295,7 @@ public final class SslProvider {
 		if (builder.sslContext == null) {
 			if (sslContextBuilder != null) {
 				if (type != null) {
-					updateDefaultConfiguration();
+					updateDefaultConfiguration(null);
 				}
 				try {
 					this.sslContext = sslContextBuilder.build();
@@ -364,7 +366,7 @@ public final class SslProvider {
 		this.sslContextBuilder = from.sslContextBuilder;
 		this.type = type;
 		if (this.sslContextBuilder != null) {
-			updateDefaultConfiguration();
+			updateDefaultConfiguration(from.sslContext);
 			try {
 				this.sslContext = sslContextBuilder.build();
 			}
@@ -396,14 +398,16 @@ public final class SslProvider {
 		return new SniProvider(config, defaultSslProvider);
 	}
 
-	void updateDefaultConfiguration() {
+	void updateDefaultConfiguration(@Nullable SslContext optionalBlueprint) {
+		List<String> ciphers = optionalBlueprint != null ? optionalBlueprint.cipherSuites() : Collections.emptyList();
 		switch (type) {
 			case H2:
+				ciphers = ciphers.stream().filter(HTTP2_CIPHERS::contains).collect(Collectors.toList());
 				sslContextBuilder.sslProvider(
 				                     io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 				                             io.netty.handler.ssl.SslProvider.OPENSSL :
 				                             io.netty.handler.ssl.SslProvider.JDK)
-				                 .ciphers(HTTP2_CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+				                 .ciphers(ciphers.isEmpty() ? HTTP2_CIPHERS : ciphers, SupportedCipherSuiteFilter.INSTANCE)
 				                 .applicationProtocolConfig(new ApplicationProtocolConfig(
 				                     ApplicationProtocolConfig.Protocol.ALPN,
 				                     ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
@@ -416,7 +420,7 @@ public final class SslProvider {
 				                     OpenSsl.isAvailable() ?
 				                             io.netty.handler.ssl.SslProvider.OPENSSL :
 				                             io.netty.handler.ssl.SslProvider.JDK)
-				                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+				                 .ciphers(ciphers.isEmpty() ? null : ciphers, IdentityCipherSuiteFilter.INSTANCE)
 				                 .applicationProtocolConfig(null);
 				break;
 			case NONE:

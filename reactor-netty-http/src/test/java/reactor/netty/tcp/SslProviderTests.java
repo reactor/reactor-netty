@@ -17,6 +17,7 @@ package reactor.netty.tcp;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -345,6 +346,52 @@ class SslProviderTests extends BaseHttpTest {
 						.sslContext(defaultSslContext)
 						.serverNames((SNIServerName[]) null));
 	}
+
+	@Test
+	void testTcpUseDefaultCiphers() {
+		disposableServer =
+				server.protocol(HttpProtocol.HTTP11)
+						.secure(spec -> spec.sslContext(serverSslContextBuilder))
+						.bindNow();
+
+		assertThat(sslContext.cipherSuites()).hasSizeGreaterThan(2);
+	}
+
+	@Test
+	void testTcpUseCiphersFromBuilder() {
+		serverSslContextBuilder.ciphers(Arrays
+				.asList("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", "TLS_AES_256_GCM_SHA384"));
+		disposableServer =
+				server.protocol(HttpProtocol.HTTP11)
+						.secure(spec -> spec.sslContext(serverSslContextBuilder))
+						.bindNow();
+
+		assertThat(sslContext.cipherSuites()).hasSize(2);
+	}
+
+	@Test
+	void testH2UseDefaultCiphers() {
+		disposableServer =
+				server.protocol(HttpProtocol.H2)
+						.secure(spec -> spec.sslContext(serverSslContextBuilder))
+						.bindNow();
+
+		assertThat(sslContext.cipherSuites()).hasSizeLessThanOrEqualTo(SslProvider.HTTP2_CIPHERS.size());
+		assertThat(sslContext.cipherSuites()).hasSizeGreaterThan(2);
+	}
+
+	@Test
+	void testH2UseCiphersFromBuilder() {
+		serverSslContextBuilder.ciphers(Arrays
+				.asList("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", "TLS_AES_256_GCM_SHA384"));
+		disposableServer =
+				server.protocol(HttpProtocol.H2)
+						.secure(spec -> spec.sslContext(serverSslContextBuilder))
+						.bindNow();
+
+		assertThat(sslContext.cipherSuites()).hasSize(2);
+	}
+
 
 	static Mapping<String, SslContext> mappings(SniProvider provider) {
 		DomainWildcardMappingBuilder<SslContext> mappingsBuilder =
