@@ -64,6 +64,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -83,6 +84,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.dns.DnsAddressResolverGroup;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
@@ -2647,16 +2649,26 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testSameNameResolver_WithConnectionPool() {
-		doTestSameNameResolver(true);
+	void testSameNameResolver_WithConnectionPoolNoMetrics() {
+		doTestSameNameResolver(true, false);
 	}
 
 	@Test
-	void testSameNameResolver_NoConnectionPool() {
-		doTestSameNameResolver(false);
+	void testSameNameResolver_WithConnectionPoolWithMetrics() {
+		doTestSameNameResolver(true, true);
 	}
 
-	private void doTestSameNameResolver(boolean useConnectionPool) {
+	@Test
+	void testSameNameResolver_NoConnectionPoolNoMetrics() {
+		doTestSameNameResolver(false, false);
+	}
+
+	@Test
+	void testSameNameResolver_NoConnectionPoolWithMetrics() {
+		doTestSameNameResolver(false, true);
+	}
+
+	private void doTestSameNameResolver(boolean useConnectionPool, boolean enableMetrics) {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just("doTestSameNameResolver")))
@@ -2666,8 +2678,10 @@ class HttpClientTest extends BaseHttpTest {
 		AtomicReference<List<AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
 		Flux.range(0, 2)
 		    .flatMap(i -> {
+		        // HttpClient creation multiple times is deliberate
 		        HttpClient client = useConnectionPool ? createClient(port) : createClientNewConnection(port);
-		        return client.doOnConnect(config -> resolvers.get().add(config.resolverInternal()))
+		        return client.metrics(enableMetrics, Function.identity())
+		                     .doOnConnect(config -> resolvers.get().add(config.resolverInternal()))
 		                     .get()
 		                     .uri("/")
 		                     .responseContent()
@@ -2681,5 +2695,64 @@ class HttpClientTest extends BaseHttpTest {
 
 		assertThat(resolvers.get()).isNotNull();
 		assertThat(resolvers.get().get(0)).isSameAs(resolvers.get().get(1));
+	}
+
+	@Test
+	void testIssue1547() throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("testIssue1547")))
+				        .bindNow();
+
+		NioEventLoopGroup loop = new NioEventLoopGroup(1);
+		AtomicReference<List<AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
+		AtomicReference<List<AddressResolverGroup<?>>> resolversInternal = new AtomicReference<>(new ArrayList<>());
+		try {
+			HttpClient client = createClientNewConnection(disposableServer.port()).runOn(useNative -> loop);
+
+			Flux.range(0, 2)
+			    .flatMap(i -> client.metrics(true, Function.identity())
+			                        .doOnConnect(config -> {
+			                            resolvers.get().add(config.resolver());
+			                            resolversInternal.get().add(config.resolverInternal());
+			                        })
+			                       .get()
+			                       .uri("/")
+			                       .responseContent()
+			                       .aggregate()
+			                       .asString())
+			    .as(StepVerifier::create)
+			    .expectNext("testIssue1547", "testIssue1547")
+			    .expectComplete()
+			    .verify(Duration.ofSeconds(5));
+
+			assertThat(resolvers.get()).isNotNull();
+			assertThat(resolvers.get().get(0))
+					.isSameAs(resolvers.get().get(1))
+					.isInstanceOf(DnsAddressResolverGroup.class);
+
+			assertThat(resolversInternal.get()).isNotNull();
+			assertThat(resolversInternal.get().get(0)).isSameAs(resolversInternal.get().get(1));
+			assertThat(resolversInternal.get().get(0).getClass().getSimpleName()).isEqualTo("AddressResolverGroupMetrics");
+		}
+		finally {
+			// Closing the executor cleans the AddressResolverGroup internal structures and closes the resolver
+			loop.shutdownGracefully()
+			    .get(500, TimeUnit.SECONDS);
+		}
+
+		assertThatExceptionOfType(IllegalStateException.class)
+				.isThrownBy(() ->
+						resolvers.get()
+						         .get(0)
+						         .getResolver(loop.next()))
+				.withMessage("executor not accepting a task");
+
+		assertThatExceptionOfType(IllegalStateException.class)
+				.isThrownBy(() ->
+						resolversInternal.get()
+						                 .get(0)
+						                 .getResolver(loop.next()))
+				.withMessage("executor not accepting a task");
 	}
 }

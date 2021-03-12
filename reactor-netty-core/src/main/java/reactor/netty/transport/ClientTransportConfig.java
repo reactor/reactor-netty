@@ -218,7 +218,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	protected AddressResolverGroup<?> resolverInternal() {
 		AddressResolverGroup<?> resolverGroup = resolver != null ? resolver : defaultAddressResolverGroup();
 		if (metricsRecorder != null) {
-			return new AddressResolverGroupMetrics<>(resolverGroup,
+			return AddressResolverGroupMetrics.getOrCreate(resolverGroup,
 					Objects.requireNonNull(metricsRecorder.get(), "Metrics recorder supplier returned null"));
 		}
 		else {
