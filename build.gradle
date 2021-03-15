@@ -19,7 +19,6 @@ import java.text.SimpleDateFormat
 buildscript {
 	repositories {
 		mavenCentral()
-		jcenter()
 		maven { url "https://plugins.gradle.org/m2/" }
 		maven { url "https://repo.spring.io/plugins-release" }
 	}
@@ -255,7 +254,6 @@ subprojects {
 
 	repositories {
 		mavenCentral()
-		jcenter()
 		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 		maven { url 'https://repo.spring.io/milestone' }
 		if (version.endsWith('-SNAPSHOT') || version.contains('-SNAPSHOT-')) { //classic or customized snapshots
