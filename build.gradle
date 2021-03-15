@@ -19,7 +19,6 @@ import me.champeau.gradle.japicmp.JapicmpTask
 buildscript {
   repositories {
 	mavenCentral()
-	jcenter()
 	maven { url "https://repo.spring.io/plugins-release" }
   }
   dependencies {
@@ -226,7 +225,6 @@ configure(rootProject) { project ->
 
 	repositories {
 	mavenCentral()
-	jcenter()
 	maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 	maven { url 'https://repo.spring.io/milestone' }
 	if (version.endsWith('BUILD-SNAPSHOT')) {
@@ -351,7 +349,7 @@ configure(rootProject) { project ->
 
 		onlyIfNewer true
 		compress true
-		src "${repositories.jcenter().url}io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}-original.jar"
+		src "${repositories.mavenCentral().url}io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}-original.jar"
 		dest "${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar"
   }
 
