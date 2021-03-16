@@ -17,7 +17,7 @@ if (project.name == 'reactor-netty-examples') {
 	return
 }
 
-javadoc {
+project.tasks.withType(Javadoc) {
 	dependsOn jar
 	group = "Reactor Netty Javadoc"
 
