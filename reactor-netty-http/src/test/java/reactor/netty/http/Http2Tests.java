@@ -302,13 +302,13 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testConcurrentStreamsNegotiatedProtocolHTTP11_DefaultPool() {
+	void testConcurrentStreamsH2ConfiguredHTTP11Negotiated_DefaultPool() {
 		doTestConcurrentStreams(HttpClient.create(), true, new HttpProtocol[]{HttpProtocol.HTTP11},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
 	}
 
 	@Test
-	void testConcurrentStreamsNegotiatedProtocolHTTP11_CustomPool() {
+	void testConcurrentStreamsH2ConfiguredHTTP11Negotiated_CustomPool() {
 		ConnectionProvider provider = ConnectionProvider.create("testConcurrentStreamsH2CUpgrade", 1);
 		doTestConcurrentStreams(HttpClient.create(provider), true, new HttpProtocol[]{HttpProtocol.HTTP11},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
@@ -317,9 +317,30 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testConcurrentStreamsNegotiatedProtocolHTTP11_NoPool() {
+	void testConcurrentStreamsH2ConfiguredHTTP11Negotiated_NoPool() {
 		doTestConcurrentStreams(HttpClient.newConnection(), true, new HttpProtocol[]{HttpProtocol.HTTP11},
 				new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11});
+	}
+
+	@Test
+	void testConcurrentStreamsH2CConfiguredHTTP11Negotiated_DefaultPool() {
+		doTestConcurrentStreams(HttpClient.create(), false, new HttpProtocol[]{HttpProtocol.HTTP11},
+				new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11});
+	}
+
+	@Test
+	void testConcurrentStreamsH2CConfiguredHTTP11Negotiated_CustomPool() {
+		ConnectionProvider provider = ConnectionProvider.create("testConcurrentStreamsH2CUpgrade", 1);
+		doTestConcurrentStreams(HttpClient.create(provider), false, new HttpProtocol[]{HttpProtocol.HTTP11},
+				new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11});
+		provider.disposeLater()
+		        .block();
+	}
+
+	@Test
+	void testConcurrentStreamsH2CConfiguredHTTP11Negotiated_NoPool() {
+		doTestConcurrentStreams(HttpClient.newConnection(), false, new HttpProtocol[]{HttpProtocol.HTTP11},
+				new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11});
 	}
 
 	@Test

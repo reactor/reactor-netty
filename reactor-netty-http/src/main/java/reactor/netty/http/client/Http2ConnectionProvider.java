@@ -16,6 +16,7 @@
 package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
@@ -355,7 +356,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		boolean notHttp2() {
 			Channel channel = pooledRef.poolable().channel();
-			SslHandler handler = channel.pipeline().get(SslHandler.class);
+			ChannelPipeline pipeline = channel.pipeline();
+			SslHandler handler = pipeline.get(SslHandler.class);
 			if (handler != null) {
 				String protocol = handler.applicationProtocol() != null ? handler.applicationProtocol() : ApplicationProtocolNames.HTTP_1_1;
 				if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
@@ -373,6 +375,17 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					channel.attr(OWNER).set(null);
 					invalidate(this, channel);
 					sink.error(new IOException("Unknown protocol [" + protocol + "]."));
+					return true;
+				}
+			}
+			else if (pipeline.get(NettyPipeline.H2CUpgradeHandler) == null &&
+					pipeline.get(NettyPipeline.H2MultiplexHandler) == null) {
+				// It is not H2. There are no handlers for H2C upgrade/H2C prior-knowledge,
+				// continue as an HTTP/1.1 request and remove the connection from this pool.
+				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
+				if (ops != null) {
+					sink.success(ops);
+					invalidate(this, channel);
 					return true;
 				}
 			}
