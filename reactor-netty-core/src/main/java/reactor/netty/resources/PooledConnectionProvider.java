@@ -15,6 +15,7 @@
  */
 package reactor.netty.resources;
 
+import io.netty.channel.Channel;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.internal.PlatformDependent;
 import org.reactivestreams.Publisher;
@@ -52,6 +53,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.resources.ConnectionProvider.ConnectionPoolSpec.PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED;
 
 /**
@@ -65,6 +67,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	final PoolFactory<T> defaultPoolFactory;
 
 	final ConcurrentMap<PoolKey, InstrumentedPool<T>> channelPools = PlatformDependent.newConcurrentHashMap();
+
 	/**
 	 * This map keeps a weakref to the {@link InstrumentedPool#metrics() metrics} of created pools through the same PoolKey that is used in
 	 * {@link #channelPools}. This is so that metrics providing objects don't get garbage collected too early,
@@ -201,6 +204,20 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			}
 		}
 		return false;
+	}
+
+	protected static void logPoolState(Channel channel, InstrumentedPool<? extends Connection> pool, String msg) {
+		logPoolState(channel, pool, msg, null);
+	}
+
+	protected static void logPoolState(Channel channel, InstrumentedPool<? extends Connection> pool, String msg, @Nullable Throwable t) {
+		InstrumentedPool.PoolMetrics metrics = pool.metrics();
+		log.debug(format(channel, "{}, now: {} active connections, {} inactive connections and {} pending acquire requests."),
+				msg,
+				metrics.acquiredSize(),
+				metrics.idleSize(),
+				metrics.pendingAcquireSize(),
+				t == null ? "" : t);
 	}
 
 	static final Logger log = Loggers.getLogger(PooledConnectionProvider.class);

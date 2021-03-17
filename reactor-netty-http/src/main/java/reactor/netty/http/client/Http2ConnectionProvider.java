@@ -17,7 +17,9 @@ package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameCodec;
+import io.netty.handler.codec.http2.Http2LocalFlowController;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslHandler;
@@ -105,12 +107,17 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			  .invalidate()
 			  .subscribe(null, null, () -> {
 			      if (log.isDebugEnabled()) {
-			          log.debug(format(channel, "Channel removed from the pool, now {} active connections and {} inactive connections"),
-			              da.pool.metrics().acquiredSize(),
-			              da.pool.metrics().idleSize());
+			          logPoolState(channel, da.pool, "Channel removed from the pool");
 			      }
 			  });
 		}
+	}
+
+	static void logStreamsState(Channel channel, Http2Connection.Endpoint<Http2LocalFlowController> localEndpoint, String msg) {
+		log.debug(format(channel, "{}, now: {} active streams and {} max active streams."),
+				msg,
+				localEndpoint.numActiveStreams(),
+				localEndpoint.maxActiveStreams());
 	}
 
 	static void registerClose(Channel channel) {
@@ -119,14 +126,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		       .addListener(f -> {
 		           Channel parent = channel.parent();
 		           Http2FrameCodec frameCodec = parent.pipeline().get(Http2FrameCodec.class);
-		           int numActiveStreams = frameCodec.connection().local().numActiveStreams();
+		           Http2Connection.Endpoint<Http2LocalFlowController> localEndpoint = frameCodec.connection().local();
 		           if (log.isDebugEnabled()) {
-		               log.debug(format(channel, "Stream closed, now {} active streams, {} max active streams."),
-		                       numActiveStreams,
-		                       frameCodec.connection().local().maxActiveStreams());
+		               logStreamsState(channel, localEndpoint, "Stream closed");
 		           }
 
-		           if (numActiveStreams == 0) {
+		           if (localEndpoint.numActiveStreams() == 0) {
 		               channel.attr(OWNER).set(null);
 		               invalidate(owner, parent);
 		           }
@@ -237,9 +242,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			Channel channel = pooledRef.poolable().channel();
 
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "Channel activated, now {} active connections and {} inactive connections"),
-						pool.metrics().acquiredSize(),
-						pool.metrics().idleSize());
+				logPoolState(channel, pool, "Channel activated");
 			}
 
 			ConnectionObserver current = channel.attr(OWNER)
@@ -310,7 +313,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				if (!frameCodec.connection().local().canOpenStream()) {
 					if (!retried) {
 						if (log.isDebugEnabled()) {
-							log.debug(format(ch, "Immediately aborted pooled channel max active streams is reached, " +
+							log.debug(format(ch, "Immediately aborted pooled channel, max active streams is reached, " +
 								"re-acquiring a new channel"));
 						}
 						pool.acquire(Duration.ofMillis(pendingAcquireTimeout))
@@ -327,10 +330,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 						sink.success(ops);
 					}
 
+					Http2Connection.Endpoint<Http2LocalFlowController> localEndpoint = frameCodec.connection().local();
 					if (log.isDebugEnabled()) {
-						log.debug(format(ch, "Stream opened, now {} active streams, {} max active streams."),
-								frameCodec.connection().local().numActiveStreams(),
-								frameCodec.connection().local().maxActiveStreams());
+						logStreamsState(ch, localEndpoint, "Stream opened");
 					}
 				}
 			}
@@ -403,9 +405,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				  .release()
 				  .subscribe(null, null, () -> {
 				      if (log.isDebugEnabled()) {
-				          log.debug(format(channel, "Channel deactivated, now {} active connections and {} inactive connections"),
-				                  da.pool.metrics().acquiredSize(),
-				                  da.pool.metrics().idleSize());
+				          logPoolState(channel, da.pool, "Channel deactivated");
 				      }
 				  });
 			}
@@ -462,10 +462,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			return parent.acquire(config, new DelegatingConnectionObserver(), remoteAddress, resolver)
 				         .map(conn -> {
 				             if (log.isDebugEnabled()) {
-				                 log.debug(format(conn.channel(), "Channel acquired from the parent pool, " +
-				                                 "now {} active connections and {} inactive connections"),
-				                         pool.metrics().acquiredSize(),
-				                         pool.metrics().idleSize());
+				                 logPoolState(conn.channel(), pool, "Channel acquired from the parent pool");
 				             }
 
 				             return conn;

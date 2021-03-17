@@ -105,20 +105,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		return poolFactoryPerRemoteHost.getOrDefault(remoteAddress, defaultPoolFactory);
 	}
 
-	static void logPoolState(Channel channel, InstrumentedPool<PooledConnection> pool, String msg) {
-		logPoolState(channel, pool, msg, null);
-	}
-
-	static void logPoolState(Channel channel, InstrumentedPool<PooledConnection> pool, String msg, @Nullable Throwable t) {
-		InstrumentedPool.PoolMetrics metrics = pool.metrics();
-		log.debug(format(channel, "{}, now: {} active connections, {} inactive connections and {} pending acquire requests."),
-				msg,
-				metrics.acquiredSize(),
-				metrics.idleSize(),
-				metrics.pendingAcquireSize(),
-				t == null ? "" : t);
-	}
-
 	static final Logger log = Loggers.getLogger(DefaultPooledConnectionProvider.class);
 
 	static final AttributeKey<ConnectionObserver> OWNER = AttributeKey.valueOf("connectionOwner");
