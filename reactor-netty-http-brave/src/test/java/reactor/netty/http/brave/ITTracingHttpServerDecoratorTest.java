@@ -15,7 +15,6 @@
  */
 package reactor.netty.http.brave;
 
-import brave.propagation.TraceContext;
 import brave.test.http.ITHttpServer;
 import org.junit.After;
 import org.junit.Ignore;
@@ -62,18 +61,16 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 				                        res.sendString(Mono.justOrEmpty(req.param("itemId"))
 				                                           .publishOn(Schedulers.boundedElastic())))
 				                .get("/nested/items/{itemId}", (req, res) -> res.sendString(Mono.justOrEmpty(req.param("itemId"))))
-				                .get("/child", (req, res) ->
-				                        Mono.deferContextual(Mono::just)
-				                            .flatMap(ctx -> {
-				                                    httpTracing.tracing()
-				                                               .tracer()
-				                                               .newChild(ctx.get(TraceContext.class))
-				                                               .name("child")
-				                                               .start()
-				                                               .finish();
+				                .get("/child", (req, res) -> {
+				                        httpTracing.tracing()
+				                                   .tracer()
+				                                   .nextSpan()
+				                                   .name("child")
+				                                   .start()
+				                                   .finish();
 
-				                                    return res.send();
-				                            }));
+				                        return res.send();
+				                });
 
 		ReactorNettyHttpTracing reactorNettyHttpTracing =
 				ReactorNettyHttpTracing.create(
@@ -107,11 +104,13 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 	@Override
 	@Ignore
 	public void httpStatusCodeSettable_onUncaughtException() {
+		// Reactor Netty always returns 500 ISE when an exception happens
 	}
 
 	@Override
 	@Ignore
 	public void httpStatusCodeSettable_onUncaughtException_async() {
+		// Reactor Netty always returns 500 ISE when an exception happens
 	}
 
 	@Test
