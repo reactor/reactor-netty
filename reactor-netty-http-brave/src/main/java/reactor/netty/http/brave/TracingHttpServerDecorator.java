@@ -207,6 +207,7 @@ final class TracingHttpServerDecorator {
 		}
 
 		@Override
+		@SuppressWarnings("try")
 		public void channelRead(ChannelHandlerContext ctx, Object msg) {
 			Span span = ctx.channel().attr(SPAN_ATTR_KEY).get();
 			if (span != null) {
@@ -233,7 +234,7 @@ final class TracingHttpServerDecorator {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
+		@SuppressWarnings({"FutureReturnValueIgnored", "try"})
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 			Span span = ctx.channel().attr(SPAN_ATTR_KEY).get();
 			if (span != null) {
@@ -372,8 +373,17 @@ final class TracingHttpServerDecorator {
 		}
 
 		void cleanup(Channel channel) {
-			channel.attr(REQUEST_ATTR_KEY).set(null);
-			channel.attr(SPAN_ATTR_KEY).set(null);
+			EventLoop eventLoop = channel.eventLoop();
+			if (eventLoop.inEventLoop()) {
+				channel.attr(REQUEST_ATTR_KEY).set(null);
+				channel.attr(SPAN_ATTR_KEY).set(null);
+			}
+			else {
+				eventLoop.execute(() -> {
+					channel.attr(REQUEST_ATTR_KEY).set(null);
+					channel.attr(SPAN_ATTR_KEY).set(null);
+				});
+			}
 		}
 	}
 }
