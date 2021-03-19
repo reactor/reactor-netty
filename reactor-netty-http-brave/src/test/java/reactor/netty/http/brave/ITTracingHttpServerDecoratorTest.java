@@ -15,9 +15,13 @@
  */
 package reactor.netty.http.brave;
 
-import brave.propagation.TraceContext;
 import brave.test.http.ITHttpServer;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty.util.concurrent.EventExecutor;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
@@ -27,18 +31,33 @@ import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRoutes;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import static brave.Span.Kind.SERVER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 	private DisposableServer disposableServer;
+	private ChannelGroup group;
+	private static final EventExecutor executor = new DefaultEventExecutor();
+
+	@AfterClass
+	public static void afterClass() throws Exception {
+		executor.shutdownGracefully()
+		        .get(5, TimeUnit.SECONDS);
+	}
 
 	@After
-	public void after() {
+	@Override
+	public void close() throws Exception {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
+		if (group != null) {
+			group.close()
+			     .get(5, TimeUnit.SECONDS);
+		}
+		super.close();
 	}
 
 	@Override
@@ -49,12 +68,12 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 				                .get("/foo", (req, res) -> res.sendString(Mono.just("bar")))
 				                .get("/baggage", (req, res) ->
 				                        res.sendString(Mono.just(req.requestHeaders().getAsString(BAGGAGE_FIELD_KEY))))
-				                .get("/exception", (req, res) -> Mono.error(new RuntimeException("not ready")))
+				                .get("/exception", (req, res) -> Mono.error(NOT_READY_ISE))
 				                .get("/badrequest", (req, res) -> res.status(400).send())
 				                .get("/async", (req, res) ->
 				                        res.sendString(Mono.just("body")
 				                                           .publishOn(Schedulers.boundedElastic())))
-				                .get("/exceptionAsync", (req, res) -> Mono.error(new RuntimeException("not ready"))
+				                .get("/exceptionAsync", (req, res) -> Mono.error(NOT_READY_ISE)
 				                                                          .publishOn(Schedulers.boundedElastic())
 				                                                          .then())
 				                .get("/items/{itemId}", (req, res) -> res.sendString(Mono.justOrEmpty(req.param("itemId"))))
@@ -62,18 +81,16 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 				                        res.sendString(Mono.justOrEmpty(req.param("itemId"))
 				                                           .publishOn(Schedulers.boundedElastic())))
 				                .get("/nested/items/{itemId}", (req, res) -> res.sendString(Mono.justOrEmpty(req.param("itemId"))))
-				                .get("/child", (req, res) ->
-				                        Mono.deferContextual(Mono::just)
-				                            .flatMap(ctx -> {
-				                                    httpTracing.tracing()
-				                                               .tracer()
-				                                               .newChild(ctx.get(TraceContext.class))
-				                                               .name("child")
-				                                               .start()
-				                                               .finish();
+				                .get("/child", (req, res) -> {
+				                        httpTracing.tracing()
+				                                   .tracer()
+				                                   .nextSpan()
+				                                   .name("child")
+				                                   .start()
+				                                   .finish();
 
-				                                    return res.send();
-				                            }));
+				                        return res.send();
+				                });
 
 		ReactorNettyHttpTracing reactorNettyHttpTracing =
 				ReactorNettyHttpTracing.create(
@@ -91,11 +108,13 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 				            return s;
 				        });
 
+		group = new DefaultChannelGroup(executor);
 		disposableServer = reactorNettyHttpTracing.decorateHttpServer(
 				HttpServer.create()
 				          .port(0)
 				          .wiretap(true)
 				          .forwarded(true)
+				          .channelGroup(group)
 				          .handle(routes)).bindNow();
 	}
 
@@ -107,11 +126,13 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 	@Override
 	@Ignore
 	public void httpStatusCodeSettable_onUncaughtException() {
+		// Reactor Netty always returns 500 ISE when an exception happens
 	}
 
 	@Override
 	@Ignore
 	public void httpStatusCodeSettable_onUncaughtException_async() {
+		// Reactor Netty always returns 500 ISE when an exception happens
 	}
 
 	@Test

@@ -22,13 +22,21 @@ import brave.http.HttpServerRequest;
 import brave.http.HttpServerResponse;
 import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
+import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.server.HttpServer;
 import reactor.util.annotation.Nullable;
 
@@ -39,6 +47,7 @@ import java.util.regex.Pattern;
 
 import static java.util.Objects.requireNonNull;
 import static reactor.netty.ConnectionObserver.State.CONFIGURED;
+import static reactor.netty.ConnectionObserver.State.CONNECTED;
 import static reactor.netty.http.server.HttpServerState.REQUEST_DECODING_FAILED;
 
 final class TracingHttpServerDecorator {
@@ -190,23 +199,92 @@ final class TracingHttpServerDecorator {
 		}
 	}
 
+	static final class TracingChannelInboundHandler extends ChannelInboundHandlerAdapter {
+		final CurrentTraceContext currentTraceContext;
+
+		TracingChannelInboundHandler(CurrentTraceContext currentTraceContext) {
+			this.currentTraceContext = currentTraceContext;
+		}
+
+		@Override
+		@SuppressWarnings("try")
+		public void channelRead(ChannelHandlerContext ctx, Object msg) {
+			Span span = ctx.channel().attr(SPAN_ATTR_KEY).get();
+			if (span != null) {
+				try (Scope scope = currentTraceContext.maybeScope(span.context())) {
+					ctx.fireChannelRead(msg);
+				}
+				return;
+			}
+
+			ctx.fireChannelRead(msg);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
+		}
+	}
+
+	static final class TracingChannelOutboundHandler extends ChannelOutboundHandlerAdapter {
+		final CurrentTraceContext currentTraceContext;
+
+		TracingChannelOutboundHandler(CurrentTraceContext currentTraceContext) {
+			this.currentTraceContext = currentTraceContext;
+		}
+
+		@Override
+		@SuppressWarnings({"FutureReturnValueIgnored", "try"})
+		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+			Span span = ctx.channel().attr(SPAN_ATTR_KEY).get();
+			if (span != null) {
+				try (Scope scope = currentTraceContext.maybeScope(span.context())) {
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.write(msg, promise);
+				}
+				return;
+			}
+
+			//"FutureReturnValueIgnored" this is deliberate
+			ctx.write(msg, promise);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
+		}
+	}
+
 	static final class TracingConnectionObserver implements ConnectionObserver {
+		static final String INBOUND_HANDLER = "TracingChannelInboundHandler";
+		static final String OUTBOUND_HANDLER = "TracingChannelOutboundHandler";
 
 		final CurrentTraceContext currentTraceContext;
 		final HttpServerHandler<HttpServerRequest, HttpServerResponse> handler;
 		final Function<String, String> uriMapping;
+		final ChannelHandler inboundHandler;
+		final ChannelHandler outboundHandler;
 
 		TracingConnectionObserver(
 				CurrentTraceContext currentTraceContext,
 				HttpServerHandler<HttpServerRequest, HttpServerResponse> handler,
 				Function<String, String> uriMapping) {
 			this.currentTraceContext = currentTraceContext;
+			this.inboundHandler = new TracingChannelInboundHandler(currentTraceContext);
+			this.outboundHandler = new TracingChannelOutboundHandler(currentTraceContext);
 			this.handler = handler;
 			this.uriMapping = uriMapping;
 		}
 
 		@Override
 		public void onStateChange(Connection connection, State state) {
+			if (state == CONNECTED) {
+				connection.channel()
+				          .pipeline()
+				          .addAfter(NettyPipeline.HttpTrafficHandler, INBOUND_HANDLER, inboundHandler)
+				          .addBefore(NettyPipeline.ReactiveBridge, OUTBOUND_HANDLER, outboundHandler);
+				return;
+			}
 			if (state == CONFIGURED && connection instanceof reactor.netty.http.server.HttpServerRequest) {
 				reactor.netty.http.server.HttpServerRequest request = (reactor.netty.http.server.HttpServerRequest) connection;
 
@@ -215,6 +293,7 @@ final class TracingHttpServerDecorator {
 
 				connection.channel().attr(REQUEST_ATTR_KEY).set(braveRequest);
 				connection.channel().attr(SPAN_ATTR_KEY).set(span);
+
 				return;
 			}
 			if (state == REQUEST_DECODING_FAILED && connection instanceof reactor.netty.http.server.HttpServerResponse) {
@@ -269,6 +348,11 @@ final class TracingHttpServerDecorator {
 			                       HttpServerResponse braveResponse =
 			                               new DelegatingHttpResponse(response, braveRequest, throwable);
 			                       response.withConnection(conn -> {
+			                               conn.onTerminate()
+			                                   .subscribe(
+			                                           null,
+			                                           t -> cleanup(connection.channel()),
+			                                           () -> cleanup(connection.channel()));
 			                               EventLoop eventLoop = conn.channel().eventLoop();
 			                               if (eventLoop.inEventLoop()) {
 			                                   handler.handleSend(braveResponse, localSpan);
@@ -277,8 +361,6 @@ final class TracingHttpServerDecorator {
 			                                   eventLoop.execute(() -> handler.handleSend(braveResponse, localSpan));
 			                               }
 			                       });
-				                   connection.channel().attr(REQUEST_ATTR_KEY).set(null);
-				                   connection.channel().attr(SPAN_ATTR_KEY).set(null);
 			                   }
 			               })
 			               .doOnError(this::throwable)
@@ -288,6 +370,20 @@ final class TracingHttpServerDecorator {
 
 		void throwable(Throwable t) {
 			this.throwable = t;
+		}
+
+		void cleanup(Channel channel) {
+			EventLoop eventLoop = channel.eventLoop();
+			if (eventLoop.inEventLoop()) {
+				channel.attr(REQUEST_ATTR_KEY).set(null);
+				channel.attr(SPAN_ATTR_KEY).set(null);
+			}
+			else {
+				eventLoop.execute(() -> {
+					channel.attr(REQUEST_ATTR_KEY).set(null);
+					channel.attr(SPAN_ATTR_KEY).set(null);
+				});
+			}
 		}
 	}
 }
