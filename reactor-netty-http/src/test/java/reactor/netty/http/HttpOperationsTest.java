@@ -96,7 +96,7 @@ class HttpOperationsTest {
 	@Test
 	void testPath() {
 		TestHttpInfos infos = new TestHttpInfos();
-		Flux<String> expectations = Flux.just("", "", "", "/", "a", "a", "", "a", "", "a", "a", "a b");
+		Flux<String> expectations = Flux.just("", "", "", "/", "a", "a", "", "a", "", "a", "a", "a b", "a");
 
 		doTestPath(infos, expectations,
 				Flux.just("http://localhost:8080",
@@ -110,7 +110,8 @@ class HttpOperationsTest {
 						"http://localhost:8080/#b",
 						"http://localhost:8080/a#b",
 						"http://localhost:8080/a?b#c",
-						"http://localhost:8080/a%20b"));
+						"http://localhost:8080/a%20b",
+						"http://localhost:8080/a?b={}"));
 
 		doTestPath(infos, expectations,
 				Flux.just("localhost:8080",
@@ -124,9 +125,11 @@ class HttpOperationsTest {
 						"localhost:8080/#b",
 						"localhost:8080/a#b",
 						"localhost:8080/a?b#c",
-						"localhost:8080/a%20b"));
+						"localhost:8080/a%20b",
+						"localhost:8080/a?b={}"));
 
-		doTestPath(infos, expectations, Flux.just("", "/", "//", "///", "/a", "/a/", "/?b", "/a?b", "/#b", "/a#b", "/a?b#c", "/a%20b"));
+		doTestPath(infos, expectations,
+				Flux.just("", "/", "//", "///", "/a", "/a/", "/?b", "/a?b", "/#b", "/a#b", "/a?b#c", "/a%20b", "/a?b={}"));
 	}
 
 	private void doTestPath(TestHttpInfos infos, Flux<String> expectations, Flux<String> uris) {
@@ -152,6 +155,7 @@ class HttpOperationsTest {
 		assertThat(HttpOperations.resolvePath("http://localhost:8080/a#b")).isEqualTo("/a");
 		assertThat(HttpOperations.resolvePath("http://localhost:8080/a?b#c")).isEqualTo("/a");
 		assertThat(HttpOperations.resolvePath("http://localhost:8080/a%20b")).isEqualTo("/a b");
+		assertThat(HttpOperations.resolvePath("http://localhost:8080/a?b={}")).isEqualTo("/a");
 
 		assertThat(HttpOperations.resolvePath("localhost:8080")).isEqualTo("");
 		assertThat(HttpOperations.resolvePath("localhost:8080/")).isEqualTo("/");
@@ -165,6 +169,7 @@ class HttpOperationsTest {
 		assertThat(HttpOperations.resolvePath("localhost:8080/a#b")).isEqualTo("/a");
 		assertThat(HttpOperations.resolvePath("localhost:8080/a?b#c")).isEqualTo("/a");
 		assertThat(HttpOperations.resolvePath("localhost:8080/a%20b")).isEqualTo("/a b");
+		assertThat(HttpOperations.resolvePath("localhost:8080/a?b={}")).isEqualTo("/a");
 
 		assertThat(HttpOperations.resolvePath("")).isEqualTo("");
 		assertThat(HttpOperations.resolvePath("/")).isEqualTo("/");
@@ -178,6 +183,7 @@ class HttpOperationsTest {
 		assertThat(HttpOperations.resolvePath("/a#b")).isEqualTo("/a");
 		assertThat(HttpOperations.resolvePath("/a?b#c")).isEqualTo("/a");
 		assertThat(HttpOperations.resolvePath("/a%20b")).isEqualTo("/a b");
+		assertThat(HttpOperations.resolvePath("/a?b={}")).isEqualTo("/a");
 	}
 
 	static final class TestHttpInfos implements HttpInfos {

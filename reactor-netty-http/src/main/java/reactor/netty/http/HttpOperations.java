@@ -359,12 +359,27 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 */
 	public static String resolvePath(String uri) {
 		Objects.requireNonNull(uri, "uri");
-		if (uri.isEmpty()) {
-			return uri;
-		}
 
 		String tempUri = uri;
+
+		int index = tempUri.indexOf('?');
+		if (index > -1) {
+			tempUri = tempUri.substring(0, index);
+		}
+
+		index = tempUri.indexOf('#');
+		if (index > -1) {
+			tempUri = tempUri.substring(0, index);
+		}
+
+		if (tempUri.isEmpty()) {
+			return tempUri;
+		}
+
 		if (tempUri.charAt(0) == '/') {
+			if (tempUri.length() == 1) {
+				return tempUri;
+			}
 			tempUri = "http://localhost:8080" + tempUri;
 		}
 		else if (!SCHEME_PATTERN.matcher(tempUri).matches()) {
