@@ -205,11 +205,24 @@ class ConnectionPoolTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testClientWithMetrics() {
+	void testClientWithMetricsDifferentRecorders() {
 		HttpClient localClient1 =
 				client.port(server1.port())
 				      .metrics(true, Function.identity());
 		HttpClient localClient2 = localClient1.metrics(true, () -> metricsRecorder);
+		checkExpectations(
+				"server1-ConnectionPoolTests",
+				"server1-ConnectionPoolTests",
+				localClient1,
+				localClient2);
+	}
+
+	@Test
+	void testClientWithMetricsDifferentUriTagValueMappers() {
+		HttpClient localClient1 =
+				client.port(server1.port())
+				      .metrics(true, Function.identity());
+		HttpClient localClient2 = localClient1.metrics(true, s -> "testClientWithMetricsDifferentUriTagValueMappers");
 		checkExpectations(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",

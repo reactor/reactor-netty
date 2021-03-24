@@ -237,6 +237,75 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkExpectationsExisting("testUriTagValueResolver", sa.getHostString() + ":" + sa.getPort(), 1);
 	}
 
+	/**
+	 * https://github.com/reactor/reactor-netty/issues/1559
+	 */
+	@Test
+	void testUriTagValueFunctionNotSharedForClient() throws Exception {
+		disposableServer =
+				httpServer.metrics(true,
+				                s -> {
+				                    if ("/1".equals(s)) {
+				                        return "testUriTagValueFunctionNotShared_1";
+				                    }
+				                    else {
+				                        return "testUriTagValueFunctionNotShared_2";
+				                    }
+				                })
+				          .bindNow();
+
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		httpClient = httpClient.doAfterRequest((req, conn) ->
+				serverAddress.set(conn.channel().remoteAddress())
+		);
+
+		CountDownLatch latch1 = new CountDownLatch(1);
+		httpClient.doOnResponse((res, conn) -> conn.channel()
+		                                           .closeFuture()
+		                                           .addListener(f -> latch1.countDown()))
+		          .metrics(true, s -> "testUriTagValueFunctionNotShared_1")
+		          .post()
+		          .uri("/1")
+		          .send(body)
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+
+		Thread.sleep(1000);
+		checkExpectationsExisting("testUriTagValueFunctionNotShared_1", sa.getHostString() + ":" + sa.getPort(), 1);
+
+		CountDownLatch latch2 = new CountDownLatch(1);
+		httpClient.doOnResponse((res, conn) -> conn.channel()
+		                                           .closeFuture()
+		                                           .addListener(f -> latch2.countDown()))
+		          .metrics(true, s -> "testUriTagValueFunctionNotShared_2")
+		          .post()
+		          .uri("/2")
+		          .send(body)
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		sa = (InetSocketAddress) serverAddress.get();
+
+		Thread.sleep(1000);
+		checkExpectationsExisting("testUriTagValueFunctionNotShared_2", sa.getHostString() + ":" + sa.getPort(), 2);
+	}
+
 	private void checkExpectationsExisting(String uri, String serverAddress, int index) {
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "POST", STATUS, "200"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
