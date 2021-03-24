@@ -106,7 +106,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	@Override
 	public int channelHash() {
-		return Objects.hash(super.channelHash(), acceptGzip, decoder, _protocols, sslProvider);
+		return Objects.hash(super.channelHash(), acceptGzip, decoder, _protocols, sslProvider, uriTagValue);
 	}
 
 	@Override
