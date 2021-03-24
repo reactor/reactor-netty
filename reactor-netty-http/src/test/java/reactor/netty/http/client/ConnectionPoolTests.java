@@ -112,7 +112,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	void testClientWithPort() {
 		HttpClient localClient1 = client.port(server1.port());
 		HttpClient localClient2 = localClient1.port(server2.port());
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server2-ConnectionPoolTests",
 				localClient1,
@@ -123,7 +123,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	void testClientWithAddress() {
 		HttpClient localClient1 = client.remoteAddress(server1::address);
 		HttpClient localClient2 = localClient1.remoteAddress(server2::address);
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server2-ConnectionPoolTests",
 				localClient1,
@@ -136,7 +136,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 				client.port(server1.port())
 				      .attr(AttributeKey.valueOf("attr1-ConnectionPoolTests"), "");
 		HttpClient localClient2 = localClient1.attr(AttributeKey.valueOf("attr2-ConnectionPoolTests"), "");
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -149,7 +149,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 				client.port(server1.port())
 				      .channelGroup(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE));
 		HttpClient localClient2 = localClient1.channelGroup(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE));
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -162,7 +162,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 				client.port(server1.port())
 				      .doOnChannelInit((observer, channel, address) -> {});
 		HttpClient localClient2 = localClient1.doOnChannelInit((observer, channel, address) -> {});
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -175,7 +175,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 				client.port(server1.port())
 				      .wiretap(true);
 		HttpClient localClient2 = localClient1.wiretap("reactor.netty.ConnectionPoolTests");
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -186,7 +186,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	void testClientWithRunOn() {
 		HttpClient localClient1 = client.port(server1.port());
 		HttpClient localClient2 = localClient1.runOn(loop);
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -197,7 +197,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	void testClientWithRunOnPreferNativeFalse() {
 		HttpClient localClient1 = client.port(server1.port());
 		HttpClient localClient2 = localClient1.runOn(loop, false);
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -210,7 +210,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 				client.port(server1.port())
 				      .metrics(true, Function.identity());
 		HttpClient localClient2 = localClient1.metrics(true, () -> metricsRecorder);
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -223,7 +223,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 				client.port(server1.port())
 				      .metrics(true, Function.identity());
 		HttpClient localClient2 = localClient1.metrics(true, s -> "testClientWithMetricsDifferentUriTagValueMappers");
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -236,7 +236,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 				client.port(server1.port())
 				      .observe((conn, state) -> {});
 		HttpClient localClient2 = localClient1.observe((conn, state) -> {});
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -249,7 +249,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 				client.port(server1.port())
 				      .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
 		HttpClient localClient2 = localClient1.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000);
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -260,7 +260,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	void testClientWithResolver() {
 		HttpClient localClient1 = client.port(server1.port());
 		HttpClient localClient2 = localClient1.resolver(DefaultAddressResolverGroup.INSTANCE);
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -271,7 +271,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	void testClientWithCompress() {
 		HttpClient localClient1 = client.port(server1.port());
 		HttpClient localClient2 = localClient1.compress(true);
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -282,7 +282,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	void testClientWithDecoder() {
 		HttpClient localClient1 = client.port(server1.port());
 		HttpClient localClient2 = localClient1.httpResponseDecoder(spec -> spec.maxInitialLineLength(256));
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
@@ -299,7 +299,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 				client.port(server3.port())
 				      .secure(spec -> spec.sslContext(sslContextBuilder1));
 		HttpClient localClient2 = localClient1.protocol(HttpProtocol.H2);
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server3-ConnectionPoolTests",
 				"server3-ConnectionPoolTests",
 				localClient1,
@@ -320,7 +320,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 				client.port(server4.port())
 				      .secure(spec -> spec.sslContext(sslContextBuilder1));
 		HttpClient localClient2 = localClient1.secure(spec -> spec.sslContext(sslContextBuilder2));
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server4-ConnectionPoolTests",
 				"server4-ConnectionPoolTests",
 				localClient1,
@@ -338,14 +338,19 @@ class ConnectionPoolTests extends BaseHttpTest {
 				localClient1.secure(spec ->
 				    spec.sslContext(SslContextBuilder.forClient()
 				                                     .trustManager(InsecureTrustManagerFactory.INSTANCE)));
-		checkExpectations(
+		checkResponsesAndChannelsStates(
 				"server4-ConnectionPoolTests",
 				"server4-ConnectionPoolTests",
 				localClient1,
 				localClient2);
 	}
 
-	private void checkExpectations(String client1Response, String client2Response, HttpClient client1, HttpClient client2) {
+	private void checkResponsesAndChannelsStates(
+			String expectedClient1Response,
+			String expectedClient2Response,
+			HttpClient client1,
+			HttpClient client2) {
+
 		List<Tuple2<String, Channel>> response1 =
 		Flux.range(0, 2)
 		    .concatMap(i ->
@@ -361,8 +366,9 @@ class ConnectionPoolTests extends BaseHttpTest {
 		    .block(Duration.ofSeconds(10));
 
 		assertThat(response1).isNotNull().hasSize(2);
-		assertThat(response1.get(0).getT1()).isEqualTo(client1Response);
-		assertThat(response1.get(1).getT1()).isEqualTo(client1Response);
+		assertThat(response1.get(0).getT1()).isEqualTo(expectedClient1Response);
+		assertThat(response1.get(1).getT1()).isEqualTo(expectedClient1Response);
+
 		assertThat(response1.get(0).getT2()).isSameAs(response1.get(1).getT2());
 
 		List<Tuple2<String, Channel>> response2 =
@@ -378,7 +384,8 @@ class ConnectionPoolTests extends BaseHttpTest {
 				       .block(Duration.ofSeconds(10));
 
 		assertThat(response2).isNotNull().hasSize(1);
-		assertThat(response2.get(0).getT1()).isEqualTo(client2Response);
+		assertThat(response2.get(0).getT1()).isEqualTo(expectedClient2Response);
+
 		assertThat(response2.get(0).getT2()).isNotSameAs(response1.get(0).getT2());
 	}
 }
