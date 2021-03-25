@@ -34,6 +34,7 @@ import java.nio.file.StandardOpenOption;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -2754,5 +2755,27 @@ class HttpClientTest extends BaseHttpTest {
 						                 .get(0)
 						                 .getResolver(loop.next()))
 				.withMessage("executor not accepting a task");
+	}
+
+	@Test
+	void testCustomUserAgentHeaderPreserved() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just(req.requestHeaders()
+				                                                          .get(HttpHeaderNames.USER_AGENT, ""))))
+				        .bindNow();
+
+		HttpClient client = createClient(disposableServer.port());
+		Flux.just("User-Agent", "user-agent")
+		    .flatMap(s -> client.headers(h -> h.set(s, "custom"))
+		                        .get()
+		                        .responseContent()
+		                        .aggregate()
+		                        .asString())
+		    .collectList()
+		    .as(StepVerifier::create)
+		    .expectNext(Arrays.asList("custom", "custom"))
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(5));
 	}
 }
