@@ -21,7 +21,6 @@ import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.function.Supplier;
 
 /**
@@ -30,13 +29,11 @@ import java.util.function.Supplier;
 abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgProvider<SELF>>
 		implements AccessLogArgProvider, Supplier<SELF> {
 
-	static final DateTimeFormatter DATE_TIME_FORMATTER =
-			DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z");
 	static final String MISSING = "-";
 
 	final SocketAddress remoteAddress;
 	final String user = MISSING;
-	String zonedDateTime;
+	ZonedDateTime zonedDateTime;
 	CharSequence method;
 	CharSequence uri;
 	String protocol;
@@ -50,7 +47,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	@Override
 	@Nullable
-	public String zonedDateTime() {
+	public ZonedDateTime zonedDateTime() {
 		return zonedDateTime;
 	}
 
@@ -99,7 +96,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	 * Should be called when a new request is received.
 	 */
 	void onRequest() {
-		this.zonedDateTime = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM).format(DATE_TIME_FORMATTER);
+		this.zonedDateTime = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
 		this.startTime = System.currentTimeMillis();
 	}
 

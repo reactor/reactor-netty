@@ -18,6 +18,7 @@ package reactor.netty.http.server.logging;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.time.ZonedDateTime;
 
 /**
  * A provider of the args required for access log.
@@ -28,12 +29,12 @@ import java.net.SocketAddress;
 public interface AccessLogArgProvider {
 
 	/**
-	 * Returns the date-time string with a time-zone, (e.g. "30/Oct/2020:03:52:11 +0000").
+	 * Returns the date-time of the moment when the request was received
 	 *
-	 * @return the date-time string with a time-zone
+	 * @return zoned date-time
 	 */
 	@Nullable
-	String zonedDateTime();
+	ZonedDateTime zonedDateTime();
 
 	/**
 	 * Returns the address of the remote peer or {@code null} in case of Unix Domain Sockets.
