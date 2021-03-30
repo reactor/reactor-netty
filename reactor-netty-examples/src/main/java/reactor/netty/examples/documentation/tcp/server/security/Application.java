@@ -15,9 +15,10 @@
  */
 package reactor.netty.examples.documentation.tcp.server.security;
 
-import io.netty.handler.ssl.SslContextBuilder;
 import reactor.netty.DisposableServer;
 import reactor.netty.tcp.TcpServer;
+import reactor.netty.tcp.TcpSslContextSpec;
+
 import java.io.File;
 
 public class Application {
@@ -26,11 +27,11 @@ public class Application {
 		File cert = new File("certificate.crt");
 		File key = new File("private.key");
 
-		SslContextBuilder sslContextBuilder = SslContextBuilder.forServer(cert, key);
+		TcpSslContextSpec tcpSslContextSpec = TcpSslContextSpec.forServer(cert, key);
 
 		DisposableServer server =
 				TcpServer.create()
-				         .secure(spec -> spec.sslContext(sslContextBuilder))
+				         .secure(spec -> spec.sslContext(tcpSslContextSpec))
 				         .bindNow();
 
 		server.onDispose()

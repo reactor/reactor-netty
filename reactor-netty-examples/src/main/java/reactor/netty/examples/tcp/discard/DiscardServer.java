@@ -15,9 +15,9 @@
  */
 package reactor.netty.examples.tcp.discard;
 
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import reactor.netty.tcp.TcpServer;
+import reactor.netty.tcp.TcpSslContextSpec;
 
 /**
  * A TCP server that discards the received data.
@@ -44,7 +44,7 @@ public final class DiscardServer {
 		if (SECURE) {
 			SelfSignedCertificate ssc = new SelfSignedCertificate();
 			server = server.secure(
-					spec -> spec.sslContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())));
+					spec -> spec.sslContext(TcpSslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
 		}
 
 		server.bindNow()

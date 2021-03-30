@@ -15,13 +15,13 @@
  */
 package reactor.netty.examples.tcp.echo;
 
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.Connection;
 import reactor.netty.tcp.TcpClient;
+import reactor.netty.tcp.TcpSslContextSpec;
 
 /**
  * A TCP client that sends a package to the TCP server and
@@ -42,8 +42,10 @@ public final class EchoClient {
 				         .wiretap(WIRETAP);
 
 		if (SECURE) {
-			client = client.secure(
-					spec -> spec.sslContext(SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)));
+			TcpSslContextSpec tcpSslContextSpec =
+					TcpSslContextSpec.forClient()
+					                 .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+			client = client.secure(spec -> spec.sslContext(tcpSslContextSpec));
 		}
 
 		Connection connection =

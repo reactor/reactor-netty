@@ -15,8 +15,8 @@
  */
 package reactor.netty.examples.http.helloworld;
 
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.client.HttpClient;
 
 /**
@@ -39,8 +39,10 @@ public final class HelloWorldClient {
 				          .compress(COMPRESS);
 
 		if (SECURE) {
-			client = client.secure(
-					spec -> spec.sslContext(SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)));
+			Http11SslContextSpec http11SslContextSpec =
+					Http11SslContextSpec.forClient()
+					                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+			client = client.secure(spec -> spec.sslContext(http11SslContextSpec));
 		}
 
 		String response =

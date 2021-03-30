@@ -17,7 +17,6 @@ package reactor.netty.http.client;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
@@ -32,6 +31,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyPipeline;
+import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.transport.ProxyProvider;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
@@ -198,11 +198,12 @@ class HttpClientProxyTest extends BaseHttpTest {
 
 	@Test
 	void shouldUseDifferentResolvers(Hoverfly hoverfly) {
+		Http11SslContextSpec http11SslContextSpec =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		HttpClient client =
 				createClient(disposableServer::address)
-				          .secure(spec ->
-				                  spec.sslContext(SslContextBuilder.forClient()
-				                                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)))
+				          .secure(spec -> spec.sslContext(http11SslContextSpec))
 				          .metrics(true, () -> MicrometerHttpClientMetricsRecorder.INSTANCE);
 
 		AtomicReference<AddressResolverGroup<?>> resolver1 = new AtomicReference<>();
@@ -270,9 +271,10 @@ class HttpClientProxyTest extends BaseHttpTest {
 		}
 
 		if (securityEnabled) {
-			client = client.secure(spec ->
-			        spec.sslContext(SslContextBuilder.forClient()
-			                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)));
+			Http11SslContextSpec http11SslContextSpec =
+					Http11SslContextSpec.forClient()
+					                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+			client = client.secure(spec -> spec.sslContext(http11SslContextSpec));
 		}
 
 		return client.wiretap(wiretap)

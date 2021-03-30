@@ -27,7 +27,6 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.OpenSslContext;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -38,6 +37,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
+import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
@@ -60,10 +61,11 @@ class SslProviderTests extends BaseHttpTest {
 	private List<String> protocols;
 	private SslContext sslContext;
 	private HttpServer server;
-	private SslContextBuilder serverSslContextBuilder;
+	private Http11SslContextSpec serverSslContextBuilder;
+	private Http2SslContextSpec serverSslContextBuilderH2;
 	private SslContext localhostSslContext;
 	private SslContext anotherSslContext;
-	private SslContextBuilder clientSslContextBuilder;
+	private Http11SslContextSpec clientSslContextBuilder;
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws Exception {
@@ -74,18 +76,20 @@ class SslProviderTests extends BaseHttpTest {
 
 	@BeforeEach
 	void setUp() throws Exception {
-		serverSslContextBuilder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		serverSslContextBuilder = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		serverSslContextBuilderH2 = Http2SslContextSpec.forServer(cert.certificate(), cert.privateKey());
 
-		SslContextBuilder localhostSslContextBuilder =
-				SslContextBuilder.forServer(localhostCert.certificate(), localhostCert.privateKey());
-		localhostSslContext = localhostSslContextBuilder.build();
+		localhostSslContext =
+				Http11SslContextSpec.forServer(localhostCert.certificate(), localhostCert.privateKey())
+				                    .sslContext();
 
-		SslContextBuilder anotherSslContextBuilder =
-				SslContextBuilder.forServer(anotherCert.certificate(), anotherCert.privateKey());
-		anotherSslContext = anotherSslContextBuilder.build();
+		anotherSslContext =
+				Http11SslContextSpec.forServer(anotherCert.certificate(), anotherCert.privateKey())
+				                    .sslContext();
 
-		clientSslContextBuilder = SslContextBuilder.forClient()
-		                                           .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		clientSslContextBuilder =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		protocols = new ArrayList<>();
 		server = createServer()
 		                   .doOnBind(conf -> {
@@ -135,7 +139,7 @@ class SslProviderTests extends BaseHttpTest {
 	void testProtocolH2SslConfiguration() {
 		disposableServer =
 				server.protocol(HttpProtocol.H2)
-				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
+				      .secure(spec -> spec.sslContext(serverSslContextBuilderH2))
 				      .bindNow();
 		assertThat(protocols.size()).isEqualTo(2);
 		assertThat(protocols.contains("h2")).isTrue();
@@ -147,7 +151,7 @@ class SslProviderTests extends BaseHttpTest {
 	@Test
 	void testSslConfigurationProtocolH2_1() {
 		disposableServer =
-				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
+				server.secure(spec -> spec.sslContext(serverSslContextBuilderH2))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
 		assertThat(protocols.size()).isEqualTo(2);
@@ -161,7 +165,7 @@ class SslProviderTests extends BaseHttpTest {
 	void testSslConfigurationProtocolH2_2() {
 		disposableServer =
 				server.protocol(HttpProtocol.HTTP11)
-				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
+				      .secure(spec -> spec.sslContext(serverSslContextBuilderH2))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
 		assertThat(protocols.size()).isEqualTo(2);
@@ -174,21 +178,23 @@ class SslProviderTests extends BaseHttpTest {
 	@Test
 	void testTls13Support() {
 		disposableServer =
-				server.secure(spec -> spec.sslContext(serverSslContextBuilder.protocols("TLSv1.3")))
+				server.secure(spec ->
+				          spec.sslContext(serverSslContextBuilder.configure(builder -> builder.protocols("TLSv1.3"))))
 				      .handle((req, res) -> res.sendString(Mono.just("testTls13Support")))
 				      .bindNow();
 
-		StepVerifier.create(
-		        createClient(disposableServer.port())
-		                  .secure(spec -> spec.sslContext(clientSslContextBuilder.protocols("TLSv1.3")))
-		                  .get()
-		                  .uri("/")
-		                  .responseContent()
-		                  .aggregate()
-		                  .asString())
-		            .expectNext("testTls13Support")
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		createClient(disposableServer.port())
+		        .secure(spec ->
+		            spec.sslContext(clientSslContextBuilder.configure(builder -> builder.protocols("TLSv1.3"))))
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectNext("testTls13Support")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -203,10 +209,10 @@ class SslProviderTests extends BaseHttpTest {
 
 	private void doTestTls13UnsupportedProtocol(boolean serverSupport, boolean clientSupport) {
 		if (serverSupport) {
-			serverSslContextBuilder.protocols("TLSv1.3");
+			serverSslContextBuilder.configure(builder -> builder.protocols("TLSv1.3"));
 		}
 		else {
-			serverSslContextBuilder.protocols("TLSv1.2");
+			serverSslContextBuilder.configure(builder -> builder.protocols("TLSv1.2"));
 		}
 		disposableServer =
 				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
@@ -214,10 +220,10 @@ class SslProviderTests extends BaseHttpTest {
 				      .bindNow();
 
 		if (clientSupport) {
-			clientSslContextBuilder.protocols("TLSv1.3");
+			clientSslContextBuilder.configure(builder -> builder.protocols("TLSv1.3"));
 		}
 		else {
-			clientSslContextBuilder.protocols("TLSv1.2");
+			clientSslContextBuilder.configure(builder -> builder.protocols("TLSv1.2"));
 		}
 		StepVerifier.create(
 		        createClient(disposableServer.port())
@@ -235,7 +241,7 @@ class SslProviderTests extends BaseHttpTest {
 	void testAdd() throws Exception {
 		SslProvider.Builder builder =
 				SslProvider.builder()
-				           .sslContext(serverSslContextBuilder.build())
+				           .sslContext(serverSslContextBuilder)
 				           .addSniMapping("localhost", spec -> spec.sslContext(localhostSslContext));
 
 		SniProvider provider = builder.build().sniProvider;
@@ -251,12 +257,12 @@ class SslProviderTests extends BaseHttpTest {
 	void testAddBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
-						.sslContext(serverSslContextBuilder.build())
+						.sslContext(serverSslContextBuilder)
 						.addSniMapping(null, spec -> spec.sslContext(localhostSslContext)));
 
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
-						.sslContext(serverSslContextBuilder.build())
+						.sslContext(serverSslContextBuilder)
 						.addSniMapping("localhost", null));
 	}
 
@@ -267,7 +273,7 @@ class SslProviderTests extends BaseHttpTest {
 
 		SslProvider.Builder builder =
 				SslProvider.builder()
-				           .sslContext(serverSslContextBuilder.build())
+				           .sslContext(serverSslContextBuilder)
 				           .addSniMappings(map);
 
 		SniProvider provider = builder.build().sniProvider;
@@ -284,7 +290,7 @@ class SslProviderTests extends BaseHttpTest {
 	void testAddAllBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
-						.sslContext(serverSslContextBuilder.build())
+						.sslContext(serverSslContextBuilder)
 						.addSniMappings(null));
 	}
 
@@ -293,7 +299,7 @@ class SslProviderTests extends BaseHttpTest {
 		Map<String, Consumer<? super SslProvider.SslContextSpec>> map = new HashMap<>();
 		map.put("localhost", spec -> spec.sslContext(localhostSslContext));
 
-		SslContext defaultSslContext = serverSslContextBuilder.build();
+		SslContext defaultSslContext = serverSslContextBuilder.sslContext();
 		SslProvider.Builder builder =
 				SslProvider.builder()
 				           .sslContext(defaultSslContext)
@@ -314,13 +320,13 @@ class SslProviderTests extends BaseHttpTest {
 	void testSetAllBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
-						.sslContext(serverSslContextBuilder.build())
+						.sslContext(serverSslContextBuilder)
 						.setSniMappings(null));
 	}
 
 	@Test
 	void testServerNames() throws Exception {
-		SslContext defaultSslContext = clientSslContextBuilder.build();
+		SslContext defaultSslContext = clientSslContextBuilder.sslContext();
 		SslProvider.Builder builder =
 				SslProvider.builder()
 				          .sslContext(defaultSslContext)
@@ -339,7 +345,7 @@ class SslProviderTests extends BaseHttpTest {
 
 	@Test
 	void testServerNamesBadValues() throws Exception {
-		SslContext defaultSslContext = clientSslContextBuilder.build();
+		SslContext defaultSslContext = clientSslContextBuilder.sslContext();
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(defaultSslContext)

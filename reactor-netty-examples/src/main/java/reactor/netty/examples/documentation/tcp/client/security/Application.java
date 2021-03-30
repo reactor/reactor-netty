@@ -15,20 +15,20 @@
  */
 package reactor.netty.examples.documentation.tcp.client.security;
 
-import io.netty.handler.ssl.SslContextBuilder;
 import reactor.netty.Connection;
 import reactor.netty.tcp.TcpClient;
+import reactor.netty.tcp.TcpSslContextSpec;
 
 public class Application {
 
 	public static void main(String[] args) {
-		SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+		TcpSslContextSpec tcpSslContextSpec = TcpSslContextSpec.forClient();
 
 		Connection connection =
 				TcpClient.create()
 				         .host("example.com")
 				         .port(443)
-				         .secure(spec -> spec.sslContext(sslContextBuilder))
+				         .secure(spec -> spec.sslContext(tcpSslContextSpec))
 				         .connectNow();
 
 		connection.onDispose()

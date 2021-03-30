@@ -18,7 +18,6 @@ package reactor.netty.http.client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.resolver.DefaultAddressResolverGroup;
@@ -34,6 +33,8 @@ import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.DisposableServer;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
@@ -73,14 +74,15 @@ class ConnectionPoolTests extends BaseHttpTest {
 		                .bindNow();
 
 		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder sslContextBuilder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		Http11SslContextSpec http11SslContextSpec = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		Http2SslContextSpec http2SslContextSpec = Http2SslContextSpec.forServer(cert.certificate(), cert.privateKey());
 
 		server3 = server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11)
-		                .secure(spec -> spec.sslContext(sslContextBuilder))
+		                .secure(spec -> spec.sslContext(http2SslContextSpec))
 		                .handle((req, res) -> res.sendString(Mono.just("server3-ConnectionPoolTests")))
 		                .bindNow();
 
-		server4 = server.secure(spec -> spec.sslContext(sslContextBuilder))
+		server4 = server.secure(spec -> spec.sslContext(http11SslContextSpec))
 		                .handle((req, res) -> res.sendString(Mono.just("server4-ConnectionPoolTests")))
 		                .bindNow();
 
@@ -291,14 +293,19 @@ class ConnectionPoolTests extends BaseHttpTest {
 
 	@Test
 	void testClientWithProtocols() {
-		SslContextBuilder sslContextBuilder1 =
-				SslContextBuilder.forClient()
-				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http11SslContextSpec http11SslContextSpec =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		Http2SslContextSpec http2SslContextSpec =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
 		HttpClient localClient1 =
 				client.port(server3.port())
-				      .secure(spec -> spec.sslContext(sslContextBuilder1));
-		HttpClient localClient2 = localClient1.protocol(HttpProtocol.H2);
+				      .secure(spec -> spec.sslContext(http11SslContextSpec));
+		HttpClient localClient2 =
+				localClient1.protocol(HttpProtocol.H2)
+				            .secure(spec -> spec.sslContext(http2SslContextSpec));
 		checkResponsesAndChannelsStates(
 				"server3-ConnectionPoolTests",
 				"server3-ConnectionPoolTests",
@@ -308,18 +315,18 @@ class ConnectionPoolTests extends BaseHttpTest {
 
 	@Test
 	void testClientWithSecurity_1() {
-		SslContextBuilder sslContextBuilder1 =
-				SslContextBuilder.forClient()
-				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http11SslContextSpec http11SslContextSpec1 =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
-		SslContextBuilder sslContextBuilder2 =
-				SslContextBuilder.forClient()
-				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http11SslContextSpec http11SslContextSpec2 =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
 		HttpClient localClient1 =
 				client.port(server4.port())
-				      .secure(spec -> spec.sslContext(sslContextBuilder1));
-		HttpClient localClient2 = localClient1.secure(spec -> spec.sslContext(sslContextBuilder2));
+				      .secure(spec -> spec.sslContext(http11SslContextSpec1));
+		HttpClient localClient2 = localClient1.secure(spec -> spec.sslContext(http11SslContextSpec2));
 		checkResponsesAndChannelsStates(
 				"server4-ConnectionPoolTests",
 				"server4-ConnectionPoolTests",
@@ -332,12 +339,14 @@ class ConnectionPoolTests extends BaseHttpTest {
 		HttpClient localClient1 =
 				client.port(server4.port())
 				      .secure(spec ->
-				          spec.sslContext(SslContextBuilder.forClient()
-				                                           .trustManager(InsecureTrustManagerFactory.INSTANCE)));
+				          spec.sslContext(
+				              Http11SslContextSpec.forClient()
+				                                  .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE))));
 		HttpClient localClient2 =
 				localClient1.secure(spec ->
-				    spec.sslContext(SslContextBuilder.forClient()
-				                                     .trustManager(InsecureTrustManagerFactory.INSTANCE)));
+				    spec.sslContext(
+				        Http11SslContextSpec.forClient()
+				                            .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE))));
 		checkResponsesAndChannelsStates(
 				"server4-ConnectionPoolTests",
 				"server4-ConnectionPoolTests",

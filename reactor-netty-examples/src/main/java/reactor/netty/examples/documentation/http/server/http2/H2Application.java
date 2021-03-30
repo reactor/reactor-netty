@@ -15,9 +15,9 @@
  */
 package reactor.netty.examples.documentation.http.server.http2;
 
-import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
+import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import java.io.File;
@@ -28,13 +28,13 @@ public class H2Application {
 		File cert = new File("certificate.crt");
 		File key = new File("private.key");
 
-		SslContextBuilder sslContextBuilder = SslContextBuilder.forServer(cert, key);
+		Http2SslContextSpec http2SslContextSpec = Http2SslContextSpec.forServer(cert, key);
 
 		DisposableServer server =
 				HttpServer.create()
 				          .port(8080)
-				          .protocol(HttpProtocol.H2)                          //<1>
-				          .secure(spec -> spec.sslContext(sslContextBuilder)) //<2>
+				          .protocol(HttpProtocol.H2)                            //<1>
+				          .secure(spec -> spec.sslContext(http2SslContextSpec)) //<2>
 				          .handle((request, response) -> response.sendString(Mono.just("hello")))
 				          .bindNow();
 

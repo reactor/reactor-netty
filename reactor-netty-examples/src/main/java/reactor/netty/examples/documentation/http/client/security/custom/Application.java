@@ -15,21 +15,19 @@
  */
 package reactor.netty.examples.documentation.http.client.security.custom;
 
-import io.netty.handler.ssl.SslContextBuilder;
+import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.tcp.SslProvider;
 
 import java.time.Duration;
 
 public class Application {
 
 	public static void main(String[] args) {
-		SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+		Http11SslContextSpec http11SslContextSpec = Http11SslContextSpec.forClient();
 
 		HttpClient client =
 				HttpClient.create()
-				          .secure(spec -> spec.sslContext(sslContextBuilder)
-				                              .defaultConfiguration(SslProvider.DefaultConfigurationType.TCP)
+				          .secure(spec -> spec.sslContext(http11SslContextSpec)
 				                              .handshakeTimeout(Duration.ofSeconds(30))         //<1>
 				                              .closeNotifyFlushTimeout(Duration.ofSeconds(10))  //<2>
 				                              .closeNotifyReadTimeout(Duration.ofSeconds(10))); //<3>
