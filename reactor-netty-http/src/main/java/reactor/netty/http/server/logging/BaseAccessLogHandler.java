@@ -38,7 +38,7 @@ class BaseAccessLogHandler extends ChannelDuplexHandler {
 			"{} - {} [{}] \"{} {} {}\" {} {} {} ms";
 	static final Function<AccessLogArgProvider, AccessLog> DEFAULT_ACCESS_LOG =
 			args -> {
-				ZonedDateTime accessDt = args.zonedDateTime();
+				ZonedDateTime accessDt = args.accessDateTime();
 				String formattedDt = accessDt == null ? MISSING : accessDt.format(DEFAULT_DATE_TIME_FORMAT);
 				return AccessLog.create(DEFAULT_LOG_FORMAT, applyAddress(args.remoteAddress()), args.user(),
 						formattedDt, args.method(), args.uri(), args.protocol(), args.status(),

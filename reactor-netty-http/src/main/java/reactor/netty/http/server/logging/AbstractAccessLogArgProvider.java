@@ -21,6 +21,7 @@ import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.function.Supplier;
 
 /**
@@ -29,11 +30,14 @@ import java.util.function.Supplier;
 abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgProvider<SELF>>
 		implements AccessLogArgProvider, Supplier<SELF> {
 
+	static final DateTimeFormatter DATE_TIME_FORMATTER =
+			DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z");
 	static final String MISSING = "-";
 
 	final SocketAddress remoteAddress;
 	final String user = MISSING;
-	ZonedDateTime zonedDateTime;
+	String zonedDateTime;
+	ZonedDateTime accessDateTime;
 	CharSequence method;
 	CharSequence uri;
 	String protocol;
@@ -47,8 +51,15 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	@Override
 	@Nullable
-	public ZonedDateTime zonedDateTime() {
+	@Deprecated
+	public String zonedDateTime() {
 		return zonedDateTime;
+	}
+
+	@Override
+	@Nullable
+	public ZonedDateTime accessDateTime() {
+		return accessDateTime;
 	}
 
 	@Override
@@ -96,7 +107,8 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	 * Should be called when a new request is received.
 	 */
 	void onRequest() {
-		this.zonedDateTime = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
+		this.accessDateTime = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
+		this.zonedDateTime = accessDateTime.format(DATE_TIME_FORMATTER);
 		this.startTime = System.currentTimeMillis();
 	}
 
@@ -104,6 +116,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	 * Remove non-final fields for reuse.
 	 */
 	void clear() {
+		this.accessDateTime = null;
 		this.zonedDateTime = null;
 		this.method = null;
 		this.uri = null;

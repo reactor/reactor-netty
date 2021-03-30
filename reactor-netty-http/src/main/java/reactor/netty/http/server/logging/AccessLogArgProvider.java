@@ -29,12 +29,22 @@ import java.time.ZonedDateTime;
 public interface AccessLogArgProvider {
 
 	/**
+	 * Returns the date-time string with a time-zone, (e.g. "30/Oct/2020:03:52:11 +0000").
+	 *
+	 * @return the date-time string with a time-zone
+	 * @deprecated as of 1.0.6. Prefer using {@link #accessDateTime()} This method will be removed in version 1.2.0.
+	 */
+	@Nullable
+	@Deprecated
+	String zonedDateTime();
+
+	/**
 	 * Returns the date-time of the moment when the request was received
 	 *
 	 * @return zoned date-time
 	 */
 	@Nullable
-	ZonedDateTime zonedDateTime();
+	ZonedDateTime accessDateTime();
 
 	/**
 	 * Returns the address of the remote peer or {@code null} in case of Unix Domain Sockets.
