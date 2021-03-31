@@ -110,7 +110,7 @@ ext {
 	junitVersion = '5.7.1'
 	junitPlatformLauncherVersion = '1.7.1'
 	mockitoVersion = '3.8.0'
-	blockHoundVersion = '1.0.4.RELEASE'
+	blockHoundVersion = '1.0.5.RELEASE'
 
 	javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
 					"https://docs.oracle.com/javaee/6/api/",
