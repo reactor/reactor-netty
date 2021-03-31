@@ -31,6 +31,8 @@ class BaseAccessLogHandler extends ChannelDuplexHandler {
 
 	static final String DEFAULT_LOG_FORMAT =
 			"{} - {} [{}] \"{} {} {}\" {} {} {} ms";
+
+	@SuppressWarnings("deprecation")
 	static final Function<AccessLogArgProvider, AccessLog> DEFAULT_ACCESS_LOG =
 			args -> AccessLog.create(DEFAULT_LOG_FORMAT, applyAddress(args.remoteAddress()), args.user(),
 					args.zonedDateTime(), args.method(), args.uri(), args.protocol(), args.status(),

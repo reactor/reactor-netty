@@ -64,6 +64,7 @@ class AccessLogHandlerH2Tests {
 		channel.writeOutbound(new DefaultHttp2DataFrame(byteBuf, true));
 	}
 
+	@SuppressWarnings("deprecation")
 	private void assertAccessLogArgProvider(AccessLogArgProvider args, SocketAddress remoteAddress) {
 		assertThat(args.remoteAddress()).isEqualTo(remoteAddress);
 		assertThat(args.user()).isEqualTo(AbstractAccessLogArgProvider.MISSING);

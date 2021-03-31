@@ -68,6 +68,7 @@ class AccessLogArgProviderTests {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void onRequest() {
 		assertThat(accessLogArgProvider.accessDateTime()).isNull();
 		assertThat(accessLogArgProvider.zonedDateTime()).isNull();
@@ -79,6 +80,7 @@ class AccessLogArgProviderTests {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void clear() {
 		assertAccessLogArgProviderInitState();
 		accessLogArgProvider.onRequest();
@@ -97,6 +99,7 @@ class AccessLogArgProviderTests {
 		assertAccessLogArgProviderInitState();
 	}
 
+	@SuppressWarnings("deprecation")
 	private void assertAccessLogArgProviderInitState() {
 		assertThat(accessLogArgProvider.accessDateTime()).isNull();
 		assertThat(accessLogArgProvider.zonedDateTime()).isNull();
