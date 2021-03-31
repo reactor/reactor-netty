@@ -69,9 +69,11 @@ class AccessLogArgProviderTests {
 
 	@Test
 	void onRequest() {
+		assertThat(accessLogArgProvider.accessDateTime()).isNull();
 		assertThat(accessLogArgProvider.zonedDateTime()).isNull();
 		assertThat(accessLogArgProvider.startTime).isZero();
 		accessLogArgProvider.onRequest();
+		assertThat(accessLogArgProvider.accessDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.zonedDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.startTime).isNotNull();
 	}
@@ -83,6 +85,7 @@ class AccessLogArgProviderTests {
 		accessLogArgProvider
 				.chunked(true)
 				.increaseContentLength(100);
+		assertThat(accessLogArgProvider.accessDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.zonedDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.method()).isEqualTo(HttpMethod.POST.name());
 		assertThat(accessLogArgProvider.uri()).isEqualTo(URI);
@@ -95,6 +98,7 @@ class AccessLogArgProviderTests {
 	}
 
 	private void assertAccessLogArgProviderInitState() {
+		assertThat(accessLogArgProvider.accessDateTime()).isNull();
 		assertThat(accessLogArgProvider.zonedDateTime()).isNull();
 		assertThat(accessLogArgProvider.method()).isNull();
 		assertThat(accessLogArgProvider.uri()).isNull();

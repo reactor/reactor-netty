@@ -34,6 +34,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.server.logging.AccessLog.LOG;
@@ -164,6 +165,7 @@ class AccessLogTest extends BaseHttpTest {
 			@Nullable Tuple2<String, String> response,
 			boolean enable, boolean filteringEnabled,
 			@Nullable String loggerFormat) {
+		sleep(20);
 		if (enable) {
 			Mockito.verify(mockedAppender, Mockito.times(1)).doAppend(loggingEventArgumentCaptor.capture());
 			assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
@@ -202,5 +204,14 @@ class AccessLogTest extends BaseHttpTest {
 						     .defaultIfEmpty("")
 						     .zipWith(Mono.just(res.responseHeaders().get(ACCESS_LOG_HANDLER))))
 				.block(Duration.ofSeconds(30));
+	}
+
+	private void sleep(long ms) {
+		try {
+			TimeUnit.MILLISECONDS.sleep(ms);
+		}
+		catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }

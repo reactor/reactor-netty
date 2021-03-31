@@ -37,6 +37,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	final SocketAddress remoteAddress;
 	final String user = MISSING;
 	String zonedDateTime;
+	ZonedDateTime accessDateTime;
 	CharSequence method;
 	CharSequence uri;
 	String protocol;
@@ -50,8 +51,15 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	@Override
 	@Nullable
+	@Deprecated
 	public String zonedDateTime() {
 		return zonedDateTime;
+	}
+
+	@Override
+	@Nullable
+	public ZonedDateTime accessDateTime() {
+		return accessDateTime;
 	}
 
 	@Override
@@ -99,7 +107,8 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	 * Should be called when a new request is received.
 	 */
 	void onRequest() {
-		this.zonedDateTime = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM).format(DATE_TIME_FORMATTER);
+		this.accessDateTime = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
+		this.zonedDateTime = accessDateTime.format(DATE_TIME_FORMATTER);
 		this.startTime = System.currentTimeMillis();
 	}
 
@@ -107,6 +116,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	 * Remove non-final fields for reuse.
 	 */
 	void clear() {
+		this.accessDateTime = null;
 		this.zonedDateTime = null;
 		this.method = null;
 		this.uri = null;

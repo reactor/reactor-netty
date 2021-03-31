@@ -106,6 +106,7 @@ class AccessLogHandlerH1Tests {
 	private void assertAccessLogArgProvider(AccessLogArgProvider args, SocketAddress remoteAddress, boolean chunked) {
 		assertThat(args.remoteAddress()).isEqualTo(remoteAddress);
 		assertThat(args.user()).isEqualTo(AbstractAccessLogArgProvider.MISSING);
+		assertThat(args.accessDateTime()).isNotNull();
 		assertThat(args.zonedDateTime()).isNotNull();
 		assertThat(args.method()).isEqualTo(HttpMethod.GET.name());
 		assertThat(args.uri()).isEqualTo(URI);
