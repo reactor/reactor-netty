@@ -20,8 +20,6 @@ import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.function.Function;
 
 import static reactor.netty.http.server.logging.AbstractAccessLogArgProvider.MISSING;
@@ -31,19 +29,12 @@ import static reactor.netty.http.server.logging.AbstractAccessLogArgProvider.MIS
  */
 class BaseAccessLogHandler extends ChannelDuplexHandler {
 
-	static final DateTimeFormatter DEFAULT_DATE_TIME_FORMAT =
-			DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z");
-
 	static final String DEFAULT_LOG_FORMAT =
 			"{} - {} [{}] \"{} {} {}\" {} {} {} ms";
 	static final Function<AccessLogArgProvider, AccessLog> DEFAULT_ACCESS_LOG =
-			args -> {
-				ZonedDateTime accessDt = args.accessDateTime();
-				String formattedDt = accessDt == null ? MISSING : accessDt.format(DEFAULT_DATE_TIME_FORMAT);
-				return AccessLog.create(DEFAULT_LOG_FORMAT, applyAddress(args.remoteAddress()), args.user(),
-						formattedDt, args.method(), args.uri(), args.protocol(), args.status(),
-						args.contentLength() > -1 ? args.contentLength() : MISSING, args.duration());
-			};
+			args -> AccessLog.create(DEFAULT_LOG_FORMAT, applyAddress(args.remoteAddress()), args.user(),
+					args.zonedDateTime(), args.method(), args.uri(), args.protocol(), args.status(),
+					args.contentLength() > -1 ? args.contentLength() : MISSING, args.duration());
 
 	final Function<AccessLogArgProvider, AccessLog> accessLog;
 
