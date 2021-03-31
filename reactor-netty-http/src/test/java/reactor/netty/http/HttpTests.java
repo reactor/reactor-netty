@@ -614,4 +614,36 @@ class HttpTests extends BaseHttpTest {
 						.substring(originalChannelIdPrefixLength)
 						.replace(clientChannelShortId.get(), clientChannelShortId.get() + "-2"));
 	}
+
+	@Test
+	public void testIssue594() {
+		disposableServer = createServer()
+				.route(r -> r.get("/hotels/{id}", (httpServerRequest, httpServerResponse) -> {
+					httpServerResponse.status(201);
+					return httpServerResponse.sendString(Mono.just("/netty/{version}"));
+				}).get("/hotels/id", (httpServerRequest, httpServerResponse) -> {
+					httpServerResponse.status(200);
+					return httpServerResponse.sendString(Mono.just("/hotels/id"));
+				}))
+				.bindNow();
+
+		HttpClient client = createClient(disposableServer.port());
+		Mono<Integer> code =
+				client.get().uri("/hotels/id")
+						.responseSingle((httpClientResponse, byteBufMono) -> Mono.just(httpClientResponse.status().code()));
+
+		StepVerifier.create(code)
+				.expectNext(200)
+				.expectComplete();
+
+		Mono<String> content =
+				client.get().uri("/hotels/id")
+						.responseContent()
+						.aggregate()
+						.asString();
+
+		StepVerifier.create(content)
+				.expectNext("/hotels/id")
+				.expectComplete();
+	}
 }

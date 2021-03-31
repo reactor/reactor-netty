@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
  * @author Stephane Maldini
  */
 final class HttpPredicate
-		implements Predicate<HttpServerRequest>, Function<Object, Map<String, String>> {
+		implements Predicate<HttpServerRequest>, Function<Object, Map<String, String>>, Comparable<HttpPredicate> {
 
 	/**
 	 * An alias for {@link HttpPredicate#http}.
@@ -223,6 +223,11 @@ final class HttpPredicate
 				template.matches(key.uri());
 	}
 
+	@Override
+	public int compareTo(HttpPredicate o) {
+		return Integer.compare(o.template.score, template.score);
+	}
+
 	/**
 	 * Represents a URI template. A URI template is a URI-like String that contains
 	 * variables enclosed by braces (<code>{</code>, <code>}</code>), which can be
@@ -251,6 +256,8 @@ final class HttpPredicate
 		private final List<String> pathVariables = new ArrayList<>();
 
 		private final Pattern uriPattern;
+
+		private int score;
 
 		private static String getNameSplatReplacement(String name) {
 			return "(?<" + name + ">.*)";
@@ -292,6 +299,10 @@ final class HttpPredicate
 		 * @param uriPattern The pattern to be used by the template
 		 */
 		UriPathTemplate(String uriPattern) {
+			if (uriPattern.contains("*")) {
+				this.score += Integer.MIN_VALUE / 2;
+			}
+
 			String s = "^" + filterQueryParams(filterHostAndPort(uriPattern));
 
 			Matcher m = NAME_SPLAT_PATTERN.matcher(s);
@@ -301,6 +312,7 @@ final class HttpPredicate
 					pathVariables.add(name);
 					s = m.replaceFirst(getNameSplatReplacement(name));
 					m.reset(s);
+					this.score--;
 				}
 			}
 
@@ -311,6 +323,7 @@ final class HttpPredicate
 					pathVariables.add(name);
 					s = m.replaceFirst(getNameReplacement(name));
 					m.reset(s);
+					this.score--;
 				}
 			}
 
@@ -318,6 +331,7 @@ final class HttpPredicate
 			while (m.find()) {
 				s = m.replaceAll(FULL_SPLAT_REPLACEMENT);
 				m.reset(s);
+				this.score--;
 			}
 
 			this.uriPattern = Pattern.compile(s + "$");

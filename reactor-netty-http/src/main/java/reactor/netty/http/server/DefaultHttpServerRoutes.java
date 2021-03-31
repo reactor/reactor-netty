@@ -19,7 +19,9 @@ package reactor.netty.http.server;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -91,11 +93,12 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		final Iterator<HttpRouteHandler> iterator = handlers.iterator();
 		HttpRouteHandler cursor;
 
+		List<HttpRouteHandler> matchHandlers = new ArrayList<>();
 		try {
 			while (iterator.hasNext()) {
 				cursor = iterator.next();
 				if (cursor.test(request)) {
-					return cursor.apply(request, response);
+					matchHandlers.add(cursor);
 				}
 			}
 		}
@@ -104,7 +107,30 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 			return Mono.error(t); //500
 		}
 
-		return response.sendNotFound();
+		if (matchHandlers.isEmpty()) {
+			return response.sendNotFound();
+		}
+
+		// only one handler match request,just apply for speed
+		if (matchHandlers.size() == 1) {
+			return matchHandlers.get(0).apply(request, response);
+		}
+
+		for (HttpRouteHandler handler : matchHandlers) {
+			// if condition is not HttpPredicate,have no method to compare
+			if (!(handler.condition instanceof HttpPredicate)) {
+				return matchHandlers.get(0).apply(request, response);
+			}
+		}
+
+		matchHandlers.sort((o1, o2) -> {
+			HttpPredicate predicate1 = (HttpPredicate) o1.condition;
+			HttpPredicate predicate2 = (HttpPredicate) o2.condition;
+			return predicate1.compareTo(predicate2);
+		});
+
+		return matchHandlers.get(0).apply(request, response);
+
 	}
 
 	/**
