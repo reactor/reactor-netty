@@ -23,8 +23,11 @@ import brave.http.HttpClientResponse;
 import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.TraceContext;
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.client.HttpClient;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
@@ -36,6 +39,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
+import static reactor.netty.http.brave.ReactorNettyHttpTracing.SPAN_ATTR_KEY;
 
 /**
  * This class is based on
@@ -61,7 +65,18 @@ final class TracingHttpClientDecorator {
 		             .doOnRedirect(onResponse)
 		             .doOnError(new TracingDoOnRequestError(handler, uriMapping),
 		                        new TracingDoOnResponseError(handler, uriMapping))
+		             .doOnChannelInit(new TracingChannelPipelineConfigurer(currentTraceContext))
 		             .mapConnect(new TracingMapConnect(currentTraceContext));
+	}
+
+	static void cleanup(Channel channel) {
+		EventLoop eventLoop = channel.eventLoop();
+		if (eventLoop.inEventLoop()) {
+			channel.attr(SPAN_ATTR_KEY).set(null);
+		}
+		else {
+			eventLoop.execute(() -> channel.attr(SPAN_ATTR_KEY).set(null));
+		}
 	}
 
 	static abstract class AbstractTracingDoOnHandler {
@@ -209,6 +224,8 @@ final class TracingHttpClientDecorator {
 
 			AtomicReference<SpanCustomizer> ref = contextView.get(SpanCustomizer.class.getName());
 			ref.set(span.customizer());
+
+			connection.channel().attr(SPAN_ATTR_KEY).set(span);
 		}
 	}
 
@@ -238,6 +255,7 @@ final class TracingHttpClientDecorator {
 					span.error(throwable).finish();
 				}
 			}
+			cleanup(((ChannelOperations<?, ?>) request).channel());
 		}
 	}
 
@@ -258,6 +276,7 @@ final class TracingHttpClientDecorator {
 			DelegatingHttpResponse delegate = new DelegatingHttpResponse(response,
 					new DelegatingHttpRequest((reactor.netty.http.client.HttpClientRequest) response, uriMapping), throwable);
 			handleReceive(delegate, response.currentContextView());
+			cleanup(((ChannelOperations<?, ?>) response).channel());
 		}
 	}
 
@@ -278,6 +297,7 @@ final class TracingHttpClientDecorator {
 			HttpClientResponse delegate = new DelegatingHttpResponse(response,
 					new DelegatingHttpRequest((reactor.netty.http.client.HttpClientRequest) response, uriMapping), null);
 			handleReceive(delegate, response.currentContextView());
+			cleanup(((ChannelOperations<?, ?>) response).channel());
 		}
 	}
 
