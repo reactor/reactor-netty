@@ -16,7 +16,6 @@
 package reactor.netty.tcp;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ChannelFactory;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
@@ -83,7 +82,8 @@ final class TcpClientBootstrap extends Bootstrap {
 	}
 
 	@Override
-	public Bootstrap channelFactory(ChannelFactory<? extends Channel> channelFactory) {
+	@SuppressWarnings("deprecation")
+	public Bootstrap channelFactory(io.netty.bootstrap.ChannelFactory<? extends Channel> channelFactory) {
 		throw new UnsupportedOperationException();
 	}
 
