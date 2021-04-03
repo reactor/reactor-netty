@@ -28,6 +28,7 @@ import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -2460,6 +2461,48 @@ class HttpServerTests extends BaseHttpTest {
 		doTestConnectionClosePropagatedAsError(
 				"POST http://%s/ HTTP/1.1\r\nHost: %s\r\nTransfer-Encoding: chunked\r\n\r\n10\r\nhello");
 	}
+
+	@Test
+	void testOrderRoutes() {
+		DisposableServer server =
+				createServer()
+						.route(routes -> routes.get("/yes/{value}", (request, response) -> {
+							response.status(200);
+							return response.sendNotFound();
+						}).get("/yes/value", (request, response) -> {
+							response.status(201);
+							return response.sendNotFound();
+						}).comparator(() -> comparator)).bindNow();
+
+		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+				.response().map(httpClientResponse -> httpClientResponse.status().code()))
+				.expectNext(201)
+				.expectComplete();
+
+		server.disposeNow();
+		server = createServer()
+				.route(routes -> routes.get("/yes/{value}", (request, response) -> {
+					response.status(200);
+					return response.sendNotFound();
+				}).get("/yes/value", (request, response) -> {
+					response.status(201);
+					return response.sendNotFound();
+				}).comparator(comparator::reversed)).bindNow();
+		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+				.response().map(httpClientResponse -> httpClientResponse.status().code()))
+				.expectNext(200)
+				.expectComplete();
+	}
+
+	private final Comparator<HttpRouteHandler> comparator = (o1, o2) -> {
+		if (o1.getPath().contains("{")) {
+			return 1;
+		}
+		else if (o1.getPath().contains("{") && o2.getPath().contains("{")) {
+			return 0;
+		}
+		return -1;
+	};
 
 	private void doTestConnectionClosePropagatedAsError(String request) throws Exception {
 		AtomicReference<Throwable> error = new AtomicReference<>();

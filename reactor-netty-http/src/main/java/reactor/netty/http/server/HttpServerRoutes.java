@@ -20,10 +20,12 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -261,6 +263,15 @@ public interface HttpServerRoutes extends
 	 */
 	HttpServerRoutes route(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler);
+
+	/**
+	 * A comparator used to sort HttpRouteHandlers.If this method called more times,
+	 * only the last Comparator will works.
+	 *
+	 * @param supplier a HttpRouteHandler comparator supplier
+	 * @return this {@link HttpServerRoutes}
+	 */
+	HttpServerRoutes comparator(Supplier<Comparator<HttpRouteHandler>> supplier);
 
 	/**
 	 * Listens for websocket on the passed path to be used as a routing condition. Incoming

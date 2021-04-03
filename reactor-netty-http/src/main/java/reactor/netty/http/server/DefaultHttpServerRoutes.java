@@ -19,13 +19,14 @@ package reactor.netty.http.server;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
@@ -37,9 +38,10 @@ import reactor.util.annotation.Nullable;
  */
 final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
-
 	private final CopyOnWriteArrayList<HttpRouteHandler> handlers =
 			new CopyOnWriteArrayList<>();
+
+	private Comparator<HttpRouteHandler> comparator;
 
 	@Override
 	public HttpServerRoutes directory(String uri, Path directory,
@@ -78,11 +80,23 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		if (condition instanceof HttpPredicate) {
 			handlers.add(new HttpRouteHandler(condition,
 					handler,
-					(HttpPredicate) condition));
+					(HttpPredicate) condition, ((HttpPredicate) condition).uri));
 		}
 		else {
-			handlers.add(new HttpRouteHandler(condition, handler, null));
+			handlers.add(new HttpRouteHandler(condition, handler, null, null));
 		}
+
+		if (this.comparator != null) {
+			handlers.sort(this.comparator);
+		}
+
+		return this;
+	}
+
+	@Override
+	public HttpServerRoutes comparator(Supplier<Comparator<HttpRouteHandler>> supplier) {
+		this.comparator = supplier.get();
+		handlers.sort(comparator);
 		return this;
 	}
 
@@ -106,36 +120,4 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 		return response.sendNotFound();
 	}
-
-	/**
-	 */
-	static final class HttpRouteHandler
-			implements BiFunction<HttpServerRequest, HttpServerResponse, Publisher<Void>>,
-			           Predicate<HttpServerRequest> {
-
-		final Predicate<? super HttpServerRequest>          condition;
-		final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>
-		                                                    handler;
-		final Function<? super String, Map<String, String>> resolver;
-
-		HttpRouteHandler(Predicate<? super HttpServerRequest> condition,
-				BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
-				@Nullable Function<? super String, Map<String, String>> resolver) {
-			this.condition = Objects.requireNonNull(condition, "condition");
-			this.handler = Objects.requireNonNull(handler, "handler");
-			this.resolver = resolver;
-		}
-
-		@Override
-		public Publisher<Void> apply(HttpServerRequest request,
-				HttpServerResponse response) {
-			return handler.apply(request.paramsResolver(resolver), response);
-		}
-
-		@Override
-		public boolean test(HttpServerRequest o) {
-			return condition.test(o);
-		}
-	}
-
 }
