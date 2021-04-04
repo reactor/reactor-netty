@@ -16,12 +16,15 @@
 package reactor.netty.http.server.logging;
 
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.netty.ReactorNetty;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -44,6 +47,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	boolean chunked;
 	long contentLength = -1;
 	long startTime;
+	Map<CharSequence, Set<Cookie>> cookies;
 
 	AbstractAccessLogArgProvider(@Nullable SocketAddress remoteAddress) {
 		this.remoteAddress = remoteAddress;
@@ -102,6 +106,12 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		return System.currentTimeMillis() - startTime;
 	}
 
+	@Override
+	@Nullable
+	public Map<CharSequence, Set<Cookie>> cookies() {
+		return cookies;
+	}
+
 	/**
 	 * Initialize some fields (e.g. ZonedDateTime startTime).
 	 * Should be called when a new request is received.
@@ -124,6 +134,12 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		this.chunked = false;
 		this.contentLength = -1;
 		this.startTime = 0;
+		this.cookies = null;
+	}
+
+	SELF cookies(Map<CharSequence, Set<Cookie>> cookies) {
+		this.cookies = cookies;
+		return get();
 	}
 
 	SELF chunked(boolean chunked) {

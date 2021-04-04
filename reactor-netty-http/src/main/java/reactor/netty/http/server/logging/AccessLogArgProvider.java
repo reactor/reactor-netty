@@ -15,10 +15,13 @@
  */
 package reactor.netty.http.server.logging;
 
+import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A provider of the args required for access log.
@@ -42,6 +45,7 @@ public interface AccessLogArgProvider {
 	 * Returns the date-time of the moment when the request was received
 	 *
 	 * @return zoned date-time
+	 * @since 1.0.6
 	 */
 	@Nullable
 	ZonedDateTime accessDateTime();
@@ -129,4 +133,12 @@ public interface AccessLogArgProvider {
 	@Nullable
 	CharSequence responseHeader(CharSequence name);
 
+	/**
+	 * Returns resolved HTTP cookies.
+	 *
+	 * @return Resolved HTTP cookies
+	 * @since 1.0.6
+	 */
+	@Nullable
+	Map<CharSequence, Set<Cookie>> cookies();
 }

@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.server.logging.LoggingTests.URI;
@@ -87,6 +88,7 @@ class AccessLogArgProviderTests {
 		accessLogArgProvider
 				.chunked(true)
 				.increaseContentLength(100);
+		accessLogArgProvider.cookies(Collections.emptyMap());
 		assertThat(accessLogArgProvider.accessDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.zonedDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.method()).isEqualTo(HttpMethod.POST.name());
@@ -95,6 +97,7 @@ class AccessLogArgProviderTests {
 		assertThat(accessLogArgProvider.chunked).isTrue();
 		assertThat(accessLogArgProvider.contentLength).isEqualTo(100);
 		assertThat(accessLogArgProvider.startTime).isNotNull();
+		assertThat(accessLogArgProvider.cookies).isNotNull();
 		accessLogArgProvider.clear();
 		assertAccessLogArgProviderInitState();
 	}
@@ -109,6 +112,7 @@ class AccessLogArgProviderTests {
 		assertThat(accessLogArgProvider.chunked).isFalse();
 		assertThat(accessLogArgProvider.contentLength).isEqualTo(-1);
 		assertThat(accessLogArgProvider.startTime).isZero();
+		assertThat(accessLogArgProvider.cookies).isNull();
 	}
 
 	static class TestAccessLogArgProvider extends AbstractAccessLogArgProvider<TestAccessLogArgProvider> {
