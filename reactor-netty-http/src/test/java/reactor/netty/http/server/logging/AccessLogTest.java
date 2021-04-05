@@ -21,6 +21,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.ChannelHandler;
+import io.netty.handler.codec.http.cookie.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,9 @@ import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,7 +49,16 @@ class AccessLogTest extends BaseHttpTest {
 	static final Logger ROOT = (Logger) LoggerFactory.getLogger(LOG.getName());
 	static final String NOT_FOUND = "NOT FOUND";
 	static final String FOUND = "FOUND";
-	static final String CUSTOM_FORMAT = "method={}, uri={}";
+	static final String CUSTOM_FORMAT = "method={}, uri={}, cookie: {}";
+	static final String URI_1 = "/example/test";
+	static final String URI_2 = "/filtered/test";
+	static final String EXPECTED_FORMATTED_MESSAGE_1 = "GET /example/test HTTP/1.1\" 200";
+	static final String EXPECTED_FORMATTED_MESSAGE_2 = "method=GET, uri=/example/test, cookie: key=value";
+	static final String COOKIE_KEY = "key";
+	static final String COOKIE_VALUE = "value";
+
+	static final AccessLogFactory CUSTOM_ACCESS_LOG =
+			args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri(), cookieToString(args.cookies()));
 
 	private Appender<ILoggingEvent> mockedAppender;
 	private ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor;
@@ -77,7 +90,7 @@ class AccessLogTest extends BaseHttpTest {
 				.accessLog(true)
 				.bindNow();
 
-		Tuple2<String, String> response = getHttpClientResponse("/example/test");
+		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 
 		assertAccessLogging(response, true, false, null);
 	}
@@ -92,10 +105,10 @@ class AccessLogTest extends BaseHttpTest {
 					});
 					return resp.send();
 				})
-				.accessLog(true, args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri()))
+				.accessLog(true, CUSTOM_ACCESS_LOG)
 				.bindNow();
 
-		Tuple2<String, String> response = getHttpClientResponse("/example/test");
+		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 
 		assertAccessLogging(response, true, false, CUSTOM_FORMAT);
 	}
@@ -110,11 +123,11 @@ class AccessLogTest extends BaseHttpTest {
 					});
 					return resp.send();
 				})
-				.accessLog(true, args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri()))
+				.accessLog(true, CUSTOM_ACCESS_LOG)
 				.accessLog(false)
 				.bindNow();
 
-		Tuple2<String, String> response = getHttpClientResponse("/example/test");
+		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 
 		assertAccessLogging(response, false, false, null);
 	}
@@ -132,9 +145,9 @@ class AccessLogTest extends BaseHttpTest {
 				.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/")))
 				.bindNow();
 
-		Tuple2<String, String> response = getHttpClientResponse("/example/test");
+		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 
-		getHttpClientResponse("/filtered/test");
+		getHttpClientResponse(URI_2);
 
 		assertAccessLogging(response, true, true, null);
 	}
@@ -151,12 +164,12 @@ class AccessLogTest extends BaseHttpTest {
 					return resp.send();
 				})
 				.accessLog(true, AccessLogFactory.createFilter(p -> !String.valueOf(p.uri()).startsWith("/filtered/"),
-						args -> AccessLog.create(CUSTOM_FORMAT, args.method(), args.uri())))
+						CUSTOM_ACCESS_LOG))
 				.bindNow();
 
-		Tuple2<String, String> response = getHttpClientResponse("/example/test");
+		Tuple2<String, String> response = getHttpClientResponse(URI_1);
 
-		getHttpClientResponse("/filtered/test");
+		getHttpClientResponse(URI_2);
 
 		assertAccessLogging(response, true, true, CUSTOM_FORMAT);
 	}
@@ -173,7 +186,7 @@ class AccessLogTest extends BaseHttpTest {
 
 			if (null == loggerFormat) {
 				assertThat(relevantLog.getMessage()).isEqualTo(BaseAccessLogHandler.DEFAULT_LOG_FORMAT);
-				assertThat(relevantLog.getFormattedMessage()).contains("GET /example/test HTTP/1.1\" 200");
+				assertThat(relevantLog.getFormattedMessage()).contains(EXPECTED_FORMATTED_MESSAGE_1);
 
 				if (filteringEnabled) {
 					assertThat(relevantLog.getFormattedMessage()).doesNotContain("filtered");
@@ -182,7 +195,7 @@ class AccessLogTest extends BaseHttpTest {
 
 			else {
 				assertThat(relevantLog.getMessage()).isEqualTo(loggerFormat);
-				assertThat(relevantLog.getFormattedMessage()).isEqualTo("method=GET, uri=/example/test");
+				assertThat(relevantLog.getFormattedMessage()).isEqualTo(EXPECTED_FORMATTED_MESSAGE_2);
 			}
 		}
 		else {
@@ -197,6 +210,7 @@ class AccessLogTest extends BaseHttpTest {
 	@Nullable
 	private Tuple2<String, String> getHttpClientResponse(String uri) {
 		return createClient(disposableServer.port())
+				.cookie(COOKIE_KEY, cookie -> cookie.setValue(COOKIE_VALUE))
 				.get()
 				.uri(uri)
 				.responseSingle((res, bytes) ->
@@ -213,5 +227,18 @@ class AccessLogTest extends BaseHttpTest {
 		catch (InterruptedException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	static String cookieToString(@Nullable Map<CharSequence, Set<Cookie>> cookies) {
+		if (cookies != null) {
+			Optional<Map.Entry<CharSequence, Set<Cookie>>> firstEntry = cookies.entrySet().stream().findFirst();
+			if (firstEntry.isPresent()) {
+				String key = firstEntry.get().getKey().toString();
+				Optional<Cookie> firstCookie = firstEntry.get().getValue().stream().findFirst();
+				String value = firstCookie.isPresent() ? firstCookie.get().value() : "";
+				return key + "=" + value;
+			}
+		}
+		return "";
 	}
 }
