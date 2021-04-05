@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.zip.GZIPOutputStream;
 
 import io.netty.buffer.ByteBuf;
@@ -89,6 +90,8 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -802,6 +805,36 @@ class HttpServerTests extends BaseHttpTest {
 				HttpServer.create()
 				          .port(0)
 				          .httpRequestDecoder(c -> c.maxInitialLineLength(20)));
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {1_000, 1_000_000})
+	void testHeaderTooLong(final int headerSize) {
+		final String path = "/";
+		final DisposableServer server = HttpServer.create()
+				.port(0)
+				.httpRequestDecoder(c -> c.maxHeaderSize(100))
+				.route(routes ->
+					routes.get(path, (req, resp) -> resp.sendString(Mono.just("oh nos!")))
+				).bindNow();
+
+		final String headerVal =
+				IntStream
+						.range(0, headerSize)
+						.mapToObj(i -> "a")
+						.collect(Collectors.joining());
+
+		final HttpClient client = createClient(server.port());
+
+		final int status = client.headers(hs -> hs.add("longheader", headerVal))
+				.get()
+				.uri(path)
+				.response()
+				.map(resp -> resp.status().code())
+				.block();
+
+		assertThat(status).isEqualTo(413);
+		server.disposeNow();
 	}
 
 	@Test
