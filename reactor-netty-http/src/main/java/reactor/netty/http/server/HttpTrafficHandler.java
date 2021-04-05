@@ -92,6 +92,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	boolean overflow;
 	boolean nonInformationalResponse;
+	boolean drainRequest;
+
 
 	HttpTrafficHandler(
 			ConnectionObserver listener,
@@ -128,6 +130,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
+
+		if (drainRequest) {
+			ReferenceCountUtil.release(msg);
+			ctx.read();
+			return;
+		}
+
 		if (secure == null) {
 			secure = ctx.channel().pipeline().get(SslHandler.class) != null;
 		}
@@ -181,6 +190,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				DecoderResult decoderResult = request.decoderResult();
 				if (decoderResult.isFailure()) {
 					sendDecodingFailures(decoderResult.cause(), msg);
+					drainRequest = true;
+					ctx.read();
 					return;
 				}
 

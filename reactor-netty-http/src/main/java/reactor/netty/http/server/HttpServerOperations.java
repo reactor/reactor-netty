@@ -668,8 +668,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		response.headers()
 		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
 		        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-		ctx.writeAndFlush(response)
-		   .addListener(ChannelFutureListener.CLOSE);
+		ctx.writeAndFlush(response);
 
 		HttpRequest request = null;
 		if (msg instanceof HttpRequest) {
