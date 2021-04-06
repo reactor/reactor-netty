@@ -26,6 +26,8 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
+import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.HttpInfos;
 import reactor.util.annotation.Nullable;
 
 import java.util.function.Function;
@@ -75,6 +77,11 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 					.chunked(chunked);
 			if (!chunked) {
 				accessLogArgProvider.contentLength(HttpUtil.getContentLength(response, -1));
+			}
+
+			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+			if (ops instanceof HttpInfos) {
+				accessLogArgProvider.cookies(((HttpInfos) ops).cookies());
 			}
 		}
 		if (msg instanceof LastHttpContent) {
