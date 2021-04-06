@@ -15,49 +15,71 @@
  */
 package reactor.netty.http.brave;
 
-import brave.propagation.CurrentTraceContext;
+import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.SamplingFlags;
 import brave.propagation.TraceContext;
 import brave.test.http.ITHttpAsyncClient;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty.util.concurrent.EventExecutor;
+import org.junit.AfterClass;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
-import reactor.util.context.ContextView;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 import static brave.Span.Kind.CLIENT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClient> {
+	private ChannelGroup group;
+	private static final EventExecutor executor = new DefaultEventExecutor();
+
+	@AfterClass
+	public static void afterClass() throws Exception {
+		executor.shutdownGracefully()
+		        .get(5, TimeUnit.SECONDS);
+	}
 
 	@Override
 	protected HttpClient newClient(int port) {
 		ReactorNettyHttpTracing reactorNettyHttpTracing = ReactorNettyHttpTracing.create(httpTracing, s -> null);
 
+		group = new DefaultChannelGroup(executor);
 		return reactorNettyHttpTracing.decorateHttpClient(
 		        HttpClient.create()
 		                  .host("127.0.0.1")
 		                  .port(port)
 		                  .wiretap(true)
 		                  .followRedirect(true)
-		                  .disableRetry(true));
-	}
-
-	@Override
-	protected void checkForLeakedScopes() {
-		//noop
+		                  .disableRetry(true)
+		                  .channelGroup(group));
 	}
 
 	@Override
 	protected void closeClient(HttpClient client) {
-		// noop
+		if (group != null) {
+			try {
+				group.close()
+				     .get(5, TimeUnit.SECONDS);
+			}
+			catch (InterruptedException | ExecutionException | TimeoutException e) {
+				fail(e.getMessage());
+			}
+		}
 	}
 
 	@Override
@@ -72,10 +94,10 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 
 	@Override
 	protected void get(HttpClient client, String path, BiConsumer<Integer, Throwable> callback) {
-		client.doAfterResponseSuccess((res, conn) -> invokeCallback(callback, res.currentContextView(), res.status().code(), null))
+		client.doAfterResponseSuccess((res, conn) -> callback.accept(res.status().code(), null))
 		      .doOnError(
-		          (req, throwable) -> invokeCallback(callback, req.currentContextView(), null, throwable),
-		          (res, throwable) -> invokeCallback(callback, res.currentContextView(), null, throwable))
+		          (req, throwable) -> callback.accept(null, throwable),
+		          (res, throwable) -> callback.accept(res.status().code(), throwable))
 		      .get()
 		      .uri(path.isEmpty() ? "/" : path)
 		      .responseContent()
@@ -89,11 +111,12 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 	}
 
 	@Test
+	@SuppressWarnings("try")
 	public void currentSpanVisibleToUserHandler() {
 		AtomicReference<HttpHeaders> headers = new AtomicReference<>();
 		DisposableServer disposableServer = null;
 		TraceContext parent = newTraceContext(SamplingFlags.SAMPLED);
-		try (CurrentTraceContext.Scope scope = currentTraceContext.newScope(parent)) {
+		try (Scope scope = currentTraceContext.newScope(parent)) {
 			disposableServer =
 					HttpServer.create()
 					          .port(0)
@@ -107,10 +130,7 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 			      .request(HttpMethod.GET)
 			      .uri("/")
 			      .send((req, out) -> {
-			          TraceContext traceContext = req.currentContextView().getOrDefault(TraceContext.class, null);
-			          if (traceContext != null) {
-			              req.header("test-id", traceContext.traceIdString());
-			          }
+			          req.header("test-id", currentTraceContext.get().traceIdString());
 			          return out;
 			      })
 			      .responseContent()
@@ -132,7 +152,7 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 		execute(client, method, pathIncludingQuery, null);
 	}
 
-	void execute(HttpClient client, HttpMethod method, String pathIncludingQuery, String body) {
+	void execute(HttpClient client, HttpMethod method, String pathIncludingQuery, @Nullable String body) {
 		client.request(method)
 		      .uri(pathIncludingQuery.isEmpty() ? "/" : pathIncludingQuery)
 		      .send((req, out) -> {
@@ -144,17 +164,5 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 		      .responseContent()
 		      .aggregate()
 		      .block(Duration.ofSeconds(30));
-	}
-
-	void invokeCallback(BiConsumer<Integer, Throwable> callback, ContextView contextView, Integer status, Throwable throwable) {
-		TraceContext traceContext = contextView.getOrDefault(TraceContext.class, null);
-		if (traceContext != null) {
-			try (CurrentTraceContext.Scope scope = currentTraceContext.maybeScope(traceContext)) {
-				callback.accept(status, throwable);
-			}
-		}
-		else {
-			callback.accept(status, throwable);
-		}
 	}
 }

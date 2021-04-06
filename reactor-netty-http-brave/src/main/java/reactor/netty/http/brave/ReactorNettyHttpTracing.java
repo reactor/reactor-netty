@@ -15,7 +15,10 @@
  */
 package reactor.netty.http.brave;
 
+import brave.Span;
+import brave.http.HttpServerRequest;
 import brave.http.HttpTracing;
+import io.netty.util.AttributeKey;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 
@@ -90,4 +93,8 @@ public final class ReactorNettyHttpTracing {
 	public HttpServer decorateHttpServer(HttpServer server) {
 		return httpServerDecorator.decorate(server);
 	}
+
+	static final AttributeKey<HttpServerRequest> REQUEST_ATTR_KEY = AttributeKey.valueOf(HttpServerRequest.class.getName());
+
+	static final AttributeKey<Span> SPAN_ATTR_KEY = AttributeKey.valueOf(Span.class.getName());
 }
