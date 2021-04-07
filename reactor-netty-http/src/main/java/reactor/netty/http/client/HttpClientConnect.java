@@ -203,6 +203,7 @@ class HttpClientConnect extends HttpClient {
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		public void subscribe(CoreSubscriber<? super Connection> actual) {
 			HttpClientHandler handler = new HttpClientHandler(config);
 

@@ -15,11 +15,11 @@
  */
 package reactor.netty.examples.tcp.discard;
 
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.core.publisher.Flux;
 import reactor.netty.Connection;
 import reactor.netty.tcp.TcpClient;
+import reactor.netty.tcp.TcpSslContextSpec;
 
 import java.time.Duration;
 
@@ -42,8 +42,10 @@ public final class DiscardClient {
 				         .wiretap(WIRETAP);
 
 		if (SECURE) {
-			client = client.secure(
-					spec -> spec.sslContext(SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)));
+			TcpSslContextSpec tcpSslContextSpec =
+					TcpSslContextSpec.forClient()
+					                 .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+			client = client.secure(spec -> spec.sslContext(tcpSslContextSpec));
 		}
 
 		Connection connection =

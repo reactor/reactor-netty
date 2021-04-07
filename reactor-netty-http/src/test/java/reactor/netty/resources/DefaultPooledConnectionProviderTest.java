@@ -34,6 +34,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 import reactor.test.StepVerifier;
@@ -63,7 +64,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	@Test
 	void testIssue903() {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.key(), ssc.cert());
+		Http11SslContextSpec serverCtx = Http11SslContextSpec.forServer(ssc.key(), ssc.cert());
 		disposableServer =
 				createServer()
 				          .secure(s -> s.sslContext(serverCtx))

@@ -19,12 +19,8 @@ import java.util.function.Consumer;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
-import io.netty.handler.codec.http2.Http2SecurityUtil;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.tcp.SslProvider;
 
 /**
@@ -68,23 +64,8 @@ final class HttpClientSecure {
 	static {
 		SslProvider sslProvider;
 		try {
-			io.netty.handler.ssl.SslProvider provider =
-					io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
-							io.netty.handler.ssl.SslProvider.OPENSSL :
-							io.netty.handler.ssl.SslProvider.JDK;
-			SslContextBuilder sslCtxBuilder =
-					SslContextBuilder.forClient()
-					                 .sslProvider(provider)
-					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
-					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
-					                         ApplicationProtocolConfig.Protocol.ALPN,
-					                         ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
-					                         ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
-					                         ApplicationProtocolNames.HTTP_2,
-					                         ApplicationProtocolNames.HTTP_1_1));
 			sslProvider = SslProvider.builder()
-			                         .sslContext(sslCtxBuilder)
-			                         .defaultConfiguration(SslProvider.DefaultConfigurationType.H2)
+			                         .sslContext(Http2SslContextSpec.forClient())
 			                         .build();
 		}
 		catch (Exception e) {

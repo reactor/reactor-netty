@@ -241,7 +241,7 @@ The following example uses `SslContextBuilder`:
 [source,java,indent=0]
 .{examplesdir}/security/Application.java
 ----
-include::{examplesdir}/security/Application.java[lines=18..39]
+include::{examplesdir}/security/Application.java[lines=18..40]
 ----
 ====
 

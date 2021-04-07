@@ -85,7 +85,6 @@ import reactor.util.Loggers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assumptions.assumeThat;
-import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 
 /**
  * @author Jon Brisbin
@@ -106,8 +105,9 @@ class TcpServerTests {
 	void tcpServerHandlesJsonPojosOverSsl() throws Exception {
 		final CountDownLatch latch = new CountDownLatch(2);
 
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-		                                                   .sslProvider(SslProvider.JDK);
+		SslContext serverOptions = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+		                                            .sslProvider(SslProvider.JDK)
+		                                            .build();
 		SslContext clientOptions = SslContextBuilder.forClient()
 		                                            .trustManager(InsecureTrustManagerFactory.INSTANCE)
 		                                            .sslProvider(SslProvider.JDK)
@@ -1106,25 +1106,24 @@ class TcpServerTests {
 	@Test
 	void testSniSupport() throws Exception {
 		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
-		SslContextBuilder defaultSslContextBuilder =
-				SslContextBuilder.forServer(defaultCert.certificate(), defaultCert.privateKey());
+		TcpSslContextSpec defaultTcpSslContextSpec =
+				TcpSslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey());
 
 		SelfSignedCertificate testCert = new SelfSignedCertificate("test.com");
-		SslContextBuilder testSslContextBuilder =
-				SslContextBuilder.forServer(testCert.certificate(), testCert.privateKey());
+		TcpSslContextSpec testTcpSslContextSpec =
+				TcpSslContextSpec.forServer(testCert.certificate(), testCert.privateKey());
 
-		SslContextBuilder clientSslContextBuilder =
-				SslContextBuilder.forClient()
-				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		TcpSslContextSpec clientTcpSslContextSpec =
+				TcpSslContextSpec.forClient()
+				                 .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
 		AtomicReference<String> hostname = new AtomicReference<>();
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
 				         .wiretap(true)
-				         .secure(spec -> spec.sslContext(defaultSslContextBuilder)
-				                             .defaultConfiguration(TCP)
-				                             .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(testSslContextBuilder)))
+				         .secure(spec -> spec.sslContext(defaultTcpSslContextSpec)
+				                             .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(testTcpSslContextSpec)))
 				         .doOnChannelInit((obs, channel, remoteAddress) ->
 				             channel.pipeline()
 				                    .addAfter(NettyPipeline.SslHandler, "test", new ChannelInboundHandlerAdapter() {
@@ -1143,8 +1142,7 @@ class TcpServerTests {
 				TcpClient.create()
 				         .remoteAddress(server::address)
 				         .wiretap(true)
-				         .secure(spec -> spec.sslContext(clientSslContextBuilder)
-				                             .defaultConfiguration(TCP)
+				         .secure(spec -> spec.sslContext(clientTcpSslContextSpec)
 				                             .serverNames(new SNIHostName("test.com")))
 				         .connectNow();
 
