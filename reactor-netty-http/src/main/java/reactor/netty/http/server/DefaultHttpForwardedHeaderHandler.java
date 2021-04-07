@@ -15,7 +15,6 @@
  */
 package reactor.netty.http.server;
 
-import java.net.InetSocketAddress;
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -55,7 +54,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		Matcher hostMatcher = FORWARDED_HOST_PATTERN.matcher(forwarded);
 		if (hostMatcher.find()) {
 			connectionInfo = connectionInfo.withHostAddress(
-					AddressUtils.parseAddress(hostMatcher.group(1), connectionInfo.getHostAddress().getPort()));
+					AddressUtils.parseAddress(hostMatcher.group(1), connectionInfo.getHostAddress().getPort(), true));
 		}
 		Matcher protoMatcher = FORWARDED_PROTO_PATTERN.matcher(forwarded);
 		if (protoMatcher.find()) {
@@ -64,7 +63,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		Matcher forMatcher = FORWARDED_FOR_PATTERN.matcher(forwarded);
 		if (forMatcher.find()) {
 			connectionInfo = connectionInfo.withRemoteAddress(
-					AddressUtils.parseAddress(forMatcher.group(1).trim(), connectionInfo.getRemoteAddress().getPort()));
+					AddressUtils.parseAddress(forMatcher.group(1).trim(), connectionInfo.getRemoteAddress().getPort(), true));
 		}
 		return connectionInfo;
 	}
@@ -72,30 +71,24 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	private ConnectionInfo parseXForwardedInfo(ConnectionInfo connectionInfo, HttpRequest request) {
 		String ipHeader = request.headers().get(X_FORWARDED_IP_HEADER);
 		if (ipHeader != null) {
-			InetSocketAddress remoteAddress = AddressUtils.parseAddress(ipHeader.split(",", 2)[0], connectionInfo.getRemoteAddress().getPort());
-			connectionInfo = connectionInfo.withRemoteAddress(remoteAddress);
+			connectionInfo = connectionInfo.withRemoteAddress(
+					AddressUtils.parseAddress(ipHeader.split(",", 2)[0], connectionInfo.getRemoteAddress().getPort()));
 		}
 		String hostHeader = request.headers().get(X_FORWARDED_HOST_HEADER);
 		if (hostHeader != null) {
 			String portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
-			InetSocketAddress hostAddress = connectionInfo.getHostAddress();
-			if (portHeader != null) {
-				int port;
-				try {
-					port = Integer.parseInt(portHeader.split(",", 2)[0].trim());
+			int port = connectionInfo.getHostAddress().getPort();
+			if (portHeader != null && !portHeader.isEmpty()) {
+				String portStr = portHeader.split(",", 2)[0].trim();
+				if (portStr.chars().allMatch(Character::isDigit)) {
+					port = Integer.parseInt(portStr);
 				}
-				catch (NumberFormatException e) {
-					port = hostAddress.getPort();
+				else {
+					throw new IllegalArgumentException("Failed to parse a port from " + portHeader);
 				}
-				hostAddress = AddressUtils.createUnresolved(
-						hostHeader.split(",", 2)[0].trim(), port);
 			}
-			else {
-				hostAddress = AddressUtils.createUnresolved(
-						hostHeader.split(",", 2)[0].trim(),
-						hostAddress.getPort());
-			}
-			connectionInfo = connectionInfo.withHostAddress(hostAddress);
+			connectionInfo = connectionInfo.withHostAddress(
+					AddressUtils.createUnresolved(hostHeader.split(",", 2)[0].trim(), port));
 		}
 		String protoHeader = request.headers().get(X_FORWARDED_PROTO_HEADER);
 		if (protoHeader != null) {
