@@ -148,7 +148,7 @@ class AddressUtilsTest {
 	}
 
 	@Test
-	void shouldParseAddressForIPv6WithoutBrackets_Strict() {
+	void shouldNotParseAddressForIPv6WithoutBrackets_Strict() {
 		assertThatIllegalArgumentException()
 				.isThrownBy(() -> AddressUtils.parseAddress("1abc:2abc:3abc:0:0:0:5abc:6abc", 80, true))
 				.withMessage("Invalid IPv4 address 1abc:2abc:3abc:0:0:0:5abc:6abc");
@@ -164,7 +164,7 @@ class AddressUtilsTest {
 	}
 
 	@Test
-	void shouldParseAddressForIPv6WithNotNumericPort_Strict() {
+	void shouldNotParseAddressForIPv6WithNotNumericPort_Strict() {
 		assertThatIllegalArgumentException()
 				.isThrownBy(() -> AddressUtils.parseAddress("[1abc:2abc:3abc:0:0:0:5abc:6abc]:abc42", 80, true))
 				.withMessage("Failed to parse a port from [1abc:2abc:3abc:0:0:0:5abc:6abc]:abc42");
@@ -180,7 +180,7 @@ class AddressUtilsTest {
 	}
 
 	@Test
-	void shouldParseAddressForIPv6WithoutPort_Strict() {
+	void shouldNotParseAddressForIPv6WithoutPort_Strict() {
 		assertThatIllegalArgumentException()
 				.isThrownBy(() -> AddressUtils.parseAddress("[1abc:2abc:3abc:0:0:0:5abc:6abc]:", 80, true))
 				.withMessage("Failed to parse a port from [1abc:2abc:3abc:0:0:0:5abc:6abc]:");

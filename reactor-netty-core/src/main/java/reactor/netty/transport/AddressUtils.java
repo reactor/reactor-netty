@@ -102,8 +102,10 @@ public final class AddressUtils {
 	 * Parse unresolved InetSocketAddress. Numeric IP addresses will be detected and resolved.
 	 *
 	 * @param address ip-address or hostname
-	 * @param defaultPort the default port
-	 * @param strict if true throws an exception when the address cannot be parsed
+	 * @param defaultPort is used when the host is parseable but not the port
+	 * @param strict if true throws an exception when the address cannot be parsed,
+	 * otherwise an unresolved {@link InetSocketAddress} is returned. It can include the case of the host
+	 * having been parsed but not the port (replaced by {@code defaultPort})
 	 * @return {@link InetSocketAddress} for given parameters, only numeric IP addresses will be resolved
 	 */
 	public static InetSocketAddress parseAddress(String address, int defaultPort, boolean strict) {
