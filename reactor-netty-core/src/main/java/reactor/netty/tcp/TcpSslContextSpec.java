@@ -32,7 +32,7 @@ import static io.netty.handler.ssl.SslProvider.JDK;
 import static io.netty.handler.ssl.SslProvider.OPENSSL;
 
 /**
- * SslContext builder that provides, specific for TCP, default configuration.
+ * SslContext builder that provides default configuration specific to TCP as follows:
  * <ul>
  *     <li>{@link io.netty.handler.ssl.SslProvider} will be set depending on {@code OpenSsl.isAvailable()}</li>
  *     <li>The default cipher suites will be used</li>

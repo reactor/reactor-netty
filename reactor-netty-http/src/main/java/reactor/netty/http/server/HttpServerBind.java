@@ -56,6 +56,7 @@ final class HttpServerBind extends HttpServer {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public Mono<? extends DisposableServer> bind() {
 		if (config.sslProvider != null) {
 			if ((config._protocols & HttpServerConfig.h2c) == HttpServerConfig.h2c) {

@@ -259,7 +259,9 @@ public final class SslProvider {
 	/**
 	 * Default configuration that will be applied to the provided
 	 * {@link SslContextBuilder}
+	 * @deprecated as of 1.0.6
 	 */
+	@Deprecated
 	public enum DefaultConfigurationType {
 		/**
 		 * There will be no default configuration
@@ -280,6 +282,10 @@ public final class SslProvider {
 		H2
 	}
 
+	/**
+	 * @deprecated as of 1.0.6
+	 */
+	@Deprecated
 	public interface DefaultConfigurationSpec {
 
 		/**

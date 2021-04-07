@@ -52,6 +52,7 @@ final class TcpServerBind extends TcpServer {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public Mono<? extends DisposableServer> bind() {
 		if (config.sslProvider != null && config.sslProvider.getDefaultConfigurationType() == null) {
 			config.sslProvider = SslProvider.updateDefaultConfiguration(config.sslProvider, SslProvider.DefaultConfigurationType.TCP);

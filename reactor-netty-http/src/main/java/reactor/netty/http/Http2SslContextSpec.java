@@ -36,7 +36,7 @@ import static io.netty.handler.ssl.SslProvider.JDK;
 import static io.netty.handler.ssl.SslProvider.OPENSSL;
 
 /**
- * SslContext builder that provides, specific for HTTP/2, default configuration.
+ * SslContext builder that provides default configuration specific to HTTP/2 as follows:
  * <ul>
  *     <li>{@link io.netty.handler.ssl.SslProvider} will be set depending on {@code OpenSsl.isAlpnSupported()}</li>
  *     <li>{@link Http2SecurityUtil#CIPHERS}</li>
