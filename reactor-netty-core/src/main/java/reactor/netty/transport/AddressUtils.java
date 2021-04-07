@@ -102,7 +102,8 @@ public final class AddressUtils {
 	 * Parse unresolved InetSocketAddress. Numeric IP addresses will be detected and resolved.
 	 *
 	 * @param address ip-address or hostname
-	 * @param defaultPort is used when the host is parseable but not the port
+	 * @param defaultPort is used if the address does not contain a port,
+	 * or if the port cannot be parsed in non-strict mode
 	 * @param strict if true throws an exception when the address cannot be parsed,
 	 * otherwise an unresolved {@link InetSocketAddress} is returned. It can include the case of the host
 	 * having been parsed but not the port (replaced by {@code defaultPort})
@@ -118,11 +119,13 @@ public final class AddressUtils {
 			if (separatorIdx == address.indexOf(':') || ipV6HostSeparatorIdx > -1) {
 				host = address.substring(0, separatorIdx);
 				String portStr = address.substring(separatorIdx + 1);
-				if (!portStr.isEmpty() && portStr.chars().allMatch(Character::isDigit)) {
-					port = Integer.parseInt(portStr);
-				}
-				else if (strict) {
-					throw new IllegalArgumentException("Failed to parse a port from " + address);
+				if (!portStr.isEmpty()) {
+					if (portStr.chars().allMatch(Character::isDigit)) {
+						port = Integer.parseInt(portStr);
+					}
+					else if (strict) {
+						throw new IllegalArgumentException("Failed to parse a port from " + address);
+					}
 				}
 			}
 			else if (strict) {

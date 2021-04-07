@@ -78,10 +78,13 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		if (hostHeader != null) {
 			String portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
 			int port = connectionInfo.getHostAddress().getPort();
-			if (portHeader != null) {
+			if (portHeader != null && !portHeader.isEmpty()) {
 				String portStr = portHeader.split(",", 2)[0].trim();
-				if (!portStr.isEmpty() && portStr.chars().allMatch(Character::isDigit)) {
+				if (portStr.chars().allMatch(Character::isDigit)) {
 					port = Integer.parseInt(portStr);
+				}
+				else {
+					throw new IllegalArgumentException("Failed to parse a port from " + portHeader);
 				}
 			}
 			connectionInfo = connectionInfo.withHostAddress(

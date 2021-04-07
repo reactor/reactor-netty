@@ -180,10 +180,12 @@ class AddressUtilsTest {
 	}
 
 	@Test
-	void shouldNotParseAddressForIPv6WithoutPort_Strict() {
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> AddressUtils.parseAddress("[1abc:2abc:3abc:0:0:0:5abc:6abc]:", 80, true))
-				.withMessage("Failed to parse a port from [1abc:2abc:3abc:0:0:0:5abc:6abc]:");
+	void shouldParseAddressForIPv6WithoutPort_Strict() {
+		InetSocketAddress socketAddress = AddressUtils.parseAddress("[1abc:2abc:3abc::5ABC:6abc]:", 80);
+		assertThat(socketAddress.isUnresolved()).isFalse();
+		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+		assertThat(socketAddress.getPort()).isEqualTo(80);
+		assertThat(socketAddress.getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 	}
 
 	@Test
