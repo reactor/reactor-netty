@@ -230,7 +230,8 @@ public final class SslProvider {
 		 * any other custom configuration.
 		 *
 		 * @param spec SslContext builder that provides, specific for the protocol, default configuration
-		 * @return a new {@link SslContext}
+		 * @return {@literal this}
+		 * @since 1.0.6
 		 */
 		Builder sslContext(ProtocolSslContextSpec spec);
 
