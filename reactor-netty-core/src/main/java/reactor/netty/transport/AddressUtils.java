@@ -88,30 +88,51 @@ public final class AddressUtils {
 	}
 
 	/**
-	 * Parse unresolved InetSocketAddress. Numeric IP addresses will be detected and
-	 * resolved.
+	 * Parse unresolved InetSocketAddress. Numeric IP addresses will be detected and resolved.
 	 *
 	 * @param address ip-address or hostname
 	 * @param defaultPort the default port
-	 * @return InetSocketAddress for given parameters
+	 * @return {@link InetSocketAddress} for given parameters, only numeric IP addresses will be resolved
 	 */
 	public static InetSocketAddress parseAddress(String address, int defaultPort) {
+		return parseAddress(address, defaultPort, false);
+	}
+
+	/**
+	 * Parse unresolved InetSocketAddress. Numeric IP addresses will be detected and resolved.
+	 *
+	 * @param address ip-address or hostname
+	 * @param defaultPort is used if the address does not contain a port,
+	 * or if the port cannot be parsed in non-strict mode
+	 * @param strict if true throws an exception when the address cannot be parsed,
+	 * otherwise an unresolved {@link InetSocketAddress} is returned. It can include the case of the host
+	 * having been parsed but not the port (replaced by {@code defaultPort})
+	 * @return {@link InetSocketAddress} for given parameters, only numeric IP addresses will be resolved
+	 */
+	public static InetSocketAddress parseAddress(String address, int defaultPort, boolean strict) {
 		requireNonNull(address, "address");
+		String host = address;
+		int port = defaultPort;
 		int separatorIdx = address.lastIndexOf(':');
 		int ipV6HostSeparatorIdx = address.lastIndexOf(']');
 		if (separatorIdx > ipV6HostSeparatorIdx) {
 			if (separatorIdx == address.indexOf(':') || ipV6HostSeparatorIdx > -1) {
-				String port = address.substring(separatorIdx + 1);
-				if (port.chars().allMatch(Character::isDigit)) {
-					return AddressUtils.createUnresolved(address.substring(0, separatorIdx),
-							Integer.parseInt(port));
-				}
-				else {
-					return AddressUtils.createUnresolved(address.substring(0, separatorIdx), defaultPort);
+				host = address.substring(0, separatorIdx);
+				String portStr = address.substring(separatorIdx + 1);
+				if (!portStr.isEmpty()) {
+					if (portStr.chars().allMatch(Character::isDigit)) {
+						port = Integer.parseInt(portStr);
+					}
+					else if (strict) {
+						throw new IllegalArgumentException("Failed to parse a port from " + address);
+					}
 				}
 			}
+			else if (strict) {
+				throw new IllegalArgumentException("Invalid IPv4 address " + address);
+			}
 		}
-		return AddressUtils.createUnresolved(address, defaultPort);
+		return AddressUtils.createUnresolved(host, port);
 	}
 
 	/**

@@ -102,6 +102,7 @@ import reactor.netty.Connection;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
+import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionPoolMetrics;
@@ -896,8 +897,8 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	void testIssue473() {
-		SslContextBuilder serverSslContextBuilder =
-				SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
+		Http11SslContextSpec serverSslContextBuilder =
+				Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		disposableServer =
 				createServer()
 				          .secure(spec -> spec.sslContext(serverSslContextBuilder))
@@ -918,7 +919,7 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .secure(spec -> spec.sslContext(
-				                  SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())))
+				              Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
 				          .bindNow(Duration.ofSeconds(30));
 
@@ -926,8 +927,8 @@ class HttpClientTest extends BaseHttpTest {
 		HttpClient client =
 				createHttpClientForContextWithAddress(provider)
 				        .secure(spec -> spec.sslContext(
-				                SslContextBuilder.forClient()
-				                                 .trustManager(InsecureTrustManagerFactory.INSTANCE)));
+				            Http11SslContextSpec.forClient()
+				                                .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE))));
 
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
 		StepVerifier.create(client.doOnConnected(c -> ch1.set(c.channel()))
@@ -956,9 +957,8 @@ class HttpClientTest extends BaseHttpTest {
 		StepVerifier.create(
 				client.doOnConnected(c -> ch3.set(c.channel()))
 				      .secure(spec -> spec.sslContext(
-				              SslContextBuilder.forClient()
-				                               .trustManager(InsecureTrustManagerFactory.INSTANCE))
-				                          .defaultConfiguration(SslProvider.DefaultConfigurationType.TCP))
+				          Http11SslContextSpec.forClient()
+				                              .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE))))
 				      .post()
 				      .uri("/3")
 				      .responseContent()
@@ -980,17 +980,20 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .secure(spec -> spec.sslContext(
-				                  SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())))
+				              Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
 				          .bindNow(Duration.ofSeconds(30));
 
-		SslContextBuilder clientSslContextBuilder =
-				SslContextBuilder.forClient()
-				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http11SslContextSpec clientSslContextBuilder1 =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		Http11SslContextSpec clientSslContextBuilder2 =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		ConnectionProvider provider = ConnectionProvider.create("testIssue407_2", 1);
 		HttpClient client =
 				createHttpClientForContextWithAddress(provider)
-				        .secure(spec -> spec.sslContext(clientSslContextBuilder));
+				        .secure(spec -> spec.sslContext(clientSslContextBuilder1));
 
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
 		StepVerifier.create(client.doOnConnected(c -> ch1.set(c.channel()))
@@ -1018,8 +1021,7 @@ class HttpClientTest extends BaseHttpTest {
 		AtomicReference<Channel> ch3 = new AtomicReference<>();
 		StepVerifier.create(
 				client.doOnConnected(c -> ch3.set(c.channel()))
-				      .secure(spec -> spec.sslContext(clientSslContextBuilder)
-				                          .defaultConfiguration(SslProvider.DefaultConfigurationType.TCP))
+				      .secure(spec -> spec.sslContext(clientSslContextBuilder2))
 				      .post()
 				      .uri("/3")
 				      .responseContent()
@@ -1742,7 +1744,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		if (ssl) {
 			server = server.secure(spec -> spec.sslContext(
-					SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())));
+					Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
 		}
 
 		disposableServer = server.bindNow();
@@ -1750,8 +1752,9 @@ class HttpClientTest extends BaseHttpTest {
 		HttpClient client = createHttpClientForContextWithAddress();
 		if (ssl) {
 			client = client.secure(spec ->
-					spec.sslContext(SslContextBuilder.forClient()
-					                                 .trustManager(InsecureTrustManagerFactory.INSTANCE)));
+					spec.sslContext(
+							Http11SslContextSpec.forClient()
+							                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE))));
 		}
 
 		StepVerifier.create(

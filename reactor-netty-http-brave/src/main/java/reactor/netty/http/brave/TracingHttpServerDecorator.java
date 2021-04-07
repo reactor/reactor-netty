@@ -22,21 +22,14 @@ import brave.http.HttpServerRequest;
 import brave.http.HttpServerResponse;
 import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
-import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.util.AttributeKey;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.NettyPipeline;
 import reactor.netty.http.server.HttpServer;
 import reactor.util.annotation.Nullable;
 
@@ -47,7 +40,8 @@ import java.util.regex.Pattern;
 
 import static java.util.Objects.requireNonNull;
 import static reactor.netty.ConnectionObserver.State.CONFIGURED;
-import static reactor.netty.ConnectionObserver.State.CONNECTED;
+import static reactor.netty.http.brave.ReactorNettyHttpTracing.REQUEST_ATTR_KEY;
+import static reactor.netty.http.brave.ReactorNettyHttpTracing.SPAN_ATTR_KEY;
 import static reactor.netty.http.server.HttpServerState.REQUEST_DECODING_FAILED;
 
 final class TracingHttpServerDecorator {
@@ -65,12 +59,9 @@ final class TracingHttpServerDecorator {
 
 	HttpServer decorate(HttpServer server) {
 		return server.childObserve(new TracingConnectionObserver(currentTraceContext, handler, uriMapping))
+		             .doOnChannelInit(new TracingChannelPipelineConfigurer(currentTraceContext))
 		             .mapHandle(new TracingMapHandle(currentTraceContext, handler));
 	}
-
-	static final AttributeKey<HttpServerRequest> REQUEST_ATTR_KEY = AttributeKey.newInstance(HttpServerResponse.class.getName());
-
-	static final AttributeKey<Span> SPAN_ATTR_KEY = AttributeKey.newInstance(Span.class.getName());
 
 	static final class DelegatingHttpRequest extends HttpServerRequest {
 
@@ -199,65 +190,7 @@ final class TracingHttpServerDecorator {
 		}
 	}
 
-	static final class TracingChannelInboundHandler extends ChannelInboundHandlerAdapter {
-		final CurrentTraceContext currentTraceContext;
-
-		TracingChannelInboundHandler(CurrentTraceContext currentTraceContext) {
-			this.currentTraceContext = currentTraceContext;
-		}
-
-		@Override
-		@SuppressWarnings("try")
-		public void channelRead(ChannelHandlerContext ctx, Object msg) {
-			Span span = ctx.channel().attr(SPAN_ATTR_KEY).get();
-			if (span != null) {
-				try (Scope scope = currentTraceContext.maybeScope(span.context())) {
-					ctx.fireChannelRead(msg);
-				}
-				return;
-			}
-
-			ctx.fireChannelRead(msg);
-		}
-
-		@Override
-		public boolean isSharable() {
-			return true;
-		}
-	}
-
-	static final class TracingChannelOutboundHandler extends ChannelOutboundHandlerAdapter {
-		final CurrentTraceContext currentTraceContext;
-
-		TracingChannelOutboundHandler(CurrentTraceContext currentTraceContext) {
-			this.currentTraceContext = currentTraceContext;
-		}
-
-		@Override
-		@SuppressWarnings({"FutureReturnValueIgnored", "try"})
-		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-			Span span = ctx.channel().attr(SPAN_ATTR_KEY).get();
-			if (span != null) {
-				try (Scope scope = currentTraceContext.maybeScope(span.context())) {
-					//"FutureReturnValueIgnored" this is deliberate
-					ctx.write(msg, promise);
-				}
-				return;
-			}
-
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(msg, promise);
-		}
-
-		@Override
-		public boolean isSharable() {
-			return true;
-		}
-	}
-
 	static final class TracingConnectionObserver implements ConnectionObserver {
-		static final String INBOUND_HANDLER = "TracingChannelInboundHandler";
-		static final String OUTBOUND_HANDLER = "TracingChannelOutboundHandler";
 
 		final CurrentTraceContext currentTraceContext;
 		final HttpServerHandler<HttpServerRequest, HttpServerResponse> handler;
@@ -278,13 +211,6 @@ final class TracingHttpServerDecorator {
 
 		@Override
 		public void onStateChange(Connection connection, State state) {
-			if (state == CONNECTED) {
-				connection.channel()
-				          .pipeline()
-				          .addAfter(NettyPipeline.HttpTrafficHandler, INBOUND_HANDLER, inboundHandler)
-				          .addBefore(NettyPipeline.ReactiveBridge, OUTBOUND_HANDLER, outboundHandler);
-				return;
-			}
 			if (state == CONFIGURED && connection instanceof reactor.netty.http.server.HttpServerRequest) {
 				reactor.netty.http.server.HttpServerRequest request = (reactor.netty.http.server.HttpServerRequest) connection;
 

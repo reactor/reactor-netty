@@ -676,9 +676,9 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * <pre>
 	 * {@code
 	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
-	 *     SslContextBuilder sslContextBuilder =
-	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder));
+	 *     Http11SslContextSpec http11SslContextSpec =
+	 *             Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(http11SslContextSpec));
 	 * }
 	 * </pre>
 	 *
@@ -700,9 +700,9 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * <pre>
 	 * {@code
 	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
-	 *     SslContextBuilder sslContextBuilder =
-	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder), true);
+	 *     Http11SslContextSpec http11SslContextSpec =
+	 *             Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(http11SslContextSpec), true);
 	 * }
 	 * </pre>
 	 *
@@ -731,9 +731,9 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * <pre>
 	 * {@code
 	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
-	 *     SslContextBuilder sslContextBuilder =
-	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder));
+	 *     Http11SslContextSpec http11SslContextSpec =
+	 *             Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(http11SslContextSpec));
 	 * }
 	 * </pre>
 	 *
@@ -753,9 +753,9 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * <pre>
 	 * {@code
 	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
-	 *     SslContextBuilder sslContextBuilder =
-	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder), true);
+	 *     Http11SslContextSpec http11SslContextSpec =
+	 *             Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(http11SslContextSpec), true);
 	 * }
 	 * </pre>
 	 *

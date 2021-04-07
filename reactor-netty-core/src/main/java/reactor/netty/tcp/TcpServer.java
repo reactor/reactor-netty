@@ -178,9 +178,9 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	 * <pre>
 	 * {@code
 	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
-	 *     SslContextBuilder sslContextBuilder =
-	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder));
+	 *     TcpSslContextSpec tcpSslContextSpec =
+	 *             TcpSslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(tcpSslContextSpec));
 	 * }
 	 * </pre>
 	 *
@@ -204,9 +204,9 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	 * <pre>
 	 * {@code
 	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
-	 *     SslContextBuilder sslContextBuilder =
-	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder));
+	 *     TcpSslContextSpec tcpSslContextSpec =
+	 *             TcpSslContextSpec.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(tcpSslContextSpec));
 	 * }
 	 * </pre>
 	 *

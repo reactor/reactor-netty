@@ -16,8 +16,6 @@
 
 package reactor.netty.tcp;
 
-import io.netty.handler.ssl.SslContextBuilder;
-
 /**
  * Initializes the default {@link SslProvider} for the TCP client.
  *
@@ -33,8 +31,7 @@ final class TcpClientSecure {
 		try {
 			sslProvider =
 					SslProvider.builder()
-					           .sslContext(SslContextBuilder.forClient())
-					           .defaultConfiguration(SslProvider.DefaultConfigurationType.TCP)
+					           .sslContext(TcpSslContextSpec.forClient())
 					           .build();
 		}
 		catch (Exception e) {

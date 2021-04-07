@@ -38,6 +38,9 @@ dependencies {
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
+	// JSR-305 annotations
+	testCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
+
 	testCompile "io.zipkin.brave:brave-instrumentation-http-tests:$braveVersion"
 
 	testRuntimeOnly "org.junit.vintage:junit-vintage-engine:$junitVersion"

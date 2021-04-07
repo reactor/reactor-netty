@@ -34,8 +34,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -49,6 +47,8 @@ import reactor.netty.BaseHttpTest;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
+import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
@@ -475,22 +475,26 @@ class HttpRedirectTest extends BaseHttpTest {
 		try {
 			server1 =
 					createServer()
-					          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())))
+					          .secure(spec ->
+					              spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())))
 					          .handle((req, res) -> res.sendRedirect("https://localhost:" + server2Port))
 					          .bindNow();
 
 			server2 =
 					createServer(server2Port)
 					          .host("localhost")
-					          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())))
+					          .secure(spec ->
+					              spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())))
 					          .handle((req, res) -> res.sendString(Mono.just("test")))
 					          .bindNow();
 
 			AtomicInteger peerPort = new AtomicInteger(0);
+			Http11SslContextSpec http11SslContextSpec =
+					Http11SslContextSpec.forClient()
+					                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 			createClient(server1::address)
 			          .followRedirect(true)
-			          .secure(spec -> spec.sslContext(SslContextBuilder.forClient()
-			                                                           .trustManager(InsecureTrustManagerFactory.INSTANCE)))
+			          .secure(spec -> spec.sslContext(http11SslContextSpec))
 			          .doOnRequest((req, conn) ->
 			                  peerPort.set(conn.channel()
 			                                   .pipeline()
@@ -515,10 +519,8 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testHttpRequestIfRedirectHttpToHttpsEnabled() throws Exception {
-		SslContext sslContext =
-				SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-						.build();
+	void testHttpRequestIfRedirectHttpToHttpsEnabled() {
+		Http11SslContextSpec sslContext = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		disposableServer =
 				createServer()
 						.host("localhost")
@@ -552,13 +554,16 @@ class HttpRedirectTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 						.host("localhost")
-						.secure(spec -> spec.sslContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())), true)
+						.secure(spec ->
+								spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())), true)
 						.handle((request, response) -> response.sendString(Mono.just(message)))
 						.bindNow();
+		Http11SslContextSpec http11SslContextSpec =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		HttpClient client =
 				HttpClient.create()
-						.secure(spec -> spec.sslContext(SslContextBuilder.forClient()
-								.trustManager(InsecureTrustManagerFactory.INSTANCE)));
+				          .secure(spec -> spec.sslContext(http11SslContextSpec));
 		String uri = String.format("https://%s:%d/for-test/123", disposableServer.host(), disposableServer.port());
 		StepVerifier
 				.create(client.get().uri(uri).response((response, body) -> {
@@ -583,13 +588,14 @@ class HttpRedirectTest extends BaseHttpTest {
 				                   .get(redirectPath, (req, res) -> res.sendString(Mono.just(responseContent))))
 				          .bindNow();
 
+		Http11SslContextSpec http11SslContextSpec =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		final Mono<String> responseMono =
 				HttpClient.create()
 				          .wiretap(true)
 				          .followRedirect(true)
-				          .secure(spec -> spec.sslContext(
-				                  SslContextBuilder.forClient()
-				                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)))
+				          .secure(spec -> spec.sslContext(http11SslContextSpec))
 				          .get()
 				          .uri("http://localhost:" + disposableServer.port() + requestPath)
 				          .responseContent()
@@ -608,8 +614,8 @@ class HttpRedirectTest extends BaseHttpTest {
 		final String destinationPath = "/destination";
 		final String responseContent = "Success";
 
-		SslContextBuilder serverSslCtxBuilder =
-				SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
+		Http11SslContextSpec serverSslContextSpec =
+				Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		DisposableServer redirectServer = null;
 		DisposableServer initialServer = null;
 		try {
@@ -619,7 +625,7 @@ class HttpRedirectTest extends BaseHttpTest {
 					                  r.get(redirectPath, (req, res) -> res.sendRedirect(destinationPath))
 					                   .get(destinationPath, (req, res) -> res.sendString(Mono.just(responseContent)))
 					          )
-					          .secure(spec -> spec.sslContext(serverSslCtxBuilder))
+					          .secure(spec -> spec.sslContext(serverSslContextSpec))
 					          .bindNow();
 
 			final int redirectServerPort = redirectServer.port();
@@ -630,15 +636,15 @@ class HttpRedirectTest extends BaseHttpTest {
 					          )
 					          .bindNow();
 
-			SslContextBuilder clientSslCtxBuilder =
-					SslContextBuilder.forClient()
-					                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+			Http11SslContextSpec clientSslContextSpec =
+					Http11SslContextSpec.forClient()
+					                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 			final String requestUri = "http://localhost:" + initialServer.port();
 			StepVerifier.create(
 			        HttpClient.create()
 			                  .wiretap(true)
 			                  .followRedirect(true)
-			                  .secure(spec -> spec.sslContext(clientSslCtxBuilder))
+			                  .secure(spec -> spec.sslContext(clientSslContextSpec))
 			                  .get()
 			                  .uri(requestUri)
 			                  .response((res, conn) -> Mono.justOrEmpty(res.resourceUrl())))
@@ -716,9 +722,10 @@ class HttpRedirectTest extends BaseHttpTest {
 
 	@Test
 	void testHttpServerWithDomainSockets_HTTP2() {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http11SslContextSpec serverCtx = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http11SslContextSpec clientCtx =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestHttpServerWithDomainSockets(
 				HttpServer.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
 				HttpClient.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
@@ -749,9 +756,10 @@ class HttpRedirectTest extends BaseHttpTest {
 
 	@Test
 	void testHttp2Redirect() {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		disposableServer =
 				createServer()
 				          .host("localhost")

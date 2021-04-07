@@ -15,17 +15,17 @@
  */
 package reactor.netty.examples.documentation.http.client.security;
 
-import io.netty.handler.ssl.SslContextBuilder;
+import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.client.HttpClient;
 
 public class Application {
 
 	public static void main(String[] args) {
-		SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
+		Http11SslContextSpec http11SslContextSpec = Http11SslContextSpec.forClient();
 
 		HttpClient client =
 				HttpClient.create()
-				          .secure(spec -> spec.sslContext(sslContextBuilder));
+				          .secure(spec -> spec.sslContext(http11SslContextSpec));
 
 		client.get()
 		      .uri("https://example.com/")

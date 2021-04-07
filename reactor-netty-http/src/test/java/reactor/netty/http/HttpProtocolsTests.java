@@ -16,7 +16,6 @@
 package reactor.netty.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -59,33 +58,36 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 	static Object[][] data() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http11SslContextSpec serverCtxHttp11 = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		Http11SslContextSpec clientCtxHttp11 =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		Http2SslContextSpec serverCtxHttp2 = Http2SslContextSpec.forServer(cert.certificate(), cert.privateKey());
+		Http2SslContextSpec clientCtxHttp2 =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
 		HttpServer _server = createServer().httpRequestDecoder(spec -> spec.h2cMaxContentLength(256));
-		HttpServer securedServer = _server.secure(spec -> spec.sslContext(serverCtx));
 
 		HttpServer[] servers = new HttpServer[]{
 				_server, // by default protocol is HTTP/1.1
 				_server.protocol(HttpProtocol.H2C),
 				_server.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C),
-				securedServer, // by default protocol is HTTP/1.1
-				securedServer.protocol(HttpProtocol.H2),
-				securedServer.protocol(HttpProtocol.HTTP11, HttpProtocol.H2)
+				_server.secure(spec -> spec.sslContext(serverCtxHttp11)), // by default protocol is HTTP/1.1
+				_server.secure(spec -> spec.sslContext(serverCtxHttp2)).protocol(HttpProtocol.H2),
+				_server.secure(spec -> spec.sslContext(serverCtxHttp2)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2)
 		};
 
 		HttpClient _client = HttpClient.create()
 		                               .wiretap(true);
-		HttpClient securedClient = _client.secure(spec -> spec.sslContext(clientCtx));
 
 		HttpClient[] clients = new HttpClient[]{
 				_client, // by default protocol is HTTP/1.1
 				_client.protocol(HttpProtocol.H2C),
 				_client.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C),
-				securedClient, // by default protocol is HTTP/1.1
-				securedClient.protocol(HttpProtocol.H2),
-				securedClient.protocol(HttpProtocol.HTTP11, HttpProtocol.H2)
+				_client.secure(spec -> spec.sslContext(clientCtxHttp11)), // by default protocol is HTTP/1.1
+				_client.secure(spec -> spec.sslContext(clientCtxHttp2)).protocol(HttpProtocol.H2),
+				_client.secure(spec -> spec.sslContext(clientCtxHttp2)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2)
 		};
 
 		Flux<HttpServer> f1 = Flux.fromArray(servers).concatMap(o -> Flux.just(o).repeat(clients.length - 1));

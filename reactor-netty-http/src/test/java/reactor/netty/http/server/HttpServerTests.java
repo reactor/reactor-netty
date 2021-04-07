@@ -104,6 +104,8 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.AbortedException;
+import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientRequest;
@@ -124,7 +126,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.Assumptions.assumeThat;
-import static reactor.netty.tcp.SslProvider.DefaultConfigurationType.TCP;
 
 /**
  * @author Stephane Maldini
@@ -1705,9 +1706,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testHttpServerWithDomainSockets_HTTP2() {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestHttpServerWithDomainSockets(
 				HttpServer.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
 				HttpClient.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
@@ -1903,22 +1905,21 @@ class HttpServerTests extends BaseHttpTest {
 	@Test
 	void testSniSupport() throws Exception {
 		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
-		SslContextBuilder defaultSslContextBuilder =
-				SslContextBuilder.forServer(defaultCert.certificate(), defaultCert.privateKey());
+		Http11SslContextSpec defaultSslContextBuilder =
+				Http11SslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey());
 
 		SelfSignedCertificate testCert = new SelfSignedCertificate("test.com");
-		SslContextBuilder testSslContextBuilder =
-				SslContextBuilder.forServer(testCert.certificate(), testCert.privateKey());
+		Http11SslContextSpec testSslContextBuilder =
+				Http11SslContextSpec.forServer(testCert.certificate(), testCert.privateKey());
 
-		SslContextBuilder clientSslContextBuilder =
-				SslContextBuilder.forClient()
-				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http11SslContextSpec clientSslContextBuilder =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
 		AtomicReference<String> hostname = new AtomicReference<>();
 		disposableServer =
 				createServer()
 				          .secure(spec -> spec.sslContext(defaultSslContextBuilder)
-				                              .defaultConfiguration(TCP)
 				                              .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(testSslContextBuilder)))
 				          .doOnChannelInit((obs, channel, remoteAddress) ->
 				              channel.pipeline()
@@ -1936,7 +1937,6 @@ class HttpServerTests extends BaseHttpTest {
 
 		createClient(disposableServer::address)
 		          .secure(spec -> spec.sslContext(clientSslContextBuilder)
-		                              .defaultConfiguration(TCP)
 		                              .serverNames(new SNIHostName("test.com")))
 		          .get()
 		          .uri("/")
@@ -1980,9 +1980,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286_H2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
@@ -1991,9 +1992,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286_ServerHTTP11AndH2ClientH2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
@@ -2002,9 +2004,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286_ServerHTTP11AndH2ClientHTTP11AndH2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(clientCtx)),
@@ -2043,9 +2046,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286ErrorResponse_H2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
@@ -2054,9 +2058,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286ErrorResponse_ServerHTTP11AndH2ClientH2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
@@ -2065,9 +2070,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286ErrorResponse_ServerHTTP11AndH2ClientHTTP11AndH2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(clientCtx)),
@@ -2106,9 +2112,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286ConnectionClose_H2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
@@ -2117,9 +2124,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286ConnectionClose_ServerHTTP11AndH2ClientH2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
@@ -2128,9 +2136,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286ConnectionClose_ServerHTTP11AndH2ClientHTTP11AndH2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(clientCtx)),
@@ -2169,9 +2178,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286ConnectionCloseErrorResponse_H2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
@@ -2180,9 +2190,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286ConnectionCloseErrorResponse_ServerHTTP11AndH2ClientH2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
@@ -2191,9 +2202,10 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1286ConnectionCloseErrorResponse_ServerHTTP11AndH2ClientHTTP11AndH2() throws Exception {
-		SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-		SslContextBuilder clientCtx = SslContextBuilder.forClient()
-		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		doTestIssue1286(
 				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
 				client -> client.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(clientCtx)),
@@ -2393,9 +2405,10 @@ class HttpServerTests extends BaseHttpTest {
 				          .disableRetry(true);
 
 		if (withSecurity) {
-			SslContextBuilder serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
-			SslContextBuilder clientCtx = SslContextBuilder.forClient()
-			                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+			Http11SslContextSpec serverCtx = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+			Http11SslContextSpec clientCtx =
+					Http11SslContextSpec.forClient()
+					                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 			server = server.secure(spec -> spec.sslContext(serverCtx));
 			client = client.secure(spec -> spec.sslContext(clientCtx));
 		}

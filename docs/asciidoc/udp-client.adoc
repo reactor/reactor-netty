@@ -194,7 +194,7 @@ you can configure the `UdpClient` as follows:
 [source,java,indent=0]
 .{examplesdir}/wiretap/custom/Application.java
 ----
-include::{examplesdir}/wiretap/custom/Application.java[lines=18..34]
+include::{examplesdir}/wiretap/custom/Application.java[lines=18..38]
 ----
 <1> Enables the wire logging,
 {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
@@ -215,7 +215,7 @@ The following listing shows the default configuration for the "`Event Loop Group
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=84..113]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=85..114]
 ----
 ====
 

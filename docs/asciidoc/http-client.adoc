@@ -651,7 +651,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 [source,java,indent=0]
 .{examplesdir}/security/custom/Application.java
 ----
-include::{examplesdir}/security/custom/Application.java[lines=18..47]
+include::{examplesdir}/security/custom/Application.java[lines=18..45]
 ----
 <1> Configures the SSL handshake timeout to 30 seconds.
 <2> Configures the SSL `close_notify` flush timeout to 10 seconds.

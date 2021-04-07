@@ -224,6 +224,18 @@ public final class SslProvider {
 	public interface SslContextSpec {
 
 		/**
+		 * SslContext builder that provides, specific for the protocol, default configuration
+		 * e.g. {@link DefaultSslContextSpec}, {@link TcpSslContextSpec} etc.
+		 * As opposed to {@link #sslContext(SslContextBuilder)}, the default configuration is applied before
+		 * any other custom configuration.
+		 *
+		 * @param spec SslContext builder that provides, specific for the protocol, default configuration
+		 * @return {@literal this}
+		 * @since 1.0.6
+		 */
+		Builder sslContext(ProtocolSslContextSpec spec);
+
+		/**
 		 * The SslContext to set when configuring SSL
 		 *
 		 * @param sslContext The context to set when configuring SSL
@@ -233,18 +245,26 @@ public final class SslProvider {
 		Builder sslContext(SslContext sslContext);
 
 		/**
-		 * The SslContextBuilder for building a new {@link SslContext}.
+		 * The SslContextBuilder for building a new {@link SslContext}. The default configuration is applied after
+		 * the custom configuration.
 		 *
 		 * @return {@literal this}
+		 * @deprecated as of 1.0.6. Prefer {@link #sslContext(ProtocolSslContextSpec)}, where the default
+		 * configuration is applied before any other custom configuration.
+		 * This method will be removed in version 1.2.0.
 		 */
+		@Deprecated
 		DefaultConfigurationSpec sslContext(SslContextBuilder sslCtxBuilder);
-
 	}
 
 	/**
 	 * Default configuration that will be applied to the provided
 	 * {@link SslContextBuilder}
+	 * @deprecated as of 1.0.6. Prefer {@link SslProvider.SslContextSpec#sslContext(ProtocolSslContextSpec)},
+	 * where the default configuration is applied before any other custom configuration.
+	 * This will be removed in version 1.2.0.
 	 */
+	@Deprecated
 	public enum DefaultConfigurationType {
 		/**
 		 * There will be no default configuration
@@ -265,6 +285,12 @@ public final class SslProvider {
 		H2
 	}
 
+	/**
+	 * @deprecated as of 1.0.6. Prefer {@link SslProvider.SslContextSpec#sslContext(ProtocolSslContextSpec)},
+	 * where the default configuration is applied before any other custom configuration.
+	 * This will be removed in version 1.2.0.
+	 */
+	@Deprecated
 	public interface DefaultConfigurationSpec {
 
 		/**
@@ -275,6 +301,31 @@ public final class SslProvider {
 		 * @return {@code this}
 		 */
 		Builder defaultConfiguration(DefaultConfigurationType type);
+	}
+
+	/**
+	 * SslContext builder that provides, specific for the protocol, default configuration.
+	 * The default configuration is applied prior any other custom configuration.
+	 *
+	 * @since 1.0.6
+	 */
+	public interface ProtocolSslContextSpec {
+
+		/**
+		 * Configures the underlying {@link SslContextBuilder}.
+		 *
+		 * @param sslCtxBuilder a callback for configuring the underlying {@link SslContextBuilder}
+		 * @return {@code this}
+		 */
+		ProtocolSslContextSpec configure(Consumer<SslContextBuilder> sslCtxBuilder);
+
+		/**
+		 * Create a new {@link SslContext} instance with the configured settings.
+		 *
+		 * @return a new {@link SslContext} instance
+		 * @throws SSLException thrown when {@link SslContext} instance cannot be created
+		 */
+		SslContext sslContext() throws SSLException;
 	}
 
 	final SslContext                   sslContext;
@@ -297,6 +348,14 @@ public final class SslProvider {
 				}
 				try {
 					this.sslContext = sslContextBuilder.build();
+				}
+				catch (SSLException e) {
+					throw Exceptions.propagate(e);
+				}
+			}
+			else if (builder.protocolSslContextSpec != null) {
+				try {
+					this.sslContext = builder.protocolSslContextSpec.sslContext();
 				}
 				catch (SSLException e) {
 					throw Exceptions.propagate(e);
@@ -547,6 +606,7 @@ public final class SslProvider {
 						"10000"));
 
 		SslContextBuilder sslCtxBuilder;
+		ProtocolSslContextSpec protocolSslContextSpec;
 		DefaultConfigurationType type;
 		SslContext sslContext;
 		Consumer<? super SslHandler> handlerConfigurator;
@@ -559,8 +619,16 @@ public final class SslProvider {
 		// SslContextSpec
 
 		@Override
+		public Builder sslContext(ProtocolSslContextSpec protocolSslContextSpec) {
+			this.protocolSslContextSpec = protocolSslContextSpec;
+			this.type = DefaultConfigurationType.NONE;
+			return this;
+		}
+
+		@Override
 		public final Builder sslContext(SslContext sslContext) {
 			this.sslContext = Objects.requireNonNull(sslContext, "sslContext");
+			this.type = DefaultConfigurationType.NONE;
 			return this;
 		}
 
@@ -685,14 +753,15 @@ public final class SslProvider {
 					Objects.equals(sslContext, build.sslContext) &&
 					Objects.equals(handlerConfigurator, build.handlerConfigurator) &&
 					Objects.equals(serverNames, build.serverNames) &&
-					confPerDomainName.equals(build.confPerDomainName);
+					confPerDomainName.equals(build.confPerDomainName) &&
+					Objects.equals(protocolSslContextSpec, build.protocolSslContextSpec);
 		}
 
 		@Override
 		public int hashCode() {
 			return Objects.hash(sslCtxBuilder, type, sslContext, handlerConfigurator,
 					handshakeTimeoutMillis, closeNotifyFlushTimeoutMillis, closeNotifyReadTimeoutMillis,
-					serverNames, confPerDomainName);
+					serverNames, confPerDomainName, protocolSslContextSpec);
 		}
 
 		void addInternal(String domainName, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
