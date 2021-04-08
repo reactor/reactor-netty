@@ -14,11 +14,25 @@
  * limitations under the License.
  */
 
+import org.gradle.util.VersionNumber
+
+static def qualifyVersion(String v) {
+	def versionNumber = VersionNumber.parse(v)
+
+	if (versionNumber == VersionNumber.UNKNOWN) return "BAD";
+
+	if (versionNumber.qualifier == null || versionNumber.qualifier.size() == 0) return "RELEASE" //new scheme
+	if (versionNumber.qualifier == "RELEASE") return "RELEASE" //old scheme
+	if (versionNumber.qualifier.matches("(?:M|RC)\\d+")) return "MILESTONE"
+	if (versionNumber.qualifier == "SNAPSHOT" || versionNumber.qualifier == "BUILD-SNAPSHOT") return "SNAPSHOT"
+
+	return "BAD"
+}
+
 configure(rootProject) { subproject ->
 	apply from: "$gradleScriptDir/doc.gradle"
 	apply plugin: 'maven-publish'
-	apply plugin: 'com.jfrog.artifactory'
-
+	//we also conditionally apply artifactory and signing plugins below
 
 	task sourcesJar(type: Jar) {
 		archiveClassifier.set('sources')
@@ -30,17 +44,45 @@ configure(rootProject) { subproject ->
 		from javadoc
 	}
 
+	task qualifyVersionGha() {
+		doLast {
+			def versionType = qualifyVersion("$version")
+
+			println "::set-output name=versionType::$versionType"
+			println "::set-output name=fullVersion::$version"
+			if (versionType == "BAD") {
+				println "::error ::Unable to parse $version to a VersionNumber with recognizable qualifier"
+				throw new TaskExecutionException(tasks.getByName("qualifyVersionGha"), new IllegalArgumentException("Unable to parse $version to a VersionNumber with recognizable qualifier"))
+			}
+		}
+	}
+
 	publishing {
+		repositories {
+			maven {
+				name = "mock"
+				url = "${rootProject.buildDir}/mockRepo"
+			}
+			if (qualifyVersion("$version") == "RELEASE") {
+				maven {
+					name = "sonatype"
+					url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
+					credentials {
+						username findProperty("sonatypeUsername")
+						password findProperty("sonatypePassword")
+					}
+				}
+			}
+		}
+
 		publications {
 			mavenJava(MavenPublication) {
 				from components.java
 				artifact sourcesJar
 				artifact javadocJar
-
-				//FIXME don't rely solely on Bamboo to detect release environment
-				if (System.getenv()["bamboo_buildNumber"] != null) {
-					artifact docsZip
-					println docsZip
+				//consider adding extra artifacts here, conditionally on submodule's name and perhaps in an afterEvaluate block
+				afterEvaluate {
+					artifact rootProject.tasks.docsZip
 				}
 
 				pom {
@@ -114,8 +156,29 @@ configure(rootProject) { subproject ->
 	}
 
 	artifactoryPublish {
-		//don't activate the onlyIf clause below yet, so that Bamboo builds will publish stuff...
-		//onlyIf { project.hasProperty("artifactory_publish_password") }
-		publications(publishing.publications.mavenJava)
+		if (rootProject.hasProperty("artifactory_publish_password")) {
+			apply plugin: "com.jfrog.artifactory"
+
+			artifactoryPublish {
+				publications(publishing.publications.mavenJava)
+			}
+		}
+
+		if (qualifyVersion("$version") in ["RELEASE", "MILESTONE"] || rootProject.hasProperty("forceSigning")) {
+			apply plugin: 'signing'
+
+			signing {
+				//requiring signature if there is a publish task that is not to MavenLocal
+				required { gradle.taskGraph.allTasks.any { it.name.toLowerCase().contains("publish") && !it.name.contains("MavenLocal") } }
+				def signingKey = findProperty("signingKey")
+				def signingPassword = findProperty("signingPassword")
+
+				useInMemoryPgpKeys(signingKey, signingPassword)
+
+				afterEvaluate {
+					sign publishing.publications.mavenJava
+				}
+			}
+		}
 	}
 }
