@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 class ProxyProviderTest {
 
@@ -193,6 +194,14 @@ class ProxyProviderTest {
 	void nonProxyHosts_builderDefault_empty() {
 		Predicate<SocketAddress> pred = ProxyProvider.builder().type(ProxyProvider.Proxy.HTTP).host("something").build().getNonProxyHostsPredicate();
 		assertThat(pred.test(someAddress("localhost"))).as("Default should proxy").isFalse();
+	}
+
+	@Test
+	void shouldNotCreateProxyProviderWithMissingRemoteHostInfo() {
+		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder().type(ProxyProvider.Proxy.HTTP);
+		assertThatIllegalArgumentException()
+				.isThrownBy(builder::build)
+				.withMessage("Neither address nor host is specified");
 	}
 
 	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
