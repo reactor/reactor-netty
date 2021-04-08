@@ -25,7 +25,6 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -57,7 +56,7 @@ public interface HttpServerRoutes extends
 	/**
 	 * Listens for HTTP DELETE on the passed path to be used as a routing condition.
 	 * Incoming connections will query the internal registry to invoke the matching
-	 * handler.
+	 * handler.HttpRouteHandlerMetadata
 	 * <p>Additional regex matching is available, e.g. "/test/{param}".
 	 * Params are resolved using {@link HttpServerRequest#param(CharSequence)}</p>
 	 *
@@ -265,13 +264,22 @@ public interface HttpServerRoutes extends
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler);
 
 	/**
-	 * A comparator used to sort HttpRouteHandlers.If this method called more times,
-	 * only the last Comparator will works.
+	 * A comparator used to sort HttpRouteHandlers.When call this method,added routes will be sorted use
+	 * this comparator.When add route if already set comparator,routes will be sorted. If you don't want
+	 * to sort routes you can use noCompare() method to recover and keep routes in add order.
 	 *
-	 * @param supplier a HttpRouteHandler comparator supplier
+	 * @param comparator a HttpRouteHandler comparator supplier
 	 * @return this {@link HttpServerRoutes}
 	 */
-	HttpServerRoutes comparator(Supplier<Comparator<HttpRouteHandler>> supplier);
+	HttpServerRoutes comparator(Comparator<HttpRouteHandlerMetadata> comparator);
+
+	/**
+	 * If already call comparator() method routes will be ordered use this comparator,
+	 * this method can eliminate the side effect and keep routes in added order。
+	 *
+	 * @return this {@link HttpServerRoutes}
+	 */
+	HttpServerRoutes noCompare();
 
 	/**
 	 * Listens for websocket on the passed path to be used as a routing condition. Incoming

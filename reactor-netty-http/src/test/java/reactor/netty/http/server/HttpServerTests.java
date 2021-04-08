@@ -2485,7 +2485,7 @@ class HttpServerTests extends BaseHttpTest {
 						}).get("/yes/value", (request, response) -> {
 							response.status(201);
 							return response.sendNotFound();
-						}).comparator(() -> comparator)).bindNow();
+						}).comparator(comparator)).bindNow();
 
 		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
 				.response().map(httpClientResponse -> httpClientResponse.status().code()))
@@ -2500,14 +2500,14 @@ class HttpServerTests extends BaseHttpTest {
 				}).get("/yes/value", (request, response) -> {
 					response.status(201);
 					return response.sendNotFound();
-				}).comparator(comparator::reversed)).bindNow();
+				}).comparator(comparator.reversed())).bindNow();
 		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
 				.response().map(httpClientResponse -> httpClientResponse.status().code()))
 				.expectNext(200)
 				.expectComplete();
 	}
 
-	private final Comparator<HttpRouteHandler> comparator = (o1, o2) -> {
+	private final Comparator<HttpRouteHandlerMetadata> comparator = (o1, o2) -> {
 		if (o1.getPath().contains("{")) {
 			return 1;
 		}

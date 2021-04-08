@@ -30,7 +30,7 @@ import reactor.util.annotation.Nullable;
  */
 public class HttpRouteHandler
 		implements BiFunction<HttpServerRequest, HttpServerResponse, Publisher<Void>>,
-		Predicate<HttpServerRequest> {
+		Predicate<HttpServerRequest>, HttpRouteHandlerMetadata {
 
 	private final Predicate<? super HttpServerRequest> condition;
 	private final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>
@@ -60,6 +60,7 @@ public class HttpRouteHandler
 		return condition.test(o);
 	}
 
+	@Override
 	public String getPath() {
 		return path;
 	}

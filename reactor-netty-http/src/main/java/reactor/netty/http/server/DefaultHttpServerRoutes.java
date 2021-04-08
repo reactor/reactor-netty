@@ -26,7 +26,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
@@ -41,7 +40,10 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 	private final CopyOnWriteArrayList<HttpRouteHandler> handlers =
 			new CopyOnWriteArrayList<>();
 
-	private Comparator<HttpRouteHandler> comparator;
+	private final CopyOnWriteArrayList<HttpRouteHandler> initialOrderHandlers =
+			new CopyOnWriteArrayList<>();
+
+	private Comparator<HttpRouteHandlerMetadata> comparator;
 
 	@Override
 	public HttpServerRoutes directory(String uri, Path directory,
@@ -78,12 +80,18 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		Objects.requireNonNull(handler, "handler");
 
 		if (condition instanceof HttpPredicate) {
-			handlers.add(new HttpRouteHandler(condition,
+			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition,
 					handler,
-					(HttpPredicate) condition, ((HttpPredicate) condition).uri));
+					(HttpPredicate) condition, ((HttpPredicate) condition).uri);
+
+			handlers.add(httpRouteHandler);
+			initialOrderHandlers.add(httpRouteHandler);
+
 		}
 		else {
-			handlers.add(new HttpRouteHandler(condition, handler, null, null));
+			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition, handler, null, null);
+			handlers.add(httpRouteHandler);
+			initialOrderHandlers.add(httpRouteHandler);
 		}
 
 		if (this.comparator != null) {
@@ -94,9 +102,16 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 	}
 
 	@Override
-	public HttpServerRoutes comparator(Supplier<Comparator<HttpRouteHandler>> supplier) {
-		this.comparator = supplier.get();
+	public HttpServerRoutes comparator(Comparator<HttpRouteHandlerMetadata> comparator) {
+		this.comparator = comparator;
 		handlers.sort(comparator);
+		return this;
+	}
+
+	@Override
+	public HttpServerRoutes noCompare() {
+		handlers.clear();
+		handlers.addAll(initialOrderHandlers);
 		return this;
 	}
 
