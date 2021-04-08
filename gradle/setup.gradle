@@ -155,29 +155,27 @@ configure(rootProject) { subproject ->
 		}
 	}
 
-	artifactoryPublish {
-		if (rootProject.hasProperty("artifactory_publish_password")) {
-			apply plugin: "com.jfrog.artifactory"
+	if (rootProject.hasProperty("artifactory_publish_password")) {
+		apply plugin: "com.jfrog.artifactory"
 
-			artifactoryPublish {
-				publications(publishing.publications.mavenJava)
-			}
+		artifactoryPublish {
+			publications(publishing.publications.mavenJava)
 		}
+	}
 
-		if (qualifyVersion("$version") in ["RELEASE", "MILESTONE"] || rootProject.hasProperty("forceSigning")) {
-			apply plugin: 'signing'
+	if (qualifyVersion("$version") in ["RELEASE", "MILESTONE"] || rootProject.hasProperty("forceSigning")) {
+		apply plugin: 'signing'
 
-			signing {
-				//requiring signature if there is a publish task that is not to MavenLocal
-				required { gradle.taskGraph.allTasks.any { it.name.toLowerCase().contains("publish") && !it.name.contains("MavenLocal") } }
-				def signingKey = findProperty("signingKey")
-				def signingPassword = findProperty("signingPassword")
+		signing {
+			//requiring signature if there is a publish task that is not to MavenLocal
+			required { gradle.taskGraph.allTasks.any { it.name.toLowerCase().contains("publish") && !it.name.contains("MavenLocal") } }
+			def signingKey = findProperty("signingKey")
+			def signingPassword = findProperty("signingPassword")
 
-				useInMemoryPgpKeys(signingKey, signingPassword)
+			useInMemoryPgpKeys(signingKey, signingPassword)
 
-				afterEvaluate {
-					sign publishing.publications.mavenJava
-				}
+			afterEvaluate {
+				sign publishing.publications.mavenJava
 			}
 		}
 	}
