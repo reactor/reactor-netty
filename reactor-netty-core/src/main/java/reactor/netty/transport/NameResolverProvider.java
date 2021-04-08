@@ -27,6 +27,7 @@ import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.LoggingDnsQueryLifeCycleObserverFactory;
 import io.netty.resolver.dns.RoundRobinDnsAddressResolverGroup;
+import io.netty.util.concurrent.Future;
 import reactor.netty.resources.LoopResources;
 import reactor.util.annotation.Nullable;
 
@@ -84,6 +85,19 @@ public final class NameResolverProvider {
 		 * @return {@code this}
 		 */
 		NameResolverSpec cacheNegativeTimeToLive(Duration cacheNegativeTimeToLive);
+
+		/**
+		 * If {@code true}, the resolver notifies the returned {@link Future} as
+		 * soon as all queries for the preferred address type are complete.
+		 * If {@code false}, the resolver notifies the returned {@link Future} when
+		 * all possible address types are complete.
+		 * This configuration is applicable for {@link DnsNameResolver#resolveAll(String)}.
+		 * By default this is enabled.
+		 *
+		 * @param enable {@code true} to enable, {@code false} to disable.
+		 * @return {@code this}
+		 */
+		NameResolverSpec completeOncePreferredResolved(boolean enable);
 
 		/**
 		 * Disables the automatic inclusion of an optional record that tries to hint the remote DNS server about
@@ -248,6 +262,17 @@ public final class NameResolverProvider {
 	}
 
 	/**
+	 * Returns {@code true} if the resolver notifies the returned {@link Future} as
+	 * soon as all queries for the preferred address type are complete.
+	 *
+	 * @return {@code true} if the resolver notifies the returned {@link Future} as
+	 * soon as all queries for the preferred address type are complete
+	 */
+	public boolean isCompleteOncePreferredResolved() {
+		return completeOncePreferredResolved;
+	}
+
+	/**
 	 * Returns {@code true} if an optional record inclusion is disabled.
 	 *
 	 * @return {@code true} if an optional record inclusion is disabled
@@ -359,7 +384,8 @@ public final class NameResolverProvider {
 			return false;
 		}
 		NameResolverProvider that = (NameResolverProvider) o;
-		return disableRecursionDesired == that.disableRecursionDesired &&
+		return completeOncePreferredResolved == that.completeOncePreferredResolved &&
+				disableRecursionDesired == that.disableRecursionDesired &&
 				disableOptionalRecord == that.disableOptionalRecord &&
 				maxPayloadSize == that.maxPayloadSize &&
 				maxQueriesPerResolve == that.maxQueriesPerResolve &&
@@ -379,9 +405,10 @@ public final class NameResolverProvider {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(cacheMaxTimeToLive, cacheMinTimeToLive, cacheNegativeTimeToLive, disableRecursionDesired,
-				disableOptionalRecord, loggingFactory, loopResources, maxPayloadSize, maxQueriesPerResolve, ndots,
-				preferNative, queryTimeout, resolvedAddressTypes, roundRobinSelection, searchDomains);
+		return Objects.hash(cacheMaxTimeToLive, cacheMinTimeToLive, cacheNegativeTimeToLive, completeOncePreferredResolved,
+				disableRecursionDesired, disableOptionalRecord, loggingFactory, loopResources, maxPayloadSize,
+				maxQueriesPerResolve, ndots, preferNative, queryTimeout, resolvedAddressTypes, roundRobinSelection,
+				searchDomains);
 	}
 
 	/**
@@ -405,6 +432,7 @@ public final class NameResolverProvider {
 		DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
 				.ttl(Math.toIntExact(cacheMinTimeToLive.getSeconds()), Math.toIntExact(cacheMaxTimeToLive.getSeconds()))
 				.negativeTtl(Math.toIntExact(cacheNegativeTimeToLive.getSeconds()))
+				.completeOncePreferredResolved(completeOncePreferredResolved)
 				.optResourceEnabled(!disableOptionalRecord)
 				.recursionDesired(!disableRecursionDesired)
 				.maxPayloadSize(maxPayloadSize)
@@ -429,6 +457,7 @@ public final class NameResolverProvider {
 	final Duration cacheMaxTimeToLive;
 	final Duration cacheMinTimeToLive;
 	final Duration cacheNegativeTimeToLive;
+	final boolean completeOncePreferredResolved;
 	final boolean disableRecursionDesired;
 	final boolean disableOptionalRecord;
 	final DnsQueryLifecycleObserverFactory loggingFactory;
@@ -446,6 +475,7 @@ public final class NameResolverProvider {
 		this.cacheMaxTimeToLive = build.cacheMaxTimeToLive;
 		this.cacheMinTimeToLive = build.cacheMinTimeToLive;
 		this.cacheNegativeTimeToLive = build.cacheNegativeTimeToLive;
+		this.completeOncePreferredResolved = build.completeOncePreferredResolved;
 		this.disableOptionalRecord = build.disableOptionalRecord;
 		this.disableRecursionDesired = build.disableRecursionDesired;
 		this.loggingFactory = build.loggingFactory;
@@ -464,6 +494,7 @@ public final class NameResolverProvider {
 		static final Duration DEFAULT_CACHE_MAX_TIME_TO_LIVE = Duration.ofSeconds(Integer.MAX_VALUE);
 		static final Duration DEFAULT_CACHE_MIN_TIME_TO_LIVE = Duration.ofSeconds(0);
 		static final Duration DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE = Duration.ofSeconds(0);
+		static final boolean DEFAULT_COMPLETE_ONCE_PREFERRED_RESOLVED = true;
 		static final int DEFAULT_MAX_PAYLOAD_SIZE = 4096;
 		static final int DEFAULT_MAX_QUERIES_PER_RESOLVE = 16;
 		static final int DEFAULT_NDOTS = -1;
@@ -472,6 +503,7 @@ public final class NameResolverProvider {
 		Duration cacheMaxTimeToLive = DEFAULT_CACHE_MAX_TIME_TO_LIVE;
 		Duration cacheMinTimeToLive = DEFAULT_CACHE_MIN_TIME_TO_LIVE;
 		Duration cacheNegativeTimeToLive = DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE;
+		boolean completeOncePreferredResolved = DEFAULT_COMPLETE_ONCE_PREFERRED_RESOLVED;
 		boolean disableOptionalRecord;
 		boolean disableRecursionDesired;
 		DnsQueryLifecycleObserverFactory loggingFactory;
@@ -500,6 +532,12 @@ public final class NameResolverProvider {
 		@Override
 		public NameResolverSpec cacheNegativeTimeToLive(Duration cacheNegativeTimeToLive) {
 			this.cacheNegativeTimeToLive = Objects.requireNonNull(cacheNegativeTimeToLive);
+			return this;
+		}
+
+		@Override
+		public NameResolverSpec completeOncePreferredResolved(boolean enable) {
+			this.completeOncePreferredResolved = enable;
 			return this;
 		}
 

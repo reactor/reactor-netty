@@ -15,7 +15,6 @@
  */
 package reactor.netty.resources;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -24,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -40,7 +38,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.DefaultAddressResolverGroup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -54,8 +51,10 @@ import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.resources.DefaultPooledConnectionProvider.PooledConnection;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpClientTests;
+import reactor.netty.tcp.TcpResources;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ClientTransportConfig;
+import reactor.netty.transport.NameResolverProvider;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolAcquirePendingLimitException;
 import reactor.pool.PooledRef;
@@ -121,24 +120,24 @@ class DefaultPooledConnectionProviderTest {
 	}
 
 	@Test
-	void fixedPoolTwoAcquire()
-			throws ExecutionException, InterruptedException, IOException {
+	void fixedPoolTwoAcquire() throws Exception {
 		final ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
 		int echoServerPort = SocketUtils.findAvailableTcpPort();
 		TcpClientTests.EchoServer echoServer = new TcpClientTests.EchoServer(echoServerPort);
+		EventLoopGroup group = new NioEventLoopGroup(2);
 
 		java.util.concurrent.Future<?> f1 = null;
 		java.util.concurrent.Future<?> f2 = null;
 		Future<?> sf = null;
-		try {
+		try (AddressResolverGroup<?> resolver =
+				NameResolverProvider.builder().build().newNameResolverGroup(TcpResources.get(), true)) {
 			final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", echoServerPort);
 			ConnectionProvider pool = ConnectionProvider.create("fixedPoolTwoAcquire", 2);
 
 			Supplier<? extends SocketAddress> remoteAddress = () -> address;
 			ConnectionObserver observer = ConnectionObserver.emptyListener();
-			EventLoopGroup group = new NioEventLoopGroup(2);
 			ClientTransportConfigImpl config =
-					new ClientTransportConfigImpl(group, pool, Collections.emptyMap(), remoteAddress);
+					new ClientTransportConfigImpl(group, pool, Collections.emptyMap(), remoteAddress, resolver);
 
 			//fail a couple
 			StepVerifier.create(pool.acquire(config, observer, remoteAddress, config.resolverInternal()))
@@ -209,6 +208,9 @@ class DefaultPooledConnectionProviderTest {
 		finally {
 			service.shutdownNow();
 			echoServer.close();
+			group.shutdownGracefully()
+			     .get(5, TimeUnit.SECONDS);
+
 			assertThat(f1).isNotNull();
 			assertThat(f1.get()).isNull();
 			assertThat(f2).isNotNull();
@@ -399,11 +401,14 @@ class DefaultPooledConnectionProviderTest {
 	static final class ClientTransportConfigImpl extends ClientTransportConfig<ClientTransportConfigImpl> {
 
 		final EventLoopGroup group;
+		final AddressResolverGroup<?> resolver;
 
 		ClientTransportConfigImpl(EventLoopGroup group, ConnectionProvider connectionProvider,
-				Map<ChannelOption<?>, ?> options, Supplier<? extends SocketAddress> remoteAddress) {
+				Map<ChannelOption<?>, ?> options, Supplier<? extends SocketAddress> remoteAddress,
+				AddressResolverGroup<?> resolver) {
 			super(connectionProvider, options, remoteAddress);
 			this.group = group;
+			this.resolver = resolver;
 		}
 
 		@Override
@@ -423,7 +428,7 @@ class DefaultPooledConnectionProviderTest {
 
 		@Override
 		protected AddressResolverGroup<?> defaultAddressResolverGroup() {
-			return DefaultAddressResolverGroup.INSTANCE;
+			return resolver;
 		}
 
 		@Override
