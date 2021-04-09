@@ -38,6 +38,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -51,10 +52,8 @@ import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.resources.DefaultPooledConnectionProvider.PooledConnection;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpClientTests;
-import reactor.netty.tcp.TcpResources;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ClientTransportConfig;
-import reactor.netty.transport.NameResolverProvider;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolAcquirePendingLimitException;
 import reactor.pool.PooledRef;
@@ -129,8 +128,8 @@ class DefaultPooledConnectionProviderTest {
 		java.util.concurrent.Future<?> f1 = null;
 		java.util.concurrent.Future<?> f2 = null;
 		Future<?> sf = null;
-		try (AddressResolverGroup<?> resolver =
-				NameResolverProvider.builder().build().newNameResolverGroup(TcpResources.get(), true)) {
+		AddressResolverGroup<?> resolver = DefaultAddressResolverGroup.INSTANCE;
+		try {
 			final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", echoServerPort);
 			ConnectionProvider pool = ConnectionProvider.create("fixedPoolTwoAcquire", 2);
 
