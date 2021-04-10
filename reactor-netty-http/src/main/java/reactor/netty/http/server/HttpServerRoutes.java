@@ -279,7 +279,7 @@ public interface HttpServerRoutes extends
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	HttpServerRoutes noCompare();
+	HttpServerRoutes noComparator();
 
 	/**
 	 * Listens for websocket on the passed path to be used as a routing condition. Incoming

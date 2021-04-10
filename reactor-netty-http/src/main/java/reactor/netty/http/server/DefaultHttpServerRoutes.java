@@ -109,7 +109,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 	}
 
 	@Override
-	public HttpServerRoutes noCompare() {
+	public HttpServerRoutes noComparator() {
 		handlers.clear();
 		handlers.addAll(initialOrderHandlers);
 		return this;
