@@ -101,7 +101,7 @@ ext {
 	nettyIoUringVersion = '0.0.5.Final'
 
 	// Testing
-	jacksonDatabindVersion = '2.12.2'
+	jacksonDatabindVersion = '2.12.3'
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.19.0'
 	hoverflyJavaVersion = '0.14.0'
