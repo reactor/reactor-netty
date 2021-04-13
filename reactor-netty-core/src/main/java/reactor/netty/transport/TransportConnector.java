@@ -111,14 +111,13 @@ public final class TransportConnector {
 						.onErrorResume(RetryConnectException.class,
 								t -> {
 									AtomicInteger index = new AtomicInteger(1);
-									return Mono.<Channel>create(sink ->
+									return Mono.defer(() ->
 											doInitAndRegister(config, channelInitializer, isDomainAddress)
 													.flatMap(ch -> {
 														MonoChannelPromise mono = new MonoChannelPromise(ch);
 														doConnect(t.addresses, config.bindAddress(), mono, index.get());
 														return mono;
-													})
-													.subscribe(sink::success, sink::error))
+													}))
 											.retryWhen(Retry.max(t.addresses.size() - 1)
 															.filter(RETRY_PREDICATE)
 															.doBeforeRetry(sig -> index.incrementAndGet()));
