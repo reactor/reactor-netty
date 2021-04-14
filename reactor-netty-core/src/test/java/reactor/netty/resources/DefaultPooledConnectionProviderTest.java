@@ -18,6 +18,7 @@ package reactor.netty.resources;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -37,9 +38,12 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.NetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
@@ -53,6 +57,7 @@ import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpClientTests;
 import reactor.netty.tcp.TcpResources;
 import reactor.netty.tcp.TcpServer;
+import reactor.netty.transport.AddressUtils;
 import reactor.netty.transport.ClientTransportConfig;
 import reactor.netty.transport.NameResolverProvider;
 import reactor.pool.InstrumentedPool;
@@ -362,6 +367,51 @@ class DefaultPooledConnectionProviderTest {
 		finally {
 			server.disposeNow();
 			provider.dispose();
+		}
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void testRetryConnect() throws Exception {
+		EventLoopGroup group = new NioEventLoopGroup(1);
+		InetSocketAddress address = AddressUtils.createUnresolved("localhost", 12122);
+
+		AddressResolverGroup<SocketAddress> resolverGroup = Mockito.mock(AddressResolverGroup.class);
+		AddressResolver<SocketAddress> resolver = Mockito.mock(AddressResolver.class);
+		io.netty.util.concurrent.Future<List<SocketAddress>> resolveFuture =
+				Mockito.mock(io.netty.util.concurrent.Future.class);
+		List<SocketAddress> resolveAllResult = Arrays.asList(
+				new InetSocketAddress(NetUtil.LOCALHOST4, 12122), // connection refused
+				new InetSocketAddress(NetUtil.LOCALHOST6, 12122), // connection refused
+				new InetSocketAddress("example.com", 80) // connection established
+		);
+		Mockito.when(resolverGroup.getResolver(group.next())).thenReturn(resolver);
+		Mockito.when(resolver.isSupported(address)).thenReturn(true);
+		Mockito.when(resolver.isResolved(address)).thenReturn(false);
+		Mockito.when(resolver.resolveAll(address)).thenReturn(resolveFuture);
+		Mockito.when(resolveFuture.isDone()).thenReturn(true);
+		Mockito.when(resolveFuture.cause()).thenReturn(null);
+		Mockito.when(resolveFuture.getNow()).thenReturn(resolveAllResult);
+
+		ConnectionProvider pool = ConnectionProvider.create("testRetryConnect", 1);
+		Supplier<? extends SocketAddress> remoteAddress = () -> address;
+		ConnectionObserver observer = ConnectionObserver.emptyListener();
+		ClientTransportConfigImpl config =
+				new ClientTransportConfigImpl(group, pool, Collections.emptyMap(), remoteAddress, resolverGroup);
+		Connection conn = null;
+		try {
+			conn = pool.acquire(config, observer, remoteAddress, config.resolverInternal())
+			           .block(Duration.ofSeconds(5));
+			assertThat(((InetSocketAddress) conn.address()).getHostString()).isEqualTo("example.com");
+		}
+		finally {
+			if (conn != null) {
+				conn.disposeNow(Duration.ofSeconds(5));
+			}
+			pool.disposeLater()
+			    .block(Duration.ofSeconds(5));
+			group.shutdownGracefully()
+			     .get(5, TimeUnit.SECONDS);
 		}
 	}
 

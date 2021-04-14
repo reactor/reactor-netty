@@ -38,6 +38,7 @@ import reactor.netty.Connection;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
+import reactor.util.retry.Retry;
 
 import java.net.SocketAddress;
 import java.util.Collections;
@@ -45,7 +46,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static reactor.netty.ReactorNetty.format;
@@ -102,8 +105,23 @@ public final class TransportConnector {
 		Objects.requireNonNull(resolverGroup, "resolverGroup");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
 
-		return doInitAndRegister(config, channelInitializer, remoteAddress instanceof DomainSocketAddress)
-				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup));
+		boolean isDomainAddress = remoteAddress instanceof DomainSocketAddress;
+		return doInitAndRegister(config, channelInitializer, isDomainAddress)
+				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup)
+						.onErrorResume(RetryConnectException.class,
+								t -> {
+									AtomicInteger index = new AtomicInteger(1);
+									return Mono.defer(() ->
+											doInitAndRegister(config, channelInitializer, isDomainAddress)
+													.flatMap(ch -> {
+														MonoChannelPromise mono = new MonoChannelPromise(ch);
+														doConnect(t.addresses, config.bindAddress(), mono, index.get());
+														return mono;
+													}))
+											.retryWhen(Retry.max(t.addresses.size() - 1)
+															.filter(RETRY_PREDICATE)
+															.doBeforeRetry(sig -> index.incrementAndGet()));
+								}));
 	}
 
 	/**
@@ -144,6 +162,7 @@ public final class TransportConnector {
 		}
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	static void doConnect(
 			List<SocketAddress> addresses,
 			@Nullable Supplier<? extends SocketAddress> bindAddress,
@@ -171,6 +190,9 @@ public final class TransportConnector {
 					connectPromise.setSuccess();
 				}
 				else {
+					// "FutureReturnValueIgnored" this is deliberate
+					channel.close();
+
 					Throwable cause = future.cause();
 					if (log.isDebugEnabled()) {
 						log.debug(format(channel, "Connect attempt to [" + remoteAddress + "] failed."), cause);
@@ -178,7 +200,7 @@ public final class TransportConnector {
 
 					int next = index + 1;
 					if (next < addresses.size()) {
-						doConnect(addresses, bindAddress, connectPromise, next);
+						connectPromise.setFailure(new RetryConnectException(addresses));
 					}
 					else {
 						connectPromise.setFailure(cause);
@@ -569,5 +591,24 @@ public final class TransportConnector {
 		volatile Object result;
 	}
 
+	static final class RetryConnectException extends RuntimeException {
+
+		final List<SocketAddress> addresses;
+
+		RetryConnectException(List<SocketAddress> addresses) {
+			this.addresses = addresses;
+		}
+
+		@Override
+		public synchronized Throwable fillInStackTrace() {
+			// omit stacktrace for this exception
+			return this;
+		}
+
+		private static final long serialVersionUID = -207274323623692199L;
+	}
+
 	static final Logger log = Loggers.getLogger(TransportConnector.class);
+
+	static final Predicate<Throwable> RETRY_PREDICATE = t -> t instanceof RetryConnectException;
 }
