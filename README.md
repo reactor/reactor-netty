@@ -2,9 +2,9 @@
 
 [![Join the chat at https://gitter.im/reactor/reactor-netty](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/reactor/reactor-netty)
 
-[![Reactor Netty](https://img.shields.io/maven-central/v/io.projectreactor.netty/reactor-netty.svg?colorB=brightgreen)](https://mvnrepository.com/artifact/io.projectreactor.netty/reactor-netty) [ ![Download](https://api.bintray.com/packages/spring/jars/io.projectreactor.netty/images/download.svg) ](https://bintray.com/spring/jars/io.projectreactor.netty/_latestVersion)
+[![Reactor Netty](https://img.shields.io/maven-central/v/io.projectreactor.netty/reactor-netty.svg?colorB=brightgreen)](https://mvnrepository.com/artifact/io.projectreactor.netty/reactor-netty)
 
-[![build](https://github.com/reactor/reactor-netty/workflows/Check%20Matrix/badge.svg?event=push)](https://github.com/reactor/reactor-netty/actions?query=workflow%3A%22Check+Matrix%22) [![CodeQL](https://github.com/reactor/reactor-netty/workflows/CodeQL/badge.svg?event=push)](https://github.com/reactor/reactor-netty/actions?query=workflow%3ACodeQL)
+[![publish](https://github.com/reactor/reactor-netty/actions/workflows/publish.yml/badge.svg)](https://github.com/reactor/reactor-netty/actions/workflows/publish.yml) [![CodeQL](https://github.com/reactor/reactor-netty/workflows/CodeQL/badge.svg?event=push)](https://github.com/reactor/reactor-netty/actions?query=workflow%3ACodeQL)
 
 `Reactor Netty` offers non-blocking and backpressure-ready `TCP`/`HTTP`/`UDP`
 clients & servers based on `Netty` framework.
