@@ -16,6 +16,10 @@ jobs:
       versionType: ${{ steps.version.outputs.versionType }}
     steps:
       - uses: actions/checkout@v2
+      - name: Update /etc/hosts file
+        # /etc/hosts file needs to be updated as a workaround for
+        # https://github.com/actions/virtual-environments/issues/3185
+        run: echo -e "$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)\t$(hostname -f) $(hostname -s)" | sudo tee -a /etc/hosts
       - name: setup java
         uses: actions/setup-java@v1
         with:
@@ -46,6 +50,10 @@ jobs:
     environment: snapshots
     steps:
       - uses: actions/checkout@v2
+      - name: Update /etc/hosts file
+        # /etc/hosts file needs to be updated as a workaround for
+        # https://github.com/actions/virtual-environments/issues/3185
+        run: echo -e "$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)\t$(hostname -f) $(hostname -s)" | sudo tee -a /etc/hosts
       - uses: actions/setup-java@v1
         with:
           java-version: 8
@@ -65,6 +73,10 @@ jobs:
     environment: releases
     steps:
       - uses: actions/checkout@v2
+      - name: Update /etc/hosts file
+        # /etc/hosts file needs to be updated as a workaround for
+        # https://github.com/actions/virtual-environments/issues/3185
+        run: echo -e "$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)\t$(hostname -f) $(hostname -s)" | sudo tee -a /etc/hosts
       - uses: actions/setup-java@v1
         with:
           java-version: 8
