@@ -2477,37 +2477,73 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testOrderRoutes() {
-		DisposableServer server =
-				createServer()
-						.route(routes -> routes.get("/yes/{value}", (request, response) -> {
-							response.status(200);
-							return response.sendNotFound();
-						}).get("/yes/value", (request, response) -> {
-							response.status(201);
-							return response.sendNotFound();
-						}).comparator(comparator)).bindNow();
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/yes/{value}", (request, response) -> response.sendString(Mono.just("/yes/{value}")))
+				.get("/yes/value", (request, response) -> response.sendString(Mono.just("/yes/value")));
 
-		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
-				.response().map(httpClientResponse -> httpClientResponse.status().code()))
-				.expectNext(201)
-				.expectComplete();
+		DisposableServer server = null;
 
-		server.disposeNow();
-		server = createServer()
-				.route(routes -> routes.get("/yes/{value}", (request, response) -> {
-					response.status(200);
-					return response.sendNotFound();
-				}).get("/yes/value", (request, response) -> {
-					response.status(201);
-					return response.sendNotFound();
-				}).comparator(comparator.reversed())).bindNow();
-		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
-				.response().map(httpClientResponse -> httpClientResponse.status().code()))
-				.expectNext(200)
-				.expectComplete();
+		// case1: no comparator
+		try {
+			server = HttpServer.create().handle(serverRoutes).bindNow();
+			StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.expectNext("/yes/{value}")
+					.verifyComplete();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+		}
+
+		// case2: set comparator
+		try {
+			server = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
+			StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.expectNext("/yes/value")
+					.verifyComplete();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+		}
+
+		// case3: override comparator
+		try {
+			server = HttpServer.create().handle(serverRoutes.comparator(comparator).comparator(comparator.reversed()))
+					.bindNow();
+			StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.expectNext("/yes/{value}")
+					.verifyComplete();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+		}
+
+		// case4: no comparator
+		try {
+			server = HttpServer.create().handle(serverRoutes.comparator(comparator).noComparator())
+					.bindNow();
+			StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.expectNext("/yes/{value}")
+					.verifyComplete();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+		}
+
 	}
 
-	private final Comparator<HttpRouteHandlerMetadata> comparator = (o1, o2) -> {
+	private static final Comparator<HttpRouteHandlerMetadata> comparator = (o1, o2) -> {
 		if (o1.getPath().contains("{")) {
 			return 1;
 		}

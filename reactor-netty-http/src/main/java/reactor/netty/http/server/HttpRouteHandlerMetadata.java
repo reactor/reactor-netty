@@ -18,6 +18,7 @@ package reactor.netty.http.server;
 
 /**
  * @author chentong
+ * @since 1.0.7
  */
 public interface HttpRouteHandlerMetadata {
 

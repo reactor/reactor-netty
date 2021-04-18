@@ -56,7 +56,7 @@ public interface HttpServerRoutes extends
 	/**
 	 * Listens for HTTP DELETE on the passed path to be used as a routing condition.
 	 * Incoming connections will query the internal registry to invoke the matching
-	 * handler.HttpRouteHandlerMetadata
+	 * handler.
 	 * <p>Additional regex matching is available, e.g. "/test/{param}".
 	 * Params are resolved using {@link HttpServerRequest#param(CharSequence)}</p>
 	 *
@@ -264,18 +264,18 @@ public interface HttpServerRoutes extends
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler);
 
 	/**
-	 * A comparator used to sort HttpRouteHandlers.When call this method,added routes will be sorted use
-	 * this comparator.When add route if already set comparator,routes will be sorted. If you don't want
-	 * to sort routes you can use noCompare() method to recover and keep routes in add order.
+	 * A comparator used to sort routes.When call this method or configure a route,already configured routes will be
+	 * sorted use this comparator.If you don't want to sort routes you can use noComparator() method to recover and
+	 * keep routes in they are configured order.By default there is no sorting and the routes will be interpreted in
+	 * the way they are configured order.
 	 *
-	 * @param comparator a HttpRouteHandler comparator supplier
+	 * @param comparator a HttpRouteHandlerMetadata comparator.
 	 * @return this {@link HttpServerRoutes}
 	 */
 	HttpServerRoutes comparator(Comparator<HttpRouteHandlerMetadata> comparator);
 
 	/**
-	 * If already call comparator() method routes will be ordered use this comparator,
-	 * this method can eliminate the side effect and keep routes in added order。
+	 * This method make sure routes will be interpreted in the way they are configured order.
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */

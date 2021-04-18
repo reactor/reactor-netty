@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiFunction;
@@ -103,6 +104,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 	@Override
 	public HttpServerRoutes comparator(Comparator<HttpRouteHandlerMetadata> comparator) {
+		Objects.requireNonNull(comparator, "comparator");
 		this.comparator = comparator;
 		handlers.sort(comparator);
 		return this;
@@ -134,5 +136,43 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		}
 
 		return response.sendNotFound();
+	}
+
+	static final class HttpRouteHandler
+			implements BiFunction<HttpServerRequest, HttpServerResponse, Publisher<Void>>,
+			Predicate<HttpServerRequest>, HttpRouteHandlerMetadata {
+
+		private final Predicate<? super HttpServerRequest> condition;
+		private final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>
+				handler;
+		private final Function<? super String, Map<String, String>> resolver;
+
+		private final String path;
+
+		public HttpRouteHandler(Predicate<? super HttpServerRequest> condition,
+				BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
+				@Nullable Function<? super String, Map<String, String>> resolver,
+				@Nullable String path) {
+			this.condition = condition;
+			this.handler = handler;
+			this.resolver = resolver;
+			this.path = path;
+		}
+
+		@Override
+		public Publisher<Void> apply(HttpServerRequest request,
+				HttpServerResponse response) {
+			return handler.apply(request.paramsResolver(resolver), response);
+		}
+
+		@Override
+		public boolean test(HttpServerRequest o) {
+			return condition.test(o);
+		}
+
+		@Override
+		public String getPath() {
+			return path;
+		}
 	}
 }
