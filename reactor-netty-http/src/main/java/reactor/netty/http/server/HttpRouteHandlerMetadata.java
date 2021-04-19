@@ -16,6 +16,8 @@
 
 package reactor.netty.http.server;
 
+import reactor.util.annotation.Nullable;
+
 /**
  * @author chentong
  * @since 1.0.7
@@ -27,5 +29,6 @@ public interface HttpRouteHandlerMetadata {
 	 *
 	 * @return the http path
 	 */
+	@Nullable
 	String getPath();
 }

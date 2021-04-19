@@ -19,8 +19,10 @@ package reactor.netty.http.server;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -41,8 +43,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 	private final CopyOnWriteArrayList<HttpRouteHandler> handlers =
 			new CopyOnWriteArrayList<>();
 
-	private final CopyOnWriteArrayList<HttpRouteHandler> initialOrderHandlers =
-			new CopyOnWriteArrayList<>();
+	private final List<HttpRouteHandler> initialOrderHandlers = new ArrayList<>();
 
 	private Comparator<HttpRouteHandlerMetadata> comparator;
 
@@ -142,19 +143,19 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 			implements BiFunction<HttpServerRequest, HttpServerResponse, Publisher<Void>>,
 			Predicate<HttpServerRequest>, HttpRouteHandlerMetadata {
 
-		private final Predicate<? super HttpServerRequest> condition;
-		private final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>
+		final Predicate<? super HttpServerRequest> condition;
+		final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>
 				handler;
-		private final Function<? super String, Map<String, String>> resolver;
+		final Function<? super String, Map<String, String>> resolver;
 
-		private final String path;
+		final String path;
 
-		public HttpRouteHandler(Predicate<? super HttpServerRequest> condition,
+		HttpRouteHandler(Predicate<? super HttpServerRequest> condition,
 				BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
 				@Nullable Function<? super String, Map<String, String>> resolver,
 				@Nullable String path) {
-			this.condition = condition;
-			this.handler = handler;
+			this.condition = Objects.requireNonNull(condition, "condition");
+			this.handler = Objects.requireNonNull(handler, "handler");
 			this.resolver = resolver;
 			this.path = path;
 		}
