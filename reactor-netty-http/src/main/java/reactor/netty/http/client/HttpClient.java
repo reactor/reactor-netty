@@ -258,6 +258,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		/**
 		 * Return the response status and headers as {@link HttpClientResponse}
 		 * <p> Will automatically close the response if necessary.
+		 * <p>Note: Will automatically close low-level network connection after returned
+		 * {@link Mono} terminates or is being cancelled.
 		 *
 		 * @return the response status and headers as {@link HttpClientResponse}
 		 */
