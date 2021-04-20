@@ -264,20 +264,21 @@ public interface HttpServerRoutes extends
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler);
 
 	/**
-	 * A comparator used to sort routes.When call this method or configure a route,already configured routes will be
-	 * sorted use this comparator.If you don't want to sort routes you can use noComparator() method to recover and
-	 * keep routes in they are configured order.By default there is no sorting and the routes will be interpreted in
-	 * the way they are configured order.
+	 * Use the provided {@link java.util.Comparator} to sort routes, rather than using configured order.Routes that were
+	 * already configured are also impacted by this change and will be sorted according to the comparator.You can revert
+	 * to using the declaration order by calling the {@link #noComparator()} method (which is the default).
 	 *
 	 * @param comparator a HttpRouteHandlerMetadata comparator.
 	 * @return this {@link HttpServerRoutes}
+	 * @since 1.0.7
 	 */
 	HttpServerRoutes comparator(Comparator<HttpRouteHandlerMetadata> comparator);
 
 	/**
-	 * This method make sure routes will be interpreted in the way they are configured order.
+	 * Do not sort routes but use the order which the routes were configured.
 	 *
 	 * @return this {@link HttpServerRoutes}
+	 * @since 1.0.7
 	 */
 	HttpServerRoutes noComparator();
 

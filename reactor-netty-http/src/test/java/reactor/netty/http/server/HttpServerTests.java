@@ -2476,71 +2476,87 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testOrderRoutes() {
+	void testMatchRouteInConfiguredOrder() {
 		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
 				.get("/yes/{value}", (request, response) -> response.sendString(Mono.just("/yes/{value}")))
 				.get("/yes/value", (request, response) -> response.sendString(Mono.just("/yes/value")));
 
-		DisposableServer server = null;
+		DisposableServer server = HttpServer.create().handle(serverRoutes).bindNow();
 
-		// case1: no comparator
-		try {
-			server = HttpServer.create().handle(serverRoutes).bindNow();
-			StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
-					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
-					.expectNext("/yes/{value}")
-					.verifyComplete();
-		}
-		finally {
-			if (server != null) {
-				server.disposeNow();
-			}
-		}
+		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/yes/{value}")
+				.verifyComplete();
 
-		// case2: set comparator
-		try {
-			server = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
-			StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
-					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
-					.expectNext("/yes/value")
-					.verifyComplete();
-		}
-		finally {
-			if (server != null) {
-				server.disposeNow();
-			}
-		}
+		server.disposeNow();
+	}
 
-		// case3: override comparator
-		try {
-			server = HttpServer.create().handle(serverRoutes.comparator(comparator).comparator(comparator.reversed()))
-					.bindNow();
-			StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
-					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
-					.expectNext("/yes/{value}")
-					.verifyComplete();
-		}
-		finally {
-			if (server != null) {
-				server.disposeNow();
-			}
-		}
+	@Test
+	void testUseComparatorOrderRoues() {
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/yes/{value}", (request, response) -> response.sendString(Mono.just("/yes/{value}")))
+				.get("/yes/value", (request, response) -> response.sendString(Mono.just("/yes/value")));
 
-		// case4: no comparator
-		try {
-			server = HttpServer.create().handle(serverRoutes.comparator(comparator).noComparator())
-					.bindNow();
-			StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
-					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
-					.expectNext("/yes/{value}")
-					.verifyComplete();
-		}
-		finally {
-			if (server != null) {
-				server.disposeNow();
-			}
-		}
+		DisposableServer server = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
 
+		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/yes/value")
+				.verifyComplete();
+
+		server.disposeNow();
+	}
+
+	@Test
+	void testOverrideRoueOrder() {
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/yes/{value}", (request, response) -> response.sendString(Mono.just("/yes/{value}")))
+				.get("/yes/value", (request, response) -> response.sendString(Mono.just("/yes/value")));
+
+		DisposableServer server = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
+
+		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/yes/value")
+				.verifyComplete();
+
+		server.disposeNow();
+
+		server = HttpServer.create().handle(serverRoutes.comparator(comparator).comparator(comparator.reversed()))
+				.bindNow();
+
+		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/yes/{value}")
+				.verifyComplete();
+
+		server.disposeNow();
+	}
+
+	@Test
+	void testUseRoutesConfiguredOrder() {
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/yes/{value}", (request, response) -> response.sendString(Mono.just("/yes/{value}")))
+				.get("/yes/value", (request, response) -> response.sendString(Mono.just("/yes/value")));
+
+		DisposableServer server = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
+
+		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/yes/value")
+				.verifyComplete();
+
+		server.disposeNow();
+
+		server = HttpServer.create().handle(serverRoutes.comparator(comparator).noComparator())
+				.bindNow();
+
+		StepVerifier.create(createClient(server.port()).get().uri("/yes/value")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/yes/{value}")
+				.verifyComplete();
+
+		server.disposeNow();
 	}
 
 	private static final Comparator<HttpRouteHandlerMetadata> comparator = (o1, o2) -> {
