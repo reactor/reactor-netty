@@ -32,7 +32,7 @@ plugins {
 	id 'org.asciidoctor.convert' version '2.4.0'
 	id 'com.google.osdetector' version '1.7.0'
 	id 'org.gradle.test-retry' version '1.2.1'
-	id 'io.spring.nohttp' version '0.0.5.RELEASE'
+	id 'io.spring.nohttp' version '0.0.6.RELEASE'
 	id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
 	id 'com.jfrog.artifactory' version '4.16.1' apply false
 	id 'me.champeau.gradle.japicmp' version '0.2.9' apply false
@@ -101,7 +101,7 @@ ext {
 	nettyIoUringVersion = '0.0.5.Final'
 
 	// Testing
-	jacksonDatabindVersion = '2.12.2'
+	jacksonDatabindVersion = '2.12.3'
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.19.0'
 	hoverflyJavaVersion = '0.14.0'
@@ -109,7 +109,7 @@ ext {
 	boringSslVersion = '2.0.38.Final'
 	junitVersion = '5.7.1'
 	junitPlatformLauncherVersion = '1.7.1'
-	mockitoVersion = '3.8.0'
+	mockitoVersion = '3.9.0'
 	blockHoundVersion = '1.0.6.RELEASE'
 
 	javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",

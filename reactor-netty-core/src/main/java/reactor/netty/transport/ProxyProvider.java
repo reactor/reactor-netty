@@ -70,7 +70,12 @@ public final class ProxyProvider {
 		this.password = builder.password;
 		this.nonProxyHostPredicate = builder.nonProxyHostPredicate;
 		if (Objects.isNull(builder.address)) {
-			this.address = () -> AddressUtils.createResolved(builder.host, builder.port);
+			if (builder.host != null) {
+				this.address = () -> AddressUtils.createResolved(builder.host, builder.port);
+			}
+			else {
+				throw new IllegalArgumentException("Neither address nor host is specified");
+			}
 		}
 		else {
 			this.address = builder.address;

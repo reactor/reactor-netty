@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, macos-10.15, windows-2019]
+        os: [ubuntu-20.04, macos-10.15, windows-2019]
         transport: [native, nio]
         exclude:
           # excludes native on Windows (there's none)
@@ -23,6 +23,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Update /etc/hosts file
+        if: startsWith(matrix.os, 'ubuntu-')
+        # /etc/hosts file needs to be updated as a workaround for
+        # https://github.com/actions/virtual-environments/issues/3185
+        run: echo -e "$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)\t$(hostname -f) $(hostname -s)" | sudo tee -a /etc/hosts
       - name: Set up JDK 1.8
         uses: actions/setup-java@v1
         with:

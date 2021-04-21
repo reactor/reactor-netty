@@ -17,6 +17,7 @@ package reactor.netty.transport;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
@@ -37,12 +38,17 @@ import reactor.netty.Connection;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
+import reactor.util.retry.Retry;
 
 import java.net.SocketAddress;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static reactor.netty.ReactorNetty.format;
@@ -99,8 +105,23 @@ public final class TransportConnector {
 		Objects.requireNonNull(resolverGroup, "resolverGroup");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
 
-		return doInitAndRegister(config, channelInitializer, remoteAddress instanceof DomainSocketAddress)
-				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup));
+		boolean isDomainAddress = remoteAddress instanceof DomainSocketAddress;
+		return doInitAndRegister(config, channelInitializer, isDomainAddress)
+				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup)
+						.onErrorResume(RetryConnectException.class,
+								t -> {
+									AtomicInteger index = new AtomicInteger(1);
+									return Mono.defer(() ->
+											doInitAndRegister(config, channelInitializer, isDomainAddress)
+													.flatMap(ch -> {
+														MonoChannelPromise mono = new MonoChannelPromise(ch);
+														doConnect(t.addresses, config.bindAddress(), mono, index.get());
+														return mono;
+													}))
+											.retryWhen(Retry.max(t.addresses.size() - 1)
+															.filter(RETRY_PREDICATE)
+															.doBeforeRetry(sig -> index.incrementAndGet()));
+								}));
 	}
 
 	/**
@@ -142,18 +163,50 @@ public final class TransportConnector {
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	static void doConnect(SocketAddress remoteAddress, @Nullable Supplier<? extends SocketAddress> bindAddress, ChannelPromise connectPromise) {
+	static void doConnect(
+			List<SocketAddress> addresses,
+			@Nullable Supplier<? extends SocketAddress> bindAddress,
+			ChannelPromise connectPromise,
+			int index) {
 		Channel channel = connectPromise.channel();
 		channel.eventLoop().execute(() -> {
+			SocketAddress remoteAddress = addresses.get(index);
+
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel, "Connecting to [" + remoteAddress + "]."));
+			}
+
+			ChannelFuture f;
 			if (bindAddress == null) {
-				// "FutureReturnValueIgnored" this is deliberate
-				channel.connect(remoteAddress, connectPromise.unvoid());
+				f = channel.connect(remoteAddress);
 			}
 			else {
 				SocketAddress local = Objects.requireNonNull(bindAddress.get(), "bindAddress");
-				// "FutureReturnValueIgnored" this is deliberate
-				channel.connect(remoteAddress, local, connectPromise.unvoid());
+				f = channel.connect(remoteAddress, local);
 			}
+
+			f.addListener(future -> {
+				if (future.isSuccess()) {
+					connectPromise.setSuccess();
+				}
+				else {
+					// "FutureReturnValueIgnored" this is deliberate
+					channel.close();
+
+					Throwable cause = future.cause();
+					if (log.isDebugEnabled()) {
+						log.debug(format(channel, "Connect attempt to [" + remoteAddress + "] failed."), cause);
+					}
+
+					int next = index + 1;
+					if (next < addresses.size()) {
+						connectPromise.setFailure(new RetryConnectException(addresses));
+					}
+					else {
+						connectPromise.setFailure(cause);
+					}
+				}
+			});
 		});
 	}
 
@@ -216,7 +269,7 @@ public final class TransportConnector {
 			Supplier<? extends SocketAddress> bindAddress = config.bindAddress();
 			if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
 				MonoChannelPromise monoChannelPromise = new MonoChannelPromise(channel);
-				doConnect(remoteAddress, bindAddress, monoChannelPromise);
+				doConnect(Collections.singletonList(remoteAddress), bindAddress, monoChannelPromise, 0);
 				return monoChannelPromise;
 			}
 
@@ -227,13 +280,13 @@ public final class TransportConnector {
 				}
 			}
 
-			Future<SocketAddress> resolveFuture = resolver.resolve(remoteAddress);
+			Future<List<SocketAddress>> resolveFuture = resolver.resolveAll(remoteAddress);
 
 			if (config instanceof ClientTransportConfig) {
 				final ClientTransportConfig<?> clientTransportConfig = (ClientTransportConfig<?>) config;
 
 				if (clientTransportConfig.doOnResolveError != null) {
-					resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
+					resolveFuture.addListener((FutureListener<List<SocketAddress>>) future -> {
 						if (future.cause() != null) {
 							clientTransportConfig.doOnResolveError.accept(Connection.from(channel), future.cause());
 						}
@@ -241,9 +294,9 @@ public final class TransportConnector {
 				}
 
 				if (clientTransportConfig.doAfterResolve != null) {
-					resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
+					resolveFuture.addListener((FutureListener<List<SocketAddress>>) future -> {
 						if (future.isSuccess()) {
-							clientTransportConfig.doAfterResolve.accept(Connection.from(channel), future.getNow());
+							clientTransportConfig.doAfterResolve.accept(Connection.from(channel), future.getNow().get(0));
 						}
 					});
 				}
@@ -258,20 +311,20 @@ public final class TransportConnector {
 				}
 				else {
 					MonoChannelPromise monoChannelPromise = new MonoChannelPromise(channel);
-					doConnect(resolveFuture.getNow(), bindAddress, monoChannelPromise);
+					doConnect(resolveFuture.getNow(), bindAddress, monoChannelPromise, 0);
 					return monoChannelPromise;
 				}
 			}
 
 			MonoChannelPromise monoChannelPromise = new MonoChannelPromise(channel);
-			resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
+			resolveFuture.addListener((FutureListener<List<SocketAddress>>) future -> {
 				if (future.cause() != null) {
 					// "FutureReturnValueIgnored" this is deliberate
 					channel.close();
 					monoChannelPromise.tryFailure(future.cause());
 				}
 				else {
-					doConnect(future.getNow(), bindAddress, monoChannelPromise);
+					doConnect(future.getNow(), bindAddress, monoChannelPromise, 0);
 				}
 			});
 			return monoChannelPromise;
@@ -538,5 +591,24 @@ public final class TransportConnector {
 		volatile Object result;
 	}
 
+	static final class RetryConnectException extends RuntimeException {
+
+		final List<SocketAddress> addresses;
+
+		RetryConnectException(List<SocketAddress> addresses) {
+			this.addresses = addresses;
+		}
+
+		@Override
+		public synchronized Throwable fillInStackTrace() {
+			// omit stacktrace for this exception
+			return this;
+		}
+
+		private static final long serialVersionUID = -207274323623692199L;
+	}
+
 	static final Logger log = Loggers.getLogger(TransportConnector.class);
+
+	static final Predicate<Throwable> RETRY_PREDICATE = t -> t instanceof RetryConnectException;
 }

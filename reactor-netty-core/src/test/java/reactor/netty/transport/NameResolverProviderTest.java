@@ -110,6 +110,14 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	void completeOncePreferredResolved() {
+		assertThat(builder.build().isCompleteOncePreferredResolved()).isTrue();
+
+		builder.completeOncePreferredResolved(false);
+		assertThat(builder.build().isCompleteOncePreferredResolved()).isFalse();
+	}
+
+	@Test
 	void disableOptionalRecord() {
 		assertThat(builder.build().isDisableOptionalRecord()).isFalse();
 
