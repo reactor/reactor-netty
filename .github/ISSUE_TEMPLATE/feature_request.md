@@ -10,7 +10,7 @@ assignees: ''
 <!--- Provide a general summary of the issue in the Title above -->
 
 <!--- /!\ Make sure to follow the Contribution Guidelines and notably for security issues:
-https://github.com/reactor/reactor-netty/blob/master/CONTRIBUTING.md
+https://github.com/reactor/reactor-netty/blob/main/CONTRIBUTING.md
 https://tanzu.vmware.com/security
 -->
 <!--- /!\ Questions should be asked on [Gitter](https://gitter.im/reactor/reactor-netty) or [StackOverflow](https://stackoverflow.com/questions/tagged/reactor-netty). -->
