@@ -18,7 +18,7 @@ copy contains this `Copyright Notice`, whether distributed in print or electroni
 == Contributing to the Documentation
 The reference guide is written in
 https://asciidoctor.org/docs/asciidoc-writers-guide/[Asciidoc], and you can find its
-sources at https://github.com/reactor/reactor-netty/tree/master/docs/asciidoc.
+sources at https://github.com/reactor/reactor-netty/tree/main/src/docs/asciidoc.
 
 If you have an improvement, we will be happy to get a pull request from you!
 
@@ -31,7 +31,7 @@ ifeval::["{backend}" == "html5"]
 TIP: To facilitate documentation edits, most sections have a link at the end that opens
 an edit `UI` directly on `GitHub` for the main source file for that section. These links are
 only present in the `HTML5` version of this reference guide. They look like the following link:
-link:https://github.com/reactor/reactor-netty/edit/master/docs/asciidoc/about-doc.adoc[Suggest Edit^, role="fa fa-edit"] to <<about-doc>>.
+link:https://github.com/reactor/reactor-netty/edit/main/src/docs/asciidoc/about-doc.adoc[Suggest Edit^, role="fa fa-edit"] to <<about-doc>>.
 endif::[]
 
 == Getting Help
@@ -44,5 +44,5 @@ https://stackoverflow.com/tags/reactor-netty[`reactor-netty`].
 https://github.com/reactor/reactor-netty/issues[reactor-netty].
 
 NOTE: All of `Reactor Netty` is open source,
-https://github.com/reactor/reactor-netty/tree/master/docs/asciidoc[including this
+https://github.com/reactor/reactor-netty/tree/main/src/docs/asciidoc[including this
 documentation].

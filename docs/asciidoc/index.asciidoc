@@ -9,49 +9,49 @@ ifndef::host-github[:ext-relative: {outfilesuffix}]
 
 include::about-doc.adoc[leveloffset=1]
 ifeval::["{backend}" == "html5"]
-https://github.com/reactor/reactor-netty/edit/master/docs/asciidoc/about-doc.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
+https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/about-doc.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
 to "<<about-doc>>"
 endif::[]
 
 include::getting-started.adoc[leveloffset=1]
 ifeval::["{backend}" == "html5"]
-https://github.com/reactor/reactor-netty/edit/master/docs/asciidoc/getting-started.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
+https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/getting-started.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
 to "<<getting-started>>"
 endif::[]
 
 include::tcp-server.adoc[leveloffset=1]
 ifeval::["{backend}" == "html5"]
-https://github.com/reactor/reactor-netty/edit/master/docs/asciidoc/tcp-server.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
+https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/tcp-server.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
 to "<<tcp-server>>"
 endif::[]
 
 include::tcp-client.adoc[leveloffset=1]
 ifeval::["{backend}" == "html5"]
-https://github.com/reactor/reactor-netty/edit/master/docs/asciidoc/tcp-client.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
+https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/tcp-client.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
 to "<<tcp-client>>"
 endif::[]
 
 include::http-server.adoc[leveloffset=1]
 ifeval::["{backend}" == "html5"]
-https://github.com/reactor/reactor-netty/edit/master/docs/asciidoc/http-server.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
+https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/http-server.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
 to "<<http-server>>"
 endif::[]
 
 include::http-client.adoc[leveloffset=1]
 ifeval::["{backend}" == "html5"]
-https://github.com/reactor/reactor-netty/edit/master/docs/asciidoc/http-client.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
+https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/http-client.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
 to "<<http-client>>"
 endif::[]
 
 include::udp-server.adoc[leveloffset=1]
 ifeval::["{backend}" == "html5"]
-https://github.com/reactor/reactor-netty/edit/master/docs/asciidoc/udp-server.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
+https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/udp-server.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
 to "<<udp-server>>"
 endif::[]
 
 include::udp-client.adoc[leveloffset=1]
 ifeval::["{backend}" == "html5"]
-https://github.com/reactor/reactor-netty/edit/master/docs/asciidoc/udp-client.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
+https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/udp-client.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
 to "<<udp-client>>"
 endif::[]
 

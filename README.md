@@ -77,7 +77,7 @@ Having trouble with `Reactor Netty`? We'd like to help!
   tagged with [`reactor-netty`](https://stackoverflow.com/questions/tagged/reactor-netty). You can also chat
   with the community on [Gitter](https://gitter.im/reactor/reactor-netty).
 * Report bugs with `Reactor Netty` at [github.com/reactor/reactor-netty/issues](https://github.com/reactor/reactor-netty/issues).
-* More about [Support and Deprecation policies](https://github.com/reactor/.github/blob/master/SUPPORT.adoc)
+* More about [Support and Deprecation policies](https://github.com/reactor/.github/blob/main/SUPPORT.adoc)
 
 ## Reporting Issues
 `Reactor Netty` uses `GitHub’s` integrated issue tracking system to record bugs and feature requests.
