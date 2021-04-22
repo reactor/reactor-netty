@@ -275,7 +275,8 @@ public interface HttpServerRoutes extends
 	HttpServerRoutes comparator(Comparator<HttpRouteHandlerMetadata> comparator);
 
 	/**
-	 * Do not sort routes but use the order which the routes were configured.
+	 * Removes any previously applied {@link java.util.Comparator} customization using
+	 * {@link HttpServerRoutes#comparator(Comparator)}, and use the order in which the routes were configured.
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 * @since 1.0.7
