@@ -28,6 +28,7 @@ import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -2473,6 +2474,102 @@ class HttpServerTests extends BaseHttpTest {
 		doTestConnectionClosePropagatedAsError(
 				"POST http://%s/ HTTP/1.1\r\nHost: %s\r\nTransfer-Encoding: chunked\r\n\r\n10\r\nhello");
 	}
+
+	@Test
+	void testMatchRouteInConfiguredOrder() {
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/yes/{value}", (request, response) -> response.sendString(Mono.just("/yes/{value}")))
+				.get("/yes/value", (request, response) -> response.sendString(Mono.just("/yes/value")));
+
+		disposableServer = HttpServer.create().handle(serverRoutes).bindNow();
+
+		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/yes/{value}")
+				.verifyComplete();
+	}
+
+	@Test
+	void testUseComparatorOrderRoutes() {
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/yes/{value}", (request, response) -> response.sendString(Mono.just("/yes/{value}")))
+				.get("/yes/value", (request, response) -> response.sendString(Mono.just("/yes/value")));
+
+		disposableServer = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
+
+		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/yes/value")
+				.verifyComplete();
+	}
+
+	@Test
+	void testOverrideRouteOrder() {
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/yes/{value}", (request, response) -> response.sendString(Mono.just("/yes/{value}")))
+				.get("/yes/value", (request, response) -> response.sendString(Mono.just("/yes/value")));
+
+		try {
+			disposableServer = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
+
+			StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
+					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.expectNext("/yes/value")
+					.verifyComplete();
+		}
+		finally {
+			if (disposableServer != null) {
+				disposableServer.disposeNow();
+			}
+		}
+
+		disposableServer = HttpServer.create().handle(serverRoutes.comparator(comparator).comparator(comparator.reversed()))
+				.bindNow();
+
+		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/yes/{value}")
+				.verifyComplete();
+	}
+
+	@Test
+	void testUseRoutesConfiguredOrder() {
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/yes/{value}", (request, response) -> response.sendString(Mono.just("/yes/{value}")))
+				.get("/yes/value", (request, response) -> response.sendString(Mono.just("/yes/value")));
+
+		try {
+			disposableServer = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
+
+			StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
+					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.expectNext("/yes/value")
+					.verifyComplete();
+		}
+		finally {
+			if (disposableServer != null) {
+				disposableServer.disposeNow();
+			}
+		}
+
+		disposableServer = HttpServer.create().handle(serverRoutes.comparator(comparator).noComparator())
+				.bindNow();
+
+		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/yes/{value}")
+				.verifyComplete();
+	}
+
+	private static final Comparator<HttpRouteHandlerMetadata> comparator = (o1, o2) -> {
+		if (o1.getPath().contains("{")) {
+			return 1;
+		}
+		else if (o1.getPath().contains("{") && o2.getPath().contains("{")) {
+			return 0;
+		}
+		return -1;
+	};
 
 	private void doTestConnectionClosePropagatedAsError(String request) throws Exception {
 		AtomicReference<Throwable> error = new AtomicReference<>();

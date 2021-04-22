@@ -20,6 +20,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -261,6 +262,26 @@ public interface HttpServerRoutes extends
 	 */
 	HttpServerRoutes route(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler);
+
+	/**
+	 * Use the provided {@link java.util.Comparator} to sort routes, rather than using configured order.Routes that were
+	 * already configured are also impacted by this change and will be sorted according to the comparator.You can revert
+	 * to using the declaration order by calling the {@link #noComparator()} method (which is the default).
+	 *
+	 * @param comparator a HttpRouteHandlerMetadata comparator.
+	 * @return this {@link HttpServerRoutes}
+	 * @since 1.0.7
+	 */
+	HttpServerRoutes comparator(Comparator<HttpRouteHandlerMetadata> comparator);
+
+	/**
+	 * Removes any previously applied {@link java.util.Comparator} customization using
+	 * {@link HttpServerRoutes#comparator(Comparator)}, and use the order in which the routes were configured.
+	 *
+	 * @return this {@link HttpServerRoutes}
+	 * @since 1.0.7
+	 */
+	HttpServerRoutes noComparator();
 
 	/**
 	 * Listens for websocket on the passed path to be used as a routing condition. Incoming

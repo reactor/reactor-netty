@@ -19,7 +19,10 @@ package reactor.netty.http.server;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -37,9 +40,12 @@ import reactor.util.annotation.Nullable;
  */
 final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
-
 	private final CopyOnWriteArrayList<HttpRouteHandler> handlers =
 			new CopyOnWriteArrayList<>();
+
+	private final List<HttpRouteHandler> initialOrderHandlers = new ArrayList<>();
+
+	private Comparator<HttpRouteHandlerMetadata> comparator;
 
 	@Override
 	public HttpServerRoutes directory(String uri, Path directory,
@@ -76,13 +82,39 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		Objects.requireNonNull(handler, "handler");
 
 		if (condition instanceof HttpPredicate) {
-			handlers.add(new HttpRouteHandler(condition,
+			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition,
 					handler,
-					(HttpPredicate) condition));
+					(HttpPredicate) condition, ((HttpPredicate) condition).uri);
+
+			handlers.add(httpRouteHandler);
+			initialOrderHandlers.add(httpRouteHandler);
+
 		}
 		else {
-			handlers.add(new HttpRouteHandler(condition, handler, null));
+			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition, handler, null, null);
+			handlers.add(httpRouteHandler);
+			initialOrderHandlers.add(httpRouteHandler);
 		}
+
+		if (this.comparator != null) {
+			handlers.sort(this.comparator);
+		}
+
+		return this;
+	}
+
+	@Override
+	public HttpServerRoutes comparator(Comparator<HttpRouteHandlerMetadata> comparator) {
+		Objects.requireNonNull(comparator, "comparator");
+		this.comparator = comparator;
+		handlers.sort(comparator);
+		return this;
+	}
+
+	@Override
+	public HttpServerRoutes noComparator() {
+		handlers.clear();
+		handlers.addAll(initialOrderHandlers);
 		return this;
 	}
 
@@ -107,23 +139,25 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		return response.sendNotFound();
 	}
 
-	/**
-	 */
 	static final class HttpRouteHandler
 			implements BiFunction<HttpServerRequest, HttpServerResponse, Publisher<Void>>,
-			           Predicate<HttpServerRequest> {
+			Predicate<HttpServerRequest>, HttpRouteHandlerMetadata {
 
-		final Predicate<? super HttpServerRequest>          condition;
+		final Predicate<? super HttpServerRequest> condition;
 		final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>
-		                                                    handler;
+				handler;
 		final Function<? super String, Map<String, String>> resolver;
+
+		final String path;
 
 		HttpRouteHandler(Predicate<? super HttpServerRequest> condition,
 				BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
-				@Nullable Function<? super String, Map<String, String>> resolver) {
+				@Nullable Function<? super String, Map<String, String>> resolver,
+				@Nullable String path) {
 			this.condition = Objects.requireNonNull(condition, "condition");
 			this.handler = Objects.requireNonNull(handler, "handler");
 			this.resolver = resolver;
+			this.path = path;
 		}
 
 		@Override
@@ -136,6 +170,10 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		public boolean test(HttpServerRequest o) {
 			return condition.test(o);
 		}
-	}
 
+		@Override
+		public String getPath() {
+			return path;
+		}
+	}
 }
