@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
@@ -40,6 +41,7 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientConfig;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerConfig;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
@@ -65,6 +67,17 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @since 1.0.0
  */
 class HttpProtocolsTests extends BaseHttpTest {
+	static final ConnectionProvider provider =
+			ConnectionProvider.builder("HttpProtocolsTests")
+			                  .maxConnections(1)
+			                  .pendingAcquireMaxCount(10)
+			                  .build();
+
+	@AfterAll
+	static void disposePool() {
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
+	}
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
@@ -80,6 +93,20 @@ class HttpProtocolsTests extends BaseHttpTest {
 	@interface ParameterizedCompatibleCombinationsTest {
 	}
 
+	@Retention(RetentionPolicy.RUNTIME)
+	@Target(ElementType.METHOD)
+	@ParameterizedTest(name = "{displayName}({0}, {1})")
+	@MethodSource("dataCompatibleCombinations_NoPool")
+	@interface ParameterizedCompatibleCombinationsNoPoolTest {
+	}
+
+	@Retention(RetentionPolicy.RUNTIME)
+	@Target(ElementType.METHOD)
+	@ParameterizedTest(name = "{displayName}({0}, {1})")
+	@MethodSource("dataCompatibleCombinations_CustomPool")
+	@interface ParameterizedCompatibleCombinationsCustomPoolTest {
+	}
+
 	/**
 	 * Returns all combinations servers/clients even when they are not compatible
 	 * (e.g. the server supports only HTTP/1.1 and the client supports only HTTP/2).
@@ -87,7 +114,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 	 * @return all combinations servers/clients even when they are not compatible
 	 */
 	static Object[][] dataAllCombinations() throws Exception {
-		return data(false);
+		return data(false, false, false);
 	}
 
 	/**
@@ -96,10 +123,30 @@ class HttpProtocolsTests extends BaseHttpTest {
 	 * @return all combinations of compatible servers/clients
 	 */
 	static Object[][] dataCompatibleCombinations() throws Exception {
-		return data(true);
+		return data(true, false, false);
 	}
 
-	static Object[][] data(boolean onlyCompatible) throws Exception {
+	/**
+	 * Returns all combinations of compatible servers/clients.
+	 * The connection pool is disabled
+	 *
+	 * @return all combinations of compatible servers/clients
+	 */
+	static Object[][] dataCompatibleCombinations_NoPool() throws Exception {
+		return data(true, true, false);
+	}
+
+	/**
+	 * Returns all combinations of compatible servers/clients.
+	 * The connection pool configuration is: maxConnections=1, unlimited pending requests.
+	 *
+	 * @return all combinations of compatible servers/clients
+	 */
+	static Object[][] dataCompatibleCombinations_CustomPool() throws Exception {
+		return data(true, false, true);
+	}
+
+	static Object[][] data(boolean onlyCompatible, boolean disablePool, boolean useCustomPool) throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		Http11SslContextSpec serverCtxHttp11 = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
 		Http11SslContextSpec clientCtxHttp11 =
@@ -121,8 +168,18 @@ class HttpProtocolsTests extends BaseHttpTest {
 				_server.secure(spec -> spec.sslContext(serverCtxHttp2)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2)
 		};
 
-		HttpClient _client = HttpClient.create()
-		                               .wiretap(true);
+		HttpClient _client;
+		if (disablePool) {
+			_client = HttpClient.newConnection();
+		}
+		else if (useCustomPool) {
+			_client = HttpClient.create(provider);
+		}
+		else {
+			_client = HttpClient.create();
+		}
+
+		_client = _client.wiretap(true);
 
 		HttpClient[] clients = new HttpClient[]{
 				_client, // by default protocol is HTTP/1.1
@@ -162,7 +219,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	@ParameterizedAllCombinationsTest
-	void testProtocolVariationsGetRequest(HttpServer server, HttpClient client) {
+	void testGetRequest(HttpServer server, HttpClient client) {
 		HttpServerConfig serverConfig = server.configuration();
 		HttpClientConfig clientConfig = client.configuration();
 		List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());
@@ -210,16 +267,16 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	@ParameterizedAllCombinationsTest
-	void testProtocolVariationsPostRequest_1(HttpServer server, HttpClient client) {
-		doTestProtocolVariationsPostRequest(server, client, false);
+	void testPostRequest_1(HttpServer server, HttpClient client) {
+		doTestPostRequest(server, client, false);
 	}
 
 	@ParameterizedAllCombinationsTest
-	void testProtocolVariationsPostRequest_2(HttpServer server, HttpClient client) {
-		doTestProtocolVariationsPostRequest(server, client, true);
+	void testPostRequest_2(HttpServer server, HttpClient client) {
+		doTestPostRequest(server, client, true);
 	}
 
-	private void doTestProtocolVariationsPostRequest(HttpServer server, HttpClient client, boolean externalThread) {
+	private void doTestPostRequest(HttpServer server, HttpClient client, boolean externalThread) {
 		HttpServerConfig serverConfig = server.configuration();
 		HttpClientConfig clientConfig = client.configuration();
 		List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());
@@ -315,7 +372,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompatibleCombinationsTest
-	void testProtocolVariationsResponseTimeout(HttpServer server, HttpClient client) throws Exception {
+	void testResponseTimeout(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.handle((req, res) -> res.sendString(Mono.just("testProtocolVariationsResponseTimeout")))
 				      .bindNow();
@@ -323,13 +380,13 @@ class HttpProtocolsTests extends BaseHttpTest {
 		HttpClient localClient =
 				client.port(disposableServer.port())
 				      .responseTimeout(Duration.ofMillis(100));
-		doTestProtocolVariationsResponseTimeout(localClient, 100);
+		doTestResponseTimeout(localClient, 100);
 
 		localClient = localClient.doOnRequest((req, conn) -> req.responseTimeout(Duration.ofMillis(200)));
-		doTestProtocolVariationsResponseTimeout(localClient, 200);
+		doTestResponseTimeout(localClient, 200);
 	}
 
-	private void doTestProtocolVariationsResponseTimeout(HttpClient client, long expectedTimeout)
+	private void doTestResponseTimeout(HttpClient client, long expectedTimeout)
 			throws Exception {
 		AtomicBoolean onRequest = new AtomicBoolean();
 		AtomicBoolean onResponse = new AtomicBoolean();
@@ -376,5 +433,45 @@ class HttpProtocolsTests extends BaseHttpTest {
 		assertThat(onResponse.get()).isTrue();
 		assertThat(onDisconnected.get()).isFalse();
 		assertThat(timeout.get()).isEqualTo(expectedTimeout);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testConcurrentRequests_DefaultPool(HttpServer server, HttpClient client) {
+		disposableServer = server.handle((req, res) -> res.sendString(Mono.just("testConcurrentRequests_DefaultPool")))
+		                         .bindNow();
+
+		doTestConcurrentRequests(client.port(disposableServer.port()));
+	}
+
+	@ParameterizedCompatibleCombinationsNoPoolTest
+	void testConcurrentRequests_NoPool(HttpServer server, HttpClient client) {
+		disposableServer = server.handle((req, res) -> res.sendString(Mono.just("testConcurrentRequests_NoPool")))
+		                         .bindNow();
+
+		doTestConcurrentRequests(client.port(disposableServer.port()));
+	}
+
+	@ParameterizedCompatibleCombinationsCustomPoolTest
+	void testConcurrentRequests_CustomPool(HttpServer server, HttpClient client) {
+		disposableServer = server.handle((req, res) -> res.sendString(Mono.just("testConcurrentRequests_CustomPool")))
+		                         .bindNow();
+
+		doTestConcurrentRequests(client.port(disposableServer.port()));
+	}
+
+	private void doTestConcurrentRequests(HttpClient client) {
+		List<String> responses =
+				Flux.range(0, 10)
+				    .flatMapDelayError(i -> client.get()
+				                                  .uri("/")
+				                                  .responseContent()
+				                                  .aggregate()
+				                                  .asString(),
+				            256, 32)
+				    .collectList()
+				    .block(Duration.ofSeconds(30));
+
+		assertThat(responses).isNotNull();
+		assertThat(responses.size()).isEqualTo(10);
 	}
 }
