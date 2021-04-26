@@ -15,16 +15,25 @@
  */
 package reactor.netty.http;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.LoggingEvent;
+import ch.qos.logback.core.Appender;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientConfig;
 import reactor.netty.http.server.HttpServer;
@@ -39,6 +48,9 @@ import java.lang.annotation.Target;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test a combination of {@link HttpServer} + {@link HttpProtocol}
@@ -51,12 +63,38 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
-	@ParameterizedTest(name = "{index}: {0}, {1}")
-	@MethodSource("data")
-	@interface ParameterizedHttpProtocolsTest {
+	@ParameterizedTest(name = "{displayName}({0}, {1})")
+	@MethodSource("dataAllCombinations")
+	@interface ParameterizedAllCombinationsTest {
 	}
 
-	static Object[][] data() throws Exception {
+	@Retention(RetentionPolicy.RUNTIME)
+	@Target(ElementType.METHOD)
+	@ParameterizedTest(name = "{displayName}({0}, {1})")
+	@MethodSource("dataCompatibleCombinations")
+	@interface ParameterizedCompatibleCombinationsTest {
+	}
+
+	/**
+	 * Returns all combinations servers/clients even when they are not compatible
+	 * (e.g. the server supports only HTTP/1.1 and the client supports only HTTP/2).
+	 *
+	 * @return all combinations servers/clients even when they are not compatible
+	 */
+	static Object[][] dataAllCombinations() throws Exception {
+		return data(false);
+	}
+
+	/**
+	 * Returns all combinations of compatible servers/clients.
+	 *
+	 * @return all combinations of compatible servers/clients
+	 */
+	static Object[][] dataCompatibleCombinations() throws Exception {
+		return data(true);
+	}
+
+	static Object[][] data(boolean onlyCompatible) throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		Http11SslContextSpec serverCtxHttp11 = Http11SslContextSpec.forServer(cert.certificate(), cert.privateKey());
 		Http11SslContextSpec clientCtxHttp11 =
@@ -94,13 +132,31 @@ class HttpProtocolsTests extends BaseHttpTest {
 		Flux<HttpClient> f2 = Flux.fromArray(clients).repeat(servers.length - 1);
 
 		return Flux.zip(f1, f2)
+		           .filter(tuple2 -> {
+		               if (onlyCompatible) {
+		                   HttpServerConfig serverConfig = tuple2.getT1().configuration();
+		                   HttpClientConfig clientConfig = tuple2.getT2().configuration();
+		                   List<HttpProtocol> serverProtocols = Arrays.asList(serverConfig.protocols());
+		                   List<HttpProtocol> clientProtocols = Arrays.asList(clientConfig.protocols());
+		                   if (serverConfig.isSecure() != clientConfig.isSecure()) {
+		                       return false;
+		                   }
+		                   else if (serverProtocols.size() == 1 && serverProtocols.get(0) == HttpProtocol.H2C &&
+		                           clientProtocols.size() == 2) {
+		                       return false;
+		                   }
+		                   return serverProtocols.containsAll(clientProtocols) ||
+		                           clientProtocols.containsAll(serverProtocols);
+		               }
+		               return true;
+		           })
 		           .map(Tuple2::toArray)
 		           .collectList()
 		           .block(Duration.ofSeconds(30))
-		           .toArray(new Object[servers.length * clients.length][2]);
+		           .toArray(new Object[0][2]);
 	}
 
-	@ParameterizedHttpProtocolsTest
+	@ParameterizedAllCombinationsTest
 	void testProtocolVariationsGetRequest(HttpServer server, HttpClient client) {
 		HttpServerConfig serverConfig = server.configuration();
 		HttpClientConfig clientConfig = client.configuration();
@@ -148,12 +204,12 @@ class HttpProtocolsTests extends BaseHttpTest {
 		}
 	}
 
-	@ParameterizedHttpProtocolsTest
+	@ParameterizedAllCombinationsTest
 	void testProtocolVariationsPostRequest_1(HttpServer server, HttpClient client) {
 		doTestProtocolVariationsPostRequest(server, client, false);
 	}
 
-	@ParameterizedHttpProtocolsTest
+	@ParameterizedAllCombinationsTest
 	void testProtocolVariationsPostRequest_2(HttpServer server, HttpClient client) {
 		doTestProtocolVariationsPostRequest(server, client, true);
 	}
@@ -207,6 +263,49 @@ class HttpProtocolsTests extends BaseHttpTest {
 			StepVerifier.create(response)
 			            .expectError()
 			            .verify(Duration.ofSeconds(30));
+		}
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	@SuppressWarnings("unchecked")
+	void testAccessLog(HttpServer server, HttpClient client) throws Exception {
+		disposableServer =
+				server.handle((req, resp) -> {
+				          resp.withConnection(conn -> {
+				              ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
+				              resp.header(NettyPipeline.AccessLogHandler, handler != null ? "FOUND" : "NOT FOUND");
+				          });
+				          return resp.send();
+				      })
+				      .accessLog(true)
+				      .bindNow();
+
+		Appender<ILoggingEvent> mockedAppender = (Appender<ILoggingEvent>) Mockito.mock(Appender.class);
+		ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor = ArgumentCaptor.forClass(LoggingEvent.class);
+		Mockito.when(mockedAppender.getName()).thenReturn("MOCK");
+		Logger accessLogger = (Logger) LoggerFactory.getLogger("reactor.netty.http.server.AccessLog");
+		AtomicReference<String> protocol = new AtomicReference<>();
+		try {
+			accessLogger.addAppender(mockedAppender);
+			client.port(disposableServer.port())
+			      .get()
+			      .uri("/")
+			      .responseSingle((res, bytes) -> {
+			          protocol.set(res.responseHeaders().get("x-http2-stream-id") != null ? "2.0" : "1.1");
+			          return Mono.just(res.responseHeaders().get(NettyPipeline.AccessLogHandler));
+			      })
+			      .as(StepVerifier::create)
+			      .expectNext("FOUND")
+			      .expectComplete()
+			      .verify(Duration.ofSeconds(5));
+		}
+		finally {
+			Thread.sleep(20);
+			Mockito.verify(mockedAppender, Mockito.times(1)).doAppend(loggingEventArgumentCaptor.capture());
+			assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
+			LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
+			assertThat(relevantLog.getFormattedMessage()).contains("GET / HTTP/" + protocol.get() + "\" 200");
+			accessLogger.detachAppender(mockedAppender);
 		}
 	}
 }
