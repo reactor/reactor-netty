@@ -22,6 +22,7 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -58,6 +59,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
@@ -655,9 +657,20 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		@Override
 		public void handlerAdded(ChannelHandlerContext ctx) {
 			ChannelPipeline pipeline = ctx.pipeline();
+			ReadTimeoutHandler responseTimeoutHandler =
+					(ReadTimeoutHandler) pipeline.get(NettyPipeline.ResponseTimeoutHandler);
+			Http2MultiplexHandler http2MultiplexHandler;
+			if (responseTimeoutHandler != null) {
+				pipeline.remove(NettyPipeline.ResponseTimeoutHandler);
+				http2MultiplexHandler = new Http2MultiplexHandler(new H2Codec(opsFactory, acceptGzip),
+						new H2Codec(opsFactory, acceptGzip, responseTimeoutHandler.getReaderIdleTimeInMillis()));
+			}
+			else {
+				http2MultiplexHandler =
+						new Http2MultiplexHandler(new H2Codec(opsFactory, acceptGzip), new H2Codec(opsFactory, acceptGzip));
+			}
 			pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, http2FrameCodec)
-			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler,
-			                new Http2MultiplexHandler(new H2Codec(opsFactory, acceptGzip), new H2Codec(opsFactory, acceptGzip)));
+			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, http2MultiplexHandler);
 			if (pipeline.get(NettyPipeline.HttpDecompressor) != null) {
 				pipeline.remove(NettyPipeline.HttpDecompressor);
 			}
@@ -670,19 +683,33 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final boolean acceptGzip;
 		final ConnectionObserver observer;
 		final ChannelOperations.OnSetup opsFactory;
+		final long responseTimeoutMillis;
 
 		H2Codec(boolean acceptGzip) {
-			this(null, null, acceptGzip);
+			this(null, null, acceptGzip, -1);
 		}
 
 		H2Codec(@Nullable ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
-			this(null, opsFactory, acceptGzip);
+			this(null, opsFactory, acceptGzip, -1);
+		}
+
+		H2Codec(@Nullable ChannelOperations.OnSetup opsFactory, boolean acceptGzip, long responseTimeoutMillis) {
+			this(null, opsFactory, acceptGzip, responseTimeoutMillis);
 		}
 
 		H2Codec(@Nullable ConnectionObserver observer, @Nullable ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
+			this(observer, opsFactory, acceptGzip, -1);
+		}
+
+		H2Codec(
+				@Nullable ConnectionObserver observer,
+				@Nullable ChannelOperations.OnSetup opsFactory,
+				boolean acceptGzip,
+				long responseTimeoutMillis) {
 			this.acceptGzip = acceptGzip;
 			this.observer = observer;
 			this.opsFactory = opsFactory;
+			this.responseTimeoutMillis = responseTimeoutMillis;
 		}
 
 		@Override
@@ -712,6 +739,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			}
 
 			ChannelOperations.addReactiveBridge(ch, opsFactory, obs);
+
+			if (responseTimeoutMillis > -1) {
+				Connection.from(ch).addHandler(NettyPipeline.ResponseTimeoutHandler,
+						new ReadTimeoutHandler(responseTimeoutMillis, TimeUnit.MILLISECONDS));
+			}
 
 			if (log.isDebugEnabled()) {
 				log.debug(format(ch, "Initialized HTTP/2 stream pipeline {}"), ch.pipeline());

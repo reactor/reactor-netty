@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
@@ -33,6 +34,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.Connection;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientConfig;
@@ -49,6 +51,9 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -307,5 +312,69 @@ class HttpProtocolsTests extends BaseHttpTest {
 			assertThat(relevantLog.getFormattedMessage()).contains("GET / HTTP/" + protocol.get() + "\" 200");
 			accessLogger.detachAppender(mockedAppender);
 		}
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testProtocolVariationsResponseTimeout(HttpServer server, HttpClient client) throws Exception {
+		disposableServer =
+				server.handle((req, res) -> res.sendString(Mono.just("testProtocolVariationsResponseTimeout")))
+				      .bindNow();
+
+		HttpClient localClient =
+				client.port(disposableServer.port())
+				      .responseTimeout(Duration.ofMillis(100));
+		doTestProtocolVariationsResponseTimeout(localClient, 100);
+
+		localClient = localClient.doOnRequest((req, conn) -> req.responseTimeout(Duration.ofMillis(200)));
+		doTestProtocolVariationsResponseTimeout(localClient, 200);
+	}
+
+	private void doTestProtocolVariationsResponseTimeout(HttpClient client, long expectedTimeout)
+			throws Exception {
+		AtomicBoolean onRequest = new AtomicBoolean();
+		AtomicBoolean onResponse = new AtomicBoolean();
+		AtomicBoolean onDisconnected = new AtomicBoolean();
+		AtomicLong timeout = new AtomicLong();
+		Predicate<Connection> handlerAvailable =
+				conn -> conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null;
+		HttpClient localClient =
+				client.doOnRequest((req, conn) -> onRequest.set(handlerAvailable.test(conn)))
+				      .doOnResponse((req, conn) -> {
+				          if (handlerAvailable.test(conn)) {
+				              ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler);
+				              onResponse.set(true);
+				              timeout.set(((ReadTimeoutHandler) handler).getReaderIdleTimeInMillis());
+				          }
+				      })
+				      .doOnDisconnected(conn -> onDisconnected.set(handlerAvailable.test(conn)));
+
+		Mono<String> response =
+				localClient.get()
+				           .uri("/")
+				           .responseContent()
+				           .aggregate()
+				           .asString();
+
+		StepVerifier.create(response)
+		            .expectNext("testProtocolVariationsResponseTimeout")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(onRequest.get()).isFalse();
+		assertThat(onResponse.get()).isTrue();
+		assertThat(onDisconnected.get()).isFalse();
+		assertThat(timeout.get()).isEqualTo(expectedTimeout);
+
+		Thread.sleep(expectedTimeout + 50);
+
+		StepVerifier.create(response)
+		            .expectNext("testProtocolVariationsResponseTimeout")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(onRequest.get()).isFalse();
+		assertThat(onResponse.get()).isTrue();
+		assertThat(onDisconnected.get()).isFalse();
+		assertThat(timeout.get()).isEqualTo(expectedTimeout);
 	}
 }
