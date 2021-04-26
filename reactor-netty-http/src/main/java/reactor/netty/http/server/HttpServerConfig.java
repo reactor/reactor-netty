@@ -497,7 +497,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		                    cookieDecoder, mapHandle, idleTimeout));
 
 		if (accessLogEnabled) {
-			p.addAfter(NettyPipeline.H2CUpgradeHandler, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
+			p.addBefore(NettyPipeline.HttpTrafficHandler, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
 		}
 
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
@@ -594,17 +594,36 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	static final class H2CleartextCodec extends ChannelHandlerAdapter {
 
 		final Http11OrH2CleartextCodec upgrader;
+		final boolean addHttp2FrameCodec;
 
+		/**
+		 * Used when full H2 preface is received
+		 */
 		H2CleartextCodec(Http11OrH2CleartextCodec upgrader) {
+			this(upgrader, true);
+		}
+
+		/**
+		 * Used when upgrading from HTTP/1.1 to H2. When an upgrade happens {@link Http2FrameCodec}
+		 * is added by {@link Http2ServerUpgradeCodec}
+		 */
+		H2CleartextCodec(Http11OrH2CleartextCodec upgrader, boolean addHttp2FrameCodec) {
 			this.upgrader = upgrader;
+			this.addHttp2FrameCodec = addHttp2FrameCodec;
 		}
 
 		@Override
 		public void handlerAdded(ChannelHandlerContext ctx) {
 			ChannelPipeline pipeline = ctx.pipeline();
-			pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodec)
-			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(upgrader))
-			        .remove(this);
+			if (addHttp2FrameCodec) {
+				pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodec);
+			}
+
+			pipeline.addAfter(ctx.pipeline().context(upgrader.http2FrameCodec).name(),
+					NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(upgrader));
+
+			pipeline.remove(this);
+
 			if (pipeline.get(NettyPipeline.AccessLogHandler) != null) {
 				pipeline.remove(NettyPipeline.AccessLogHandler);
 			}
@@ -722,7 +741,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		@Nullable
 		public HttpServerUpgradeHandler.UpgradeCodec newUpgradeCodec(CharSequence protocol) {
 			if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-				return new Http2ServerUpgradeCodec(http2FrameCodec, new Http2MultiplexHandler(this));
+				return new Http2ServerUpgradeCodec(http2FrameCodec, new H2CleartextCodec(this, false));
 			}
 			else {
 				return null;
