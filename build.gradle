@@ -228,10 +228,10 @@ configure(rootProject) { project ->
 	maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 	maven { url 'https://repo.spring.io/milestone' }
 	if (version.endsWith('BUILD-SNAPSHOT')) {
-	  if (System.getenv ()["bamboo_buildNumber"] == null) {
+	  if (System.getenv ()["GITHUB_ACTION"] == null) {
 		mavenLocal()
 	  } else {
-		println 'Bamboo CI detected, avoiding use of mavenLocal()'
+		println 'GitHub Action detected, avoiding use of mavenLocal()'
 	  }
 	  maven { url 'https://repo.spring.io/snapshot' }
 	  maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
