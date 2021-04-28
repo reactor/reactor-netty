@@ -1278,7 +1278,7 @@ class WebsocketTest extends BaseHttpTest {
 
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> ops.aggregateFrames(-1))
-				.withMessage("maxContentLength: -1 (expected: >= 0)");
+				.withMessageEndingWith("-1 (expected: >= 0)");
 
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> ops.send(null));
