@@ -1310,7 +1310,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 
 	/**
 	 * Specifies the response timeout duration in milliseconds.
-	 * This is time that takes to receive a response after sending a request.
+	 * This is the timeout for the read data operation, i.e., the maximum inactive time.
 	 * If the {@code timeout} is {@code null}, any previous setting will be removed and no response timeout
 	 * will be applied.
 	 * If the {@code timeout} is less than {@code 1ms}, then {@code 1ms} will be the response timeout.
