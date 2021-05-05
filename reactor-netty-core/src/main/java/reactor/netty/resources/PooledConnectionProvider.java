@@ -236,7 +236,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	final void scheduleInactivePoolsDisposal() {
 		if (!disposeInterval.isZero()) {
 			Schedulers.parallel()
-			          .schedule(this::disposeInactivePoolsInBackground, disposeInterval.toNanos(), TimeUnit.NANOSECONDS);
+			          .schedule(this::disposeInactivePoolsInBackground, disposeInterval.toMillis(), TimeUnit.MILLISECONDS);
 		}
 	}
 

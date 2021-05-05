@@ -279,8 +279,9 @@ public interface ConnectionProvider extends Disposable {
 		 * Default to {@link #DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED} - the background disposal is disabled.
 		 * Providing an {@code interval} of {@link Duration#ZERO zero} means the background disposal is disabled.
 		 *
-		 * @param disposeInterval specifies the interval to be used for checking the connection pool inactivity, (resolution: ns)
-		 * @param poolInactivity specifies the time the pool was empty and inactive, (resolution: seconds)
+		 * @param disposeInterval specifies the interval to be used for checking the connection pool inactivity, (resolution: ms)
+		 * @param poolInactivity specifies the duration after which an empty pool with
+		 * no recorded interactions is considered inactive (resolution: seconds)
 		 * @return {@literal this}
 		 */
 		public final Builder disposeInactivePoolsInBackground(Duration disposeInterval, Duration poolInactivity) {
