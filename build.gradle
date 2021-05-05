@@ -28,7 +28,7 @@ buildscript {
 }
 
 plugins {
-	id 'com.github.hierynomus.license' version '0.15.0'
+	id 'com.github.hierynomus.license' version '0.16.1'
 	id 'org.asciidoctor.convert' version '2.4.0'
 	id 'com.google.osdetector' version '1.7.0'
 	id 'org.gradle.test-retry' version '1.2.1'
