@@ -110,7 +110,9 @@ dependencies {
 
 	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
+	testCompile "io.projectreactor.addons:reactor-extra:$reactorAddonsVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"
+	testCompile "org.awaitility:awaitility:$awaitilityVersion"
 	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testCompile "org.mockito:mockito-core:$mockitoVersion"
 	testCompile "ch.qos.logback:logback-classic:$logbackVersion"

@@ -243,7 +243,11 @@ public interface ConnectionProvider extends Disposable {
 	 */
 	final class Builder extends ConnectionPoolSpec<Builder> {
 
+		static final Duration DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED = Duration.ZERO;
+
 		String name;
+		Duration disposeInterval = DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED;
+		Duration poolInactivity;
 		final Map<SocketAddress, ConnectionPoolSpec<?>> confPerRemoteHost = new HashMap<>();
 
 		/**
@@ -266,6 +270,23 @@ public interface ConnectionProvider extends Disposable {
 		public final Builder name(String name) {
 			this.name = Objects.requireNonNull(name, "name");
 			return this;
+		}
+
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} background disposal for inactive connection pools.
+		 * When this option is enabled, the connection pools are regularly checked whether they are empty and inactive
+		 * for a specified time, thus applicable for disposal.
+		 * Default to {@link #DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED} - the background disposal is disabled.
+		 * Providing an {@code interval} of {@link Duration#ZERO zero} means the background disposal is disabled.
+		 *
+		 * @param disposeInterval specifies the interval to be used for checking the connection pool inactivity, (resolution: ns)
+		 * @param poolInactivity specifies the time the pool was empty and inactive, (resolution: seconds)
+		 * @return {@literal this}
+		 */
+		public final Builder disposeInactivePoolsInBackground(Duration disposeInterval, Duration poolInactivity) {
+			this.disposeInterval = Objects.requireNonNull(disposeInterval, "disposeInterval");
+			this.poolInactivity = Objects.requireNonNull(poolInactivity, "poolInactivity");
+			return get();
 		}
 
 		/**

@@ -40,6 +40,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,9 +64,12 @@ import reactor.netty.transport.NameResolverProvider;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolAcquirePendingLimitException;
 import reactor.pool.PooledRef;
+import reactor.scheduler.clock.SchedulerClock;
 import reactor.test.StepVerifier;
+import reactor.test.scheduler.VirtualTimeScheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 class DefaultPooledConnectionProviderTest {
 
@@ -408,6 +412,51 @@ class DefaultPooledConnectionProviderTest {
 			if (conn != null) {
 				conn.disposeNow(Duration.ofSeconds(5));
 			}
+			pool.disposeLater()
+			    .block(Duration.ofSeconds(5));
+			group.shutdownGracefully()
+			     .get(5, TimeUnit.SECONDS);
+		}
+	}
+
+	@Test
+	void testCloseInBackground() throws Exception {
+		EventLoopGroup group = new NioEventLoopGroup(1);
+		InetSocketAddress address = AddressUtils.createUnresolved("example.com", 80);
+		ConnectionProvider.Builder builder =
+				ConnectionProvider.builder("testRetryConnect")
+				                  .maxConnections(1)
+				                  .disposeInactivePoolsInBackground(Duration.ofMillis(100), Duration.ofSeconds(1));
+		VirtualTimeScheduler vts = VirtualTimeScheduler.create();
+		DefaultPooledConnectionProvider pool = new DefaultPooledConnectionProvider(builder, SchedulerClock.of(vts));
+		Supplier<? extends SocketAddress> remoteAddress = () -> address;
+		ConnectionObserver observer = ConnectionObserver.emptyListener();
+		ClientTransportConfigImpl config = new ClientTransportConfigImpl(group, pool, Collections.emptyMap(),
+				remoteAddress, DefaultAddressResolverGroup.INSTANCE);
+		Connection conn = null;
+		try {
+			conn = pool.acquire(config, observer, remoteAddress, config.resolverInternal())
+			           .block(Duration.ofSeconds(5));
+			assertThat(((InetSocketAddress) conn.address()).getHostString()).isEqualTo("example.com");
+		}
+		finally {
+			if (conn != null) {
+				CountDownLatch latch = new CountDownLatch(1);
+				conn.channel()
+				    .close()
+				    .addListener(f -> latch.countDown());
+				assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+			}
+
+			assertThat(pool.channelPools.size()).isEqualTo(1);
+
+			vts.advanceTimeBy(Duration.ofSeconds(5));
+
+			await().atMost(500, TimeUnit.MILLISECONDS)
+			       .with()
+			       .pollInterval(10, TimeUnit.MILLISECONDS)
+			       .untilAsserted(() -> assertThat(pool.channelPools.size()).isEqualTo(0));
+
 			pool.disposeLater()
 			    .block(Duration.ofSeconds(5));
 			group.shutdownGracefully()

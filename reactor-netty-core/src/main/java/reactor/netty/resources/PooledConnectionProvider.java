@@ -23,6 +23,7 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
@@ -42,12 +43,14 @@ import reactor.util.annotation.Nullable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -80,10 +83,20 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	private final Map<PoolKey, ConnectionPoolMetrics> poolMetrics = new WeakHashMap<>();
 
 	final String name;
+	final Duration disposeInterval;
+	final Duration poolInactivity;
 
 	protected PooledConnectionProvider(Builder builder) {
+		this(builder, null);
+	}
+
+	// Used only for testing purposes
+	PooledConnectionProvider(Builder builder, @Nullable Clock clock) {
 		this.name = builder.name;
-		this.defaultPoolFactory = new PoolFactory<>(builder);
+		this.disposeInterval = builder.disposeInterval;
+		this.poolInactivity = builder.poolInactivity;
+		this.defaultPoolFactory = new PoolFactory<>(builder, clock);
+		scheduleInactivePoolsDisposal();
 	}
 
 	@Override
@@ -220,6 +233,34 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				t == null ? "" : t);
 	}
 
+	final void scheduleInactivePoolsDisposal() {
+		if (!disposeInterval.isZero()) {
+			Schedulers.parallel()
+			          .schedule(this::disposeInactivePoolsInBackground, disposeInterval.toNanos(), TimeUnit.NANOSECONDS);
+		}
+	}
+
+	final void disposeInactivePoolsInBackground() {
+		if (!channelPools.isEmpty()) {
+			List<Map.Entry<PoolKey, InstrumentedPool<T>>> toDispose;
+
+			toDispose = channelPools.entrySet()
+			                        .stream()
+			                        .filter(p -> p.getValue().metrics().isInactiveForMoreThan(poolInactivity))
+			                        .collect(Collectors.toList());
+
+			toDispose.forEach(e -> {
+				if (channelPools.remove(e.getKey(), e.getValue())) {
+					if (log.isDebugEnabled()) {
+						log.debug("ConnectionProvider[name={}]: Disposing inactive pool for [{}]", name, e.getKey().fqdn);
+					}
+					e.getValue().dispose();
+				}
+			});
+		}
+		scheduleInactivePoolsDisposal();
+	}
+
 	static final Logger log = Loggers.getLogger(PooledConnectionProvider.class);
 
 	protected static final class PoolFactory<T extends Connection> {
@@ -260,8 +301,14 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final int pendingAcquireMaxCount;
 		final long pendingAcquireTimeout;
 		final Supplier<? extends MeterRegistrar> registrar;
+		final Clock clock;
 
 		PoolFactory(ConnectionPoolSpec<?> conf) {
+			this(conf, null);
+		}
+
+		// Used only for testing purposes
+		PoolFactory(ConnectionPoolSpec<?> conf, @Nullable Clock clock) {
 			this.evictionInterval = conf.evictionInterval;
 			this.leasingStrategy = conf.leasingStrategy;
 			this.maxConnections = conf.maxConnections;
@@ -272,6 +319,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					2 * conf.maxConnections : conf.pendingAcquireMaxCount;
 			this.pendingAcquireTimeout = conf.pendingAcquireTimeout.toMillis();
 			this.registrar = conf.registrar;
+			this.clock = clock;
 		}
 
 		public InstrumentedPool<T> newPool(
@@ -298,6 +346,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			}
 			else {
 				poolBuilder = poolBuilder.sizeBetween(0, maxConnections);
+			}
+
+			if (clock != null) {
+				poolBuilder = poolBuilder.clock(clock);
 			}
 
 			if (LEASING_STRATEGY_FIFO.equals(leasingStrategy)) {
