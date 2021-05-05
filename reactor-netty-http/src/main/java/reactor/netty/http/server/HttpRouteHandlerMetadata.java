@@ -18,7 +18,12 @@ package reactor.netty.http.server;
 
 import reactor.util.annotation.Nullable;
 
+import java.util.Comparator;
+
 /**
+ * Provides the metadata that a given handler can handle.
+ * Used with the {@link HttpServerRoutes#comparator(Comparator)}.
+ *
  * @author chentong
  * @since 1.0.7
  */
