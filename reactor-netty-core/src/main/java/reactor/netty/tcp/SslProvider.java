@@ -527,16 +527,14 @@ public final class SslProvider {
 					.newHandler(channel.alloc(), sniInfo.getHostString(), sniInfo.getPort());
 
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "SSL enabled using engine {} and SNI {}"),
-						sslHandler.engine().getClass().getSimpleName(), sniInfo);
+				log.debug(format(channel, "SSL enabled using engine {} and SNI {}"), sslHandler.engine(), sniInfo);
 			}
 		}
 		else {
 			sslHandler = getSslContext().newHandler(channel.alloc());
 
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "SSL enabled using engine {}"),
-						sslHandler.engine().getClass().getSimpleName());
+				log.debug(format(channel, "SSL enabled using engine {}"), sslHandler.engine());
 			}
 		}
 
