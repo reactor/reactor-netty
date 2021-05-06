@@ -1332,10 +1332,14 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Enable default sslContext support. The default {@link SslContext} will be
-	 * assigned to with a default value of {@code 10} seconds handshake timeout unless
-	 * the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
-	 * The hostname verification is enabled by default.
+	 * Enable default sslContext support.
+	 * <p>By default {@link SslContext} is initialized with:
+	 * <ul>
+	 *     <li>{@code 10} seconds handshake timeout unless
+	 *     the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set</li>
+	 *     <li>hostname verification enabled</li>
+	 * </ul>
+	 * </p>
 	 *
 	 * @return a new {@link HttpClient}
 	 */
@@ -1350,11 +1354,14 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Apply an SSL configuration customization via the passed builder. The builder
-	 * will produce the {@link SslContext} to be passed to with a default value of
-	 * {@code 10} seconds handshake timeout unless the environment property {@code
-	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
-	 * The hostname verification is enabled by default.
+	 * Apply an SSL configuration customization via the passed builder.
+	 * <p>The builder will produce the {@link SslContext} with:
+	 * <ul>
+	 *     <li>{@code 10} seconds handshake timeout unless the passed builder sets another configuration or
+	 *     the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set</li>
+	 *     <li>hostname verification enabled</li>
+	 * </ul>
+	 * </p>
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
 	 * @return a new {@link HttpClient}
@@ -1374,15 +1381,17 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 
 	/**
 	 * Apply an SSL configuration via the passed {@link SslProvider}.
-	 * The hostname verification is not enabled by default.
-	 * If the hostname verification is needed, the {@link HttpClientSecure#ENABLE_HOSTNAME_VERIFICATION}
-	 * configuration should be applied to the {@link SslProvider}:
+	 * <p>Note: Hostname verification is not enabled by default.
+	 * If hostname verification is needed, please apply the
+	 * {@link HttpClientSecurityUtils#HOSTNAME_VERIFICATION_CONFIGURER}
+	 * configuration to the {@link SslProvider}:
+	 * </p>
 	 * <p>
 	 * <pre>
 	 * {@code
 	 * SslProvider.builder()
 	 *            .sslContext(...)
-	 *            .handlerConfigurator(HttpClientSecure.ENABLE_HOSTNAME_VERIFICATION)
+	 *            .handlerConfigurator(HttpClientSecurityUtils.HOSTNAME_VERIFICATION_CONFIGURER)
 	 *            .build();
 	 * }
 	 * </pre>
