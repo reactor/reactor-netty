@@ -75,9 +75,9 @@ public interface HttpClientRequest extends HttpClientInfos {
 	boolean isFollowRedirect();
 
 	/**
-	 * Specifies the maximum interval allowed between read operations (resolution: ms).
-	 * {@link io.netty.handler.timeout.ReadTimeoutHandler} is added to the channel pipeline after sending the request
-	 * and is removed when the response is fully received.
+	 * Specifies the maximum duration allowed between each network-level read operation while reading a given response
+	 * (resolution: ms). In other words, {@link io.netty.handler.timeout.ReadTimeoutHandler} is added to the channel
+	 * pipeline after sending the request and is removed when the response is fully received.
 	 * If the {@code maxReadOperationInterval} is {@code null}, any previous setting will be removed and no
 	 * {@code maxReadOperationInterval} will be applied.
 	 * If the {@code maxReadOperationInterval} is less than {@code 1ms}, then {@code 1ms} will be the
@@ -85,7 +85,8 @@ public interface HttpClientRequest extends HttpClientInfos {
 	 * The {@code maxReadOperationInterval} setting on {@link HttpClientRequest} level overrides any
 	 * {@code maxReadOperationInterval} setting on {@link HttpClient} level.
 	 *
-	 * @param maxReadOperationInterval the maximum interval allowed between read operations (resolution: ms).
+	 * @param maxReadOperationInterval the maximum duration allowed between each network-level read operations
+	 *                                 (resolution: ms).
 	 * @return this outbound
 	 * @since 0.9.11
 	 * @see io.netty.handler.timeout.ReadTimeoutHandler
