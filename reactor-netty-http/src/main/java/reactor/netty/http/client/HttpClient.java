@@ -1309,12 +1309,15 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Specifies the response timeout duration.
-	 * If the {@code timeout} is {@code null}, any previous setting will be removed and no response timeout
-	 * will be applied.
-	 * If the {@code timeout} is less than {@code 1ms}, then {@code 1ms} will be the response timeout.
-	 * The response timeout setting on {@link HttpClientRequest} level overrides any response timeout
-	 * setting on {@link HttpClient} level.
+	 * Specifies the maximum interval allowed between read operations (resolution: ms).
+	 * {@link io.netty.handler.timeout.ReadTimeoutHandler} is added to the channel pipeline after sending the request
+	 * and is removed when the response is fully received.
+	 * If the {@code maxReadOperationInterval} is {@code null}, any previous setting will be removed and no
+	 * {@code maxReadOperationInterval} will be applied.
+	 * If the {@code maxReadOperationInterval} is less than {@code 1ms}, then {@code 1ms} will be the
+	 * {@code maxReadOperationInterval}.
+	 * The {@code maxReadOperationInterval} setting on {@link HttpClientRequest} level overrides any
+	 * {@code maxReadOperationInterval} setting on {@link HttpClient} level.
 	 *
 	 * @param maxReadOperationInterval the maximum interval allowed between read operations (resolution: ms).
 	 * @return a new {@link HttpClient}
@@ -1322,7 +1325,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @see io.netty.handler.timeout.ReadTimeoutHandler
 	 */
 	public final HttpClient responseTimeout(Duration maxReadOperationInterval) {
-		Objects.requireNonNull(maxReadOperationInterval, "timeout");
+		Objects.requireNonNull(maxReadOperationInterval, "maxReadOperationInterval");
 		if (Objects.equals(maxReadOperationInterval, configuration().responseTimeout)) {
 			return this;
 		}
