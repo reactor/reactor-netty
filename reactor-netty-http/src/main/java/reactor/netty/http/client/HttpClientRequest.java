@@ -83,7 +83,7 @@ public interface HttpClientRequest extends HttpClientInfos {
 	 * If the {@code maxReadOperationInterval} is less than {@code 1ms}, then {@code 1ms} will be the
 	 * {@code maxReadOperationInterval}.
 	 * The {@code maxReadOperationInterval} setting on {@link HttpClientRequest} level overrides any
-	 * {@code maxReadOperationInterval} setting timeout setting on {@link HttpClient} level.
+	 * {@code maxReadOperationInterval} setting on {@link HttpClient} level.
 	 *
 	 * @param maxReadOperationInterval the maximum interval allowed between read operations (resolution: ms).
 	 * @return this outbound
