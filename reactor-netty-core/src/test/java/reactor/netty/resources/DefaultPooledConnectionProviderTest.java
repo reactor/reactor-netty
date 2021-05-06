@@ -420,11 +420,11 @@ class DefaultPooledConnectionProviderTest {
 	}
 
 	@Test
-	void testCloseInBackground() throws Exception {
+	void testDisposeInactivePoolsInBackground() throws Exception {
 		EventLoopGroup group = new NioEventLoopGroup(1);
 		InetSocketAddress address = AddressUtils.createUnresolved("example.com", 80);
 		ConnectionProvider.Builder builder =
-				ConnectionProvider.builder("testRetryConnect")
+				ConnectionProvider.builder("testDisposeInactivePoolsInBackground")
 				                  .maxConnections(1)
 				                  .disposeInactivePoolsInBackground(Duration.ofMillis(100), Duration.ofSeconds(1));
 		VirtualTimeScheduler vts = VirtualTimeScheduler.create();
