@@ -1309,25 +1309,29 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Specifies the response timeout duration in milliseconds.
-	 * This is time that takes to receive a response after sending a request.
-	 * If the {@code timeout} is {@code null}, any previous setting will be removed and no response timeout
-	 * will be applied.
-	 * If the {@code timeout} is less than {@code 1ms}, then {@code 1ms} will be the response timeout.
-	 * The response timeout setting on {@link HttpClientRequest} level overrides any response timeout
-	 * setting on {@link HttpClient} level.
+	 * Specifies the maximum duration allowed between each network-level read operation while reading a given response
+	 * (resolution: ms). In other words, {@link io.netty.handler.timeout.ReadTimeoutHandler} is added to the channel
+	 * pipeline after sending the request and is removed when the response is fully received.
+	 * If the {@code maxReadOperationInterval} is {@code null}, any previous setting will be removed and no
+	 * {@code maxReadOperationInterval} will be applied.
+	 * If the {@code maxReadOperationInterval} is less than {@code 1ms}, then {@code 1ms} will be the
+	 * {@code maxReadOperationInterval}.
+	 * The {@code maxReadOperationInterval} setting on {@link HttpClientRequest} level overrides any
+	 * {@code maxReadOperationInterval} setting on {@link HttpClient} level.
 	 *
-	 * @param timeout the response timeout duration (resolution: ms)
+	 * @param maxReadOperationInterval the maximum duration allowed between each network-level read operations
+	 *                                 (resolution: ms).
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.11
+	 * @see io.netty.handler.timeout.ReadTimeoutHandler
 	 */
-	public final HttpClient responseTimeout(Duration timeout) {
-		Objects.requireNonNull(timeout, "timeout");
-		if (Objects.equals(timeout, configuration().responseTimeout)) {
+	public final HttpClient responseTimeout(Duration maxReadOperationInterval) {
+		Objects.requireNonNull(maxReadOperationInterval, "maxReadOperationInterval");
+		if (Objects.equals(maxReadOperationInterval, configuration().responseTimeout)) {
 			return this;
 		}
 		HttpClient dup = duplicate();
-		dup.configuration().responseTimeout = timeout;
+		dup.configuration().responseTimeout = maxReadOperationInterval;
 		return dup;
 	}
 
