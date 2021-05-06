@@ -1309,25 +1309,25 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Specifies the response timeout duration in milliseconds.
-	 * This is the timeout for the read data operation, i.e., the maximum inactive time.
+	 * Specifies the response timeout duration.
 	 * If the {@code timeout} is {@code null}, any previous setting will be removed and no response timeout
 	 * will be applied.
 	 * If the {@code timeout} is less than {@code 1ms}, then {@code 1ms} will be the response timeout.
 	 * The response timeout setting on {@link HttpClientRequest} level overrides any response timeout
 	 * setting on {@link HttpClient} level.
 	 *
-	 * @param timeout the response timeout duration (resolution: ms)
+	 * @param maxReadOperationInterval the maximum interval allowed between read operations (resolution: ms).
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.11
+	 * @see io.netty.handler.timeout.ReadTimeoutHandler
 	 */
-	public final HttpClient responseTimeout(Duration timeout) {
-		Objects.requireNonNull(timeout, "timeout");
-		if (Objects.equals(timeout, configuration().responseTimeout)) {
+	public final HttpClient responseTimeout(Duration maxReadOperationInterval) {
+		Objects.requireNonNull(maxReadOperationInterval, "timeout");
+		if (Objects.equals(maxReadOperationInterval, configuration().responseTimeout)) {
 			return this;
 		}
 		HttpClient dup = duplicate();
-		dup.configuration().responseTimeout = timeout;
+		dup.configuration().responseTimeout = maxReadOperationInterval;
 		return dup;
 	}
 

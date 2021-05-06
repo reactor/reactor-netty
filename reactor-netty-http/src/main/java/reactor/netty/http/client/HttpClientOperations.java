@@ -334,9 +334,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	public HttpClientRequest responseTimeout(Duration timeout) {
+	public HttpClientRequest responseTimeout(Duration maxReadOperationInterval) {
 		if (!hasSentHeaders()) {
-			this.responseTimeout = timeout;
+			this.responseTimeout = maxReadOperationInterval;
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");

@@ -75,17 +75,17 @@ public interface HttpClientRequest extends HttpClientInfos {
 	boolean isFollowRedirect();
 
 	/**
-	 * Specifies the response timeout duration in milliseconds.
-	 * This is the timeout for the read data operation, i.e., the maximum inactive time.
+	 * Specifies the response timeout duration.
 	 * If the {@code timeout} is {@code null}, any previous setting will be removed and no response timeout
 	 * will be applied.
 	 * If the {@code timeout} is less than {@code 1ms}, then {@code 1ms} will be the response timeout.
 	 * The response timeout setting on {@link HttpClientRequest} level overrides any response timeout
 	 * setting on {@link HttpClient} level.
 	 *
-	 * @param timeout the response timeout duration
+	 * @param maxReadOperationInterval the maximum interval allowed between read operations (resolution: ms).
 	 * @return this outbound
 	 * @since 0.9.11
+	 * @see io.netty.handler.timeout.ReadTimeoutHandler
 	 */
-	HttpClientRequest responseTimeout(Duration timeout);
+	HttpClientRequest responseTimeout(Duration maxReadOperationInterval);
 }
