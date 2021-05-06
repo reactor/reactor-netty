@@ -1333,9 +1333,9 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 
 	/**
 	 * Enable default sslContext support. The default {@link SslContext} will be
-	 * assigned to
-	 * with a default value of {@code 10} seconds handshake timeout unless
+	 * assigned to with a default value of {@code 10} seconds handshake timeout unless
 	 * the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 * The hostname verification is enabled by default.
 	 *
 	 * @return a new {@link HttpClient}
 	 */
@@ -1354,9 +1354,9 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * will produce the {@link SslContext} to be passed to with a default value of
 	 * {@code 10} seconds handshake timeout unless the environment property {@code
 	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 * The hostname verification is enabled by default.
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
-	 *
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
@@ -1374,6 +1374,19 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 
 	/**
 	 * Apply an SSL configuration via the passed {@link SslProvider}.
+	 * The hostname verification is not enabled by default.
+	 * If the hostname verification is needed, the {@link HttpClientSecure#ENABLE_HOSTNAME_VERIFICATION}
+	 * configuration should be applied to the {@link SslProvider}:
+	 * <p>
+	 * <pre>
+	 * {@code
+	 * SslProvider.builder()
+	 *            .sslContext(...)
+	 *            .handlerConfigurator(HttpClientSecure.ENABLE_HOSTNAME_VERIFICATION)
+	 *            .build();
+	 * }
+	 * </pre>
+	 * </p>
 	 *
 	 * @param sslProvider The provider to set when configuring SSL
 	 * @return a new {@link HttpClient}

@@ -29,7 +29,7 @@ import reactor.netty.tcp.SslProvider;
  * @author Stephane Maldini
  * @author Violeta Georgieva
  */
-final class HttpClientSecure {
+public final class HttpClientSecure {
 
 	private HttpClientSecure() {
 	}
@@ -50,10 +50,10 @@ final class HttpClientSecure {
 	}
 
 	static SslProvider sslProvider(SslProvider sslProvider) {
-		return SslProvider.addHandlerConfigurator(sslProvider, DEFAULT_HOSTNAME_VERIFICATION);
+		return SslProvider.addHandlerConfigurator(sslProvider, ENABLE_HOSTNAME_VERIFICATION);
 	}
 
-	static final Consumer<? super SslHandler> DEFAULT_HOSTNAME_VERIFICATION = handler -> {
+	public static final Consumer<? super SslHandler> ENABLE_HOSTNAME_VERIFICATION = handler -> {
 		SSLEngine sslEngine = handler.engine();
 		SSLParameters sslParameters = sslEngine.getSSLParameters();
 		sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
@@ -75,8 +75,8 @@ final class HttpClientSecure {
 	}
 
 	static final SslProvider DEFAULT_HTTP_SSL_PROVIDER =
-			SslProvider.addHandlerConfigurator(SslProvider.defaultClientProvider(), DEFAULT_HOSTNAME_VERIFICATION);
+			SslProvider.addHandlerConfigurator(SslProvider.defaultClientProvider(), ENABLE_HOSTNAME_VERIFICATION);
 
 	static final SslProvider DEFAULT_HTTP2_SSL_PROVIDER =
-			SslProvider.addHandlerConfigurator(HTTP2_SSL_PROVIDER, DEFAULT_HOSTNAME_VERIFICATION);
+			SslProvider.addHandlerConfigurator(HTTP2_SSL_PROVIDER, ENABLE_HOSTNAME_VERIFICATION);
 }
