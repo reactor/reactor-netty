@@ -283,6 +283,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @param poolInactivity specifies the duration after which an empty pool with
 		 * no recorded interactions is considered inactive (resolution: seconds)
 		 * @return {@literal this}
+		 * @since 1.0.7
 		 */
 		public final Builder disposeInactivePoolsInBackground(Duration disposeInterval, Duration poolInactivity) {
 			this.disposeInterval = Objects.requireNonNull(disposeInterval, "disposeInterval");
