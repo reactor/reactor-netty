@@ -342,9 +342,17 @@ class HttpClientConnect extends HttpClient {
 					handler.previousRequestHeaders = ops.requestHeaders;
 				}
 			}
-			else if (AbortedException.isConnectionReset(error) && handler.shouldRetry) {
+			else if (handler.shouldRetry && AbortedException.isConnectionReset(error)) {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
 				if (ops != null) {
+					// In some cases the channel close event may be delayed and thus the connection to be
+					// returned to the pool and later the eviction functionality to remote it from the pool.
+					// In some rare cases the connection might be acquired immediately, before the channel close
+					// event and the eviction functionality be able to remove it from the pool, this may lead to I/O
+					// errors.
+					// Mark the connection as non-persistent here so that it never be returned to the pool and leave
+					// the channel close event to invalidate it.
+					ops.markPersistent(false);
 					ops.retrying = true;
 				}
 				if (log.isDebugEnabled()) {
@@ -635,7 +643,7 @@ class HttpClientConnect extends HttpClient {
 				redirect(re.location);
 				return true;
 			}
-			if (AbortedException.isConnectionReset(throwable) && shouldRetry) {
+			if (shouldRetry && AbortedException.isConnectionReset(throwable)) {
 				shouldRetry = false;
 				redirect(toURI.toString());
 				return true;
