@@ -344,7 +344,7 @@ class HttpClientConnect extends HttpClient {
 			}
 			else if (handler.shouldRetry && AbortedException.isConnectionReset(error)) {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
-				if (ops != null) {
+				if (ops != null && ops.hasSentHeaders()) {
 					// In some cases the channel close event may be delayed and thus the connection to be
 					// returned to the pool and later the eviction functionality to remote it from the pool.
 					// In some rare cases the connection might be acquired immediately, before the channel close
@@ -353,11 +353,30 @@ class HttpClientConnect extends HttpClient {
 					// Mark the connection as non-persistent here so that it never be returned to the pool and leave
 					// the channel close event to invalidate it.
 					ops.markPersistent(false);
-					ops.retrying = true;
+					// Disable retry if the headers or/and the body were sent
+					handler.shouldRetry = false;
+					if (log.isWarnEnabled()) {
+						log.warn(format(connection.channel(),
+								"The connection observed an error, the request cannot be " +
+										"retried as the headers/body were sent"), error);
+					}
 				}
-				if (log.isDebugEnabled()) {
-					log.debug(format(connection.channel(),
-							"The connection observed an error, the request will be retried"), error);
+				else {
+					if (ops != null) {
+						// In some cases the channel close event may be delayed and thus the connection to be
+						// returned to the pool and later the eviction functionality to remote it from the pool.
+						// In some rare cases the connection might be acquired immediately, before the channel close
+						// event and the eviction functionality be able to remove it from the pool, this may lead to I/O
+						// errors.
+						// Mark the connection as non-persistent here so that it never be returned to the pool and leave
+						// the channel close event to invalidate it.
+						ops.markPersistent(false);
+						ops.retrying = true;
+					}
+					if (log.isDebugEnabled()) {
+						log.debug(format(connection.channel(),
+								"The connection observed an error, the request will be retried"), error);
+					}
 				}
 			}
 			else if (log.isWarnEnabled()) {

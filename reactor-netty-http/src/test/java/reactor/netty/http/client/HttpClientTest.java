@@ -1264,15 +1264,20 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	void testRetryNotEndlessIssue587() throws Exception {
-		doTestRetry(false);
+		doTestRetry(false, true);
+	}
+
+	@Test
+	void testRetryDisabledWhenHeadersSent() throws Exception {
+		doTestRetry(false, false);
 	}
 
 	@Test
 	void testRetryDisabledIssue995() throws Exception {
-		doTestRetry(true);
+		doTestRetry(true, false);
 	}
 
-	private void doTestRetry(boolean retryDisabled) throws Exception {
+	private void doTestRetry(boolean retryDisabled, boolean expectRetry) throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 		int serverPort = SocketUtils.findAvailableTcpPort();
 		ConnectionResetByPeerServer server = new ConnectionResetByPeerServer(serverPort);
@@ -1295,8 +1300,14 @@ class HttpClientTest extends BaseHttpTest {
 		}
 
 		AtomicReference<Throwable> error = new AtomicReference<>();
-		StepVerifier.create(client.get()
+		StepVerifier.create(client.request(HttpMethod.GET)
 		                          .uri("/")
+		                          .send((req, out) -> {
+		                              if (expectRetry) {
+		                                  return Mono.error(new IOException("Connection reset by peer"));
+		                              }
+		                              return out;
+		                          })
 		                          .responseContent())
 		            .expectErrorMatches(t -> {
 		                error.set(t);
@@ -1308,7 +1319,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		int requestCount = 1;
 		int requestErrorCount = 1;
-		if (!retryDisabled && !(error.get() instanceof PrematureCloseException)) {
+		if (expectRetry && !(error.get() instanceof PrematureCloseException)) {
 			requestCount = 2;
 			requestErrorCount = 2;
 		}
