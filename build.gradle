@@ -32,7 +32,7 @@ plugins {
 	id 'org.asciidoctor.convert' version '2.4.0'
 	id 'com.google.osdetector' version '1.7.0'
 	id 'org.gradle.test-retry' version '1.2.1'
-	id 'io.spring.nohttp' version '0.0.7'
+	id 'io.spring.nohttp' version '0.0.8'
 	id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
 	id 'com.jfrog.artifactory' version '4.16.1' apply false
 	id 'me.champeau.gradle.japicmp' version '0.2.9' apply false
