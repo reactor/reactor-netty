@@ -112,21 +112,20 @@ final class WebsocketClientOperations extends HttpClientOperations
 			setNettyResponse(response);
 
 			if (notRedirected(response)) {
-
-
 				try {
 					handshaker.finishHandshake(channel(), response);
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
 				catch (Exception e) {
 					onInboundError(e);
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.close();
 				}
 				finally {
 					//Release unused content (101 status)
 					response.content()
 					        .release();
 				}
-
 			}
 			else {
 				response.content()
