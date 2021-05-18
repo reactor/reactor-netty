@@ -27,6 +27,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import io.netty.buffer.Unpooled;
@@ -40,6 +42,7 @@ import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
@@ -60,6 +63,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -1377,5 +1381,53 @@ class WebsocketTest extends BaseHttpTest {
 		assertThat(statusServer.get())
 				.isNotNull()
 				.isEqualTo(WebSocketCloseStatus.EMPTY);
+	}
+
+	@Test
+	void testConnectionClosedWhenFailedUpgrade_NoErrorHandling() throws Exception {
+		doTestConnectionClosedWhenFailedUpgrade(httpClient -> httpClient, null);
+	}
+
+	@Test
+	void testConnectionClosedWhenFailedUpgrade_ClientErrorHandling() throws Exception {
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		doTestConnectionClosedWhenFailedUpgrade(
+				httpClient -> httpClient.doOnRequestError((req, t) -> error.set(t)), null);
+		assertThat(error.get()).isNotNull()
+				.isInstanceOf(WebSocketClientHandshakeException.class);
+		assertThat(((WebSocketClientHandshakeException) error.get()).response().status())
+				.isEqualTo(HttpResponseStatus.NOT_FOUND);
+	}
+
+	@Test
+	void testConnectionClosedWhenFailedUpgrade_PublisherErrorHandling() throws Exception {
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		doTestConnectionClosedWhenFailedUpgrade(httpClient -> httpClient, error::set);
+		assertThat(error.get()).isNotNull()
+				.isInstanceOf(WebSocketClientHandshakeException.class);
+		assertThat(((WebSocketClientHandshakeException) error.get()).response().status())
+				.isEqualTo(HttpResponseStatus.NOT_FOUND);
+	}
+
+	private void doTestConnectionClosedWhenFailedUpgrade(
+			Function<HttpClient, HttpClient> clientCustomizer,
+			@Nullable Consumer<Throwable> errorConsumer) throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendNotFound())
+				        .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		HttpClient client =
+				createClient(disposableServer.port())
+				          .doOnConnected(conn -> conn.channel().closeFuture().addListener(f -> latch.countDown()));
+
+		clientCustomizer.apply(client)
+		                .websocket()
+		                .uri("/")
+		                .connect()
+		                .subscribe(null, errorConsumer, null);
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 	}
 }
