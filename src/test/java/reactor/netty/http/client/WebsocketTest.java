@@ -25,6 +25,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import io.netty.buffer.Unpooled;
@@ -35,6 +37,7 @@ import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
@@ -1438,5 +1441,58 @@ public class WebsocketTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 		assertThat(clientHandler.get()).isEqualTo(compress);
+	}
+
+	@Test
+	void testConnectionClosedWhenFailedUpgrade_NoErrorHandling() throws Exception {
+		doTestConnectionClosedWhenFailedUpgrade(httpClient -> httpClient, null);
+	}
+
+	@Test
+	void testConnectionClosedWhenFailedUpgrade_ClientErrorHandling() throws Exception {
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		doTestConnectionClosedWhenFailedUpgrade(
+				httpClient -> httpClient.doOnRequestError((req, t) -> error.set(t)), null);
+		assertThat(error.get()).isNotNull()
+				.isInstanceOf(WebSocketClientHandshakeException.class);
+		assertThat(((WebSocketClientHandshakeException) error.get()).response().status())
+				.isEqualTo(HttpResponseStatus.NOT_FOUND);
+	}
+
+	@Test
+	void testConnectionClosedWhenFailedUpgrade_PublisherErrorHandling() throws Exception {
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		doTestConnectionClosedWhenFailedUpgrade(httpClient -> httpClient, error::set);
+		assertThat(error.get()).isNotNull()
+				.isInstanceOf(WebSocketClientHandshakeException.class);
+		assertThat(((WebSocketClientHandshakeException) error.get()).response().status())
+				.isEqualTo(HttpResponseStatus.NOT_FOUND);
+	}
+
+	private void doTestConnectionClosedWhenFailedUpgrade(
+			Function<HttpClient, HttpClient> clientCustomizer,
+			Consumer<Throwable> errorConsumer) throws Exception {
+		httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> res.sendNotFound())
+				          .wiretap(true)
+				          .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		HttpClient client =
+				HttpClient.create()
+				          .remoteAddress(httpServer::address)
+				          .wiretap(true)
+				          .tcpConfiguration(tcpClient -> tcpClient.doOnConnected(
+				                  conn -> conn.channel().closeFuture().addListener(f -> latch.countDown())));
+
+		clientCustomizer.apply(client)
+		                .websocket()
+		                .uri("/")
+		                .connect()
+		                .subscribe(null, errorConsumer, null);
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 	}
 }
