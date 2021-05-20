@@ -476,7 +476,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Duration idleTimeout) {
 		HttpServerCodec httpServerCodec =
 				new HttpServerCodec(decoder.maxInitialLineLength(), decoder.maxHeaderSize(),
-						decoder.maxChunkSize(), decoder.validateHeaders(), decoder.initialBufferSize());
+						decoder.maxChunkSize(), decoder.validateHeaders(), decoder.initialBufferSize(),
+						decoder.allowDuplicateContentLengths());
 
 		Http11OrH2CleartextCodec
 				upgrader = new Http11OrH2CleartextCodec(compressPredicate, cookieDecoder, cookieEncoder,
@@ -537,7 +538,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		p.addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpCodec,
 		            new HttpServerCodec(decoder.maxInitialLineLength(), decoder.maxHeaderSize(),
-		                    decoder.maxChunkSize(), decoder.validateHeaders(), decoder.initialBufferSize()))
+		                    decoder.maxChunkSize(), decoder.validateHeaders(), decoder.initialBufferSize(),
+		                    decoder.allowDuplicateContentLengths()))
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
 		            new HttpTrafficHandler(listener, forwardedHeaderHandler, compressPredicate, cookieEncoder,

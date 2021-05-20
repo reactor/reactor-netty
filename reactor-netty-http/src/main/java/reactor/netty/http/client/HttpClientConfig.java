@@ -537,7 +537,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 						decoder.failOnMissingResponse,
 						decoder.validateHeaders(),
 						decoder.initialBufferSize(),
-						decoder.parseHttpAfterConnectRequest);
+						decoder.parseHttpAfterConnectRequest,
+						decoder.allowDuplicateContentLengths());
 
 		Http2FrameCodecBuilder http2FrameCodecBuilder =
 				Http2FrameCodecBuilder.forClient()
@@ -589,7 +590,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 						decoder.failOnMissingResponse,
 						decoder.validateHeaders(),
 						decoder.initialBufferSize(),
-						decoder.parseHttpAfterConnectRequest));
+						decoder.parseHttpAfterConnectRequest,
+						decoder.allowDuplicateContentLengths()));
 
 		if (acceptGzip) {
 			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.HttpDecompressor, new HttpContentDecompressor());

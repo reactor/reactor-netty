@@ -26,17 +26,19 @@ import java.util.function.Supplier;
  */
 public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements Supplier<T> {
 
-	public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
-	public static final int DEFAULT_MAX_HEADER_SIZE         = 8192;
-	public static final int DEFAULT_MAX_CHUNK_SIZE          = 8192;
-	public static final boolean DEFAULT_VALIDATE_HEADERS    = true;
-	public static final int DEFAULT_INITIAL_BUFFER_SIZE     = 128;
+	public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH             = 4096;
+	public static final int DEFAULT_MAX_HEADER_SIZE                     = 8192;
+	public static final int DEFAULT_MAX_CHUNK_SIZE                      = 8192;
+	public static final boolean DEFAULT_VALIDATE_HEADERS                = true;
+	public static final int DEFAULT_INITIAL_BUFFER_SIZE                 = 128;
+	public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
 
-	protected int maxInitialLineLength = DEFAULT_MAX_INITIAL_LINE_LENGTH;
-	protected int maxHeaderSize        = DEFAULT_MAX_HEADER_SIZE;
-	protected int maxChunkSize         = DEFAULT_MAX_CHUNK_SIZE;
-	protected boolean validateHeaders  = DEFAULT_VALIDATE_HEADERS;
-	protected int initialBufferSize    = DEFAULT_INITIAL_BUFFER_SIZE;
+	protected int maxInitialLineLength             = DEFAULT_MAX_INITIAL_LINE_LENGTH;
+	protected int maxHeaderSize                    = DEFAULT_MAX_HEADER_SIZE;
+	protected int maxChunkSize                     = DEFAULT_MAX_CHUNK_SIZE;
+	protected boolean validateHeaders              = DEFAULT_VALIDATE_HEADERS;
+	protected int initialBufferSize                = DEFAULT_INITIAL_BUFFER_SIZE;
+	protected boolean allowDuplicateContentLengths = DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS;
 	protected int h2cMaxContentLength;
 
 	/**
@@ -48,13 +50,17 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	 */
 	public T maxInitialLineLength(int value) {
 		if (value <= 0) {
-			throw new IllegalArgumentException(
-					"maxInitialLineLength must be strictly positive");
+			throw new IllegalArgumentException("maxInitialLineLength must be strictly positive");
 		}
 		this.maxInitialLineLength = value;
 		return get();
 	}
 
+	/**
+	 * Return the configured maximum length that can be decoded for the HTTP request's initial line.
+	 *
+	 * @return the configured maximum length that can be decoded for the HTTP request's initial line
+	 */
 	public int maxInitialLineLength() {
 		return maxInitialLineLength;
 	}
@@ -74,6 +80,11 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		return get();
 	}
 
+	/**
+	 * Return the configured maximum header size that can be decoded for the HTTP request.
+	 *
+	 * @return the configured maximum header size that can be decoded for the HTTP request
+	 */
 	public int maxHeaderSize() {
 		return maxHeaderSize;
 	}
@@ -93,13 +104,18 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		return get();
 	}
 
+	/**
+	 * Return the configured maximum chunk size that can be decoded for the HTTP request.
+	 *
+	 * @return the configured maximum chunk size that can be decoded for the HTTP request
+	 */
 	public int maxChunkSize() {
 		return maxChunkSize;
 	}
 
 	/**
 	 * Configure whether or not to validate headers when decoding requests. Defaults to
-	 * #DEFAULT_VALIDATE_HEADERS.
+	 * {@link #DEFAULT_VALIDATE_HEADERS}.
 	 *
 	 * @param validate true to validate headers, false otherwise
 	 * @return this option builder for further configuration
@@ -109,6 +125,11 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		return get();
 	}
 
+	/**
+	 * Return the configuration whether or not to validate headers when decoding requests.
+	 *
+	 * @return the configuration whether or not to validate headers when decoding requests
+	 */
 	public boolean validateHeaders() {
 		return validateHeaders;
 	}
@@ -128,8 +149,40 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		return get();
 	}
 
+	/**
+	 * Return the configured initial buffer size for HTTP request decoding.
+	 *
+	 * @return the configured initial buffer size for HTTP request decoding
+	 */
 	public int initialBufferSize() {
 		return initialBufferSize;
+	}
+
+	/**
+	 * Configure whether or not to allow duplicate {@code Content-Length} headers. Defaults to
+	 * {@link #DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS} which means that a message with duplicate
+	 * {@code Content-Length} headers is rejected. When this is configured to {@code true},
+	 * duplicate {@code Content-Length} headers are accepted only if they are all the same value, otherwise
+	 * such message is rejected. The duplicated {@code Content-Length} headers are replaced with a single valid
+	 * {@code Content-Length} header.
+	 *
+	 * @param allow true to allow duplicate {@code Content-Length} headers with the same value, false otherwise
+	 * @return this option builder for further configuration
+	 * @since 1.0.8
+	 */
+	public T allowDuplicateContentLengths(boolean allow) {
+		this.allowDuplicateContentLengths = allow;
+		return get();
+	}
+
+	/**
+	 * Return the configuration whether or not to allow duplicate {@code Content-Length} headers.
+	 *
+	 * @return the configuration whether or not to allow duplicate {@code Content-Length} headers
+	 * @since 1.0.8
+	 */
+	public boolean allowDuplicateContentLengths() {
+		return allowDuplicateContentLengths;
 	}
 
 	/**
@@ -154,6 +207,11 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		return get();
 	}
 
+	/**
+	 * Return the configured maximum length of the content of the HTTP/2.0 clear-text upgrade request.
+	 *
+	 * @return the configured maximum length of the content of the HTTP/2.0 clear-text upgrade request
+	 */
 	public int h2cMaxContentLength() {
 		return h2cMaxContentLength;
 	}
@@ -172,11 +230,13 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 				maxChunkSize == that.maxChunkSize &&
 				validateHeaders == that.validateHeaders &&
 				initialBufferSize == that.initialBufferSize &&
+				allowDuplicateContentLengths == that.allowDuplicateContentLengths &&
 				h2cMaxContentLength == that.h2cMaxContentLength;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize, h2cMaxContentLength);
+		return Objects.hash(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize,
+				allowDuplicateContentLengths, h2cMaxContentLength);
 	}
 }

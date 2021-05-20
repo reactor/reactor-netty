@@ -1609,7 +1609,7 @@ class HttpClientTest extends BaseHttpTest {
 		AtomicReference<Channel> channelRef = new AtomicReference<>();
 		AtomicReference<Boolean> validate = new AtomicReference<>();
 		AtomicReference<Integer> chunkSize = new AtomicReference<>();
-
+		AtomicReference<Boolean> allowDuplicateContentLengths = new AtomicReference<>();
 		disposableServer =
 				createServer()
 				          .handle((req, resp) -> req.receive()
@@ -1623,7 +1623,8 @@ class HttpClientTest extends BaseHttpTest {
 		                                       .validateHeaders(false)
 		                                       .initialBufferSize(10)
 		                                       .failOnMissingResponse(true)
-		                                       .parseHttpAfterConnectRequest(true))
+		                                       .parseHttpAfterConnectRequest(true)
+		                                       .allowDuplicateContentLengths(true))
 		        .doOnConnected(c -> {
 		                    channelRef.set(c.channel());
 		                    HttpClientCodec codec = c.channel()
@@ -1632,6 +1633,7 @@ class HttpClientTest extends BaseHttpTest {
 		                    HttpObjectDecoder decoder = (HttpObjectDecoder) getValueReflection(codec, "inboundHandler", 1);
 		                    chunkSize.set((Integer) getValueReflection(decoder, "maxChunkSize", 2));
 		                    validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
+		                    allowDuplicateContentLengths.set((Boolean) getValueReflection(decoder, "allowDuplicateContentLengths", 2));
 		                })
 		        .post()
 		        .uri("/")
@@ -1645,6 +1647,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		assertThat(chunkSize.get()).as("line length").isEqualTo(789);
 		assertThat(validate.get()).as("validate headers").isFalse();
+		assertThat(allowDuplicateContentLengths.get()).as("allow duplicate Content-Length").isTrue();
 	}
 
 	private Object getValueReflection(Object obj, String fieldName, int superLevel) {

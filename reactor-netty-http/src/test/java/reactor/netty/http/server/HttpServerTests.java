@@ -842,13 +842,15 @@ class HttpServerTests extends BaseHttpTest {
 		AtomicReference<Channel> channelRef = new AtomicReference<>();
 		AtomicReference<Boolean> validate = new AtomicReference<>();
 		AtomicReference<Integer> chunkSize = new AtomicReference<>();
+		AtomicReference<Boolean> allowDuplicateContentLengths = new AtomicReference<>();
 		disposableServer =
 				createServer()
 				          .httpRequestDecoder(opt -> opt.maxInitialLineLength(123)
 				                                        .maxHeaderSize(456)
 				                                        .maxChunkSize(789)
 				                                        .validateHeaders(false)
-				                                        .initialBufferSize(10))
+				                                        .initialBufferSize(10)
+				                                        .allowDuplicateContentLengths(true))
 				          .handle((req, resp) -> req.receive().then(resp.sendNotFound()))
 				          .doOnConnection(c -> {
 				                      channelRef.set(c.channel());
@@ -858,6 +860,7 @@ class HttpServerTests extends BaseHttpTest {
 				                      HttpObjectDecoder decoder = (HttpObjectDecoder) getValueReflection(codec, "inboundHandler", 1);
 				                      chunkSize.set((Integer) getValueReflection(decoder, "maxChunkSize", 2));
 				                      validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
+				                      allowDuplicateContentLengths.set((Boolean) getValueReflection(decoder, "allowDuplicateContentLengths", 2));
 				                  })
 				          .bindNow();
 
@@ -873,6 +876,7 @@ class HttpServerTests extends BaseHttpTest {
 		assertThat(channelRef.get()).isNotNull();
 		assertThat(chunkSize.get()).as("line length").isEqualTo(789);
 		assertThat(validate.get()).as("validate headers").isFalse();
+		assertThat(allowDuplicateContentLengths.get()).as("allow duplicate Content-Length").isTrue();
 	}
 
 	private Object getValueReflection(Object obj, String fieldName, int superLevel) {
