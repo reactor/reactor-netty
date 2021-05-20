@@ -1607,9 +1607,9 @@ class HttpClientTest extends BaseHttpTest {
 	@Test
 	void httpClientResponseConfigInjectAttributes() {
 		AtomicReference<Channel> channelRef = new AtomicReference<>();
-		AtomicReference<Boolean> validate = new AtomicReference<>();
-		AtomicReference<Integer> chunkSize = new AtomicReference<>();
-
+		AtomicBoolean validate = new AtomicBoolean();
+		AtomicInteger chunkSize = new AtomicInteger();
+		AtomicBoolean allowDuplicateContentLengths = new AtomicBoolean();
 		disposableServer =
 				createServer()
 				          .handle((req, resp) -> req.receive()
@@ -1623,7 +1623,8 @@ class HttpClientTest extends BaseHttpTest {
 		                                       .validateHeaders(false)
 		                                       .initialBufferSize(10)
 		                                       .failOnMissingResponse(true)
-		                                       .parseHttpAfterConnectRequest(true))
+		                                       .parseHttpAfterConnectRequest(true)
+		                                       .allowDuplicateContentLengths(true))
 		        .doOnConnected(c -> {
 		                    channelRef.set(c.channel());
 		                    HttpClientCodec codec = c.channel()
@@ -1632,6 +1633,7 @@ class HttpClientTest extends BaseHttpTest {
 		                    HttpObjectDecoder decoder = (HttpObjectDecoder) getValueReflection(codec, "inboundHandler", 1);
 		                    chunkSize.set((Integer) getValueReflection(decoder, "maxChunkSize", 2));
 		                    validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
+		                    allowDuplicateContentLengths.set((Boolean) getValueReflection(decoder, "allowDuplicateContentLengths", 2));
 		                })
 		        .post()
 		        .uri("/")
@@ -1642,9 +1644,9 @@ class HttpClientTest extends BaseHttpTest {
 		        .block(Duration.ofSeconds(30));
 
 		assertThat(channelRef.get()).isNotNull();
-
-		assertThat(chunkSize.get()).as("line length").isEqualTo(789);
-		assertThat(validate.get()).as("validate headers").isFalse();
+		assertThat(chunkSize).as("line length").hasValue(789);
+		assertThat(validate).as("validate headers").isFalse();
+		assertThat(allowDuplicateContentLengths).as("allow duplicate Content-Length").isTrue();
 	}
 
 	private Object getValueReflection(Object obj, String fieldName, int superLevel) {

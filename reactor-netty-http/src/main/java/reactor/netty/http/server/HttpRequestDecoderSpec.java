@@ -57,6 +57,7 @@ public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDec
 		decoder.maxHeaderSize = maxHeaderSize;
 		decoder.maxInitialLineLength = maxInitialLineLength;
 		decoder.validateHeaders = validateHeaders;
+		decoder.allowDuplicateContentLengths = allowDuplicateContentLengths;
 		decoder.h2cMaxContentLength = h2cMaxContentLength;
 		return decoder;
 	}

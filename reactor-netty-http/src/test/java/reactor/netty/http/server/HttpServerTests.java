@@ -37,6 +37,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -840,15 +841,17 @@ class HttpServerTests extends BaseHttpTest {
 	@Test
 	void httpServerRequestConfigInjectAttributes() {
 		AtomicReference<Channel> channelRef = new AtomicReference<>();
-		AtomicReference<Boolean> validate = new AtomicReference<>();
-		AtomicReference<Integer> chunkSize = new AtomicReference<>();
+		AtomicBoolean validate = new AtomicBoolean();
+		AtomicInteger chunkSize = new AtomicInteger();
+		AtomicBoolean allowDuplicateContentLengths = new AtomicBoolean();
 		disposableServer =
 				createServer()
 				          .httpRequestDecoder(opt -> opt.maxInitialLineLength(123)
 				                                        .maxHeaderSize(456)
 				                                        .maxChunkSize(789)
 				                                        .validateHeaders(false)
-				                                        .initialBufferSize(10))
+				                                        .initialBufferSize(10)
+				                                        .allowDuplicateContentLengths(true))
 				          .handle((req, resp) -> req.receive().then(resp.sendNotFound()))
 				          .doOnConnection(c -> {
 				                      channelRef.set(c.channel());
@@ -858,6 +861,7 @@ class HttpServerTests extends BaseHttpTest {
 				                      HttpObjectDecoder decoder = (HttpObjectDecoder) getValueReflection(codec, "inboundHandler", 1);
 				                      chunkSize.set((Integer) getValueReflection(decoder, "maxChunkSize", 2));
 				                      validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
+				                      allowDuplicateContentLengths.set((Boolean) getValueReflection(decoder, "allowDuplicateContentLengths", 2));
 				                  })
 				          .bindNow();
 
@@ -871,8 +875,9 @@ class HttpServerTests extends BaseHttpTest {
 		          .block();
 
 		assertThat(channelRef.get()).isNotNull();
-		assertThat(chunkSize.get()).as("line length").isEqualTo(789);
-		assertThat(validate.get()).as("validate headers").isFalse();
+		assertThat(chunkSize).as("line length").hasValue(789);
+		assertThat(validate).as("validate headers").isFalse();
+		assertThat(allowDuplicateContentLengths).as("allow duplicate Content-Length").isTrue();
 	}
 
 	private Object getValueReflection(Object obj, String fieldName, int superLevel) {

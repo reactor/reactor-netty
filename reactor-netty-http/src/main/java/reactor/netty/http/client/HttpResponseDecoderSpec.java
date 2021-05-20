@@ -109,6 +109,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 		decoder.maxHeaderSize = maxHeaderSize;
 		decoder.maxInitialLineLength = maxInitialLineLength;
 		decoder.validateHeaders = validateHeaders;
+		decoder.allowDuplicateContentLengths = allowDuplicateContentLengths;
 		decoder.failOnMissingResponse = failOnMissingResponse;
 		decoder.parseHttpAfterConnectRequest = parseHttpAfterConnectRequest;
 		decoder.h2cMaxContentLength = h2cMaxContentLength;
