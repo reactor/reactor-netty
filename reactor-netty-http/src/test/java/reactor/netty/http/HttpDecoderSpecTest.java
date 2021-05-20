@@ -32,16 +32,17 @@ class HttpDecoderSpecTest {
 
 	@Test
 	void maxInitialLineLength() {
-		assertThat(conf.maxInitialLineLength()).as("default initial line length").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
+		checkDefaultMaxInitialLineLength(conf);
 
 		conf.maxInitialLineLength(123);
 
 		assertThat(conf.maxInitialLineLength()).as("initial line length").isEqualTo(123);
 
-		assertThat(conf.maxHeaderSize()).as("default header size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_HEADER_SIZE);
-		assertThat(conf.maxChunkSize()).as("default chunk size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_CHUNK_SIZE);
-		assertThat(conf.validateHeaders()).as("default validate headers").isEqualTo(HttpDecoderSpec.DEFAULT_VALIDATE_HEADERS);
-		assertThat(conf.initialBufferSize()).as("default initial buffer sizes").isEqualTo(HttpDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
+		checkDefaultMaxHeaderSize(conf);
+		checkDefaultMaxChunkSize(conf);
+		checkDefaultValidateHeaders(conf);
+		checkDefaultInitialBufferSize(conf);
+		checkDefaultAllowDuplicateContentLengths(conf);
 	}
 
 	@Test
@@ -59,16 +60,17 @@ class HttpDecoderSpecTest {
 
 	@Test
 	void maxHeaderSize() {
-		assertThat(conf.maxHeaderSize()).as("default header size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_HEADER_SIZE);
+		checkDefaultMaxHeaderSize(conf);
 
 		conf.maxHeaderSize(123);
 
 		assertThat(conf.maxHeaderSize()).as("header size").isEqualTo(123);
 
-		assertThat(conf.maxInitialLineLength()).as("default initial line length").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
-		assertThat(conf.maxChunkSize()).as("default chunk size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_CHUNK_SIZE);
-		assertThat(conf.validateHeaders()).as("default validate headers").isEqualTo(HttpDecoderSpec.DEFAULT_VALIDATE_HEADERS);
-		assertThat(conf.initialBufferSize()).as("default initial buffer sizes").isEqualTo(HttpDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
+		checkDefaultMaxInitialLineLength(conf);
+		checkDefaultMaxChunkSize(conf);
+		checkDefaultValidateHeaders(conf);
+		checkDefaultInitialBufferSize(conf);
+		checkDefaultAllowDuplicateContentLengths(conf);
 	}
 
 	@Test
@@ -86,16 +88,17 @@ class HttpDecoderSpecTest {
 
 	@Test
 	void maxChunkSize() {
-		assertThat(conf.maxChunkSize()).as("default chunk size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_CHUNK_SIZE);
+		checkDefaultMaxChunkSize(conf);
 
 		conf.maxChunkSize(123);
 
 		assertThat(conf.maxChunkSize()).as("chunk size").isEqualTo(123);
 
-		assertThat(conf.maxInitialLineLength()).as("default initial line length").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
-		assertThat(conf.maxHeaderSize()).as("default header size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_HEADER_SIZE);
-		assertThat(conf.validateHeaders()).as("default validate headers").isEqualTo(HttpDecoderSpec.DEFAULT_VALIDATE_HEADERS);
-		assertThat(conf.initialBufferSize()).as("default initial buffer sizes").isEqualTo(HttpDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
+		checkDefaultMaxInitialLineLength(conf);
+		checkDefaultMaxHeaderSize(conf);
+		checkDefaultValidateHeaders(conf);
+		checkDefaultInitialBufferSize(conf);
+		checkDefaultAllowDuplicateContentLengths(conf);
 	}
 
 	@Test
@@ -113,30 +116,32 @@ class HttpDecoderSpecTest {
 
 	@Test
 	void validateHeaders() {
-		assertThat(conf.validateHeaders()).as("default validate headers").isTrue();
+		checkDefaultValidateHeaders(conf);
 
 		conf.validateHeaders(false);
 
 		assertThat(conf.validateHeaders()).as("validate headers").isFalse();
 
-		assertThat(conf.maxInitialLineLength()).as("default initial line length").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
-		assertThat(conf.maxHeaderSize()).as("default header size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_HEADER_SIZE);
-		assertThat(conf.maxChunkSize()).as("default chunk size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_CHUNK_SIZE);
-		assertThat(conf.initialBufferSize()).as("default initial buffer sizes").isEqualTo(HttpDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
+		checkDefaultMaxInitialLineLength(conf);
+		checkDefaultMaxHeaderSize(conf);
+		checkDefaultMaxChunkSize(conf);
+		checkDefaultInitialBufferSize(conf);
+		checkDefaultAllowDuplicateContentLengths(conf);
 	}
 
 	@Test
 	void initialBufferSize() {
-		assertThat(conf.initialBufferSize()).as("default initial buffer sizes").isEqualTo(HttpDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
+		checkDefaultInitialBufferSize(conf);
 
 		conf.initialBufferSize(123);
 
 		assertThat(conf.initialBufferSize()).as("initial buffer size").isEqualTo(123);
 
-		assertThat(conf.maxInitialLineLength()).as("default initial line length").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
-		assertThat(conf.maxHeaderSize()).as("default header size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_HEADER_SIZE);
-		assertThat(conf.maxChunkSize()).as("default chunk size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_CHUNK_SIZE);
-		assertThat(conf.validateHeaders()).as("default validate headers").isEqualTo(HttpDecoderSpec.DEFAULT_VALIDATE_HEADERS);
+		checkDefaultMaxInitialLineLength(conf);
+		checkDefaultMaxHeaderSize(conf);
+		checkDefaultMaxChunkSize(conf);
+		checkDefaultValidateHeaders(conf);
+		checkDefaultAllowDuplicateContentLengths(conf);
 	}
 
 	@Test
@@ -154,16 +159,53 @@ class HttpDecoderSpecTest {
 
 	@Test
 	void allowDuplicateContentLengths() {
-		assertThat(conf.allowDuplicateContentLengths()).as("default allow duplicate Content-Length headers").isFalse();
+		checkDefaultAllowDuplicateContentLengths(conf);
 
 		conf.allowDuplicateContentLengths(true);
 
 		assertThat(conf.allowDuplicateContentLengths()).as("allow duplicate Content-Length headers").isTrue();
 
-		assertThat(conf.maxInitialLineLength()).as("default initial line length").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
-		assertThat(conf.maxHeaderSize()).as("default header size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_HEADER_SIZE);
-		assertThat(conf.maxChunkSize()).as("default chunk size").isEqualTo(HttpDecoderSpec.DEFAULT_MAX_CHUNK_SIZE);
-		assertThat(conf.initialBufferSize()).as("default initial buffer sizes").isEqualTo(HttpDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
+		checkDefaultMaxInitialLineLength(conf);
+		checkDefaultMaxHeaderSize(conf);
+		checkDefaultMaxChunkSize(conf);
+		checkDefaultValidateHeaders(conf);
+		checkDefaultInitialBufferSize(conf);
+	}
+
+	private static void checkDefaultMaxInitialLineLength(HttpDecoderSpecImpl conf) {
+		assertThat(conf.maxInitialLineLength()).as("default initial line length")
+				.isEqualTo(HttpDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH)
+				.isEqualTo(4096);
+	}
+
+	private static void checkDefaultMaxHeaderSize(HttpDecoderSpecImpl conf) {
+		assertThat(conf.maxHeaderSize()).as("default header size")
+				.isEqualTo(HttpDecoderSpec.DEFAULT_MAX_HEADER_SIZE)
+				.isEqualTo(8192);
+	}
+
+	private static void checkDefaultMaxChunkSize(HttpDecoderSpecImpl conf) {
+		assertThat(conf.maxChunkSize()).as("default chunk size")
+				.isEqualTo(HttpDecoderSpec.DEFAULT_MAX_CHUNK_SIZE)
+				.isEqualTo(8192);
+	}
+
+	private static void checkDefaultValidateHeaders(HttpDecoderSpecImpl conf) {
+		assertThat(conf.validateHeaders()).as("default validate headers")
+				.isEqualTo(HttpDecoderSpec.DEFAULT_VALIDATE_HEADERS)
+				.isTrue();
+	}
+
+	private static void checkDefaultInitialBufferSize(HttpDecoderSpecImpl conf) {
+		assertThat(conf.initialBufferSize()).as("default initial buffer sizes")
+				.isEqualTo(HttpDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE)
+				.isEqualTo(128);
+	}
+
+	private static void checkDefaultAllowDuplicateContentLengths(HttpDecoderSpecImpl conf) {
+		assertThat(conf.allowDuplicateContentLengths()).as("default allow duplicate Content-Length headers")
+				.isEqualTo(HttpDecoderSpec.DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS)
+				.isFalse();
 	}
 
 	private static final class HttpDecoderSpecImpl extends HttpDecoderSpec<HttpDecoderSpecImpl> {

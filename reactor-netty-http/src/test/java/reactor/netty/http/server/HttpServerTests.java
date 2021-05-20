@@ -37,6 +37,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -840,9 +841,9 @@ class HttpServerTests extends BaseHttpTest {
 	@Test
 	void httpServerRequestConfigInjectAttributes() {
 		AtomicReference<Channel> channelRef = new AtomicReference<>();
-		AtomicReference<Boolean> validate = new AtomicReference<>();
-		AtomicReference<Integer> chunkSize = new AtomicReference<>();
-		AtomicReference<Boolean> allowDuplicateContentLengths = new AtomicReference<>();
+		AtomicBoolean validate = new AtomicBoolean();
+		AtomicInteger chunkSize = new AtomicInteger();
+		AtomicBoolean allowDuplicateContentLengths = new AtomicBoolean();
 		disposableServer =
 				createServer()
 				          .httpRequestDecoder(opt -> opt.maxInitialLineLength(123)
@@ -874,9 +875,9 @@ class HttpServerTests extends BaseHttpTest {
 		          .block();
 
 		assertThat(channelRef.get()).isNotNull();
-		assertThat(chunkSize.get()).as("line length").isEqualTo(789);
-		assertThat(validate.get()).as("validate headers").isFalse();
-		assertThat(allowDuplicateContentLengths.get()).as("allow duplicate Content-Length").isTrue();
+		assertThat(chunkSize).as("line length").hasValue(789);
+		assertThat(validate).as("validate headers").isFalse();
+		assertThat(allowDuplicateContentLengths).as("allow duplicate Content-Length").isTrue();
 	}
 
 	private Object getValueReflection(Object obj, String fieldName, int superLevel) {
