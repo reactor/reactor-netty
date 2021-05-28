@@ -102,7 +102,7 @@ public final class Cookies {
 		for (String aCookieHeader : allCookieHeaders) {
 			Set<Cookie> decode;
 			if (isClientChannel) {
-				final Cookie c = ((ClientCookieDecoder) decoder).decode(aCookieHeader);
+				final Cookie c = ((ClientCookieDecoder) decoder).decodeAll(aCookieHeader);
 				if (c == null) {
 					continue;
 				}
@@ -114,7 +114,7 @@ public final class Cookies {
 				existingCookiesOfName.add(c);
 			}
 			else {
-				decode = ((ServerCookieDecoder) decoder).decode(aCookieHeader);
+				decode = ((ServerCookieDecoder) decoder).decodeAll(aCookieHeader);
 				for (Cookie cookie : decode) {
 					Set<Cookie> existingCookiesOfName = cookies.get(cookie.name());
 					if (null == existingCookiesOfName) {
