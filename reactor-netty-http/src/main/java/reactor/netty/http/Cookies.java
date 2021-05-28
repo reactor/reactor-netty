@@ -102,7 +102,7 @@ public final class Cookies {
 		for (String aCookieHeader : allCookieHeaders) {
 			Set<Cookie> decode;
 			if (isClientChannel) {
-				final Cookie c = ((ClientCookieDecoder) decoder).decodeAll(aCookieHeader);
+				final Cookie c = ((ClientCookieDecoder) decoder).decode(aCookieHeader);
 				if (c == null) {
 					continue;
 				}
