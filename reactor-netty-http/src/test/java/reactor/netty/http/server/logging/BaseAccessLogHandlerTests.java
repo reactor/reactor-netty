@@ -41,8 +41,7 @@ class BaseAccessLogHandlerTests {
 
 	@Test
 	void applyAddress() {
-		assertThat(BaseAccessLogHandler.applyAddress(new InetSocketAddress("127.0.0.1", 8080)))
-				.isEqualTo("127.0.0.1:8080");
+		assertThat(BaseAccessLogHandler.applyAddress(new InetSocketAddress("127.0.0.1", 8080))).isEqualTo("127.0.0.1");
 		assertThat(BaseAccessLogHandler.applyAddress(null)).isEqualTo(MISSING);
 	}
 
