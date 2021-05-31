@@ -27,6 +27,7 @@ import java.util.function.Predicate;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCounted;
 import org.reactivestreams.Publisher;
@@ -96,8 +97,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (remote == null) {
 			remote = ch.remoteAddress();
 		}
+		ChannelHandler handler = recorder instanceof ContextAwareChannelMetricsRecorder ?
+				new ContextAwareChannelMetricsHandler((ContextAwareChannelMetricsRecorder) recorder, remote, onServer) :
+				new ChannelMetricsHandler(recorder, remote, onServer);
 		ch.pipeline()
-		  .addFirst(NettyPipeline.ChannelMetricsHandler, new ChannelMetricsHandler(recorder, remote, onServer));
+		  .addFirst(NettyPipeline.ChannelMetricsHandler, handler);
 	}
 
 	/**

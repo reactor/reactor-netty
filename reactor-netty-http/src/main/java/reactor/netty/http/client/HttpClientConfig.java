@@ -32,6 +32,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -566,11 +567,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		if (metricsRecorder != null) {
-			ChannelMetricsRecorder channelMetricsRecorder = metricsRecorder.get();
-			if (channelMetricsRecorder instanceof HttpClientMetricsRecorder) {
-				p.addBefore(NettyPipeline.ReactiveBridge,
-						NettyPipeline.HttpMetricsHandler,
-						new HttpClientMetricsHandler((HttpClientMetricsRecorder) channelMetricsRecorder, uriTagValue));
+			ChannelMetricsRecorder recorder = metricsRecorder.get();
+			if (recorder instanceof HttpClientMetricsRecorder) {
+				ChannelHandler handler = recorder instanceof ContextAwareHttpClientMetricsRecorder ?
+						new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) recorder, uriTagValue) :
+						new HttpClientMetricsHandler((HttpClientMetricsRecorder) recorder, uriTagValue);
+				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
 		}
 
@@ -598,11 +600,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		if (metricsRecorder != null) {
-			ChannelMetricsRecorder channelMetricsRecorder = metricsRecorder.get();
-			if (channelMetricsRecorder instanceof HttpClientMetricsRecorder) {
-				p.addBefore(NettyPipeline.ReactiveBridge,
-						NettyPipeline.HttpMetricsHandler,
-						new HttpClientMetricsHandler((HttpClientMetricsRecorder) channelMetricsRecorder, uriTagValue));
+			ChannelMetricsRecorder recorder = metricsRecorder.get();
+			if (recorder instanceof HttpClientMetricsRecorder) {
+				ChannelHandler handler = recorder instanceof ContextAwareHttpClientMetricsRecorder ?
+						new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) recorder, uriTagValue) :
+						new HttpClientMetricsHandler((HttpClientMetricsRecorder) recorder, uriTagValue);
+				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
 		}
 	}

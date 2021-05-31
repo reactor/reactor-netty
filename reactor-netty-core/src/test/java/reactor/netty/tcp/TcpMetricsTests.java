@@ -43,12 +43,17 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
+import reactor.netty.channel.ContextAwareChannelMetricsRecorder;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Violeta Georgieva
@@ -166,6 +171,52 @@ class TcpMetricsTests {
 		checkExpectationsNegative(port);
 	}
 
+	@Test
+	void testContextAwareRecorder() throws Exception {
+		CountDownLatch latch = new CountDownLatch(2);
+		disposableServer =
+				tcpServer.handle((in, out) -> {
+				             in.receive()
+				               .asString()
+				               .subscribe(s -> {
+				                   if ("hello".equals(s)) {
+				                       latch.countDown();
+				                   }
+				               });
+				             return out.sendString(Mono.just("hello"))
+				                       .neverComplete();
+				         })
+				         .bindNow();
+
+		ContextAwareRecorder recorder = ContextAwareRecorder.INSTANCE;
+		connection =
+				tcpClient.metrics(true, () -> recorder)
+				         .connect()
+				         .contextWrite(Context.of("testContextAwareRecorder", "OK"))
+				         .block(Duration.ofSeconds(30));
+
+		assertThat(connection).isNotNull();
+
+		connection.outbound()
+		          .sendString(Mono.just("hello"))
+		          .neverComplete()
+		          .subscribe();
+
+		connection.inbound()
+		          .receive()
+		          .asString()
+		          .subscribe(s -> {
+		              if ("hello".equals(s)) {
+		                  latch.countDown();
+		              }
+		          });
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		assertThat(recorder.onDataReceivedContextView).isTrue();
+		assertThat(recorder.onDataSentContextView).isTrue();
+	}
+
 	private void checkExpectationsPositive() {
 		InetSocketAddress ca = (InetSocketAddress) connection.channel().localAddress();
 		String clientAddress = ca.getHostString() + ":" + ca.getPort();
@@ -261,4 +312,38 @@ class TcpMetricsTests {
 	static final String CLIENT_ERRORS = TCP_CLIENT_PREFIX + ERRORS;
 	static final String CLIENT_CONNECT_TIME = TCP_CLIENT_PREFIX + CONNECT_TIME;
 	static final String CLIENT_TLS_HANDSHAKE_TIME = TCP_CLIENT_PREFIX + TLS_HANDSHAKE_TIME;
+
+	static final class ContextAwareRecorder extends ContextAwareChannelMetricsRecorder {
+
+		static final ContextAwareRecorder INSTANCE = new ContextAwareRecorder();
+
+		AtomicBoolean onDataReceivedContextView = new AtomicBoolean();
+		AtomicBoolean onDataSentContextView = new AtomicBoolean();
+
+		@Override
+		public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void incrementErrorsCount(ContextView contextView, SocketAddress remoteAddress) {
+		}
+
+		@Override
+		public void recordConnectTime(ContextView contextView, SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordDataReceived(ContextView contextView, SocketAddress remoteAddress, long bytes) {
+			onDataReceivedContextView.set("OK".equals(contextView.getOrDefault("testContextAwareRecorder", "KO")));
+		}
+
+		@Override
+		public void recordDataSent(ContextView contextView, SocketAddress remoteAddress, long bytes) {
+			onDataSentContextView.set("OK".equals(contextView.getOrDefault("testContextAwareRecorder", "KO")));
+		}
+
+		@Override
+		public void recordTlsHandshakeTime(ContextView contextView, SocketAddress remoteAddress, Duration time, String status) {
+		}
+	}
 }
