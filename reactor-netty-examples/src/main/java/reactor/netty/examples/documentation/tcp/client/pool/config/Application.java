@@ -26,8 +26,10 @@ public class Application {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("fixed")
 				                  .maxConnections(50)
-				                  .pendingAcquireTimeout(Duration.ofMillis(30000))
-				                  .maxIdleTime(Duration.ofMillis(60))
+				                  .maxIdleTime(Duration.ofSeconds(20))           //<1>
+				                  .maxLifeTime(Duration.ofSeconds(60))           //<2>
+				                  .pendingAcquireTimeout(Duration.ofSeconds(60)) //<3>
+				                  .evictInBackground(Duration.ofSeconds(120))    //<4>
 				                  .build();
 
 		Connection connection =

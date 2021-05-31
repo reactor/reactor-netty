@@ -307,6 +307,8 @@ include::{examplesdir}/wiretap/custom/Application.java[lines=18..34]
 printing the content.
 ====
 
+include::conn-provider.adoc[]
+
 == SSL and TLS
 When you need SSL or TLS, you can apply the configuration shown in the next example.
 By default, if `OpenSSL` is available, a
@@ -564,7 +566,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 [source,java,indent=0]
 .{examplesdir}/pool/Application.java
 ----
-include::{examplesdir}/pool/Application.java[lines=18..50]
+include::{examplesdir}/pool/config/Application.java[lines=18..50]
 ----
 <1> Configures the maximum time for a connection to stay idle to 20 seconds.
 <2> Configures the maximum time for a connection to stay alive to 60 seconds.

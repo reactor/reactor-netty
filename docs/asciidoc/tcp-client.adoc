@@ -261,64 +261,7 @@ include::{examplesdir}/eventloop/Application.java[lines=18..37]
 ----
 ====
 
-== Connection Pool
-
-By default, the `TCP` client uses a "`fixed`" connection pool with `500` as the maximum number of channels
-and `1000` as the maximum number of the registered requests for acquire to keep in the pending queue
-(for the rest of the configurations check the system properties below).
-This means that the implementation creates a new channel if someone tries to acquire a channel but none is in the pool.
-When the maximum number of the channels in the pool is reached, new tries to acquire a channel are delayed
-until a channel is returned to the pool again.
-
-====
-[source,java,indent=0]
-.{sourcedir}/reactor/netty/ReactorNetty.java
-----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=117..159]
-----
-====
-
-
-If you need to disable the connection pool, you can apply the following configuration:
-
-====
-[source,java,indent=0]
-.{examplesdir}/pool/Application.java
-----
-include::{examplesdir}/pool/Application.java[lines=18..33]
-----
-====
-
-If you need to specify an idle time for the channels in the connection pool, you can apply the following configuration:
-
-====
-[source,java,indent=0]
-.{examplesdir}/pool/config/Application.java
-----
-include::{examplesdir}/pool/config/Application.java[lines=18..42]
-----
-====
-
-NOTE: When you expect a high load, be cautious with a connection pool with a very high value for maximum connections. You might experience
-`reactor.netty.http.client.PrematureCloseException` exception with a root cause "Connect Timeout" due
-to too many concurrent connections opened/acquired.
-
-=== Metrics
-The pooled `ConnectionProvider` supports built-in integration with https://micrometer.io/[`Micrometer`].
-It exposes all metrics with a prefix of `reactor.netty.connection.provider`.
-
-include::conn-provider-metrics.adoc[]
-
-The following example enables that integration:
-
-====
-[source,java,indent=0]
-.{examplesdir}/pool/metrics/Application.java
-----
-include::{examplesdir}/pool/metrics/Application.java[lines=18..40]
-----
-<1> Enables the built-in integration with Micrometer
-====
+include::conn-provider.adoc[]
 
 == SSL and TLS
 

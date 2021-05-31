@@ -13,14 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.documentation.http.client.pool;
+package reactor.netty.examples.documentation.http.client.pool.metrics;
 
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 public class Application {
 
 	public static void main(String[] args) {
-		HttpClient client = HttpClient.newConnection();
+		ConnectionProvider provider =
+				ConnectionProvider.builder("custom")
+				                  .maxConnections(50)
+				                  .metrics(true) //<1>
+				                  .build();
+
+		HttpClient client = HttpClient.create(provider);
 
 		String response =
 				client.get()
@@ -31,5 +38,8 @@ public class Application {
 				      .block();
 
 		System.out.println("Response " + response);
+
+		provider.disposeLater()
+		        .block();
 	}
 }
