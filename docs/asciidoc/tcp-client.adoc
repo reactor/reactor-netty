@@ -86,6 +86,23 @@ include::{examplesdir}/send/Application.java[lines=18..35]
 <1> Sends `hello` string to the endpoint.
 ====
 
+When you need more control over the writing process, as an alternative for I/O handler you may use
+{javadoc}/reactor/netty/Connection.html#outbound--[`Connection#outbound`]. As opposed to I/O handler
+where the connection is closed when the provided `Publisher` finishes (in case of finite `Publisher`),
+when using {javadoc}/reactor/netty/Connection.html#outbound--[`Connection#outbound`], you have to invoke explicitly
+`Connection#dispose` in order to close the connection.
+
+====
+[source,java,indent=0]
+.{examplesdir}/send/connection/Application.java
+----
+include::{examplesdir}/send/connection/Application.java[lines=18..44]
+----
+<1> Sends `hello 1` string to the endpoint.
+<2> Sends `hello 2` string to the endpoint.
+<3> Closes the connection once the message is sent to the endpoint.
+====
+
 == Consuming Data
 
 To receive data from a given endpoint, you must attach an I/O handler.
@@ -99,6 +116,21 @@ to be able to read data. The following example shows how to do so:
 include::{examplesdir}/read/Application.java[lines=18..34]
 ----
 <1> Receives data from a given endpoint
+====
+
+When you need more control over the reading process, as an alternative for I/O handler you may use
+{javadoc}/reactor/netty/Connection.html#inbound--[`Connection#inbound`]. As opposed to I/O handler
+where the connection is closed when the provided `Publisher` finishes (in case of finite `Publisher`),
+when using {javadoc}/reactor/netty/Connection.html#inbound--[`Connection#inbound`], you have to invoke explicitly
+`Connection#dispose` in order to close the connection.
+
+====
+[source,java,indent=0]
+.{examplesdir}/read/connection/Application.java
+----
+include::{examplesdir}/read/connection/Application.java[lines=18..38]
+----
+<1> Receives data from a given endpoint.
 ====
 
 == Lifecycle Callbacks
