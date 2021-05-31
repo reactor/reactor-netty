@@ -30,7 +30,7 @@ import static reactor.netty.http.server.logging.AbstractAccessLogArgProvider.MIS
 class BaseAccessLogHandler extends ChannelDuplexHandler {
 
 	static final String DEFAULT_LOG_FORMAT =
-			"{} - {} [{}] \"{} {} {}\" {} {} {} ms";
+			"{} - {} [{}] \"{} {} {}\" {} {} {}";
 
 	@SuppressWarnings("deprecation")
 	static final Function<AccessLogArgProvider, AccessLog> DEFAULT_ACCESS_LOG =
@@ -45,13 +45,7 @@ class BaseAccessLogHandler extends ChannelDuplexHandler {
 	}
 
 	static String applyAddress(@Nullable SocketAddress socketAddress) {
-		if (socketAddress instanceof InetSocketAddress) {
-			InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
-			return inetSocketAddress.getHostString() + ":" + inetSocketAddress.getPort();
-		}
-		else {
-			return MISSING;
-		}
+		return socketAddress instanceof InetSocketAddress ? ((InetSocketAddress) socketAddress).getHostString() : MISSING;
 	}
 
 }
