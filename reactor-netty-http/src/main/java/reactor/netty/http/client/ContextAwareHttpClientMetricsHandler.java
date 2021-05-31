@@ -46,8 +46,9 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 		if (contextView != null) {
 			recorder().incrementErrorsCount(contextView, ctx.channel().remoteAddress(), path);
 		}
-
-		super.recordException(ctx);
+		else {
+			super.recordException(ctx);
+		}
 	}
 
 	@Override

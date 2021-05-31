@@ -105,7 +105,7 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 			super.connect(ctx, remoteAddress, localAddress, promise);
 			promise.addListener(future -> {
 				ctx.pipeline().remove(this);
-				recordConnectTime(ctx, remoteAddress, connectTimeStart, future.isSuccess() ? SUCCESS :  ERROR);
+				recordConnectTime(ctx, remoteAddress, connectTimeStart, future.isSuccess() ? SUCCESS : ERROR);
 			});
 		}
 

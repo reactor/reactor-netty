@@ -70,7 +70,7 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 				recorder.recordConnectTime(
 						remoteAddress,
 						Duration.ofNanos(System.nanoTime() - connectTimeStart),
-						future.isSuccess() ? SUCCESS :  ERROR);
+						future.isSuccess() ? SUCCESS : ERROR);
 			});
 		}
 	}
