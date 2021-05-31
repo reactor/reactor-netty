@@ -17,8 +17,8 @@ package reactor.netty.examples.documentation.http.server.metrics.custom;
 
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
-import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.HttpServerMetricsRecorder;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -40,7 +40,32 @@ public class Application {
 		      .block();
 	}
 
-	private static class CustomHttpServerMetricsRecorder implements ChannelMetricsRecorder {
+	private static class CustomHttpServerMetricsRecorder implements HttpServerMetricsRecorder {
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+		}
+
+		@Override
+		public void recordDataReceivedTime(String uri, String method, Duration time) {
+		}
+
+		@Override
+		public void recordDataSentTime(String uri, String method, String status, Duration time) {
+		}
+
+		@Override
+		public void recordResponseTime(String uri, String method, String status, Duration time) {
+		}
+
 		@Override
 		public void recordDataReceived(SocketAddress socketAddress, long l) {
 		}
