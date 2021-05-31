@@ -1,10 +1,12 @@
 == Connection Pool
-By default, Reactor Netty client uses a "`fixed`" connection pool with `500` as the maximum number of channels
-and `1000` as the maximum number of the registered requests for acquire to keep in the pending queue
+By default, Reactor Netty client uses a "`fixed`" connection pool with `500` as the maximum number of active channels
+and `1000` as the maximum number of further channel acquisition attempts allowed to be kept in a pending state
 (for the rest of the configurations check the system properties or the builder configurations below).
-This means that the implementation creates a new channel if someone tries to acquire a channel but none is in the pool.
-When the maximum number of the channels in the pool is reached, new tries to acquire a channel are delayed
-until a channel is returned to the pool again.
+This means that the implementation creates a new channel if someone tries to acquire a channel
+as long as less than `500` have been created and are managed by the pool.
+When the maximum number of channels in the pool is reached, up to `1000` new attempts to
+acquire a channel are delayed (pending) until a channel is returned to the pool again,
+and further attempts are declined with an error.
 
 ====
 [source,java,indent=0]
@@ -32,10 +34,11 @@ The following listing shows the available configurations:
 [width="100%",options="header"]
 |=======
 | Configuration name | Description
-| `disposeInactivePoolsInBackground` | When this option is enabled, the connection pools are regularly checked whether they are empty and inactive
-for a specified time, thus applicable for disposal. By default, the background disposal is disabled.
-| `evictInBackground` | When a background eviction is enabled, the connection pool is regularly checked for connections,
-that are applicable for removal. By default, the background eviction is disabled.
+| `disposeInactivePoolsInBackground` | When this option is enabled, connection pools are regularly checked in the background,
+and those that are empty and been inactive for a specified time become eligible for disposal. By default, this background
+disposal of inactive pools is disabled.
+| `evictInBackground` | When this option is enabled, each connection pool regularly checks for connections that are
+eligible for removal according to eviction criteria like `maxIdleTime`. By default, this background eviction is disabled.
 | `fifo` | Configure the connection pool so that if there are idle connections (i.e. pool is under-utilized),
 the next acquire operation will get the `Least Recently Used` connection
 (LRU, i.e. the connection that was released first among the current idle connections). Default leasing strategy.
@@ -44,15 +47,14 @@ the next acquire operation will get the `Most Recently Used` connection
 (MRU, i.e. the connection that was released last among the current idle connections).
 | `maxConnections` | The maximum number of connections (per connection pool) before start pending. Default to
 2 * available number of processors (but with a minimum value of 16).
-| `maxIdleTime` | The time after which the channel will be closed when idle (resolution: ms). Default: max idle time is not specified.
-| `maxLifeTime` | The time after which the channel will be closed (resolution: ms). Default: max lifetime is not specified.
+| `maxIdleTime` | The time after which the channel is eligible to be closed when idle (resolution: ms). Default: max idle time is not specified.
+| `maxLifeTime` | The total life time after which the channel is eligible to be closed (resolution: ms). Default: max life time is not specified.
 | `metrics` | Enables/disables built-in integration with Micrometer. `ConnectionProvider.MeterRegistrar` can be provided
 for integration with another metrics system. By default, metrics are not enabled.
-| `pendingAcquireMaxCount` | The maximum number of registered requests for acquire to keep in a pending queue.
+| `pendingAcquireMaxCount` | The maximum number of extra attempts at acquiring a connection to keep in a pending queue.
 If -1 is specified, the pending queue does not have upper limit. Default to 2 * max connections.
-| `pendingAcquireTimeout` | The maximum time after which a pending acquire must complete, or
-the TimeoutException is thrown (resolution: ms). If -1 is specified, it will not wait to acquire before opening a new
-connection in an unbounded fashion. Default: 45 seconds.
+| `pendingAcquireTimeout` | The maximum time before which a pending acquire must complete, or a TimeoutException is
+thrown (resolution: ms). If -1 is specified, no such timeout is applied. Default: 45 seconds.
 |=======
 
 NOTE: When you expect a high load, be cautious with a connection pool with a very high value for maximum connections. You might experience
