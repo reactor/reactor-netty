@@ -19,6 +19,7 @@ import brave.Span;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
@@ -44,36 +45,44 @@ final class TracingChannelOutboundHandler extends ChannelOutboundHandlerAdapter 
 	}
 
 	@Override
-	@SuppressWarnings({"FutureReturnValueIgnored", "try"})
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-		Span span = ctx.channel().attr(SPAN_ATTR_KEY).get();
+		//"FutureReturnValueIgnored" this is deliberate
+		maybeScope(ctx.channel(), () -> ctx.write(msg, promise));
+	}
+
+	@Override
+	public void flush(ChannelHandlerContext ctx) {
+		maybeScope(ctx.channel(), () -> ctx.flush());
+	}
+
+	@Override
+	public boolean isSharable() {
+		return true;
+	}
+
+	@SuppressWarnings("try")
+	void maybeScope(Channel channel, Runnable runnable) {
+		Span span = channel.attr(SPAN_ATTR_KEY).get();
 		if (span != null) {
 			try (Scope scope = currentTraceContext.maybeScope(span.context())) {
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(msg, promise);
+				runnable.run();
 			}
 			return;
 		}
 		else {
-			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+			ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 			if (ops instanceof HttpClientRequest) {
 				TraceContext parent = ((HttpClientRequest) ops).currentContextView().getOrDefault(TraceContext.class, null);
 				if (parent != null) {
 					try (Scope scope = currentTraceContext.maybeScope(parent)) {
-						//"FutureReturnValueIgnored" this is deliberate
-						ctx.write(msg, promise);
+						runnable.run();
 					}
 					return;
 				}
 			}
 		}
 
-		//"FutureReturnValueIgnored" this is deliberate
-		ctx.write(msg, promise);
-	}
-
-	@Override
-	public boolean isSharable() {
-		return true;
+		runnable.run();
 	}
 }
