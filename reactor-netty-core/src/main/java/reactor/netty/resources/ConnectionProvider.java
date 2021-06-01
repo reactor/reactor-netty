@@ -47,7 +47,7 @@ public interface ConnectionProvider extends Disposable {
 
 	/**
 	 * Default max connections. Fallback to
-	 * available number of processors (but with a minimum value of 16)
+	 * 2 * available number of processors (but with a minimum value of 16)
 	 */
 	int DEFAULT_POOL_MAX_CONNECTIONS =
 			Integer.parseInt(System.getProperty(ReactorNetty.POOL_MAX_CONNECTIONS,
