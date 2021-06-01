@@ -44,6 +44,32 @@ final class TracingChannelOutboundHandler extends ChannelOutboundHandlerAdapter 
 	}
 
 	@Override
+	@SuppressWarnings("try")
+	public void flush(ChannelHandlerContext ctx) {
+		Span span = ctx.channel().attr(SPAN_ATTR_KEY).get();
+		if (span != null) {
+			try (Scope scope = currentTraceContext.maybeScope(span.context())) {
+				ctx.flush();
+			}
+			return;
+		}
+		else {
+			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+			if (ops instanceof HttpClientRequest) {
+				TraceContext parent = ((HttpClientRequest) ops).currentContextView().getOrDefault(TraceContext.class, null);
+				if (parent != null) {
+					try (Scope scope = currentTraceContext.maybeScope(parent)) {
+						ctx.flush();
+					}
+					return;
+				}
+			}
+		}
+
+		ctx.flush();
+	}
+
+	@Override
 	@SuppressWarnings({"FutureReturnValueIgnored", "try"})
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		Span span = ctx.channel().attr(SPAN_ATTR_KEY).get();
