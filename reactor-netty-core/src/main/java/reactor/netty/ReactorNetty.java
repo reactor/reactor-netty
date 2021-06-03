@@ -316,7 +316,7 @@ public final class ReactorNetty {
 			channel.pipeline().addLast(name, handler);
 		}
 		else {
-			channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, name, handler);
+			channel.pipeline().addBefore(before, name, handler);
 		}
 
 		registerForClose(context.isPersistent(),  name, context);
