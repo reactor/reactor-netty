@@ -36,6 +36,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty.NettyPipeline.RIGHT;
 
 /**
  * @author Simon Baslé
@@ -45,11 +46,13 @@ class ConnectionTest {
 
 	static final BiConsumer<? super ChannelHandlerContext, Object> ADD_EXTRACTOR = ChannelHandlerContext::fireChannelRead;
 
+	static final String ANOTHER_RIGHT = RIGHT + "test";
 	static final String DECODER_NAME = "decoder";
 	static final String DECODER_EXTRACT_NAME = "decoder$extract";
 	static final String ENCODER_NAME = "encoder";
 	static final String TAIL_CONTEXT_NAME = "DefaultChannelPipeline$TailContext#0";
 
+	ChannelHandler anotherRight;
 	EmbeddedChannel channel;
 	ChannelHandler decoder;
 	ChannelHandler encoder;
@@ -59,6 +62,7 @@ class ConnectionTest {
 
 	@BeforeEach
 	void init() {
+		anotherRight = new ChannelDuplexHandler();
 		channel = new EmbeddedChannel();
 		decoder = new LineBasedFrameDecoder(12);
 		encoder = new LineBasedFrameDecoder(12);
@@ -77,6 +81,20 @@ class ConnectionTest {
 
 		assertThat(channel.pipeline().names())
 				.containsExactly(DECODER_EXTRACT_NAME, DECODER_NAME, NettyPipeline.ReactiveBridge, TAIL_CONTEXT_NAME);
+	}
+
+	@Test
+	void addByteDecoderWhenManyRight() {
+		channel.pipeline()
+		       .addLast(ANOTHER_RIGHT, anotherRight)
+		       .addLast(NettyPipeline.ReactiveBridge, reactiveBridgeMock);
+
+		testContext.addHandlerLast(DECODER_NAME, decoder)
+		           .addHandlerFirst(DECODER_EXTRACT_NAME, NettyPipeline.inboundHandler(ADD_EXTRACTOR));
+
+		assertThat(channel.pipeline().names())
+				.containsExactly(DECODER_EXTRACT_NAME, DECODER_NAME, ANOTHER_RIGHT,
+						NettyPipeline.ReactiveBridge, TAIL_CONTEXT_NAME);
 	}
 
 	@Test
@@ -123,6 +141,18 @@ class ConnectionTest {
 
 		assertThat(channel.pipeline().names())
 				.containsExactly(DECODER_NAME, NettyPipeline.ReactiveBridge, TAIL_CONTEXT_NAME);
+	}
+
+	@Test
+	void addNonByteDecoderWhenManyRight() {
+		channel.pipeline()
+		       .addLast(ANOTHER_RIGHT, anotherRight)
+		       .addLast(NettyPipeline.ReactiveBridge, reactiveBridgeMock);
+
+		testContext.addHandlerLast(DECODER_NAME, decoder);
+
+		assertThat(channel.pipeline().names())
+				.containsExactly(DECODER_NAME, ANOTHER_RIGHT, NettyPipeline.ReactiveBridge, TAIL_CONTEXT_NAME);
 	}
 
 	@Test
