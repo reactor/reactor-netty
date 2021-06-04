@@ -61,6 +61,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
@@ -2793,5 +2794,40 @@ class HttpClientTest extends BaseHttpTest {
 		    .expectNext(Arrays.asList("custom", "custom"))
 		    .expectComplete()
 		    .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void testCustomHandlerAddedOnChannelInitAlwaysAvailable() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("testCustomHandlerAddedOnChannelInit")))
+				        .bindNow();
+
+		ConnectionProvider provider = ConnectionProvider.create("testCustomHandlerAddedOnChannelInit", 1);
+		AtomicBoolean handlerExists = new AtomicBoolean();
+		HttpClient client =
+				createHttpClientForContextWithPort(provider)
+				        .doOnChannelInit((observer, channel, address) ->
+				                Connection.from(channel).addHandlerLast("custom", new ChannelDuplexHandler()))
+				        .doOnRequest((req, conn) -> handlerExists.set(conn.channel().pipeline().get("custom") != null));
+		try {
+			Flux.range(0, 2)
+			    .flatMap(i -> client.get()
+			                        .uri("/")
+			                        .responseContent()
+			                        .aggregate()
+			                        .asString())
+			    .collectList()
+			    .as(StepVerifier::create)
+			    .expectNext(Arrays.asList("testCustomHandlerAddedOnChannelInit", "testCustomHandlerAddedOnChannelInit"))
+			    .expectComplete()
+			    .verify(Duration.ofSeconds(5));
+
+			assertThat(handlerExists).isTrue();
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
 	}
 }
