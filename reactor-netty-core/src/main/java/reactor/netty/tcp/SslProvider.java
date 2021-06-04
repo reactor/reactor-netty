@@ -49,10 +49,13 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.core.Exceptions;
+import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
-import reactor.netty.channel.ChannelMetricsHandler;
+import reactor.netty.channel.AbstractChannelMetricsHandler;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.channel.ContextAwareChannelMetricsRecorder;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -783,7 +786,7 @@ public final class SslProvider {
 		public void channelRegistered(ChannelHandlerContext ctx) {
 			ChannelHandler handler = ctx.pipeline().get(NettyPipeline.ChannelMetricsHandler);
 			if (handler != null) {
-				recorder = ((ChannelMetricsHandler) handler).recorder();
+				recorder = ((AbstractChannelMetricsHandler) handler).recorder();
 				tlsHandshakeTimeStart = System.nanoTime();
 			}
 
@@ -815,19 +818,13 @@ public final class SslProvider {
 				SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
 				if (handshake.isSuccess()) {
 					if (recorder != null) {
-						recorder.recordTlsHandshakeTime(
-								ctx.channel().remoteAddress(),
-								Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
-								SUCCESS);
+						recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, SUCCESS);
 					}
 					ctx.fireChannelActive();
 				}
 				else {
 					if (recorder != null) {
-						recorder.recordTlsHandshakeTime(
-								ctx.channel().remoteAddress(),
-								Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
-								ERROR);
+						recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, ERROR);
 					}
 					ctx.fireExceptionCaught(handshake.cause());
 				}
@@ -835,6 +832,23 @@ public final class SslProvider {
 			ctx.fireUserEventTriggered(evt);
 		}
 
+		void recordTlsHandshakeTime(ChannelHandlerContext ctx, long tlsHandshakeTimeStart, String status) {
+			if (recorder instanceof ContextAwareChannelMetricsRecorder) {
+				Connection connection = Connection.from(ctx.channel());
+				if (connection instanceof ConnectionObserver) {
+					((ContextAwareChannelMetricsRecorder) recorder).recordTlsHandshakeTime(
+							((ConnectionObserver) connection).currentContext(),
+							ctx.channel().remoteAddress(),
+							Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
+							status);
+					return;
+				}
+			}
+			recorder.recordTlsHandshakeTime(
+					ctx.channel().remoteAddress(),
+					Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
+					status);
+		}
 	}
 
 	static final Logger log = Loggers.getLogger(SslProvider.class);

@@ -30,11 +30,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.channel.ContextAwareChannelMetricsRecorder;
+import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.CONNECT_TIME;
@@ -130,6 +135,55 @@ class UdpMetricsTests {
 		checkExpectationsPositive();
 	}
 
+	@Test
+	void testContextAwareRecorder() throws Exception {
+		CountDownLatch latch = new CountDownLatch(2);
+		serverConnection =
+				udpServer.handle((in, out) ->
+				             out.sendObject(
+				                 in.receiveObject()
+				                   .map(o -> {
+				                       if (o instanceof DatagramPacket) {
+				                           DatagramPacket p = (DatagramPacket) o;
+				                           latch.countDown();
+				                           ByteBuf buf = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
+				                           return new DatagramPacket(buf, p.sender());
+				                       }
+				                       else {
+				                           return Mono.error(new Exception("Unexpected type of the message: " + o));
+				                       }
+				                   })))
+				         .bindNow(Duration.ofSeconds(30));
+
+		ContextAwareRecorder recorder = ContextAwareRecorder.INSTANCE;
+		clientConnection =
+				udpClient.metrics(true, () -> recorder)
+				         .connect()
+				         .contextWrite(Context.of("testContextAwareRecorder", "OK"))
+				         .block(Duration.ofSeconds(30));
+
+		assertThat(clientConnection).isNotNull();
+
+		clientConnection.outbound()
+		                .sendString(Mono.just("hello"))
+		                .neverComplete()
+		                .subscribe();
+
+		clientConnection.inbound()
+		                .receive()
+		                .asString()
+		                .subscribe(s -> {
+		                    if ("hello".equals(s)) {
+		                        latch.countDown();
+		                    }
+		                });
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		assertThat(recorder.onDataReceivedContextView).isTrue();
+		assertThat(recorder.onDataSentContextView).isTrue();
+	}
+
 	private void checkExpectationsPositive() {
 		InetSocketAddress sa = (InetSocketAddress) serverConnection.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
@@ -184,4 +238,38 @@ class UdpMetricsTests {
 	private static final String CLIENT_DATA_RECEIVED = UDP_CLIENT_PREFIX + DATA_RECEIVED;
 	private static final String CLIENT_ERRORS = UDP_CLIENT_PREFIX + ERRORS;
 	private static final String CLIENT_CONNECT_TIME = UDP_CLIENT_PREFIX + CONNECT_TIME;
+
+	static final class ContextAwareRecorder extends ContextAwareChannelMetricsRecorder {
+
+		static final ContextAwareRecorder INSTANCE = new ContextAwareRecorder();
+
+		AtomicBoolean onDataReceivedContextView = new AtomicBoolean();
+		AtomicBoolean onDataSentContextView = new AtomicBoolean();
+
+		@Override
+		public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void incrementErrorsCount(ContextView contextView, SocketAddress remoteAddress) {
+		}
+
+		@Override
+		public void recordConnectTime(ContextView contextView, SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordDataReceived(ContextView contextView, SocketAddress remoteAddress, long bytes) {
+			onDataReceivedContextView.set("OK".equals(contextView.getOrDefault("testContextAwareRecorder", "KO")));
+		}
+
+		@Override
+		public void recordDataSent(ContextView contextView, SocketAddress remoteAddress, long bytes) {
+			onDataSentContextView.set("OK".equals(contextView.getOrDefault("testContextAwareRecorder", "KO")));
+		}
+
+		@Override
+		public void recordTlsHandshakeTime(ContextView contextView, SocketAddress remoteAddress, Duration time, String status) {
+		}
+	}
 }

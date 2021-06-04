@@ -15,14 +15,10 @@
  */
 package reactor.netty.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.DatagramPacket;
-import reactor.netty.NettyPipeline;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -36,94 +32,21 @@ import static reactor.netty.Metrics.SUCCESS;
  *
  * @author Violeta Georgieva
  */
-public class ChannelMetricsHandler extends ChannelDuplexHandler {
+public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
+
 	final ChannelMetricsRecorder recorder;
 
-	final SocketAddress remoteAddress;
-
-	final boolean onServer;
-
-
 	ChannelMetricsHandler(ChannelMetricsRecorder recorder, @Nullable SocketAddress remoteAddress, boolean onServer) {
+		super(remoteAddress, onServer);
 		this.recorder = recorder;
-		this.remoteAddress = remoteAddress;
-		this.onServer = onServer;
 	}
 
 	@Override
-	public void channelRegistered(ChannelHandlerContext ctx) {
-		if (!onServer) {
-			ctx.pipeline()
-			   .addAfter(NettyPipeline.ChannelMetricsHandler,
-			             NettyPipeline.ConnectMetricsHandler,
-			             new ConnectMetricsHandler(recorder));
-		}
-
-		ctx.fireChannelRegistered();
+	public ChannelHandler connectMetricsHandler() {
+		return new ConnectMetricsHandler(recorder());
 	}
 
 	@Override
-	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof ByteBuf) {
-			ByteBuf buffer = (ByteBuf) msg;
-			if (buffer.readableBytes() > 0) {
-				recorder.recordDataReceived(remoteAddress, buffer.readableBytes());
-			}
-		}
-		else if (msg instanceof DatagramPacket) {
-			DatagramPacket p = (DatagramPacket) msg;
-			ByteBuf buffer = p.content();
-			if (buffer.readableBytes() > 0) {
-				if (remoteAddress != null) {
-					recorder.recordDataReceived(remoteAddress, buffer.readableBytes());
-				}
-				else {
-					recorder.recordDataReceived(p.sender(), buffer.readableBytes());
-				}
-			}
-		}
-
-		ctx.fireChannelRead(msg);
-	}
-
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-		if (msg instanceof ByteBuf) {
-			ByteBuf buffer = (ByteBuf) msg;
-			if (buffer.readableBytes() > 0) {
-				recorder.recordDataSent(remoteAddress, buffer.readableBytes());
-			}
-		}
-		else if (msg instanceof DatagramPacket) {
-			DatagramPacket p = (DatagramPacket) msg;
-			ByteBuf buffer = p.content();
-			if (buffer.readableBytes() > 0) {
-				if (remoteAddress != null) {
-					recorder.recordDataSent(remoteAddress, buffer.readableBytes());
-				}
-				else {
-					recorder.recordDataSent(p.recipient(), buffer.readableBytes());
-				}
-			}
-		}
-
-		//"FutureReturnValueIgnored" this is deliberate
-		ctx.write(msg, promise);
-	}
-
-	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		if (remoteAddress != null) {
-			recorder.incrementErrorsCount(remoteAddress);
-		}
-		else {
-			recorder.incrementErrorsCount(ctx.channel().remoteAddress());
-		}
-
-		ctx.fireExceptionCaught(cause);
-	}
-
 	public ChannelMetricsRecorder recorder() {
 		return recorder;
 	}
@@ -144,17 +67,10 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 			promise.addListener(future -> {
 				ctx.pipeline().remove(this);
 
-				String status;
-				if (future.isSuccess()) {
-					status = SUCCESS;
-				}
-				else {
-					status = ERROR;
-				}
 				recorder.recordConnectTime(
 						remoteAddress,
 						Duration.ofNanos(System.nanoTime() - connectTimeStart),
-						status);
+						future.isSuccess() ? SUCCESS : ERROR);
 			});
 		}
 	}
