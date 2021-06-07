@@ -160,13 +160,13 @@ public class TcpClientTests {
 		                             .host("localhost")
 		                             .port(echoServerPort)
 		                             .handle((in, out) -> {
-			                               in.receive()
-			                                 .log("conn")
-			                                 .subscribe(s -> latch.countDown());
+		                                 in.receive()
+		                                   .log("conn")
+		                                   .subscribe(s -> latch.countDown());
 
-			                               return out.sendString(Flux.just("Hello World!"))
-			                                  .neverComplete();
-		                               })
+		                                 return out.sendString(Flux.just("Hello World!"))
+		                                           .neverComplete();
+		                             })
 		                             .wiretap(true)
 		                             .connectNow();
 
@@ -178,9 +178,7 @@ public class TcpClientTests {
 
 	@Test
 	void testTcpClient1ThreadAcquire() {
-
 		LoopResources resources = LoopResources.create("test", 1, true);
-
 
 		Connection client = TcpClient.create()
 		                             .host("localhost")
@@ -199,18 +197,18 @@ public class TcpClientTests {
 	void testTcpClientWithInetSocketAddress() throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 
-		TcpClient client =
-				TcpClient.create().port(echoServerPort);
+		TcpClient client = TcpClient.create().port(echoServerPort);
 
-		Connection s = client.handle((in, out) -> {
-			in.receive()
-			  .subscribe(d -> latch.countDown());
+		Connection s =
+				client.handle((in, out) -> {
+				          in.receive()
+				            .subscribe(d -> latch.countDown());
 
-			return out.sendString(Flux.just("Hello"))
-			   .neverComplete();
-		})
-		                     .wiretap(true)
-		                     .connectNow(Duration.ofSeconds(5));
+				          return out.sendString(Flux.just("Hello"))
+				                    .neverComplete();
+				      })
+				      .wiretap(true)
+				      .connectNow(Duration.ofSeconds(5));
 
 		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 
@@ -227,21 +225,20 @@ public class TcpClientTests {
 				TcpClient.create()
 				         .host("localhost")
 				         .port(echoServerPort)
-				         .doOnConnected(c -> c.addHandlerLast("codec",
-						                                 new LineBasedFrameDecoder(8 * 1024)))
+				         .doOnConnected(c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024)))
 				         .handle((in, out) ->
-					        out.sendString(Flux.range(1, messages)
-					                            .map(i -> "Hello World!" + i + "\n")
-					                            .subscribeOn(Schedulers.parallel()))
-					            .then(in.receive()
-					                    .asString()
-					                    .take(100)
-					                    .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
-					                    .doOnNext(s -> {
-						                    strings.add(s);
-						                    latch.countDown();
-					                    }).then())
-				         )
+				             out.sendString(Flux.range(1, messages)
+				                                .map(i -> "Hello World!" + i + "\n")
+				                                .subscribeOn(Schedulers.parallel()))
+				                .then(in.receive()
+				                        .asString()
+				                        .take(100)
+				                        .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+				                        .doOnNext(s -> {
+				                            strings.add(s);
+				                            latch.countDown();
+				                        })
+				                        .then()))
 				         .wiretap(true)
 				         .connectNow(Duration.ofSeconds(15));
 
@@ -255,11 +252,7 @@ public class TcpClientTests {
 
 	@Test
 	void tcpClientHandlesLineFeedDataFixedPool() throws InterruptedException {
-		Consumer<? super Connection> channelInit = c -> c
-				.addHandler("codec",
-				            new LineBasedFrameDecoder(8 * 1024));
-
-		//ConnectionProvider p = ConnectionProvider.fixed("tcpClientHandlesLineFeedDataFixedPool", 1);
+		Consumer<? super Connection> channelInit = c -> c.addHandler("codec", new LineBasedFrameDecoder(8 * 1024));
 
 		ConnectionProvider p = ConnectionProvider.newConnection();
 
@@ -267,23 +260,18 @@ public class TcpClientTests {
 				TcpClient.create(p)
 				         .host("localhost")
 				         .port(echoServerPort)
-				         .doOnConnected(channelInit)
-		);
-
+				         .doOnConnected(channelInit));
 	}
 
 	@Test
 	void tcpClientHandlesLineFeedDataElasticPool() throws InterruptedException {
-		Consumer<? super Connection> channelInit = c -> c
-				.addHandler("codec",
-				            new LineBasedFrameDecoder(8 * 1024));
+		Consumer<? super Connection> channelInit = c -> c.addHandler("codec", new LineBasedFrameDecoder(8 * 1024));
 
 		tcpClientHandlesLineFeedData(
 				TcpClient.create(ConnectionProvider.create("tcpClientHandlesLineFeedDataElasticPool", Integer.MAX_VALUE))
 				         .host("localhost")
 				         .port(echoServerPort)
-				         .doOnConnected(channelInit)
-		);
+				         .doOnConnected(channelInit));
 	}
 
 	private void tcpClientHandlesLineFeedData(TcpClient client) throws InterruptedException {
@@ -292,20 +280,19 @@ public class TcpClientTests {
 		final List<String> strings = new ArrayList<>();
 
 		Connection c = client.handle((in, out) ->
-					        out.sendString(Flux.range(1, messages)
-					                            .map(i -> "Hello World!" + i + "\n")
-					                            .subscribeOn(Schedulers.parallel()))
-					            .then(in.receive()
-					                    .asString()
-					                    .take(100)
-					                    .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
-					                    .doOnNext(s -> {
-						                    strings.add(s);
-						                    latch.countDown();
-					                    }).then())
-				         )
-				         .wiretap(true)
-				         .connectNow(Duration.ofSeconds(30));
+		                         out.sendString(Flux.range(1, messages)
+		                                            .map(i -> "Hello World!" + i + "\n")
+		                                            .subscribeOn(Schedulers.parallel()))
+		                            .then(in.receive()
+		                                    .asString()
+		                                    .take(100)
+		                                    .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+		                                    .doOnNext(s -> {
+		                                        strings.add(s);
+		                                        latch.countDown();
+		                                    }).then()))
+		                     .wiretap(true)
+		                     .connectNow(Duration.ofSeconds(30));
 
 		log.debug("Connected");
 
@@ -334,44 +321,38 @@ public class TcpClientTests {
 	}
 
 	/*Check in details*/
-	private void connectionWillRetryConnectionAttemptWhenItFails(TcpClient client)
-			throws InterruptedException {
+	private void connectionWillRetryConnectionAttemptWhenItFails(TcpClient client) throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();
 
 		client.handle((in, out) -> Mono.never())
-		         .wiretap(true)
-		         .connect()
-		         .retryWhen(Retry.from(errors -> errors
-		                                    .flatMap(attempt -> {
-			                                    switch ((int) attempt.totalRetries()) {
-				                                    case 0:
-					                                    totalDelay.addAndGet(100);
-					                                    return Mono.delay(Duration
-							                                    .ofMillis(100));
-				                                    case 1:
-					                                    totalDelay.addAndGet(500);
-					                                    return Mono.delay(Duration
-							                                    .ofMillis(500));
-				                                    case 2:
-					                                    totalDelay.addAndGet(1000);
-					                                    return Mono.delay(Duration
-							                                    .ofSeconds(1));
-				                                    default:
-					                                    latch.countDown();
-					                                    return Mono.<Long>empty();
-			                                    }
+		      .wiretap(true)
+		      .connect()
+		      .retryWhen(Retry.from(errors -> errors.flatMap(attempt -> {
+		                                          switch ((int) attempt.totalRetries()) {
+		                                              case 0:
+		                                                  totalDelay.addAndGet(100);
+		                                                  return Mono.delay(Duration.ofMillis(100));
+		                                              case 1:
+		                                                  totalDelay.addAndGet(500);
+		                                                  return Mono.delay(Duration.ofMillis(500));
+		                                              case 2:
+		                                                  totalDelay.addAndGet(1000);
+		                                                  return Mono.delay(Duration.ofSeconds(1));
+		                                              default:
+		                                                  latch.countDown();
+		                                                  return Mono.<Long>empty();
+		                                          }
 		                                    })))
-		         .subscribe(System.out::println);
+		      .subscribe(System.out::println);
 
-		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(latch.await(15, TimeUnit.SECONDS)).as("latch await").isTrue();
 		assertThat(totalDelay.get()).as("totalDelay was >1.6s").isGreaterThanOrEqualTo(1600L);
 	}
 
 	/*Check in details*/
 	@Test
-	void connectionWillRetryConnectionAttemptWhenItFailsElastic()
-			throws InterruptedException {
+	void connectionWillRetryConnectionAttemptWhenItFailsElastic() throws InterruptedException {
 		connectionWillRetryConnectionAttemptWhenItFails(
 				TcpClient.create()
 				         .host("localhost")
@@ -381,8 +362,7 @@ public class TcpClientTests {
 
 	//see https://github.com/reactor/reactor-netty/issues/289
 	@Test
-	void connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool()
-			throws InterruptedException {
+	void connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool() throws InterruptedException {
 		connectionWillRetryConnectionAttemptWhenItFails(
 				TcpClient.create(ConnectionProvider.create("connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool", 1))
 				         .host("localhost")
@@ -391,8 +371,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	void connectionWillAttemptToReconnectWhenItIsDropped()
-			throws InterruptedException {
+	void connectionWillAttemptToReconnectWhenItIsDropped() throws InterruptedException {
 		final CountDownLatch connectionLatch = new CountDownLatch(1);
 		final CountDownLatch reconnectionLatch = new CountDownLatch(1);
 
@@ -402,15 +381,15 @@ public class TcpClientTests {
 					         .host("localhost")
 					         .port(abortServerPort);
 
-			Mono<? extends Connection> handler = tcpClient.handle((in, out) -> {
-				log.debug("Start");
-				connectionLatch.countDown();
-				in.receive()
-				  .subscribe();
-				return Flux.never();
-			})
-			.wiretap(true)
-			.connect();
+			Mono<? extends Connection> handler =
+					tcpClient.handle((in, out) -> {
+					             log.debug("Start");
+					             connectionLatch.countDown();
+					             in.receive().subscribe();
+					             return Flux.never();
+					         })
+					         .wiretap(true)
+					         .connect();
 
 			Connection c =
 					handler.log()
@@ -438,30 +417,30 @@ public class TcpClientTests {
 		Connection c;
 
 		c = tcpClient.handle((i, o) -> {
-			o.sendObject(Mono.never()
-			                 .doOnCancel(connectionLatch::countDown)
-			                 .log("uno"))
-			 .then()
-			 .subscribe()
-			 .dispose();
+		                 o.sendObject(Mono.never()
+		                                  .doOnCancel(connectionLatch::countDown)
+		                                  .log("uno"))
+		                  .then()
+		                  .subscribe()
+		                  .dispose();
 
-			Schedulers.parallel()
-			          .schedule(() -> o.sendObject(Mono.never()
-			                                           .doOnCancel(connectionLatch::countDown)
-			                                           .log("dos"))
-			                           .then()
-			                           .subscribe()
-			                           .dispose());
+		                 Schedulers.parallel()
+		                           .schedule(() -> o.sendObject(Mono.never()
+		                                                            .doOnCancel(connectionLatch::countDown)
+		                                                            .log("dos"))
+		                                            .then()
+		                                            .subscribe()
+		                                            .dispose());
 
-			o.sendObject(Mono.never()
-			                 .doOnCancel(connectionLatch::countDown)
-			                 .log("tres"))
-			 .then()
-			 .subscribe()
-			 .dispose();
+		                 o.sendObject(Mono.never()
+		                                  .doOnCancel(connectionLatch::countDown)
+		                                  .log("tres"))
+		                  .then()
+		                  .subscribe()
+		                  .dispose();
 
-			return Mono.never();
-		})
+		                 return Mono.never();
+		             })
 		             .connectNow();
 
 		assertThat(connectionLatch.await(30, TimeUnit.SECONDS)).as("Cancel not propagated").isTrue();
@@ -482,16 +461,16 @@ public class TcpClientTests {
 
 		Connection s =
 				client.handle((in, out) -> {
-				            in.withConnection(c -> c.onDispose(close::countDown));
+				          in.withConnection(c -> c.onDispose(close::countDown));
 
-				            out.withConnection(c -> c.onWriteIdle(200, () -> {
-				                totalDelay.addAndGet(System.currentTimeMillis() - start);
-				                latch.countDown();
-				            }));
+				          out.withConnection(c -> c.onWriteIdle(200, () -> {
+				              totalDelay.addAndGet(System.currentTimeMillis() - start);
+				              latch.countDown();
+				          }));
 
-				            return Mono.delay(Duration.ofSeconds(1))
-				                       .then()
-				                       .log();
+				          return Mono.delay(Duration.ofSeconds(1))
+				                     .then()
+				                     .log();
 				      })
 				      .wiretap(true)
 				      .connectNow();
@@ -513,8 +492,8 @@ public class TcpClientTests {
 
 		Connection s =
 				client.handle((in, out) -> {
-				            in.withConnection(c -> c.onReadIdle(200, latch::countDown));
-				            return Flux.never();
+				          in.withConnection(c -> c.onReadIdle(200, latch::countDown));
+				          return Flux.never();
 				      })
 				      .wiretap(true)
 				      .connectNow();
@@ -537,17 +516,16 @@ public class TcpClientTests {
 		                             .host("localhost")
 		                             .port(echoServerPort)
 		                             .handle((in, out) -> {
-			                               log.debug("hello");
-			                               out.withConnection(c -> c.onWriteIdle(500, latch::countDown));
+		                                 log.debug("hello");
+		                                 out.withConnection(c -> c.onWriteIdle(500, latch::countDown));
 
-			                               List<Publisher<Void>> allWrites =
-					                               new ArrayList<>();
-			                               for (int i = 0; i < 5; i++) {
-				                               allWrites.add(out.sendString(Flux.just("a")
-				                                                                .delayElements(Duration.ofMillis(750))));
-			                               }
-			                               return Flux.merge(allWrites);
-		                               })
+		                                 List<Publisher<Void>> allWrites = new ArrayList<>();
+		                                 for (int i = 0; i < 5; i++) {
+		                                     allWrites.add(out.sendString(Flux.just("a")
+		                                                                      .delayElements(Duration.ofMillis(750))));
+		                                 }
+		                                 return Flux.merge(allWrites);
+		                             })
 		                             .wiretap(true)
 		                             .connectNow();
 
@@ -570,9 +548,7 @@ public class TcpClientTests {
 				.isNotSameAs(((TcpClientConnect) client2).duplicate());
 	}
 
-	public static final class EchoServer
-			extends CountDownLatch
-			implements Runnable {
+	public static final class EchoServer extends CountDownLatch implements Runnable {
 
 		private final    int                 port;
 		private final    ServerSocketChannel server;
@@ -632,9 +608,7 @@ public class TcpClientTests {
 		}
 	}
 
-	private static final class ConnectionAbortServer
-			extends CountDownLatch
-			implements Runnable {
+	private static final class ConnectionAbortServer extends CountDownLatch implements Runnable {
 
 		final         int                 port;
 		private final ServerSocketChannel server;
@@ -676,9 +650,7 @@ public class TcpClientTests {
 		}
 	}
 
-	private static final class ConnectionTimeoutServer
-			extends CountDownLatch
-			implements Runnable {
+	private static final class ConnectionTimeoutServer extends CountDownLatch implements Runnable {
 
 		final         int                 port;
 		private final ServerSocketChannel server;
@@ -720,8 +692,7 @@ public class TcpClientTests {
 		}
 	}
 
-	private static final class HeartbeatServer extends CountDownLatch
-			implements Runnable {
+	private static final class HeartbeatServer extends CountDownLatch implements Runnable {
 
 		final         int                 port;
 		private final ServerSocketChannel server;
@@ -808,17 +779,17 @@ public class TcpClientTests {
 		}
 
 		Set<String> threadNames = new ConcurrentSkipListSet<>();
-		StepVerifier.create(
-				Flux.range(1, 4)
-				    .flatMap(i ->
-				            client.handle((in, out) -> {
-				                threadNames.add(Thread.currentThread().getName());
-				                return out.send(Flux.empty());
-				            })
-				            .connect()))
-		            .expectNextCount(4)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		Flux.range(1, 4)
+		    .flatMap(i ->
+		        client.handle((in, out) -> {
+		                  threadNames.add(Thread.currentThread().getName());
+		                  return out.send(Flux.empty());
+		              })
+		              .connect())
+		    .as(StepVerifier::create)
+		    .expectNextCount(4)
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(30));
 
 		pool.dispose();
 		loop.dispose();
@@ -1237,9 +1208,9 @@ public class TcpClientTests {
 				         .connectNow();
 
 		conn.outbound()
-				.sendString(Mono.just("testAddressSupplier"))
-				.then()
-				.subscribe();
+		    .sendString(Mono.just("testAddressSupplier"))
+		    .then()
+		    .subscribe();
 
 		String result =
 				conn.inbound()
