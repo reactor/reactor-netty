@@ -39,8 +39,8 @@ import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 public final class Cookies {
 
 	/**
+	 * Return a new cookies holder from client response headers.
 	 *
-	 * Return a new cookies holder from client response headers
 	 * @param headers client response headers
 	 * @return a new cookies holder from client response headers
 	 */
@@ -49,7 +49,8 @@ public final class Cookies {
 	}
 
 	/**
-	 * Return a new cookies holder from server request headers
+	 * Return a new cookies holder from server request headers.
+	 *
 	 * @param headers server request headers
 	 * @return a new cookies holder from server request headers
 	 */
@@ -60,18 +61,16 @@ public final class Cookies {
 
 	final static int NOT_READ = 0;
 	final static int READING  = 1;
-
 	final static int READ     = 2;
-	final HttpHeaders  nettyHeaders;
-	final CharSequence cookiesHeaderName;
 
-	final boolean      isClientChannel;
-
+	final HttpHeaders   nettyHeaders;
+	final CharSequence  cookiesHeaderName;
+	final boolean       isClientChannel;
 	final CookieDecoder decoder;
 
 	Map<CharSequence, Set<Cookie>> cachedCookies;
-	volatile     int                                state;
 
+	volatile     int                                state;
 	static final AtomicIntegerFieldUpdater<Cookies> STATE =
 			AtomicIntegerFieldUpdater.newUpdater(Cookies.class, "state");
 
@@ -85,8 +84,7 @@ public final class Cookies {
 	}
 
 	/**
-	 * Wait for the cookies to become available, cache them and subsequently return the
-	 * cached map of cookies.
+	 * Wait for the cookies to become available, cache them and subsequently return the cached map of cookies.
 	 */
 	public Map<CharSequence, Set<Cookie>> getCachedCookies() {
 		if (!STATE.compareAndSet(this, NOT_READ, READING)) {
