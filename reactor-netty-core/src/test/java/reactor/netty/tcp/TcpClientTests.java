@@ -49,6 +49,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
@@ -67,6 +68,7 @@ import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.NameResolverProvider;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -1253,6 +1255,57 @@ public class TcpClientTests {
 			     .block(Duration.ofSeconds(10));
 			loop2.shutdownGracefully()
 			     .get(10, TimeUnit.SECONDS);
+		}
+	}
+
+	@Test
+	void testCustomLoopCustomResolver() {
+		LoopResources loop1 = LoopResources.create("loop1", 1, true);
+		LoopResources loop2 = LoopResources.create("loop2", 1, true);
+		LoopResources loop3 = LoopResources.create("loop3", 1, true);
+
+		TcpClient client = TcpClient.create();
+
+		try {
+			assertThat(client.configuration().loopResources()).isSameAs(TcpResources.get());
+			assertThat(client.configuration().resolver()).isNull();
+			assertThat(client.configuration().getNameResolverProvider()).isNull();
+
+			client = client.runOn(loop1);
+
+			assertThat(client.configuration().loopResources()).isSameAs(loop1);
+			AddressResolverGroup<?> resolver1 = client.configuration().resolver();
+			NameResolverProvider nameResolverProvider1 = client.configuration().getNameResolverProvider();
+			assertThat(resolver1).isNotNull();
+			assertThat(nameResolverProvider1).isNotNull();
+			resolver1.close();
+
+			client = client.runOn(loop2);
+
+			assertThat(client.configuration().loopResources()).isSameAs(loop2);
+			AddressResolverGroup<?> resolver2 = client.configuration().resolver();
+			NameResolverProvider nameResolverProvider2 = client.configuration().getNameResolverProvider();
+			assertThat(resolver2).isNotNull().isNotSameAs(resolver1);
+			assertThat(nameResolverProvider2).isNotNull().isSameAs(nameResolverProvider1);
+			resolver2.close();
+
+			client = client.resolver(DefaultAddressResolverGroup.INSTANCE);
+			assertThat(client.configuration().loopResources()).isSameAs(loop2);
+			assertThat(client.configuration().resolver()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
+			assertThat(client.configuration().getNameResolverProvider()).isNull();
+
+			client = client.runOn(loop3);
+			assertThat(client.configuration().loopResources()).isSameAs(loop3);
+			assertThat(client.configuration().resolver()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
+			assertThat(client.configuration().getNameResolverProvider()).isNull();
+		}
+		finally {
+			loop1.disposeLater()
+			     .block(Duration.ofSeconds(5));
+			loop2.disposeLater()
+			     .block(Duration.ofSeconds(5));
+			loop3.disposeLater()
+			     .block(Duration.ofSeconds(5));
 		}
 	}
 }
