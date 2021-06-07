@@ -307,7 +307,8 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		if (conf.nameResolverProvider != null) {
 			conf.resolver = conf.nameResolverProvider.newNameResolverGroup(conf.loopResources(), conf.preferNative);
 		}
-		else {
+		else if (conf.resolver == null) {
+			conf.nameResolverProvider = ClientTransportConfig.DEFAULT_NAME_RESOLVER_PROVIDER;
 			conf.resolver = ClientTransportConfig.DEFAULT_NAME_RESOLVER_PROVIDER
 					.newNameResolverGroup(conf.loopResources(), conf.preferNative);
 		}
