@@ -537,12 +537,12 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 				this.pooledConnection = pooledConnection;
 
-				pooledConnection.bind();
-
 				ch.attr(OWNER).compareAndSet(null, new PendingConnectionObserver(sink.currentContext()));
 				ch.pipeline().remove(this);
 				ch.pipeline()
 				  .addFirst(config.channelInitializer(pooledConnection, remoteAddress, false));
+
+				pooledConnection.bind();
 			}
 
 			@Override
