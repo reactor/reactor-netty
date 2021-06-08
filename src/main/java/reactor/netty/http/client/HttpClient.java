@@ -624,6 +624,17 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Set up proxy from java system properties.
+	 * Supports http, https, socks4, socks5 proxies.
+	 * List of supported system properties https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
+     *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient proxyWithSystemProperties() {
+		return new HttpClientProxyWithSystemProperties(this, System.getProperties());
+	}
+
+	/**
 	 * Enable or Disable Keep-Alive support for the outgoing request.
 	 *
 	 * @param keepAlive true if keepAlive should be enabled (default: true)
