@@ -108,13 +108,14 @@ dependencies {
 	testCompile "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	testCompile "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 
+	// Needed for proxy testing
+	testCompile "io.netty:netty-handler-proxy:$nettyVersion"
+
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 
-	// Needed for proxy testing
-	testRuntimeOnly "io.netty:netty-handler-proxy:$nettyVersion"
 	// Needed for HTTP/2 testing
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 }

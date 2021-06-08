@@ -20,6 +20,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -59,6 +60,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.ClientTransport;
+import reactor.netty.transport.ProxyProvider;
 import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
@@ -624,6 +626,33 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 				             }));
 		return dup;
 	}
+
+
+	/**
+	 * Set up proxy from java system properties.
+	 * Supports http, https, socks4, socks5 proxies.
+	 * List of supported system properties https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient proxyWithSystemProperties() {
+		return proxyWithSystemProperties(System.getProperties());
+	}
+
+	/**
+	 * Same as proxyWithSystemProperties() but accepts properties and used in testing only.
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	final HttpClient proxyWithSystemProperties(Properties properties) {
+		HttpClient dup = duplicate();
+		ProxyProvider proxy = ProxyUtils.findProvider(properties);
+		if (proxy != null) {
+			dup.configuration().proxyProvider(proxy);
+		}
+		return dup;
+	}
+
 
 	/**
 	 * HTTP DELETE to connect the {@link HttpClient}.
