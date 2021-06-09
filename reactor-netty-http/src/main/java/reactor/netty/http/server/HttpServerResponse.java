@@ -25,7 +25,6 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
-import reactor.netty.http.HttpInfos;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
@@ -37,7 +36,7 @@ import reactor.netty.http.websocket.WebsocketOutbound;
  * @author Stephane Maldini
  * @since 0.5
  */
-public interface HttpServerResponse extends NettyOutbound, HttpInfos {
+public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 
 	/**
 	 * Adds an outbound cookie
