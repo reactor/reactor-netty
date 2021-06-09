@@ -73,7 +73,6 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
-import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
@@ -95,8 +94,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		implements HttpServerRequest, HttpServerResponse {
 
 	final HttpResponse nettyResponse;
-	final HttpHeaders  responseHeaders;
-	final Cookies     cookieHolder;
+	final HttpHeaders responseHeaders;
+	final ServerCookies cookieHolder;
 	final HttpRequest nettyRequest;
 	final String path;
 	final ConnectionInfo connectionInfo;
@@ -160,7 +159,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.responseHeaders = nettyResponse.headers();
 		this.responseHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 		this.compressionPredicate = compressionPredicate;
-		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders(), decoder);
+		this.cookieHolder = ServerCookies.newServerRequestHolder(requestHeaders(), decoder);
 		this.connectionInfo = connectionInfo;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
@@ -250,6 +249,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public Map<CharSequence, Set<Cookie>> cookies() {
 		if (cookieHolder != null) {
 			return cookieHolder.getCachedCookies();
+		}
+		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public Map<CharSequence, List<Cookie>> allCookies() {
+		if (cookieHolder != null) {
+			return cookieHolder.getAllCachedCookies();
 		}
 		throw new IllegalStateException("request not parsed");
 	}

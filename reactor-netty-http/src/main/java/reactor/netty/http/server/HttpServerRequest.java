@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import reactor.core.publisher.Flux;
 import reactor.netty.Connection;
 import reactor.netty.NettyInbound;
-import reactor.netty.http.HttpInfos;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -36,7 +35,7 @@ import reactor.util.annotation.Nullable;
  * @author Stephane Maldini
  * @since 0.5
  */
-public interface HttpServerRequest extends NettyInbound, HttpInfos {
+public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 
 	@Override
 	HttpServerRequest withConnection(Consumer<? super Connection> withConnection);
