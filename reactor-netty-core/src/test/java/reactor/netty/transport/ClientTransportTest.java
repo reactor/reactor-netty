@@ -33,6 +33,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -132,6 +133,66 @@ class ClientTransportTest {
 		}
 	}
 
+	@Test
+	void testCreateClientWithHttpProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
+
+		TestClientTransport transport = createTestTransportForProxy()
+				.proxyWithSystemProperties(properties);
+
+		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+	}
+
+	@Test
+	void testCreateClientWithHttpsProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
+
+		TestClientTransport transport = createTestTransportForProxy()
+				.proxyWithSystemProperties(properties);
+
+		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+	}
+
+	@Test
+	void testCreateClientWithSock5Proxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
+
+		TestClientTransport transport = createTestTransportForProxy()
+				.proxyWithSystemProperties(properties);
+
+		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
+	}
+
+	@Test
+	void testCreateClientWithSock4Proxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.SOCKS_VERSION, "4");
+
+		TestClientTransport transport = createTestTransportForProxy()
+				.proxyWithSystemProperties(properties);
+
+		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS4);
+	}
+
+	@Test
+	void testCreateClientWithSystemProxyProvider() {
+		TestClientTransport transport = createTestTransportForProxy()
+				.proxyWithSystemProperties();
+
+		assertThat(transport).isNotNull();
+	}
+
+	static TestClientTransport createTestTransportForProxy() {
+		ConnectionProvider provider = ConnectionProvider.create("test");
+		return new TestClientTransport(Mono.empty(),
+				new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null)
+		);
+	}
+
 	static final class TestClientTransport extends ClientTransport<TestClientTransport, TestClientTransportConfig> {
 
 		final Mono<? extends Connection> connect;
@@ -158,7 +219,7 @@ class ClientTransportTest {
 
 		@Override
 		protected TestClientTransport duplicate() {
-			return null;
+			return new TestClientTransport(this.connect, this.config);
 		}
 	}
 

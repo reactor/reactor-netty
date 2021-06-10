@@ -18,6 +18,7 @@ package reactor.netty.transport;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -246,6 +247,31 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		conf.proxyProvider = builder.build();
 		if (conf.resolver == null) {
 			conf.resolver = NoopAddressResolverGroup.INSTANCE;
+		}
+		return dup;
+	}
+
+	/**
+	 * Set up proxy from java system properties.
+	 * Supports http, https, socks4, socks5 proxies.
+	 * List of supported system properties https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
+	 *
+	 * @return a new {@link ClientTransport} reference
+	 */
+	public final T proxyWithSystemProperties() {
+		return proxyWithSystemProperties(System.getProperties());
+	}
+
+	/**
+	 * Same as proxyWithSystemProperties() but accepts properties and used in testing only.
+	 *
+	 * @return a new {@link ClientTransport} reference
+	 */
+	final T proxyWithSystemProperties(Properties properties) {
+		T dup = duplicate();
+		ProxyProvider proxy = ProxyProvider.createFrom(properties);
+		if (proxy != null) {
+			dup.configuration().proxyProvider(proxy);
 		}
 		return dup;
 	}

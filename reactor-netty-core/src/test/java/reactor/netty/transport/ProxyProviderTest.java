@@ -18,11 +18,14 @@ package reactor.netty.transport;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Properties;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.proxy.ProxyHandler;
+import io.netty.handler.proxy.Socks5ProxyHandler;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -202,6 +205,171 @@ class ProxyProviderTest {
 		assertThatIllegalArgumentException()
 				.isThrownBy(builder::build)
 				.withMessage("Neither address nor host is specified");
+	}
+
+	@Test
+	void proxyFromSystemProperties_nullProxyProviderIfNoHostnamePropertySet() {
+		Properties properties = new Properties();
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider).isNull();
+	}
+
+	@Test
+	void proxyFromSystemProperties_proxyProviderIsNotNullWhenHttpHostSet() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+		assertThat(provider.getAddress().get().getHostName()).isEqualTo("host");
+	}
+
+	@Test
+	void proxyFromSystemProperties_port80SetByDefaultForHttpProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getAddress().get().getPort()).isEqualTo(80);
+	}
+
+	@Test
+	void proxyFromSystemProperties_parseHttpPortFromSystemProperties() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.HTTP_PROXY_PORT, "8080");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getAddress().get().getPort()).isEqualTo(8080);
+	}
+
+	@Test
+	void proxyFromSystemProperties_proxySettingsIsNotNullWhenHttpSHostSet() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+		assertThat(provider.getAddress().get().getHostName()).isEqualTo("host");
+	}
+
+	@Test
+	void proxyFromSystemProperties_port443SetByDefaultForHttpProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getAddress().get().getPort()).isEqualTo(443);
+	}
+
+	@Test
+	void proxyFromSystemProperties_parseHttpsPortFromSystemProperties() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.HTTP_PROXY_PORT, "8443");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getAddress().get().getPort()).isEqualTo(8443);
+	}
+
+	@Test
+	void proxyFromSystemProperties_defaultNonHttpHostsSetForHttpProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(ProxyProvider.DEFAULT_NON_PROXY_HOSTS);
+	}
+
+	@Test
+	void proxyFromSystemProperties_defaultNonHttpHostsSetForHttpsProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(ProxyProvider.DEFAULT_NON_PROXY_HOSTS);
+	}
+
+	@Test
+	void proxyFromSystemProperties_customNonProxyHostsSetForHttpProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "non-host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo("non-host");
+	}
+
+	@Test
+	void proxyFromSystemProperties_customNonProxyHostsSetForHttpsProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "non-host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo("non-host");
+	}
+
+	@Test
+	void proxyFromSystemProperties_socksProxy5SetWhenSocksSystemPropertySet() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
+		assertThat(provider.getAddress().get().getHostName()).isEqualTo("host");
+	}
+
+	@Test
+	void proxyFromSystemProperties_overrideSocksVersionWithCustomProperty() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.SOCKS_VERSION, "4");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.SOCKS4);
+	}
+
+	@Test
+	void proxyFromSystemProperties_overrideSocksPortWithCustomProperty() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.SOCKS_PROXY_PORT, "2080");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider.getAddress().get().getPort()).isEqualTo(2080);
+	}
+
+	@Test
+	void proxyFromSystemProperties_setUserPasswordInSockProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.SOCKS_USERNAME, "user");
+		properties.setProperty(ProxyProvider.SOCKS_PASSWORD, "pwd");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		assertThat(provider).isNotNull();
+
+		ProxyHandler handler = provider.newProxyHandler();
+		assertThat(handler.getClass()).isEqualTo(Socks5ProxyHandler.class);
+
+		Socks5ProxyHandler httpHandler = (Socks5ProxyHandler) handler;
+		assertThat(httpHandler.username()).isEqualTo("user");
+		assertThat(httpHandler.password()).isEqualTo("pwd");
 	}
 
 	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
