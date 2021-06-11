@@ -256,6 +256,13 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * Supports http, https, socks4, socks5 proxies.
 	 * List of supported system properties https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
 	 *
+	 * If both https.proxyHost and http.proxyHost are set it chooses https.proxyHost over http.proxyHost.
+	 * Same with http proxy port.
+	 *
+	 * If a {@link ClientTransport} instance already has proxy set via {@link ClientTransport#proxy(Consumer)}
+	 * this method will delete the previous proxy settings completely
+	 * and use the ones defined in system properties only.
+	 *
 	 * @return a new {@link ClientTransport} reference
 	 */
 	public final T proxyWithSystemProperties() {
@@ -263,7 +270,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	}
 
 	/**
-	 * Same as proxyWithSystemProperties() but accepts properties and used in testing only.
+	 * Same as {@link #proxyWithSystemProperties()} but accepts properties and used in testing only.
 	 *
 	 * @return a new {@link ClientTransport} reference
 	 */

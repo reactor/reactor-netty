@@ -266,10 +266,10 @@ public final class ProxyProvider {
 		}
 		int port = properties.containsKey(HTTPS_PROXY_HOST) ? 443 : 80;
 		if (properties.containsKey(HTTPS_PROXY_PORT)) {
-			port = Integer.parseInt(properties.getProperty(HTTPS_PROXY_PORT));
+			port = parsePort(properties.getProperty(HTTPS_PROXY_PORT), HTTPS_PROXY_PORT);
 		}
 		else if (properties.containsKey(HTTP_PROXY_PORT)) {
-			port = Integer.parseInt(properties.getProperty(HTTP_PROXY_PORT));
+			port = parsePort(properties.getProperty(HTTP_PROXY_PORT), HTTP_PROXY_PORT);
 		}
 		String nonProxyHosts = properties.getProperty(HTTP_NON_PROXY_HOSTS, DEFAULT_NON_PROXY_HOSTS);
 
@@ -289,7 +289,7 @@ public final class ProxyProvider {
 					? ProxyProvider.Proxy.SOCKS5
 					: ProxyProvider.Proxy.SOCKS4;
 		}
-		int port = Integer.parseInt(properties.getProperty(SOCKS_PROXY_PORT, "1080"));
+		int port = parsePort(properties.getProperty(SOCKS_PROXY_PORT, "1080"), SOCKS_PROXY_PORT);
 
 		ProxyProvider.Builder proxy = ProxyProvider.builder()
 				.type(type)
@@ -304,6 +304,22 @@ public final class ProxyProvider {
 		}
 
 		return proxy.build();
+	}
+
+	static int parsePort(String port, String propertyName) {
+		Objects.requireNonNull(port, "port");
+		Objects.requireNonNull(propertyName, "propertyName");
+
+		if (port.isEmpty()) {
+			String message = "expected system property " + propertyName + " to be a number but got empty string";
+			throw new IllegalArgumentException(message);
+		}
+		if (!port.chars().allMatch(Character::isDigit)) {
+			String message = "expected system property " + propertyName + " to be a number but got " + port;
+			throw new IllegalArgumentException(message);
+		}
+
+		return Integer.parseInt(port);
 	}
 
 	static final class Build implements TypeSpec, AddressSpec, Builder {
