@@ -141,6 +141,7 @@ class ClientTransportTest {
 		TestClientTransport transport = createTestTransportForProxy()
 				.proxyWithSystemProperties(properties);
 
+		assertThat(transport.configuration().proxyProvider()).isNotNull();
 		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
 	}
 
@@ -152,6 +153,7 @@ class ClientTransportTest {
 		TestClientTransport transport = createTestTransportForProxy()
 				.proxyWithSystemProperties(properties);
 
+		assertThat(transport.configuration().proxyProvider()).isNotNull();
 		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
 	}
 
@@ -163,6 +165,7 @@ class ClientTransportTest {
 		TestClientTransport transport = createTestTransportForProxy()
 				.proxyWithSystemProperties(properties);
 
+		assertThat(transport.configuration().proxyProvider()).isNotNull();
 		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
 	}
 
@@ -175,6 +178,7 @@ class ClientTransportTest {
 		TestClientTransport transport = createTestTransportForProxy()
 				.proxyWithSystemProperties(properties);
 
+		assertThat(transport.configuration().proxyProvider()).isNotNull();
 		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS4);
 	}
 
