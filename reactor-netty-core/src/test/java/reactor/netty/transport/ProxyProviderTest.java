@@ -277,7 +277,7 @@ class ProxyProviderTest {
 	void proxyFromSystemProperties_parseHttpsPortFromSystemProperties() {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTP_PROXY_PORT, "8443");
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_PORT, "8443");
 
 		ProxyProvider provider = ProxyProvider.createFrom(properties);
 
@@ -472,6 +472,17 @@ class ProxyProviderTest {
 		assertThatIllegalArgumentException()
 				.isThrownBy(() -> ProxyProvider.createFrom(properties))
 				.withMessage("expected system property socksProxyPort to be a number but got 8080Hello");
+	}
+
+	@Test
+	void proxyFromSystemProperties_errorWhenSocksVersionInvalid() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.SOCKS_VERSION, "42");
+
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> ProxyProvider.createFrom(properties))
+				.withMessage("only socks versions 4 and 5 supported but got 42");
 	}
 
 	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {

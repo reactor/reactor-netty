@@ -242,6 +242,7 @@ public final class ProxyProvider {
 	static final String SOCKS_PROXY_PORT = "socksProxyPort";
 	static final String SOCKS_VERSION = "socksProxyVersion";
 	static final String SOCKS_VERSION_5 = "5";
+	static final String SOCKS_VERSION_4 = "4";
 	static final String SOCKS_USERNAME = "java.net.socks.username";
 	static final String SOCKS_PASSWORD = "java.net.socks.password";
 
@@ -259,18 +260,27 @@ public final class ProxyProvider {
 		return null;
 	}
 
+	/*
+		assumes properties has either http.proxyHost or https.proxyHost
+	 */
 	static ProxyProvider createHttpProxyFrom(Properties properties) {
-		String hostname = properties.getProperty(HTTPS_PROXY_HOST);
-		if (hostname == null) {
-			hostname = properties.getProperty(HTTP_PROXY_HOST);
+		String hostProperty;
+		String portProperty;
+		String defaultPort;
+		if (properties.containsKey(HTTPS_PROXY_HOST)) {
+			hostProperty = HTTPS_PROXY_HOST;
+			portProperty = HTTPS_PROXY_PORT;
+			defaultPort = "443";
 		}
-		int port = properties.containsKey(HTTPS_PROXY_HOST) ? 443 : 80;
-		if (properties.containsKey(HTTPS_PROXY_PORT)) {
-			port = parsePort(properties.getProperty(HTTPS_PROXY_PORT), HTTPS_PROXY_PORT);
+		else {
+			hostProperty = HTTP_PROXY_HOST;
+			portProperty = HTTP_PROXY_PORT;
+			defaultPort = "80";
 		}
-		else if (properties.containsKey(HTTP_PROXY_PORT)) {
-			port = parsePort(properties.getProperty(HTTP_PROXY_PORT), HTTP_PROXY_PORT);
-		}
+
+		String hostname = Objects.requireNonNull(properties.getProperty(hostProperty), hostProperty);
+		int port = parsePort(properties.getProperty(portProperty, defaultPort), portProperty);
+
 		String nonProxyHosts = properties.getProperty(HTTP_NON_PROXY_HOSTS, DEFAULT_NON_PROXY_HOSTS);
 
 		return ProxyProvider.builder()
@@ -283,12 +293,13 @@ public final class ProxyProvider {
 
 	static ProxyProvider createSocksProxyFrom(Properties properties) {
 		String hostname = properties.getProperty(SOCKS_PROXY_HOST);
-		ProxyProvider.Proxy type = ProxyProvider.Proxy.SOCKS5;
-		if (properties.containsKey(SOCKS_VERSION)) {
-			type = SOCKS_VERSION_5.equals(properties.getProperty(SOCKS_VERSION))
-					? ProxyProvider.Proxy.SOCKS5
-					: ProxyProvider.Proxy.SOCKS4;
+		String version = properties.getProperty(SOCKS_VERSION, SOCKS_VERSION_5);
+		if (!SOCKS_VERSION_5.equals(version) && !SOCKS_VERSION_4.equals(version)) {
+			String message = "only socks versions 4 and 5 supported but got " + version;
+			throw new IllegalArgumentException(message);
 		}
+
+		ProxyProvider.Proxy type = SOCKS_VERSION_5.equals(version) ? Proxy.SOCKS5 : Proxy.SOCKS4;
 		int port = parsePort(properties.getProperty(SOCKS_PROXY_PORT, "1080"), SOCKS_PROXY_PORT);
 
 		ProxyProvider.Builder proxy = ProxyProvider.builder()
