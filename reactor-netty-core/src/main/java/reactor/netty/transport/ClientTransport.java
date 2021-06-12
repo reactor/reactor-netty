@@ -264,6 +264,9 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * this method will delete the previous proxy settings completely
 	 * and use the ones defined in system properties only.
 	 *
+	 * If a {@link ClientTransport} instance already has proxy set via {@link ClientTransport#proxy(Consumer)}
+	 * and system properties do not have configuration for proxy, proxy will not be set.
+	 *
 	 * @return a new {@link ClientTransport} reference
 	 */
 	public final T proxyWithSystemProperties() {
