@@ -256,7 +256,8 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * Supports http, https, socks4, socks5 proxies.
 	 * List of supported system properties https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
 	 *
-	 * If both https.proxyHost and http.proxyHost are set it chooses https.proxyHost over http.proxyHost.
+	 * If both {@code https.proxyHost} and {@code http.proxyHost} are set
+	 * it chooses {@code https.proxyHost} over {@code http.proxyHost}.
 	 * Same with http proxy port.
 	 *
 	 * If a {@link ClientTransport} instance already has proxy set via {@link ClientTransport#proxy(Consumer)}
