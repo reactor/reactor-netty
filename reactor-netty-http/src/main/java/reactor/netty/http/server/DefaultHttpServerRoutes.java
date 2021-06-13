@@ -57,7 +57,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 			                   .getPath()
 			                   .replaceFirst(uri, "");
 
-			if (prefix.charAt(0) == '/') {
+			if (!prefix.isEmpty() && prefix.charAt(0) == '/') {
 				prefix = prefix.substring(1);
 			}
 
