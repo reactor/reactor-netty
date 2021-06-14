@@ -284,6 +284,10 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		if (proxy != null) {
 			dup.configuration().proxyProvider(proxy);
 		}
+		CONF conf = dup.configuration();
+		if (conf.resolver == null) {
+			conf.resolver = NoopAddressResolverGroup.INSTANCE;
+		}
 		return dup;
 	}
 
