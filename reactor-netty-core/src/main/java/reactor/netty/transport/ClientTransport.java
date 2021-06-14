@@ -268,6 +268,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * and system properties do not have configuration for proxy, proxy will not be set.
 	 *
 	 * @return a new {@link ClientTransport} reference
+	 * @since 1.0.8
 	 */
 	public final T proxyWithSystemProperties() {
 		return proxyWithSystemProperties(System.getProperties());
