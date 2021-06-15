@@ -132,7 +132,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 					// With epoll/kqueue transport it is
 					// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
 					(t instanceof IOException && t.getMessage() != null &&
-							t.getMessage().contains("Address already in use")))) {
+							t.getMessage().contains("bind(..)")))) {
 				sink.error(ChannelBindException.fail(bindAddress.get(), null));
 			}
 			else {
