@@ -261,11 +261,13 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * Same with http proxy port.
 	 *
 	 * If a {@link ClientTransport} instance already has proxy set via {@link ClientTransport#proxy(Consumer)}
-	 * this method will delete the previous proxy settings completely
-	 * and use the ones defined in system properties only.
+	 * this method will create a copy of {@link ClientTransport}
+	 * with proxy settings from system properties only. The old instance is not affected.
 	 *
 	 * If a {@link ClientTransport} instance already has proxy set via {@link ClientTransport#proxy(Consumer)}
-	 * and system properties do not have configuration for proxy, proxy will not be set.
+	 * and system properties do not have configuration for proxy,
+	 * this method will return a copy of {@link ClientTransport} with proxy not set.
+	 * The old instance is not affected.
 	 *
 	 * @return a new {@link ClientTransport} reference
 	 * @since 1.0.8
