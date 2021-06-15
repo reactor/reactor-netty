@@ -2798,18 +2798,28 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	void testCustomHandlerAddedOnChannelInitAlwaysAvailable() {
+		doTestCustomHandlerAddedOnCallbackAlwaysAvailable(
+				client -> client.doOnChannelInit((observer, channel, address) ->
+						Connection.from(channel).addHandlerLast("custom", new ChannelDuplexHandler())));
+	}
+
+	@Test
+	void testCustomHandlerAddedOnChannelConnectedAlwaysAvailable() {
+		doTestCustomHandlerAddedOnCallbackAlwaysAvailable(
+				client -> client.doOnConnected(conn -> conn.addHandlerLast("custom", new ChannelDuplexHandler())));
+	}
+
+	private void doTestCustomHandlerAddedOnCallbackAlwaysAvailable(Function<HttpClient, HttpClient> customizer) {
 		disposableServer =
 				createServer()
-				        .handle((req, res) -> res.sendString(Mono.just("testCustomHandlerAddedOnChannelInit")))
+				        .handle((req, res) -> res.sendString(Mono.just("testCustomHandlerAddedOnCallback")))
 				        .bindNow();
 
-		ConnectionProvider provider = ConnectionProvider.create("testCustomHandlerAddedOnChannelInit", 1);
+		ConnectionProvider provider = ConnectionProvider.create("testCustomHandlerAddedOnCallback", 1);
 		AtomicBoolean handlerExists = new AtomicBoolean();
-		HttpClient client =
+		HttpClient client = customizer.apply(
 				createHttpClientForContextWithPort(provider)
-				        .doOnChannelInit((observer, channel, address) ->
-				                Connection.from(channel).addHandlerLast("custom", new ChannelDuplexHandler()))
-				        .doOnRequest((req, conn) -> handlerExists.set(conn.channel().pipeline().get("custom") != null));
+				        .doOnRequest((req, conn) -> handlerExists.set(conn.channel().pipeline().get("custom") != null)));
 		try {
 			Flux.range(0, 2)
 			    .flatMap(i -> client.get()
@@ -2819,7 +2829,7 @@ class HttpClientTest extends BaseHttpTest {
 			                        .asString())
 			    .collectList()
 			    .as(StepVerifier::create)
-			    .expectNext(Arrays.asList("testCustomHandlerAddedOnChannelInit", "testCustomHandlerAddedOnChannelInit"))
+			    .expectNext(Arrays.asList("testCustomHandlerAddedOnCallback", "testCustomHandlerAddedOnCallback"))
 			    .expectComplete()
 			    .verify(Duration.ofSeconds(5));
 
