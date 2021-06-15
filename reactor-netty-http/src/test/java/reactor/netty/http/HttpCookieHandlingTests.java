@@ -134,6 +134,7 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 		doTestServerCookiesDecodingMultipleCookiesSameName(HttpServerInfos::allCookies, " value1 value2");
 	}
 
+	@SuppressWarnings("CollectionUndefinedEquality")
 	private void doTestServerCookiesDecodingMultipleCookiesSameName(
 			Function<HttpServerRequest, Map<CharSequence, ? extends Collection<Cookie>>> cookies,
 			String expectedResponse) {
@@ -141,6 +142,8 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 				createServer()
 				        .handle((req, res) ->
 				                res.sendString(Mono.just(cookies.apply(req)
+				                                                // Suppressed "CollectionUndefinedEquality",
+				                                                // the CharSequence is String
 				                                                .get("test")
 				                                                .stream()
 				                                                .map(Cookie::value)
