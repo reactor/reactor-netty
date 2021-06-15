@@ -356,7 +356,19 @@ class ProxyProviderTest {
 	}
 
 	@Test
-	void proxyFromSystemProperties_overrideSocksVersionWithCustomProperty() {
+	void proxyFromSystemProperties_overrideSocks5VersionWithCustomProperty() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.SOCKS_VERSION, "5");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider).isNotNull();
+		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
+	}
+
+	@Test
+	void proxyFromSystemProperties_overrideSocks4VersionWithCustomProperty() {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
 		properties.setProperty(ProxyProvider.SOCKS_VERSION, "4");
