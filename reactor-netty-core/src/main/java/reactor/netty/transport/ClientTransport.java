@@ -282,9 +282,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	final T proxyWithSystemProperties(Properties properties) {
 		T dup = duplicate();
 		ProxyProvider proxy = ProxyProvider.createFrom(properties);
-		if (proxy != null) {
-			dup.configuration().proxyProvider(proxy);
-		}
+		dup.configuration().proxyProvider(proxy);
 		CONF conf = dup.configuration();
 		if (conf.resolver == null) {
 			conf.resolver = NoopAddressResolverGroup.INSTANCE;

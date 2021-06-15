@@ -190,6 +190,16 @@ class ClientTransportTest {
 		assertThat(transport).isNotNull();
 	}
 
+	@Test
+	void proxyOverriddenWithNullIfSystemPropertiesHaveNoProxySet() {
+		TestClientTransport transport = createTestTransportForProxy();
+		transport.proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP).host("proxy").port(8080));
+		assertThat(transport.configuration().proxyProvider).isNotNull();
+
+		transport.proxyWithSystemProperties(new Properties());
+		assertThat(transport.configuration().proxyProvider).isNull();
+	}
+
 	static TestClientTransport createTestTransportForProxy() {
 		ConnectionProvider provider = ConnectionProvider.create("test");
 		return new TestClientTransport(Mono.empty(),
