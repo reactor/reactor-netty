@@ -292,7 +292,7 @@ public final class ProxyProvider {
 	}
 
 	static ProxyProvider createSocksProxyFrom(Properties properties) {
-		String hostname = properties.getProperty(SOCKS_PROXY_HOST);
+		String hostname = Objects.requireNonNull(properties.getProperty(SOCKS_PROXY_HOST), SOCKS_PROXY_HOST);
 		String version = properties.getProperty(SOCKS_VERSION, SOCKS_VERSION_5);
 		if (!SOCKS_VERSION_5.equals(version) && !SOCKS_VERSION_4.equals(version)) {
 			String message = "only socks versions 4 and 5 supported but got " + version;
