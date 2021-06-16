@@ -44,7 +44,7 @@ public class ChannelBindException extends RuntimeException {
 				// With epoll/kqueue transport it is
 				// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
 				(cause instanceof IOException && cause.getMessage() != null &&
-						cause.getMessage().contains("Address already in use"))) {
+						cause.getMessage().contains("bind(..)"))) {
 			cause = null;
 		}
 		if (!(bindAddress instanceof InetSocketAddress)) {
@@ -54,6 +54,7 @@ public class ChannelBindException extends RuntimeException {
 
 		return new ChannelBindException(address.getHostString(), address.getPort(), cause);
 	}
+
 
 	final String localHost;
 	final int    localPort;
