@@ -32,20 +32,37 @@ public class NewConnectionProviderTest {
 	void testDisposableConnectBindException() {
 		MonoSink<Connection> sink = Mockito.mock(MonoSink.class);
 
-		NewConnectionProvider.DisposableConnect connect = new NewConnectionProvider.DisposableConnect(sink, () -> new InetSocketAddress("tset", 6956));
+		NewConnectionProvider.DisposableConnect connect = new NewConnectionProvider.DisposableConnect(
+				sink,
+				() -> new InetSocketAddress("test1", 6956)
+		);
+
 		connect.onError(new UnsupportedOperationException());
 		Mockito.verify(sink).error(Mockito.argThat(a -> a instanceof UnsupportedOperationException));
 
-		connect = new NewConnectionProvider.DisposableConnect(sink, () -> new InetSocketAddress("test", 4956));
-		// Not possible to mock io.netty.channel.unix.Errors.NativeIoException or create a new instance because of Jni errors
+		connect = new NewConnectionProvider.DisposableConnect(sink, () -> new InetSocketAddress("test2", 4956));
+		// Not possible to mock io.netty.channel.unix.Errors.NativeIoException or create a new instance because of Jni
+		// error:
 		// java.lang.UnsatisfiedLinkError: 'int io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOENT()'
 		connect.onError(new IOException("bind(..) failed: Address already in use"));
-		Mockito.verify(sink).error(Mockito.argThat(a -> a instanceof ChannelBindException && ((ChannelBindException) a).localHost().equals("test") && ((ChannelBindException) a).localPort() == 4956));
+		Mockito.verify(sink).error(
+				Mockito.argThat(
+						a -> a instanceof ChannelBindException &&
+								((ChannelBindException) a).localHost().equals("test2") &&
+								((ChannelBindException) a).localPort() == 4956
+				)
+		);
 
 		// Issue-1668
-		connect = new NewConnectionProvider.DisposableConnect(sink, () -> new InetSocketAddress("tset", 6956));
+		connect = new NewConnectionProvider.DisposableConnect(sink, () -> new InetSocketAddress("test3", 7956));
 		connect.onError(new IOException("bind(..) failed: Die Adresse wird bereits verwendet"));
-		Mockito.verify(sink).error(Mockito.argThat(a -> a instanceof ChannelBindException && ((ChannelBindException) a).localHost().equals("tset") && ((ChannelBindException) a).localPort() == 6956));
+		Mockito.verify(sink).error(
+				Mockito.argThat(a ->
+						a instanceof ChannelBindException &&
+								((ChannelBindException) a).localHost().equals("test3") &&
+								((ChannelBindException) a).localPort() == 7956
+				)
+		);
 	}
 
 
