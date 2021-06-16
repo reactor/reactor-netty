@@ -24,7 +24,7 @@ import reactor.netty.Connection;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-public class NewConnectionProviderTest {
+class NewConnectionProviderTest {
 
 
 	@Test
