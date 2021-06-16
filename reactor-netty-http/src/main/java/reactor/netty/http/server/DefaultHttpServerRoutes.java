@@ -47,6 +47,8 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 	private Comparator<HttpRouteHandlerMetadata> comparator;
 
+	private List<Predicate<? super HttpServerRequest>> removedRoutes = new ArrayList<>();
+
 	@Override
 	public HttpServerRoutes directory(String uri, Path directory,
 			@Nullable Function<HttpServerResponse, HttpServerResponse> interceptor) {
@@ -73,6 +75,15 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 			return resp.sendNotFound();
 		});
+	}
+
+	@Override
+	public HttpServerRoutes removeRoute(Predicate<? super HttpServerRequest> condition) {
+		Objects.requireNonNull(condition, "condition");
+
+		removedRoutes.add(condition);
+
+		return this;
 	}
 
 	@Override
@@ -120,6 +131,22 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 	@Override
 	public Publisher<Void> apply(HttpServerRequest request, HttpServerResponse response) {
+		// check if this request need process or not
+		final Iterator<Predicate<? super HttpServerRequest>> removedRouteIterator = removedRoutes.iterator();
+		Predicate<? super HttpServerRequest> removedRoute;
+		try {
+			while (removedRouteIterator.hasNext()) {
+				removedRoute = removedRouteIterator.next();
+				if (removedRoute.test(request)) {
+					return response.sendNotFound();
+				}
+			}
+		} catch (Throwable throwable) {
+			Exceptions.throwIfJvmFatal(throwable);
+			return Mono.error(throwable);
+		}
+
+		// find I/0 handler to process this request
 		final Iterator<HttpRouteHandler> iterator = handlers.iterator();
 		HttpRouteHandler cursor;
 
@@ -174,6 +201,24 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		@Override
 		public String getPath() {
 			return path;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+			HttpRouteHandler handler1 = (HttpRouteHandler) o;
+			return condition.equals(handler1.condition) && handler.equals(handler1.handler) && resolver
+					.equals(handler1.resolver) && path.equals(handler1.path);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(condition, handler, resolver, path);
 		}
 	}
 }
