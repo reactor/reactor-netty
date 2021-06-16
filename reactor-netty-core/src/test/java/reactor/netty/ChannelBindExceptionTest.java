@@ -33,6 +33,7 @@ class ChannelBindExceptionTest {
 		ChannelBindException ex = ChannelBindException.fail(new InetSocketAddress("test", 4956), cause);
 		assertThat(ex.getCause()).isEqualTo(cause);
 		assertThat(ex.localHost()).isEqualTo("test");
+		assertThat(ex.localPort()).isEqualTo( 4956);
 		assertThat(ex.localPort()).isEqualTo(4956);
 
 		ex = ChannelBindException.fail(new InetSocketAddress("test", 4956), new BindException("Address already in use"));
