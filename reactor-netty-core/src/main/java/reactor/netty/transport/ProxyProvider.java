@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -229,6 +230,108 @@ public final class ProxyProvider {
 	static final LoggingHandler LOGGING_HANDLER =
 			AdvancedByteBufFormat.HEX_DUMP
 					.toLoggingHandler("reactor.netty.proxy", LogLevel.DEBUG, Charset.defaultCharset());
+
+	static final String HTTP_PROXY_HOST = "http.proxyHost";
+	static final String HTTP_PROXY_PORT = "http.proxyPort";
+	static final String HTTPS_PROXY_HOST = "https.proxyHost";
+	static final String HTTPS_PROXY_PORT = "https.proxyPort";
+	static final String HTTP_NON_PROXY_HOSTS = "http.nonProxyHosts";
+	static final String DEFAULT_NON_PROXY_HOSTS = "localhost|127.*|[::1]";
+
+	static final String SOCKS_PROXY_HOST = "socksProxyHost";
+	static final String SOCKS_PROXY_PORT = "socksProxyPort";
+	static final String SOCKS_VERSION = "socksProxyVersion";
+	static final String SOCKS_VERSION_5 = "5";
+	static final String SOCKS_VERSION_4 = "4";
+	static final String SOCKS_USERNAME = "java.net.socks.username";
+	static final String SOCKS_PASSWORD = "java.net.socks.password";
+
+	@Nullable
+	static ProxyProvider createFrom(Properties properties) {
+		Objects.requireNonNull(properties, "properties");
+
+		if (properties.containsKey(HTTP_PROXY_HOST) || properties.containsKey(HTTPS_PROXY_HOST)) {
+			return createHttpProxyFrom(properties);
+		}
+		if (properties.containsKey(SOCKS_PROXY_HOST)) {
+			return createSocksProxyFrom(properties);
+		}
+
+		return null;
+	}
+
+	/*
+		assumes properties has either http.proxyHost or https.proxyHost
+	 */
+	static ProxyProvider createHttpProxyFrom(Properties properties) {
+		String hostProperty;
+		String portProperty;
+		String defaultPort;
+		if (properties.containsKey(HTTPS_PROXY_HOST)) {
+			hostProperty = HTTPS_PROXY_HOST;
+			portProperty = HTTPS_PROXY_PORT;
+			defaultPort = "443";
+		}
+		else {
+			hostProperty = HTTP_PROXY_HOST;
+			portProperty = HTTP_PROXY_PORT;
+			defaultPort = "80";
+		}
+
+		String hostname = Objects.requireNonNull(properties.getProperty(hostProperty), hostProperty);
+		int port = parsePort(properties.getProperty(portProperty, defaultPort), portProperty);
+
+		String nonProxyHosts = properties.getProperty(HTTP_NON_PROXY_HOSTS, DEFAULT_NON_PROXY_HOSTS);
+
+		return ProxyProvider.builder()
+				.type(ProxyProvider.Proxy.HTTP)
+				.host(hostname)
+				.port(port)
+				.nonProxyHosts(nonProxyHosts)
+				.build();
+	}
+
+	static ProxyProvider createSocksProxyFrom(Properties properties) {
+		String hostname = Objects.requireNonNull(properties.getProperty(SOCKS_PROXY_HOST), SOCKS_PROXY_HOST);
+		String version = properties.getProperty(SOCKS_VERSION, SOCKS_VERSION_5);
+		if (!SOCKS_VERSION_5.equals(version) && !SOCKS_VERSION_4.equals(version)) {
+			String message = "only socks versions 4 and 5 supported but got " + version;
+			throw new IllegalArgumentException(message);
+		}
+
+		ProxyProvider.Proxy type = SOCKS_VERSION_5.equals(version) ? Proxy.SOCKS5 : Proxy.SOCKS4;
+		int port = parsePort(properties.getProperty(SOCKS_PROXY_PORT, "1080"), SOCKS_PROXY_PORT);
+
+		ProxyProvider.Builder proxy = ProxyProvider.builder()
+				.type(type)
+				.host(hostname)
+				.port(port);
+
+		if (properties.containsKey(SOCKS_USERNAME)) {
+			proxy = proxy.username(properties.getProperty(SOCKS_USERNAME));
+		}
+		if (properties.containsKey(SOCKS_PASSWORD)) {
+			proxy = proxy.password(u -> properties.getProperty(SOCKS_PASSWORD));
+		}
+
+		return proxy.build();
+	}
+
+	static int parsePort(String port, String propertyName) {
+		Objects.requireNonNull(port, "port");
+		Objects.requireNonNull(propertyName, "propertyName");
+
+		if (port.isEmpty()) {
+			String message = "expected system property " + propertyName + " to be a number but got empty string";
+			throw new IllegalArgumentException(message);
+		}
+		if (!port.chars().allMatch(Character::isDigit)) {
+			String message = "expected system property " + propertyName + " to be a number but got " + port;
+			throw new IllegalArgumentException(message);
+		}
+
+		return Integer.parseInt(port);
+	}
 
 	static final class Build implements TypeSpec, AddressSpec, Builder {
 

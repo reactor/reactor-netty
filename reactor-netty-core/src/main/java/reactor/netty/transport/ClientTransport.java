@@ -18,6 +18,7 @@ package reactor.netty.transport;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -244,6 +245,46 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		proxyOptions.accept(builder);
 		CONF conf = dup.configuration();
 		conf.proxyProvider = builder.build();
+		if (conf.resolver == null) {
+			conf.resolver = NoopAddressResolverGroup.INSTANCE;
+		}
+		return dup;
+	}
+
+	/**
+	 * Set up proxy from java system properties.
+	 * Supports http, https, socks4, socks5 proxies.
+	 * List of supported system properties https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
+	 *
+	 * If both {@code https.proxyHost} and {@code http.proxyHost} are set
+	 * it chooses {@code https.proxyHost} over {@code http.proxyHost}.
+	 * Same with http proxy port.
+	 *
+	 * If a {@link ClientTransport} instance already has proxy set via {@link ClientTransport#proxy(Consumer)}
+	 * the new instance created by this method will have all the proxy settings replaced
+	 * with proxy settings from system properties only.
+	 *
+	 * If a {@link ClientTransport} instance already has proxy set via {@link ClientTransport#proxy(Consumer)}
+	 * but system properties do not have configuration for proxy, the new
+	 * instance returned by this method will not have any proxy set.
+	 *
+	 * @return a new {@link ClientTransport} reference
+	 * @since 1.0.8
+	 */
+	public final T proxyWithSystemProperties() {
+		return proxyWithSystemProperties(System.getProperties());
+	}
+
+	/**
+	 * Same as {@link #proxyWithSystemProperties()} but accepts properties and used in testing only.
+	 *
+	 * @return a new {@link ClientTransport} reference
+	 */
+	final T proxyWithSystemProperties(Properties properties) {
+		T dup = duplicate();
+		ProxyProvider proxy = ProxyProvider.createFrom(properties);
+		dup.configuration().proxyProvider(proxy);
+		CONF conf = dup.configuration();
 		if (conf.resolver == null) {
 			conf.resolver = NoopAddressResolverGroup.INSTANCE;
 		}
