@@ -15,6 +15,7 @@
  */
 package reactor.netty.resources;
 
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -150,9 +151,9 @@ class DefaultPooledConnectionProviderTest {
 
 			//fail a couple
 			StepVerifier.create(pool.acquire(config, observer, remoteAddress, config.resolverInternal()))
-			            .verifyErrorMatches(msg -> msg.getMessage().contains("Connection refused"));
+			            .verifyErrorMatches(msg -> msg.getCause() instanceof ConnectException);
 			StepVerifier.create(pool.acquire(config, observer, remoteAddress, config.resolverInternal()))
-			            .verifyErrorMatches(msg -> msg.getMessage().contains("Connection refused"));
+			            .verifyErrorMatches(msg -> msg.getCause() instanceof ConnectException);
 
 			//start the echo server
 			f1 = service.submit(echoServer);
