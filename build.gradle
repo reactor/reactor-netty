@@ -24,7 +24,8 @@ buildscript {
   dependencies {
 	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
 			'com.google.gradle:osdetector-gradle-plugin:1.7.0',
-			'biz.aQute.bnd:biz.aQute.bnd.gradle:4.2.0'
+			'biz.aQute.bnd:biz.aQute.bnd.gradle:4.2.0',
+			'org.jfrog.buildinfo:build-info-extractor-gradle:4.24.5' //applied in individual submodules
   }
 }
 
@@ -33,7 +34,7 @@ plugins {
   id 'org.asciidoctor.convert' version '1.5.11'
   id 'org.gradle.test-retry' version '1.2.1'
   id 'com.github.johnrengelman.shadow' version '5.2.0'
-  id "com.jfrog.artifactory" version "4.16.1" apply false
+  //we now need version of Artifactory gradle plugin deployed on Maven Central, see above
   id "de.undercouch.download" version "4.1.1"
   id 'me.champeau.gradle.japicmp' version '0.2.9'
   id 'io.spring.nohttp' version '0.0.5.RELEASE'
