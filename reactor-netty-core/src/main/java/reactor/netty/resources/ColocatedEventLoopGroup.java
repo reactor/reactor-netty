@@ -48,12 +48,20 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 		this.eventLoopGroup = eventLoopGroup;
 		for (EventExecutor ex : eventLoopGroup) {
 			if (ex instanceof EventLoop) {
-				//"FutureReturnValueIgnored" this is deliberate
-				ex.submit(() -> {
+				EventLoop eventLoop = (EventLoop) ex;
+				if (eventLoop.inEventLoop()) {
 					if (!localLoop.isSet()) {
-						localLoop.set((EventLoop) ex);
+						localLoop.set(eventLoop);
 					}
-				});
+				}
+				else {
+					//"FutureReturnValueIgnored" this is deliberate
+					eventLoop.submit(() -> {
+						if (!localLoop.isSet()) {
+							localLoop.set(eventLoop);
+						}
+					});
+				}
 			}
 		}
 	}
