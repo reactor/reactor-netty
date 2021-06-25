@@ -49,50 +49,63 @@ class ColocatedEventLoopGroupTest extends BaseHttpTest {
 
 	@Test
 	void testIssue1679() {
-		DisposableServer server1 =
-				createServer()
-				        .runOn(loop)
-				        .handle((req, res) -> res.sendString(Mono.just("testIssue1679")))
-				        .bindNow();
+		DisposableServer server1 = null;
+		DisposableServer server2 = null;
+		try {
+			server1 =
+					createServer()
+					        .runOn(loop)
+					        .handle((req, res) -> res.sendString(Mono.just("testIssue1679")))
+					        .bindNow();
 
-		DisposableServer server2 =
-				createServer()
-				        .handle((req, res) -> {
-				            HttpClient client = httpClientThreadLocal.get();
-				            if (client == null) {
-				                ConnectionProvider provider =
-				                        ConnectionProvider.create("client_conn_pool" + Thread.currentThread(), 500);
-				                providers.get().add(provider);
-				                client = createClient(provider, server1.port());
-				                httpClientThreadLocal.set(client);
-				            }
-				            String serverThread = Thread.currentThread().getName();
-				            return client.get()
-				                         .uri("/")
-				                         .responseSingle((clientRes, bytes) -> Mono.just(Thread.currentThread().getName()))
-				                         .flatMap(s ->
-				                                 serverThread.equals(s) ?
-				                                     res.sendString(Mono.just("OK")).then() :
-				                                     res.sendString(Mono.just("KO")).then());
-				        })
-				        .bindNow();
+			int server1Port = server1.port();
+			server2 =
+					createServer()
+					        .handle((req, res) -> {
+					            HttpClient client = httpClientThreadLocal.get();
+					            if (client == null) {
+					                ConnectionProvider provider =
+					                        ConnectionProvider.create("client_conn_pool" + Thread.currentThread(), 500);
+					                providers.get().add(provider);
+					                client = createClient(provider, server1Port);
+					                httpClientThreadLocal.set(client);
+					            }
+					            String serverThread = Thread.currentThread().getName();
+					            return client.get()
+					                         .uri("/")
+					                         .responseSingle((clientRes, bytes) -> Mono.just(Thread.currentThread().getName()))
+					                         .flatMap(s ->
+					                                 serverThread.equals(s) ?
+					                                     res.sendString(Mono.just("OK")).then() :
+					                                     res.sendString(Mono.just("KO")).then());
+					        })
+					        .bindNow();
 
-		HttpClient client2 = createClient(server2.port()).runOn(loop);
-		Mono<String> response2 =
-				client2.get()
-				       .uri("/")
-				       .responseContent()
-				       .aggregate()
-				       .asString();
+			HttpClient client2 = createClient(server2.port()).runOn(loop);
+			Mono<String> response2 =
+					client2.get()
+					       .uri("/")
+					       .responseContent()
+					       .aggregate()
+					       .asString();
 
-		int count = LoopResources.DEFAULT_IO_WORKER_COUNT * 2;
-		List<String> expectedResult = Collections.nCopies(count, "OK");
-		Flux.range(0, count)
-		    .concatMap(i -> response2)
-		    .collectList()
-		    .as(StepVerifier::create)
-		    .expectNext(expectedResult)
-		    .expectComplete()
-		    .verify(Duration.ofSeconds(30));
+			int count = LoopResources.DEFAULT_IO_WORKER_COUNT * 2;
+			List<String> expectedResult = Collections.nCopies(count, "OK");
+			Flux.range(0, count)
+			    .concatMap(i -> response2)
+			    .collectList()
+			    .as(StepVerifier::create)
+			    .expectNext(expectedResult)
+			    .expectComplete()
+			    .verify(Duration.ofSeconds(30));
+		}
+		finally {
+			if (server1 != null) {
+				server1.disposeNow();
+			}
+			if (server2 != null) {
+				server2.disposeNow();
+			}
+		}
 	}
 }
