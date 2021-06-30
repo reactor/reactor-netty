@@ -2841,4 +2841,51 @@ class HttpClientTest extends BaseHttpTest {
 			        .block(Duration.ofSeconds(5));
 		}
 	}
+
+	@Test
+	void testIssue1697() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("testIssue1697")))
+				        .bindNow();
+
+		AtomicBoolean onRequest = new AtomicBoolean();
+		AtomicBoolean onResponse = new AtomicBoolean();
+		AtomicBoolean onDisconnected = new AtomicBoolean();
+		HttpClient client =
+				createHttpClientForContextWithAddress()
+				        .doOnRequest((req, conn) -> {
+				            onRequest.set(conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null);
+				        })
+				        .doOnResponse((req, conn) -> {
+				            onResponse.set(conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null);
+				        })
+				        .doOnDisconnected(conn ->
+				            onDisconnected.set(conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null))
+						.responseTimeout(Duration.ofMillis(100));
+
+		doTestIssue1697(client, true, onRequest, onResponse, onDisconnected);
+		doTestIssue1697(client.responseTimeout(null), false, onRequest, onResponse, onDisconnected);
+	}
+
+	private void doTestIssue1697(HttpClient client, boolean hasTimeout, AtomicBoolean onRequest,
+			AtomicBoolean onResponse, AtomicBoolean onDisconnected) {
+		String response =
+				client.post()
+				      .uri("/")
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .block(Duration.ofSeconds(5));
+
+		assertThat(response).isEqualTo("testIssue1697");
+		assertThat(onRequest.get()).isFalse();
+		if (hasTimeout) {
+			assertThat(onResponse.get()).isTrue();
+		}
+		else {
+			assertThat(onResponse.get()).isFalse();
+		}
+		assertThat(onDisconnected.get()).isFalse();
+	}
 }

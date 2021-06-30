@@ -1325,8 +1325,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 0.9.11
 	 * @see io.netty.handler.timeout.ReadTimeoutHandler
 	 */
-	public final HttpClient responseTimeout(Duration maxReadOperationInterval) {
-		Objects.requireNonNull(maxReadOperationInterval, "maxReadOperationInterval");
+	public final HttpClient responseTimeout(@Nullable Duration maxReadOperationInterval) {
 		if (Objects.equals(maxReadOperationInterval, configuration().responseTimeout)) {
 			return this;
 		}
