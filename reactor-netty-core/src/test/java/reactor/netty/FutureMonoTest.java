@@ -28,6 +28,7 @@ import reactor.core.publisher.Operators;
 import reactor.netty.channel.AbortedException;
 import reactor.test.StepVerifier;
 import reactor.test.util.RaceTestUtils;
+import reactor.util.annotation.Nullable;
 
 import java.lang.reflect.Field;
 import java.nio.channels.ClosedChannelException;
@@ -160,6 +161,8 @@ class FutureMonoTest {
 		}
 	}
 
+	@Nullable
+	@SuppressWarnings("unchecked")
 	static GenericFutureListener<? extends Future<?>>[] resolveListeners(Promise<Void> promise) {
 		try {
 			final Field listeners = DefaultPromise.class.getDeclaredField("listeners");

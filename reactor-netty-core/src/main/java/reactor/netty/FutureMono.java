@@ -79,7 +79,6 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void subscribe(final CoreSubscriber<? super Void> s) {
 			doSubscribe(s, future);
 		}
@@ -95,7 +94,6 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void subscribe(CoreSubscriber<? super Void> s) {
 			F f;
 			try {
@@ -117,6 +115,7 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	static <F extends Future<Void>> void doSubscribe(CoreSubscriber<? super Void> s, F future) {
 		if (future.isDone()) {
 			if (future.isSuccess()) {
@@ -147,6 +146,7 @@ public abstract class FutureMono extends Mono<Void> {
 		// check once again if is cancelled to see if we need to removeListener in case addListener racing with
 		// subscription.cancel (which should remove listener)
 		if (fs.cancelled) {
+			// Returned value is deliberately ignored
 			future.removeListener(fs);
 		}
 	}
@@ -159,6 +159,7 @@ public abstract class FutureMono extends Mono<Void> {
 		final F                            future;
 
 		boolean cancelled;
+
 		FutureSubscription(F future, CoreSubscriber<? super Void> s) {
 			this.s = s;
 			this.future = future;
