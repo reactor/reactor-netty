@@ -32,7 +32,7 @@ buildscript {
 plugins {
   id "com.github.hierynomus.license" version "0.15.0"
   id 'org.asciidoctor.convert' version '1.5.11'
-  id 'org.gradle.test-retry' version '1.2.1'
+  id 'org.gradle.test-retry' version '1.3.1'
   id 'com.github.johnrengelman.shadow' version '5.2.0'
   //we now need version of Artifactory gradle plugin deployed on Maven Central, see above
   id "de.undercouch.download" version "4.1.1"
