@@ -189,7 +189,7 @@ class FutureMonoTest {
 			ON_ERROR, ON_COMPLETE, ON_SUBSCRIBE
 		}
 
-		volatile     Subscription                                              s;
+		volatile Subscription                                                  s;
 		static final AtomicReferenceFieldUpdater<TestSubscriber, Subscription> S =
 				AtomicReferenceFieldUpdater.newUpdater(TestSubscriber.class, Subscription.class, "s");
 
