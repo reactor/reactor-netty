@@ -79,22 +79,8 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public final void subscribe(final CoreSubscriber<? super Void> s) {
-			if (future.isDone()) {
-				if (future.isSuccess()) {
-					Operators.complete(s);
-				}
-				else {
-					Operators.error(s, FutureSubscription.wrapError(future.cause()));
-				}
-				return;
-			}
-
-			FutureSubscription<F> fs = new FutureSubscription<>(future, s);
-			// Returned value is deliberately ignored
-			future.addListener(fs);
-			s.onSubscribe(fs);
+		public void subscribe(final CoreSubscriber<? super Void> s) {
+			doSubscribe(s, future);
 		}
 	}
 
@@ -108,7 +94,6 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void subscribe(CoreSubscriber<? super Void> s) {
 			F f;
 			try {
@@ -126,20 +111,43 @@ public abstract class FutureMono extends Mono<Void> {
 				return;
 			}
 
-			if (f.isDone()) {
-				if (f.isSuccess()) {
-					Operators.complete(s);
-				}
-				else {
-					Operators.error(s, FutureSubscription.wrapError(f.cause()));
-				}
-				return;
-			}
+			doSubscribe(s, f);
+		}
+	}
 
-			FutureSubscription<F> fs = new FutureSubscription<>(f, s);
-			s.onSubscribe(fs);
+	@SuppressWarnings("FutureReturnValueIgnored")
+	static <F extends Future<Void>> void doSubscribe(CoreSubscriber<? super Void> s, F future) {
+		if (future.isDone()) {
+			if (future.isSuccess()) {
+				Operators.complete(s);
+			}
+			else {
+				Operators.error(s, FutureSubscription.wrapError(future.cause()));
+			}
+			return;
+		}
+
+		FutureSubscription<F> fs = new FutureSubscription<>(future, s);
+		// propagate subscription before adding listener to avoid any race between finishing future and onSubscribe
+		// is called
+		s.onSubscribe(fs);
+
+		// check if subscription was not cancelled immediately.
+		if (fs.cancelled) {
+			// if so do nothing anymore
+			return;
+		}
+
+		// add listener to the future to propagate on complete when future is done
+		// addListener likely to be thread safe method
+		// Returned value is deliberately ignored
+		future.addListener(fs);
+
+		// check once again if is cancelled to see if we need to removeListener in case addListener racing with
+		// subscription.cancel (which should remove listener)
+		if (fs.cancelled) {
 			// Returned value is deliberately ignored
-			f.addListener(fs);
+			future.removeListener(fs);
 		}
 	}
 
@@ -149,6 +157,9 @@ public abstract class FutureMono extends Mono<Void> {
 		final CoreSubscriber<? super Void> s;
 
 		final F                            future;
+
+		boolean cancelled;
+
 		FutureSubscription(F future, CoreSubscriber<? super Void> s) {
 			this.s = s;
 			this.future = future;
@@ -167,6 +178,11 @@ public abstract class FutureMono extends Mono<Void> {
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void cancel() {
+			// cancel is not thread safe since we assume that removeListener is thread-safe. That said if we have
+			// concurrent addListener and removeListener and if addListener is after removeListener, the other Thread
+			// after execution addListener should see changes happened before removeListener. Thus, it should see
+			// cancelled flag set to true and should cleanup added handler
+			this.cancelled = true;
 			// Returned value is deliberately ignored
 			future.removeListener(this);
 		}
