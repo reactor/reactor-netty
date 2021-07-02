@@ -27,6 +27,6 @@ jobs:
         with:
           java-version: 1.8
       - name: Check License
-        run: ./gradlew clean spotlessCheck -PspotlessFrom=origin/${{ github.base_ref }}
+        run: ./gradlew clean spotlessCheck -PspotlessFrom='origin/${{ github.base_ref }}'
       - name: Build with Gradle
         run: ./gradlew clean check -PforceTransport=${{ matrix.transport }}
