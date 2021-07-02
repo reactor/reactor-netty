@@ -30,7 +30,7 @@ buildscript {
 }
 
 plugins {
-  id "com.github.hierynomus.license" version "0.15.0"
+  id "com.diffplug.spotless" version "5.14.0"
   id 'org.asciidoctor.convert' version '1.5.11'
   id 'org.gradle.test-retry' version '1.3.1'
   id 'com.github.johnrengelman.shadow' version '5.2.0'
@@ -101,6 +101,31 @@ ext {
 nohttp {
 	source.exclude "src/docs/asciidoc/highlight/**"
 	source.exclude "**/build/**"
+}
+
+spotless {
+	if (project.hasProperty("spotlessFrom")) {
+		if (project.spotlessFrom == "ALL") {
+			println "[Spotless] Ratchet deactivated"
+		}
+		else {
+			println "[Spotless] Ratchet from $project.spotlessFrom"
+			ratchetFrom project.spotlessFrom
+		}
+	}
+	else if (System.getenv ()["GITHUB_ACTION"] != null) {
+		println "[Spotless] GitHub Action detected without explicit branch, not enforcing check"
+		enforceCheck false
+	}
+	else {
+		String spotlessBranch = "origin/0.9.x"
+		println "[Spotless] Local run detected, ratchet from $spotlessBranch"
+		ratchetFrom spotlessBranch
+	}
+	java {
+		target '**/*.java'
+		licenseHeaderFile('codequality/spotless/licenseSlashstarStyle.txt')
+	}
 }
 
 configure(rootProject) { project ->
@@ -512,14 +537,4 @@ configure(rootProject) { project ->
 configurations.all {
   // check for updates every build
   resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
-
-  license {
-    header rootProject.file('codequality/HEADER')
-    includes(["**/*.java", "**/*.css"])
-    strictCheck true
-    mapping {
-        java = 'SLASHSTAR_STYLE'
-        css = 'SLASHSTAR_STYLE'
-    }
-  }
 }
