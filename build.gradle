@@ -37,7 +37,7 @@ plugins {
 	id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
 	//we now need version of Artifactory gradle plugin deployed on Maven Central, see above
 	id 'me.champeau.gradle.japicmp' version '0.2.9' apply false
-	id 'de.undercouch.download' version '4.1.1' apply false
+	id 'de.undercouch.download' version '4.1.2' apply false
 	id 'io.spring.javadoc' version '0.0.1' apply false
 	id 'io.spring.javadoc-aggregate' version '0.0.1' apply false
 	id 'biz.aQute.bnd.builder' version '5.3.0' apply false
