@@ -36,7 +36,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @author Stephane Maldini
  */
-public final class HttpPredicate
+final class HttpPredicate
 		implements Predicate<HttpServerRequest>, Function<Object, Map<String, String>> {
 
 	/**

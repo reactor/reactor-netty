@@ -30,6 +30,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
@@ -78,10 +79,10 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 	}
 
 	@Override
-	public HttpServerRoutes removeRoute(Predicate<? super HttpServerRequest> condition) {
+	public HttpServerRoutes removeIf(Predicate<? super HttpRouteHandlerMetadata> condition) {
 		Objects.requireNonNull(condition, "condition");
 
-		removedRoutes.add(condition);
+		handlers.removeIf(condition);
 
 		return this;
 	}
@@ -95,14 +96,14 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		if (condition instanceof HttpPredicate) {
 			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition,
 					handler,
-					(HttpPredicate) condition, ((HttpPredicate) condition).uri);
+					(HttpPredicate) condition, ((HttpPredicate) condition).uri, ((HttpPredicate) condition).method);
 
 			handlers.add(httpRouteHandler);
 			initialOrderHandlers.add(httpRouteHandler);
 
 		}
 		else {
-			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition, handler, null, null);
+			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition, handler, null, null, null);
 			handlers.add(httpRouteHandler);
 			initialOrderHandlers.add(httpRouteHandler);
 		}
@@ -131,21 +132,6 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 	@Override
 	public Publisher<Void> apply(HttpServerRequest request, HttpServerResponse response) {
-		// check if this request need process or not
-		final Iterator<Predicate<? super HttpServerRequest>> removedRouteIterator = removedRoutes.iterator();
-		Predicate<? super HttpServerRequest> removedRoute;
-		try {
-			while (removedRouteIterator.hasNext()) {
-				removedRoute = removedRouteIterator.next();
-				if (removedRoute.test(request)) {
-					return response.sendNotFound();
-				}
-			}
-		} catch (Throwable throwable) {
-			Exceptions.throwIfJvmFatal(throwable);
-			return Mono.error(throwable);
-		}
-
 		// find I/0 handler to process this request
 		final Iterator<HttpRouteHandler> iterator = handlers.iterator();
 		HttpRouteHandler cursor;
@@ -177,14 +163,18 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 		final String path;
 
+		final HttpMethod method;
+
 		HttpRouteHandler(Predicate<? super HttpServerRequest> condition,
 				BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
 				@Nullable Function<? super String, Map<String, String>> resolver,
-				@Nullable String path) {
+				@Nullable String path,
+				@Nullable HttpMethod method) {
 			this.condition = Objects.requireNonNull(condition, "condition");
 			this.handler = Objects.requireNonNull(handler, "handler");
 			this.resolver = resolver;
 			this.path = path;
+			this.method = method;
 		}
 
 		@Override
@@ -201,6 +191,11 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		@Override
 		public String getPath() {
 			return path;
+		}
+
+		@Override
+		public HttpMethod getMethod() {
+			return method;
 		}
 
 		@Override
