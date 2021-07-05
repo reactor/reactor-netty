@@ -197,23 +197,5 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		public HttpMethod getMethod() {
 			return method;
 		}
-
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) {
-				return true;
-			}
-			if (o == null || getClass() != o.getClass()) {
-				return false;
-			}
-			HttpRouteHandler handler1 = (HttpRouteHandler) o;
-			return condition.equals(handler1.condition) && handler.equals(handler1.handler) && resolver
-					.equals(handler1.resolver) && path.equals(handler1.path);
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(condition, handler, resolver, path);
-		}
 	}
 }
