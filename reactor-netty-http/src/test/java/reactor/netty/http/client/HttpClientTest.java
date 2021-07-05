@@ -2887,4 +2887,74 @@ class HttpClientTest extends BaseHttpTest {
 		}
 		assertThat(onDisconnected.get()).isFalse();
 	}
+
+	@Test
+	public void testSharedNameResolver_SharedClientWithConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(HttpClient.create(), true);
+	}
+
+	@Test
+	public void testSharedNameResolver_SharedClientNoConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(HttpClient.newConnection(), true);
+	}
+
+	@Test
+	public void testSharedNameResolver_NotSharedClientWithConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(HttpClient.create(), false);
+	}
+
+	@Test
+	public void testSharedNameResolver_NotSharedClientNoConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(HttpClient.newConnection(), false);
+	}
+
+	private void doTestSharedNameResolver(HttpClient client, boolean sharedClient) throws InterruptedException {
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> res.sendString(Mono.just("testNoOpenedFileDescriptors")))
+				          .bindNow(Duration.ofSeconds(30));
+
+		LoopResources loop = LoopResources.create("doTestSharedNameResolver", 4, true);
+		AtomicReference<List<AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
+		try {
+			int count = 8;
+			CountDownLatch latch = new CountDownLatch(count);
+			HttpClient localClient = null;
+			if (sharedClient) {
+				localClient = client.runOn(loop)
+				                    .port(disposableServer.port())
+				                    .doOnConnect(config -> resolvers.get().add(config.resolver()))
+				                    .doOnConnected(conn ->
+				                            conn.onTerminate()
+				                                .subscribe(null, t -> latch.countDown(), latch::countDown));
+			}
+			for (int i = 0; i < count; i++) {
+				if (!sharedClient) {
+					localClient = client.runOn(loop)
+					                    .port(disposableServer.port())
+					                    .doOnConnect(config -> resolvers.get().add(config.resolver()))
+					                    .doOnConnected(conn ->
+					                            conn.onTerminate()
+					                                .subscribe(null, t -> latch.countDown(), latch::countDown));
+				}
+				localClient.get()
+				           .uri("/")
+				           .responseContent()
+				           .aggregate()
+				           .asString()
+				           .subscribe();
+			}
+
+			assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(resolvers.get().size()).isEqualTo(count);
+			AddressResolverGroup<?> resolver = resolvers.get().get(0);
+			assertThat(resolvers.get()).allMatch(addressResolverGroup -> addressResolverGroup == resolver);
+		}
+		finally {
+			loop.disposeLater()
+			    .block();
+		}
+	}
 }

@@ -36,6 +36,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -1305,6 +1306,70 @@ public class TcpClientTests {
 			     .block(Duration.ofSeconds(5));
 			loop3.disposeLater()
 			     .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	public void testSharedNameResolver_SharedClientWithConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(TcpClient.create(), true);
+	}
+
+	@Test
+	public void testSharedNameResolver_SharedClientNoConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(TcpClient.newConnection(), true);
+	}
+
+	@Test
+	public void testSharedNameResolver_NotSharedClientWithConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(TcpClient.create(), false);
+	}
+
+	@Test
+	public void testSharedNameResolver_NotSharedClientNoConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(TcpClient.newConnection(), false);
+	}
+
+	private void doTestSharedNameResolver(TcpClient client, boolean sharedClient) throws InterruptedException {
+		DisposableServer disposableServer =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.sendString(Mono.just("testNoOpenedFileDescriptors")))
+				         .bindNow(Duration.ofSeconds(30));
+
+		LoopResources loop = LoopResources.create("doTestSharedNameResolver", 4, true);
+		AtomicReference<List<AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
+		try {
+			int count = 8;
+			CountDownLatch latch = new CountDownLatch(count);
+			TcpClient localClient = null;
+			if (sharedClient) {
+				localClient = client.runOn(loop)
+				               .port(disposableServer.port())
+				               .doOnConnect(config -> resolvers.get().add(config.resolver()))
+				               .doOnConnected(conn -> conn.onDispose(latch::countDown));
+			}
+			for (int i = 0; i < count; i++) {
+				if (!sharedClient) {
+					localClient = client.runOn(loop)
+					               .port(disposableServer.port())
+					               .doOnConnect(config -> resolvers.get().add(config.resolver()))
+					               .doOnConnected(conn -> conn.onDispose(latch::countDown));
+				}
+				localClient.handle((in, out) -> in.receive().then())
+				      .connect()
+				      .subscribe();
+			}
+
+			assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(resolvers.get().size()).isEqualTo(count);
+			AddressResolverGroup<?> resolver = resolvers.get().get(0);
+			assertThat(resolvers.get()).allMatch(addressResolverGroup -> addressResolverGroup == resolver);
+		}
+		finally {
+			disposableServer.disposeNow();
+			loop.disposeLater()
+			    .block();
 		}
 	}
 }

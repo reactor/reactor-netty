@@ -18,6 +18,7 @@ package reactor.netty.transport;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -29,10 +30,13 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.dns.DnsAddressResolverGroup;
+import io.netty.util.internal.PlatformDependent;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.resources.LoopResources;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -224,6 +228,16 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		else {
 			return resolverGroup;
 		}
+	}
+
+	static final ConcurrentMap<Integer, DnsAddressResolverGroup> RESOLVERS_CACHE = PlatformDependent.newConcurrentHashMap();
+
+	static DnsAddressResolverGroup getOrCreateResolver(
+			NameResolverProvider nameResolverProvider,
+			LoopResources loopResources,
+			boolean preferNative) {
+		return RESOLVERS_CACHE.computeIfAbsent(Objects.hash(nameResolverProvider, loopResources, preferNative),
+				key -> nameResolverProvider.newNameResolverGroup(loopResources, preferNative));
 	}
 
 	static final NameResolverProvider DEFAULT_NAME_RESOLVER_PROVIDER = NameResolverProvider.builder().build();

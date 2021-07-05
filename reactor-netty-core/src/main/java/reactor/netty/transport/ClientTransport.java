@@ -346,12 +346,13 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		T dup = super.runOn(loopResources, preferNative);
 		CONF conf = dup.configuration();
 		if (conf.nameResolverProvider != null) {
-			conf.resolver = conf.nameResolverProvider.newNameResolverGroup(conf.loopResources(), conf.preferNative);
+			conf.resolver = ClientTransportConfig.getOrCreateResolver(
+					conf.nameResolverProvider, conf.loopResources(), conf.preferNative);
 		}
 		else if (conf.resolver == null) {
 			conf.nameResolverProvider = ClientTransportConfig.DEFAULT_NAME_RESOLVER_PROVIDER;
-			conf.resolver = ClientTransportConfig.DEFAULT_NAME_RESOLVER_PROVIDER
-					.newNameResolverGroup(conf.loopResources(), conf.preferNative);
+			conf.resolver = ClientTransportConfig.getOrCreateResolver(
+					ClientTransportConfig.DEFAULT_NAME_RESOLVER_PROVIDER, conf.loopResources(), conf.preferNative);
 		}
 		return dup;
 	}
