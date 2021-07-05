@@ -525,7 +525,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			boolean acceptGzip,
 			HttpResponseDecoderSpec decoder,
 			Http2Settings http2Settings,
-			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
+			@Nullable ChannelMetricsRecorder metricsRecorder,
 			ConnectionObserver observer,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Function<String, String> uriTagValue) {
@@ -566,11 +566,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		if (metricsRecorder != null) {
-			ChannelMetricsRecorder recorder = metricsRecorder.get();
-			if (recorder instanceof HttpClientMetricsRecorder) {
-				ChannelHandler handler = recorder instanceof ContextAwareHttpClientMetricsRecorder ?
-						new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) recorder, uriTagValue) :
-						new HttpClientMetricsHandler((HttpClientMetricsRecorder) recorder, uriTagValue);
+			if (metricsRecorder instanceof HttpClientMetricsRecorder) {
+				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder ?
+						new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue) :
+						new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
 		}
@@ -580,7 +579,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	static void configureHttp11Pipeline(ChannelPipeline p,
 			boolean acceptGzip,
 			HttpResponseDecoderSpec decoder,
-			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
+			@Nullable ChannelMetricsRecorder metricsRecorder,
 			@Nullable Function<String, String> uriTagValue) {
 		p.addBefore(NettyPipeline.ReactiveBridge,
 				NettyPipeline.HttpCodec,
@@ -599,11 +598,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		if (metricsRecorder != null) {
-			ChannelMetricsRecorder recorder = metricsRecorder.get();
-			if (recorder instanceof HttpClientMetricsRecorder) {
-				ChannelHandler handler = recorder instanceof ContextAwareHttpClientMetricsRecorder ?
-						new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) recorder, uriTagValue) :
-						new HttpClientMetricsHandler((HttpClientMetricsRecorder) recorder, uriTagValue);
+			if (metricsRecorder instanceof HttpClientMetricsRecorder) {
+				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder ?
+						new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue) :
+						new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
 		}
@@ -759,7 +757,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final boolean                                    acceptGzip;
 		final HttpResponseDecoderSpec                    decoder;
 		final Http2Settings                              http2Settings;
-		final Supplier<? extends ChannelMetricsRecorder> metricsRecorder;
+		final ChannelMetricsRecorder                     metricsRecorder;
 		final ConnectionObserver                         observer;
 		final Function<String, String>                   uriTagValue;
 
@@ -803,7 +801,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final boolean                                    acceptGzip;
 		final HttpResponseDecoderSpec                    decoder;
 		final Http2Settings                              http2Settings;
-		final Supplier<? extends ChannelMetricsRecorder> metricsRecorder;
+		final ChannelMetricsRecorder                     metricsRecorder;
 		final ChannelOperations.OnSetup                  opsFactory;
 		final int                                        protocols;
 		final SslProvider                                sslProvider;
@@ -813,7 +811,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			this.acceptGzip = config.acceptGzip;
 			this.decoder = config.decoder;
 			this.http2Settings = config.http2Settings();
-			this.metricsRecorder = config.metricsRecorder();
+			this.metricsRecorder = config.metricsRecorderInternal();
 			this.opsFactory = config.channelOperationsProvider();
 			this.protocols = config._protocols;
 			this.sslProvider = config.sslProvider;

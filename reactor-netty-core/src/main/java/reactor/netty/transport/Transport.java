@@ -140,12 +140,12 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 						" to the class path first");
 			}
 			T dup = duplicate();
-			dup.configuration().metricsRecorder = () -> configuration().defaultMetricsRecorder();
+			dup.configuration().metricsRecorder(() -> configuration().defaultMetricsRecorder());
 			return dup;
 		}
-		else if (configuration().metricsRecorder != null) {
+		else if (configuration().metricsRecorderSupplier != null) {
 			T dup = duplicate();
-			dup.configuration().metricsRecorder = null;
+			dup.configuration().metricsRecorder(null);
 			return dup;
 		}
 		else {
@@ -167,12 +167,12 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	public T metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		if (enable) {
 			T dup = duplicate();
-			dup.configuration().metricsRecorder = recorder;
+			dup.configuration().metricsRecorder(recorder);
 			return dup;
 		}
-		else if (configuration().metricsRecorder != null) {
+		else if (configuration().metricsRecorderSupplier != null) {
 			T dup = duplicate();
-			dup.configuration().metricsRecorder = null;
+			dup.configuration().metricsRecorder(null);
 			return dup;
 		}
 		else {
