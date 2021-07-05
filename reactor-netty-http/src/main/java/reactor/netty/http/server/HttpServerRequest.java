@@ -40,19 +40,18 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	HttpServerRequest withConnection(Consumer<? super Connection> withConnection);
 
 	/**
-	 * URI parameter captured via {} "/test/{var}"
+	 * URI parameter captured via {@code {}} e.g. {@code /test/{param}}.
 	 *
-	 * @param key param var name
-	 *
-	 * @return the param captured value
+	 * @param key parameter name e.g. {@code "param"} in URI {@code /test/{param}}
+	 * @return the parameter captured value
 	 */
 	@Nullable
 	String param(CharSequence key);
 
 	/**
-	 * Returns the param captured key/value map
+	 * Returns all URI parameters captured via {@code {}} e.g. {@code /test/{param1}/{param2}} as key/value map.
 	 *
-	 * @return the param captured key/value map
+	 * @return the parameters captured key/value map
 	 */
 	@Nullable
 	Map<String, String> params();
