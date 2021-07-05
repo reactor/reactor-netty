@@ -8,7 +8,6 @@
 | reactor.netty.bytebuf.allocator.used.heap.arenas | Gauge | The number of heap arenas (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.direct.arenas | Gauge | The number of direct arenas (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.threadlocal.caches | Gauge | The number of thread local caches (when `PooledByteBufAllocator`)
-| reactor.netty.bytebuf.allocator.used.tiny.cache.size | Gauge | The size of the tiny cache (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.small.cache.size | Gauge | The size of the small cache (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.normal.cache.size | Gauge | The size of the normal cache (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.chunk.size | Gauge | The chunk size for an arena (when `PooledByteBufAllocator`)
