@@ -29,7 +29,7 @@ buildscript {
 }
 
 plugins {
-	id "com.diffplug.spotless" version "5.14.0"
+	id "com.diffplug.spotless" version "5.14.1"
 	id 'org.asciidoctor.convert' version '2.4.0'
 	id 'com.google.osdetector' version '1.7.0'
 	id 'org.gradle.test-retry' version '1.3.1'
