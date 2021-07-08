@@ -18,10 +18,15 @@ package reactor.netty.http.server;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.ReferenceCountUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,8 +46,28 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		}
 	}
 
-	@Override
-	public void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) throws Exception {
-		super.decode(ctx, msg, out);
+	void decode(ChannelHandlerContext ctx, HttpRequest msg) {
+		List<Object> out = new ArrayList<>();
+		HttpRequest request = msg;
+		try {
+			if (msg instanceof FullHttpRequest && ((FullHttpRequest) msg).content().refCnt() == 0) {
+				// This can happen only in HTTP2 use case and delayed response
+				// When the incoming FullHttpRequest content is with 0 readableBytes it is released immediately
+				// decode(...) will observe a freed content
+				request = new DefaultHttpRequest(msg.protocolVersion(), msg.method(), msg.uri(), msg.headers());
+			}
+			super.decode(ctx, request, out);
+		}
+		catch (DecoderException e) {
+			throw e;
+		}
+		catch (Exception e) {
+			throw new DecoderException(e);
+		}
+		finally {
+			// ReferenceCountUtil.retain(...) is invoked in decode(...) so release(...) here
+			ReferenceCountUtil.release(request);
+			out.clear();
+		}
 	}
 }

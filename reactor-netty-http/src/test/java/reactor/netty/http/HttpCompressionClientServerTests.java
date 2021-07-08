@@ -33,6 +33,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
@@ -52,7 +53,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
-	@ParameterizedTest(name = "{index}: {0}, {1}")
+	@ParameterizedTest(name = "{displayName}({0}, {1})")
 	@MethodSource("data")
 	@interface ParameterizedCompressionTest {
 	}
@@ -216,9 +217,23 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 
 	@ParameterizedCompressionTest
 	void serverCompressionPredicateTrue(HttpServer server, HttpClient client) throws Exception {
+		testServerCompressionPredicateTrue(server, client, false);
+	}
+
+	/* https://github.com/spring-projects/spring-boot/issues/27176 */
+	@ParameterizedCompressionTest
+	void serverCompressionPredicateTrue_WithScheduledResponse(HttpServer server, HttpClient client) throws Exception {
+		testServerCompressionPredicateTrue(server, client, true);
+	}
+
+	private void testServerCompressionPredicateTrue(HttpServer server, HttpClient client, boolean useScheduler)
+			throws Exception {
 		disposableServer =
 				server.compress((req, res) -> true)
-				      .handle((in, out) -> out.sendString(Mono.just("reply")))
+				      .handle((in, out) ->
+				              useScheduler ? out.sendString(Mono.just("reply")
+				                                                .subscribeOn(Schedulers.boundedElastic())) :
+				                             out.sendString(Mono.just("reply")))
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
@@ -229,8 +244,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				      .get()
 				      .uri("/test")
 				      .responseSingle((res, byteBufMono) -> Mono.just(res.responseHeaders())
-				                                                .zipWith(byteBufMono.asByteArray())
-				                                                .log())
+				                                                .zipWith(byteBufMono.asByteArray()))
 				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
