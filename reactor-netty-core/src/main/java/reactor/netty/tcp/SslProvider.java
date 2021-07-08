@@ -94,6 +94,12 @@ public final class SslProvider {
 		return new SslProvider(provider, handlerConfigurator);
 	}
 
+	/**
+	 * @deprecated as of 1.0.6. Prefer {@link SslProvider.SslContextSpec#sslContext(ProtocolSslContextSpec)},
+	 * where the default configuration is applied before any other custom configuration.
+	 * This will be removed in version 1.2.0.
+	 */
+	@Deprecated
 	public static SslProvider updateDefaultConfiguration(SslProvider provider, DefaultConfigurationType type) {
 		Objects.requireNonNull(provider, "provider");
 		Objects.requireNonNull(type, "type");
