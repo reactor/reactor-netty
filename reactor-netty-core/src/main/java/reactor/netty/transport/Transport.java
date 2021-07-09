@@ -143,7 +143,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 			dup.configuration().metricsRecorder(() -> configuration().defaultMetricsRecorder());
 			return dup;
 		}
-		else if (configuration().metricsRecorderSupplier != null) {
+		else if (configuration().metricsRecorder != null) {
 			T dup = duplicate();
 			dup.configuration().metricsRecorder(null);
 			return dup;
@@ -171,7 +171,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 			dup.configuration().metricsRecorder(recorder);
 			return dup;
 		}
-		else if (configuration().metricsRecorderSupplier != null) {
+		else if (configuration().metricsRecorder != null) {
 			T dup = duplicate();
 			dup.configuration().metricsRecorder(null);
 			return dup;

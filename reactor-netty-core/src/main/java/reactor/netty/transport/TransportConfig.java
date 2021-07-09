@@ -194,7 +194,6 @@ public abstract class TransportConfig {
 	LoggingHandler                             loggingHandler;
 	LoopResources                              loopResources;
 	ChannelMetricsRecorder                     metricsRecorder;
-	Supplier<? extends ChannelMetricsRecorder> metricsRecorderSupplier;
 	ConnectionObserver                         observer;
 	Map<ChannelOption<?>, ?>                   options;
 	boolean                                    preferNative;
@@ -233,7 +232,6 @@ public abstract class TransportConfig {
 		this.loggingHandler = parent.loggingHandler;
 		this.loopResources = parent.loopResources;
 		this.metricsRecorder = parent.metricsRecorder;
-		this.metricsRecorderSupplier = parent.metricsRecorderSupplier;
 		this.observer = parent.observer;
 		this.options = parent.options;
 		this.preferNative = parent.preferNative;
@@ -313,8 +311,12 @@ public abstract class TransportConfig {
 		this.loggingHandler = loggingHandler;
 	}
 
+	/**
+	 * Obtains immediately the {@link ChannelMetricsRecorder} from the provided {@link Supplier}
+	 *
+	 * @param metricsRecorderSupplier a supplier for the {@link ChannelMetricsRecorder}
+	 */
 	protected void metricsRecorder(@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorderSupplier) {
-		this.metricsRecorderSupplier = metricsRecorderSupplier;
 		this.metricsRecorder = metricsRecorderSupplier != null ? metricsRecorderSupplier.get() : null;
 	}
 
