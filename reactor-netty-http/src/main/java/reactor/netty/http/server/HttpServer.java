@@ -549,7 +549,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Specifies whether the metrics are enabled on the {@link HttpServer}.
 	 * All generated metrics are provided to the specified recorder which is only
-	 * instantiated if metrics are being enabled.
+	 * instantiated if metrics are being enabled (the instantiation is not lazy,
+	 * but happens immediately, while configuring the {@link HttpServer}).
 	 * <p>{@code uriValue} function receives the actual uri and returns the uri value
 	 * that will be used when the metrics are propagated to the recorder.
 	 * For example instead of using the actual uri {@code "/users/1"} as uri value, templated uri
