@@ -39,12 +39,14 @@ import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,7 +61,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	static DisposableServer server4;
 	static ConnectionProvider provider;
 	static LoopResources loop;
-	static ChannelMetricsRecorder metricsRecorder;
+	static Supplier<ChannelMetricsRecorder> metricsRecorderSupplier;
 
 	HttpClient client;
 
@@ -90,7 +92,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 
 		loop = LoopResources.create("ConnectionPoolTests");
 
-		metricsRecorder = Mockito.mock(ChannelMetricsRecorder.class);
+		metricsRecorderSupplier = () -> Mockito.mock(ChannelMetricsRecorder.class);
 	}
 
 	@AfterAll
@@ -211,12 +213,23 @@ class ConnectionPoolTests extends BaseHttpTest {
 		HttpClient localClient1 =
 				client.port(server1.port())
 				      .metrics(true, Function.identity());
-		HttpClient localClient2 = localClient1.metrics(true, () -> metricsRecorder);
+		HttpClient localClient2 = localClient1.metrics(true, metricsRecorderSupplier);
 		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
 				localClient1,
 				localClient2);
+	}
+
+	@Test
+	void testSameClientWithMetricsSameSupplierDifferentRecorders() {
+		HttpClient localClient1 =
+				client.port(server1.port())
+				      .metrics(true, metricsRecorderSupplier);
+		// Resolver that provides information for the resolution time, works with the metrics recorder
+		assertThat(localClient1.configuration().resolverInternal())
+				.isSameAs(localClient1.configuration().resolverInternal());
+		checkResponsesAndChannelsStates("server1-ConnectionPoolTests", localClient1);
 	}
 
 	@Test
@@ -354,11 +367,15 @@ class ConnectionPoolTests extends BaseHttpTest {
 				localClient2);
 	}
 
+	private void checkResponsesAndChannelsStates(String expectedClient1Response, HttpClient client1) {
+		checkResponsesAndChannelsStates(expectedClient1Response, null, client1, null);
+	}
+
 	private void checkResponsesAndChannelsStates(
 			String expectedClient1Response,
-			String expectedClient2Response,
+			@Nullable String expectedClient2Response,
 			HttpClient client1,
-			HttpClient client2) {
+			@Nullable HttpClient client2) {
 
 		List<Tuple2<String, Channel>> response1 =
 		Flux.range(0, 2)
@@ -380,21 +397,23 @@ class ConnectionPoolTests extends BaseHttpTest {
 
 		assertThat(response1.get(0).getT2()).isSameAs(response1.get(1).getT2());
 
-		List<Tuple2<String, Channel>> response2 =
-				client2.get()
-				       .uri("/")
-				       .responseConnection((res, conn) ->
-				           conn.inbound()
-				               .receive()
-				               .aggregate()
-				               .asString()
-				               .zipWith(Mono.just(conn.channel())))
-				       .collectList()
-				       .block(Duration.ofSeconds(10));
+		if (client2 != null) {
+			List<Tuple2<String, Channel>> response2 =
+					client2.get()
+					       .uri("/")
+					       .responseConnection((res, conn) ->
+					           conn.inbound()
+					               .receive()
+					               .aggregate()
+					               .asString()
+					               .zipWith(Mono.just(conn.channel())))
+					       .collectList()
+					       .block(Duration.ofSeconds(10));
 
-		assertThat(response2).isNotNull().hasSize(1);
-		assertThat(response2.get(0).getT1()).isEqualTo(expectedClient2Response);
+			assertThat(response2).isNotNull().hasSize(1);
+			assertThat(response2.get(0).getT1()).isEqualTo(expectedClient2Response);
 
-		assertThat(response2.get(0).getT2()).isNotSameAs(response1.get(0).getT2());
+			assertThat(response2.get(0).getT2()).isNotSameAs(response1.get(0).getT2());
+		}
 	}
 }

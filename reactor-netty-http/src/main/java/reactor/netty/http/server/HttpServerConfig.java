@@ -467,7 +467,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			Http2Settings http2Settings,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
+			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Function<String, String> uriTagValue,
@@ -508,13 +508,12 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		if (metricsRecorder != null) {
-			ChannelMetricsRecorder recorder = metricsRecorder.get();
-			if (recorder instanceof HttpServerMetricsRecorder) {
-				ChannelHandler handler = recorder instanceof ContextAwareHttpServerMetricsRecorder ?
-						new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) recorder, uriTagValue) :
-						new HttpServerMetricsHandler((HttpServerMetricsRecorder) recorder, uriTagValue);
+			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
+				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder ?
+						new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
+						new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
 				p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, handler);
-				if (recorder instanceof MicrometerHttpServerMetricsRecorder) {
+				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
 					// MicrometerHttpServerMetricsRecorder does not implement metrics on protocol level
 					// ChannelMetricsHandler will be removed from the pipeline
 					p.remove(NettyPipeline.ChannelMetricsHandler);
@@ -531,7 +530,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
+			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
 			@Nullable Function<String, String> uriTagValue,
 			boolean accessLogEnabled,
@@ -558,13 +557,12 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		if (metricsRecorder != null) {
-			ChannelMetricsRecorder recorder = metricsRecorder.get();
-			if (recorder instanceof HttpServerMetricsRecorder) {
-				ChannelHandler handler = recorder instanceof ContextAwareHttpServerMetricsRecorder ?
-						new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) recorder, uriTagValue) :
-						new HttpServerMetricsHandler((HttpServerMetricsRecorder) recorder, uriTagValue);
+			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
+				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder ?
+						new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
+						new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
 				p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, handler);
-				if (recorder instanceof MicrometerHttpServerMetricsRecorder) {
+				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
 					// MicrometerHttpServerMetricsRecorder does not implement metrics on protocol level
 					// ChannelMetricsHandler will be removed from the pipeline
 					p.remove(NettyPipeline.ChannelMetricsHandler);
@@ -768,7 +766,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Duration                                                idleTimeout;
 		final ConnectionObserver                                      listener;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
-		final Supplier<? extends ChannelMetricsRecorder>              metricsRecorder;
+		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
 		final Function<String, String>                                uriTagValue;
@@ -830,7 +828,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Http2Settings                                           http2Settings;
 		final Duration                                                idleTimeout;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
-		final Supplier<? extends ChannelMetricsRecorder>              metricsRecorder;
+		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
 		final int                                                     protocols;
@@ -850,7 +848,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.http2Settings = config.http2Settings();
 			this.idleTimeout = config.idleTimeout;
 			this.mapHandle = config.mapHandle;
-			this.metricsRecorder = config.metricsRecorder();
+			this.metricsRecorder = config.metricsRecorderInternal();
 			this.minCompressionSize = config.minCompressionSize;
 			this.opsFactory = config.channelOperationsProvider();
 			this.protocols = config._protocols;

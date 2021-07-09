@@ -80,7 +80,7 @@ public abstract class TransportConfig {
 
 	public int channelHash() {
 		return Objects.hash(attrs, bindAddress != null ? bindAddress.get() : 0, channelGroup, doOnChannelInit,
-				loggingHandler, loopResources, metricsRecorder != null ? metricsRecorder.get() : 0, observer, options, preferNative);
+				loggingHandler, loopResources, metricsRecorder, observer, options, preferNative);
 	}
 
 	/**
@@ -169,7 +169,7 @@ public abstract class TransportConfig {
 	 */
 	@Nullable
 	public final Supplier<? extends ChannelMetricsRecorder> metricsRecorder() {
-		return this.metricsRecorder;
+		return this.metricsRecorder != null ? () -> this.metricsRecorder : null;
 	}
 
 	/**
@@ -193,7 +193,7 @@ public abstract class TransportConfig {
 	ChannelPipelineConfigurer                  doOnChannelInit;
 	LoggingHandler                             loggingHandler;
 	LoopResources                              loopResources;
-	Supplier<? extends ChannelMetricsRecorder> metricsRecorder;
+	ChannelMetricsRecorder                     metricsRecorder;
 	ConnectionObserver                         observer;
 	Map<ChannelOption<?>, ?>                   options;
 	boolean                                    preferNative;
@@ -311,8 +311,17 @@ public abstract class TransportConfig {
 		this.loggingHandler = loggingHandler;
 	}
 
-	protected void metricsRecorder(@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder) {
-		this.metricsRecorder = metricsRecorder;
+	/**
+	 * Obtains immediately the {@link ChannelMetricsRecorder} from the provided {@link Supplier}
+	 *
+	 * @param metricsRecorderSupplier a supplier for the {@link ChannelMetricsRecorder}
+	 */
+	protected void metricsRecorder(@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorderSupplier) {
+		this.metricsRecorder = metricsRecorderSupplier != null ? metricsRecorderSupplier.get() : null;
+	}
+
+	protected ChannelMetricsRecorder metricsRecorderInternal() {
+		return metricsRecorder;
 	}
 
 	/**
@@ -363,10 +372,7 @@ public abstract class TransportConfig {
 			ChannelPipeline pipeline = channel.pipeline();
 
 			if (config.metricsRecorder != null) {
-				ChannelOperations.addMetricsHandler(channel,
-						requireNonNull(config.metricsRecorder.get(), "Metrics recorder supplier returned null"),
-						remoteAddress,
-						onServer);
+				ChannelOperations.addMetricsHandler(channel, config.metricsRecorder, remoteAddress, onServer);
 
 				ByteBufAllocator alloc = channel.alloc();
 				if (alloc instanceof PooledByteBufAllocator) {

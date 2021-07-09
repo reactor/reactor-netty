@@ -140,12 +140,12 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 						" to the class path first");
 			}
 			T dup = duplicate();
-			dup.configuration().metricsRecorder = () -> configuration().defaultMetricsRecorder();
+			dup.configuration().metricsRecorder(() -> configuration().defaultMetricsRecorder());
 			return dup;
 		}
 		else if (configuration().metricsRecorder != null) {
 			T dup = duplicate();
-			dup.configuration().metricsRecorder = null;
+			dup.configuration().metricsRecorder(null);
 			return dup;
 		}
 		else {
@@ -158,7 +158,8 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	/**
 	 * Specifies whether the metrics are enabled on the {@link Transport}.
 	 * All generated metrics are provided to the specified recorder
-	 * which is only instantiated if metrics are being enabled.
+	 * which is only instantiated if metrics are being enabled (the instantiation is not lazy,
+	 * but happens immediately, while configuring the {@link Transport}).
 	 *
 	 * @param enable if true enables the metrics on the {@link Transport}.
 	 * @param recorder a supplier for the {@link ChannelMetricsRecorder}
@@ -167,12 +168,12 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	public T metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		if (enable) {
 			T dup = duplicate();
-			dup.configuration().metricsRecorder = recorder;
+			dup.configuration().metricsRecorder(recorder);
 			return dup;
 		}
 		else if (configuration().metricsRecorder != null) {
 			T dup = duplicate();
-			dup.configuration().metricsRecorder = null;
+			dup.configuration().metricsRecorder(null);
 			return dup;
 		}
 		else {
