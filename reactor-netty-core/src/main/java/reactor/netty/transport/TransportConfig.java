@@ -169,7 +169,7 @@ public abstract class TransportConfig {
 	 */
 	@Nullable
 	public final Supplier<? extends ChannelMetricsRecorder> metricsRecorder() {
-		return this.metricsRecorderSupplier;
+		return this.metricsRecorder != null ? () -> this.metricsRecorder : null;
 	}
 
 	/**
