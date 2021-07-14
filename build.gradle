@@ -25,7 +25,7 @@ buildscript {
 	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
 			'com.google.gradle:osdetector-gradle-plugin:1.7.0',
 			'biz.aQute.bnd:biz.aQute.bnd.gradle:4.2.0',
-			'org.jfrog.buildinfo:build-info-extractor-gradle:4.24.11' //applied in individual submodules
+			'org.jfrog.buildinfo:build-info-extractor-gradle:4.24.12' //applied in individual submodules
   }
 }
 
