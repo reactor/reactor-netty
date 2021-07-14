@@ -53,6 +53,25 @@ class HttpResponseDecoderSpecTest {
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
 		checkDefaultParseHttpAfterConnectRequest(conf);
+		checkDefaultH2cMaxContentLength(conf);
+	}
+
+	@Test
+	void h2cMaxContentLength() {
+		checkDefaultH2cMaxContentLength(conf);
+
+		conf.h2cMaxContentLength(256);
+
+		assertThat(conf.h2cMaxContentLength()).as("H2C max content length").isEqualTo(256);
+
+		checkDefaultMaxInitialLineLength(conf);
+		checkDefaultMaxHeaderSize(conf);
+		checkDefaultMaxChunkSize(conf);
+		checkDefaultValidateHeaders(conf);
+		checkDefaultInitialBufferSize(conf);
+		checkDefaultAllowDuplicateContentLengths(conf);
+		checkDefaultFailOnMissingResponse(conf);
+		checkDefaultParseHttpAfterConnectRequest(conf);
 	}
 
 	@Test
@@ -70,12 +89,19 @@ class HttpResponseDecoderSpecTest {
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
 		checkDefaultFailOnMissingResponse(conf);
+		checkDefaultH2cMaxContentLength(conf);
 	}
 
 	private static void checkDefaultFailOnMissingResponse(HttpResponseDecoderSpec conf) {
 		assertThat(conf.failOnMissingResponse).as("default fail on missing response")
 				.isEqualTo(HttpResponseDecoderSpec.DEFAULT_FAIL_ON_MISSING_RESPONSE)
 				.isFalse();
+	}
+
+	private static void checkDefaultH2cMaxContentLength(HttpResponseDecoderSpec conf) {
+		assertThat(conf.h2cMaxContentLength()).as("default H2C max content length")
+				.isEqualTo(HttpResponseDecoderSpec.DEFAULT_H2C_MAX_CONTENT_LENGTH)
+				.isEqualTo(65536);
 	}
 
 	private static void checkDefaultParseHttpAfterConnectRequest(HttpResponseDecoderSpec conf) {
