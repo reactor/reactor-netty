@@ -247,6 +247,7 @@ final class TracingHttpClientDecorator {
 				DelegatingHttpResponse delegate = new DelegatingHttpResponse((reactor.netty.http.client.HttpClientResponse) request,
 						new DelegatingHttpRequest(request, uriMapping), throwable);
 				handleReceive(delegate, request.currentContextView());
+				cleanup(((ChannelOperations<?, ?>) request).channel());
 			}
 			else {
 				PendingSpan pendingSpan = request.currentContextView().get(PendingSpan.class);
@@ -255,7 +256,6 @@ final class TracingHttpClientDecorator {
 					span.error(throwable).finish();
 				}
 			}
-			cleanup(((ChannelOperations<?, ?>) request).channel());
 		}
 	}
 
