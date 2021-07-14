@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-class HttpDecoderSpecTest {
+public class HttpDecoderSpecTest {
 
 	private HttpDecoderSpecImpl conf;
 
@@ -172,37 +172,37 @@ class HttpDecoderSpecTest {
 		checkDefaultInitialBufferSize(conf);
 	}
 
-	private static void checkDefaultMaxInitialLineLength(HttpDecoderSpecImpl conf) {
+	public static void checkDefaultMaxInitialLineLength(HttpDecoderSpec<?> conf) {
 		assertThat(conf.maxInitialLineLength()).as("default initial line length")
 				.isEqualTo(HttpDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH)
 				.isEqualTo(4096);
 	}
 
-	private static void checkDefaultMaxHeaderSize(HttpDecoderSpecImpl conf) {
+	public static void checkDefaultMaxHeaderSize(HttpDecoderSpec<?> conf) {
 		assertThat(conf.maxHeaderSize()).as("default header size")
 				.isEqualTo(HttpDecoderSpec.DEFAULT_MAX_HEADER_SIZE)
 				.isEqualTo(8192);
 	}
 
-	private static void checkDefaultMaxChunkSize(HttpDecoderSpecImpl conf) {
+	public static void checkDefaultMaxChunkSize(HttpDecoderSpec<?> conf) {
 		assertThat(conf.maxChunkSize()).as("default chunk size")
 				.isEqualTo(HttpDecoderSpec.DEFAULT_MAX_CHUNK_SIZE)
 				.isEqualTo(8192);
 	}
 
-	private static void checkDefaultValidateHeaders(HttpDecoderSpecImpl conf) {
+	public static void checkDefaultValidateHeaders(HttpDecoderSpec<?> conf) {
 		assertThat(conf.validateHeaders()).as("default validate headers")
 				.isEqualTo(HttpDecoderSpec.DEFAULT_VALIDATE_HEADERS)
 				.isTrue();
 	}
 
-	private static void checkDefaultInitialBufferSize(HttpDecoderSpecImpl conf) {
+	public static void checkDefaultInitialBufferSize(HttpDecoderSpec<?> conf) {
 		assertThat(conf.initialBufferSize()).as("default initial buffer sizes")
 				.isEqualTo(HttpDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE)
 				.isEqualTo(128);
 	}
 
-	private static void checkDefaultAllowDuplicateContentLengths(HttpDecoderSpecImpl conf) {
+	public static void checkDefaultAllowDuplicateContentLengths(HttpDecoderSpec<?> conf) {
 		assertThat(conf.allowDuplicateContentLengths()).as("default allow duplicate Content-Length headers")
 				.isEqualTo(HttpDecoderSpec.DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS)
 				.isFalse();
