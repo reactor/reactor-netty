@@ -15,6 +15,9 @@
  */
 package reactor.netty.tcp;
 
+import reactor.util.Logger;
+import reactor.util.Loggers;
+
 /**
  * Initializes the default {@link SslProvider} for the TCP client.
  *
@@ -22,6 +25,8 @@ package reactor.netty.tcp;
  * @author Violeta Georgieva
  */
 final class TcpClientSecure {
+
+	private static final Logger log = Loggers.getLogger(TcpClientSecure.class);
 
 	static final SslProvider DEFAULT_SSL_PROVIDER;
 
@@ -34,6 +39,7 @@ final class TcpClientSecure {
 					           .build();
 		}
 		catch (Exception e) {
+			log.error("Failed to build default ssl provider", e);
 			sslProvider = null;
 		}
 		DEFAULT_SSL_PROVIDER = sslProvider;
