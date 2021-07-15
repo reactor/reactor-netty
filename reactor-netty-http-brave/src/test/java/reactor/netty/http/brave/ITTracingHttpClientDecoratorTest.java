@@ -34,6 +34,7 @@ import reactor.netty.http.server.HttpServer;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -146,6 +147,28 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 			}
 		}
 		testSpanHandler.takeRemoteSpan(CLIENT);
+	}
+
+	@Test
+	@SuppressWarnings("try")
+	public void testIssue1738() throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		TraceContext parent = newTraceContext(SamplingFlags.SAMPLED);
+		try (Scope scope = currentTraceContext.newScope(parent)) {
+			client.doOnRequestError((req, conn) -> latch.countDown())
+			      .post()
+			      .uri("/")
+			      .send((req, out) -> {
+			          throw new IllegalStateException("not ready");
+			      })
+			      .responseContent()
+			      .aggregate()
+			      .subscribe();
+		}
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		testSpanHandler.takeRemoteSpanWithErrorMessage(CLIENT, "not ready");
 	}
 
 	void execute(HttpClient client, HttpMethod method, String pathIncludingQuery) {
