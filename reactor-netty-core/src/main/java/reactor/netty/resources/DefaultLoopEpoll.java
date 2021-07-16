@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollDatagramChannel;
+import io.netty.channel.epoll.EpollDomainDatagramChannel;
 import io.netty.channel.epoll.EpollDomainSocketChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerDomainSocketChannel;
@@ -29,6 +30,7 @@ import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.ServerDomainSocketChannel;
 import reactor.util.Logger;
@@ -59,6 +61,9 @@ final class DefaultLoopEpoll implements DefaultLoop {
 		}
 		if (channelClass.equals(ServerDomainSocketChannel.class)) {
 			return (CHANNEL) new EpollServerDomainSocketChannel();
+		}
+		if (channelClass.equals(DomainDatagramChannel.class)) {
+			return (CHANNEL) new EpollDomainDatagramChannel();
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}

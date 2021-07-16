@@ -48,6 +48,7 @@ import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.SocketUtils;
 import reactor.netty.resources.LoopResources;
+import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -274,14 +275,6 @@ class UdpServerTests {
 	}
 
 	@Test
-	void testUdpServerWithDomainSockets() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> UdpServer.create()
-		                                   .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-		                                   .bindNow());
-	}
-
-	@Test
 	void testUdpServerWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> UdpServer.create()
@@ -305,5 +298,23 @@ class UdpServerTests {
 				.isThrownBy(() -> UdpServer.create()
 		                                   .port(0)
 		                                   .bindNow(Duration.ofMillis(Long.MAX_VALUE)));
+	}
+
+	@Test
+	void testUdpServerWithDomainSocketsNIOTransport() {
+		LoopResources loop = LoopResources.create("testUdpServerWithDomainSocketsNIOTransport");
+		try {
+			UdpServer.create()
+			         .runOn(loop, false)
+			         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+			         .bind()
+			         .as(StepVerifier::create)
+			         .expectError(IllegalArgumentException.class)
+			         .verify(Duration.ofSeconds(5));
+		}
+		finally {
+			loop.disposeLater()
+			    .block(Duration.ofSeconds(30));
+		}
 	}
 }
