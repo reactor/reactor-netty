@@ -252,6 +252,15 @@ public interface HttpServerRoutes extends
 	}
 
 	/**
+	 * A generic route predicate that if matched already register I/O handler use
+	 * {@link HttpServerRoutes#route(Predicate, BiFunction)} will be removed.
+	 *
+	 * @param condition a predicate given each http route handler {@link HttpRouteHandlerMetadata}
+	 * @return this {@link HttpServerRoutes}
+	 */
+	HttpServerRoutes removeIf(Predicate<? super HttpRouteHandlerMetadata> condition);
+
+	/**
 	 * A generic route predicate that if matched invoke the passed I/O handler.
 	 *
 	 * @param condition a predicate given each inbound request

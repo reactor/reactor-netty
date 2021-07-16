@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.server;
 
+import io.netty.handler.codec.http.HttpMethod;
 import reactor.util.annotation.Nullable;
 
 import java.util.Comparator;
@@ -35,4 +36,12 @@ public interface HttpRouteHandlerMetadata {
 	 */
 	@Nullable
 	String getPath();
+
+	/**
+	 * Get the http method this handler can handle
+	 *
+	 * @return the http method {@link HttpMethod}
+	 */
+	@Nullable
+	HttpMethod getMethod();
 }
