@@ -32,6 +32,7 @@ interface UdpConnection {
 	 * @param multicastAddress multicast address of the group to join
 	 *
 	 * @return a {@link Publisher} that will be complete when the group has been joined
+	 * @throws UnsupportedOperationException when Unix Domain Sockets
 	 */
 	default Mono<Void> join(InetAddress multicastAddress) {
 		return join(multicastAddress, null);
@@ -43,6 +44,7 @@ interface UdpConnection {
 	 * @param multicastAddress multicast address of the group to join
 	 *
 	 * @return a {@link Publisher} that will be complete when the group has been joined
+	 * @throws UnsupportedOperationException when Unix Domain Sockets
 	 */
 	Mono<Void> join(final InetAddress multicastAddress, @Nullable NetworkInterface iface);
 
@@ -52,6 +54,7 @@ interface UdpConnection {
 	 * @param multicastAddress multicast address of the group to leave
 	 *
 	 * @return a {@link Publisher} that will be complete when the group has been left
+	 * @throws UnsupportedOperationException when Unix Domain Sockets
 	 */
 	default Mono<Void> leave(InetAddress multicastAddress) {
 		return leave(multicastAddress, null);
@@ -63,6 +66,7 @@ interface UdpConnection {
 	 * @param multicastAddress multicast address of the group to leave
 	 *
 	 * @return a {@link Publisher} that will be complete when the group has been left
+	 * @throws UnsupportedOperationException when Unix Domain Sockets
 	 */
 	Mono<Void> leave(final InetAddress multicastAddress, @Nullable NetworkInterface iface);
 }

@@ -23,6 +23,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import reactor.netty.ChannelPipelineConfigurer;
@@ -117,19 +118,13 @@ public final class UdpServerConfig extends TransportConfig {
 
 	@Override
 	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
-		if (isDomainSocket) {
-			throw new UnsupportedOperationException();
-		}
-		return DatagramChannel.class;
+		return isDomainSocket ? DomainDatagramChannel.class : DatagramChannel.class;
 	}
 
 	@Override
 	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg, boolean isDomainSocket) {
-		if (isDomainSocket) {
-			throw new UnsupportedOperationException();
-		}
 		if (isPreferNative()) {
-			return () -> loopResources().onChannel(DatagramChannel.class, elg);
+			return super.connectionFactory(elg, isDomainSocket);
 		}
 		else {
 			return () -> new NioDatagramChannel(family());
