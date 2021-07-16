@@ -48,8 +48,6 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 	private Comparator<HttpRouteHandlerMetadata> comparator;
 
-	private List<Predicate<? super HttpServerRequest>> removedRoutes = new ArrayList<>();
-
 	@Override
 	public HttpServerRoutes directory(String uri, Path directory,
 			@Nullable Function<HttpServerResponse, HttpServerResponse> interceptor) {
