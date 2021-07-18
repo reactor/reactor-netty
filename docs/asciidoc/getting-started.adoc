@@ -94,7 +94,7 @@ adding the following snippet to your `pom.xml`. If the top section
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-bom</artifactId>
-            <version>Dysprosium-SR10</version> <2>
+            <version>2020.0.9</version> <2>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -103,7 +103,7 @@ adding the following snippet to your `pom.xml`. If the top section
 ----
 <1> Notice the `dependencyManagement` tag. This is in addition to the regular
 `dependencies` section.
-<2> As of this writing, `Dysprosium-SR10` is the latest version of the `BOM`.
+<2> As of this writing, `2020.0.9` is the latest version of the `BOM`.
 Check for updates at https://github.com/reactor/reactor/releases.
 ====
 
@@ -141,14 +141,14 @@ The following listing shows how to import the `BOM` and add a dependency to `Rea
 ----
 dependencies {
     // import a BOM
-    implementation platform('io.projectreactor:reactor-bom:Dysprosium-SR10') <1>
+    implementation platform('io.projectreactor:reactor-bom:2020.0.9') <1>
 
     // define dependencies without versions
     implementation 'io.projectreactor.netty:reactor-netty-core' <2>
     implementation 'io.projectreactor.netty:reactor-netty-http'
 }
 ----
-<1> As of this writing, `Dysprosium-SR10` is the latest version of the `BOM`.
+<1> As of this writing, `2020.0.9` is the latest version of the `BOM`.
 Check for updates at https://github.com/reactor/reactor/releases.
 <2> There is no third `:` separated section for the version. It is taken from the `BOM`.
 ====
