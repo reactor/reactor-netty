@@ -87,14 +87,14 @@ adding the following snippet to your `pom.xml`. If the top section
 (`dependencyManagement`) already exists in your pom, add only the contents.
 
 ====
-[source,xml]
+[source,xml,subs=attributes+]
 ----
 <dependencyManagement> <1>
     <dependencies>
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-bom</artifactId>
-            <version>Dysprosium-SR10</version> <2>
+            <version>{reactorReleaseTrain}</version> <2>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -103,7 +103,7 @@ adding the following snippet to your `pom.xml`. If the top section
 ----
 <1> Notice the `dependencyManagement` tag. This is in addition to the regular
 `dependencies` section.
-<2> As of this writing, `Dysprosium-SR10` is the latest version of the `BOM`.
+<2> As of this writing, `{reactorReleaseTrain}` is the latest version of the `BOM`.
 Check for updates at https://github.com/reactor/reactor/releases.
 ====
 
@@ -137,18 +137,18 @@ The `BOM` concept is supported in Gradle since version 5.
 The following listing shows how to import the `BOM` and add a dependency to `Reactor Netty`:
 
 ====
-[source,groovy]
+[source,groovy,subs=attributes+]
 ----
 dependencies {
     // import a BOM
-    implementation platform('io.projectreactor:reactor-bom:Dysprosium-SR10') <1>
+    implementation platform('io.projectreactor:reactor-bom:{reactorReleaseTrain}') <1>
 
     // define dependencies without versions
     implementation 'io.projectreactor.netty:reactor-netty-core' <2>
     implementation 'io.projectreactor.netty:reactor-netty-http'
 }
 ----
-<1> As of this writing, `Dysprosium-SR10` is the latest version of the `BOM`.
+<1> As of this writing, `{reactorReleaseTrain}` is the latest version of the `BOM`.
 Check for updates at https://github.com/reactor/reactor/releases.
 <2> There is no third `:` separated section for the version. It is taken from the `BOM`.
 ====
