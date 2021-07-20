@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueDatagramChannel;
+import io.netty.channel.kqueue.KQueueDomainDatagramChannel;
 import io.netty.channel.kqueue.KQueueDomainSocketChannel;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.kqueue.KQueueServerDomainSocketChannel;
@@ -29,6 +30,7 @@ import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.ServerDomainSocketChannel;
 import reactor.util.Logger;
@@ -58,6 +60,9 @@ final class DefaultLoopKQueue implements DefaultLoop {
 		}
 		if (channelClass.equals(ServerDomainSocketChannel.class)) {
 			return (CHANNEL) new KQueueServerDomainSocketChannel();
+		}
+		if (channelClass.equals(DomainDatagramChannel.class)) {
+			return (CHANNEL) new KQueueDomainDatagramChannel();
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}

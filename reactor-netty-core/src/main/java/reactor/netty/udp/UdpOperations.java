@@ -39,11 +39,8 @@ import static reactor.netty.ReactorNetty.format;
 final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		implements UdpInbound, UdpOutbound {
 
-	final DatagramChannel  datagramChannel;
-
 	UdpOperations(Connection c, ConnectionObserver listener) {
 		super(c, listener);
-		this.datagramChannel = (DatagramChannel) c.channel();
 	}
 
 	/**
@@ -55,6 +52,10 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 	 */
 	@Override
 	public Mono<Void> join(final InetAddress multicastAddress, @Nullable NetworkInterface iface) {
+		if (!(connection().channel() instanceof DatagramChannel)) {
+			throw new UnsupportedOperationException();
+		}
+		DatagramChannel datagramChannel = (DatagramChannel) connection().channel();
 		if (null == iface && null != datagramChannel.config().getNetworkInterface()) {
 			iface = datagramChannel.config().getNetworkInterface();
 		}
@@ -86,6 +87,10 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 	 */
 	@Override
 	public Mono<Void> leave(final InetAddress multicastAddress, @Nullable NetworkInterface iface) {
+		if (!(connection().channel() instanceof DatagramChannel)) {
+			throw new UnsupportedOperationException();
+		}
+		DatagramChannel datagramChannel = (DatagramChannel) connection().channel();
 		if (null == iface && null != datagramChannel.config().getNetworkInterface()) {
 			iface = datagramChannel.config().getNetworkInterface();
 		}
