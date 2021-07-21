@@ -258,6 +258,7 @@ public interface HttpServerRoutes extends
 	 *
 	 * @param condition a predicate given each http route handler {@link HttpRouteHandlerMetadata}
 	 * @return this {@link HttpServerRoutes}
+	 * @since 1.0.10
 	 */
 	HttpServerRoutes removeIf(Predicate<? super HttpRouteHandlerMetadata> condition);
 

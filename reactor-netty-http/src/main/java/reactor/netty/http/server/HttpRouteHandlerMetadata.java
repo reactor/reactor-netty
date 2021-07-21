@@ -42,6 +42,7 @@ public interface HttpRouteHandlerMetadata {
 	 * Get the http method this handler can handle
 	 *
 	 * @return the http method {@link HttpMethod}
+	 * @since 1.0.10
 	 */
 	@Nullable
 	HttpMethod getMethod();

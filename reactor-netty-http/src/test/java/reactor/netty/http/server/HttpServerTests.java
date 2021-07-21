@@ -2641,14 +2641,14 @@ class HttpServerTests extends BaseHttpTest {
 		}
 
 		HttpServerRoutes serverRoutes1 = serverRoutes.removeIf(metadata -> Objects.equals(metadata.getPath(), "/route1")
-				&& metadata.getMethod() == HttpMethod.GET);
+				&& metadata.getMethod().equals(HttpMethod.GET));
 
 		disposableServer = HttpServer.create().handle(serverRoutes1)
 				.bindNow();
 
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/route1")
 				.response())
-				.expectNextMatches(response -> response.status() == HttpResponseStatus.NOT_FOUND)
+				.expectNextMatches(response -> response.status().equals(HttpResponseStatus.NOT_FOUND))
 				.verifyComplete();
 
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/route2")
