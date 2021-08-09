@@ -20,6 +20,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.NoopAddressResolverGroup;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -141,8 +142,10 @@ class ClientTransportTest {
 		TestClientTransport transport = createTestTransportForProxy()
 				.proxyWithSystemProperties(properties);
 
-		assertThat(transport.configuration().proxyProvider()).isNotNull();
-		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+		TestClientTransportConfig config = transport.configuration();
+		assertThat(config.proxyProvider()).isNotNull();
+		assertThat(config.proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+		assertThat(config.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 	}
 
 	@Test
@@ -153,8 +156,10 @@ class ClientTransportTest {
 		TestClientTransport transport = createTestTransportForProxy()
 				.proxyWithSystemProperties(properties);
 
-		assertThat(transport.configuration().proxyProvider()).isNotNull();
-		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+		TestClientTransportConfig config = transport.configuration();
+		assertThat(config.proxyProvider()).isNotNull();
+		assertThat(config.proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
+		assertThat(config.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 	}
 
 	@Test
@@ -165,8 +170,10 @@ class ClientTransportTest {
 		TestClientTransport transport = createTestTransportForProxy()
 				.proxyWithSystemProperties(properties);
 
-		assertThat(transport.configuration().proxyProvider()).isNotNull();
-		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
+		TestClientTransportConfig config = transport.configuration();
+		assertThat(config.proxyProvider()).isNotNull();
+		assertThat(config.proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
+		assertThat(config.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 	}
 
 	@Test
@@ -178,8 +185,10 @@ class ClientTransportTest {
 		TestClientTransport transport = createTestTransportForProxy()
 				.proxyWithSystemProperties(properties);
 
-		assertThat(transport.configuration().proxyProvider()).isNotNull();
-		assertThat(transport.configuration().proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS4);
+		TestClientTransportConfig config = transport.configuration();
+		assertThat(config.proxyProvider()).isNotNull();
+		assertThat(config.proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.SOCKS4);
+		assertThat(config.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 	}
 
 	@Test
@@ -195,9 +204,22 @@ class ClientTransportTest {
 		TestClientTransport transport = createTestTransportForProxy();
 		transport.proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP).host("proxy").port(8080));
 		assertThat(transport.configuration().proxyProvider).isNotNull();
+		assertThat(transport.configuration().resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 
 		transport.proxyWithSystemProperties(new Properties());
 		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().resolver()).isNull();
+	}
+
+	@Test
+	void noProxyIfSystemPropertiesHaveNoProxySet() {
+		TestClientTransport transport = createTestTransportForProxy();
+		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().resolver()).isNull();
+
+		transport.proxyWithSystemProperties(new Properties());
+		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().resolver()).isNull();
 	}
 
 	static TestClientTransport createTestTransportForProxy() {
