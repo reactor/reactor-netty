@@ -47,6 +47,21 @@ include::{examplesdir}/address/Application.java[lines=18..33]
 <2> Configures the `HTTP` server port
 ====
 
+To serve on multiple addresses, after having configured the `HttpServer` you can bind it multiple times to obtain separate `DisposableServer`s.
+All created servers will share resources such as `LoopResources` because they use the same configuration instance under the hood.
+
+====
+[source,java,indent=0]
+.{examplesdir}/address/MultiAddressApplication.java
+----
+include::{examplesdir}/address/MultiAddressApplication.java[lines=18..41]
+----
+<1> Configures the first `HTTP` server host
+<2> Configures the first `HTTP` server port
+<3> Configures the second `HTTP` server host
+<4> Configures the second `HTTP` server port
+====
+
 == Eager Initialization
 
 By default, the initialization of the `HttpServer` resources happens on demand. This means that the `bind

@@ -48,6 +48,21 @@ include::{examplesdir}/address/Application.java[lines=18..33]
 <2> Configures the `TCP` server port
 ====
 
+To serve on multiple addresses, after having configured the `TcpServer` you can bind it multiple times to obtain separate `DisposableServer`s.
+All created servers will share resources such as `LoopResources` because they use the same configuration instance under the hood.
+
+====
+[source,java,indent=0]
+.{examplesdir}/address/MultiAddressApplication.java
+----
+include::{examplesdir}/address/MultiAddressApplication.java[lines=18..41]
+----
+<1> Configures the first `TCP` server host
+<2> Configures the first `TCP` server port
+<3> Configures the second `TCP` server host
+<4> Configures the second `TCP` server port
+====
+
 == Eager Initialization
 
 By default, the initialization of the `TcpServer` resources happens on demand. This means that the `bind
