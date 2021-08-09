@@ -240,11 +240,15 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 */
 	public T proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
 		Objects.requireNonNull(proxyOptions, "proxyOptions");
-		T dup = duplicate();
 		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder();
 		proxyOptions.accept(builder);
+		return proxyWithProxyProvider(builder.build());
+	}
+
+	final T proxyWithProxyProvider(ProxyProvider proxy) {
+		T dup = duplicate();
 		CONF conf = dup.configuration();
-		conf.proxyProvider = builder.build();
+		conf.proxyProvider = proxy;
 		if (conf.resolver == null) {
 			conf.resolver = NoopAddressResolverGroup.INSTANCE;
 		}
@@ -252,22 +256,25 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	}
 
 	/**
-	 * Set up proxy from java system properties.
+	 * Set up a proxy from the java system properties.
 	 * Supports http, https, socks4, socks5 proxies.
 	 * List of supported system properties https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
-	 *
+	 * <p>
 	 * If both {@code https.proxyHost} and {@code http.proxyHost} are set
 	 * it chooses {@code https.proxyHost} over {@code http.proxyHost}.
-	 * Same with http proxy port.
-	 *
-	 * If a {@link ClientTransport} instance already has proxy set via {@link ClientTransport#proxy(Consumer)}
-	 * the new instance created by this method will have all the proxy settings replaced
-	 * with proxy settings from system properties only.
-	 *
-	 * If a {@link ClientTransport} instance already has proxy set via {@link ClientTransport#proxy(Consumer)}
-	 * but system properties do not have configuration for proxy, the new
-	 * instance returned by this method will not have any proxy set.
-	 *
+	 * Same with the http/https proxy port.
+	 * <p>
+	 * If a {@link ClientTransport} instance already has a proxy set via {@link ClientTransport#proxy(Consumer)}
+	 * the new instance created by this method has all proxy settings replaced
+	 * with proxy settings from the system properties only.
+	 * <p>
+	 * If a {@link ClientTransport} instance already has a proxy set via {@link ClientTransport#proxy(Consumer)}
+	 * but the system properties do not have a configuration for a proxy, the new
+	 * instance returned by this method behaves as there is no proxy settings.
+	 * <p>
+	 * If the system properties do not have a configuration for a proxy, the new
+	 * instance returned by this method behaves as there is no proxy settings.
+	 * <p>
 	 * @return a new {@link ClientTransport} reference
 	 * @since 1.0.8
 	 */
@@ -281,14 +288,8 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @return a new {@link ClientTransport} reference
 	 */
 	final T proxyWithSystemProperties(Properties properties) {
-		T dup = duplicate();
 		ProxyProvider proxy = ProxyProvider.createFrom(properties);
-		dup.configuration().proxyProvider(proxy);
-		CONF conf = dup.configuration();
-		if (conf.resolver == null) {
-			conf.resolver = NoopAddressResolverGroup.INSTANCE;
-		}
-		return dup;
+		return proxy == null ? noProxy() : proxyWithProxyProvider(proxy);
 	}
 
 	/**

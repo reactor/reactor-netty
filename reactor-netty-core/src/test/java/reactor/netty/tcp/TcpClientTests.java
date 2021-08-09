@@ -1372,4 +1372,33 @@ public class TcpClientTests {
 			    .block();
 		}
 	}
+
+	/* https://github.com/reactor/reactor-netty/issues/1765 */
+	@Test
+	void noSystemProxySettings() {
+		DisposableServer disposableServer =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.sendString(Mono.just("noSystemProxySettings")))
+				         .bindNow();
+
+		AtomicReference<AddressResolverGroup<?>> resolver = new AtomicReference<>();
+		Connection conn = null;
+		try {
+			conn = TcpClient.create()
+			                .host("localhost")
+			                .port(disposableServer.port())
+			                .proxyWithSystemProperties()
+			                .doOnConnect(conf -> resolver.set(conf.resolver()))
+			                .connectNow();
+		}
+		finally {
+			disposableServer.disposeNow();
+			if (conn != null) {
+				conn.disposeNow();
+			}
+		}
+
+		assertThat(resolver.get()).isNull();
+	}
 }
