@@ -48,7 +48,8 @@ include::{examplesdir}/address/Application.java[lines=18..33]
 <2> Configures the `TCP` server port
 ====
 
-To serve on multiple addresses, you can configure and bind to each address before configuring the next one. All created servers will share resources such as `LoopResources` because they use the same configuration instance under the hood.
+To serve on multiple addresses, after having configured the `TcpServer` you can bind it multiple times to obtain separate `DisposableServer`s.
+All created servers will share resources such as `LoopResources` because they use the same configuration instance under the hood.
 
 ====
 [source,java,indent=0]
