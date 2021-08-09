@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
@@ -76,6 +77,7 @@ import reactor.util.retry.Retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * @author Stephane Maldini
@@ -1376,6 +1378,10 @@ public class TcpClientTests {
 	/* https://github.com/reactor/reactor-netty/issues/1765 */
 	@Test
 	void noSystemProxySettings() {
+		Properties props = System.getProperties();
+		assumeThat(!(props.containsKey("http.proxyHost") || props.containsKey("https.proxyHost")
+				|| props.containsKey("socksProxyHost"))).isTrue();
+
 		DisposableServer disposableServer =
 				TcpServer.create()
 				         .port(0)

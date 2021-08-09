@@ -268,12 +268,9 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * the new instance created by this method has all proxy settings replaced
 	 * with proxy settings from the system properties only.
 	 * <p>
-	 * If a {@link ClientTransport} instance already has a proxy set via {@link ClientTransport#proxy(Consumer)}
-	 * but the system properties do not have a configuration for a proxy, the new
-	 * instance returned by this method behaves as there is no proxy settings.
-	 * <p>
 	 * If the system properties do not have a configuration for a proxy, the new
-	 * instance returned by this method behaves as there is no proxy settings.
+	 * instance returned by this method behaves as if there is no proxy settings,
+	 * regardless of configuration of the original {@link ClientTransport} instance.
 	 * <p>
 	 * @return a new {@link ClientTransport} reference
 	 * @since 1.0.8
