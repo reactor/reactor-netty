@@ -85,7 +85,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		}
 
 		if (msg instanceof LastHttpContent) {
-			promise.addListener(future -> recordWrite(ctx.channel().remoteAddress()));
+			SocketAddress address = ctx.channel().remoteAddress();
+			promise.addListener(future -> recordWrite(address));
 		}
 		//"FutureReturnValueIgnored" this is deliberate
 		ctx.write(msg, promise);
