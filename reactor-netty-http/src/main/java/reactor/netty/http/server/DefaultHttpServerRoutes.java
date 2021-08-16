@@ -29,6 +29,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
@@ -75,22 +76,31 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 	}
 
 	@Override
+	public HttpServerRoutes removeIf(Predicate<? super HttpRouteHandlerMetadata> condition) {
+		Objects.requireNonNull(condition, "condition");
+
+		handlers.removeIf(condition);
+
+		return this;
+	}
+
+	@Override
 	public HttpServerRoutes route(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(condition, "condition");
 		Objects.requireNonNull(handler, "handler");
 
 		if (condition instanceof HttpPredicate) {
+			HttpPredicate predicate = (HttpPredicate) condition;
 			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition,
-					handler,
-					(HttpPredicate) condition, ((HttpPredicate) condition).uri);
+					handler, predicate, predicate.uri, predicate.method);
 
 			handlers.add(httpRouteHandler);
 			initialOrderHandlers.add(httpRouteHandler);
 
 		}
 		else {
-			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition, handler, null, null);
+			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition, handler, null, null, null);
 			handlers.add(httpRouteHandler);
 			initialOrderHandlers.add(httpRouteHandler);
 		}
@@ -119,6 +129,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 	@Override
 	public Publisher<Void> apply(HttpServerRequest request, HttpServerResponse response) {
+		// find I/0 handler to process this request
 		final Iterator<HttpRouteHandler> iterator = handlers.iterator();
 		HttpRouteHandler cursor;
 
@@ -149,14 +160,18 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 		final String path;
 
+		final HttpMethod method;
+
 		HttpRouteHandler(Predicate<? super HttpServerRequest> condition,
 				BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
 				@Nullable Function<? super String, Map<String, String>> resolver,
-				@Nullable String path) {
+				@Nullable String path,
+				@Nullable HttpMethod method) {
 			this.condition = Objects.requireNonNull(condition, "condition");
 			this.handler = Objects.requireNonNull(handler, "handler");
 			this.resolver = resolver;
 			this.path = path;
+			this.method = method;
 		}
 
 		@Override
@@ -173,6 +188,11 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		@Override
 		public String getPath() {
 			return path;
+		}
+
+		@Override
+		public HttpMethod getMethod() {
+			return method;
 		}
 	}
 }

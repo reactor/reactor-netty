@@ -29,6 +29,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -2611,5 +2612,47 @@ class HttpServerTests extends BaseHttpTest {
 		assertThat(error.get()).isNotNull()
 				.isInstanceOf(AbortedException.class)
 				.hasMessage("Connection has been closed");
+	}
+
+	@Test
+	void testRemoveRoutes() {
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/route1", (request, response) -> response.sendString(Mono.just("/route1")))
+				.get("/route2", (request, response) -> response.sendString(Mono.just("/route2")));
+
+		try {
+			disposableServer = HttpServer.create().handle(serverRoutes).bindNow();
+
+			StepVerifier.create(createClient(disposableServer.port()).get().uri("/route1")
+					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.expectNext("/route1")
+					.verifyComplete();
+
+			StepVerifier.create(createClient(disposableServer.port()).get().uri("/route2")
+					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.expectNext("/route2")
+					.verifyComplete();
+		}
+		finally {
+			if (disposableServer != null) {
+				disposableServer.disposeNow();
+			}
+		}
+
+		HttpServerRoutes serverRoutes1 = serverRoutes.removeIf(metadata -> Objects.equals(metadata.getPath(), "/route1")
+				&& metadata.getMethod().equals(HttpMethod.GET));
+
+		disposableServer = HttpServer.create().handle(serverRoutes1)
+				.bindNow();
+
+		StepVerifier.create(createClient(disposableServer.port()).get().uri("/route1")
+				.response())
+				.expectNextMatches(response -> response.status().equals(HttpResponseStatus.NOT_FOUND))
+				.verifyComplete();
+
+		StepVerifier.create(createClient(disposableServer.port()).get().uri("/route2")
+				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.expectNext("/route2")
+				.verifyComplete();
 	}
 }
