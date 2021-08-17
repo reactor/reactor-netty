@@ -26,7 +26,7 @@ jobs:
         uses: actions/setup-java@v2
         with:
           distribution: 'zulu'
-          java-version: 8.0.212
+          java-version: 8
       - name: Check License
         run: ./gradlew clean spotlessCheck -PspotlessFrom='origin/${{ github.base_ref }}'
       - name: Build with Gradle
