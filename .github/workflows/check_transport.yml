@@ -30,4 +30,4 @@ jobs:
       - name: Check License
         run: ./gradlew clean spotlessCheck -PspotlessFrom='origin/${{ github.base_ref }}'
       - name: Build with Gradle
-        run: ./gradlew reactor-netty-http:test --tests reactor.netty.http.server.HeaderTest -PforceTransport=${{ matrix.transport }}
+        run: ./gradlew reactor-netty-http:test --tests reactor.netty.http.server.HeaderTest -i -PforceTransport=${{ matrix.transport }}

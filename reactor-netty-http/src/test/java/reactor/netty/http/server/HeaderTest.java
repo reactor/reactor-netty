@@ -17,14 +17,15 @@ package reactor.netty.http.server;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
+import reactor.test.StepVerifier;
 
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.BaseHttpTest.createClient;
 
 class HeaderTest {
@@ -46,14 +47,17 @@ class HeaderTest {
 
 		final HttpClient client = createClient(server.port());
 
-		final int status = client.headers(hs -> hs.add("longheader", headerVal))
+		final Mono<Integer> status = client.headers(hs -> hs.add("longheader", headerVal))
 				.get()
 				.uri(path)
 				.response()
-				.map(resp -> resp.status().code())
-				.block();
+				.map(resp -> resp.status().code());
 
-		assertThat(status).isEqualTo(413);
+		StepVerifier.create(Flux.range(0, 2).flatMap(i -> status))
+				.expectNext(413, 413)
+				.expectComplete()
+				.verify();
+
 		server.disposeNow();
 	}
 }
