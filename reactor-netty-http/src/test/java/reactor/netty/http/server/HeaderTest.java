@@ -15,6 +15,8 @@
  */
 package reactor.netty.http.server;
 
+import io.netty.channel.ChannelOption;
+import io.netty.channel.FixedRecvByteBufAllocator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
@@ -36,6 +38,8 @@ class HeaderTest {
 		final String path = "/";
 		final DisposableServer server = HttpServer.create()
 				.port(0)
+				.option(ChannelOption.SO_RCVBUF, 8*1024)
+				.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(8*1024))
 				.httpRequestDecoder(c -> c.maxHeaderSize(100))
 				.route(routes -> routes.get(path, (req, resp) -> resp.sendString(Mono.just("oh nos!"))))
 				.bindNow();
@@ -45,7 +49,7 @@ class HeaderTest {
 						.mapToObj(i -> "a")
 						.collect(Collectors.joining());
 
-		final HttpClient client = createClient(server.port());
+		final HttpClient client = createClient(server.port()).option(ChannelOption.SO_SNDBUF, 8*1024);
 
 		final Mono<Integer> status = client.headers(hs -> hs.add("longheader", headerVal))
 				.get()
