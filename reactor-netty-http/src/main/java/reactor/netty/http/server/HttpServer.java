@@ -53,7 +53,7 @@ import reactor.util.Metrics;
 import static reactor.netty.ReactorNetty.format;
 
 /**
- * An HttpServer allows to build in a safe immutable way an HTTP server that is
+ * An HttpServer allows building in a safe immutable way an HTTP server that is
  * materialized and connecting when {@link #bind()} is ultimately called.
  * <p>
  * <p>Examples:
@@ -153,41 +153,6 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
-	 * Customize the access log, provided access logging has been enabled through the
-	 * {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
-	 * <p>
-	 * Example:
-	 * <pre>
-	 * {@code
-	 * HttpServer.create()
-	 *           .port(8080)
-	 *           .route(r -> r.get("/hello",
-	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
-	 *                                    .sendString(Mono.just("Hello World!"))))
-	 *           .accessLog(argProvider ->
-	 *                   AccessLog.create("user-agent={}", argProvider.requestHeader("user-agent")))
-	 *           .bindNow()
-	 *           .onDispose()
-	 *           .block();
-	 * }
-	 * </pre>
-	 * <p>
-	 *
-	 * @param accessLogFactory the {@link Function} that creates an {@link AccessLog} given an {@link AccessLogArgProvider}
-	 * @return a new {@link HttpServer}
-	 * @since 1.0.1
-	 * @deprecated as of 1.0.3. Prefer the {@link #accessLog(boolean, AccessLogFactory) variant}
-	 * with the {@link AccessLogFactory} interface instead. This method will be removed in version 1.2.0.
-	 */
-	@Deprecated
-	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLogFactory) {
-		Objects.requireNonNull(accessLogFactory, "accessLogFactory");
-		HttpServer dup = duplicate();
-		dup.configuration().accessLog = accessLogFactory;
-		return dup;
-	}
-
-	/**
 	 * Enable or disable the access log. If enabled, the default log system will be used.
 	 * <p>
 	 * Example:
@@ -255,6 +220,41 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		HttpServer dup = duplicate();
 		dup.configuration().accessLog = enable ? accessLogFactory : null;
 		dup.configuration().accessLogEnabled = enable;
+		return dup;
+	}
+
+	/**
+	 * Customize the access log, provided access logging has been enabled through the
+	 * {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
+	 * <p>
+	 * Example:
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .port(8080)
+	 *           .route(r -> r.get("/hello",
+	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
+	 *                                    .sendString(Mono.just("Hello World!"))))
+	 *           .accessLog(argProvider ->
+	 *                   AccessLog.create("user-agent={}", argProvider.requestHeader("user-agent")))
+	 *           .bindNow()
+	 *           .onDispose()
+	 *           .block();
+	 * }
+	 * </pre>
+	 * <p>
+	 *
+	 * @param accessLogFactory the {@link Function} that creates an {@link AccessLog} given an {@link AccessLogArgProvider}
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.1
+	 * @deprecated as of 1.0.3. Prefer the {@link #accessLog(boolean, AccessLogFactory) variant}
+	 * with the {@link AccessLogFactory} interface instead. This method will be removed in version 1.2.0.
+	 */
+	@Deprecated
+	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLogFactory) {
+		Objects.requireNonNull(accessLogFactory, "accessLogFactory");
+		HttpServer dup = duplicate();
+		dup.configuration().accessLog = accessLogFactory;
 		return dup;
 	}
 
@@ -462,20 +462,6 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
-	 * Decorate the configured I/O handler.
-	 * See {@link #handle(BiFunction)}.
-	 *
-	 * @param mapHandle A {@link BiFunction} to decorate the configured I/O handler
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer mapHandle(BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
-		Objects.requireNonNull(mapHandle, "mapHandle");
-		HttpServer dup = duplicate();
-		dup.configuration().mapHandle = mapHandle;
-		return dup;
-	}
-
-	/**
 	 * Specifies an idle timeout on the connection when it is waiting for an HTTP request (resolution: ms).
 	 * Once the timeout is reached the connection will be closed.
 	 * <p>If an {@code idleTimeout} is not specified, this indicates no timeout (i.e. infinite),
@@ -491,6 +477,20 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		Objects.requireNonNull(idleTimeout, "idleTimeout");
 		HttpServer dup = duplicate();
 		dup.configuration().idleTimeout = idleTimeout;
+		return dup;
+	}
+
+	/**
+	 * Decorate the configured I/O handler.
+	 * See {@link #handle(BiFunction)}.
+	 *
+	 * @param mapHandle A {@link BiFunction} to decorate the configured I/O handler
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer mapHandle(BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
+		Objects.requireNonNull(mapHandle, "mapHandle");
+		HttpServer dup = duplicate();
+		dup.configuration().mapHandle = mapHandle;
 		return dup;
 	}
 
