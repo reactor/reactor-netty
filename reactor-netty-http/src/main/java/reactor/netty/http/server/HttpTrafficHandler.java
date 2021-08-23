@@ -71,34 +71,38 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	static final HttpVersion H2 = HttpVersion.valueOf("HTTP/2.0");
 
-	final ConnectionObserver                                      listener;
-	Boolean                                                       secure;
-	SocketAddress                                                 remoteAddress;
-	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
-	final ServerCookieEncoder                                     cookieEncoder;
 	final ServerCookieDecoder                                     cookieDecoder;
+	final ServerCookieEncoder                                     cookieEncoder;
+	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final Duration                                                idleTimeout;
-	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
-
-	boolean persistentConnection = true;
-	// Track pending responses to support client pipelining: https://tools.ietf.org/html/rfc7230#section-6.3.2
-	int pendingResponses;
-
-	Queue<Object> pipelined;
+	final ConnectionObserver                                      listener;
+	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+	                                                              mapHandle;
 
 	ChannelHandlerContext ctx;
 
-	boolean overflow;
 	boolean nonInformationalResponse;
+	boolean overflow;
+
+	// Track pending responses to support client pipelining: https://tools.ietf.org/html/rfc7230#section-6.3.2
+	int pendingResponses;
+	boolean persistentConnection = true;
+
+	Queue<Object> pipelined;
+
+	SocketAddress remoteAddress;
+
+	Boolean secure;
 
 	HttpTrafficHandler(
-			ConnectionObserver listener,
-			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
-			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
-			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-			@Nullable Duration idleTimeout) {
+			ServerCookieDecoder decoder,
+			ServerCookieEncoder encoder,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			@Nullable Duration idleTimeout,
+			ConnectionObserver listener,
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		this.listener = listener;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
@@ -187,14 +191,15 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				try {
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
 							listener,
-							compress, request,
+							request,
+							compress,
 							ConnectionInfo.from(ctx.channel(),
 							                    request,
 							                    secure,
 							                    remoteAddress,
 							                    forwardedHeaderHandler),
-							cookieEncoder,
 							cookieDecoder,
+							cookieEncoder,
 							mapHandle,
 							secure);
 				}
@@ -372,15 +377,15 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 				HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
-						compress,
 						nextRequest,
+						compress,
 						ConnectionInfo.from(ctx.channel(),
 						                    nextRequest,
 						                    secure,
 						                    remoteAddress,
 						                    forwardedHeaderHandler),
-						cookieEncoder,
 						cookieDecoder,
+						cookieEncoder,
 						mapHandle,
 						secure);
 				ops.bind();

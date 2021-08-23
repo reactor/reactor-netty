@@ -90,77 +90,71 @@ import static reactor.netty.http.server.HttpServerState.REQUEST_DECODING_FAILED;
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
 		implements HttpServerRequest, HttpServerResponse {
 
-	final HttpResponse nettyResponse;
-	final HttpHeaders responseHeaders;
-	final ServerCookies cookieHolder;
-	final HttpRequest nettyRequest;
-	final String path;
-	final ConnectionInfo connectionInfo;
-	final ServerCookieEncoder cookieEncoder;
-	final ServerCookieDecoder cookieDecoder;
-	final String scheme;
-
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
-
+	final ConnectionInfo connectionInfo;
+	final ServerCookieDecoder cookieDecoder;
+	final ServerCookieEncoder cookieEncoder;
+	final ServerCookies cookieHolder;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
+	final HttpRequest nettyRequest;
+	final HttpResponse nettyResponse;
+	final String path;
+	final HttpHeaders responseHeaders;
+	final String scheme;
 
 	Function<? super String, Map<String, String>> paramsResolver;
 
 	HttpServerOperations(HttpServerOperations replaced) {
 		super(replaced);
-		this.cookieHolder = replaced.cookieHolder;
+		this.compressionPredicate = replaced.compressionPredicate;
 		this.connectionInfo = replaced.connectionInfo;
-		this.responseHeaders = replaced.responseHeaders;
+		this.cookieDecoder = replaced.cookieDecoder;
+		this.cookieEncoder = replaced.cookieEncoder;
+		this.cookieHolder = replaced.cookieHolder;
+		this.mapHandle = replaced.mapHandle;
+		this.nettyRequest = replaced.nettyRequest;
 		this.nettyResponse = replaced.nettyResponse;
 		this.paramsResolver = replaced.paramsResolver;
-		this.nettyRequest = replaced.nettyRequest;
 		this.path = replaced.path;
-		this.compressionPredicate = replaced.compressionPredicate;
-		this.cookieEncoder = replaced.cookieEncoder;
-		this.cookieDecoder = replaced.cookieDecoder;
-		this.mapHandle = replaced.mapHandle;
+		this.responseHeaders = replaced.responseHeaders;
 		this.scheme = replaced.scheme;
 	}
 
-	HttpServerOperations(Connection c,
-			ConnectionObserver listener,
+	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			HttpRequest nettyRequest,
 			@Nullable ConnectionInfo connectionInfo,
-			ServerCookieEncoder encoder,
 			ServerCookieDecoder decoder,
+			ServerCookieEncoder encoder,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean secured) {
-		this(c, listener, compressionPredicate, nettyRequest, connectionInfo, encoder, decoder, mapHandle, secured, true);
+		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, mapHandle, true, secured);
 	}
 
-	HttpServerOperations(Connection c,
-			ConnectionObserver listener,
+	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			HttpRequest nettyRequest,
 			@Nullable ConnectionInfo connectionInfo,
-			ServerCookieEncoder encoder,
 			ServerCookieDecoder decoder,
+			ServerCookieEncoder encoder,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-			boolean secured,
-			boolean resolvePath) {
+			boolean resolvePath,
+			boolean secured) {
 		super(c, listener);
+		this.compressionPredicate = compressionPredicate;
+		this.connectionInfo = connectionInfo;
+		this.cookieDecoder = decoder;
+		this.cookieEncoder = encoder;
+		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers(), decoder);
+		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
+		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		if (resolvePath) {
 			this.path = resolvePath(nettyRequest.uri());
 		}
 		else {
 			this.path = null;
 		}
-		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		this.responseHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-		this.compressionPredicate = compressionPredicate;
-		this.cookieHolder = ServerCookies.newServerRequestHolder(requestHeaders(), decoder);
-		this.connectionInfo = connectionInfo;
-		this.cookieEncoder = encoder;
-		this.cookieDecoder = decoder;
-		this.mapHandle = mapHandle;
 		this.scheme = secured ? "https" : "http";
 	}
 
@@ -787,7 +781,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				@Nullable HttpRequest nettyRequest,
 				HttpResponse nettyResponse,
 				boolean secure) {
-			super(c, listener, null, nettyRequest, null, ServerCookieEncoder.STRICT, ServerCookieDecoder.STRICT, null, secure, false);
+			super(c, listener, nettyRequest, null, null, ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT, null, false, secure);
 			this.customResponse = nettyResponse;
 		}
 

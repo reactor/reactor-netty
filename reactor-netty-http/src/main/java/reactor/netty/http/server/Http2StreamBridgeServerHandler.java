@@ -49,26 +49,30 @@ import static reactor.netty.ReactorNetty.format;
  */
 final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implements ChannelFutureListener {
 
+	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
-	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
-	final ConnectionObserver                                      listener;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>      mapHandle;
+	final ConnectionObserver                                      listener;
+	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+	                                                              mapHandle;
 
-	SocketAddress             remoteAddress;
-	Boolean                   secured;
+	SocketAddress remoteAddress;
 
-	Http2StreamBridgeServerHandler(ConnectionObserver listener,
+	Boolean secured;
+
+	Http2StreamBridgeServerHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
+			ServerCookieDecoder decoder,
+			ServerCookieEncoder encoder,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
-			ServerCookieEncoder encoder, ServerCookieDecoder decoder,
+			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		this.compress = compress;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
-		this.listener = listener;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
+		this.listener = listener;
 		this.mapHandle = mapHandle;
 	}
 
@@ -96,15 +100,15 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			try {
 				ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
-						compress,
 						request,
+						compress,
 						ConnectionInfo.from(ctx.channel().parent(),
 						                    request,
 						                    secured,
 						                    remoteAddress,
 						                    forwardedHeaderHandler),
-						cookieEncoder,
 						cookieDecoder,
+						cookieEncoder,
 						mapHandle,
 						secured);
 			}

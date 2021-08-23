@@ -1881,11 +1881,11 @@ class HttpServerTests extends BaseHttpTest {
 		HttpServerOperations ops = new HttpServerOperations(
 				Connection.from(channel),
 				ConnectionObserver.emptyListener(),
-				null,
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
 				null,
-				ServerCookieEncoder.STRICT,
+				null,
 				ServerCookieDecoder.STRICT,
+				ServerCookieEncoder.STRICT,
 				null,
 				false);
 		ops.status(status);
