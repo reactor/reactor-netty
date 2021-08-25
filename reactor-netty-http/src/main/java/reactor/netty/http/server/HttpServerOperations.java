@@ -744,7 +744,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					config.newHttpPostRequestDecoder(nettyRequest, isMultipart);
 
 			return receiveContent()
-					.filter(content -> content.content().readableBytes() > 0)
 					.doOnNext(content -> {
 						if (config.maxInMemorySize > -1) {
 							content.retain();
