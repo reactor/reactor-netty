@@ -445,6 +445,29 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
+	 * Apply HTTP form decoder configuration.
+	 * The configuration is used when {@link HttpServerRequest#receiveForm()} is invoked.
+	 * When a specific configuration per request is needed {@link HttpServerRequest#receiveForm(Consumer)}
+	 * should be used.
+	 *
+	 * @param formDecoderBuilder {@link HttpServerFormDecoderProvider.Builder} for HTTP form decoder configuration
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.11
+	 */
+	public final HttpServer httpFormDecoder(Consumer<HttpServerFormDecoderProvider.Builder> formDecoderBuilder) {
+		Objects.requireNonNull(formDecoderBuilder, "formDecoderBuilder");
+		HttpServerFormDecoderProvider.Build builder = new HttpServerFormDecoderProvider.Build();
+		formDecoderBuilder.accept(builder);
+		HttpServerFormDecoderProvider formDecoderProvider = builder.build();
+		if (formDecoderProvider.equals(configuration().formDecoderProvider)) {
+			return this;
+		}
+		HttpServer dup = duplicate();
+		dup.configuration().formDecoderProvider = formDecoderProvider;
+		return dup;
+	}
+
+	/**
 	 * Configure the {@link io.netty.handler.codec.http.HttpServerCodec}'s request decoding options.
 	 *
 	 * @param requestDecoderOptions a function to mutate the provided Http request decoder options

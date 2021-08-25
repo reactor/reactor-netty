@@ -53,6 +53,8 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http.multipart.HttpData;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http2.HttpConversionUtil;
@@ -80,6 +82,7 @@ import reactor.util.context.Context;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 import static reactor.netty.http.server.HttpServerState.REQUEST_DECODING_FAILED;
 
 /**
@@ -95,6 +98,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final ServerCookieDecoder cookieDecoder;
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookies cookieHolder;
+	final HttpServerFormDecoderProvider formDecoderProvider;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
 	final HttpRequest nettyRequest;
 	final HttpResponse nettyResponse;
@@ -111,6 +115,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieHolder = replaced.cookieHolder;
+		this.formDecoderProvider = replaced.formDecoderProvider;
 		this.mapHandle = replaced.mapHandle;
 		this.nettyRequest = replaced.nettyRequest;
 		this.nettyResponse = replaced.nettyResponse;
@@ -125,9 +130,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			@Nullable ConnectionInfo connectionInfo,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean secured) {
-		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, mapHandle, true, secured);
+		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, formDecoderProvider,
+				mapHandle, true, secured);
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
@@ -135,6 +142,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			@Nullable ConnectionInfo connectionInfo,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean resolvePath,
 			boolean secured) {
@@ -144,6 +152,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
 		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers(), decoder);
+		this.formDecoderProvider = formDecoderProvider;
 		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -275,8 +284,19 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public boolean isFormUrlencoded() {
+		String contentType = requestHeaders().get(HttpHeaderNames.CONTENT_TYPE);
+		return HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.contentEqualsIgnoreCase(contentType);
+	}
+
+	@Override
 	public boolean isKeepAlive() {
 		return HttpUtil.isKeepAlive(nettyRequest);
+	}
+
+	@Override
+	public boolean isMultipart() {
+		return HttpPostRequestDecoder.isMultipart(nettyRequest);
 	}
 
 	@Override
@@ -320,6 +340,20 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public HttpServerRequest paramsResolver(Function<? super String, Map<String, String>> paramsResolver) {
 		this.paramsResolver = paramsResolver;
 		return this;
+	}
+
+	@Override
+	public Flux<HttpData> receiveForm() {
+		return receiveFormInternal(formDecoderProvider);
+	}
+
+	@Override
+	public Flux<HttpData> receiveForm(Consumer<HttpServerFormDecoderProvider.Builder> formDecoderBuilder) {
+		Objects.requireNonNull(formDecoderBuilder, "formDecoderBuilder");
+		HttpServerFormDecoderProvider.Build builder = new HttpServerFormDecoderProvider.Build();
+		formDecoderBuilder.accept(builder);
+		HttpServerFormDecoderProvider config = builder.build();
+		return receiveFormInternal(config);
 	}
 
 	@Override
@@ -698,6 +732,42 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return nettyResponse;
 	}
 
+	final Flux<HttpData> receiveFormInternal(HttpServerFormDecoderProvider config) {
+		boolean isMultipart = isMultipart();
+		if (!Objects.equals(method(), HttpMethod.POST) || !(isFormUrlencoded() || isMultipart)) {
+			return Flux.error(new IllegalStateException(
+					"Request is not POST or does not have Content-Type " +
+							"with value 'application/x-www-form-urlencoded' or 'multipart/form-data'"));
+		}
+		return Flux.defer(() -> {
+			HttpServerFormDecoderProvider.ReactorNettyHttpPostRequestDecoder decoder =
+					config.newHttpPostRequestDecoder(nettyRequest, isMultipart);
+
+			return receiveContent()
+					.filter(content -> content.content().readableBytes() > 0)
+					.doOnNext(content -> {
+						if (config.maxInMemorySize > -1) {
+							content.retain();
+						}
+					})
+					.concatMap(httpContent ->
+							config.maxInMemorySize == -1 ?
+									Flux.using(
+											() -> decoder.offer(httpContent),
+											d -> Flux.fromIterable(config.streaming ? decoder.currentHttpData() :
+													decoder.currentCompletedHttpData()),
+											d -> decoder.cleanCurrentHttpData(config.streaming)) :
+									Flux.usingWhen(
+											Mono.fromCallable(() -> decoder.offer(httpContent)).subscribeOn(config.scheduler),
+											d -> Flux.fromIterable(decoder.currentCompletedHttpData()),
+											d -> Mono.fromRunnable(() -> {
+												httpContent.release();
+												decoder.cleanCurrentHttpData(false);
+											})))
+					.doFinally(sig -> decoder.destroy());
+		});
+	}
+
 	final Mono<Void> withWebsocketSupport(String url,
 			WebsocketServerSpec websocketServerSpec,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
@@ -781,7 +851,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				@Nullable HttpRequest nettyRequest,
 				HttpResponse nettyResponse,
 				boolean secure) {
-			super(c, listener, nettyRequest, null, null, ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT, null, false, secure);
+			super(c, listener, nettyRequest, null, null, ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT,
+					DEFAULT_FORM_DECODER_SPEC, null, false, secure);
 			this.customResponse = nettyResponse;
 		}
 

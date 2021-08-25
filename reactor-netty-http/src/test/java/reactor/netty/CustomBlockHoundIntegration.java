@@ -24,5 +24,7 @@ public class CustomBlockHoundIntegration implements BlockHoundIntegration {
 	public void applyTo(BlockHound.Builder builder) {
 		// Calls blocking SecureRandom.next
 		builder.allowBlockingCallsInside("java.nio.file.TempFileHelper", "createTempFile");
+
+		builder.allowBlockingCallsInside("reactor.core.scheduler.BoundedElasticScheduler$BoundedServices", "pick");
 	}
 }
