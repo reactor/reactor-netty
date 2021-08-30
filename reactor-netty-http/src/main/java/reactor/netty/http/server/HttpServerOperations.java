@@ -743,26 +743,30 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpServerFormDecoderProvider.ReactorNettyHttpPostRequestDecoder decoder =
 					config.newHttpPostRequestDecoder(nettyRequest, isMultipart);
 
-			return receiveContent()
-					.doOnNext(content -> {
-						if (config.maxInMemorySize > -1) {
-							content.retain();
+			return receiveObject() // receiveContent uses filter operator, this operator buffers, but we don't want it
+					.concatMap(object -> {
+						if (!(object instanceof HttpContent)) {
+							return Mono.empty();
 						}
-					})
-					.concatMap(httpContent ->
-							config.maxInMemorySize == -1 ?
-									Flux.using(
-											() -> decoder.offer(httpContent),
-											d -> Flux.fromIterable(config.streaming ? decoder.currentHttpData() :
-													decoder.currentCompletedHttpData()),
-											d -> decoder.cleanCurrentHttpData(config.streaming)) :
-									Flux.usingWhen(
-											Mono.fromCallable(() -> decoder.offer(httpContent)).subscribeOn(config.scheduler),
-											d -> Flux.fromIterable(decoder.currentCompletedHttpData()),
-											d -> Mono.fromRunnable(() -> {
-												httpContent.release();
-												decoder.cleanCurrentHttpData(false);
-											})))
+						HttpContent httpContent = (HttpContent) object;
+						if (config.maxInMemorySize > -1) {
+							httpContent.retain();
+						}
+						return config.maxInMemorySize == -1 ?
+								Flux.using(
+										() -> decoder.offer(httpContent),
+										d -> Flux.fromIterable(config.streaming ? decoder.currentHttpData() :
+												decoder.currentCompletedHttpData()),
+										d -> decoder.cleanCurrentHttpData(config.streaming)) :
+								Flux.usingWhen(
+										Mono.fromCallable(() -> decoder.offer(httpContent))
+										    .subscribeOn(config.scheduler)
+										    .doFinally(sig -> httpContent.release()),
+										d -> Flux.fromIterable(decoder.currentCompletedHttpData()),
+										// FIXME Can we have cancellation for the resourceSupplier that will
+										// cause this one to not be invoked?
+										d -> Mono.fromRunnable(() -> decoder.cleanCurrentHttpData(false)));
+					}, 0) // There is no need of prefetch, we already have the buffers in the Reactor Netty inbound queue
 					.doFinally(sig -> decoder.destroy());
 		});
 	}

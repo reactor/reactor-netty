@@ -94,6 +94,42 @@ class HttpServerPostFormTests extends BaseHttpTest {
 	}
 
 	@ParameterizedPostFormTest
+	void testMultipartExceedsMaxSizeInMemoryConfigOnRequest(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(-1).maxSize(8 * 1024), false, true, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testMultipartExceedsMaxSizeInMemoryConfigOnServer(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(-1).maxSize(8 * 1024), true, true, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testMultipartExceedsMaxSizeMixedConfigOnRequest(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(256).maxSize(8 * 1024), false, true, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testMultipartExceedsMaxSizeMixedConfigOnServer(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(256).maxSize(8 * 1024), true, true, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testMultipartExceedsMaxSizeOnDiskConfigOnRequest(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(0).maxSize(8 * 1024), false, true, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testMultipartExceedsMaxSizeOnDiskConfigOnServer(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(0).maxSize(8 * 1024), true, true, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
 	void testMultipartInMemoryConfigOnRequest(HttpServer server, HttpClient client) throws Exception {
 		doTestPostForm(server, client, spec -> spec.maxInMemorySize(-1), false, true, false,
 				"[test1 MemoryFileUpload true] [attr1 MemoryAttribute true] [test2 MemoryFileUpload true] ");
@@ -137,6 +173,42 @@ class HttpServerPostFormTests extends BaseHttpTest {
 	@ParameterizedPostFormTest
 	void testMultipartStreamingConfigOnServer(HttpServer server, HttpClient client) throws Exception {
 		doTestPostForm(server, client, spec -> spec.streaming(true), true, true, true, null);
+	}
+
+	@ParameterizedPostFormTest
+	void testUrlencodedExceedsMaxSizeInMemoryConfigOnRequest(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(-1).maxSize(10), false, false, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testUrlencodedExceedsMaxSizeInMemoryConfigOnServer(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(-1).maxSize(10), true, false, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testUrlencodedExceedsMaxSizeMixedConfigOnRequest(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(256).maxSize(10), false, false, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testUrlencodedExceedsMaxSizeMixedConfigOnServer(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(256).maxSize(10), true, false, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testUrlencodedExceedsMaxSizeOnDiskConfigOnRequest(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(0).maxSize(10), false, false, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testUrlencodedExceedsMaxSizeOnDiskConfigOnServer(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.maxInMemorySize(0).maxSize(10), true, false, false,
+				"Size exceed allowed maximum capacity");
 	}
 
 	@ParameterizedPostFormTest
@@ -207,6 +279,7 @@ class HttpServerPostFormTests extends BaseHttpTest {
 		                                data.getClass().getSimpleName() + ' ' +
 		                                data.isCompleted() + "] ");
 		                    })
+		                    .onErrorResume(t -> Mono.just(t.getCause().getMessage()))
 		                    .log()));
 
 		disposableServer = server.bindNow();
@@ -216,7 +289,8 @@ class HttpServerPostFormTests extends BaseHttpTest {
 		responses =
 				Flux.range(0, 2)
 				    .flatMap(i ->
-				            client.port(disposableServer.port()).post()
+				            client.port(disposableServer.port())
+				                  .post()
 				                  .uri("/" + i)
 				                  .sendForm((req, form) -> form.multipart(multipart)
 				                                               .file("test1", "largeFile1.txt", file.toFile(), null)
@@ -232,14 +306,14 @@ class HttpServerPostFormTests extends BaseHttpTest {
 			assertThat(response.getT1()).as("status code").isEqualTo(200);
 
 			if (expectedResponse != null) {
-				assertThat(response.getT2()).as("response body reflecting request").isEqualTo(expectedResponse);
+				assertThat(response.getT2()).as("response body reflecting request").contains(expectedResponse);
 			}
 		}
 
 		assertThat(originalHttpData1.get()).allMatch(data -> data.refCnt() == 0);
 		assertThat(originalHttpData2.get()).allMatch(data -> data.refCnt() == 0);
 
-		if (streaming) {
+		if (streaming && expectedResponse == null) {
 			assertThat(copiedHttpData.get()).hasSize(3);
 
 			byte[] fileBytes = Files.readAllBytes(file);
