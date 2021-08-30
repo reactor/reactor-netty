@@ -63,14 +63,6 @@ public final class HttpServerFormDecoderProvider {
 		Builder charset(Charset charset);
 
 		/**
-		 * Specifies whether the temporary files should be deleted with the JVM. Default to {@code true}.
-		 *
-		 * @param deleteOnExit if true the temporary files should be deleted with the JVM, false - otherwise
-		 * @return {@code this}
-		 */
-		Builder deleteOnExit(boolean deleteOnExit);
-
-		/**
 		 * Sets the maximum in-memory size per {@link Attribute}/{@link FileUpload} i.e. the data is written
 		 * on disk if the size is greater than {@code maxInMemorySize}, else it is in memory.
 		 * Default to {@link DefaultHttpDataFactory#MINSIZE}.
@@ -120,7 +112,6 @@ public final class HttpServerFormDecoderProvider {
 
 	final Path baseDirectory;
 	final Charset charset;
-	final boolean deleteOnExit;
 	final long maxInMemorySize;
 	final long maxSize;
 	final Scheduler scheduler;
@@ -129,7 +120,6 @@ public final class HttpServerFormDecoderProvider {
 	HttpServerFormDecoderProvider(Build build) {
 		this.baseDirectory = build.baseDirectory;
 		this.charset = build.charset;
-		this.deleteOnExit = build.deleteOnExit;
 		this.maxInMemorySize = !build.streaming ? build.maxInMemorySize : -1;
 		this.maxSize = build.maxSize;
 		this.scheduler = build.scheduler;
@@ -153,15 +143,6 @@ public final class HttpServerFormDecoderProvider {
 	 */
 	public Charset charset() {
 		return charset;
-	}
-
-	/**
-	 * Returns whether the temporary files should be deleted with the JVM.
-	 *
-	 * @return whether the temporary files should be deleted with the JVM
-	 */
-	public boolean deleteOnExit() {
-		return deleteOnExit;
 	}
 
 	/**
@@ -209,8 +190,7 @@ public final class HttpServerFormDecoderProvider {
 			return false;
 		}
 		HttpServerFormDecoderProvider that = (HttpServerFormDecoderProvider) o;
-		return deleteOnExit == that.deleteOnExit &&
-				maxInMemorySize == that.maxInMemorySize &&
+		return maxInMemorySize == that.maxInMemorySize &&
 				maxSize == that.maxSize &&
 				streaming == that.streaming &&
 				Objects.equals(baseDirectory, that.baseDirectory) &&
@@ -220,7 +200,7 @@ public final class HttpServerFormDecoderProvider {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(baseDirectory, charset, deleteOnExit, maxInMemorySize, maxSize, scheduler, streaming);
+		return Objects.hash(baseDirectory, charset, maxInMemorySize, maxSize, scheduler, streaming);
 	}
 
 	ReactorNettyHttpPostRequestDecoder newHttpPostRequestDecoder(HttpRequest request, boolean isMultipart) {
@@ -228,7 +208,6 @@ public final class HttpServerFormDecoderProvider {
 				new DefaultHttpDataFactory(maxInMemorySize, charset) :
 				new DefaultHttpDataFactory(maxInMemorySize == 0, charset);
 		factory.setMaxLimit(maxSize);
-		factory.setDeleteOnExit(deleteOnExit);
 		if (baseDirectory != null) {
 			factory.setBaseDir(baseDirectory.toFile().getAbsolutePath());
 		}
@@ -251,7 +230,6 @@ public final class HttpServerFormDecoderProvider {
 	static final class Build implements Builder {
 
 		static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
-		static final boolean DEFAULT_DELETE_ON_EXIT = true;
 		static final long DEFAULT_MAX_IN_MEMORY_SIZE = DefaultHttpDataFactory.MINSIZE;
 		static final long DEFAULT_MAX_SIZE = DefaultHttpDataFactory.MAXSIZE;
 		static final Scheduler DEFAULT_SCHEDULER = Schedulers.boundedElastic();
@@ -259,7 +237,6 @@ public final class HttpServerFormDecoderProvider {
 
 		Path baseDirectory;
 		Charset charset = DEFAULT_CHARSET;
-		boolean deleteOnExit = DEFAULT_DELETE_ON_EXIT;
 		long maxInMemorySize = DEFAULT_MAX_IN_MEMORY_SIZE;
 		long maxSize = DEFAULT_MAX_SIZE;
 		Scheduler scheduler = DEFAULT_SCHEDULER;
@@ -274,12 +251,6 @@ public final class HttpServerFormDecoderProvider {
 		@Override
 		public Builder charset(Charset charset) {
 			this.charset = Objects.requireNonNull(charset, "charset");
-			return this;
-		}
-
-		@Override
-		public Builder deleteOnExit(boolean deleteOnExit) {
-			this.deleteOnExit = deleteOnExit;
 			return this;
 		}
 

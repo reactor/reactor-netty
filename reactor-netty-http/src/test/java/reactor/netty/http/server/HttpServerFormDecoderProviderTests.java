@@ -27,7 +27,6 @@ import java.nio.file.Paths;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.Build.DEFAULT_CHARSET;
-import static reactor.netty.http.server.HttpServerFormDecoderProvider.Build.DEFAULT_DELETE_ON_EXIT;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.Build.DEFAULT_MAX_IN_MEMORY_SIZE;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.Build.DEFAULT_MAX_SIZE;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.Build.DEFAULT_SCHEDULER;
@@ -56,7 +55,6 @@ class HttpServerFormDecoderProviderTests {
 		assertThat(builder.baseDirectory).as("base directory").isSameAs(path);
 
 		checkDefaultCharset(builder);
-		checkDefaultDeleteOnExit(builder);
 		checkDefaultMaxInMemorySize(builder);
 		checkDefaultMaxSize(builder);
 		checkDefaultScheduler(builder);
@@ -78,7 +76,6 @@ class HttpServerFormDecoderProviderTests {
 		assertThat(builder.charset).as("charset").isSameAs(Charset.defaultCharset());
 
 		checkDefaultBaseDirectory(builder);
-		checkDefaultDeleteOnExit(builder);
 		checkDefaultMaxInMemorySize(builder);
 		checkDefaultMaxSize(builder);
 		checkDefaultScheduler(builder);
@@ -92,22 +89,6 @@ class HttpServerFormDecoderProviderTests {
 	}
 
 	@Test
-	void deleteOnExit() {
-		checkDefaultDeleteOnExit(builder);
-
-		builder.deleteOnExit(false);
-
-		assertThat(builder.deleteOnExit).as("delete on exit").isFalse();
-
-		checkDefaultBaseDirectory(builder);
-		checkDefaultCharset(builder);
-		checkDefaultMaxInMemorySize(builder);
-		checkDefaultMaxSize(builder);
-		checkDefaultScheduler(builder);
-		checkDefaultStreaming(builder);
-	}
-
-	@Test
 	void maxInMemorySize() {
 		checkDefaultMaxInMemorySize(builder);
 
@@ -117,7 +98,6 @@ class HttpServerFormDecoderProviderTests {
 
 		checkDefaultBaseDirectory(builder);
 		checkDefaultCharset(builder);
-		checkDefaultDeleteOnExit(builder);
 		checkDefaultMaxSize(builder);
 		checkDefaultScheduler(builder);
 		checkDefaultStreaming(builder);
@@ -140,7 +120,6 @@ class HttpServerFormDecoderProviderTests {
 
 		checkDefaultBaseDirectory(builder);
 		checkDefaultCharset(builder);
-		checkDefaultDeleteOnExit(builder);
 		checkDefaultMaxInMemorySize(builder);
 		checkDefaultScheduler(builder);
 		checkDefaultStreaming(builder);
@@ -163,7 +142,6 @@ class HttpServerFormDecoderProviderTests {
 
 		checkDefaultBaseDirectory(builder);
 		checkDefaultCharset(builder);
-		checkDefaultDeleteOnExit(builder);
 		checkDefaultMaxInMemorySize(builder);
 		checkDefaultMaxSize(builder);
 		checkDefaultStreaming(builder);
@@ -185,7 +163,6 @@ class HttpServerFormDecoderProviderTests {
 
 		checkDefaultBaseDirectory(builder);
 		checkDefaultCharset(builder);
-		checkDefaultDeleteOnExit(builder);
 		checkDefaultMaxInMemorySize(builder);
 		checkDefaultMaxSize(builder);
 		checkDefaultScheduler(builder);
@@ -199,12 +176,6 @@ class HttpServerFormDecoderProviderTests {
 		assertThat(builder.charset).as("default charset")
 				.isSameAs(DEFAULT_CHARSET)
 				.isSameAs(StandardCharsets.UTF_8);
-	}
-
-	private static void checkDefaultDeleteOnExit(HttpServerFormDecoderProvider.Build builder) {
-		assertThat(builder.deleteOnExit).as("default delete on exit")
-				.isEqualTo(DEFAULT_DELETE_ON_EXIT)
-				.isTrue();
 	}
 
 	private static void checkDefaultMaxInMemorySize(HttpServerFormDecoderProvider.Build builder) {
