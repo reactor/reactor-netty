@@ -170,12 +170,16 @@ public final class UdpServerConfig extends TransportConfig {
 			AdvancedByteBufFormat.HEX_DUMP
 					.toLoggingHandler(UdpServer.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
-	static final class MicrometerUdpServerMetricsRecorder extends MicrometerChannelMetricsRecorder {
+	public static class MicrometerUdpServerMetricsRecorder extends MicrometerChannelMetricsRecorder {
 
 		static final MicrometerUdpServerMetricsRecorder INSTANCE = new MicrometerUdpServerMetricsRecorder();
 
-		MicrometerUdpServerMetricsRecorder() {
-			super(reactor.netty.Metrics.UDP_SERVER_PREFIX, "udp");
+		public MicrometerUdpServerMetricsRecorder(String prefix) {
+			super(prefix, "udp");
+		}
+
+		public MicrometerUdpServerMetricsRecorder() {
+			this(reactor.netty.Metrics.UDP_SERVER_PREFIX);
 		}
 	}
 

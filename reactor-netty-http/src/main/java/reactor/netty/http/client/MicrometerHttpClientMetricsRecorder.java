@@ -34,12 +34,16 @@ import static reactor.netty.Metrics.URI;
  * @author Violeta Georgieva
  * @since 0.9
  */
-final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpClientMetricsRecorder {
+public class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpClientMetricsRecorder {
 
-	final static MicrometerHttpClientMetricsRecorder INSTANCE = new MicrometerHttpClientMetricsRecorder();
+	static final MicrometerHttpClientMetricsRecorder INSTANCE = new MicrometerHttpClientMetricsRecorder();
 
-	private MicrometerHttpClientMetricsRecorder() {
-		super(HTTP_CLIENT_PREFIX, "http");
+	public MicrometerHttpClientMetricsRecorder(String prefix) {
+		super(prefix, "http");
+	}
+
+	public MicrometerHttpClientMetricsRecorder() {
+		this(HTTP_CLIENT_PREFIX);
 	}
 
 	@Override

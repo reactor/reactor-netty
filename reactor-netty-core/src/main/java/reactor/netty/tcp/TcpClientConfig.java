@@ -142,12 +142,16 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 	 */
 	static final boolean SSL_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_CLIENT_DEBUG, "false"));
 
-	static final class MicrometerTcpClientMetricsRecorder extends MicrometerChannelMetricsRecorder {
+	public static class MicrometerTcpClientMetricsRecorder extends MicrometerChannelMetricsRecorder {
 
 		static final MicrometerTcpClientMetricsRecorder INSTANCE = new MicrometerTcpClientMetricsRecorder();
 
-		MicrometerTcpClientMetricsRecorder() {
-			super(reactor.netty.Metrics.TCP_CLIENT_PREFIX, "tcp");
+		public MicrometerTcpClientMetricsRecorder(String prefix) {
+			super(prefix, "tcp");
+		}
+
+		public MicrometerTcpClientMetricsRecorder() {
+			this(reactor.netty.Metrics.TCP_CLIENT_PREFIX);
 		}
 	}
 
