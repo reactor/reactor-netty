@@ -42,6 +42,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -126,6 +127,18 @@ class HttpServerPostFormTests extends BaseHttpTest {
 	@ParameterizedPostFormTest
 	void testMultipartExceedsMaxSizeOnDiskConfigOnServer(HttpServer server, HttpClient client) throws Exception {
 		doTestPostForm(server, client, spec -> spec.maxInMemorySize(0).maxSize(8 * 1024), true, true, false,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testMultipartExceedsMaxSizeStreamingConfigOnRequest(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.streaming(true).maxSize(8 * 1024), false, true, true,
+				"Size exceed allowed maximum capacity");
+	}
+
+	@ParameterizedPostFormTest
+	void testMultipartExceedsMaxSizeStreamingConfigOnServer(HttpServer server, HttpClient client) throws Exception {
+		doTestPostForm(server, client, spec -> spec.streaming(true).maxSize(8 * 1024), true, true, true,
 				"Size exceed allowed maximum capacity");
 	}
 
@@ -313,14 +326,26 @@ class HttpServerPostFormTests extends BaseHttpTest {
 		assertThat(originalHttpData1.get()).allMatch(data -> data.refCnt() == 0);
 		assertThat(originalHttpData2.get()).allMatch(data -> data.refCnt() == 0);
 
-		if (streaming && expectedResponse == null) {
-			assertThat(copiedHttpData.get()).hasSize(3);
+		if (streaming) {
+			if (expectedResponse == null) {
+				assertThat(copiedHttpData.get()).hasSize(3);
 
-			byte[] fileBytes = Files.readAllBytes(file);
-			testContent(copiedHttpData.get().get("test1"), fileBytes);
-			testContent(copiedHttpData.get().get("test2"), fileBytes);
+				byte[] fileBytes = Files.readAllBytes(file);
+				testContent(copiedHttpData.get().get("test1"), fileBytes);
+				testContent(copiedHttpData.get().get("test2"), fileBytes);
 
-			copiedHttpData.get().forEach((s, buffer) -> buffer.release());
+				copiedHttpData.get().forEach((s, buffer) -> buffer.release());
+			}
+			else {
+				List<HttpProtocol> serverProtocols = Arrays.asList(server.configuration().protocols());
+				if (serverProtocols.size() == 1 && serverProtocols.get(0).equals(HttpProtocol.HTTP11)) {
+					assertThat(copiedHttpData.get()).hasSize(1);
+					copiedHttpData.get().forEach((s, buffer) -> buffer.release());
+				}
+				else {
+					assertThat(copiedHttpData.get()).hasSize(0);
+				}
+			}
 		}
 	}
 

@@ -345,8 +345,8 @@ public final class HttpServerFormDecoderProvider {
 		public void destroy() {
 			super.destroy();
 			InterfaceHttpData partial = currentPartialHttpData();
-			if (partial instanceof HttpData) {
-				((HttpData) partial).delete();
+			if (partial != null) {
+				partial.release();
 			}
 		}
 	}
@@ -407,8 +407,8 @@ public final class HttpServerFormDecoderProvider {
 		public void destroy() {
 			super.destroy();
 			InterfaceHttpData partial = currentPartialHttpData();
-			if (partial instanceof HttpData) {
-				((HttpData) partial).delete();
+			if (partial != null) {
+				partial.release();
 			}
 		}
 	}
