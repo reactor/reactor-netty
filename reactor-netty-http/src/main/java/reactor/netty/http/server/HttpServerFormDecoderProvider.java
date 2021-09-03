@@ -327,10 +327,7 @@ public final class HttpServerFormDecoderProvider {
 			if (!onlyCompleted) {
 				InterfaceHttpData partial = currentPartialHttpData();
 				if (partial instanceof HttpData) {
-					List<HttpData> all = new ArrayList<>(currentCompletedHttpData.size() + 1);
-					all.addAll(currentCompletedHttpData);
-					all.add((HttpData) partial);
-					return all;
+					currentCompletedHttpData.add(((HttpData) partial).retainedDuplicate());
 				}
 			}
 
@@ -387,10 +384,7 @@ public final class HttpServerFormDecoderProvider {
 			if (!onlyCompleted) {
 				InterfaceHttpData partial = currentPartialHttpData();
 				if (partial instanceof HttpData) {
-					List<HttpData> all = new ArrayList<>(currentCompletedHttpData.size() + 1);
-					all.addAll(currentCompletedHttpData);
-					all.add((HttpData) partial);
-					return all;
+					currentCompletedHttpData.add(((HttpData) partial).retainedDuplicate());
 				}
 			}
 
