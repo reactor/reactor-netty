@@ -222,9 +222,7 @@ public final class HttpServerFormDecoderProvider {
 
 		void cleanCurrentHttpData(boolean onlyCompleted);
 
-		List<HttpData> currentCompletedHttpData();
-
-		List<HttpData> currentHttpData();
+		List<HttpData> currentHttpData(boolean onlyCompleted);
 	}
 
 	static final class Build implements Builder {
@@ -309,14 +307,14 @@ public final class HttpServerFormDecoderProvider {
 		}
 
 		@Override
-		public void cleanCurrentHttpData(boolean cleanAll) {
+		public void cleanCurrentHttpData(boolean onlyCompleted) {
 			for (HttpData data : currentCompletedHttpData) {
 				removeHttpDataFromClean(data);
 				data.release();
 			}
 			currentCompletedHttpData.clear();
 
-			if (cleanAll) {
+			if (!onlyCompleted) {
 				InterfaceHttpData partial = currentPartialHttpData();
 				if (partial instanceof HttpData) {
 					((HttpData) partial).delete();
@@ -325,19 +323,17 @@ public final class HttpServerFormDecoderProvider {
 		}
 
 		@Override
-		public List<HttpData> currentCompletedHttpData() {
-			return currentCompletedHttpData;
-		}
-
-		@Override
-		public List<HttpData> currentHttpData() {
-			InterfaceHttpData partial = currentPartialHttpData();
-			if (partial instanceof HttpData) {
-				List<HttpData> all = new ArrayList<>(currentCompletedHttpData.size() + 1);
-				all.addAll(currentCompletedHttpData);
-				all.add((HttpData) partial);
-				return all;
+		public List<HttpData> currentHttpData(boolean onlyCompleted) {
+			if (!onlyCompleted) {
+				InterfaceHttpData partial = currentPartialHttpData();
+				if (partial instanceof HttpData) {
+					List<HttpData> all = new ArrayList<>(currentCompletedHttpData.size() + 1);
+					all.addAll(currentCompletedHttpData);
+					all.add((HttpData) partial);
+					return all;
+				}
 			}
+
 			return currentCompletedHttpData;
 		}
 
@@ -380,26 +376,24 @@ public final class HttpServerFormDecoderProvider {
 
 			if (!onlyCompleted) {
 				InterfaceHttpData partial = currentPartialHttpData();
-				if (partial != null) {
-					currentPartialHttpData().release();
+				if (partial instanceof HttpData) {
+					((HttpData) partial).delete();
 				}
 			}
 		}
 
 		@Override
-		public List<HttpData> currentCompletedHttpData() {
-			return currentCompletedHttpData;
-		}
-
-		@Override
-		public List<HttpData> currentHttpData() {
-			InterfaceHttpData partial = currentPartialHttpData();
-			if (partial instanceof HttpData) {
-				List<HttpData> all = new ArrayList<>(currentCompletedHttpData.size() + 1);
-				all.addAll(currentCompletedHttpData);
-				all.add((HttpData) partial);
-				return all;
+		public List<HttpData> currentHttpData(boolean onlyCompleted) {
+			if (!onlyCompleted) {
+				InterfaceHttpData partial = currentPartialHttpData();
+				if (partial instanceof HttpData) {
+					List<HttpData> all = new ArrayList<>(currentCompletedHttpData.size() + 1);
+					all.addAll(currentCompletedHttpData);
+					all.add((HttpData) partial);
+					return all;
+				}
 			}
+
 			return currentCompletedHttpData;
 		}
 
