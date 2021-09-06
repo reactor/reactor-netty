@@ -82,7 +82,7 @@ public final class HttpServerFormDecoderProvider {
 		 * Default to {@link DefaultHttpDataFactory#MAXSIZE} - unlimited.
 		 * <p>Note: If set to {@code -1} this means no limitation.
 		 *
-		 * @param maxSize the maximum in-memory size
+		 * @param maxSize the maximum size allowed for an individual attribute/fileUpload
 		 * @return {@code this}
 		 */
 		Builder maxSize(long maxSize);
@@ -146,18 +146,18 @@ public final class HttpServerFormDecoderProvider {
 	}
 
 	/**
-	 * Returns the configured maximum in-memory size per {@link Attribute}/{@link FileUpload}.
+	 * Returns the configured maximum size after which an {@link Attribute}/{@link FileUpload} starts being stored on disk rather than in memory.
 	 *
-	 * @return the configured maximum in-memory size per {@link Attribute}/{@link FileUpload}
+	 * @return the configured maximum size after which an {@link Attribute}/{@link FileUpload} starts being stored on disk rather than in memory
 	 */
 	public long maxInMemorySize() {
 		return maxInMemorySize;
 	}
 
 	/**
-	 * Returns the configured maximum size per {@link Attribute}/{@link FileUpload}.
+	 * Returns the configured maximum allowed size of individual {@link Attribute}/{@link FileUpload}.
 	 *
-	 * @return the configured maximum size per {@link Attribute}/{@link FileUpload}
+	 * @return the configured maximum allowed size of individual {@link Attribute}/{@link FileUpload}
 	 */
 	public long maxSize() {
 		return maxSize;
