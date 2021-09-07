@@ -130,7 +130,7 @@ public final class HttpServerFormDecoderProvider {
 	 * Returns the configured directory where to store disk {@link Attribute}/{@link FileUpload}.
 	 *
 	 * @return the configured directory where to store disk {@link Attribute}/{@link FileUpload}
-	 * @see Builder#baseDirectory(Path) 
+	 * @see Builder#baseDirectory(Path)
 	 */
 	@Nullable
 	public Path baseDirectory() {
@@ -141,7 +141,7 @@ public final class HttpServerFormDecoderProvider {
 	 * Returns the configured charset for {@link Attribute}/{@link FileUpload}.
 	 *
 	 * @return the configured charset for {@link Attribute}/{@link FileUpload}
-	 * @see Builder#charset(Charset) 
+	 * @see Builder#charset(Charset)
 	 */
 	public Charset charset() {
 		return charset;
@@ -151,7 +151,7 @@ public final class HttpServerFormDecoderProvider {
 	 * Returns the configured maximum size after which an {@link Attribute}/{@link FileUpload} starts being stored on disk rather than in memory.
 	 *
 	 * @return the configured maximum size after which an {@link Attribute}/{@link FileUpload} starts being stored on disk rather than in memory
-	 * @see Builder#maxInMemorySize(long) 
+	 * @see Builder#maxInMemorySize(long)
 	 */
 	public long maxInMemorySize() {
 		return maxInMemorySize;
@@ -161,7 +161,7 @@ public final class HttpServerFormDecoderProvider {
 	 * Returns the configured maximum allowed size of individual {@link Attribute}/{@link FileUpload}.
 	 *
 	 * @return the configured maximum allowed size of individual {@link Attribute}/{@link FileUpload}
-	 * @see Builder#maxSize(long) 
+	 * @see Builder#maxSize(long)
 	 */
 	public long maxSize() {
 		return maxSize;
@@ -171,7 +171,7 @@ public final class HttpServerFormDecoderProvider {
 	 * Returns the configured scheduler to be used for offloading disk operations in the decoding phase.
 	 *
 	 * @return the configured scheduler to be used for offloading disk operations in the decoding phase
-	 * @see Builder#scheduler(Scheduler) 
+	 * @see Builder#scheduler(Scheduler)
 	 */
 	public Scheduler scheduler() {
 		return scheduler;
@@ -181,7 +181,7 @@ public final class HttpServerFormDecoderProvider {
 	 * Returns whether the streaming mode is enabled.
 	 *
 	 * @return whether the streaming mode is enabled
-	 * @see Builder#streaming(boolean) 
+	 * @see Builder#streaming(boolean)
 	 */
 	public boolean streaming() {
 		return streaming;
