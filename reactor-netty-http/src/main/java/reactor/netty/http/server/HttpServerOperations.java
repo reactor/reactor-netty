@@ -641,8 +641,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		Throwable cause = t.getCause() != null ? t.getCause() : t;
 
-		if (log.isDebugEnabled()) {
-			log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "), cause);
+		if (log.isWarnEnabled()) {
+			log.warn(format(ctx.channel(), "Decoding failed: " + msg + " : "), cause);
 		}
 
 		ReferenceCountUtil.release(msg);
