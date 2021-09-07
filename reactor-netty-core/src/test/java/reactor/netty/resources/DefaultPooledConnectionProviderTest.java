@@ -512,7 +512,8 @@ class DefaultPooledConnectionProviderTest {
 			InstrumentedPool<DefaultPooledConnectionProvider.PooledConnection> channelPool =
 					provider.channelPools.values().toArray(new InstrumentedPool[0])[0];
 			assertThat(channelPool.metrics())
-				.withFailMessage("Reactor-netty relies on Reactor-pool instrumented pool.metrics() to be the pool instance itself, got <%s> and <%s>", 
+				.withFailMessage("Reactor-netty relies on Reactor-pool instrumented pool.metrics()" +
+								" to be the pool instance itself, got <%s> and <%s>",
 				channelPool.metrics(), channelPool)
 				.isSameAs(channelPool);
 		}
