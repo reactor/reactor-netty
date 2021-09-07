@@ -48,7 +48,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
@@ -70,17 +69,6 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	final PoolFactory<T> defaultPoolFactory;
 
 	final ConcurrentMap<PoolKey, InstrumentedPool<T>> channelPools = PlatformDependent.newConcurrentHashMap();
-
-	/**
-	 * This map keeps a weakref to the {@link InstrumentedPool#metrics() metrics} of created pools through the same PoolKey that is used in
-	 * {@link #channelPools}. This is so that metrics providing objects don't get garbage collected too early,
-	 * as metrics-related frameworks (such as micrometer) don't hold strong references to metrics providing objects
-	 * (rightfully so). When the PoolKey is garbage collected, the metrics will become garbage collectable again.
-	 *
-	 * @see #acquire(TransportConfig, ConnectionObserver, Supplier, AddressResolverGroup)
-	 * @see #disposeLater()
-	 */
-	private final Map<PoolKey, ConnectionPoolMetrics> poolMetrics = new WeakHashMap<>();
 
 	final String name;
 	final Duration disposeInterval;
@@ -126,9 +114,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					MeterRegistrar registrar = poolFactory.registrar != null ?
 							poolFactory.registrar.get() : MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE;
 
-					DelegatingConnectionPoolMetrics metrics = new DelegatingConnectionPoolMetrics(newPool.metrics());
-					poolMetrics.put(poolKey, metrics);
-					registrar.registerMetrics(name, poolKey.hashCode() + "", remoteAddress, metrics);
+					registrar.registerMetrics(name, poolKey.hashCode() + "", remoteAddress,
+							new DelegatingConnectionPoolMetrics(newPool.metrics()));
 				}
 				return newPool;
 			});
