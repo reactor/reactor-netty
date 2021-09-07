@@ -465,6 +465,68 @@ class DefaultPooledConnectionProviderTest {
 		}
 	}
 
+	@Test
+	void testIssue1790FIFOPool() {
+		doTestIssue1790(true);
+	}
+
+	@Test
+	void testIssue1790LIFOPool() {
+		doTestIssue1790(false);
+	}
+
+	private void doTestIssue1790(boolean fifoPool) {
+		DefaultPooledConnectionProvider provider;
+		if (fifoPool) {
+			provider =
+			        (DefaultPooledConnectionProvider) ConnectionProvider.builder("testIssue1790")
+			                                                            .maxConnections(1)
+			                                                            .fifo()
+			                                                            .build();
+		}
+		else {
+			provider =
+			        (DefaultPooledConnectionProvider) ConnectionProvider.builder("testIssue1790")
+			                                                            .maxConnections(1)
+			                                                            .lifo()
+			                                                            .build();
+		}
+
+		DisposableServer disposableServer =
+				TcpServer.create()
+				         .port(0)
+				         .wiretap(true)
+				         .bindNow();
+
+		Connection connection = null;
+		try {
+			connection =
+					TcpClient.create(provider)
+					         .port(disposableServer.port())
+					         .wiretap(true)
+					         .connectNow();
+
+			assertThat(provider.channelPools).hasSize(1);
+
+			@SuppressWarnings({"unchecked", "rawtypes"})
+			InstrumentedPool<DefaultPooledConnectionProvider.PooledConnection> channelPool =
+					provider.channelPools.values().toArray(new InstrumentedPool[0])[0];
+			assertThat(channelPool.metrics())
+				.withFailMessage("Reactor-netty relies on Reactor-pool instrumented pool.metrics()" +
+								" to be the pool instance itself, got <%s> and <%s>",
+				channelPool.metrics(), channelPool)
+				.isSameAs(channelPool);
+		}
+		finally {
+			if (connection != null) {
+				connection.disposeNow();
+			}
+			disposableServer.disposeNow();
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
 	static final class PoolImpl extends AtomicInteger implements InstrumentedPool<PooledConnection> {
 
 		@Override
