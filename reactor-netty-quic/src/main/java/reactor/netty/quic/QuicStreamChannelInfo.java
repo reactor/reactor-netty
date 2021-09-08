@@ -15,13 +15,19 @@
  */
 package reactor.netty.quic;
 
-import io.netty.channel.Channel;
-import reactor.netty.NettyInbound;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
 
 /**
- * An inbound-traffic API delegating to an underlying {@link Channel}.
+ * Exposes information for the {@link QuicStreamChannel} as stream id etc.
  *
  * @author Violeta Georgieva
  */
-public interface QuicInbound extends NettyInbound, QuicStreamChannelInfo {
+public interface QuicStreamChannelInfo {
+
+	/**
+	 * The id of the stream.
+	 *
+	 * @return the stream id of this {@link QuicStreamChannel}.
+	 */
+	long streamId();
 }

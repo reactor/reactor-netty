@@ -37,6 +37,7 @@ class QuicServerSmokeTests extends BaseQuicTests {
 	static final String EMPTY_RESPONSE = "Hello Empty!";
 	static final String FLUX_RESPONSE = "Hello Flux!";
 	static final String MONO_RESPONSE = "Hello Mono!";
+	static final String STREAM_ID_RESPONSE = "stream_id=1";
 
 	static final String METHOD = "GET";
 
@@ -45,6 +46,7 @@ class QuicServerSmokeTests extends BaseQuicTests {
 	static final String MONO_PATH = " /mono";
 	static final String ERROR_PATH_1 = " /error1";
 	static final String ERROR_PATH_2 = " /error2";
+	static final String STREAM_ID = " /stream_id";
 
 	@Test
 	void testEmpty() throws Exception {
@@ -64,6 +66,11 @@ class QuicServerSmokeTests extends BaseQuicTests {
 	@Test
 	void testMonoError() throws Exception {
 		doTestServerOpensStream(Mono.just(METHOD + ERROR_PATH_2 + "\r\n"), EMPTY_RESPONSE);
+	}
+
+	@Test
+	void testStreamId() throws Exception {
+		doTestServerOpensStream(Mono.just(METHOD + STREAM_ID + "\r\n"), STREAM_ID_RESPONSE);
 	}
 
 	@Test
@@ -120,6 +127,9 @@ class QuicServerSmokeTests extends BaseQuicTests {
 				                                 }
 				                                 else if ((METHOD + ERROR_PATH_2).equals(s)) {
 				                                     return Mono.error(new RuntimeException("error2"));
+				                                 }
+				                                 else if ((METHOD + STREAM_ID).equals(s)) {
+				                                     return Mono.just("stream_id=" + in.streamId() + "\r\n");
 				                                 }
 				                                 return Mono.empty();
 				                             })))
