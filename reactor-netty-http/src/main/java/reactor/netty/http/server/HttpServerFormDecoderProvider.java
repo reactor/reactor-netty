@@ -25,12 +25,14 @@ import io.netty.handler.codec.http.multipart.HttpPostMultipartRequestDecoder;
 import io.netty.handler.codec.http.multipart.HttpPostStandardRequestDecoder;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.InterfaceHttpPostRequestDecoder;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.annotation.Nullable;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +49,8 @@ public final class HttpServerFormDecoderProvider {
 	public interface Builder {
 
 		/**
-		 * Sets the directory where to store disk {@link Attribute}/{@link FileUpload}. Default to system temp directory.
+		 * Sets the directory where to store disk {@link Attribute}/{@link FileUpload}.
+		 * Default to generated temp directory.
 		 *
 		 * @param baseDirectory directory where to store disk {@link Attribute}/{@link FileUpload}
 		 * @return {@code this}
@@ -116,6 +119,8 @@ public final class HttpServerFormDecoderProvider {
 	final long maxSize;
 	final Scheduler scheduler;
 	final boolean streaming;
+
+	private volatile Mono<Path> defaultTempDirectory = createDefaultTemDirectory();
 
 	HttpServerFormDecoderProvider(Build build) {
 		this.baseDirectory = build.baseDirectory;
@@ -209,7 +214,44 @@ public final class HttpServerFormDecoderProvider {
 		return Objects.hash(baseDirectory, charset, maxInMemorySize, maxSize, scheduler, streaming);
 	}
 
-	ReactorNettyHttpPostRequestDecoder newHttpPostRequestDecoder(HttpRequest request, boolean isMultipart) {
+	Mono<Path> createDefaultTemDirectory() {
+		return Mono.fromCallable(() -> Files.createTempDirectory(DEFAULT_TEMP_DIRECTORY_PREFIX))
+		           .cache();
+	}
+
+	Mono<Path> defaultTempDirectory() {
+		return defaultTempDirectory
+				.flatMap(dir -> {
+					if (!Files.exists(dir)) {
+						Mono<Path> newDirectory = createDefaultTemDirectory();
+						defaultTempDirectory = newDirectory;
+						return newDirectory;
+					}
+					else {
+						return Mono.just(dir);
+					}
+				})
+				.subscribeOn(scheduler);
+	}
+
+	Mono<ReactorNettyHttpPostRequestDecoder> newHttpPostRequestDecoder(HttpRequest request, boolean isMultipart) {
+		if (maxInMemorySize > -1) {
+			Mono<Path> directoryMono;
+			if (baseDirectory == null) {
+				directoryMono = defaultTempDirectory();
+			}
+			else {
+				directoryMono = Mono.just(baseDirectory);
+			}
+			return directoryMono.map(directory -> newHttpPostRequestDecoder(request, isMultipart, directory));
+		}
+		else {
+			return Mono.just(newHttpPostRequestDecoder(request, isMultipart, null));
+		}
+	}
+
+	ReactorNettyHttpPostRequestDecoder newHttpPostRequestDecoder(HttpRequest request, boolean isMultipart,
+			@Nullable Path baseDirectory) {
 		DefaultHttpDataFactory factory = maxInMemorySize > 0 ?
 				new DefaultHttpDataFactory(maxInMemorySize, charset) :
 				new DefaultHttpDataFactory(maxInMemorySize == 0, charset);
@@ -223,6 +265,8 @@ public final class HttpServerFormDecoderProvider {
 	}
 
 	static final HttpServerFormDecoderProvider DEFAULT_FORM_DECODER_SPEC = new HttpServerFormDecoderProvider.Build().build();
+
+	static final String DEFAULT_TEMP_DIRECTORY_PREFIX = "RN_form_";
 
 	interface ReactorNettyHttpPostRequestDecoder extends InterfaceHttpPostRequestDecoder {
 

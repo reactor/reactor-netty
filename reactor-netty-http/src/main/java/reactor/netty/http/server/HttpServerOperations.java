@@ -739,35 +739,32 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					"Request is not POST or does not have Content-Type " +
 							"with value 'application/x-www-form-urlencoded' or 'multipart/form-data'"));
 		}
-		return Flux.defer(() -> {
-			HttpServerFormDecoderProvider.ReactorNettyHttpPostRequestDecoder decoder =
-					config.newHttpPostRequestDecoder(nettyRequest, isMultipart);
-
-			return receiveObject() // receiveContent uses filter operator, this operator buffers, but we don't want it
-					.concatMap(object -> {
-						if (!(object instanceof HttpContent)) {
-							return Mono.empty();
-						}
-						HttpContent httpContent = (HttpContent) object;
-						if (config.maxInMemorySize > -1) {
-							httpContent.retain();
-						}
-						return config.maxInMemorySize == -1 ?
-								Flux.using(
-										() -> decoder.offer(httpContent),
-										d -> Flux.fromIterable(decoder.currentHttpData(!config.streaming)),
-										d -> decoder.cleanCurrentHttpData(!config.streaming)) :
-								Flux.usingWhen(
-										Mono.fromCallable(() -> decoder.offer(httpContent))
-										    .subscribeOn(config.scheduler)
-										    .doFinally(sig -> httpContent.release()),
-										d -> Flux.fromIterable(decoder.currentHttpData(true)),
-										// FIXME Can we have cancellation for the resourceSupplier that will
-										// cause this one to not be invoked?
-										d -> Mono.fromRunnable(() -> decoder.cleanCurrentHttpData(true)));
-					}, 0) // There is no need of prefetch, we already have the buffers in the Reactor Netty inbound queue
-					.doFinally(sig -> decoder.destroy());
-		});
+		return Flux.defer(() ->
+				config.newHttpPostRequestDecoder(nettyRequest, isMultipart).flatMapMany(decoder ->
+						receiveObject() // receiveContent uses filter operator, this operator buffers, but we don't want it
+								.concatMap(object -> {
+									if (!(object instanceof HttpContent)) {
+										return Mono.empty();
+									}
+									HttpContent httpContent = (HttpContent) object;
+									if (config.maxInMemorySize > -1) {
+										httpContent.retain();
+									}
+									return config.maxInMemorySize == -1 ?
+											Flux.using(
+													() -> decoder.offer(httpContent),
+													d -> Flux.fromIterable(decoder.currentHttpData(!config.streaming)),
+													d -> decoder.cleanCurrentHttpData(!config.streaming)) :
+											Flux.usingWhen(
+													Mono.fromCallable(() -> decoder.offer(httpContent))
+													    .subscribeOn(config.scheduler)
+													    .doFinally(sig -> httpContent.release()),
+													d -> Flux.fromIterable(decoder.currentHttpData(true)),
+													// FIXME Can we have cancellation for the resourceSupplier that will
+													// cause this one to not be invoked?
+													d -> Mono.fromRunnable(() -> decoder.cleanCurrentHttpData(true)));
+								}, 0) // There is no need of prefetch, we already have the buffers in the Reactor Netty inbound queue
+								.doFinally(sig -> decoder.destroy())));
 	}
 
 	final Mono<Void> withWebsocketSupport(String url,

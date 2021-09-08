@@ -247,7 +247,7 @@ The following listing shows the available configurations:
 [width="100%",options="header"]
 |=======
 | Configuration name | Description
-| `baseDirectory` | Configures the directory where to store the data on the disk. Default to system temp directory.
+| `baseDirectory` | Configures the directory where to store the data on the disk. Default to generated temp directory.
 | `charset` | Configures the `Charset` for the data. Default to `StandardCharsets#UTF_8`.
 | `maxInMemorySize` | Configures the maximum in-memory size per data i.e. the data is written
 on disk if the size is greater than `maxInMemorySize`, else it is in memory.
