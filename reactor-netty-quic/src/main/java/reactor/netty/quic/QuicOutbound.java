@@ -23,5 +23,5 @@ import reactor.netty.NettyOutbound;
  *
  * @author Violeta Georgieva
  */
-public interface QuicOutbound extends NettyOutbound, QuicStreamChannelInfo {
+public interface QuicOutbound extends NettyOutbound, QuicStreamInfo {
 }

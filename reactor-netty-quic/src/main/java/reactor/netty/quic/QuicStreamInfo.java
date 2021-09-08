@@ -22,7 +22,7 @@ import io.netty.incubator.codec.quic.QuicStreamChannel;
  *
  * @author Violeta Georgieva
  */
-public interface QuicStreamChannelInfo {
+public interface QuicStreamInfo {
 
 	/**
 	 * The id of the stream.
