@@ -15,7 +15,6 @@
  */
 package reactor.netty.quic;
 
-import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
@@ -91,11 +90,9 @@ class QuicServerTests extends BaseQuicTests {
 		client =
 				createClient(server::address)
 				        .handleStream((in, out) -> {
-				            in.withConnection(conn -> {
-				                streamTypeReceived.set(((QuicStreamChannel) conn.channel()).type() == streamType);
-				                remoteCreated.set(!((QuicStreamChannel) conn.channel()).isLocalCreated());
-				                latch.countDown();
-				            });
+				            streamTypeReceived.set(in.streamType() == streamType);
+				            remoteCreated.set(!in.isLocalStream());
+				            latch.countDown();
 				            if (QuicStreamType.BIDIRECTIONAL == streamType) {
 				                return out.send(in.receive().retain());
 				            }
@@ -154,11 +151,9 @@ class QuicServerTests extends BaseQuicTests {
 		client =
 				createClient(server::address)
 				        .handleStream((in, out) -> {
-				            in.withConnection(conn -> {
-				                streamTypeReceived.set(((QuicStreamChannel) conn.channel()).type() == QuicStreamType.UNIDIRECTIONAL);
-				                remoteCreated.set(!((QuicStreamChannel) conn.channel()).isLocalCreated());
-				                latch.countDown();
-				            });
+				            streamTypeReceived.set(in.streamType() == QuicStreamType.UNIDIRECTIONAL);
+				            remoteCreated.set(!in.isLocalStream());
+				            latch.countDown();
 				            return out.send(in.receive().retain())
 				                      .then()
 				                      .doOnError(t -> {

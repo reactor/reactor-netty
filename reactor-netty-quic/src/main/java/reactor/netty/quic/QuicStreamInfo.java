@@ -16,6 +16,7 @@
 package reactor.netty.quic;
 
 import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.incubator.codec.quic.QuicStreamType;
 
 /**
  * Exposes information for the {@link QuicStreamChannel} as stream id etc.
@@ -25,9 +26,23 @@ import io.netty.incubator.codec.quic.QuicStreamChannel;
 public interface QuicStreamInfo {
 
 	/**
+	 * Returns {@code true} if the stream was created by this peer.
+	 *
+	 * @return {@code true} if created by this peer, {@code false} otherwise.
+	 */
+	boolean isLocalStream();
+
+	/**
 	 * The id of the stream.
 	 *
 	 * @return the stream id of this {@link QuicStreamChannel}.
 	 */
 	long streamId();
+
+	/**
+	 * Returns the {@link QuicStreamType} of the stream.
+	 *
+	 * @return {@link QuicStreamType} of this stream.
+	 */
+	QuicStreamType streamType();
 }

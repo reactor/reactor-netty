@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.incubator.codec.quic.DefaultQuicStreamFrame;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamFrame;
+import io.netty.incubator.codec.quic.QuicStreamType;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -58,6 +59,11 @@ class QuicStreamOperations extends ChannelOperations<QuicInbound, QuicOutbound> 
 	QuicStreamOperations(Connection connection, ConnectionObserver listener) {
 		super(connection, listener);
 		markPersistent(false);
+	}
+
+	@Override
+	public boolean isLocalStream() {
+		return ((QuicStreamChannel) connection().channel()).isLocalCreated();
 	}
 
 	@Override
@@ -103,6 +109,11 @@ class QuicStreamOperations extends ChannelOperations<QuicInbound, QuicOutbound> 
 	@Override
 	public long streamId() {
 		return ((QuicStreamChannel) connection().channel()).streamId();
+	}
+
+	@Override
+	public QuicStreamType streamType() {
+		return ((QuicStreamChannel) connection().channel()).type();
 	}
 
 	@Override
