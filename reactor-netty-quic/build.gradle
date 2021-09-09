@@ -41,6 +41,7 @@ dependencies {
 
 	testCompile "org.assertj:assertj-core:$assertJVersion"
 	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
 
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"

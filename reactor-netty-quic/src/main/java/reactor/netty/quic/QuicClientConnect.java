@@ -181,16 +181,12 @@ final class QuicClientConnect extends QuicClient {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onNext(Channel channel) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel, "Bound new channel"));
 			}
 
-			SocketAddress remote = null;
-			if (remoteAddress != null) {
-				remote = Objects.requireNonNull(remoteAddress.get(), "Remote Address supplier returned null");
-			}
+			final SocketAddress remote = Objects.requireNonNull(remoteAddress.get(), "Remote Address supplier returned null");
 
 			QuicChannelBootstrap bootstrap =
 					QuicChannel.newBootstrap(channel)
@@ -204,9 +200,18 @@ final class QuicClientConnect extends QuicClient {
 			streamAttributes(bootstrap, streamAttrs);
 			streamChannelOptions(bootstrap, streamOptions);
 
-			//"FutureReturnValueIgnored" this is deliberate
-			//We don't need to attach a listener, we've already configured QuicChannelObserver
-			bootstrap.connect();
+			bootstrap.connect()
+			         .addListener(f -> {
+			             //We don't need to attach a listener, we've already configured QuicChannelObserver
+			             if (!f.isSuccess()) {
+			                 if (f.cause() != null) {
+			                     sink.error(f.cause());
+			                 }
+			                 else {
+			                     sink.error(new IOException("Cannot connect to [" + remote + "]"));
+			                 }
+			             }
+			         });
 		}
 
 		@Override

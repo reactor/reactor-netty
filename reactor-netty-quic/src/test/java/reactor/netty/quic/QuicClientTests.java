@@ -15,12 +15,16 @@
  */
 package reactor.netty.quic;
 
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ConnectTimeoutException;
 import io.netty.incubator.codec.quic.QuicException;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +39,17 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Violeta Georgieva
  */
 class QuicClientTests extends BaseQuicTests {
+
+	@Test
+	void testCannotConnectToRemote() {
+			createClient(() -> new InetSocketAddress(12121))
+			        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100)
+			        .connect()
+			        .as(StepVerifier::create)
+			        .expectErrorMatches(t -> t instanceof ConnectTimeoutException &&
+			                t.getMessage().contains("connection timed out"))
+			        .verify(Duration.ofSeconds(5));
+	}
 
 	@Test
 	void testMaxStreamsReachedBidirectional() throws Exception {
