@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Violeta Georgieva
@@ -34,12 +35,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 class QuicClientTests extends BaseQuicTests {
 
 	@Test
-	void testBidirectionalStreamCreatedByClient() throws Exception {
+	void testMissingSslContext() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() ->
+						QuicClient.create()
+						          .port(0)
+						          .connectNow());
+	}
+
+	@Test
+	void testBidirectionalStreamCreatedByClientBidirectional() throws Exception {
 		testStreamCreatedByClient(QuicStreamType.BIDIRECTIONAL);
 	}
 
 	@Test
-	void testUnidirectionalStreamCreatedByClient() throws Exception {
+	void testUnidirectionalStreamCreatedByClientUnidirectional() throws Exception {
 		testStreamCreatedByClient(QuicStreamType.UNIDIRECTIONAL);
 	}
 

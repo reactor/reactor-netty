@@ -79,8 +79,7 @@ final class QuicClientConnect extends QuicClient {
 	@Override
 	public Mono<? extends QuicConnection> connect() {
 		QuicClientConfig config = configuration();
-		Objects.requireNonNull(config.bindAddress(), "bindAddress");
-		Objects.requireNonNull(config.remoteAddress(), "remoteAddress");
+		validate(config);
 
 		Mono<? extends QuicConnection> mono = Mono.create(sink -> {
 			SocketAddress local = Objects.requireNonNull(config.bindAddress().get(), "Bind Address supplier returned null");
@@ -92,7 +91,7 @@ final class QuicClientConnect extends QuicClient {
 				}
 			}
 
-			DisposableConnect disposableConnect = new DisposableConnect(config, sink);
+			DisposableConnect disposableConnect = new DisposableConnect(config, local, sink);
 			TransportConnector.bind(config, config.parentChannelInitializer(), local, false)
 			                  .subscribe(disposableConnect);
 		});
@@ -109,6 +108,12 @@ final class QuicClientConnect extends QuicClient {
 		return new QuicClientConnect(new QuicClientConfig(config));
 	}
 
+	static void validate(QuicClientConfig config) {
+		Objects.requireNonNull(config.bindAddress(), "bindAddress");
+		Objects.requireNonNull(config.remoteAddress, "remoteAddress");
+		Objects.requireNonNull(config.sslContext, "sslContext");
+	}
+
 	/**
 	 * The default port for reactor-netty QUIC clients. Defaults to 12012 but can be tuned via
 	 * the {@code QUIC_PORT} <b>environment variable</b>.
@@ -119,7 +124,7 @@ final class QuicClientConnect extends QuicClient {
 	static final class DisposableConnect implements CoreSubscriber<Channel>, Disposable {
 
 		final Map<AttributeKey<?>, ?>           attributes;
-		final Supplier<? extends SocketAddress> bindAddress;
+		final SocketAddress                     bindAddress;
 		final ChannelHandler                    loggingHandler;
 		final Map<ChannelOption<?>, ?>          options;
 		final ChannelInitializer<Channel>       quicChannelInitializer;
@@ -131,9 +136,9 @@ final class QuicClientConnect extends QuicClient {
 
 		Subscription subscription;
 
-		DisposableConnect(QuicClientConfig config, MonoSink<QuicConnection> sink) {
+		DisposableConnect(QuicClientConfig config, SocketAddress bindAddress, MonoSink<QuicConnection> sink) {
 			this.attributes = config.attributes();
-			this.bindAddress = config.bindAddress();
+			this.bindAddress = bindAddress;
 			this.loggingHandler = config.loggingHandler();
 			this.options = config.options();
 			ConnectionObserver observer = new QuicChannelObserver(
@@ -164,12 +169,11 @@ final class QuicClientConnect extends QuicClient {
 
 		@Override
 		public void onError(Throwable t) {
-			if (bindAddress != null && (t instanceof BindException ||
+			if (t instanceof BindException ||
 					// With epoll/kqueue transport it is
 					// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
-					(t instanceof IOException && t.getMessage() != null &&
-							t.getMessage().contains("bind(..)")))) {
-				sink.error(ChannelBindException.fail(bindAddress.get(), null));
+					(t instanceof IOException && t.getMessage() != null && t.getMessage().contains("bind(..)"))) {
+				sink.error(ChannelBindException.fail(bindAddress, null));
 			}
 			else {
 				sink.error(t);
@@ -254,18 +258,18 @@ final class QuicClientConnect extends QuicClient {
 		}
 
 		@Override
-		public void onUncaughtException(Connection connection, Throwable error) {
-			sink.error(error);
-			childObs.onUncaughtException(connection, error);
-		}
-
-		@Override
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == CONFIGURED) {
 				sink.success((QuicConnection) Connection.from(connection.channel()));
 			}
 
 			childObs.onStateChange(connection, newState);
+		}
+
+		@Override
+		public void onUncaughtException(Connection connection, Throwable error) {
+			sink.error(error);
+			childObs.onUncaughtException(connection, error);
 		}
 	}
 }

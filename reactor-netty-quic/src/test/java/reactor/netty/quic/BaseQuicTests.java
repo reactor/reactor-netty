@@ -21,6 +21,7 @@ import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicSslContext;
 import io.netty.incubator.codec.quic.QuicSslContextBuilder;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import reactor.netty.Connection;
 
 import java.net.InetSocketAddress;
@@ -35,8 +36,25 @@ class BaseQuicTests {
 
 	static final String PROTOCOL = "http/0.9";
 
-	protected Connection server;
+	protected static QuicSslContext clientCtx;
+	protected static QuicSslContext serverCtx;
+
 	protected QuicConnection client;
+	protected Connection server;
+
+	@BeforeAll
+	static void createSslContext() throws Exception {
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		serverCtx =
+				QuicSslContextBuilder.forServer(ssc.privateKey(), null, ssc.certificate())
+				                     .applicationProtocols(PROTOCOL)
+				                     .build();
+		clientCtx =
+				QuicSslContextBuilder.forClient()
+				                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
+				                     .applicationProtocols(PROTOCOL)
+				                     .build();
+	}
 
 	@AfterEach
 	void dispose() {
@@ -68,7 +86,7 @@ class BaseQuicTests {
 	 *
 	 * @return a new {@link QuicServer}
 	 */
-	static QuicServer createServer() throws Exception {
+	static QuicServer createServer() {
 		return createServer(0);
 	}
 
@@ -94,13 +112,7 @@ class BaseQuicTests {
 	 * @param port the port to bind to
 	 * @return a new {@link QuicServer}
 	 */
-	public static QuicServer createServer(int port) throws Exception {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
-		QuicSslContext serverCtx =
-				QuicSslContextBuilder.forServer(ssc.privateKey(), null, ssc.certificate())
-				                     .applicationProtocols(PROTOCOL)
-				                     .build();
-
+	public static QuicServer createServer(int port) {
 		return QuicServer.create()
 		                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
 		                 .port(port)
@@ -138,12 +150,6 @@ class BaseQuicTests {
 	 * @return a new {@link QuicClient}
 	 */
 	public static QuicClient createClient(Supplier<SocketAddress> remoteAddress) {
-		QuicSslContext clientCtx =
-				QuicSslContextBuilder.forClient()
-				                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
-				                     .applicationProtocols(PROTOCOL)
-				                     .build();
-
 		return QuicClient.create()
 		                 .remoteAddress(remoteAddress)
 		                 .bindAddress(() -> new InetSocketAddress(0))

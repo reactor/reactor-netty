@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Violeta Georgieva
@@ -33,12 +34,31 @@ import static org.assertj.core.api.Assertions.assertThat;
 class QuicServerTests extends BaseQuicTests {
 
 	@Test
-	void testBidirectionalStreamCreatedByServer() throws Exception {
+	void testMissingSslContext() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() ->
+						QuicServer.create()
+						          .port(0)
+						          .bindNow());
+	}
+
+	@Test
+	void testMissingTokenHandler() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() ->
+						QuicServer.create()
+						          .secure(serverCtx)
+						          .port(0)
+						          .bindNow());
+	}
+
+	@Test
+	void testStreamCreatedByServerBidirectional() throws Exception {
 		testStreamCreatedByServer(QuicStreamType.BIDIRECTIONAL);
 	}
 
 	@Test
-	void testUnidirectionalStreamCreatedByServer() throws Exception {
+	void testStreamCreatedByServerUnidirectional() throws Exception {
 		testStreamCreatedByServer(QuicStreamType.UNIDIRECTIONAL);
 	}
 
@@ -91,7 +111,7 @@ class QuicServerTests extends BaseQuicTests {
 				        })
 				        .connectNow();
 
-		assertThat(latch.await(500, TimeUnit.SECONDS)).as("latch wait").isTrue();
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch wait").isTrue();
 
 		assertThat(streamTypeReceived).isTrue();
 		assertThat(remoteCreated).isTrue();

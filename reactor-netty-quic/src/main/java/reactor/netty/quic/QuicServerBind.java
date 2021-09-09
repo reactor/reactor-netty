@@ -36,7 +36,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -65,7 +64,7 @@ final class QuicServerBind extends QuicServer {
 	@Override
 	public Mono<? extends Connection> bind() {
 		QuicServerConfig config = configuration();
-		Objects.requireNonNull(config.bindAddress(), "bindAddress");
+		validate(config);
 
 		Mono<? extends Connection> mono = Mono.create(sink -> {
 			SocketAddress local = Objects.requireNonNull(config.bindAddress().get(), "Bind Address supplier returned null");
@@ -77,7 +76,7 @@ final class QuicServerBind extends QuicServer {
 				}
 			}
 
-			DisposableBind disposableBind = new DisposableBind(config.bindAddress(), sink);
+			DisposableBind disposableBind = new DisposableBind(local, sink);
 			TransportConnector.bind(config, config.parentChannelInitializer(), local, false)
 			                  .subscribe(disposableBind);
 		});
@@ -99,14 +98,20 @@ final class QuicServerBind extends QuicServer {
 		return new QuicServerBind(new QuicServerConfig(config));
 	}
 
+	static void validate(QuicServerConfig config) {
+		Objects.requireNonNull(config.bindAddress(), "bindAddress");
+		Objects.requireNonNull(config.sslContext, "sslContext");
+		Objects.requireNonNull(config.tokenHandler, "tokenHandler");
+	}
+
 	static final class DisposableBind implements CoreSubscriber<Channel>, Disposable {
 
-		final Supplier<? extends SocketAddress> bindAddress;
-		final MonoSink<Connection>              sink;
+		final SocketAddress        bindAddress;
+		final MonoSink<Connection> sink;
 
 		Subscription subscription;
 
-		DisposableBind(Supplier<? extends SocketAddress> bindAddress, MonoSink<Connection> sink) {
+		DisposableBind(SocketAddress bindAddress, MonoSink<Connection> sink) {
 			this.bindAddress = bindAddress;
 			this.sink = sink;
 		}
@@ -127,12 +132,11 @@ final class QuicServerBind extends QuicServer {
 
 		@Override
 		public void onError(Throwable t) {
-			if (bindAddress != null && (t instanceof BindException ||
+			if (t instanceof BindException ||
 					// With epoll/kqueue transport it is
 					// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
-					(t instanceof IOException && t.getMessage() != null &&
-							t.getMessage().contains("Address already in use")))) {
-				sink.error(ChannelBindException.fail(bindAddress.get(), null));
+					(t instanceof IOException && t.getMessage() != null && t.getMessage().contains("bind(..)"))) {
+				sink.error(ChannelBindException.fail(bindAddress, null));
 			}
 			else {
 				sink.error(t);
