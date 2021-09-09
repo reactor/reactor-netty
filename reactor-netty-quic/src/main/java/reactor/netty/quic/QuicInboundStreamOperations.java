@@ -19,6 +19,8 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelOperations;
 
+import static reactor.netty.ReactorNetty.format;
+
 /**
  * An inbound QUIC stream ready {@link ChannelOperations} with state management for FIN.
  * After sending FIN it's not possible anymore to write data, the stream will be terminated.
@@ -34,7 +36,7 @@ final class QuicInboundStreamOperations extends QuicStreamOperations {
 	@Override
 	protected void onOutboundComplete() {
 		if (log.isDebugEnabled()) {
-			log.debug("Outbound completed. Sending WRITE_FIN.");
+			log.debug(format(channel(), "Outbound completed. Sending WRITE_FIN."));
 		}
 
 		sendFinNow(f -> terminate());

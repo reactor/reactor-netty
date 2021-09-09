@@ -37,6 +37,7 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 
 import static reactor.netty.ConnectionObserver.State.CONFIGURED;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * @author Violeta Georgieva
@@ -130,7 +131,7 @@ final class QuicOperations implements QuicConnection {
 
 				try {
 					if (log.isDebugEnabled()) {
-						log.debug("Handler is being applied: {}", streamHandler);
+						log.debug(format(connection.channel(), "Handler is being applied: {}"), streamHandler);
 					}
 
 					QuicStreamOperations ops = (QuicStreamOperations) connection;
@@ -138,7 +139,7 @@ final class QuicOperations implements QuicConnection {
 					    .subscribe(ops.disposeSubscriber());
 				}
 				catch (Throwable t) {
-					log.error("", t);
+					log.error(format(connection.channel(), ""), t);
 
 					//"FutureReturnValueIgnored" this is deliberate
 					connection.channel()

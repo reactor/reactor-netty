@@ -506,7 +506,8 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 			if (newState == CONFIGURED) {
 				if (streamHandler == null) {
 					if (log.isDebugEnabled()) {
-						log.debug("IO handler for incoming streams is not specified, the incoming stream is closed.");
+						log.debug(format(connection.channel(), "IO handler for incoming streams is not specified," +
+								" the incoming stream is closed."));
 					}
 					//"FutureReturnValueIgnored" this is deliberate
 					connection.channel()
@@ -515,7 +516,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 				}
 				try {
 					if (log.isDebugEnabled()) {
-						log.debug("Handler is being applied: {}", streamHandler);
+						log.debug(format(connection.channel(), "Handler is being applied: {}"), streamHandler);
 					}
 
 					QuicStreamOperations ops = (QuicStreamOperations) connection;
@@ -523,7 +524,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 					    .subscribe(ops.disposeSubscriber());
 				}
 				catch (Throwable t) {
-					log.error("", t);
+					log.error(format(connection.channel(), ""), t);
 
 					//"FutureReturnValueIgnored" this is deliberate
 					connection.channel()

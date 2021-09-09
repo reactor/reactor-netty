@@ -21,6 +21,8 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.netty.ReactorNetty.format;
+
 /**
  * @author Violeta Georgieva
  */
@@ -32,7 +34,7 @@ final class QuicOutboundStreamTrafficHandler extends ChannelInboundHandlerAdapte
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 		if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
 			if (log.isDebugEnabled()) {
-				log.debug("Remote peer sent WRITE_FIN.");
+				log.debug(format(ctx.channel(), "Remote peer sent WRITE_FIN."));
 			}
 			ctx.channel().config().setAutoRead(true);
 			QuicStreamOperations.callTerminate(ctx.channel());

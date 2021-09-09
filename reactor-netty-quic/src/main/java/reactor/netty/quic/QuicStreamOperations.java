@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * An QUIC stream ready {@link ChannelOperations} with state management for FIN.
@@ -107,7 +108,7 @@ class QuicStreamOperations extends ChannelOperations<QuicInbound, QuicOutbound> 
 	@Override
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
-			log.debug("Cancelling inbound stream. Sending WRITE_FIN.");
+			log.debug(format(channel(), "Cancelling inbound stream. Sending WRITE_FIN."));
 		}
 
 		sendFinNow(f -> terminate());
@@ -116,7 +117,7 @@ class QuicStreamOperations extends ChannelOperations<QuicInbound, QuicOutbound> 
 	@Override
 	protected void onOutboundError(Throwable err) {
 		if (log.isDebugEnabled()) {
-			log.debug("Outbound error happened. Sending WRITE_FIN.", err);
+			log.debug(format(channel(), "Outbound error happened. Sending WRITE_FIN."), err);
 		}
 
 		sendFinNow(f -> terminate());

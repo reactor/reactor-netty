@@ -22,6 +22,8 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.netty.ReactorNetty.format;
+
 /**
  * @author Violeta Georgieva
  */
@@ -35,7 +37,7 @@ final class QuicInboundStreamTrafficHandler extends ChannelInboundHandlerAdapter
 			QuicStreamOperations ops = (QuicStreamOperations) ChannelOperations.get(ctx.channel());
 			if (ops != null) {
 				if (log.isDebugEnabled()) {
-					log.debug("Remote peer sent WRITE_FIN.");
+					log.debug(format(ops.channel(), "Remote peer sent WRITE_FIN."));
 				}
 				ctx.channel().config().setAutoRead(true);
 				ops.onInboundComplete();
