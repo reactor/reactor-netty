@@ -76,6 +76,7 @@ import java.util.function.Supplier;
 
 import static reactor.netty.ReactorNetty.ACCESS_LOG_ENABLED;
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 
 /**
  * Encapsulate all necessary configuration for HTTP server transport. The public API is read-only.
@@ -121,6 +122,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 */
 	public HttpRequestDecoderSpec decoder() {
 		return decoder;
+	}
+
+	/**
+	 * Return the configured HTTP form decoder or the default.
+	 *
+	 * @return the configured HTTP form decoder or the default
+	 * @since 1.0.11
+	 */
+	public HttpServerFormDecoderProvider formDecoderProvider() {
+		return formDecoderProvider;
 	}
 
 	/**
@@ -236,6 +247,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	ServerCookieDecoder                                     cookieDecoder;
 	ServerCookieEncoder                                     cookieEncoder;
 	HttpRequestDecoderSpec                                  decoder;
+	HttpServerFormDecoderProvider                           formDecoderProvider;
 	BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	Http2SettingsSpec                                       http2Settings;
 	Duration                                                idleTimeout;
@@ -254,6 +266,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.cookieDecoder = ServerCookieDecoder.STRICT;
 		this.cookieEncoder = ServerCookieEncoder.STRICT;
 		this.decoder = new HttpRequestDecoderSpec();
+		this.formDecoderProvider = DEFAULT_FORM_DECODER_SPEC;
 		this.minCompressionSize = -1;
 		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
 		this._protocols = h11;
@@ -269,6 +282,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.cookieDecoder = parent.cookieDecoder;
 		this.cookieEncoder = parent.cookieEncoder;
 		this.decoder = parent.decoder;
+		this.formDecoderProvider = parent.formDecoderProvider;
 		this.forwardedHeaderHandler = parent.forwardedHeaderHandler;
 		this.http2Settings = parent.http2Settings;
 		this.idleTimeout = parent.idleTimeout;
@@ -372,6 +386,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
@@ -383,8 +398,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 		pipeline.addLast(NettyPipeline.H2ToHttp11Codec, new Http2StreamFrameToHttpObjectCodec(true))
 		        .addLast(NettyPipeline.HttpTrafficHandler,
-		                 new Http2StreamBridgeServerHandler(compressPredicate, decoder, encoder, forwardedHeaderHandler,
-		                         listener, mapHandle));
+		                 new Http2StreamBridgeServerHandler(compressPredicate, decoder, encoder, formDecoderProvider,
+		                         forwardedHeaderHandler, listener, mapHandle));
 
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
@@ -437,6 +452,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
 			ConnectionObserver listener,
@@ -459,7 +475,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
 		 .addLast(NettyPipeline.H2MultiplexHandler,
 		          new Http2MultiplexHandler(new H2Codec(accessLogEnabled, accessLog, compressPredicate, cookieDecoder,
-		                  cookieEncoder, forwardedHeaderHandler, listener, mapHandle, minCompressionSize, opsFactory)));
+		                  cookieEncoder, formDecoderProvider, forwardedHeaderHandler, listener, mapHandle, minCompressionSize, opsFactory)));
 	}
 
 	static void configureHttp11OrH2CleartextPipeline(ChannelPipeline p,
@@ -469,6 +485,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
 			HttpRequestDecoderSpec decoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
 			@Nullable Duration idleTimeout,
@@ -484,8 +501,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 						decoder.allowDuplicateContentLengths());
 
 		Http11OrH2CleartextCodec upgrader = new Http11OrH2CleartextCodec(accessLogEnabled, accessLog, compressPredicate,
-				cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null, forwardedHeaderHandler,
-				http2Settings, listener, mapHandle, minCompressionSize, opsFactory, decoder.validateHeaders());
+				cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null, formDecoderProvider,
+				forwardedHeaderHandler, http2Settings, listener, mapHandle, minCompressionSize, opsFactory,
+				decoder.validateHeaders());
 
 		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader);
 		CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler = new CleartextHttp2ServerUpgradeHandler(
@@ -497,8 +515,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		            NettyPipeline.H2CUpgradeHandler, h2cUpgradeHandler)
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
-		            new HttpTrafficHandler(compressPredicate, cookieDecoder, cookieEncoder, forwardedHeaderHandler,
-		                    idleTimeout, listener, mapHandle));
+		            new HttpTrafficHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
+		                    forwardedHeaderHandler, idleTimeout, listener, mapHandle));
 
 		if (accessLogEnabled) {
 			p.addBefore(NettyPipeline.HttpTrafficHandler, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
@@ -532,6 +550,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
 			HttpRequestDecoderSpec decoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
@@ -546,8 +565,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		                    decoder.allowDuplicateContentLengths()))
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
-		            new HttpTrafficHandler(compressPredicate, cookieDecoder, cookieEncoder, forwardedHeaderHandler,
-		                    idleTimeout, listener, mapHandle));
+		            new HttpTrafficHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
+		                    forwardedHeaderHandler, idleTimeout, listener, mapHandle));
 
 		if (accessLogEnabled) {
 			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
@@ -649,6 +668,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 		final ServerCookieDecoder                                     cookieDecoder;
 		final ServerCookieEncoder                                     cookieEncoder;
+		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final ConnectionObserver                                      listener;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -662,6 +682,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				ServerCookieDecoder decoder,
 				ServerCookieEncoder encoder,
+				HttpServerFormDecoderProvider formDecoderProvider,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				ConnectionObserver listener,
 				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
@@ -672,6 +693,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.compressPredicate = compressPredicate;
 			this.cookieDecoder = decoder;
 			this.cookieEncoder = encoder;
+			this.formDecoderProvider = formDecoderProvider;
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
 			this.listener = listener;
 			this.mapHandle = mapHandle;
@@ -683,7 +705,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		protected void initChannel(Channel ch) {
 			ch.pipeline().remove(this);
 			addStreamHandlers(ch, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-					forwardedHeaderHandler, listener, mapHandle, minCompressionSize, opsFactory);
+					formDecoderProvider, forwardedHeaderHandler, listener, mapHandle, minCompressionSize, opsFactory);
 		}
 	}
 
@@ -695,6 +717,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 		final ServerCookieDecoder                                     cookieDecoder;
 		final ServerCookieEncoder                                     cookieEncoder;
+		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2FrameCodec                                         http2FrameCodec;
 		final ConnectionObserver                                      listener;
@@ -710,6 +733,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				ServerCookieDecoder cookieDecoder,
 				ServerCookieEncoder cookieEncoder,
 				boolean debug,
+				HttpServerFormDecoderProvider formDecoderProvider,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				Http2Settings http2Settings,
 				ConnectionObserver listener,
@@ -722,6 +746,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.compressPredicate = compressPredicate;
 			this.cookieDecoder = cookieDecoder;
 			this.cookieEncoder = cookieEncoder;
+			this.formDecoderProvider = formDecoderProvider;
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
 			Http2FrameCodecBuilder http2FrameCodecBuilder =
 					Http2FrameCodecBuilder.forServer()
@@ -747,7 +772,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		protected void initChannel(Channel ch) {
 			ch.pipeline().remove(this);
 			addStreamHandlers(ch, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-					forwardedHeaderHandler, listener, mapHandle, minCompressionSize, opsFactory);
+					formDecoderProvider, forwardedHeaderHandler, listener, mapHandle, minCompressionSize, opsFactory);
 		}
 
 		@Override
@@ -770,6 +795,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ServerCookieDecoder                                     cookieDecoder;
 		final ServerCookieEncoder                                     cookieEncoder;
 		final HttpRequestDecoderSpec                                  decoder;
+		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2Settings                                           http2Settings;
 		final Duration                                                idleTimeout;
@@ -789,6 +815,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.cookieDecoder = initializer.cookieDecoder;
 			this.cookieEncoder = initializer.cookieEncoder;
 			this.decoder = initializer.decoder;
+			this.formDecoderProvider = initializer.formDecoderProvider;
 			this.forwardedHeaderHandler = initializer.forwardedHeaderHandler;
 			this.http2Settings = initializer.http2Settings;
 			this.idleTimeout = initializer.idleTimeout;
@@ -810,14 +837,14 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
 				configureH2Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-						forwardedHeaderHandler, http2Settings, listener, mapHandle, minCompressionSize, opsFactory,
-						decoder.validateHeaders());
+						formDecoderProvider, forwardedHeaderHandler, http2Settings, listener, mapHandle, minCompressionSize,
+						opsFactory, decoder.validateHeaders());
 				return;
 			}
 
 			if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
 				configureHttp11Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-						decoder, forwardedHeaderHandler, idleTimeout, listener, mapHandle, metricsRecorder,
+						decoder, formDecoderProvider, forwardedHeaderHandler, idleTimeout, listener, mapHandle, metricsRecorder,
 						minCompressionSize, uriTagValue);
 				return;
 			}
@@ -834,6 +861,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ServerCookieDecoder                                     cookieDecoder;
 		final ServerCookieEncoder                                     cookieEncoder;
 		final HttpRequestDecoderSpec                                  decoder;
+		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2Settings                                           http2Settings;
 		final Duration                                                idleTimeout;
@@ -855,6 +883,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.cookieDecoder = config.cookieDecoder;
 			this.cookieEncoder = config.cookieEncoder;
 			this.decoder = config.decoder;
+			this.formDecoderProvider = config.formDecoderProvider;
 			this.forwardedHeaderHandler = config.forwardedHeaderHandler;
 			this.http2Settings = config.http2Settings();
 			this.idleTimeout = config.idleTimeout;
@@ -900,6 +929,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							cookieDecoder,
 							cookieEncoder,
 							decoder,
+							formDecoderProvider,
 							forwardedHeaderHandler,
 							idleTimeout,
 							observer,
@@ -916,6 +946,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							compressPredicate(compressPredicate, minCompressionSize),
 							cookieDecoder,
 							cookieEncoder,
+							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
 							observer,
@@ -935,6 +966,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							cookieDecoder,
 							cookieEncoder,
 							decoder,
+							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
 							idleTimeout,
@@ -954,6 +986,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							cookieDecoder,
 							cookieEncoder,
 							decoder,
+							formDecoderProvider,
 							forwardedHeaderHandler,
 							idleTimeout,
 							observer,
@@ -970,6 +1003,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							compressPredicate(compressPredicate, minCompressionSize),
 							cookieDecoder,
 							cookieEncoder,
+							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
 							observer,

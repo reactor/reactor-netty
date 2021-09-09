@@ -74,6 +74,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
+	HttpServerFormDecoderProvider                                 formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final Duration                                                idleTimeout;
 	final ConnectionObserver                                      listener;
@@ -99,11 +100,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		this.listener = listener;
+		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
 		this.cookieEncoder = encoder;
@@ -200,6 +203,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							                    forwardedHeaderHandler),
 							cookieDecoder,
 							cookieEncoder,
+							formDecoderProvider,
 							mapHandle,
 							secure);
 				}
@@ -386,6 +390,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						                    forwardedHeaderHandler),
 						cookieDecoder,
 						cookieEncoder,
+						formDecoderProvider,
 						mapHandle,
 						secure);
 				ops.bind();

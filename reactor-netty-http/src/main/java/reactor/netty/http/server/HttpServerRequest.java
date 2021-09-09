@@ -22,6 +22,9 @@ import java.util.function.Function;
 
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.multipart.Attribute;
+import io.netty.handler.codec.http.multipart.FileUpload;
+import io.netty.handler.codec.http.multipart.HttpData;
 import reactor.core.publisher.Flux;
 import reactor.netty.Connection;
 import reactor.netty.NettyInbound;
@@ -73,6 +76,56 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	default Flux<HttpContent> receiveContent() {
 		return receiveObject().ofType(HttpContent.class);
 	}
+
+	/**
+	 * Returns true if the request has {@code Content-Type} with value {@code application/x-www-form-urlencoded}.
+	 *
+	 * @return true if the request has {@code Content-Type} with value {@code application/x-www-form-urlencoded},
+	 * false - otherwise
+	 * @since 1.0.11
+	 */
+	boolean isFormUrlencoded();
+
+	/**
+	 * Returns true if the request has {@code Content-Type} with value {@code multipart/form-data}.
+	 *
+	 * @return true if the request has {@code Content-Type} with value {@code multipart/form-data},
+	 * false - otherwise
+	 * @since 1.0.11
+	 */
+	boolean isMultipart();
+
+	/**
+	 * When the request is {@code POST} and have {@code Content-Type} with value
+	 * {@code application/x-www-form-urlencoded} or {@code multipart/form-data},
+	 * returns a {@link Flux} of {@link HttpData} containing received {@link Attribute}/{@link FileUpload}.
+	 * When the request is not {@code POST} or does not have {@code Content-Type}
+	 * with value {@code application/x-www-form-urlencoded} or {@code multipart/form-data},
+	 * a {@link Flux#error(Throwable)} will be returned.
+	 * <p>Uses HTTP form decoder configuration specified on server level or the default one if nothing is configured.
+	 * <p>{@link HttpData#retain()} disables auto memory release on each {@link HttpData} published,
+	 * retaining in order to prevent premature recycling when {@link HttpData} is accumulated downstream.
+	 *
+	 * @return a {@link Flux} of {@link HttpData} containing received {@link Attribute}/{@link FileUpload}
+	 * @since 1.0.11
+	 */
+	Flux<HttpData> receiveForm();
+
+	/**
+	 * When the request is {@code POST} and have {@code Content-Type} with value
+	 * {@code application/x-www-form-urlencoded} or {@code multipart/form-data},
+	 * returns a {@link Flux} of {@link HttpData} containing received {@link Attribute}/{@link FileUpload}.
+	 * When the request is not {@code POST} or does not have {@code Content-Type}
+	 * with value {@code application/x-www-form-urlencoded} or {@code multipart/form-data},
+	 * a {@link Flux#error(Throwable)} will be returned.
+	 * <p>{@link HttpData#retain()} disables auto memory release on each {@link HttpData} published,
+	 * retaining in order to prevent premature recycling when {@link HttpData} is accumulated downstream.
+	 *
+	 * @param formDecoderBuilder {@link HttpServerFormDecoderProvider.Builder} for HTTP form decoder configuration
+	 * @return a {@link Flux} of {@link HttpData} containing received {@link Attribute}/{@link FileUpload}
+	 * @since 1.0.11
+	 */
+	Flux<HttpData> receiveForm(Consumer<HttpServerFormDecoderProvider.Builder> formDecoderBuilder);
 
 	/**
 	 * Returns the address of the host peer or {@code null} in case of Unix Domain Sockets.

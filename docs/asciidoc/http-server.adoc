@@ -215,6 +215,55 @@ include::{examplesdir}/read/headers/Application.java[lines=18..40]
 ----
 ====
 
+=== Reading Post Form or Multipart Data
+
+When you receive data from the connected clients, you might want to access `POST` `form` (`application/x-www-form-urlencoded`) or
+`multipart` (`multipart/form-data`) data. You can obtain this data by using
+{javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`].
+
+====
+[source,java,indent=0]
+.{examplesdir}/multipart/Application.java
+----
+include::{examplesdir}/multipart/Application.java[lines=18..36]
+----
+<1> Receives `POST` form/multipart data.
+====
+
+When you need to change the default settings, you can configure the `HttpServer` or you can provide a configuration per request:
+
+====
+[source,java,indent=0]
+.{examplesdir}/multipart/custom/Application.java
+----
+include::{examplesdir}/multipart/custom/Application.java[lines=18..37]
+----
+<1> Configuration on the `HttpServer` that specifies that the data is stored on disk only.
+<2> Configuration per request that specifies that if the data size exceed the specified size, the data is stored on the disk.
+====
+
+The following listing shows the available configurations:
+
+[width="100%",options="header"]
+|=======
+| Configuration name | Description
+| `baseDirectory` | Configures the directory where to store the data on the disk. Default to generated temp directory.
+| `charset` | Configures the `Charset` for the data. Default to `StandardCharsets#UTF_8`.
+| `maxInMemorySize` | Configures the maximum in-memory size per data i.e. the data is written
+on disk if the size is greater than `maxInMemorySize`, else it is in memory.
+If set to `-1` the entire contents is stored in memory. If set to `0` the entire contents is stored on disk.
+Default to `16kb`.
+| `maxSize` | Configures the maximum size per data. When the limit is reached, an exception is raised.
+If set to `-1` this means no limitation. Default to `-1` - unlimited.
+| `scheduler` | Configures the scheduler to be used for offloading disk operations in the decoding phase.
+Default to `Schedulers#boundedElastic()`
+| `streaming` | When set to `true`, the data is streamed directly from the parsed input buffer stream,
+which means it is not stored either in memory or file. When `false`, parts are backed by in-memory and/or file storage.
+Default to `false`.
+*NOTE* that with streaming enabled, the provided data might not be in a complete state i.e. `HttpData#isCompleted()`
+has to be checked. Also note that enabling this property effectively ignores `maxInMemorySize`, `baseDirectory`, and `scheduler`.
+|=======
+
 ==== Obtaining the Remote (Client) Address
 
 In addition to the metadata that you can obtain from the request, you can also receive the

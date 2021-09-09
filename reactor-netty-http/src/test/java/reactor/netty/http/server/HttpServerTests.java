@@ -127,6 +127,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 
 /**
  * @author Stephane Maldini
@@ -1886,6 +1887,7 @@ class HttpServerTests extends BaseHttpTest {
 				null,
 				ServerCookieDecoder.STRICT,
 				ServerCookieEncoder.STRICT,
+				DEFAULT_FORM_DECODER_SPEC,
 				null,
 				false);
 		ops.status(status);

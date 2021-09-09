@@ -52,6 +52,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
+	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final ConnectionObserver                                      listener;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -65,12 +66,14 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		this.compress = compress;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
+		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.listener = listener;
 		this.mapHandle = mapHandle;
@@ -109,6 +112,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 						                    forwardedHeaderHandler),
 						cookieDecoder,
 						cookieEncoder,
+						formDecoderProvider,
 						mapHandle,
 						secured);
 			}
