@@ -87,7 +87,7 @@ final class QuicOperations implements QuicConnection {
 
 			bootstrap.create()
 			         .addListener(f -> {
-			             //We don't need to handle success case, we've already configured QuicStreamChannelObserver
+			             // We don't need to handle success case, we've already configured QuicStreamChannelObserver
 			             if (!f.isSuccess()) {
 			                 if (f.cause() != null) {
 			                     sink.error(f.cause());

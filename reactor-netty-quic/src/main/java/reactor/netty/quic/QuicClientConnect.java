@@ -202,7 +202,7 @@ final class QuicClientConnect extends QuicClient {
 
 			bootstrap.connect()
 			         .addListener(f -> {
-			             //We don't need to attach a listener, we've already configured QuicChannelObserver
+			             // We don't need to handle success case, we've already configured QuicChannelObserver
 			             if (!f.isSuccess()) {
 			                 if (f.cause() != null) {
 			                     sink.error(f.cause());
