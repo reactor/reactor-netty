@@ -27,6 +27,7 @@ import reactor.netty.Connection;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -113,21 +114,36 @@ class BaseQuicTests {
 	 * @return a new {@link QuicServer}
 	 */
 	public static QuicServer createServer(int port) {
+		return createServer(port, spec ->
+				spec.maxData(10000000)
+				    .maxStreamDataBidirectionalLocal(1000000)
+				    .maxStreamDataBidirectionalRemote(1000000)
+				    .maxStreamDataUnidirectional(1000000)
+				    .maxStreamsBidirectional(100)
+				    .maxStreamsUnidirectional(100));
+	}
+
+	/**
+	 * Creates {@link QuicServer} bound on the specified port with.
+	 * <ul>
+	 *     <li>InsecureQuicTokenHandler</li>
+	 *     <li>wire logging enabled</li>
+	 *     <li>self signed certificate</li>
+	 *     <li>idle timeout 5s</li>
+	 * </ul>
+	 *
+	 * @param port the port to bind to
+	 * @return a new {@link QuicServer}
+	 */
+	public static QuicServer createServer(int port, Consumer<QuicInitialSettingsSpec.Builder> initialSettings) {
 		return QuicServer.create()
 		                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
 		                 .port(port)
 		                 .wiretap(true)
 		                 .secure(serverCtx)
 		                 .idleTimeout(Duration.ofSeconds(5))
-		                 .initialSettings(spec ->
-		                     spec.maxData(10000000)
-		                         .maxStreamDataBidirectionalLocal(1000000)
-		                         .maxStreamDataBidirectionalRemote(1000000)
-		                         .maxStreamDataUnidirectional(1000000)
-		                         .maxStreamsBidirectional(100)
-		                         .maxStreamsUnidirectional(100));
+		                 .initialSettings(initialSettings);
 	}
-
 	/**
 	 * Creates {@link QuicClient} with a specified remote address to connect to and the following configuration:
 	 * <ul>
@@ -150,18 +166,34 @@ class BaseQuicTests {
 	 * @return a new {@link QuicClient}
 	 */
 	public static QuicClient createClient(Supplier<SocketAddress> remoteAddress) {
+		return createClient(remoteAddress, spec ->
+				spec.maxData(10000000)
+				    .maxStreamDataBidirectionalLocal(1000000)
+				    .maxStreamDataBidirectionalRemote(1000000)
+				    .maxStreamDataUnidirectional(1000000)
+				    .maxStreamsBidirectional(100)
+				    .maxStreamsUnidirectional(100));
+	}
+
+	/**
+	 * Creates {@link QuicClient} with a specified remote address to connect to and the following configuration:
+	 * <ul>
+	 *     <li>wire logging enabled</li>
+	 *     <li>InsecureTrustManagerFactory</li>
+	 *     <li>idle timeout 5s</li>
+	 * </ul>
+	 *
+	 * @param remoteAddress a supplier of the address to connect to
+	 * @return a new {@link QuicClient}
+	 */
+	public static QuicClient createClient(Supplier<SocketAddress> remoteAddress,
+			Consumer<QuicInitialSettingsSpec.Builder> initialSettings) {
 		return QuicClient.create()
 		                 .remoteAddress(remoteAddress)
 		                 .bindAddress(() -> new InetSocketAddress(0))
 		                 .wiretap(true)
 		                 .secure(clientCtx)
 		                 .idleTimeout(Duration.ofSeconds(5))
-		                 .initialSettings(spec ->
-		                     spec.maxData(10000000)
-		                         .maxStreamDataBidirectionalLocal(1000000)
-		                         .maxStreamDataBidirectionalRemote(1000000)
-		                         .maxStreamDataUnidirectional(1000000)
-		                         .maxStreamsBidirectional(100)
-		                         .maxStreamsUnidirectional(100));
+		                 .initialSettings(initialSettings);
 	}
 }

@@ -32,6 +32,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiFunction;
@@ -69,7 +70,6 @@ final class QuicOperations implements QuicConnection {
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
 	public Mono<Void> createStream(
 			QuicStreamType streamType,
 			BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>> streamHandler) {
@@ -85,9 +85,18 @@ final class QuicOperations implements QuicConnection {
 			setAttributes(bootstrap, streamAttrs);
 			setChannelOptions(bootstrap, streamOptions);
 
-			//"FutureReturnValueIgnored" this is deliberate
-			//We don't need to attach a listener, we've already configured QuicStreamChannelObserver
-			bootstrap.create();
+			bootstrap.create()
+			         .addListener(f -> {
+			             //We don't need to handle success case, we've already configured QuicStreamChannelObserver
+			             if (!f.isSuccess()) {
+			                 if (f.cause() != null) {
+			                     sink.error(f.cause());
+			                 }
+			                 else {
+			                     sink.error(new IOException("Cannot create stream"));
+			                 }
+			             }
+			         });
 		});
 	}
 

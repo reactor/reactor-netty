@@ -15,8 +15,10 @@
  */
 package reactor.netty.quic;
 
+import io.netty.incubator.codec.quic.QuicException;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -24,6 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -32,6 +35,92 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Violeta Georgieva
  */
 class QuicClientTests extends BaseQuicTests {
+
+	@Test
+	void testMaxStreamsReachedBidirectional() throws Exception {
+		testMaxStreamsReached(QuicStreamType.BIDIRECTIONAL);
+	}
+
+	@Test
+	void testMaxStreamsReachedUnidirectional() throws Exception {
+		testMaxStreamsReached(QuicStreamType.UNIDIRECTIONAL);
+	}
+
+	private void testMaxStreamsReached(QuicStreamType streamType) throws Exception {
+		AtomicBoolean streamTypeReceived = new AtomicBoolean();
+		AtomicBoolean remoteCreated = new AtomicBoolean();
+		AtomicReference<String> incomingData = new AtomicReference<>("");
+
+		CountDownLatch latch = new CountDownLatch(4);
+
+		Consumer<QuicInitialSettingsSpec.Builder> initialSettings = spec -> {
+			if (QuicStreamType.BIDIRECTIONAL == streamType) {
+				spec.maxData(10000000)
+				    .maxStreamDataBidirectionalRemote(1000000)
+				    .maxStreamsBidirectional(1);
+			}
+			else {
+				spec.maxData(10000000)
+				    .maxStreamDataUnidirectional(1000000)
+				    .maxStreamsUnidirectional(1);
+			}
+		};
+		server =
+				createServer(0, initialSettings)
+				        .handleStream((in, out) -> {
+				            streamTypeReceived.set(in.streamType() == streamType);
+				            remoteCreated.set(!in.isLocalStream());
+				            latch.countDown();
+				            if (QuicStreamType.BIDIRECTIONAL == streamType) {
+				                return out.send(in.receive().retain());
+				            }
+				            else {
+				                return in.receive()
+				                         .asString()
+				                         .doOnNext(s -> {
+				                             incomingData.getAndUpdate(s1 -> s + s1);
+				                             latch.countDown();
+				                         })
+				                         .then();
+				            }
+				        })
+				        .bindNow();
+
+		AtomicReference<Throwable> error = new AtomicReference<>();
+
+		client = createClient(server::address).connectNow();
+
+		Flux.range(0, 2)
+		    .flatMap(i ->
+		        client.createStream(streamType, (in, out) -> {
+		                  in.withConnection(conn -> conn.onDispose(latch::countDown));
+		                      if (QuicStreamType.BIDIRECTIONAL == streamType) {
+		                          in.receive()
+		                            .asString()
+		                            .doOnNext(s -> {
+		                                incomingData.getAndUpdate(s1 -> s + s1);
+		                                latch.countDown();
+		                            })
+		                            .subscribe();
+		                      }
+		                      return out.sendString(Mono.just("Hello World!"));
+		                  })
+		              .onErrorResume(t -> {
+		                  error.set(t);
+		                  latch.countDown();
+		                  return Mono.empty();
+		              }))
+		      .blockLast(Duration.ofSeconds(5));
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch wait").isTrue();
+
+		assertThat(streamTypeReceived).isTrue();
+		assertThat(remoteCreated).isTrue();
+		assertThat(incomingData.get()).isEqualTo("Hello World!");
+		assertThat(error.get()).isNotNull()
+				.isInstanceOf(QuicException.class)
+				.hasMessage("QUICHE_ERR_STREAM_LIMIT");
+	}
 
 	@Test
 	void testMissingSslContext() {
