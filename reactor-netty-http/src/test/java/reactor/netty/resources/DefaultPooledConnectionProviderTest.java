@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -33,8 +34,11 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
+import reactor.netty.ByteBufMono;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.http.Http2SslContextSpec;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 import reactor.test.StepVerifier;
@@ -275,6 +279,58 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		StepVerifier.create(response)
 		            .expectErrorMatches(t -> t.getClass().isAssignableFrom(expectedExc) && t.getMessage().startsWith(expectedMsg))
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void testConnectionReturnedToParentPoolWhenNoActiveStreams() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		disposableServer =
+				createServer()
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(serverCtx))
+				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().retain())))
+				        .bindNow();
+
+		int requestsNum = 10;
+		CountDownLatch latch = new CountDownLatch(requestsNum);
+		DefaultPooledConnectionProvider provider =
+				(DefaultPooledConnectionProvider) ConnectionProvider.create("testConnectionReturnedToParentPoolWhenNoActiveStreams", 5);
+		HttpClient client =
+				createClient(provider, disposableServer.port())
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(clientCtx))
+				        .doOnResponse((res, conn) -> conn.onDispose(latch::countDown));
+
+		try {
+			Flux.range(0, requestsNum)
+			    .flatMap(i ->
+			        client.post()
+			              .uri("/")
+			              .send(ByteBufMono.fromString(Mono.just("testConnectionReturnedToParentPoolWhenNoActiveStreams")))
+			              .responseContent()
+			              .aggregate()
+			              .asString())
+			    .blockLast(Duration.ofSeconds(5));
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(provider.channelPools).hasSize(1);
+
+			@SuppressWarnings({"unchecked", "rawtypes"})
+			InstrumentedPool<DefaultPooledConnectionProvider.PooledConnection> channelPool =
+					provider.channelPools.values().toArray(new InstrumentedPool[0])[0];
+			InstrumentedPool.PoolMetrics metrics = channelPool.metrics();
+			assertThat(metrics.acquiredSize()).isEqualTo(0);
+			assertThat(metrics.allocatedSize()).isEqualTo(metrics.idleSize());
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
 	}
 
 	static final class TestPromise extends DefaultChannelPromise {
