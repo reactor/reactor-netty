@@ -107,7 +107,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			  .invalidate()
 			  .subscribe(null, null, () -> {
 			      if (log.isDebugEnabled()) {
-			          logPoolState(channel, da.pool, "Channel removed from the pool");
+			          logPoolState(channel, da.pool, "Channel removed from the http2 pool");
 			      }
 			  });
 		}
@@ -121,7 +121,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 	}
 
 	static void registerClose(Channel channel) {
-		ConnectionObserver owner = channel.attr(OWNER).get();
+		ConnectionObserver owner = channel.parent().attr(OWNER).get();
 		channel.closeFuture()
 		       .addListener(f -> {
 		           Channel parent = channel.parent();
@@ -132,7 +132,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		           }
 
 		           if (localEndpoint.numActiveStreams() == 0) {
-		               channel.attr(OWNER).set(null);
+		               channel.parent().attr(OWNER).set(null);
 		               invalidate(owner, parent);
 		           }
 		       });
