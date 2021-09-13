@@ -111,11 +111,17 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				if (poolFactory.metricsEnabled || config.metricsRecorder() != null) {
 					// registrar is null when metrics are enabled on HttpClient level or
 					// with the `metrics(boolean metricsEnabled)` method on ConnectionProvider
-					MeterRegistrar registrar = poolFactory.registrar != null ?
-							poolFactory.registrar.get() : MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE;
-
-					registrar.registerMetrics(name, poolKey.hashCode() + "", remoteAddress,
-							new DelegatingConnectionPoolMetrics(newPool.metrics()));
+					String id = poolKey.hashCode() + "";
+					if (poolFactory.registrar != null) {
+						poolFactory.registrar.get().registerMetrics(name, id, remoteAddress,
+								new DelegatingConnectionPoolMetrics(newPool.metrics()));
+					}
+					else {
+						// work directly with the pool otherwise a weak reference is needed to ConnectionPoolMetrics
+						// we don't want to keep another map with weak references
+						MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE
+								.registerMetrics(name, id, remoteAddress, newPool.metrics());
+					}
 				}
 				return newPool;
 			});
