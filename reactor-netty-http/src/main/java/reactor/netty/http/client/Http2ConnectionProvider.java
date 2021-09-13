@@ -121,7 +121,6 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 	}
 
 	static void registerClose(Channel channel) {
-		ConnectionObserver owner = channel.parent().attr(OWNER).get();
 		channel.closeFuture()
 		       .addListener(f -> {
 		           Channel parent = channel.parent();
@@ -132,7 +131,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		           }
 
 		           if (localEndpoint.numActiveStreams() == 0) {
-		               channel.parent().attr(OWNER).set(null);
+		               ConnectionObserver owner = channel.parent().attr(OWNER).getAndSet(null);
 		               invalidate(owner, parent);
 		           }
 		       });
