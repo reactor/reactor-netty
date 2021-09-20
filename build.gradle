@@ -104,7 +104,7 @@ ext {
 	// Testing
 	jacksonDatabindVersion = '2.12.5'
 	testAddonVersion = reactorCoreVersion
-	assertJVersion = '3.20.2'
+	assertJVersion = '3.21.0'
 	awaitilityVersion = '4.1.0'
 	hoverflyJavaVersion = '0.14.1'
 	tomcatVersion = '9.0.53'
