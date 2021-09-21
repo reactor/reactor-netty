@@ -16,6 +16,7 @@
 package reactor.netty.transport.logging;
 
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -51,6 +52,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 
 	private final AdvancedByteBufFormat byteBufFormat;
 	private final Charset charset;
+	private final String name;
 
 	/**
 	 * Creates a new instance with the specified logger name, level and byte buffer format.
@@ -61,8 +63,9 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 	 */
 	ReactorNettyLoggingHandler(String name, LogLevel level, AdvancedByteBufFormat byteBufFormat) {
 		super(name, level, byteBufFormat == SIMPLE ? ByteBufFormat.SIMPLE : ByteBufFormat.HEX_DUMP);
-		this.charset = null;
 		this.byteBufFormat = byteBufFormat;
+		this.charset = null;
+		this.name = name;
 	}
 
 	/**
@@ -77,6 +80,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		super(name, level);
 		this.byteBufFormat = TEXTUAL;
 		this.charset = requireNonNull(charset, "charset");
+		this.name = name;
 	}
 
 	/*
@@ -92,6 +96,26 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 			return ByteBufFormat.HEX_DUMP;
 		}
 		throw new UnsupportedOperationException("ReactorNettyLoggingHandler isn't using the classic ByteBufFormat.");
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (!(o instanceof ReactorNettyLoggingHandler)) {
+			return false;
+		}
+		ReactorNettyLoggingHandler that = (ReactorNettyLoggingHandler) o;
+		return byteBufFormat == that.byteBufFormat &&
+				Objects.equals(charset, that.charset) &&
+				level() == that.level() &&
+				name.equals(that.name);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(byteBufFormat, charset, level(), name);
 	}
 
 	@Override

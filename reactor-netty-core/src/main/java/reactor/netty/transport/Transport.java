@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.AttributeKey;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
@@ -368,8 +369,14 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 		Objects.requireNonNull(level, "level");
 		Objects.requireNonNull(format, "format");
 		Objects.requireNonNull(charset, "charset");
+		LoggingHandler loggingHandler = format.toLoggingHandler(category, level, charset);
+		if (loggingHandler.equals(configuration().loggingHandler)) {
+			@SuppressWarnings("unchecked")
+			T dup = (T) this;
+			return dup;
+		}
 		T dup = duplicate();
-		dup.configuration().loggingHandler = format.toLoggingHandler(category, level, charset);
+		dup.configuration().loggingHandler = loggingHandler;
 		return dup;
 	}
 
