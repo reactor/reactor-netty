@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.resolver.DefaultAddressResolverGroup;
@@ -39,9 +40,11 @@ import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
+import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
@@ -184,6 +187,38 @@ class ConnectionPoolTests extends BaseHttpTest {
 				"server1-ConnectionPoolTests",
 				localClient1,
 				localClient2);
+	}
+
+	@Test
+	void testClientWithWiretapSameConfiguration() {
+		HttpClient localClient1 =
+				client.port(server1.port())
+				      .wiretap("testClientWithWiretapSameConfiguration", LogLevel.DEBUG,
+				              AdvancedByteBufFormat.TEXTUAL, Charset.defaultCharset());
+		HttpClient localClient2 = localClient1.wiretap("testClientWithWiretapSameConfiguration", LogLevel.DEBUG,
+				AdvancedByteBufFormat.TEXTUAL, Charset.defaultCharset());
+		checkResponsesAndChannelsStates(
+				"server1-ConnectionPoolTests",
+				"server1-ConnectionPoolTests",
+				localClient1,
+				localClient2,
+				true);
+	}
+
+	@Test
+	void testDifferentClientWithWiretapSameConfiguration() {
+		HttpClient localClient1 =
+				client.port(server1.port())
+				      .wiretap("testClientWithWiretapSameConfiguration", LogLevel.DEBUG, AdvancedByteBufFormat.HEX_DUMP);
+		HttpClient localClient2 =
+				client.port(server1.port())
+				      .wiretap("testClientWithWiretapSameConfiguration", LogLevel.DEBUG, AdvancedByteBufFormat.HEX_DUMP);
+		checkResponsesAndChannelsStates(
+				"server1-ConnectionPoolTests",
+				"server1-ConnectionPoolTests",
+				localClient1,
+				localClient2,
+				true);
 	}
 
 	@Test
@@ -376,6 +411,15 @@ class ConnectionPoolTests extends BaseHttpTest {
 			@Nullable String expectedClient2Response,
 			HttpClient client1,
 			@Nullable HttpClient client2) {
+		checkResponsesAndChannelsStates(expectedClient1Response, expectedClient2Response, client1, client2, false);
+	}
+
+	private void checkResponsesAndChannelsStates(
+				String expectedClient1Response,
+				@Nullable String expectedClient2Response,
+				HttpClient client1,
+				@Nullable HttpClient client2,
+				boolean isSame) {
 
 		List<Tuple2<String, Channel>> response1 =
 		Flux.range(0, 2)
@@ -413,7 +457,12 @@ class ConnectionPoolTests extends BaseHttpTest {
 			assertThat(response2).isNotNull().hasSize(1);
 			assertThat(response2.get(0).getT1()).isEqualTo(expectedClient2Response);
 
-			assertThat(response2.get(0).getT2()).isNotSameAs(response1.get(0).getT2());
+			if (isSame) {
+				assertThat(response2.get(0).getT2()).isSameAs(response1.get(0).getT2());
+			}
+			else {
+				assertThat(response2.get(0).getT2()).isNotSameAs(response1.get(0).getT2());
+			}
 		}
 	}
 }
