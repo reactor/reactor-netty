@@ -114,6 +114,7 @@ dependencies {
 	testCompile "org.assertj:assertj-core:$assertJVersion"
 	testCompile "org.awaitility:awaitility:$awaitilityVersion"
 	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	testCompile "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	testCompile "org.mockito:mockito-core:$mockitoVersion"
 	testCompile "ch.qos.logback:logback-classic:$logbackVersion"
 	testCompile "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"

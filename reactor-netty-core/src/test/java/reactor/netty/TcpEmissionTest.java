@@ -17,6 +17,8 @@ package reactor.netty;
 
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
 import reactor.netty.tcp.TcpServer;
 
@@ -32,8 +34,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class TcpEmissionTest {
 
-	@Test
-	void testBackpressure() throws Exception {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testBackpressure(boolean flushOnEach) throws Exception {
 		byte[] array = new byte[32];
 		Random random = new Random();
 		final int emissionCount = 130;
@@ -47,7 +50,7 @@ class TcpEmissionTest {
 				                                                      random.nextBytes(array);
 				                                                      return Unpooled.copiedBuffer(array);
 				                                                  })),
-				                         b -> true))
+				                         b -> flushOnEach))
 				         .host("localhost")
 				         .port(0)
 				         .bindNow();
