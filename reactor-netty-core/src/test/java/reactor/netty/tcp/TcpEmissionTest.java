@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty;
+package reactor.netty.tcp;
 
 import io.netty.buffer.Unpooled;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
-import reactor.netty.tcp.TcpServer;
+import reactor.netty.DisposableServer;
 
 import java.io.InputStream;
 import java.net.Socket;
