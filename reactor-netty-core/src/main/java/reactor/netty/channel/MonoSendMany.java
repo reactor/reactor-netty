@@ -577,7 +577,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			requested--;
 			pending--;
 
-			if (checkTerminated()) {
+			if (checkTerminated() && sourceMode != SYNC) {
 				trySchedule();
 				return true;
 			}
