@@ -578,12 +578,10 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			pending--;
 
 			if (checkTerminated()) {
-				if (sourceMode == SYNC) {
-					if (requested <= REFILL_SIZE) {
-						int u = MAX_SIZE - requested;
-						requested += u;
-						nextRequest += u;
-					}
+				if (sourceMode == SYNC && requested <= REFILL_SIZE) {
+					int u = MAX_SIZE - requested;
+					requested += u;
+					nextRequest += u;
 				}
 				trySchedule();
 				return true;
