@@ -32,7 +32,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscription;
 import reactor.core.Exceptions;
 import reactor.core.publisher.BaseSubscriber;
@@ -51,13 +52,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class MonoSendManyTest {
 
-	@Test
-	void testPromiseSendTimeout() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testPromiseSendTimeout(boolean flushOnEach) {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new WriteTimeoutHandler(1), new ChannelHandlerAdapter() {});
 
 		Flux<String> flux = Flux.range(0, 257).map(count -> count + "");
-		Mono<Void> m = MonoSendMany.objectSource(flux, channel, b -> false);
+		Mono<Void> m = MonoSendMany.objectSource(flux, channel, b -> flushOnEach);
 
 		StepVerifier.create(m)
 		            .then(() -> {
@@ -69,12 +71,13 @@ class MonoSendManyTest {
 		            .verifyComplete();
 	}
 
-	@Test
-	void cleanupFuseableSyncCloseFuture() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void cleanupFuseableSyncCloseFuture(boolean flushOnEach) {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}), channel, b -> false);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}), channel, b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -90,12 +93,13 @@ class MonoSendManyTest {
 		wait(_w.get(0));
 	}
 
-	@Test
-	void cleanupFuseableAsyncCloseFuture() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void cleanupFuseableAsyncCloseFuture(boolean flushOnEach) {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).limitRate(10), channel, b -> false);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).limitRate(10), channel, b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -111,12 +115,13 @@ class MonoSendManyTest {
 		wait(_w.get(0));
 	}
 
-	@Test
-	void cleanupFuseableErrorCloseFuture() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void cleanupFuseableErrorCloseFuture(boolean flushOnEach) {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.error(new Exception("boo"))).limitRate(10), channel, b -> false);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.error(new Exception("boo"))).limitRate(10), channel, b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -132,12 +137,13 @@ class MonoSendManyTest {
 		wait(_w.get(0));
 	}
 
-	@Test
-	void cleanupCancelCloseFuture() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void cleanupCancelCloseFuture(boolean flushOnEach) {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.never()), channel, b -> false);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.never()), channel, b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -150,12 +156,13 @@ class MonoSendManyTest {
 		wait(_w.get(0));
 	}
 
-	@Test
-	void cleanupErrorCloseFuture() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void cleanupErrorCloseFuture(boolean flushOnEach) {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Mono.error(new Exception("boo")), channel, b -> false);
+		Mono<Void> m = MonoSendMany.objectSource(Mono.error(new Exception("boo")), channel, b -> flushOnEach);
 
 		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
@@ -167,8 +174,9 @@ class MonoSendManyTest {
 		wait(_w.get(0));
 	}
 
-	@Test
-	void shouldNotLeakOnRacingCancelAndOnNext() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void shouldNotLeakOnRacingCancelAndOnNext(boolean flushOnEach) {
 		int messagesToSend = 128;
 
 		for (int i = 0; i < 10000; i++) {
@@ -178,7 +186,7 @@ class MonoSendManyTest {
 			TestPublisher<ByteBuf> source = TestPublisher.createNoncompliant(TestPublisher.Violation.DEFER_CANCELLATION);
 
 			IdentityHashMap<ReferenceCounted, Object> discarded = new IdentityHashMap<>();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> false);
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> flushOnEach);
 			BaseSubscriber<Void> testSubscriber = m
 				.doOnDiscard(ReferenceCounted.class, v -> discarded.put(v, null))
 				.subscribeWith(new BaseSubscriber<Void>() {});
@@ -205,8 +213,9 @@ class MonoSendManyTest {
 		}
 	}
 
-	@Test
-	void shouldNotLeakIfFusedOnRacingCancelAndOnNext() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void shouldNotLeakIfFusedOnRacingCancelAndOnNext(boolean flushOnEach) {
 		int messagesToSend = 128;
 
 		ArrayBlockingQueue<ReferenceCounted> discarded = new ArrayBlockingQueue<>(messagesToSend * 2);
@@ -219,7 +228,7 @@ class MonoSendManyTest {
 			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
 
 			Sinks.Many<ByteBuf> source = Sinks.many().unicast().onBackpressureBuffer();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source.asFlux(), channel, b -> false);
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source.asFlux(), channel, b -> flushOnEach);
 			BaseSubscriber<Void> testSubscriber = m
 					.doOnDiscard(ReferenceCounted.class, discarded::add)
 					.subscribeWith(new BaseSubscriber<Void>() {});
