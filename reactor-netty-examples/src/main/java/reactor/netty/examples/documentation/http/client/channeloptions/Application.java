@@ -17,6 +17,8 @@ package reactor.netty.examples.documentation.http.client.channeloptions;
 
 import io.netty.channel.ChannelOption;
 import io.netty.channel.epoll.EpollChannelOption;
+//import io.netty.channel.socket.nio.NioChannelOption;
+//import jdk.net.ExtendedSocketOptions;
 import reactor.netty.http.client.HttpClient;
 import java.net.InetSocketAddress;
 
@@ -28,6 +30,10 @@ public class Application {
 				          .bindAddress(() -> new InetSocketAddress("host", 1234))
 				          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000) //<1>
 				          .option(ChannelOption.SO_KEEPALIVE, true)            //<2>
+				          // The options below are available only when NIO transport (Java 11) is used
+				          //.option(NioChannelOption.of(ExtendedSocketOptions.TCP_KEEPIDLE), 300)
+				          //.option(NioChannelOption.of(ExtendedSocketOptions.TCP_KEEPINTERVAL), 60)
+				          //.option(NioChannelOption.of(ExtendedSocketOptions.TCP_KEEPCOUNT), 8);
 				          // The options below are available only when Epoll transport is used
 				          .option(EpollChannelOption.TCP_KEEPIDLE, 300)        //<3>
 				          .option(EpollChannelOption.TCP_KEEPINTVL, 60)        //<4>

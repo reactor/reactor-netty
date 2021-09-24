@@ -611,11 +611,11 @@ the connection establishment attempt fails. Default: 30s.
 * `SO_KEEPALIVE` - When the connection stays idle for some time (the time is implementation dependent, but the default is typically two hours),
 TCP automatically sends a `keepalive` probe to the remote peer.
 By default, https://docs.oracle.com/javase/8/docs/api/java/net/SocketOptions.html#SO_KEEPALIVE[`SO_KEEPALIVE`] is not enabled.
-When you run with `Epoll` transport, you may also configure:
+When you run with `Epoll`/`NIO` (since *Java 11*) transport, you may also configure:
 ** `TCP_KEEPIDLE` - The maximum time (resolution: seconds) that this connection stays idle before TCP starts sending `keepalive` probes,
 if `SO_KEEPALIVE` has been set. The maximum time is implementation dependent, but the default is typically two hours.
-** `TCP_KEEPINTVL` - The time (resolution: seconds) between individual `keepalive` probes.
-** `TCP_KEEPCNT` - The maximum number of `keepalive` probes TCP should send before dropping the connection.
+** `TCP_KEEPINTVL` (Epoll)/`TCP_KEEPINTERVAL` (NIO) - The time (resolution: seconds) between individual `keepalive` probes.
+** `TCP_KEEPCNT` (Epoll)/`TCP_KEEPCOUNT` (NIO) - The maximum number of `keepalive` probes TCP should send before dropping the connection.
 
 NOTE: Sometimes, between the client and the server, you may have a network component that silently drops the idle connections without sending a response.
 From the Reactor Netty point of view, in this use case, the remote peer just does not respond.
@@ -628,7 +628,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 [source,java,indent=0]
 .{examplesdir}/channeloptions/Application.java
 ----
-include::{examplesdir}/channeloptions/Application.java[lines=18..46]
+include::{examplesdir}/channeloptions/Application.java[lines=18..52]
 ----
 <1> Configures the connection establishment timeout to 10 seconds.
 <2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
