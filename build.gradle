@@ -79,7 +79,7 @@ ext {
   assertJVersion = '3.21.0'
   hoverflyJavaVersion = '0.14.1'
   tomcatVersion = '9.0.53'
-  boringSslVersion = '2.0.42.Final'
+  boringSslVersion = '2.0.43.Final'
   junitVersion = '5.8.1'
 
   javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
