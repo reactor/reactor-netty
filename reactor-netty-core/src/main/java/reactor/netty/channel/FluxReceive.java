@@ -43,6 +43,9 @@ import static reactor.netty.ReactorNetty.format;
 final class FluxReceive extends Flux<Object> implements Subscription, Disposable {
 
 	static final int QUEUE_LOW_LIMIT = 32;
+  public static final String WILL_HANDLE_THE_MESSAGE_FROM_THIS_POINT_MESSAGE =
+      " will handle the message from this point";
+	public static final String RECEIVER_MESSAGE = "Receiver ";
 
 	final Channel           channel;
 	final ChannelOperations<?, ?> parent;
@@ -268,12 +271,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				try {
 					if (logLeakDetection.isDebugEnabled()) {
 						if (v instanceof ByteBuf) {
-							((ByteBuf) v).touch(format(channel, "Receiver " + a.getClass().getName() +
-									" will handle the message from this point"));
+							((ByteBuf) v).touch(format(channel, RECEIVER_MESSAGE + a.getClass().getName() +
+									WILL_HANDLE_THE_MESSAGE_FROM_THIS_POINT_MESSAGE));
 						}
 						else if (v instanceof ByteBufHolder) {
-							((ByteBufHolder) v).touch(format(channel, "Receiver " + a.getClass().getName() +
-									" will handle the message from this point"));
+							((ByteBufHolder) v).touch(format(channel, RECEIVER_MESSAGE + a.getClass().getName() +
+									WILL_HANDLE_THE_MESSAGE_FROM_THIS_POINT_MESSAGE));
 						}
 					}
 					a.onNext(v);
@@ -282,7 +285,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					try {
 						ReferenceCountUtil.release(v);
 					}
-					catch (Throwable t) {
+					catch (Exception t) {
 						inboundError = t;
 						cleanQueue(q);
 						terminateReceiver(q, a);
@@ -354,11 +357,11 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				if (logLeakDetection.isDebugEnabled()) {
 					if (msg instanceof ByteBuf) {
 						((ByteBuf) msg).touch(format(channel, "Receiver " + receiver.getClass().getName() +
-								" will handle the message from this point"));
+								WILL_HANDLE_THE_MESSAGE_FROM_THIS_POINT_MESSAGE));
 					}
 					else if (msg instanceof ByteBufHolder) {
 						((ByteBufHolder) msg).touch(format(channel, "Receiver " + receiver.getClass().getName() +
-								" will handle the message from this point"));
+								WILL_HANDLE_THE_MESSAGE_FROM_THIS_POINT_MESSAGE));
 					}
 				}
 				receiver.onNext(msg);
@@ -461,7 +464,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		Throwable ex = inboundError;
 		receiver = null;
 		if (ex != null) {
-			//parent.listener.onReceiveError(channel, ex);
 			a.onError(ex);
 		}
 		else {

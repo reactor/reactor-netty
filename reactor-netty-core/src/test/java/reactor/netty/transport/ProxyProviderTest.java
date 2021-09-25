@@ -53,19 +53,19 @@ class ProxyProviderTest {
 	@Test
 	void equalProxyProviders() {
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1)).isEqualTo(createProxy(ADDRESS_1, PASSWORD_1));
-		assertThat(createProxy(ADDRESS_1, PASSWORD_1).hashCode()).isEqualTo(createProxy(ADDRESS_1, PASSWORD_1).hashCode());
+		assertThat(createProxy(ADDRESS_1, PASSWORD_1)).hasSameHashCodeAs(createProxy(ADDRESS_1, PASSWORD_1));
 	}
 
 	@Test
 	void equalProxyProvidersNoAuth() {
 		assertThat(createNoAuthProxy(ADDRESS_1)).isEqualTo(createNoAuthProxy(ADDRESS_1));
-		assertThat(createNoAuthProxy(ADDRESS_1).hashCode()).isEqualTo(createNoAuthProxy(ADDRESS_1).hashCode());
+		assertThat(createNoAuthProxy(ADDRESS_1)).hasSameHashCodeAs(createNoAuthProxy(ADDRESS_1));
 	}
 
 	@Test
 	void equalProxyProvidersAuthHeader() {
 		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1)).isEqualTo(createHeaderProxy(ADDRESS_1, HEADER_1));
-		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode()).isEqualTo(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode());
+		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1)).hasSameHashCodeAs(createHeaderProxy(ADDRESS_1, HEADER_1));
 	}
 
 	@Test
@@ -94,8 +94,8 @@ class ProxyProviderTest {
 
 	@Test
 	void connectTimeoutWithNonPositiveValue() {
-		assertThat(createConnectTimeoutProxy(0).newProxyHandler().connectTimeoutMillis()).isEqualTo(0);
-		assertThat(createConnectTimeoutProxy(-1).newProxyHandler().connectTimeoutMillis()).isEqualTo(0);
+		assertThat(createConnectTimeoutProxy(0).newProxyHandler().connectTimeoutMillis()).isZero();
+    assertThat(createConnectTimeoutProxy(-1).newProxyHandler().connectTimeoutMillis()).isZero();
 	}
 
 	@Test

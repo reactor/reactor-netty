@@ -46,7 +46,7 @@ class ConnectionIdleTest {
 				NettyPipeline.OnChannelReadIdle,
 				"DefaultChannelPipeline$TailContext#0"));
 
-		assertThat(idle1.intValue()).isEqualTo(0);
+		assertThat(idle1.intValue()).isZero();
 		assertThat(idle2.intValue()).isEqualTo(1);
 	}
 

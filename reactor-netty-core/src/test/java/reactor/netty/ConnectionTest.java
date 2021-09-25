@@ -336,7 +336,7 @@ class ConnectionTest {
 		 .addHandlerFirst(ENCODER_NAME, encoder);
 
 		assertThat(c.isPersistent()).isFalse();
-		assertThat(closeCount.intValue()).isEqualTo(0);
+		assertThat(closeCount.intValue()).isZero();
 	}
 
 	@Test
@@ -365,7 +365,7 @@ class ConnectionTest {
 		 .addHandlerLast(DECODER_NAME, decoder);
 
 		assertThat(c.isPersistent()).isFalse();
-		assertThat(closeCount.intValue()).isEqualTo(0);
+		assertThat(closeCount.intValue()).isZero();
 	}
 
 	@Test

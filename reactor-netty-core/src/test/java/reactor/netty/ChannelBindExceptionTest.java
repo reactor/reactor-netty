@@ -35,20 +35,20 @@ class ChannelBindExceptionTest {
 		assertThat(ex.localPort()).isEqualTo(4956);
 
 		ex = ChannelBindException.fail(new InetSocketAddress("test", 4956), new BindException("Address already in use"));
-		assertThat(ex.getCause()).isEqualTo(null);
+		assertThat(ex.getCause()).isNull();
 		assertThat(ex.localHost()).isEqualTo("test");
 		assertThat(ex.localPort()).isEqualTo(4956);
 
 		// Not possible to mock io.netty.channel.unix.Errors.NativeIoException or create a new instance because of Jni errors
 		// java.lang.UnsatisfiedLinkError: 'int io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOENT()'
 		ex = ChannelBindException.fail(new InetSocketAddress("test", 4956), new IOException("bind(..) failed: Address already in use"));
-		assertThat(ex.getCause()).isEqualTo(null);
+		assertThat(ex.getCause()).isNull();
 		assertThat(ex.localHost()).isEqualTo("test");
 		assertThat(ex.localPort()).isEqualTo(4956);
 
 		// Issue-1668
 		ex = ChannelBindException.fail(new InetSocketAddress("test", 4956), new IOException("bind(..) failed: Die Adresse wird bereits verwendet"));
-		assertThat(ex.getCause()).isEqualTo(null);
+		assertThat(ex.getCause()).isNull();
 		assertThat(ex.localHost()).isEqualTo("test");
 		assertThat(ex.localPort()).isEqualTo(4956);
 

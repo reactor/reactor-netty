@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -39,12 +40,14 @@ import static org.assertj.core.api.Assertions.fail;
  */
 class JarFileShadingTest extends AbstractJarFileTest {
 
+	public static final String REACTOR_STRING = "reactor";
+
 	@Test
 	void testPackages() throws Exception {
 		try (Stream<Path> stream = Files.list(root)) {
-			assertThatFileList(stream).containsOnly("reactor", "META-INF");
+			assertThatFileList(stream).containsOnly(REACTOR_STRING, "META-INF");
 		}
-		try (Stream<Path> stream = Files.list(root.resolve("reactor"))) {
+		try (Stream<Path> stream = Files.list(root.resolve(REACTOR_STRING))) {
 			assertThatFileList(stream).containsOnly("netty");
 		}
 	}
@@ -52,7 +55,7 @@ class JarFileShadingTest extends AbstractJarFileTest {
 	@Test
 	void testPackagesReactorPool() throws Exception {
 		try (Stream<Path> stream = Files.list(root.resolve("reactor/netty/internal/shaded"))) {
-			assertThatFileList(stream).containsOnly("reactor");
+			assertThatFileList(stream).containsOnly(REACTOR_STRING);
 		}
 		try (Stream<Path> stream = Files.list(root.resolve("reactor/netty/internal/shaded/reactor"))) {
 			assertThatFileList(stream).containsOnly("pool");
@@ -64,6 +67,7 @@ class JarFileShadingTest extends AbstractJarFileTest {
 		ZipFile jar = new ZipFile(jarFilePath.toString());
 		ZipEntry manifest = jar
 				.stream()
+				.filter(ze -> Objects.nonNull(ze) && Objects.nonNull(ze.getName()))
 				.filter(ze -> ze.getName().equals("META-INF/MANIFEST.MF"))
 				.findFirst()
 				.get();

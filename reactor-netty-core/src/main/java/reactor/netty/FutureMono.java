@@ -99,7 +99,7 @@ public abstract class FutureMono extends Mono<Void> {
 			try {
 				f = deferredFuture.get();
 			}
-			catch (Throwable t) {
+			catch (Exception t) {
 				Operators.error(s, t);
 				return;
 			}

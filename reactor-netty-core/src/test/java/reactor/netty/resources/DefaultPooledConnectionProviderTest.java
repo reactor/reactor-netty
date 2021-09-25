@@ -94,7 +94,7 @@ class DefaultPooledConnectionProviderTest {
 				channelPool);
 
 		Mono<Void> disposer = poolResources.disposeLater();
-		assertThat(((AtomicInteger) channelPool).get()).as("pool closed by disposeLater()").isEqualTo(0);
+		assertThat(((AtomicInteger) channelPool).get()).as("pool closed by disposeLater()").isZero();
 
 		CountDownLatch latch = new CountDownLatch(1);
 		disposer.subscribe(null, null, latch::countDown);
@@ -290,8 +290,8 @@ class DefaultPooledConnectionProviderTest {
 			assertThat(onNext).isEqualTo(1);
 			assertThat(onError).isEqualTo(4);
 
-			assertThat(pool.get().metrics().acquiredSize()).as("currently acquired").isEqualTo(0);
-			assertThat(pool.get().metrics().idleSize()).as("currently idle").isEqualTo(0);
+			assertThat(pool.get().metrics().acquiredSize()).as("currently acquired").isZero();
+			assertThat(pool.get().metrics().idleSize()).as("currently idle").isZero();
 		}
 		finally {
 			server.disposeNow();
@@ -366,8 +366,8 @@ class DefaultPooledConnectionProviderTest {
 			assertThat(onErrorTimeout).isEqualTo(1);
 			assertThat(onErrorPendingAcquire).isEqualTo(1);
 
-			assertThat(pool.get().metrics().acquiredSize()).as("currently acquired").isEqualTo(0);
-			assertThat(pool.get().metrics().idleSize()).as("currently idle").isEqualTo(0);
+			assertThat(pool.get().metrics().acquiredSize()).as("currently acquired").isZero();
+			assertThat(pool.get().metrics().idleSize()).as("currently idle").isZero();
 		}
 		finally {
 			server.disposeNow();
@@ -456,7 +456,7 @@ class DefaultPooledConnectionProviderTest {
 			await().atMost(500, TimeUnit.MILLISECONDS)
 			       .with()
 			       .pollInterval(10, TimeUnit.MILLISECONDS)
-			       .untilAsserted(() -> assertThat(pool.channelPools.size()).isEqualTo(0));
+			       .untilAsserted(() -> assertThat(pool.channelPools.size()).isZero());
 
 			pool.disposeLater()
 			    .block(Duration.ofSeconds(5));

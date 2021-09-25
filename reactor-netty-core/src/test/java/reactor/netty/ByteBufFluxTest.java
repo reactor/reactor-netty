@@ -128,7 +128,7 @@ class ByteBufFluxTest {
 			byte[] read = new byte[bb.readableBytes()];
 			bb.readBytes(read);
 			bb.release();
-			assertThat(bb.readableBytes()).isEqualTo(0);
+			assertThat(bb.readableBytes()).isZero();
 			out.write(read);
 		}
 

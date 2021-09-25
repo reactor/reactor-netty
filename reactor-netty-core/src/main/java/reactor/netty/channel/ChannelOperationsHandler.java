@@ -76,7 +76,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 				listener.onStateChange(connection, ConnectionObserver.State.DISCONNECTING);
 			}
 		}
-		catch (Throwable err) {
+		catch (Exception err) {
 			exceptionCaught(ctx, err);
 		}
 	}
@@ -108,7 +108,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 				ReferenceCountUtil.release(msg);
 			}
 		}
-		catch (Throwable err) {
+		catch (Exception err) {
 			safeRelease(msg);
 			log.error(format(ctx.channel(), "Error was received while reading the incoming data." +
 					" The connection will be closed."), err);
