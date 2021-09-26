@@ -40,7 +40,7 @@ import static org.assertj.core.api.Assertions.fail;
  */
 class JarFileShadingTest extends AbstractJarFileTest {
 
-	public static final String REACTOR_STRING = "reactor";
+	static final String REACTOR_STRING = "reactor";
 
 	@Test
 	void testPackages() throws Exception {
