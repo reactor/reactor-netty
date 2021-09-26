@@ -26,7 +26,7 @@ import java.net.SocketException;
  */
 public class AbortedException extends RuntimeException {
 	static final String CONNECTION_CLOSED_BEFORE_SEND = "Connection has been closed BEFORE send operation";
-	public static final String CONNECTION_RESET_BY_PEER_MESSAGE = "Connection reset by peer";
+	static final String CONNECTION_RESET_BY_PEER_MESSAGE = "Connection reset by peer";
 
 	public AbortedException(String message) {
 		super(message);
