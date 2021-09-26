@@ -51,37 +51,150 @@ class QuicClientTests extends BaseQuicTests {
 			        .verify(Duration.ofSeconds(5));
 	}
 
+	/**
+	 * DATA_BLOCKED
+	 */
+	@Test
+	void testMaxDataNotSpecifiedBidirectional() throws Exception {
+		testMaxDataReached(QuicStreamType.BIDIRECTIONAL,
+				spec -> spec.maxStreamDataBidirectionalLocal(1000000)
+				            .maxStreamDataBidirectionalRemote(1000000)
+				            .maxStreamsBidirectional(100));
+	}
+
+	/**
+	 * DATA_BLOCKED
+	 */
+	@Test
+	void testMaxDataNotSpecifiedUnidirectional() throws Exception {
+		testMaxDataReached(QuicStreamType.UNIDIRECTIONAL,
+				spec -> spec.maxStreamDataUnidirectional(1000000)
+				            .maxStreamsUnidirectional(100));
+	}
+
+	/**
+	 * STREAM_DATA_BLOCKED
+	 */
+	@Test
+	void testMaxStreamDataNotSpecifiedUnidirectional() throws Exception {
+		testMaxDataReached(QuicStreamType.UNIDIRECTIONAL,
+				spec -> spec.maxData(1000000)
+				            .maxStreamsUnidirectional(100));
+	}
+
+	/**
+	 * STREAM_DATA_BLOCKED
+	 */
+	@Test
+	void testMaxStreamDataLocalNotSpecifiedBidirectional() throws Exception {
+		testMaxDataReachedLocal();
+	}
+
+	/**
+	 * STREAM_DATA_BLOCKED
+	 */
+	@Test
+	void testMaxStreamDataRemoteNotSpecifiedBidirectional() throws Exception {
+		testMaxDataReached(QuicStreamType.BIDIRECTIONAL,
+				spec -> spec.maxData(1000000)
+				            .maxStreamDataBidirectionalLocal(1000000)
+				            .maxStreamsBidirectional(100));
+	}
+
+	/**
+	 * https://datatracker.ietf.org/doc/html/rfc9000#section-4.1
+	 *
+	 * Data Flow Control
+	 *
+	 * If a sender has sent data up to the limit, it will be unable to send
+	 * new data and is considered blocked. A sender SHOULD send a
+	 * STREAM_DATA_BLOCKED or DATA_BLOCKED frame to indicate to the receiver
+	 * that it has data to write but is blocked by flow control limits. If
+	 * a sender is blocked for a period longer than the idle timeout
+	 * (Section 10.1), the receiver might close the connection even when the
+	 * sender has data that is available for transmission.
+	 */
+	private void testMaxDataReached(QuicStreamType streamType,
+			Consumer<QuicInitialSettingsSpec.Builder> serverInitialSettings) throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		server =
+				createServer(0, serverInitialSettings)
+				        .idleTimeout(Duration.ofMillis(100))
+				        .doOnConnection(quicConn -> quicConn.onDispose(latch::countDown))
+				        .bindNow();
+
+		client = createClient(server::address).connectNow();
+
+		Flux.range(0, 2)
+		    .flatMap(i -> client.createStream(streamType, (in, out) -> out.sendString(Mono.just("Hello World!"))))
+		    .blockLast(Duration.ofSeconds(5));
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch wait").isTrue();
+	}
+
+	/**
+	 * https://datatracker.ietf.org/doc/html/rfc9000#section-4.1
+	 *
+	 * Data Flow Control
+	 *
+	 * If a sender has sent data up to the limit, it will be unable to send
+	 * new data and is considered blocked. A sender SHOULD send a
+	 * STREAM_DATA_BLOCKED or DATA_BLOCKED frame to indicate to the receiver
+	 * that it has data to write but is blocked by flow control limits. If
+	 * a sender is blocked for a period longer than the idle timeout
+	 * (Section 10.1), the receiver might close the connection even when the
+	 * sender has data that is available for transmission.
+	 */
+	private void testMaxDataReachedLocal() throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		Consumer<QuicInitialSettingsSpec.Builder> serverInitialSettings =
+				spec -> spec.maxData(1000000)
+				            .maxStreamDataBidirectionalRemote(1000000)
+				            .maxStreamsBidirectional(100);
+		server =
+				createServer(0, serverInitialSettings)
+				        .idleTimeout(Duration.ofMillis(100))
+				        .doOnConnection(quicConn -> {
+				            quicConn.onDispose(latch::countDown);
+				            Flux.range(0, 2)
+				                .flatMap(i -> quicConn.createStream(QuicStreamType.BIDIRECTIONAL, (in, out) -> out.sendString(Mono.just("Hello World!"))))
+				                .subscribe();
+				        })
+				        .bindNow();
+
+		client =
+				createClient(server::address)
+				        .handleStream((in, out) -> out.send(in.receive().retain()))
+				        .connectNow();
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch wait").isTrue();
+	}
+
 	@Test
 	void testMaxStreamsReachedBidirectional() throws Exception {
-		testMaxStreamsReached(QuicStreamType.BIDIRECTIONAL);
+		testMaxStreamsReached(QuicStreamType.BIDIRECTIONAL,
+				spec -> spec.maxData(10000000)
+				            .maxStreamDataBidirectionalRemote(1000000)
+				            .maxStreamsBidirectional(1));
 	}
 
 	@Test
 	void testMaxStreamsReachedUnidirectional() throws Exception {
-		testMaxStreamsReached(QuicStreamType.UNIDIRECTIONAL);
+		testMaxStreamsReached(QuicStreamType.UNIDIRECTIONAL,
+				spec -> spec.maxData(10000000)
+				            .maxStreamDataUnidirectional(1000000)
+				            .maxStreamsUnidirectional(1));
 	}
 
-	private void testMaxStreamsReached(QuicStreamType streamType) throws Exception {
+	private void testMaxStreamsReached(QuicStreamType streamType,
+			Consumer<QuicInitialSettingsSpec.Builder> serverInitialSettings) throws Exception {
 		AtomicBoolean streamTypeReceived = new AtomicBoolean();
 		AtomicBoolean remoteCreated = new AtomicBoolean();
 		AtomicReference<String> incomingData = new AtomicReference<>("");
 
 		CountDownLatch latch = new CountDownLatch(4);
-
-		Consumer<QuicInitialSettingsSpec.Builder> initialSettings = spec -> {
-			if (QuicStreamType.BIDIRECTIONAL == streamType) {
-				spec.maxData(10000000)
-				    .maxStreamDataBidirectionalRemote(1000000)
-				    .maxStreamsBidirectional(1);
-			}
-			else {
-				spec.maxData(10000000)
-				    .maxStreamDataUnidirectional(1000000)
-				    .maxStreamsUnidirectional(1);
-			}
-		};
 		server =
-				createServer(0, initialSettings)
+				createServer(0, serverInitialSettings)
 				        .handleStream((in, out) -> {
 				            streamTypeReceived.set(in.streamType() == streamType);
 				            remoteCreated.set(!in.isLocalStream());
@@ -147,12 +260,12 @@ class QuicClientTests extends BaseQuicTests {
 	}
 
 	@Test
-	void testBidirectionalStreamCreatedByClientBidirectional() throws Exception {
+	void testStreamCreatedByClientBidirectional() throws Exception {
 		testStreamCreatedByClient(QuicStreamType.BIDIRECTIONAL);
 	}
 
 	@Test
-	void testUnidirectionalStreamCreatedByClientUnidirectional() throws Exception {
+	void testStreamCreatedByClientUnidirectional() throws Exception {
 		testStreamCreatedByClient(QuicStreamType.UNIDIRECTIONAL);
 	}
 

@@ -25,6 +25,7 @@
     </appender>
 
     <logger name="reactor.netty" level="DEBUG" />
+    <logger name="io.netty.incubator.codec.quic.Quiche" level="DEBUG" />
 
     <root level="info">
         <appender-ref ref="stdout"/>
