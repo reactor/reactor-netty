@@ -21,7 +21,6 @@ import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicSslContext;
 import io.netty.incubator.codec.quic.QuicSslContextBuilder;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import reactor.netty.Connection;
 
 import java.net.InetSocketAddress;
@@ -37,25 +36,32 @@ class BaseQuicTests {
 
 	static final String PROTOCOL = "http/0.9";
 
-	protected static QuicSslContext clientCtx;
-	protected static QuicSslContext serverCtx;
+	static final QuicSslContext clientCtx;
+	static final QuicSslContext serverCtx;
+	static final SelfSignedCertificate ssc;
+	static {
+		SelfSignedCertificate cert;
+		try {
+			cert = new SelfSignedCertificate();
+		}
+		catch (Exception e) {
+			throw new ExceptionInInitializerError(e);
+		}
+		ssc = cert;
 
-	protected QuicConnection client;
-	protected Connection server;
-
-	@BeforeAll
-	static void createSslContext() throws Exception {
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
-		serverCtx =
-				QuicSslContextBuilder.forServer(ssc.privateKey(), null, ssc.certificate())
-				                     .applicationProtocols(PROTOCOL)
-				                     .build();
 		clientCtx =
 				QuicSslContextBuilder.forClient()
 				                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
 				                     .applicationProtocols(PROTOCOL)
 				                     .build();
+		serverCtx =
+				QuicSslContextBuilder.forServer(ssc.privateKey(), null, ssc.certificate())
+				                     .applicationProtocols(PROTOCOL)
+				                     .build();
 	}
+
+	protected QuicConnection client;
+	protected Connection server;
 
 	@AfterEach
 	void dispose() {
