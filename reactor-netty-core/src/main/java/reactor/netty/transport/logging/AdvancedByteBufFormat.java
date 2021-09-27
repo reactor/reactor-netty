@@ -36,10 +36,10 @@ public enum AdvancedByteBufFormat {
 	 * <p>Examples:</p>
 	 * <pre>
 	 * {@code
-	 * reactor.netty.http.HttpTests - [id: 0x230d3686, L:/0:0:0:0:0:0:0:1:60241 - R:/0:0:0:0:0:0:0:1:60245] REGISTERED
-	 * reactor.netty.http.HttpTests - [id: 0x230d3686, L:/0:0:0:0:0:0:0:1:60241 - R:/0:0:0:0:0:0:0:1:60245] ACTIVE
-	 * reactor.netty.http.HttpTests - [id: 0x230d3686, L:/0:0:0:0:0:0:0:1:60241 - R:/0:0:0:0:0:0:0:1:60245] READ: 145B
-	 * reactor.netty.http.HttpTests - [id: 0x230d3686, L:/0:0:0:0:0:0:0:1:60241 - R:/0:0:0:0:0:0:0:1:60245] WRITE: 38B
+	 * reactor.netty.http.HttpTests - [230d3686, L:/0:0:0:0:0:0:0:1:60241 - R:/0:0:0:0:0:0:0:1:60245] REGISTERED
+	 * reactor.netty.http.HttpTests - [230d3686, L:/0:0:0:0:0:0:0:1:60241 - R:/0:0:0:0:0:0:0:1:60245] ACTIVE
+	 * reactor.netty.http.HttpTests - [230d3686, L:/0:0:0:0:0:0:0:1:60241 - R:/0:0:0:0:0:0:0:1:60245] READ: 145B
+	 * reactor.netty.http.HttpTests - [230d3686, L:/0:0:0:0:0:0:0:1:60241 - R:/0:0:0:0:0:0:0:1:60245] WRITE: 38B
 	 * }
 	 * </pre>
 	 */
@@ -50,9 +50,9 @@ public enum AdvancedByteBufFormat {
 	 * <p>Examples:</p>
 	 * <pre>
 	 * {@code
-	 * reactor.netty.http.HttpTests - [id: 0xd5230a14, L:/0:0:0:0:0:0:0:1:60267 - R:/0:0:0:0:0:0:0:1:60269] REGISTERED
-	 * reactor.netty.http.HttpTests - [id: 0xd5230a14, L:/0:0:0:0:0:0:0:1:60267 - R:/0:0:0:0:0:0:0:1:60269] ACTIVE
-	 * reactor.netty.http.HttpTests - [id: 0xd5230a14, L:/0:0:0:0:0:0:0:1:60267 - R:/0:0:0:0:0:0:0:1:60269] READ: 145B
+	 * reactor.netty.http.HttpTests - [d5230a14, L:/0:0:0:0:0:0:0:1:60267 - R:/0:0:0:0:0:0:0:1:60269] REGISTERED
+	 * reactor.netty.http.HttpTests - [d5230a14, L:/0:0:0:0:0:0:0:1:60267 - R:/0:0:0:0:0:0:0:1:60269] ACTIVE
+	 * reactor.netty.http.HttpTests - [d5230a14, L:/0:0:0:0:0:0:0:1:60267 - R:/0:0:0:0:0:0:0:1:60269] READ: 145B
 	 *          +-------------------------------------------------+
 	 *          |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |
 	 * +--------+-------------------------------------------------+----------------+
@@ -62,7 +62,7 @@ public enum AdvancedByteBufFormat {
 	 * |00000030| 61 69 6e 0d 0a 75 73 65 72 2d 61 67 65 6e 74 3a |ain..user-agent:|
 	 * |00000040| 20 52 65 61 63 74 6f 72 4e 65 74 74 79 2f 64 65 | ReactorNetty/de|
 	 * ...
-	 * reactor.netty.http.HttpTests - [id: 0xd5230a14, L:/0:0:0:0:0:0:0:1:60267 - R:/0:0:0:0:0:0:0:1:60269] WRITE: 38B
+	 * reactor.netty.http.HttpTests - [d5230a14, L:/0:0:0:0:0:0:0:1:60267 - R:/0:0:0:0:0:0:0:1:60269] WRITE: 38B
 	 *          +-------------------------------------------------+
 	 *          |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |
 	 * +--------+-------------------------------------------------+----------------+
@@ -80,13 +80,13 @@ public enum AdvancedByteBufFormat {
 	 * <p>Examples:</p>
 	 * <pre>
 	 * {@code
-	 * reactor.netty.http.HttpTests - [id: 0x02c3db6c, L:/0:0:0:0:0:0:0:1:60317 - R:/0:0:0:0:0:0:0:1:60319] REGISTERED
-	 * reactor.netty.http.HttpTests - [id: 0x02c3db6c, L:/0:0:0:0:0:0:0:1:60317 - R:/0:0:0:0:0:0:0:1:60319] ACTIVE
-	 * reactor.netty.http.HttpTests - [id: 0x02c3db6c, L:/0:0:0:0:0:0:0:1:60317 - R:/0:0:0:0:0:0:0:1:60319] READ: 145B POST /test/World HTTP/1.1
+	 * reactor.netty.http.HttpTests - [02c3db6c, L:/0:0:0:0:0:0:0:1:60317 - R:/0:0:0:0:0:0:0:1:60319] REGISTERED
+	 * reactor.netty.http.HttpTests - [02c3db6c, L:/0:0:0:0:0:0:0:1:60317 - R:/0:0:0:0:0:0:0:1:60319] ACTIVE
+	 * reactor.netty.http.HttpTests - [02c3db6c, L:/0:0:0:0:0:0:0:1:60317 - R:/0:0:0:0:0:0:0:1:60319] READ: 145B POST /test/World HTTP/1.1
 	 * Content-Type: text/plain
 	 * user-agent: ReactorNetty/dev
 	 * ...
-	 * reactor.netty.http.HttpTests - [id: 0x02c3db6c, L:/0:0:0:0:0:0:0:1:60317 - R:/0:0:0:0:0:0:0:1:60319] WRITE: 38B HTTP/1.1 200 OK
+	 * reactor.netty.http.HttpTests - [02c3db6c, L:/0:0:0:0:0:0:0:1:60317 - R:/0:0:0:0:0:0:0:1:60319] WRITE: 38B HTTP/1.1 200 OK
 	 * content-length: 0
 	 * }
 	 * </pre>
