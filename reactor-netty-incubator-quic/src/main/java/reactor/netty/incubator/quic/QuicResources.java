@@ -82,7 +82,7 @@ public class QuicResources implements LoopResources {
 	}
 
 	/**
-	 * Prepare to shutdown the global {@link QuicResources} without resetting them,
+	 * Prepare to shut down the global {@link QuicResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones. This only
 	 * occurs when the returned {@link Mono} is subscribed to.
 	 * The quiet period will be {@code 2s} and the timeout will be {@code 15s}
@@ -95,7 +95,7 @@ public class QuicResources implements LoopResources {
 	}
 
 	/**
-	 * Prepare to shutdown the global {@link QuicResources} without resetting them,
+	 * Prepare to shut down the global {@link QuicResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones. This only
 	 * occurs when the returned {@link Mono} is subscribed to.
 	 * It is guaranteed that the disposal of the underlying LoopResources will not happen before

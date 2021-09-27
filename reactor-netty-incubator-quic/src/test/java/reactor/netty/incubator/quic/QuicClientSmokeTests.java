@@ -56,7 +56,7 @@ class QuicClientSmokeTests extends BaseQuicTests {
 	static QuicConnection quicClient;
 
 	@BeforeAll
-	static void setUp() throws Exception {
+	static void setUp() {
 		quicServer =
 				createServer()
 				        .streamObserve((conn, state) -> {

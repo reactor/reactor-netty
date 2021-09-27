@@ -81,7 +81,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	 * @return the configured callback or null
 	 */
 	@Nullable
-	public final Consumer<? super QuicClientConfig> doOnConnect() {
+	public Consumer<? super QuicClientConfig> doOnConnect() {
 		return doOnConnect;
 	}
 
@@ -91,7 +91,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	 * @return the configured callback or null
 	 */
 	@Nullable
-	public final Consumer<? super QuicConnection> doOnConnected() {
+	public Consumer<? super QuicConnection> doOnConnected() {
 		return doOnConnected;
 	}
 
@@ -101,7 +101,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	 * @return the configured callback or null
 	 */
 	@Nullable
-	public final Consumer<? super QuicConnection> doOnDisconnected() {
+	public Consumer<? super QuicConnection> doOnDisconnected() {
 		return doOnDisconnected;
 	}
 
@@ -110,7 +110,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	 *
 	 * @return the remote configured {@link SocketAddress}
 	 */
-	public final Supplier<? extends SocketAddress> remoteAddress() {
+	public Supplier<? extends SocketAddress> remoteAddress() {
 		return remoteAddress;
 	}
 
