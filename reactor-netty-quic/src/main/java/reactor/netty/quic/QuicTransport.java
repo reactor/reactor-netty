@@ -37,6 +37,7 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * A generic QUIC {@link Transport}
@@ -377,8 +378,21 @@ abstract class QuicTransport<T extends Transport<T, CONF>, CONF extends QuicTran
 	 */
 	public final T secure(QuicSslContext sslContext) {
 		Objects.requireNonNull(sslContext, "sslContext");
+		return secure(quicChannel -> sslContext.newEngine(quicChannel.alloc()));
+	}
+
+	/**
+	 * The {@link Function} that will return the {@link QuicSslEngine} that should be used for the
+	 * {@link QuicChannel}.
+	 *
+	 * @param sslEngineProvider the {@link Function} that will return the {@link QuicSslEngine}
+	 * that should be used for the {@link QuicChannel}
+	 * @return a {@link QuicTransport} reference
+	 */
+	public final T secure(Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider) {
+		Objects.requireNonNull(sslEngineProvider, "sslEngineProvider");
 		T dup = duplicate();
-		dup.configuration().sslContext = sslContext;
+		dup.configuration().sslEngineProvider = sslEngineProvider;
 		return dup;
 	}
 

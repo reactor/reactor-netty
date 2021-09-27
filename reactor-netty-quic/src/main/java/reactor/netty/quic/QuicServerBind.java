@@ -100,7 +100,7 @@ final class QuicServerBind extends QuicServer {
 
 	static void validate(QuicServerConfig config) {
 		Objects.requireNonNull(config.bindAddress(), "bindAddress");
-		Objects.requireNonNull(config.sslContext, "sslContext");
+		Objects.requireNonNull(config.sslEngineProvider, "sslEngineProvider");
 		Objects.requireNonNull(config.tokenHandler, "tokenHandler");
 	}
 

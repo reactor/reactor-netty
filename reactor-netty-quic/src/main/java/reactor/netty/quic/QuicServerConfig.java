@@ -21,10 +21,11 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicCongestionControlAlgorithm;
 import io.netty.incubator.codec.quic.QuicConnectionIdGenerator;
 import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
-import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.incubator.codec.quic.QuicSslEngine;
 import io.netty.incubator.codec.quic.QuicTokenHandler;
 import io.netty.util.AttributeKey;
 import reactor.netty.Connection;
@@ -38,6 +39,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static reactor.netty.ReactorNetty.format;
@@ -165,7 +167,8 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 		final Map<AttributeKey<?>, ?>        streamAttrs;
 		final ConnectionObserver             streamObserver;
 		final Map<ChannelOption<?>, ?>       streamOptions;
-		final QuicSslContext                 sslContext;
+		final Function<QuicChannel, ? extends QuicSslEngine>
+		                                     sslEngineProvider;
 		final QuicTokenHandler               tokenHandler;
 
 		ParentChannelInitializer(QuicServerConfig config) {
@@ -192,7 +195,7 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 			this.streamAttrs = config.streamAttrs;
 			this.streamObserver = config.streamObserver.then(new QuicStreamChannelObserver(config.streamHandler));
 			this.streamOptions = config.streamOptions;
-			this.sslContext = config.sslContext;
+			this.sslEngineProvider = config.sslEngineProvider;
 			this.tokenHandler = config.tokenHandler;
 		}
 
@@ -215,7 +218,7 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 					.maxAckDelay(maxAckDelay.toMillis(), TimeUnit.MILLISECONDS)
 					.maxRecvUdpPayloadSize(maxRecvUdpPayloadSize)
 					.maxSendUdpPayloadSize(maxSendUdpPayloadSize)
-					.sslContext(sslContext);
+					.sslEngineProvider(sslEngineProvider);
 
 			if (recvQueueLen > 0 && sendQueueLen > 0) {
 				quicServerCodecBuilder.datagram(recvQueueLen, sendQueueLen);

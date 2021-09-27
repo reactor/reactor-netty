@@ -15,8 +15,14 @@
  */
 package reactor.netty.quic;
 
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicException;
+import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.incubator.codec.quic.QuicSslContextBuilder;
+import io.netty.incubator.codec.quic.QuicSslEngine;
 import io.netty.incubator.codec.quic.QuicStreamType;
+import io.netty.util.DomainWildcardMappingBuilder;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -27,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -254,6 +261,66 @@ class QuicServerTests extends BaseQuicTests {
 						          .secure(serverCtx)
 						          .port(0)
 						          .bindNow());
+	}
+
+	@Test
+	void testSniSupportDefault() throws Exception {
+		testSniSupport(quicChannel -> clientCtx.newEngine(quicChannel.alloc(), "test.com", 8080), "http/0.9");
+	}
+
+	@Test
+	void testSniSupportMatches() throws Exception {
+		QuicSslContext clientSslContext =
+				QuicSslContextBuilder.forClient()
+				                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
+				                     .applicationProtocols("http/1.1")
+				                     .build();
+		testSniSupport(quicChannel -> clientSslContext.newEngine(quicChannel.alloc(), "quic.test.com", 8080), "http/1.1");
+	}
+
+	private void testSniSupport(Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
+			String expectedAppProtocol) throws Exception {
+		QuicSslContext sniServerCtx =
+					QuicSslContextBuilder.forServer(ssc.privateKey(), null, ssc.certificate())
+					                     .applicationProtocols("http/1.1")
+					                     .build();
+
+		QuicSslContext serverSslContext = QuicSslContextBuilder.buildForServerWithSni(
+				new DomainWildcardMappingBuilder<>(serverCtx).add("*.test.com", sniServerCtx).build());
+
+		AtomicReference<String> appProtocol = new AtomicReference<>("");
+		server =
+				createServer()
+				        .secure(serverSslContext)
+				        .handleStream((in, out) -> {
+				            in.withConnection(conn ->
+				                appProtocol.set(((QuicChannel) conn.channel().parent()).sslEngine().getApplicationProtocol()));
+				            return out.send(in.receive().retain());
+				        })
+				        .bindNow();
+
+		client =
+				createClient(server::address)
+				        .secure(sslEngineProvider)
+				        .connectNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		AtomicReference<String> incomingData = new AtomicReference<>("");
+		client.createStream((in, out) -> out.sendString(Mono.just("testSniSupport"))
+		                                    .then(in.receive()
+		                                            .asString()
+		                                            .doOnNext(s -> {
+		                                                incomingData.getAndUpdate(s1 -> s + s1);
+		                                                latch.countDown();
+		                                            })
+		                                            .then()))
+		      .block();
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch wait").isTrue();
+
+		assertThat(appProtocol.get()).isEqualTo(expectedAppProtocol);
+
+		assertThat(incomingData.get()).isEqualTo("testSniSupport");
 	}
 
 	@Test

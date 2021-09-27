@@ -26,7 +26,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicCongestionControlAlgorithm;
-import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.incubator.codec.quic.QuicSslEngine;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
@@ -49,6 +49,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static reactor.netty.ConnectionObserver.State.CONFIGURED;
@@ -89,7 +90,8 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 	long                           maxSendUdpPayloadSize;
 	int                            recvQueueLen;
 	int                            sendQueueLen;
-	QuicSslContext                 sslContext;
+	Function<QuicChannel, ? extends QuicSslEngine>
+	                               sslEngineProvider;
 	Map<AttributeKey<?>, ?>        streamAttrs;
 	BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>>
 	                               streamHandler;
@@ -134,7 +136,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 		this.maxSendUdpPayloadSize = parent.maxSendUdpPayloadSize;
 		this.recvQueueLen = parent.recvQueueLen;
 		this.sendQueueLen = parent.sendQueueLen;
-		this.sslContext = parent.sslContext;
+		this.sslEngineProvider = parent.sslEngineProvider;
 		this.streamAttrs = parent.streamAttrs;
 		this.streamHandler = parent.streamHandler;
 		this.streamObserver = parent.streamObserver;
@@ -287,15 +289,6 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 	 */
 	public final int sendQueueLen() {
 		return sendQueueLen;
-	}
-
-	/**
-	 * Return the configured {@link QuicSslContext}.
-	 *
-	 * @return the configured {@link QuicSslContext}
-	 */
-	public final QuicSslContext sslContext() {
-		return sslContext;
 	}
 
 	/**

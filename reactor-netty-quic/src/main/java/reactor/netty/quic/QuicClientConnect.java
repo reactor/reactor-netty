@@ -111,7 +111,7 @@ final class QuicClientConnect extends QuicClient {
 	static void validate(QuicClientConfig config) {
 		Objects.requireNonNull(config.bindAddress(), "bindAddress");
 		Objects.requireNonNull(config.remoteAddress, "remoteAddress");
-		Objects.requireNonNull(config.sslContext, "sslContext");
+		Objects.requireNonNull(config.sslEngineProvider, "sslEngineProvider");
 	}
 
 	/**
