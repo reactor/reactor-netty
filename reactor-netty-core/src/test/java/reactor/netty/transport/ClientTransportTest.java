@@ -20,8 +20,10 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.HostsFileEntriesProvider;
 import io.netty.resolver.NoopAddressResolverGroup;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.channel.ChannelMetricsRecorder;
@@ -29,18 +31,23 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.util.annotation.Nullable;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
 
 /**
  * @author Violeta Georgieva
@@ -227,6 +234,81 @@ class ClientTransportTest {
 		return new TestClientTransport(Mono.empty(),
 				new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null)
 		);
+	}
+
+	/**
+	 * On Windows OS it is rare to have hosts file
+	 */
+	@Test
+	@DisabledOnOs(WINDOWS)
+	void testDefaultHostsFileEntriesResolver() throws Exception {
+		doTestHostsFileEntriesResolver(false);
+	}
+
+	/**
+	 * On Windows OS it is rare to have hosts file
+	 */
+	@Test
+	@DisabledOnOs(WINDOWS)
+	void testCustomHostsFileEntriesResolver() throws Exception {
+		doTestHostsFileEntriesResolver(true);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void doTestHostsFileEntriesResolver(boolean customResolver) throws Exception {
+		LoopResources loop1 = LoopResources.create("test", 1, true);
+		NioEventLoopGroup loop2 = new NioEventLoopGroup(1);
+		ConnectionProvider provider = ConnectionProvider.create("test");
+		TestClientTransportConfig config =
+				new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
+		HostsFileEntriesProvider hostsFileEntriesProvider = HostsFileEntriesProvider.parser().parseSilently();
+		List<InetAddress> addresses = hostsFileEntriesProvider.ipv4Entries().get("localhost");
+		try {
+			config.loopResources = loop1;
+			if (customResolver) {
+				NameResolverProvider nameResolverProvider = NameResolverProvider.builder()
+						.hostsFileEntriesResolver((inetHost, resolvedAddressTypes) ->
+							// Returns only the first entry from the hosts file
+							addresses != null && !addresses.isEmpty() ? addresses.get(0) : null)
+						.build();
+				config.defaultResolver.set(nameResolverProvider.newNameResolverGroup(config.loopResources, true));
+			}
+
+			AtomicReference<List<InetAddress>> resolved = new AtomicReference<>();
+			CountDownLatch latch = new CountDownLatch(1);
+			config.resolverInternal()
+			      .getResolver(loop2.next())
+			      .resolveAll(InetSocketAddress.createUnresolved("localhost", 443))
+			      .addListener(f -> {
+			          resolved.set(
+			              ((List<InetSocketAddress>) f.getNow())
+			                      .stream()
+			                      .map(InetSocketAddress::getAddress)
+			                      .collect(Collectors.toList()));
+			          latch.countDown();
+			      });
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+			assertThat(resolved.get()).isNotNull();
+			if (customResolver) {
+				assertThat(resolved.get()).hasSize(1);
+				assertThat(resolved.get().get(0)).isEqualTo(addresses.get(0));
+			}
+			else {
+				assertThat(resolved.get()).hasSize(addresses.size());
+				assertThat(resolved.get()).isEqualTo(addresses);
+			}
+		}
+		finally {
+			config.defaultResolver.get().close();
+			loop1.disposeLater()
+			     .block(Duration.ofSeconds(10));
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(10));
+			loop2.shutdownGracefully()
+			     .get(10, TimeUnit.SECONDS);
+		}
 	}
 
 	static final class TestClientTransport extends ClientTransport<TestClientTransport, TestClientTransportConfig> {
