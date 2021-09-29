@@ -23,6 +23,7 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.HostsFileEntriesProvider;
 import io.netty.resolver.NoopAddressResolverGroup;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.channel.ChannelMetricsRecorder;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
 
 /**
  * @author Violeta Georgieva
@@ -234,12 +236,20 @@ class ClientTransportTest {
 		);
 	}
 
+	/**
+	 * On Windows OS it is rare to have hosts file
+	 */
 	@Test
+	@DisabledOnOs(WINDOWS)
 	void testDefaultHostsFileEntriesResolver() throws Exception {
 		doTestHostsFileEntriesResolver(false);
 	}
 
+	/**
+	 * On Windows OS it is rare to have hosts file
+	 */
 	@Test
+	@DisabledOnOs(WINDOWS)
 	void testCustomHostsFileEntriesResolver() throws Exception {
 		doTestHostsFileEntriesResolver(true);
 	}
@@ -280,7 +290,7 @@ class ClientTransportTest {
 
 			assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-			assertThat(resolved).isNotNull();
+			assertThat(resolved.get()).isNotNull();
 			if (customResolver) {
 				assertThat(resolved.get()).hasSize(1);
 				assertThat(resolved.get().get(0)).isEqualTo(addresses.get(0));
