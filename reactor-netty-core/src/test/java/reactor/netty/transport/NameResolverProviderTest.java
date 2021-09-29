@@ -134,6 +134,20 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	void hostsFileEntriesResolver() {
+		assertThat(builder.build().hostsFileEntriesResolver).isNull();
+
+		builder.hostsFileEntriesResolver((inetHost, resolvedAddressTypes) -> null);
+		assertThat(builder.build().hostsFileEntriesResolver).isNotNull();
+	}
+
+	@Test
+	void hostsFileEntriesResolverBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.hostsFileEntriesResolver(null));
+	}
+
+	@Test
 	void maxPayloadSize() {
 		assertThat(builder.build().maxPayloadSize()).isEqualTo(DEFAULT_MAX_PAYLOAD_SIZE);
 

@@ -20,6 +20,8 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultHostsFileEntriesResolver;
+import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolver;
@@ -92,7 +94,7 @@ public final class NameResolverProvider {
 		 * If {@code false}, the resolver notifies the returned {@link Future} when
 		 * all possible address types are complete.
 		 * This configuration is applicable for {@link DnsNameResolver#resolveAll(String)}.
-		 * By default this is enabled.
+		 * By default, this is enabled.
 		 *
 		 * @param enable {@code true} to enable, {@code false} to disable.
 		 * @return {@code this}
@@ -101,7 +103,7 @@ public final class NameResolverProvider {
 
 		/**
 		 * Disables the automatic inclusion of an optional record that tries to hint the remote DNS server about
-		 * how much data the resolver can read per response. By default this is enabled.
+		 * how much data the resolver can read per response. By default, this is enabled.
 		 *
 		 * @param disable true if an optional record is not included
 		 * @return {@code this}
@@ -110,12 +112,21 @@ public final class NameResolverProvider {
 
 		/**
 		 * Specifies whether this resolver has to send a DNS query with the recursion desired (RD) flag set.
-		 * By default this is enabled.
+		 * By default, this is enabled.
 		 *
 		 * @param disable true if RD flag is not set
 		 * @return {@code this}
 		 */
 		NameResolverSpec disableRecursionDesired(boolean disable);
+
+		/**
+		 * Specifies a custom {@link HostsFileEntriesResolver} to be used for hosts file entries.
+		 * Default to {@link DefaultHostsFileEntriesResolver}.
+		 *
+		 * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} to be used for hosts file entries
+		 * @return {@code this}
+		 */
+		NameResolverSpec hostsFileEntriesResolver(HostsFileEntriesResolver hostsFileEntriesResolver);
 
 		/**
 		 * Sets the capacity of the datagram packet buffer (in bytes).
@@ -206,7 +217,7 @@ public final class NameResolverProvider {
 
 		/**
 		 * Sets the list of search domains of the resolver.
-		 * By default the effective search domain list will be populated using
+		 * By default, the effective search domain list will be populated using
 		 * the system DNS search domains.
 		 *
 		 * @param searchDomains the search domains
@@ -259,6 +270,16 @@ public final class NameResolverProvider {
 	 */
 	public Duration cacheNegativeTimeToLive() {
 		return cacheNegativeTimeToLive;
+	}
+
+	/**
+	 * Returns the configured custom {@link HostsFileEntriesResolver} to be used for hosts file entries or null.
+	 *
+	 * @return the configured custom {@link HostsFileEntriesResolver} to be used for hosts file entries or null
+	 */
+	@Nullable
+	public HostsFileEntriesResolver hostsFileEntriesResolver() {
+		return hostsFileEntriesResolver;
 	}
 
 	/**
@@ -442,6 +463,9 @@ public final class NameResolverProvider {
 				.eventLoop(group.next())
 				.channelFactory(() -> loop.onChannel(DatagramChannel.class, group))
 				.socketChannelFactory(() -> loop.onChannel(SocketChannel.class, group));
+		if (hostsFileEntriesResolver != null) {
+			builder.hostsFileEntriesResolver(hostsFileEntriesResolver);
+		}
 		if (loggingFactory != null) {
 			builder.dnsQueryLifecycleObserverFactory(loggingFactory);
 		}
@@ -460,6 +484,7 @@ public final class NameResolverProvider {
 	final boolean completeOncePreferredResolved;
 	final boolean disableRecursionDesired;
 	final boolean disableOptionalRecord;
+	final HostsFileEntriesResolver hostsFileEntriesResolver;
 	final DnsQueryLifecycleObserverFactory loggingFactory;
 	final LoopResources loopResources;
 	final int maxPayloadSize;
@@ -478,6 +503,7 @@ public final class NameResolverProvider {
 		this.completeOncePreferredResolved = build.completeOncePreferredResolved;
 		this.disableOptionalRecord = build.disableOptionalRecord;
 		this.disableRecursionDesired = build.disableRecursionDesired;
+		this.hostsFileEntriesResolver = build.hostsFileEntriesResolver;
 		this.loggingFactory = build.loggingFactory;
 		this.loopResources = build.loopResources;
 		this.maxPayloadSize = build.maxPayloadSize;
@@ -506,6 +532,7 @@ public final class NameResolverProvider {
 		boolean completeOncePreferredResolved = DEFAULT_COMPLETE_ONCE_PREFERRED_RESOLVED;
 		boolean disableOptionalRecord;
 		boolean disableRecursionDesired;
+		HostsFileEntriesResolver hostsFileEntriesResolver;
 		DnsQueryLifecycleObserverFactory loggingFactory;
 		LoopResources loopResources;
 		int maxPayloadSize = DEFAULT_MAX_PAYLOAD_SIZE;
@@ -550,6 +577,12 @@ public final class NameResolverProvider {
 		@Override
 		public NameResolverSpec disableRecursionDesired(boolean disable) {
 			this.disableRecursionDesired = disable;
+			return this;
+		}
+
+		@Override
+		public NameResolverSpec hostsFileEntriesResolver(HostsFileEntriesResolver hostsFileEntriesResolver) {
+			this.hostsFileEntriesResolver = Objects.requireNonNull(hostsFileEntriesResolver);
 			return this;
 		}
 

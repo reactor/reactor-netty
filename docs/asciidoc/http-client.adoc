@@ -492,6 +492,8 @@ This configuration is applicable for `DnsNameResolver#resolveAll(String)`. By de
 how much data the resolver can read per response. By default, this setting is enabled.
 | `disableRecursionDesired` | Specifies whether this resolver has to send a DNS query with the recursion desired (RD) flag set.
 By default, this setting is enabled.
+| `hostsFileEntriesResolver` | Sets a custom {nettyjavadoc}/io/netty/resolver/HostsFileEntriesResolver.html[`HostsFileEntriesResolver`] to be used for hosts file entries.
+Default: {nettyjavadoc}/io/netty/resolver/DefaultHostsFileEntriesResolver.html[`DefaultHostsFileEntriesResolver`].
 | `maxPayloadSize` | Sets the capacity of the datagram packet buffer (in bytes). Default: 4096.
 | `maxQueriesPerResolve` | Sets the maximum allowed number of DNS queries to send when resolving a host name. Default: 16.
 | `ndots` | Sets the number of dots that must appear in a name before an initial absolute query is made.
