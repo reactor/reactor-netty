@@ -211,23 +211,40 @@ public final class ReactorNetty {
 		Objects.requireNonNull(msg, "msg");
 		if (LOG_CHANNEL_INFO) {
 			String channelStr;
+			StringBuilder result;
 			Connection connection = Connection.from(channel);
 			if (connection instanceof ChannelOperationsId) {
 				channelStr = ((ChannelOperationsId) connection).asLongText();
-				return new StringBuilder(1 + channelStr.length() + 2 + msg.length())
-						.append(CHANNEL_ID_PREFIX)
-						.append(channelStr)
-						.append("] ")
-						.append(msg)
+				if (channelStr.charAt(0) != TRACE_ID_PREFIX) {
+					result = new StringBuilder(1 + channelStr.length() + 2 + msg.length())
+							.append(CHANNEL_ID_PREFIX)
+							.append(channelStr)
+							.append(CHANNEL_ID_SUFFIX_1);
+				}
+				else {
+					result = new StringBuilder(channelStr.length() + 1 + msg.length())
+							.append(channelStr)
+							.append(CHANNEL_ID_SUFFIX_2);
+				}
+				return result.append(msg)
 						.toString();
 			}
 			else {
-				// Replace "[id: 0x" with '[' in order to keep it consistent with ChannelOperationsId#asLongText()
-				channelStr = channel.toString().substring(ORIGINAL_CHANNEL_ID_PREFIX_LENGTH);
-				return new StringBuilder(1 + channelStr.length() + 1 + msg.length())
-						.append(CHANNEL_ID_PREFIX)
-						.append(channelStr)
-						.append(' ')
+				channelStr = channel.toString();
+				if (channelStr.charAt(0) == CHANNEL_ID_PREFIX) {
+					channelStr = channelStr.substring(ORIGINAL_CHANNEL_ID_PREFIX_LENGTH);
+					result = new StringBuilder(1 + channelStr.length() + 1 + msg.length())
+							.append(CHANNEL_ID_PREFIX)
+							.append(channelStr);
+				}
+				else {
+					int ind = channelStr.indexOf(ORIGINAL_CHANNEL_ID_PREFIX);
+					result = new StringBuilder(1 + (channelStr.length() - ORIGINAL_CHANNEL_ID_PREFIX_LENGTH) + 1 + msg.length())
+							.append(channelStr.substring(0, ind))
+							.append(CHANNEL_ID_PREFIX)
+							.append(channelStr.substring(ind + ORIGINAL_CHANNEL_ID_PREFIX_LENGTH));
+				}
+				return result.append(CHANNEL_ID_SUFFIX_2)
 						.append(msg)
 						.toString();
 			}
@@ -978,8 +995,12 @@ public final class ReactorNetty {
 
 	static final ByteBuf                   BOUNDARY              = Unpooled.EMPTY_BUFFER;
 
-	static final int ORIGINAL_CHANNEL_ID_PREFIX_LENGTH = "[id: 0x".length();
 	static final char CHANNEL_ID_PREFIX = '[';
+	static final String CHANNEL_ID_SUFFIX_1 = "] ";
+	static final char CHANNEL_ID_SUFFIX_2 = ' ';
+	static final String ORIGINAL_CHANNEL_ID_PREFIX = "[id: 0x";
+	static final int ORIGINAL_CHANNEL_ID_PREFIX_LENGTH = ORIGINAL_CHANNEL_ID_PREFIX.length();
+	static final char TRACE_ID_PREFIX = '(';
 
 	@SuppressWarnings("ReferenceEquality")
 	//Design to use reference comparison here

@@ -162,23 +162,38 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 	}
 
 	private String channelString(Channel channel) {
+		String channelStr;
+		StringBuilder result;
 		Connection connection = Connection.from(channel);
 		if (connection instanceof ChannelOperationsId) {
-			String channelStr = ((ChannelOperationsId) connection).asLongText();
-			return new StringBuilder(1 + channelStr.length() + 1)
-					.append(CHANNEL_ID_PREFIX)
-					.append(channelStr)
-					.append(CHANNEL_ID_SUFFIX)
-					.toString();
+			channelStr = ((ChannelOperationsId) connection).asLongText();
+			if (channelStr.charAt(0) != TRACE_ID_PREFIX) {
+				result = new StringBuilder(1 + channelStr.length() + 1)
+						.append(CHANNEL_ID_PREFIX)
+						.append(channelStr)
+						.append(CHANNEL_ID_SUFFIX);
+			}
+			else {
+				result = new StringBuilder(channelStr);
+			}
 		}
 		else {
-			// Replace "[id: 0x" with '[' in order to keep it consistent with ChannelOperationsId#asLongText()
-			String channelStr = channel.toString().substring(ORIGINAL_CHANNEL_ID_PREFIX_LENGTH);
-			return new StringBuilder(1 + channelStr.length())
-					.append(CHANNEL_ID_PREFIX)
-					.append(channelStr)
-					.toString();
+			channelStr = channel.toString();
+			if (channelStr.charAt(0) == CHANNEL_ID_PREFIX) {
+				channelStr = channelStr.substring(ORIGINAL_CHANNEL_ID_PREFIX_LENGTH);
+				result = new StringBuilder(1 + channelStr.length())
+						.append(CHANNEL_ID_PREFIX)
+						.append(channelStr);
+			}
+			else {
+				int ind = channelStr.indexOf(ORIGINAL_CHANNEL_ID_PREFIX);
+				result = new StringBuilder(1 + (channelStr.length() - ORIGINAL_CHANNEL_ID_PREFIX_LENGTH))
+						.append(channelStr.substring(0, ind))
+						.append(CHANNEL_ID_PREFIX)
+						.append(channelStr.substring(ind + ORIGINAL_CHANNEL_ID_PREFIX_LENGTH));
+			}
 		}
+		return result.toString();
 	}
 
 	private String formatByteBuf(ChannelHandlerContext ctx, String eventName, ByteBuf msg) {
@@ -290,7 +305,9 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 				.toString();
 	}
 
-	static final int ORIGINAL_CHANNEL_ID_PREFIX_LENGTH = "[id: 0x".length();
 	static final char CHANNEL_ID_PREFIX = '[';
 	static final char CHANNEL_ID_SUFFIX = ']';
+	static final String ORIGINAL_CHANNEL_ID_PREFIX = "[id: 0x";
+	static final int ORIGINAL_CHANNEL_ID_PREFIX_LENGTH = ORIGINAL_CHANNEL_ID_PREFIX.length();
+	static final char TRACE_ID_PREFIX = '(';
 }
