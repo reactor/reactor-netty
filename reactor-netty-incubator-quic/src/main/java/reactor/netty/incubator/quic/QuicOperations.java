@@ -25,6 +25,7 @@ import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.netty.ChannelOperationsId;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.util.Logger;
@@ -43,10 +44,11 @@ import static reactor.netty.ReactorNetty.format;
 /**
  * @author Violeta Georgieva
  */
-final class QuicOperations implements QuicConnection {
+final class QuicOperations implements ChannelOperationsId, QuicConnection {
 
 	final ChannelHandler           loggingHandler;
 	final QuicChannel              quicChannel;
+	final String                   shortId;
 	final Map<AttributeKey<?>, ?>  streamAttrs;
 	final ConnectionObserver       streamListener;
 	final Map<ChannelOption<?>, ?> streamOptions;
@@ -58,10 +60,27 @@ final class QuicOperations implements QuicConnection {
 			Map<AttributeKey<?>, ?> streamAttrs,
 			Map<ChannelOption<?>, ?> streamOptions) {
 		this.loggingHandler = loggingHandler;
+		this.quicChannel = quicChannel;
+		this.shortId = channel().id().asShortText();
 		this.streamAttrs = streamAttrs;
 		this.streamListener = streamListener;
 		this.streamOptions = streamOptions;
-		this.quicChannel = quicChannel;
+	}
+
+	@Override
+	public String asLongText() {
+		String channelStr = channel().toString();
+		int ind = channelStr.indexOf(ORIGINAL_CHANNEL_ID_PREFIX);
+		return new StringBuilder(1 + (channelStr.length() - ORIGINAL_CHANNEL_ID_PREFIX_LENGTH))
+				.append(channelStr.substring(0, ind))
+				.append(CHANNEL_ID_PREFIX)
+				.append(channelStr.substring(ind + ORIGINAL_CHANNEL_ID_PREFIX_LENGTH))
+				.toString();
+	}
+
+	@Override
+	public String asShortText() {
+		return shortId;
 	}
 
 	@Override
@@ -113,7 +132,12 @@ final class QuicOperations implements QuicConnection {
 		}
 	}
 
+	static final char CHANNEL_ID_PREFIX = '[';
+
 	static final Logger log = Loggers.getLogger(QuicOperations.class);
+
+	static final String ORIGINAL_CHANNEL_ID_PREFIX = "[id: 0x";
+	static final int ORIGINAL_CHANNEL_ID_PREFIX_LENGTH = ORIGINAL_CHANNEL_ID_PREFIX.length();
 
 	static final class QuicStreamChannelObserver implements ConnectionObserver {
 

@@ -62,6 +62,14 @@ class QuicStreamOperations extends ChannelOperations<QuicInbound, QuicOutbound> 
 	}
 
 	@Override
+	public String asLongText() {
+		// local and remote addresses are the same, see:
+		//io.netty.incubator.codec.quic.QuicheQuicStreamChannel.localAddress
+		//io.netty.incubator.codec.quic.QuicheQuicStreamChannel.remoteAddress
+		return asShortText() + ", " + channel().localAddress();
+	}
+
+	@Override
 	public boolean isLocalStream() {
 		return ((QuicStreamChannel) connection().channel()).isLocalCreated();
 	}

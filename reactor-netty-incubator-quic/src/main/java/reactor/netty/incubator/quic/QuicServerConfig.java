@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.ChannelGroup;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicCongestionControlAlgorithm;
@@ -32,9 +33,11 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -133,7 +136,9 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 		return new ParentChannelInitializer(this);
 	}
 
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(QuicServer.class);
+	static final LoggingHandler LOGGING_HANDLER =
+			AdvancedByteBufFormat.HEX_DUMP
+					.toLoggingHandler(QuicServer.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
 	static final class MicrometerQuicServerMetricsRecorder extends MicrometerChannelMetricsRecorder {
 
