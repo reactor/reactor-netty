@@ -19,6 +19,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.cookie.Cookie;
 import org.reactivestreams.Publisher;
@@ -206,5 +207,30 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 		return status(HttpResponseStatus.valueOf(status));
 	}
 
-
+	/**
+	 * Callback for setting outbound trailer headers.
+	 * The callback is invoked when the response is about to be completed.
+	 * Only headers names declared with {@link HttpHeaderNames#TRAILER} are accepted.
+	 * <p><strong>Note:</strong>The headers below cannot be sent as trailer headers:
+	 * <ul>
+	 *     <li>Age</li>
+	 *     <li>Cache-Control</li>
+	 *     <li>Content-Encoding</li>
+	 *     <li>Content-Length</li>
+	 *     <li>Content-Range</li>
+	 *     <li>Content-Type</li>
+	 *     <li>Date</li>
+	 *     <li>Expires</li>
+	 *     <li>Location</li>
+	 *     <li>Retry-After</li>
+	 *     <li>Trailer</li>
+	 *     <li>Transfer-Encoding</li>
+	 *     <li>Vary</li>
+	 *     <li>Warning</li>
+	 * </ul>
+	 *
+	 * @param trailingHeaders netty headers map
+	 * @return this {@link HttpServerResponse}
+	 */
+	HttpServerResponse trailerHeaders(Consumer<? super HttpHeaders> trailingHeaders);
 }
