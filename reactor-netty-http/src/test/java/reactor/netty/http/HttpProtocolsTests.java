@@ -509,11 +509,11 @@ class HttpProtocolsTests extends BaseHttpTest {
 				server.handle((req, res) ->
 				          res.header(HttpHeaderNames.TRAILER, HttpHeaderNames.CONTENT_LENGTH)
 				             .trailerHeaders(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, "33"))
-				             .sendString(Flux.just("testTrailerHeaders", "ChunkedResponse")))
+				             .sendString(Flux.just("testDisallowedTrailer", "HeadersNotSent")))
 				      .bindNow();
 
-		// Trailing header name [content-length] not declared with [Trailer] header, or it is not a valid trailing header name
-		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testTrailerHeadersChunkedResponse");
+		// Trailer header name [content-length] not declared with [Trailer] header, or it is not a valid trailer header name
+		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testDisallowedTrailerHeadersNotSent");
 	}
 
 	@ParameterizedCompatibleCombinationsTest
@@ -522,11 +522,11 @@ class HttpProtocolsTests extends BaseHttpTest {
 				server.handle((req, res) ->
 				          res.header(HttpHeaderNames.TRAILER, "foo")
 				             .trailerHeaders(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, "33"))
-				             .sendString(Flux.just("testTrailerHeaders", "ChunkedResponse")))
+				             .sendString(Flux.just("testTrailerHeaders", "NotSpecifiedUpfront")))
 				      .bindNow();
 
-		// Trailing header name [content-length] not declared with [Trailer] header, or it is not a valid trailing header name
-		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testTrailerHeadersChunkedResponse");
+		// Trailer header name [content-length] not declared with [Trailer] header, or it is not a valid trailer header name
+		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testTrailerHeadersNotSpecifiedUpfront");
 	}
 
 	@ParameterizedCompatibleCombinationsTest

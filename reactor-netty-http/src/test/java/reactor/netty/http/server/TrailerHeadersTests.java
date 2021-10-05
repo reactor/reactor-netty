@@ -29,10 +29,10 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Violeta Georgieva
  */
-class TrailingHeadersTests {
+class TrailerHeadersTests {
 
-	static final String ERROR_MESSAGE = "Trailing header name [%s] not declared with [Trailer] header," +
-			" or it is not a valid trailing header name";
+	static final String ERROR_MESSAGE = "Trailer header name [%s] not declared with [Trailer] header," +
+			" or it is not a valid trailer header name";
 	static final String COMMA = ",";
 	static final String EMPTY = "";
 	static final String HEADER_NAME_1 = "foo";

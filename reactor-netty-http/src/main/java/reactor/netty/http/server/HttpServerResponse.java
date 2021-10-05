@@ -210,7 +210,8 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	/**
 	 * Callback for setting outbound trailer headers.
 	 * The callback is invoked when the response is about to be completed.
-	 * Only headers names declared with {@link HttpHeaderNames#TRAILER} are accepted.
+	 * <p><strong>Note:</strong>Only headers names declared with {@link HttpHeaderNames#TRAILER} are accepted.
+	 * <p><strong>Note:</strong>Trailer headers are sent only when a message body is encoded with the chunked transfer coding
 	 * <p><strong>Note:</strong>The headers below cannot be sent as trailer headers:
 	 * <ul>
 	 *     <li>Age</li>
@@ -229,8 +230,8 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	 *     <li>Warning</li>
 	 * </ul>
 	 *
-	 * @param trailingHeaders netty headers map
+	 * @param trailerHeaders netty headers map
 	 * @return this {@link HttpServerResponse}
 	 */
-	HttpServerResponse trailerHeaders(Consumer<? super HttpHeaders> trailingHeaders);
+	HttpServerResponse trailerHeaders(Consumer<? super HttpHeaders> trailerHeaders);
 }

@@ -644,7 +644,19 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		else if (markSentBody()) {
 			LastHttpContent lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
+			// https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
+			// A trailer allows the sender to include additional fields at the end
+			// of a chunked message in order to supply metadata that might be
+			// dynamically generated while the message body is sent, such as a
+			// message integrity check, digital signature, or post-processing
+			// status.
 			if (trailerHeadersConsumer != null && isTransferEncodingChunked(nettyResponse)) {
+				// https://datatracker.ietf.org/doc/html/rfc7230#section-4.4
+				// When a message includes a message body encoded with the chunked
+				// transfer coding and the sender desires to send metadata in the form
+				// of trailer fields at the end of the message, the sender SHOULD
+				// generate a Trailer header field before the message body to indicate
+				// which fields will be present in the trailers.
 				String declaredHeaderNames = responseHeaders.get(HttpHeaderNames.TRAILER);
 				if (declaredHeaderNames != null) {
 					HttpHeaders trailerHeaders = new TrailerHeaders(declaredHeaderNames);
@@ -960,8 +972,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			@Override
 			public void validateName(CharSequence name) {
 				if (!declaredHeaderNames.contains(name.toString())) {
-					throw new IllegalArgumentException("Trailing header name [" + name +
-							"] not declared with [Trailer] header, or it is not a valid trailing header name");
+					throw new IllegalArgumentException("Trailer header name [" + name +
+							"] not declared with [Trailer] header, or it is not a valid trailer header name");
 				}
 			}
 		}
