@@ -125,6 +125,7 @@ public final class NameResolverProvider {
 		 *
 		 * @param hostsFileEntriesResolver the {@link HostsFileEntriesResolver} to be used for hosts file entries
 		 * @return {@code this}
+		 * @since 1.0.12
 		 */
 		NameResolverSpec hostsFileEntriesResolver(HostsFileEntriesResolver hostsFileEntriesResolver);
 
@@ -276,6 +277,7 @@ public final class NameResolverProvider {
 	 * Returns the configured custom {@link HostsFileEntriesResolver} to be used for hosts file entries or null.
 	 *
 	 * @return the configured custom {@link HostsFileEntriesResolver} to be used for hosts file entries or null
+	 * @since 1.0.12
 	 */
 	@Nullable
 	public HostsFileEntriesResolver hostsFileEntriesResolver() {
