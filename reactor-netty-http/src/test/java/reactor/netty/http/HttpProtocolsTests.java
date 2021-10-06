@@ -21,6 +21,7 @@ import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -473,5 +474,81 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 		assertThat(responses).isNotNull();
 		assertThat(responses.size()).isEqualTo(10);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersChunkedResponse(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, "foo")
+				             .trailerHeaders(h -> h.set("foo", "bar"))
+				             .sendString(Flux.just("testTrailerHeaders", "ChunkedResponse")))
+				      .bindNow();
+		doTestTrailerHeaders(client.port(disposableServer.port()), "bar", "testTrailerHeadersChunkedResponse");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersFailedChunkedResponse(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, "foo")
+				             .trailerHeaders(h -> h.set("foo", "bar"))
+				             .sendString(Flux.range(0, 3)
+				                             .delayElements(Duration.ofMillis(50))
+				                             .flatMap(i -> i == 2 ? Mono.error(new RuntimeException()) : Mono.just(i + ""))
+				                             .doOnError(t -> res.trailerHeaders(h -> h.set("foo", "error")))
+				                             .onErrorResume(t -> Mono.empty())))
+				      .bindNow();
+
+		doTestTrailerHeaders(client.port(disposableServer.port()), "error", "01");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testDisallowedTrailerHeadersNotSent(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, HttpHeaderNames.CONTENT_LENGTH)
+				             .trailerHeaders(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, "33"))
+				             .sendString(Flux.just("testDisallowedTrailer", "HeadersNotSent")))
+				      .bindNow();
+
+		// Trailer header name [content-length] not declared with [Trailer] header, or it is not a valid trailer header name
+		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testDisallowedTrailerHeadersNotSent");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersNotSpecifiedUpfront(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, "foo")
+				             .trailerHeaders(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, "33"))
+				             .sendString(Flux.just("testTrailerHeaders", "NotSpecifiedUpfront")))
+				      .bindNow();
+
+		// Trailer header name [content-length] not declared with [Trailer] header, or it is not a valid trailer header name
+		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testTrailerHeadersNotSpecifiedUpfront");
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testTrailerHeadersFullResponse(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.handle((req, res) ->
+				          res.header(HttpHeaderNames.TRAILER, "foo")
+				             .trailerHeaders(h -> h.set("foo", "bar"))
+				             .sendString(Mono.just("testTrailerHeadersFullResponse")))
+				      .bindNow();
+
+		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testTrailerHeadersFullResponse");
+	}
+
+	private void doTestTrailerHeaders(HttpClient client, String expectedHeaderValue, String expectedResponse) {
+		client.get()
+		      .uri("/")
+		      .responseSingle((res, bytes) -> bytes.asString().zipWith(res.trailerHeaders()))
+		      .as(StepVerifier::create)
+		      .expectNextMatches(t -> expectedResponse.equals(t.getT1()) &&
+		              expectedHeaderValue.equals(t.getT2().get("foo", "empty")))
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
 	}
 }

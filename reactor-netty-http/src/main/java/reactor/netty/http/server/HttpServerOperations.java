@@ -19,7 +19,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -33,9 +35,12 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
@@ -81,6 +86,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.handler.codec.http.HttpUtil.isTransferEncodingChunked;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 import static reactor.netty.http.server.HttpServerState.REQUEST_DECODING_FAILED;
@@ -107,6 +113,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final String scheme;
 
 	Function<? super String, Map<String, String>> paramsResolver;
+	Consumer<? super HttpHeaders> trailerHeadersConsumer;
 
 	HttpServerOperations(HttpServerOperations replaced) {
 		super(replaced);
@@ -123,6 +130,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.path = replaced.path;
 		this.responseHeaders = replaced.responseHeaders;
 		this.scheme = replaced.scheme;
+		this.trailerHeadersConsumer = replaced.trailerHeadersConsumer;
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
@@ -238,7 +246,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public HttpServerOperations chunkedTransfer(boolean chunked) {
-		if (!hasSentHeaders() && HttpUtil.isTransferEncodingChunked(nettyResponse) != chunked) {
+		if (!hasSentHeaders() && isTransferEncodingChunked(nettyResponse) != chunked) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
 		}
@@ -487,6 +495,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public HttpServerResponse trailerHeaders(Consumer<? super HttpHeaders> trailerHeaders) {
+		this.trailerHeadersConsumer = Objects.requireNonNull(trailerHeaders, "trailerHeaders");
+		return this;
+	}
+
+	@Override
 	public Mono<Void> sendWebsocket(
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler,
 			WebsocketServerSpec configurer) {
@@ -629,7 +643,38 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			f = channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER));
 		}
 		else if (markSentBody()) {
-			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+			LastHttpContent lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
+			// https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
+			// A trailer allows the sender to include additional fields at the end
+			// of a chunked message in order to supply metadata that might be
+			// dynamically generated while the message body is sent, such as a
+			// message integrity check, digital signature, or post-processing
+			// status.
+			if (trailerHeadersConsumer != null && isTransferEncodingChunked(nettyResponse)) {
+				// https://datatracker.ietf.org/doc/html/rfc7230#section-4.4
+				// When a message includes a message body encoded with the chunked
+				// transfer coding and the sender desires to send metadata in the form
+				// of trailer fields at the end of the message, the sender SHOULD
+				// generate a Trailer header field before the message body to indicate
+				// which fields will be present in the trailers.
+				String declaredHeaderNames = responseHeaders.get(HttpHeaderNames.TRAILER);
+				if (declaredHeaderNames != null) {
+					HttpHeaders trailerHeaders = new TrailerHeaders(declaredHeaderNames);
+					try {
+						trailerHeadersConsumer.accept(trailerHeaders);
+					}
+					catch (IllegalArgumentException e) {
+						// A sender MUST NOT generate a trailer when header names are
+						// HttpServerOperations.TrailerHeaders.DISALLOWED_TRAILER_HEADER_NAMES
+						log.error(format(channel(), "Cannot apply trailer headers [{0}]"), declaredHeaderNames, e);
+					}
+					if (!trailerHeaders.isEmpty()) {
+						lastHttpContent = new DefaultLastHttpContent();
+						lastHttpContent.trailingHeaders().set(trailerHeaders);
+					}
+				}
+			}
+			f = channel().writeAndFlush(lastHttpContent);
 		}
 		else {
 			discard();
@@ -863,6 +908,74 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		@Override
 		public HttpResponseStatus status() {
 			return customResponse.status();
+		}
+	}
+
+	static final class TrailerHeaders extends DefaultHttpHeaders {
+
+		static final Set<String> DISALLOWED_TRAILER_HEADER_NAMES = new HashSet<>(14);
+		static {
+			// https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
+			// A sender MUST NOT generate a trailer that contains a field necessary
+			// for message framing (e.g., Transfer-Encoding and Content-Length),
+			// routing (e.g., Host), request modifiers (e.g., controls and
+			// conditionals in Section 5 of [RFC7231]), authentication (e.g., see
+			// [RFC7235] and [RFC6265]), response control data (e.g., see Section
+			// 7.1 of [RFC7231]), or determining how to process the payload (e.g.,
+			// Content-Encoding, Content-Type, Content-Range, and Trailer).
+			DISALLOWED_TRAILER_HEADER_NAMES.add("age");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("cache-control");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("content-encoding");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("content-length");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("content-range");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("content-type");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("date");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("expires");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("location");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("retry-after");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("trailer");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("transfer-encoding");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("vary");
+			DISALLOWED_TRAILER_HEADER_NAMES.add("warning");
+		}
+
+		TrailerHeaders(String declaredHeaderNames) {
+			super(true, new TrailerNameValidator(filterHeaderNames(declaredHeaderNames)));
+		}
+
+		static Set<String> filterHeaderNames(String declaredHeaderNames) {
+			Objects.requireNonNull(declaredHeaderNames, "declaredHeaderNames");
+			Set<String> result = new HashSet<>();
+			String[] names = declaredHeaderNames.split(",", -1);
+			for (String name : names) {
+				String trimmedStr = name.trim();
+				if (trimmedStr.isEmpty() ||
+						DISALLOWED_TRAILER_HEADER_NAMES.contains(trimmedStr.toLowerCase(Locale.ENGLISH))) {
+					continue;
+				}
+				result.add(trimmedStr);
+			}
+			return result;
+		}
+
+		static final class TrailerNameValidator implements DefaultHeaders.NameValidator<CharSequence> {
+
+			/**
+			 * Contains the headers names specified with {@link HttpHeaderNames#TRAILER}
+			 */
+			final Set<String> declaredHeaderNames;
+
+			TrailerNameValidator(Set<String> declaredHeaderNames) {
+				this.declaredHeaderNames = declaredHeaderNames;
+			}
+
+			@Override
+			public void validateName(CharSequence name) {
+				if (!declaredHeaderNames.contains(name.toString())) {
+					throw new IllegalArgumentException("Trailer header name [" + name +
+							"] not declared with [Trailer] header, or it is not a valid trailer header name");
+				}
+			}
 		}
 	}
 }

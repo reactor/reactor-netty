@@ -17,6 +17,7 @@ package reactor.netty.http.client;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import reactor.core.publisher.Mono;
 
 /**
  * An HttpClient Reactive metadata contract for incoming response. It inherits several
@@ -43,4 +44,12 @@ public interface HttpClientResponse extends HttpClientInfos {
 	 * @return the resolved HTTP Response Status
 	 */
 	HttpResponseStatus status();
+
+	/**
+	 * Return response trailer headers.
+	 *
+	 * @return response trailer headers.
+	 * @since 1.0.12
+	 */
+	Mono<HttpHeaders> trailerHeaders();
 }
