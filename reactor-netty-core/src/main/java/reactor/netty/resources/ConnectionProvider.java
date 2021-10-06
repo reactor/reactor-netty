@@ -245,8 +245,9 @@ public interface ConnectionProvider extends Disposable {
 		static final Duration DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED = Duration.ZERO;
 
 		String name;
-		Duration disposeInterval = DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED;
+		Duration inactivePoolDisposeInterval = DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED;
 		Duration poolInactivity;
+		Duration disposeTimeout;
 		final Map<SocketAddress, ConnectionPoolSpec<?>> confPerRemoteHost = new HashMap<>();
 
 		/**
@@ -285,8 +286,27 @@ public interface ConnectionProvider extends Disposable {
 		 * @since 1.0.7
 		 */
 		public final Builder disposeInactivePoolsInBackground(Duration disposeInterval, Duration poolInactivity) {
-			this.disposeInterval = Objects.requireNonNull(disposeInterval, "disposeInterval");
+			this.inactivePoolDisposeInterval = Objects.requireNonNull(disposeInterval, "disposeInterval");
 			this.poolInactivity = Objects.requireNonNull(poolInactivity, "poolInactivity");
+			return get();
+		}
+
+		/**
+		 * When {@link ConnectionProvider#dispose()} or {@link ConnectionProvider#disposeLater()} is called,
+		 * trigger a {@code graceful shutdown} for the connection pools, with this grace period timeout.
+		 * From there on, all calls for acquiring a connection will fail fast with an exception.
+		 * However, for the provided {@link Duration}, pending acquires will get a chance to be served.
+		 * <p><strong>Note:</strong> The rejection of new acquires and the grace timer start immediately,
+		 * irrespective of subscription to the {@link Mono} returned by {@link ConnectionProvider#disposeLater()}.
+		 * Subsequent calls return the same {@link Mono}, effectively getting notifications from the first graceful
+		 * shutdown call and ignoring subsequently provided timeouts.
+		 *
+		 * @param timeout the maximum {@link Duration} for graceful shutdown before full shutdown is forced (resolution: ms)
+		 * @return {@literal this}
+		 * @since 1.0.12
+		 */
+		public final Builder disposeTimeout(Duration timeout) {
+			this.disposeTimeout = Objects.requireNonNull(timeout, "disposeTimeout");
 			return get();
 		}
 

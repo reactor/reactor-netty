@@ -75,7 +75,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 	DefaultPooledConnectionProvider(Builder builder, @Nullable Clock clock) {
 		super(builder, clock);
 		for (Map.Entry<SocketAddress, ConnectionPoolSpec<?>> entry : builder.confPerRemoteHost.entrySet()) {
-			poolFactoryPerRemoteHost.put(entry.getKey(), new PoolFactory<>(entry.getValue()));
+			poolFactoryPerRemoteHost.put(entry.getKey(), new PoolFactory<>(entry.getValue(), builder.disposeTimeout));
 			maxConnections.put(entry.getKey(), entry.getValue().maxConnections);
 		}
 	}

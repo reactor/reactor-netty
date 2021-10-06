@@ -37,6 +37,14 @@ The following listing shows the available configurations:
 | `disposeInactivePoolsInBackground` | When this option is enabled, connection pools are regularly checked in the background,
 and those that are empty and been inactive for a specified time become eligible for disposal. By default, this background
 disposal of inactive pools is disabled.
+| `disposeTimeout` | When `ConnectionProvider#dispose()` or `ConnectionProvider#disposeLater()` is called,
+trigger a graceful shutdown for the connection pools, with this grace period timeout.
+From there on, all calls for acquiring a connection will fail fast with an exception.
+However, for the provided `Duration`, pending acquires will get a chance to be served.
+Note: The rejection of new acquires and the grace timer start immediately,
+irrespective of subscription to the `Mono` returned by `ConnectionProvider#disposeLater()`.
+Subsequent calls return the same `Mono`, effectively getting notifications from the first graceful
+shutdown call and ignoring subsequently provided timeouts. By default, dispose timeout is not specified.
 | `evictInBackground` | When this option is enabled, each connection pool regularly checks for connections that are
 eligible for removal according to eviction criteria like `maxIdleTime`. By default, this background eviction is disabled.
 | `fifo` | Configure the connection pool so that if there are idle connections (i.e. pool is under-utilized),

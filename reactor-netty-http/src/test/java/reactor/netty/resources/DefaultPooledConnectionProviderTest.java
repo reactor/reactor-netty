@@ -31,8 +31,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Signal;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufMono;
 import reactor.netty.ConnectionObserver;
@@ -41,6 +44,7 @@ import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
+import reactor.netty.internal.shaded.reactor.pool.PoolShutdownException;
 import reactor.test.StepVerifier;
 
 import javax.net.ssl.SSLException;
@@ -49,6 +53,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -331,6 +336,67 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		finally {
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@ParameterizedTest(name = "{displayName}({argumentsWithNames})")
+	@ValueSource(booleans = {false, true})
+	void testPoolGracefulShutdown(boolean enableGracefulShutdown) {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("testPoolGracefulShutdown")
+				                                                 .delayElement(Duration.ofMillis(50))))
+				        .bindNow();
+
+		ConnectionProvider.Builder providerBuilder =
+				ConnectionProvider.builder("testPoolGracefulShutdown")
+				                  .maxConnections(1);
+		if (enableGracefulShutdown) {
+			providerBuilder.disposeTimeout(Duration.ofMillis(200));
+		}
+		ConnectionProvider provider = providerBuilder.build();
+
+		HttpClient client =
+				createClient(provider, disposableServer.port())
+				        .doOnDisconnected(conn -> {
+				            if (!provider.isDisposed()) {
+				                provider.dispose();
+				            }
+				        });
+
+		List<Signal<String>> result =
+				Flux.range(0, 2)
+				    .flatMap(i ->
+				        client.get()
+				              .uri("/")
+				              .responseContent()
+				              .aggregate()
+				              .asString())
+				    .materialize()
+				    .collectList()
+				    .block(Duration.ofSeconds(5));
+
+		assertThat(result).isNotNull();
+
+		int onNext = 0;
+		int onError = 0;
+		for (Signal<String> signal : result) {
+			if (signal.isOnNext()) {
+				onNext++;
+				assertThat(signal.get()).isEqualTo("testPoolGracefulShutdown");
+			}
+			else if (signal.getThrowable() instanceof PoolShutdownException) {
+				onError++;
+			}
+		}
+
+		if (enableGracefulShutdown) {
+			assertThat(onNext).isEqualTo(2);
+			assertThat(onError).isEqualTo(0);
+		}
+		else {
+			assertThat(onNext).isEqualTo(1);
+			assertThat(onError).isEqualTo(1);
 		}
 	}
 
