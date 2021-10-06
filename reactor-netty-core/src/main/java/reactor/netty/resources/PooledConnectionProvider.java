@@ -143,7 +143,9 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			                    .stream()
 			                    .map(pool -> {
 			                        if (pool instanceof GracefulShutdownInstrumentedPool) {
-			                            return ((GracefulShutdownInstrumentedPool<T>) pool).disposeGracefully(disposeTimeout);
+			                            return ((GracefulShutdownInstrumentedPool<T>) pool)
+			                                    .disposeGracefully(disposeTimeout)
+			                                    .onErrorResume(t -> Mono.empty());
 			                        }
 			                        return pool.disposeLater();
 			                    })
