@@ -232,6 +232,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	 *
 	 * @param trailerHeaders netty headers map
 	 * @return this {@link HttpServerResponse}
+	 * @since 1.0.12
 	 */
 	HttpServerResponse trailerHeaders(Consumer<? super HttpHeaders> trailerHeaders);
 }

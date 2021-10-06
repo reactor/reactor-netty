@@ -49,6 +49,7 @@ public interface HttpClientResponse extends HttpClientInfos {
 	 * Return response trailer headers.
 	 *
 	 * @return response trailer headers.
+	 * @since 1.0.12
 	 */
 	Mono<HttpHeaders> trailerHeaders();
 }
