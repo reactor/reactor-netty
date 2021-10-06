@@ -30,6 +30,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.transport.TransportConfig;
 import reactor.pool.AllocationStrategy;
 import reactor.pool.InstrumentedPool;
+import reactor.pool.Pool;
 import reactor.pool.PoolBuilder;
 import reactor.pool.PoolConfig;
 import reactor.pool.PooledRef;
@@ -139,13 +140,17 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	public final Mono<Void> disposeLater() {
 		return Mono.defer(() -> {
 			List<Mono<Void>> pools;
-			pools = channelPools.values()
+			pools = channelPools.entrySet()
 			                    .stream()
-			                    .map(pool -> {
+			                    .map(e -> {
+			                        Pool<T> pool = e.getValue();
 			                        if (pool instanceof GracefulShutdownInstrumentedPool) {
 			                            return ((GracefulShutdownInstrumentedPool<T>) pool)
 			                                    .disposeGracefully(disposeTimeout)
-			                                    .onErrorResume(t -> Mono.empty());
+			                                    .onErrorResume(t -> {
+			                                        log.error("Connection pool for [{}] didn't shut down gracefully", e.getKey(), t);
+			                                        return Mono.empty();
+			                                    });
 			                        }
 			                        return pool.disposeLater();
 			                    })
