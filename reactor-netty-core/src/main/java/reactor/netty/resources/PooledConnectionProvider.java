@@ -30,11 +30,12 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.transport.TransportConfig;
 import reactor.pool.AllocationStrategy;
 import reactor.pool.InstrumentedPool;
-import reactor.pool.Pool;
 import reactor.pool.PoolBuilder;
 import reactor.pool.PoolConfig;
 import reactor.pool.PooledRef;
 import reactor.pool.PooledRefMetadata;
+import reactor.pool.decorators.GracefulShutdownInstrumentedPool;
+import reactor.pool.decorators.InstrumentedPoolDecorators;
 import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -71,8 +72,9 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	final ConcurrentMap<PoolKey, InstrumentedPool<T>> channelPools = PlatformDependent.newConcurrentHashMap();
 
 	final String name;
-	final Duration disposeInterval;
+	final Duration inactivePoolDisposeInterval;
 	final Duration poolInactivity;
+	final Duration disposeTimeout;
 
 	protected PooledConnectionProvider(Builder builder) {
 		this(builder, null);
@@ -81,9 +83,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	// Used only for testing purposes
 	PooledConnectionProvider(Builder builder, @Nullable Clock clock) {
 		this.name = builder.name;
-		this.disposeInterval = builder.disposeInterval;
+		this.inactivePoolDisposeInterval = builder.inactivePoolDisposeInterval;
 		this.poolInactivity = builder.poolInactivity;
-		this.defaultPoolFactory = new PoolFactory<>(builder, clock);
+		this.disposeTimeout = builder.disposeTimeout;
+		this.defaultPoolFactory = new PoolFactory<>(builder, builder.disposeTimeout, clock);
 		scheduleInactivePoolsDisposal();
 	}
 
@@ -138,7 +141,12 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			List<Mono<Void>> pools;
 			pools = channelPools.values()
 			                    .stream()
-			                    .map(Pool::disposeLater)
+			                    .map(pool -> {
+			                        if (pool instanceof GracefulShutdownInstrumentedPool) {
+			                            return ((GracefulShutdownInstrumentedPool<T>) pool).disposeGracefully(disposeTimeout);
+			                        }
+			                        return pool.disposeLater();
+			                    })
 			                    .collect(Collectors.toList());
 			if (pools.isEmpty()) {
 				return Mono.empty();
@@ -227,9 +235,9 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	}
 
 	final void scheduleInactivePoolsDisposal() {
-		if (!disposeInterval.isZero()) {
+		if (!inactivePoolDisposeInterval.isZero()) {
 			Schedulers.parallel()
-			          .schedule(this::disposeInactivePoolsInBackground, disposeInterval.toMillis(), TimeUnit.MILLISECONDS);
+			          .schedule(this::disposeInactivePoolsInBackground, inactivePoolDisposeInterval.toMillis(), TimeUnit.MILLISECONDS);
 		}
 	}
 
@@ -295,13 +303,14 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final long pendingAcquireTimeout;
 		final Supplier<? extends MeterRegistrar> registrar;
 		final Clock clock;
+		final Duration disposeTimeout;
 
-		PoolFactory(ConnectionPoolSpec<?> conf) {
-			this(conf, null);
+		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout) {
+			this(conf, disposeTimeout, null);
 		}
 
 		// Used only for testing purposes
-		PoolFactory(ConnectionPoolSpec<?> conf, @Nullable Clock clock) {
+		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout, @Nullable Clock clock) {
 			this.evictionInterval = conf.evictionInterval;
 			this.leasingStrategy = conf.leasingStrategy;
 			this.maxConnections = conf.maxConnections;
@@ -313,6 +322,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			this.pendingAcquireTimeout = conf.pendingAcquireTimeout.toMillis();
 			this.registrar = conf.registrar;
 			this.clock = clock;
+			this.disposeTimeout = disposeTimeout;
 		}
 
 		public InstrumentedPool<T> newPool(
@@ -346,12 +356,17 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			}
 
 			if (LEASING_STRATEGY_FIFO.equals(leasingStrategy)) {
-				return poolBuilder.idleResourceReuseLruOrder()
-				                  .buildPool();
+				poolBuilder = poolBuilder.idleResourceReuseLruOrder();
+			}
+			else {
+				poolBuilder = poolBuilder.idleResourceReuseMruOrder();
 			}
 
-			return poolBuilder.idleResourceReuseMruOrder()
-			                  .buildPool();
+			if (disposeTimeout != null) {
+				return poolBuilder.buildPoolAndDecorateWith(InstrumentedPoolDecorators::gracefulShutdown);
+			}
+
+			return poolBuilder.buildPool();
 		}
 
 		@Override
