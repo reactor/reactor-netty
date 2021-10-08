@@ -40,6 +40,7 @@ import reactor.pool.decorators.InstrumentedPoolDecorators;
 import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetAddress;
@@ -120,7 +121,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 						poolFactory.registrar.get().registerMetrics(name, id, remoteAddress,
 								new DelegatingConnectionPoolMetrics(newPool.metrics()));
 					}
-					else {
+					else if (Metrics.isInstrumentationAvailable()) {
 						// work directly with the pool otherwise a weak reference is needed to ConnectionPoolMetrics
 						// we don't want to keep another map with weak references
 						MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE

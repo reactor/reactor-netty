@@ -42,6 +42,7 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;
@@ -374,12 +375,14 @@ public abstract class TransportConfig {
 			if (config.metricsRecorder != null) {
 				ChannelOperations.addMetricsHandler(channel, config.metricsRecorder, remoteAddress, onServer);
 
-				ByteBufAllocator alloc = channel.alloc();
-				if (alloc instanceof PooledByteBufAllocator) {
-					ByteBufAllocatorMetrics.INSTANCE.registerMetrics("pooled", ((PooledByteBufAllocator) alloc).metric());
-				}
-				else if (alloc instanceof UnpooledByteBufAllocator) {
-					ByteBufAllocatorMetrics.INSTANCE.registerMetrics("unpooled", ((UnpooledByteBufAllocator) alloc).metric());
+				if (Metrics.isInstrumentationAvailable()) {
+					ByteBufAllocator alloc = channel.alloc();
+					if (alloc instanceof PooledByteBufAllocator) {
+						ByteBufAllocatorMetrics.INSTANCE.registerMetrics("pooled", ((PooledByteBufAllocator) alloc).metric());
+					}
+					else if (alloc instanceof UnpooledByteBufAllocator) {
+						ByteBufAllocatorMetrics.INSTANCE.registerMetrics("unpooled", ((UnpooledByteBufAllocator) alloc).metric());
+					}
 				}
 			}
 
