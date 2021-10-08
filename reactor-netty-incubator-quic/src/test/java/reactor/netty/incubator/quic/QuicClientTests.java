@@ -46,8 +46,8 @@ class QuicClientTests extends BaseQuicTests {
 			        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100)
 			        .connect()
 			        .as(StepVerifier::create)
-			        .expectErrorMatches(t -> t instanceof ConnectTimeoutException &&
-			                t.getMessage().contains("connection timed out"))
+			        .expectErrorSatisfies(t -> assertThat(t).isInstanceOf(ConnectTimeoutException.class)
+			                                                .hasMessageContaining("connection timed out"))
 			        .verify(Duration.ofSeconds(5));
 	}
 
