@@ -111,7 +111,7 @@ ext {
 	boringSslVersion = '2.0.44.Final'
 	junitVersion = '5.8.1'
 	junitPlatformLauncherVersion = '1.8.1'
-	mockitoVersion = '3.12.4'
+	mockitoVersion = '4.0.0'
 	blockHoundVersion = '1.0.6.RELEASE'
 
 	javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
