@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+apply plugin: 'java-library'
 apply plugin: 'io.spring.javadoc'
 apply plugin: 'biz.aQute.bnd.builder'
 
@@ -30,21 +31,21 @@ ext {
 }
 
 dependencies {
-	compile project(':reactor-netty-core')
+	api project(':reactor-netty-core')
 
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	compile "io.netty.incubator:netty-incubator-codec-quic:$nettyQuicVersion$os_suffix"
+	api "io.netty.incubator:netty-incubator-codec-quic:$nettyQuicVersion$os_suffix"
 
 	// Testing
 
 	// JSR-305 annotations
 	testCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	testCompile "org.assertj:assertj-core:$assertJVersion"
-	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
-	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
+	testImplementation "org.assertj:assertj-core:$assertJVersion"
+	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	testImplementation "io.projectreactor:reactor-test:$testAddonVersion"
 
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
