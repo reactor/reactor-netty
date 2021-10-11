@@ -20,6 +20,7 @@ apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
 apply plugin: 'biz.aQute.bnd.builder'
 apply plugin: 'org.unbroken-dome.test-sets'
+apply plugin: 'idea'
 
 ext {
 	bndOptions = [
@@ -125,6 +126,13 @@ dependencies {
 
 	// noMicrometerTest testset must exclude micrometer, which is brought in from classic tests
 	configurations.noMicrometerTestImplementation.exclude(group: 'io.micrometer', module: 'micrometer-core')
+}
+
+idea {
+	module {
+		testSourceDirs += project.sourceSets.noMicrometerTest.java.srcDirs
+		testResourceDirs += project.sourceSets.noMicrometerTest.resources.srcDirs
+	}
 }
 
 jar {
