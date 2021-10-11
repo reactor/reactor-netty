@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 import java.net.SocketAddress;
 import java.time.Duration;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import reactor.core.publisher.Flux;
@@ -36,6 +37,15 @@ import static org.assertj.core.api.Assertions.assertThatCode;
  */
 class HttpClientNoMicrometerTest {
 
+	private DisposableServer disposableServer;
+
+	@AfterEach
+	void cleanup() {
+		if (disposableServer != null) {
+			disposableServer.dispose();
+		}
+	}
+
 	@Test
 	void smokeTestNoMicrometer() {
 		assertThat(Metrics.isInstrumentationAvailable()).as("isInstrumentationAvailable").isFalse();
@@ -46,7 +56,7 @@ class HttpClientNoMicrometerTest {
 		//note that this test cannot really access and assert the NoClassDefFoundException, which is forcefully logged by Netty
 		//But when that error occurs, the channel cannot be initialized and the test will fail.
 
-		DisposableServer disposableServer =  HttpServer.create()
+		disposableServer =  HttpServer.create()
 				.port(0)
 				.route(r -> r.get("/foo", (in, out) -> out.sendString(Flux.just("bar"))))
 				.bindNow();
