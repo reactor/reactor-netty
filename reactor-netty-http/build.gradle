@@ -19,6 +19,7 @@ apply plugin: 'io.spring.javadoc'
 apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
 apply plugin: 'biz.aQute.bnd.builder'
+apply plugin: 'org.unbroken-dome.test-sets'
 
 ext {
 	bndOptions = [
@@ -35,6 +36,10 @@ ext {
 			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-http",
 			"Bundle-Version" : "$osgiVersion"
 	]
+}
+
+testSets {
+	noMicrometerTest
 }
 
 dependencies {
@@ -117,6 +122,9 @@ dependencies {
 	testRuntimeOnly "io.netty:netty-handler-proxy:$nettyVersion"
 	// Needed for HTTP/2 testing
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
+
+	// noMicrometerTest testset must exclude micrometer, which is brought in from classic tests
+	configurations.noMicrometerTestImplementation.exclude(group: 'io.micrometer', module: 'micrometer-core')
 }
 
 jar {

@@ -41,6 +41,7 @@ plugins {
 	id 'io.spring.javadoc' version '0.0.1' apply false
 	id 'io.spring.javadoc-aggregate' version '0.0.1' apply false
 	id 'biz.aQute.bnd.builder' version '6.0.0' apply false
+	id "org.unbroken-dome.test-sets" version "4.0.0" apply false
 }
 
 description = 'Reactive Streams Netty driver'
