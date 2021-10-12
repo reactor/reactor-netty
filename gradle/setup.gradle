@@ -47,6 +47,9 @@ static def qualifyVersion(String v) {
 
 task qualifyVersionGha() {
 	doLast {
+		if (project.name != 'reactor-netty') {
+			return
+		}
 		def versionType = qualifyVersion("$version")
 
 		println "::set-output name=versionType::$versionType"
