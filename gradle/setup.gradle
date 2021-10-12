@@ -47,17 +47,17 @@ static def qualifyVersion(String v) {
 
 task qualifyVersionGha() {
 	doLast {
-		if (project.name != 'reactor-netty') {
-			return
-		}
 		def versionType = qualifyVersion("$version")
-
-		println "::set-output name=versionType::$versionType"
-		println "::set-output name=fullVersion::$version"
 		if (versionType == "BAD") {
 			println "::error ::Unable to parse $version to a VersionNumber with recognizable qualifier"
 			throw new TaskExecutionException(tasks.getByName("qualifyVersionGha"), new IllegalArgumentException("Unable to parse $version to a VersionNumber with recognizable qualifier"))
 		}
+
+		if (project.name != 'reactor-netty') {
+			return
+		}
+		println "::set-output name=versionType::$versionType"
+		println "::set-output name=fullVersion::$version"
 	}
 }
 
