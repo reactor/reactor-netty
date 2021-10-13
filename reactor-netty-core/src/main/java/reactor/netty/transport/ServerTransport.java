@@ -477,6 +477,11 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 			childObs.onStateChange(connection, newState);
 		}
+
+		@Override
+		public Context currentContext() {
+			return childObs.currentContext();
+		}
 	}
 
 	static class DisposableBind implements CoreSubscriber<Channel>, DisposableServer, Connection {
