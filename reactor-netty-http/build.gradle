@@ -123,6 +123,8 @@ dependencies {
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 
 	// noMicrometerTest sourceSet (must not include Micrometer)
+	noMicrometerTestCompile project(':reactor-netty-core')
+	noMicrometerTestCompile project(':reactor-netty-http')
 	noMicrometerTestCompile "org.assertj:assertj-core:$assertJVersion"
 	noMicrometerTestCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	noMicrometerTestCompile "org.junit.jupiter:junit-jupiter-params:$junitVersion"
