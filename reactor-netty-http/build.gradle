@@ -19,7 +19,6 @@ apply plugin: 'io.spring.javadoc'
 apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
 apply plugin: 'biz.aQute.bnd.builder'
-apply plugin: 'idea'
 
 ext {
 	bndOptions = [
@@ -131,13 +130,6 @@ dependencies {
 	noMicrometerTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	noMicrometerTestRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	noMicrometerTestRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
-}
-
-idea {
-	module {
-		testSourceDirs += project.sourceSets.noMicrometerTest.java.srcDirs
-		testResourceDirs += project.sourceSets.noMicrometerTest.resources.srcDirs
-	}
 }
 
 jar {
