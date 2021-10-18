@@ -38,7 +38,18 @@ ext {
 }
 
 sourceSets {
-	noMicrometerTest
+	noMicrometerTest {
+		compileClasspath += sourceSets.main.output
+		runtimeClasspath += sourceSets.main.output
+	}
+}
+
+configurations {
+	noMicrometerTestImplementation {
+		extendsFrom implementation
+		exclude group: 'io.micrometer'
+	}
+	noMicrometerTestRuntimeOnly.extendsFrom(runtimeOnly)
 }
 
 dependencies {
@@ -123,10 +134,6 @@ dependencies {
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 
 	// noMicrometerTest sourceSet (must not include Micrometer)
-	noMicrometerTestCompile(project(':reactor-netty-http')) {
-		exclude group: "io.micrometer"
-	}
-	noMicrometerTestCompile project(':reactor-netty-core')
 	noMicrometerTestCompile "org.assertj:assertj-core:$assertJVersion"
 	noMicrometerTestCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	noMicrometerTestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
