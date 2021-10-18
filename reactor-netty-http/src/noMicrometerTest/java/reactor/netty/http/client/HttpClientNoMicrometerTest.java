@@ -17,6 +17,8 @@ package reactor.netty.http.client;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -61,49 +63,59 @@ class HttpClientNoMicrometerTest {
 				.route(r -> r.get("/foo", (in, out) -> out.sendString(Flux.just("bar"))))
 				.bindNow();
 
+		final NoOpHttpClientMetricsRecorder metricsRecorder = new NoOpHttpClientMetricsRecorder();
+
 		assertThatCode(() -> HttpClient
 				.create(ConnectionProvider.builder("foo")
 						.metrics(true, NoOpMeterRegistrar::new)
 						.build())
-				.metrics(true, NoOpHttpClientMetricsRecorder::new)
+				.metrics(true, () -> metricsRecorder)
 				.port(disposableServer.port())
 				.baseUrl("/foo")
 				.get()
 				.response()
 				.block()
 		).doesNotThrowAnyException();
+
+		//we still assert that the custom recorder did receive events, since it is not based on micrometer
+		assertThat(metricsRecorder.events).containsExactly(
+				"connectTime,status=SUCCESS",
+				"dataSent, 103 bytes",
+				"dataReceived, 45 bytes");
 	}
 
 	private static class NoOpHttpClientMetricsRecorder implements ChannelMetricsRecorder {
 
+		private List<String> events = new ArrayList<>();
+
 		@Override
 		public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
-
+			events.add("dataReceived, " + bytes + " bytes");
 		}
 
 		@Override
 		public void recordDataSent(SocketAddress remoteAddress, long bytes) {
-
+			events.add("dataSent, " + bytes + " bytes");
 		}
 
 		@Override
 		public void incrementErrorsCount(SocketAddress remoteAddress) {
-
+			events.add("incrementErrorsCount");
 		}
 
 		@Override
 		public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
-
+			events.add("tlsHandshakeTime,status=" + status);
 		}
 
 		@Override
 		public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
-
+			events.add("connectTime,status=" + status);
 		}
 
 		@Override
 		public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
-
+			events.add("resolveAddressTime,status=" + status);
 		}
 	}
 
