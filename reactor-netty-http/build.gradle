@@ -136,9 +136,7 @@ dependencies {
 	// noMicrometerTest sourceSet (must not include Micrometer)
 	noMicrometerTestCompile "org.assertj:assertj-core:$assertJVersion"
 	noMicrometerTestCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
-	noMicrometerTestRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	noMicrometerTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
-	noMicrometerTestRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	noMicrometerTestRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 }
 
