@@ -263,7 +263,9 @@ subprojects {
 			maxFailures = 10
 			maxRetries = 1
 		}
+	}
 
+	test {
 		testLogging {
 			showExceptions true
 			exceptionFormat "full"
@@ -271,12 +273,8 @@ subprojects {
 		}
 
 		onOutput { descriptor, event ->
-			def evMsg = event.message
-			if (evMsg.contains("ResourceLeakDetector")) {
-				if (!evMsg.contains(" -Dio.netty.leakDetection")
-						&& !evMsg.contains("DEBUG io.netty.util.ResourceLeakDetectorFactory")) {
-					logger.error("ERROR: Test: " + descriptor + " produced resource leak: " + event.message)
-				}
+			if (event.message.contains("ResourceLeakDetector")) {
+				logger.error("ERROR: Test: " + descriptor + " produced resource leak: " + event.message)
 			}
 		}
 	}
