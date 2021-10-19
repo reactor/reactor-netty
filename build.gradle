@@ -263,15 +263,15 @@ subprojects {
 			maxFailures = 10
 			maxRetries = 1
 		}
-	}
 
-	test {
 		testLogging {
 			showExceptions true
 			exceptionFormat "full"
 			maxGranularity 3
 		}
+	}
 
+	test {
 		onOutput { descriptor, event ->
 			if (event.message.contains("ResourceLeakDetector")) {
 				logger.error("ERROR: Test: " + descriptor + " produced resource leak: " + event.message)
