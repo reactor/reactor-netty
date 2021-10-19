@@ -82,8 +82,8 @@ class HttpClientNoMicrometerTest {
 		//we still assert that the custom recorder did receive events, since it is not based on micrometer
 		assertThat(metricsRecorder.events).containsExactly(
 				"connectTime,status=SUCCESS",
-				"dataSent, 103 bytes",
-				"dataReceived, 45 bytes");
+				"dataSent",
+				"dataReceived");
 	}
 
 	private static class NoOpHttpClientMetricsRecorder implements ChannelMetricsRecorder {
@@ -92,12 +92,12 @@ class HttpClientNoMicrometerTest {
 
 		@Override
 		public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
-			events.add("dataReceived, " + bytes + " bytes");
+			events.add("dataReceived");
 		}
 
 		@Override
 		public void recordDataSent(SocketAddress remoteAddress, long bytes) {
-			events.add("dataSent, " + bytes + " bytes");
+			events.add("dataSent");
 		}
 
 		@Override
