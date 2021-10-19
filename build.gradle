@@ -269,9 +269,7 @@ subprojects {
 			exceptionFormat "full"
 			maxGranularity 3
 		}
-	}
 
-	test {
 		onOutput { descriptor, event ->
 			def evMsg = event.message
 			if (evMsg.contains("ResourceLeakDetector")) {
