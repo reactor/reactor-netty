@@ -73,7 +73,9 @@ class HttpClientNoMicrometerTest {
 				.port(disposableServer.port())
 				.baseUrl("/foo")
 				.get()
-				.response()
+				.responseContent()
+				.aggregate()
+				.asString()
 				.block()
 		).doesNotThrowAnyException();
 
