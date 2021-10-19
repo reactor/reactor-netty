@@ -89,6 +89,34 @@ final class QuicOperations implements ChannelOperationsId, QuicConnection {
 	}
 
 	@Override
+	public Mono<? extends QuicStreamConnection> createStream(QuicStreamType streamType) {
+		Objects.requireNonNull(streamType, "streamType");
+
+		return Mono.create(sink -> {
+			QuicStreamChannelBootstrap bootstrap = quicChannel.newStreamBootstrap();
+			bootstrap.type(streamType)
+			         .handler(QuicTransportConfig.streamChannelInitializer(loggingHandler,
+			                 streamListener.then(new QuicStreamChannelConnection(sink)), false));
+
+			setAttributes(bootstrap, streamAttrs);
+			setChannelOptions(bootstrap, streamOptions);
+
+			bootstrap.create()
+			         .addListener(f -> {
+			             // We don't need to handle success case, we've already configured QuicStreamChannelObserver
+			             if (!f.isSuccess()) {
+			                 if (f.cause() != null) {
+			                     sink.error(f.cause());
+			                 }
+			                 else {
+			                     sink.error(new IOException("Cannot create stream"));
+			                 }
+			             }
+			         });
+		});
+	}
+
+	@Override
 	public Mono<Void> createStream(
 			QuicStreamType streamType,
 			BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>> streamHandler) {
@@ -99,7 +127,7 @@ final class QuicOperations implements ChannelOperationsId, QuicConnection {
 			QuicStreamChannelBootstrap bootstrap = quicChannel.newStreamBootstrap();
 			bootstrap.type(streamType)
 			         .handler(QuicTransportConfig.streamChannelInitializer(loggingHandler,
-			                 streamListener.then(new QuicStreamChannelObserver(sink, streamHandler)), false));
+			                 streamListener.then(new QuicStreamChannelHandle(sink, streamHandler)), false));
 
 			setAttributes(bootstrap, streamAttrs);
 			setChannelOptions(bootstrap, streamOptions);
@@ -139,12 +167,38 @@ final class QuicOperations implements ChannelOperationsId, QuicConnection {
 	static final String ORIGINAL_CHANNEL_ID_PREFIX = "[id: 0x";
 	static final int ORIGINAL_CHANNEL_ID_PREFIX_LENGTH = ORIGINAL_CHANNEL_ID_PREFIX.length();
 
-	static final class QuicStreamChannelObserver implements ConnectionObserver {
+	static final class QuicStreamChannelConnection implements ConnectionObserver {
+
+		final MonoSink<QuicStreamConnection> sink;
+
+		QuicStreamChannelConnection(MonoSink<QuicStreamConnection> sink) {
+			this.sink = sink;
+		}
+
+		@Override
+		public Context currentContext() {
+			return sink.currentContext();
+		}
+
+		@Override
+		public void onStateChange(Connection connection, State newState) {
+			if (newState == CONFIGURED) {
+				sink.success((QuicStreamConnection) connection);
+			}
+		}
+
+		@Override
+		public void onUncaughtException(Connection connection, Throwable error) {
+			sink.error(error);
+		}
+	}
+
+	static final class QuicStreamChannelHandle implements ConnectionObserver {
 
 		final MonoSink<Void> sink;
 		final BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>> streamHandler;
 
-		QuicStreamChannelObserver(
+		QuicStreamChannelHandle(
 				MonoSink<Void> sink,
 				BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>> streamHandler) {
 			this.sink = sink;

@@ -30,6 +30,20 @@ import java.util.function.BiFunction;
 public interface QuicConnection extends Connection {
 
 	/**
+	 * Creates a bidirectional stream and returns a {@link Mono} of {@link QuicStreamConnection}.
+	 * Once the {@link QuicStreamConnection} has been emitted and is not necessary anymore, disposing must be
+	 * done by the user via {@link QuicStreamConnection#dispose()}.
+	 * <p>
+	 * If stream creation phase fails, a {@link Mono#error(Throwable)} will be returned.
+	 *
+	 * @return a {@link Mono} of {@link QuicStreamConnection}
+	 * @since 0.0.2
+	 */
+	default Mono<? extends QuicStreamConnection> createStream() {
+		return createStream(QuicStreamType.BIDIRECTIONAL);
+	}
+
+	/**
 	 * Creates a bidirectional stream. A {@link Mono} completing when the stream is created,
 	 * then the provided callback is invoked. If the stream creation is not
 	 * successful the returned {@link Mono} fails.
@@ -41,6 +55,18 @@ public interface QuicConnection extends Connection {
 			BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>> streamHandler) {
 		return createStream(QuicStreamType.BIDIRECTIONAL, streamHandler);
 	}
+
+	/**
+	 * Creates a bidirectional stream and returns a {@link Mono} of {@link QuicStreamConnection}.
+	 * Once the {@link QuicStreamConnection} has been emitted and is not necessary anymore, disposing must be
+	 * done by the user via {@link QuicStreamConnection#dispose()}.
+	 * <p>
+	 * If stream creation phase fails, a {@link Mono#error(Throwable)} will be returned.
+	 *
+	 * @return a {@link Mono} of {@link QuicStreamConnection}
+	 * @since 0.0.2
+	 */
+	Mono<? extends QuicStreamConnection> createStream(QuicStreamType streamType);
 
 	/**
 	 * Creates a stream. A {@link Mono} completing when the stream is created,

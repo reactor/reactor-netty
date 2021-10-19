@@ -20,6 +20,8 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.incubator.codec.quic.QuicException;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -312,6 +314,67 @@ class QuicClientTests extends BaseQuicTests {
 		          return out.sendString(Mono.just("Hello World!"));
 		      })
 		      .block(Duration.ofSeconds(5));
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch wait").isTrue();
+
+		assertThat(streamTypeReceived).isTrue();
+		assertThat(remoteCreated).isTrue();
+		assertThat(incomingData.get()).isEqualTo("Hello World!");
+	}
+
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@EnumSource(QuicStreamType.class)
+	void testStreamWithNoHandler(QuicStreamType streamType) throws Exception {
+		AtomicBoolean streamTypeReceived = new AtomicBoolean();
+		AtomicBoolean remoteCreated = new AtomicBoolean();
+		AtomicReference<String> incomingData = new AtomicReference<>("");
+
+		CountDownLatch latch = new CountDownLatch(3);
+		server =
+				createServer()
+				        .handleStream((in, out) -> {
+				            streamTypeReceived.set(in.streamType() == streamType);
+				            remoteCreated.set(!in.isLocalStream());
+				            latch.countDown();
+				            if (QuicStreamType.BIDIRECTIONAL == streamType) {
+				                return out.send(in.receive().retain());
+				            }
+				            else {
+				                return in.receive()
+				                         .asString()
+				                         .doOnNext(s -> {
+				                             incomingData.getAndUpdate(s1 -> s + s1);
+				                             latch.countDown();
+				                         })
+				                         .then();
+				            }
+				        })
+				        .bindNow();
+
+		client = createClient(server::address).connectNow();
+
+		QuicStreamConnection streamConnection = client.createStream(streamType)
+		                                              .block(Duration.ofSeconds(5));
+
+		assertThat(streamConnection).isNotNull();
+
+		streamConnection.onDispose(latch::countDown);
+
+		if (QuicStreamType.BIDIRECTIONAL == streamType) {
+			streamConnection.inbound()
+			                .receive()
+			                .asString()
+			                .doOnNext(s -> {
+			                    incomingData.getAndUpdate(s1 -> s + s1);
+			                    latch.countDown();
+			                })
+			                .subscribe();
+		}
+
+		streamConnection.outbound()
+		                .sendString(Mono.just("Hello World!"))
+		                .then()
+		                .subscribe();
 
 		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch wait").isTrue();
 
