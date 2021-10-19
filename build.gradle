@@ -268,7 +268,9 @@ subprojects {
 	test {
 		testLogging {
 			showExceptions true
-			exceptionFormat "full"
+			showCauses true
+			showStackTraces true
+			exceptionFormat "SHORT"
 			maxGranularity 3
 		}
 
