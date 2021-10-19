@@ -77,6 +77,8 @@ class HttpClientNoMicrometerTest {
 				.block()
 		).doesNotThrowAnyException();
 
+		System.out.println(metricsRecorder.events);
+
 		//we still assert that the custom recorder did receive events, since it is not based on micrometer
 		assertThat(metricsRecorder.events).containsExactly(
 				"connectTime,status=SUCCESS",
