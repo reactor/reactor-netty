@@ -37,6 +37,21 @@ ext {
 	]
 }
 
+sourceSets {
+	noMicrometerTest {
+		compileClasspath += sourceSets.main.output
+		runtimeClasspath += sourceSets.main.output
+	}
+}
+
+configurations {
+	noMicrometerTestImplementation {
+		extendsFrom implementation
+		exclude group: 'io.micrometer'
+	}
+	noMicrometerTestRuntimeOnly.extendsFrom(runtimeOnly)
+}
+
 dependencies {
 	compile project(path: ':reactor-netty-core', configuration: 'shadow')
 
@@ -117,6 +132,12 @@ dependencies {
 	testRuntimeOnly "io.netty:netty-handler-proxy:$nettyVersion"
 	// Needed for HTTP/2 testing
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
+
+	// noMicrometerTest sourceSet (must not include Micrometer)
+	noMicrometerTestCompile "org.assertj:assertj-core:$assertJVersion"
+	noMicrometerTestCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	noMicrometerTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+	noMicrometerTestRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 }
 
 jar {
@@ -161,7 +182,13 @@ task japicmp(type: JapicmpTask) {
 }
 
 tasks.japicmp.dependsOn(downloadBaseline)
-
 tasks.check.dependsOn(japicmp)
+
+task noMicrometerTest(type: Test) {
+	testClassesDirs = sourceSets.noMicrometerTest.output.classesDirs
+	classpath = sourceSets.noMicrometerTest.runtimeClasspath
+}
+
+tasks.check.dependsOn(noMicrometerTest)
 
 description = "HTTP functionality for the Reactor Netty library"
