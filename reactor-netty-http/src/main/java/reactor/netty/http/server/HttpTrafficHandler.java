@@ -287,7 +287,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			final HttpResponse response = (HttpResponse) msg;
 			nonInformationalResponse = !isInformational(response);
 			// Assume the response writer knows if they can persist or not and sets isKeepAlive on the response
-			boolean maxKeepAliveRequestsReached = HttpServerOperations.requestsCounter(ctx.channel()) == maxKeepAliveRequests;
+			boolean maxKeepAliveRequestsReached = maxKeepAliveRequests != -1 && HttpServerOperations.requestsCounter(ctx.channel()) == maxKeepAliveRequests;
 			if (maxKeepAliveRequestsReached || !isKeepAlive(response) || !isSelfDefinedMessageLength(response)) {
 				// No longer keep alive as the client can't tell when the message is done unless we close connection
 				pendingResponses = 0;
