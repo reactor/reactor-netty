@@ -91,6 +91,8 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -2656,5 +2658,63 @@ class HttpServerTests extends BaseHttpTest {
 				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
 				.expectNext("/route2")
 				.verifyComplete();
+	}
+
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(ints = {-1, 1, 2})
+	void testMaxKeepAliveRequests(int maxKeepAliveRequests) {
+		HttpServer server = createServer().handle((req, res) -> res.sendString(Mono.just("testMaxKeepAliveRequests")));
+		assertThat(server.configuration().maxKeepAliveRequests()).isEqualTo(-1);
+
+		server = server.maxKeepAliveRequests(maxKeepAliveRequests);
+		assertThat(server.configuration().maxKeepAliveRequests()).isEqualTo(maxKeepAliveRequests);
+
+		disposableServer = server.bindNow();
+
+		ConnectionProvider provider = ConnectionProvider.create("testMaxKeepAliveRequests", 1);
+		HttpClient client = createClient(provider, disposableServer.port());
+		Flux.range(0, 2)
+		    .flatMap(i ->
+		        client.get()
+		              .uri("/")
+		              .responseSingle((res, bytes) ->
+		                  bytes.asString()
+		                       .zipWith(Mono.just(res.responseHeaders().get(HttpHeaderNames.CONNECTION, "persistent")))))
+		    .collectList()
+		    .as(StepVerifier::create)
+		    .expectNextMatches(l -> {
+		        boolean result = l.size() == 2 &&
+		                "testMaxKeepAliveRequests".equals(l.get(0).getT1()) &&
+		                "testMaxKeepAliveRequests".equals(l.get(1).getT1());
+
+		        if (maxKeepAliveRequests == -1) {
+		            return result &&
+		                    "persistent".equals(l.get(0).getT2()) &&
+		                    "persistent".equals(l.get(1).getT2());
+		        }
+		        else if (maxKeepAliveRequests == 1) {
+		            return result &&
+		                    "close".equals(l.get(0).getT2()) &&
+		                    "close".equals(l.get(1).getT2());
+		        }
+		        else if (maxKeepAliveRequests == 2) {
+		            return result &&
+		                    "persistent".equals(l.get(0).getT2()) &&
+		                    "close".equals(l.get(1).getT2());
+		        }
+		        return false;
+		    })
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(5));
+
+		provider.disposeLater().block(Duration.ofSeconds(5));
+	}
+
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(ints = {-2, 0})
+	void testMaxKeepAliveRequestsBadValues(int maxKeepAliveRequests) {
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> createServer().maxKeepAliveRequests(maxKeepAliveRequests))
+				.withMessage("maxKeepAliveRequests must be positive or -1");
 	}
 }

@@ -80,6 +80,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	final ConnectionObserver                                      listener;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 	                                                              mapHandle;
+	final int                                                     maxKeepAliveRequests;
 
 	ChannelHandlerContext ctx;
 
@@ -104,7 +105,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
-			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			int maxKeepAliveRequests) {
 		this.listener = listener;
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
@@ -113,6 +115,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		this.cookieDecoder = decoder;
 		this.idleTimeout = idleTimeout;
 		this.mapHandle = mapHandle;
+		this.maxKeepAliveRequests = maxKeepAliveRequests;
 	}
 
 	@Override
@@ -284,7 +287,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			final HttpResponse response = (HttpResponse) msg;
 			nonInformationalResponse = !isInformational(response);
 			// Assume the response writer knows if they can persist or not and sets isKeepAlive on the response
-			if (!isKeepAlive(response) || !isSelfDefinedMessageLength(response)) {
+			boolean maxKeepAliveRequestsReached = HttpServerOperations.requestsCounter(ctx.channel()) == maxKeepAliveRequests;
+			if (maxKeepAliveRequestsReached || !isKeepAlive(response) || !isSelfDefinedMessageLength(response)) {
 				// No longer keep alive as the client can't tell when the message is done unless we close connection
 				pendingResponses = 0;
 				persistentConnection = false;

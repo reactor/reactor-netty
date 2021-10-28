@@ -518,6 +518,30 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
+	 * The maximum number of HTTP/1.1 requests which can be served until the connection is closed by the server.
+	 * Setting this attribute to:
+	 * <ul>
+	 *     <li><strong>-1</strong>: The connection serves unlimited number of requests. It is up to the I/O handler to decide
+	 *     to close the connection. This is the default behaviour.</li>
+	 *     <li><strong>1</strong>: The connection is marked as non persistent and serves just one request.</li>
+	 *     <li><strong>>1</strong>: The connection serves a number of requests up to the specified maximum number
+	 *     then the connection is closed by the server.</li>
+	 * </ul>
+	 * @param maxKeepAliveRequests the maximum number of HTTP/1.1 requests which can be served until
+	 * the connection is closed by the server
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.13
+	 */
+	public final HttpServer maxKeepAliveRequests(int maxKeepAliveRequests) {
+		if (maxKeepAliveRequests < -1 || maxKeepAliveRequests == 0) {
+			throw new IllegalArgumentException("maxKeepAliveRequests must be positive or -1");
+		}
+		HttpServer dup = duplicate();
+		dup.configuration().maxKeepAliveRequests = maxKeepAliveRequests;
+		return dup;
+	}
+
+	/**
 	 * Whether to enable metrics to be collected and registered in Micrometer's
 	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
 	 * under the name {@link reactor.netty.Metrics#HTTP_SERVER_PREFIX}.

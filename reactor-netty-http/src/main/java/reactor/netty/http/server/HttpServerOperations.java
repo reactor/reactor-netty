@@ -25,6 +25,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -707,6 +708,16 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			//if already disposed, we can immediately call terminate
 			((HttpServerOperations) ops).terminate();
 		}
+	}
+
+	static long requestsCounter(Channel channel) {
+		HttpServerOperations ops = Connection.from(channel).as(HttpServerOperations.class);
+
+		if (ops == null) {
+			return -1;
+		}
+
+		return ((AtomicLong) ops.connection()).get();
 	}
 
 	static void sendDecodingFailures(
