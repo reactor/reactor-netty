@@ -524,7 +524,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 *     <li><strong>-1</strong>: The connection serves unlimited number of requests. It is up to the I/O handler to decide
 	 *     to close the connection. This is the default behaviour.</li>
 	 *     <li><strong>1</strong>: The connection is marked as non persistent and serves just one request.</li>
-	 *     <li><strong>>1</strong>: The connection serves a number of requests up to the specified maximum number
+	 *     <li><strong>&gt;1</strong>: The connection serves a number of requests up to the specified maximum number
 	 *     then the connection is closed by the server.</li>
 	 * </ul>
 	 * @param maxKeepAliveRequests the maximum number of HTTP/1.1 requests which can be served until
