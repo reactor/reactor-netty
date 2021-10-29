@@ -174,6 +174,17 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	/**
+	 * The configured maximum number of HTTP/1.1 requests which can be served until the connection is closed by the server.
+	 *
+	 * @return the configured maximum number of HTTP/1.1 requests which can be served until the connection is closed by the server.
+	 * @see HttpServer#maxKeepAliveRequests(int)
+	 * @since 1.0.13
+	 */
+	public int maxKeepAliveRequests() {
+		return maxKeepAliveRequests;
+	}
+
+	/**
 	 * Compression is performed once response size exceeds the minimum compression size in bytes.
 	 *
 	 * @return the minimum compression size in bytes
@@ -253,6 +264,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	Duration                                                idleTimeout;
 	BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 	                                                        mapHandle;
+	int                                                     maxKeepAliveRequests;
 	int                                                     minCompressionSize;
 	HttpProtocol[]                                          protocols;
 	int                                                     _protocols;
@@ -267,6 +279,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.cookieEncoder = ServerCookieEncoder.STRICT;
 		this.decoder = new HttpRequestDecoderSpec();
 		this.formDecoderProvider = DEFAULT_FORM_DECODER_SPEC;
+		this.maxKeepAliveRequests = -1;
 		this.minCompressionSize = -1;
 		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
 		this._protocols = h11;
@@ -287,6 +300,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.http2Settings = parent.http2Settings;
 		this.idleTimeout = parent.idleTimeout;
 		this.mapHandle = parent.mapHandle;
+		this.maxKeepAliveRequests = parent.maxKeepAliveRequests;
 		this.minCompressionSize = parent.minCompressionSize;
 		this.protocols = parent.protocols;
 		this._protocols = parent._protocols;
@@ -491,6 +505,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			int maxKeepAliveRequests,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
@@ -516,7 +531,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
 		            new HttpTrafficHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
-		                    forwardedHeaderHandler, idleTimeout, listener, mapHandle));
+		                    forwardedHeaderHandler, idleTimeout, listener, mapHandle, maxKeepAliveRequests));
 
 		if (accessLogEnabled) {
 			p.addBefore(NettyPipeline.HttpTrafficHandler, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
@@ -555,6 +570,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			int maxKeepAliveRequests,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
 			@Nullable Function<String, String> uriTagValue) {
@@ -566,7 +582,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
 		            new HttpTrafficHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
-		                    forwardedHeaderHandler, idleTimeout, listener, mapHandle));
+		                    forwardedHeaderHandler, idleTimeout, listener, mapHandle, maxKeepAliveRequests));
 
 		if (accessLogEnabled) {
 			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
@@ -802,6 +818,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ConnectionObserver                                      listener;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 		                                                              mapHandle;
+		final int                                                     maxKeepAliveRequests;
 		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
@@ -821,6 +838,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.idleTimeout = initializer.idleTimeout;
 			this.listener = listener;
 			this.mapHandle = initializer.mapHandle;
+			this.maxKeepAliveRequests = initializer.maxKeepAliveRequests;
 			this.metricsRecorder = initializer.metricsRecorder;
 			this.minCompressionSize = initializer.minCompressionSize;
 			this.opsFactory = initializer.opsFactory;
@@ -844,8 +862,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
 				configureHttp11Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-						decoder, formDecoderProvider, forwardedHeaderHandler, idleTimeout, listener, mapHandle, metricsRecorder,
-						minCompressionSize, uriTagValue);
+						decoder, formDecoderProvider, forwardedHeaderHandler, idleTimeout, listener, mapHandle,
+						maxKeepAliveRequests, metricsRecorder, minCompressionSize, uriTagValue);
 				return;
 			}
 
@@ -867,6 +885,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Duration                                                idleTimeout;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 		                                                              mapHandle;
+		final int                                                     maxKeepAliveRequests;
 		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
@@ -888,6 +907,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.http2Settings = config.http2Settings();
 			this.idleTimeout = config.idleTimeout;
 			this.mapHandle = config.mapHandle;
+			this.maxKeepAliveRequests = config.maxKeepAliveRequests;
 			this.metricsRecorder = config.metricsRecorderInternal();
 			this.minCompressionSize = config.minCompressionSize;
 			this.opsFactory = config.channelOperationsProvider();
@@ -934,6 +954,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							idleTimeout,
 							observer,
 							mapHandle,
+							maxKeepAliveRequests,
 							metricsRecorder,
 							minCompressionSize,
 							uriTagValue);
@@ -972,6 +993,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							idleTimeout,
 							observer,
 							mapHandle,
+							maxKeepAliveRequests,
 							metricsRecorder,
 							minCompressionSize,
 							opsFactory,
@@ -991,6 +1013,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							idleTimeout,
 							observer,
 							mapHandle,
+							maxKeepAliveRequests,
 							metricsRecorder,
 							minCompressionSize,
 							uriTagValue);
