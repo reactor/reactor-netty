@@ -24,7 +24,7 @@ buildscript {
 	}
 	dependencies {
 		classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
-			'org.jfrog.buildinfo:build-info-extractor-gradle:4.24.20' //applied in individual submodules
+			'org.jfrog.buildinfo:build-info-extractor-gradle:4.24.21' //applied in individual submodules
 	}
 }
 
