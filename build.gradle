@@ -91,7 +91,7 @@ ext {
 	logbackVersion = '1.2.6'
 
 	// Netty
-	nettyDefaultVersion = '4.1.69.Final'
+	nettyDefaultVersion = '4.1.70.Final'
 	if (!project.hasProperty("forceNettyVersion")) {
 		nettyVersion = nettyDefaultVersion
 	}
@@ -109,7 +109,7 @@ ext {
 	awaitilityVersion = '4.1.1'
 	hoverflyJavaVersion = '0.14.1'
 	tomcatVersion = '9.0.54'
-	boringSslVersion = '2.0.44.Final'
+	boringSslVersion = '2.0.45.Final'
 	junitVersion = '5.8.1'
 	junitPlatformLauncherVersion = '1.8.1'
 	mockitoVersion = '4.0.0'
