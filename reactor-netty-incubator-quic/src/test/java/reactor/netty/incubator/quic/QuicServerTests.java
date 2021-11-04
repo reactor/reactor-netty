@@ -15,6 +15,9 @@
  */
 package reactor.netty.incubator.quic;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicException;
@@ -26,6 +29,7 @@ import io.netty.util.DomainWildcardMappingBuilder;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.NettyPipeline;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -265,7 +269,7 @@ class QuicServerTests extends BaseQuicTests {
 
 	@Test
 	void testSniSupportDefault() throws Exception {
-		testSniSupport(quicChannel -> clientCtx.newEngine(quicChannel.alloc(), "test.com", 8080), "http/0.9");
+		testSniSupport(quicChannel -> clientCtx.newEngine(quicChannel.alloc(), "test.com", 8080), "http/0.9", "test.com");
 	}
 
 	@Test
@@ -275,11 +279,11 @@ class QuicServerTests extends BaseQuicTests {
 				                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
 				                     .applicationProtocols("http/1.1")
 				                     .build();
-		testSniSupport(quicChannel -> clientSslContext.newEngine(quicChannel.alloc(), "quic.test.com", 8080), "http/1.1");
+		testSniSupport(quicChannel -> clientSslContext.newEngine(quicChannel.alloc(), "quic.test.com", 8080), "http/1.1", "quic.test.com");
 	}
 
 	private void testSniSupport(Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
-			String expectedAppProtocol) throws Exception {
+			String expectedAppProtocol, String expectedHostname) throws Exception {
 		QuicSslContext sniServerCtx =
 					QuicSslContextBuilder.forServer(ssc.privateKey(), null, ssc.certificate())
 					                     .applicationProtocols("http/1.1")
@@ -289,9 +293,21 @@ class QuicServerTests extends BaseQuicTests {
 				new DomainWildcardMappingBuilder<>(serverCtx).add("*.test.com", sniServerCtx).build());
 
 		AtomicReference<String> appProtocol = new AtomicReference<>("");
+		AtomicReference<String> hostname = new AtomicReference<>();
 		server =
 				createServer()
 				        .secure(serverSslContext)
+				        .doOnChannelInit((obs, channel, remoteAddress) ->
+				                channel.pipeline()
+				                       .addBefore(NettyPipeline.ReactiveBridge, "test", new ChannelInboundHandlerAdapter() {
+				                           @Override
+				                           public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				                               if (evt instanceof SniCompletionEvent) {
+				                                   hostname.set(((SniCompletionEvent) evt).hostname());
+				                               }
+				                               ctx.fireUserEventTriggered(evt);
+				                           }
+				                       }))
 				        .handleStream((in, out) -> {
 				            in.withConnection(conn ->
 				                appProtocol.set(((QuicChannel) conn.channel().parent()).sslEngine().getApplicationProtocol()));
@@ -321,6 +337,8 @@ class QuicServerTests extends BaseQuicTests {
 		assertThat(appProtocol.get()).isEqualTo(expectedAppProtocol);
 
 		assertThat(incomingData.get()).isEqualTo("testSniSupport");
+
+		assertThat(hostname.get()).isNotNull().isEqualTo(expectedHostname);
 	}
 
 	@Test
