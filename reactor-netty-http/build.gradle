@@ -60,38 +60,39 @@ dependencies {
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	api "io.netty:netty-codec-http:$nettyVersion"
-	api "io.netty:netty-codec-http2:$nettyVersion"
-	api "io.netty:netty-resolver-dns:$nettyVersion"
+	api "io.netty:netty-buffer:$nettyByteBufVersion"
+	api "io.netty:netty5-codec-http:$nettyVersion"
+	api "io.netty:netty5-codec-http2:$nettyVersion"
+	api "io.netty:netty5-resolver-dns:$nettyVersion"
 	// MacOS binaries are not available for Netty SNAPSHOT version
 	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
 		if (osdetector.classifier == "osx-x86_64" || osdetector.classifier == "osx-aarch_64") {
-			api "io.netty:netty-resolver-dns-native-macos:$nettyVersion$os_suffix"
+			api "io.netty:netty5-resolver-dns-native-macos:$nettyVersion$os_suffix"
 		}
 		else {
-			api "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
+			api "io.netty:netty5-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
 		}
 	}
 	else {
 		// MacOS binaries are not available for Netty SNAPSHOT version
-		api "io.netty:netty-resolver-dns-native-macos:$nettyVersion"
+		api "io.netty:netty5-resolver-dns-native-macos:$nettyVersion"
 	}
-	compileOnly "io.netty:netty-codec-haproxy:$nettyVersion"
+	compileOnly "io.netty.contrib:netty-codec-haproxy:$nettyContribVersion"
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
 	if (project.hasProperty("forceTransport")) {
 		//so that the main code compiles
-		compileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
-		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		compileOnly "io.netty:netty5-transport-native-epoll:$nettyVersion"
+		compileOnly "io.netty:netty5-transport-native-kqueue:$nettyVersion"
 		//compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
-				testRuntimeOnly "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
+				testRuntimeOnly "io.netty:netty5-transport-native-kqueue:$nettyVersion$os_suffix"
 			}
 			else if (osdetector.os == "linux") {
-				testRuntimeOnly "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
+				testRuntimeOnly "io.netty:netty5-transport-native-epoll:$nettyVersion$os_suffix"
 			}
 		}
 		//else if (forceTransport == "io_uring" && osdetector.os == "linux") {
@@ -103,8 +104,8 @@ dependencies {
 	}
 	else {
 		//classic build to be distributed
-		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
-		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		api "io.netty:netty5-transport-native-epoll:$nettyVersion:linux-x86_64"
+		compileOnly "io.netty:netty5-transport-native-kqueue:$nettyVersion"
 		//compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	}
 
@@ -139,6 +140,7 @@ dependencies {
 	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-tracing-integration-test:$micrometerTracingVersion"
+	testImplementation "io.netty.contrib:netty-codec-extras:$nettyContribVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
@@ -146,8 +148,8 @@ dependencies {
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 
 	// Needed for proxy testing
-	testRuntimeOnly "io.netty:netty-handler-proxy:$nettyVersion"
-	testRuntimeOnly "io.netty:netty-codec-haproxy:$nettyVersion"
+	testRuntimeOnly "io.netty.contrib:netty-handler-proxy:$nettyContribVersion"
+	testRuntimeOnly "io.netty.contrib:netty-codec-haproxy:$nettyContribVersion"
 	// Needed for HTTP/2 testing
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 
