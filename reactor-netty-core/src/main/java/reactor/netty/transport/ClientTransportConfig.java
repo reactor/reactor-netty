@@ -18,6 +18,7 @@ package reactor.netty.transport;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -31,7 +32,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
-import io.netty.util.internal.PlatformDependent;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -229,7 +229,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		}
 	}
 
-	static final ConcurrentMap<Integer, DnsAddressResolverGroup> RESOLVERS_CACHE = PlatformDependent.newConcurrentHashMap();
+	static final ConcurrentMap<Integer, DnsAddressResolverGroup> RESOLVERS_CACHE = new ConcurrentHashMap<>();
 
 	static DnsAddressResolverGroup getOrCreateResolver(
 			NameResolverProvider nameResolverProvider,

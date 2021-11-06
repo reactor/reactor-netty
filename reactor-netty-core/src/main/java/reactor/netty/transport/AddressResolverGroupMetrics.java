@@ -20,13 +20,13 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import reactor.netty.channel.ChannelMetricsRecorder;
 
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
@@ -38,7 +38,7 @@ import static reactor.netty.Metrics.SUCCESS;
  */
 final class AddressResolverGroupMetrics<T extends SocketAddress> extends AddressResolverGroup<T> {
 
-	static final ConcurrentMap<Integer, AddressResolverGroupMetrics<?>> cache = PlatformDependent.newConcurrentHashMap();
+	static final ConcurrentMap<Integer, AddressResolverGroupMetrics<?>> cache = new ConcurrentHashMap<>();
 
 	static AddressResolverGroupMetrics<?> getOrCreate(
 			AddressResolverGroup<?> resolverGroup, ChannelMetricsRecorder recorder) {

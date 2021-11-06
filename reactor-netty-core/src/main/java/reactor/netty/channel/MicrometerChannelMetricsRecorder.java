@@ -20,11 +20,11 @@ import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.noop.NoopMeter;
-import io.netty.util.internal.PlatformDependent;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static reactor.netty.Metrics.ADDRESS_RESOLVER;
@@ -47,22 +47,22 @@ import static reactor.netty.Metrics.URI;
 public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder {
 
 	final DistributionSummary.Builder dataReceivedBuilder;
-	final ConcurrentMap<String, DistributionSummary> dataReceivedCache = PlatformDependent.newConcurrentHashMap();
+	final ConcurrentMap<String, DistributionSummary> dataReceivedCache = new ConcurrentHashMap<>();
 
 	final DistributionSummary.Builder dataSentBuilder;
-	final ConcurrentMap<String, DistributionSummary> dataSentCache = PlatformDependent.newConcurrentHashMap();
+	final ConcurrentMap<String, DistributionSummary> dataSentCache = new ConcurrentHashMap<>();
 
 	final Counter.Builder errorCountBuilder;
-	final ConcurrentMap<String, Counter> errorsCache = PlatformDependent.newConcurrentHashMap();
+	final ConcurrentMap<String, Counter> errorsCache = new ConcurrentHashMap<>();
 
 	final Timer.Builder connectTimeBuilder;
-	final ConcurrentMap<MeterKey, Timer> connectTimeCache = PlatformDependent.newConcurrentHashMap();
+	final ConcurrentMap<MeterKey, Timer> connectTimeCache = new ConcurrentHashMap<>();
 
 	final Timer.Builder tlsHandshakeTimeBuilder;
-	final ConcurrentMap<MeterKey, Timer> tlsHandshakeTimeCache = PlatformDependent.newConcurrentHashMap();
+	final ConcurrentMap<MeterKey, Timer> tlsHandshakeTimeCache = new ConcurrentHashMap<>();
 
 	final Timer.Builder addressResolverTimeBuilder;
-	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = PlatformDependent.newConcurrentHashMap();
+	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = new ConcurrentHashMap<>();
 
 
 	public MicrometerChannelMetricsRecorder(String name, String protocol) {

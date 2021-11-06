@@ -18,8 +18,8 @@ package reactor.netty.transport;
 import io.micrometer.core.instrument.Gauge;
 import io.netty.buffer.ByteBufAllocatorMetric;
 import io.netty.buffer.PooledByteBufAllocatorMetric;
-import io.netty.util.internal.PlatformDependent;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static reactor.netty.Metrics.BYTE_BUF_ALLOCATOR_PREFIX;
@@ -42,7 +42,7 @@ import static reactor.netty.Metrics.USED_HEAP_MEMORY;
 final class ByteBufAllocatorMetrics {
 	static final ByteBufAllocatorMetrics INSTANCE = new ByteBufAllocatorMetrics();
 
-	final ConcurrentMap<String, ByteBufAllocatorMetric> cache = PlatformDependent.newConcurrentHashMap();
+	final ConcurrentMap<String, ByteBufAllocatorMetric> cache = new ConcurrentHashMap<>();
 
 	private ByteBufAllocatorMetrics() {
 	}
