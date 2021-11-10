@@ -17,7 +17,6 @@ package reactor.netty.resources;
 
 import io.netty.channel.Channel;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.internal.PlatformDependent;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
@@ -51,6 +50,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
@@ -71,7 +71,7 @@ import static reactor.netty.resources.ConnectionProvider.ConnectionPoolSpec.PEND
 public abstract class PooledConnectionProvider<T extends Connection> implements ConnectionProvider {
 	final PoolFactory<T> defaultPoolFactory;
 
-	final ConcurrentMap<PoolKey, InstrumentedPool<T>> channelPools = PlatformDependent.newConcurrentHashMap();
+	final ConcurrentMap<PoolKey, InstrumentedPool<T>> channelPools = new ConcurrentHashMap<>();
 
 	final String name;
 	final Duration inactivePoolDisposeInterval;
