@@ -29,7 +29,8 @@ buildscript {
 
 plugins {
 	id "com.diffplug.spotless" version "6.0.0"
-	id 'org.asciidoctor.convert' version '2.4.0'
+	id 'org.asciidoctor.jvm.convert' version '3.3.2' apply false
+	id 'org.asciidoctor.jvm.pdf' version '3.3.2' apply false
 	id 'com.google.osdetector' version '1.7.0'
 	id 'org.gradle.test-retry' version '1.3.1'
 	id 'io.spring.nohttp' version '0.0.10'
@@ -114,8 +115,14 @@ ext {
 	mockitoVersion = '4.0.0'
 	blockHoundVersion = '1.0.6.RELEASE'
 
-	javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
-					"https://docs.oracle.com/javaee/6/api/",
+
+	jdk = JavaVersion.current().majorVersion
+	jdkJavadoc = "https://docs.oracle.com/javase/${jdk}/docs/api/"
+	if (JavaVersion.current().isJava11Compatible()) {
+		jdkJavadoc = "https://docs.oracle.com/en/java/javase/${jdk}/docs/api/"
+	}
+	println "JDK Javadoc link for this build is ${jdkJavadoc}"
+	javadocLinks = [jdkJavadoc,
 					"https://fasterxml.github.io/jackson-databind/javadoc/2.5/",
 					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",

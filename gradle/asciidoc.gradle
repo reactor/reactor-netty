@@ -13,12 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'org.asciidoctor.convert'
+apply plugin: 'org.asciidoctor.jvm.convert'
+apply plugin: 'org.asciidoctor.jvm.pdf'
 
-// put asciidoctor dependencies/extensions to 'asciidoctor' configuration instead of buildscript classpath
-dependencies {
-	asciidoctor 'org.asciidoctor:asciidoctorj-pdf:1.5.3'
-	asciidoctor 'org.jruby:jruby-complete:9.2.13.0'
+// This configuration applies both to the asciidoctor & asciidoctorPdf tasks
+asciidoctorj {
+	options = [doctype: 'book']
+	attributes 'allow-uri-read': '',
+			'attribute-missing': 'warn',
+			'project-version': "${project.version}",
+			'reactorReleaseTrain': "${bomVersion}"
 }
 
 asciidoctor {
@@ -26,6 +30,7 @@ asciidoctor {
 	sources {
 		include "index.asciidoc"
 	}
+	baseDirFollowsSourceDir()
 	resources {
 		from(sourceDir) {
 			include 'images/**'
@@ -33,32 +38,35 @@ asciidoctor {
 		}
 	}
 	outputDir file("$buildDir/asciidoc")
-	backends = ['html5', 'pdf']
 	logDocuments = true
-	options = [
-			doctype: 'book'
-	]
-	attributes 'allow-uri-read': '',
-			reactorReleaseTrain: "$bomVersion",
-			imagesdir: "images/",
-			stylesdir: "stylesheets/",
+	attributes stylesdir: "stylesheets/",
 			stylesheet: 'reactor.css',
 			'source-highlighter': 'highlightjs',
 			'highlightjsdir': "./highlight",
 			'highlightjs-theme': 'railscasts'
 }
 
-task docsZip(type: Zip, dependsOn: asciidoctor) {
+asciidoctorPdf {
+	onlyIf { System.getenv()["GITHUB_ACTION"] != null || !rootProject.version.toString().endsWith("-SNAPSHOT") || rootProject.hasProperty("forcePdf") }
+	sourceDir "$rootDir/docs/asciidoc/"
+	sources {
+		include "index.asciidoc"
+	}
+	baseDirFollowsSourceDir()
+	outputDir file("$buildDir/asciidoc/pdf")
+	logDocuments = true
+	attributes 'source-highlighter': 'rouge'
+}
+
+task docsZip(type: Zip, dependsOn: [asciidoctor, asciidoctorPdf]) {
 	archiveBaseName.set("reactor-netty")
 	archiveClassifier.set("docs")
 	afterEvaluate() {
 		//we copy the pdf late, when a potential customVersion has been applied to rootProject
-		from("$buildDir/asciidoc/pdf/index.pdf") {
+		from(asciidoctorPdf) {
 			into("docs/")
 			rename("index.pdf", "reactor-netty-reference-guide-${rootProject.version}.pdf")
 		}
 	}
-	from("$buildDir/asciidoc/html5/index.html") { into("docs/") }
-	from("$buildDir/asciidoc/html5/images") { into("docs/images/") }
-	from("$buildDir/asciidoc/html5/highlight") { into("docs/highlight/") }
+	from(asciidoctor) { into("docs/") }
 }
