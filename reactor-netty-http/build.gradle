@@ -135,6 +135,13 @@ dependencies {
 	// Needed for HTTP/2 testing
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 
+	if (JavaVersion.current() > JavaVersion.VERSION_14) {
+		// https://github.com/netty/netty/pull/11487
+		// https://github.com/netty/netty/issues/10317
+		// Necessary for generating SelfSignedCertificate on Java version >= 15
+		testRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
+	}
+
 	// noMicrometerTest sourceSet (must not include Micrometer)
 	noMicrometerTestImplementation "org.assertj:assertj-core:$assertJVersion"
 	noMicrometerTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"

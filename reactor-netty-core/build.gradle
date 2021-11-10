@@ -129,6 +129,13 @@ dependencies {
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 
+	if (JavaVersion.current() > JavaVersion.VERSION_14) {
+		// https://github.com/netty/netty/pull/11487
+		// https://github.com/netty/netty/issues/10317
+		// Necessary for generating SelfSignedCertificate on Java version >= 15
+		testRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
+	}
+
 	for (dependency in project.configurations.shaded.dependencies) {
 		compileOnly(dependency)
 		testImplementation(dependency)
