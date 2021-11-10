@@ -259,7 +259,7 @@ task shadedJarTest(type: Test) {
 
 	Set<? super File> mainOutputs = [
 			project.sourceSets.main.output.resourcesDir,
-			project.sourceSets.main.java.outputDir,
+			project.sourceSets.main.java.classesDirectory,
 	]
 
 	classpath = shadowJar.outputs.files
