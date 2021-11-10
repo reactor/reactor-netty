@@ -16,8 +16,4 @@ updates:
   - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
     versions:
     - ">= 10.0.a"
-  - dependency-name: com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin
-    versions:
-    # This version of Shadow supports Gradle 7.0+ only.
-    - ">= 7.a"
   rebase-strategy: disabled
