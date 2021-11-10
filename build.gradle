@@ -47,6 +47,10 @@ description = 'Reactive Streams Netty driver'
 
 apply from: "gradle/releaser.gradle"
 
+repositories { //needed at root for nohttp-checkstyle
+	mavenCentral()
+}
+
 ext {
 	if (project.hasProperty('versionBranch') && version.toString().endsWith("-SNAPSHOT")) {
 		versionBranch = versionBranch.replaceAll("\"", "").trim()
