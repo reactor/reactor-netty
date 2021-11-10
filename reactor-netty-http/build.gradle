@@ -53,38 +53,38 @@ configurations {
 }
 
 dependencies {
-	compile project(path: ':reactor-netty-core', configuration: 'shadow')
+	api project(path: ':reactor-netty-core', configuration: 'shadow')
 
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	compile "io.netty:netty-codec-http:$nettyVersion"
-	compile "io.netty:netty-codec-http2:$nettyVersion"
-	compile "io.netty:netty-resolver-dns:$nettyVersion"
+	api "io.netty:netty-codec-http:$nettyVersion"
+	api "io.netty:netty-codec-http2:$nettyVersion"
+	api "io.netty:netty-resolver-dns:$nettyVersion"
 	// MacOS binaries are not available for Netty SNAPSHOT version
 	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
-		compile "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
+		api "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
 	}
-	optional "io.netty:netty-codec-haproxy:$nettyVersion"
+	compileOnly "io.netty:netty-codec-haproxy:$nettyVersion"
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
 	if (project.hasProperty("forceTransport")) {
 		//so that the main code compiles
-		optional "io.netty:netty-transport-native-epoll:$nettyVersion"
-		optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		optional "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		compileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
+		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
-				testRuntime "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
+				testRuntimeOnly "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
 			}
 			else if (osdetector.os == "linux") {
-				testRuntime "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
+				testRuntimeOnly "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
 			}
 		}
 		else if (forceTransport == "io_uring" && osdetector.os == "linux") {
-			testRuntime "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
+			testRuntimeOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
 		}
 		else if (forceTransport != "nio") {
 			throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
@@ -92,20 +92,20 @@ dependencies {
 	}
 	else {
 		//classic build to be distributed
-		compile "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
-		optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		optional "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
+		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	}
 
 	//Metrics
-	optional "io.micrometer:micrometer-core:$micrometerVersion"
+	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
 
 	// Logging
-	optional "org.slf4j:slf4j-api:$slf4jVersion"
+	compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
 
-	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
+	api "io.projectreactor:reactor-core:$reactorCoreVersion"
 
-	testCompile(testFixtures(project(':reactor-netty-core'))) {
+	testImplementation(testFixtures(project(':reactor-netty-core'))) {
 		exclude module: "reactor-netty-core"
 	}
 
@@ -114,14 +114,15 @@ dependencies {
 	// JSR-305 annotations
 	testCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	testCompile "org.mockito:mockito-core:$mockitoVersion"
-	testCompile "io.specto:hoverfly-java-junit5:$hoverflyJavaVersion"
-	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
-	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
-	testCompile "org.assertj:assertj-core:$assertJVersion"
-	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
-	testCompile "org.junit.jupiter:junit-jupiter-params:$junitVersion"
-	testCompile "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
+	testImplementation "org.mockito:mockito-core:$mockitoVersion"
+	testImplementation "io.specto:hoverfly-java-junit5:$hoverflyJavaVersion"
+	testImplementation "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
+	testImplementation "io.projectreactor:reactor-test:$testAddonVersion"
+	testImplementation "org.assertj:assertj-core:$assertJVersion"
+	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
+	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
+	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
@@ -130,12 +131,13 @@ dependencies {
 
 	// Needed for proxy testing
 	testRuntimeOnly "io.netty:netty-handler-proxy:$nettyVersion"
+	testRuntimeOnly "io.netty:netty-codec-haproxy:$nettyVersion"
 	// Needed for HTTP/2 testing
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 
 	// noMicrometerTest sourceSet (must not include Micrometer)
-	noMicrometerTestCompile "org.assertj:assertj-core:$assertJVersion"
-	noMicrometerTestCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	noMicrometerTestImplementation "org.assertj:assertj-core:$assertJVersion"
+	noMicrometerTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	noMicrometerTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	noMicrometerTestRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 }

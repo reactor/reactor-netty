@@ -31,9 +31,9 @@ ext {
 }
 
 dependencies {
-	compile project(':reactor-netty-http')
+	api project(':reactor-netty-http')
 
-	compile "io.zipkin.brave:brave-instrumentation-http:$braveVersion"
+	api "io.zipkin.brave:brave-instrumentation-http:$braveVersion"
 
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
@@ -41,7 +41,7 @@ dependencies {
 	// JSR-305 annotations
 	testCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	testCompile "io.zipkin.brave:brave-instrumentation-http-tests:$braveVersion"
+	testImplementation "io.zipkin.brave:brave-instrumentation-http-tests:$braveVersion"
 
 	testRuntimeOnly "org.junit.vintage:junit-vintage-engine:$junitVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"

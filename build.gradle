@@ -23,8 +23,7 @@ buildscript {
 		maven { url "https://repo.spring.io/plugins-release" }
 	}
 	dependencies {
-		classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
-			'org.jfrog.buildinfo:build-info-extractor-gradle:4.24.21' //applied in individual submodules
+		classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.24.21' //applied in individual submodules
 	}
 }
 
@@ -157,10 +156,9 @@ spotless {
 subprojects {
 	group = 'io.projectreactor.netty'
 
-	apply plugin: 'java'
+	apply plugin: 'java-library'
 	apply plugin: 'jacoco'
 	apply plugin: 'checkstyle'
-	apply plugin: 'propdeps'
 	apply plugin: 'org.gradle.test-retry'
 	apply from: "${rootDir}/gradle/setup.gradle"
 	apply from: "${rootDir}/gradle/javadoc.gradle"

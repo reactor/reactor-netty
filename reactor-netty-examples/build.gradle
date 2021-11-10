@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 dependencies {
-	compile project(':reactor-netty-http')
+	api project(':reactor-netty-http')
 
-	compile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+	api "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+
+	api "io.micrometer:micrometer-core:$micrometerVersion"
+
+	api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
 
 	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
