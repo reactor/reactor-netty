@@ -17,12 +17,16 @@ apply plugin: 'io.spring.javadoc-aggregate'
 apply from: "${rootDir}/gradle/asciidoc.gradle"
 
 dependencies {
-	compile project(':reactor-netty-core')
-	compile project(':reactor-netty-http')
+	api project(':reactor-netty-core')
+	api project(':reactor-netty-http')
 
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
+	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
+	compileOnly "io.netty:netty-codec-haproxy:$nettyVersion"
+	compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
+	compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	compileOnly "io.projectreactor.addons:reactor-pool:$reactorPoolVersion"
 }
 

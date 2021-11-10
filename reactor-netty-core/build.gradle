@@ -51,35 +51,38 @@ dependencies {
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	compile "io.netty:netty-handler:$nettyVersion"
-	compile "io.netty:netty-handler-proxy:$nettyVersion"
-	compile "io.netty:netty-resolver-dns:$nettyVersion"
+	api "io.netty:netty-handler:$nettyVersion"
+	api "io.netty:netty-handler-proxy:$nettyVersion"
+	api "io.netty:netty-resolver-dns:$nettyVersion"
 	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
-		compile "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
+		api "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
 	}
 	else {
 		// MacOS binaries are not available for Netty SNAPSHOT version
-		compile "io.netty:netty-resolver-dns-native-macos:$nettyVersion"
+		api "io.netty:netty-resolver-dns-native-macos:$nettyVersion"
 	}
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
 	if (project.hasProperty("forceTransport")) {
 		//so that the main code compiles
-		optional "io.netty:netty-transport-native-epoll:$nettyVersion"
-		optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		optional "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		compileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
+		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		testImplementation "io.netty:netty-transport-native-epoll:$nettyVersion"
+		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
-				testRuntime "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
+				testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
 			}
 			else if (osdetector.os == "linux") {
-				testRuntime "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
+				testImplementation "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
 			}
 		}
 		else if (forceTransport == "io_uring" && osdetector.os == "linux") {
-			testRuntime "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
+			testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
 		}
 		else if (forceTransport != "nio") {
 			throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
@@ -87,18 +90,20 @@ dependencies {
 	}
 	else {
 		//classic build to be distributed
-		compile "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
-		optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		optional "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
+		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	}
 
 	//Metrics
-	optional "io.micrometer:micrometer-core:$micrometerVersion"
+	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
 
 	// Logging
-	optional "org.slf4j:slf4j-api:$slf4jVersion"
+	compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
 
-	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
+	api "io.projectreactor:reactor-core:$reactorCoreVersion"
 	shaded("io.projectreactor.addons:reactor-pool:$reactorPoolVersion") {
 		exclude module: "reactor-core"
 	}
@@ -108,16 +113,17 @@ dependencies {
 	// JSR-305 annotations
 	testCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
-	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
-	testCompile "io.projectreactor.addons:reactor-extra:$reactorAddonsVersion"
-	testCompile "org.assertj:assertj-core:$assertJVersion"
-	testCompile "org.awaitility:awaitility:$awaitilityVersion"
-	testCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
-	testCompile "org.junit.jupiter:junit-jupiter-params:$junitVersion"
-	testCompile "org.mockito:mockito-core:$mockitoVersion"
-	testCompile "ch.qos.logback:logback-classic:$logbackVersion"
-	testCompile "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
+	testImplementation "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+	testImplementation "io.projectreactor:reactor-test:$testAddonVersion"
+	testImplementation "io.projectreactor.addons:reactor-extra:$reactorAddonsVersion"
+	testImplementation "org.assertj:assertj-core:$assertJVersion"
+	testImplementation "org.awaitility:awaitility:$awaitilityVersion"
+	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
+	testImplementation "org.mockito:mockito-core:$mockitoVersion"
+	testImplementation "ch.qos.logback:logback-classic:$logbackVersion"
+	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
+	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
@@ -125,11 +131,11 @@ dependencies {
 
 	for (dependency in project.configurations.shaded.dependencies) {
 		compileOnly(dependency)
-		testCompile(dependency)
+		testImplementation(dependency)
 	}
 
-	jarFileTestCompile "org.assertj:assertj-core:$assertJVersion"
-	jarFileTestCompile "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	jarFileTestImplementation "org.assertj:assertj-core:$assertJVersion"
+	jarFileTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	jarFileTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
 
@@ -210,7 +216,7 @@ shadowJar {
 					.toSet()
 
 			// Exclude every compile-scoped dependency (including the transitive ones)
-			for (id in project.configurations.compile.resolvedConfiguration.resolvedArtifacts*.moduleVersion*.id) {
+			for (id in project.configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts*.moduleVersion*.id) {
 				def module = "${id.group}:${id.name}".toString()
 				if (!shadedDependencies.contains(module)) {
 					project.configurations.shaded.exclude(group: id.group, module: id.name)
