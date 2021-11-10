@@ -202,7 +202,7 @@ public final class ProxyProvider {
 		return Objects.equals(username, that.username) &&
 				Objects.equals(getPasswordValue(), that.getPasswordValue()) &&
 				Objects.equals(getAddress().get(), that.getAddress().get()) &&
-				Objects.equals(getNonProxyHostsValue(), that.getNonProxyHostsValue()) &&
+				getNonProxyHostsValue() == that.getNonProxyHostsValue() &&
 				Objects.equals(httpHeaders.get(), that.httpHeaders.get()) &&
 				getType() == that.getType() &&
 				connectTimeoutMillis == that.connectTimeoutMillis;

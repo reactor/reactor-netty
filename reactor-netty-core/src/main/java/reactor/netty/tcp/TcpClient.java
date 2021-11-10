@@ -113,6 +113,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 * @deprecated Use {@link #remoteAddress(Supplier)}. This method will be removed in version 1.1.0.
 	 */
 	@Deprecated
+	@SuppressWarnings("InlineMeSuggester")
 	public final TcpClient addressSupplier(Supplier<? extends SocketAddress> connectAddressSupplier) {
 		return remoteAddress(connectAddressSupplier);
 	}
