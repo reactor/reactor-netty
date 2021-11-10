@@ -20,14 +20,14 @@ buildscript {
 		}
 	}
 	dependencies {
-		classpath "net.ltgt.gradle:gradle-errorprone-plugin:1.3.0"
+		classpath "net.ltgt.gradle:gradle-errorprone-plugin:2.0.2"
 	}
 }
 
 apply plugin: net.ltgt.gradle.errorprone.ErrorPronePlugin
 
 ext {
-	errorproneCoreVersion = "2.4.0"
+	errorproneCoreVersion = "2.7.1"
 	errorproneJavacVersion = "9+181-r4173-1"
 	guavaVersion = "30.0-jre"
 }

@@ -306,6 +306,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	 *
 	 * @return {@link ByteBufMono} of retained {@link ByteBuf}
 	 */
+	@SuppressWarnings("DoNotCallSuggester")
 	public final ByteBufMono multicast() {
 		throw new UnsupportedOperationException("Not yet implemented");
 	}
