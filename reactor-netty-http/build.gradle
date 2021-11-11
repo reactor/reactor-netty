@@ -65,6 +65,10 @@ dependencies {
 	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
 		api "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
 	}
+	else {
+		// MacOS binaries are not available for Netty SNAPSHOT version
+		api "io.netty:netty-resolver-dns-native-macos:$nettyVersion"
+	}
 	compileOnly "io.netty:netty-codec-haproxy:$nettyVersion"
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
