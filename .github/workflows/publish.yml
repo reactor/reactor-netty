@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: setup java
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v2
         with:
           java-version: 8
       - name: interpret version
@@ -40,7 +40,7 @@ jobs:
     environment: snapshots
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-java@v1
+      - uses: actions/setup-java@v2
         with:
           java-version: 8
       - name: deploy
@@ -59,7 +59,7 @@ jobs:
     environment: releases
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-java@v1
+      - uses: actions/setup-java@v2
         with:
           java-version: 8
       - name: deploy
@@ -86,7 +86,7 @@ jobs:
     environment: releases
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-java@v1
+      - uses: actions/setup-java@v2
         with:
           java-version: 8
       - name: deploy
