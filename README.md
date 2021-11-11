@@ -6,7 +6,7 @@
 
 [![publish](https://github.com/reactor/reactor-netty/actions/workflows/publish.yml/badge.svg)](https://github.com/reactor/reactor-netty/actions/workflows/publish.yml) [![CodeQL](https://github.com/reactor/reactor-netty/workflows/CodeQL/badge.svg?event=push)](https://github.com/reactor/reactor-netty/actions?query=workflow%3ACodeQL)
 
-`Reactor Netty` offers non-blocking and backpressure-ready `TCP`/`HTTP`/`UDP`
+`Reactor Netty` offers non-blocking and backpressure-ready `TCP`/`HTTP`/`UDP`/`QUIC`
 clients & servers based on `Netty` framework.
 
 ## Getting it
