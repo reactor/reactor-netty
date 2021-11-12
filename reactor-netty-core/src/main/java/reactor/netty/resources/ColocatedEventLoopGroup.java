@@ -66,6 +66,63 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 	}
 
 	@Override
+	public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+		return eventLoopGroup.awaitTermination(timeout, unit);
+	}
+
+	@Override
+	public void execute(Runnable command) {
+		next().execute(command);
+	}
+
+	@Override
+	public EventLoopGroup get() {
+		return eventLoopGroup;
+	}
+
+	@Override
+	public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException {
+		return next().invokeAll(tasks);
+	}
+
+	@Override
+	public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
+			throws InterruptedException {
+		return next().invokeAll(tasks, timeout, unit);
+	}
+
+	@Override
+	public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
+		return next().invokeAny(tasks);
+	}
+
+	@Override
+	public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
+			throws InterruptedException, ExecutionException, TimeoutException {
+		return next().invokeAny(tasks, timeout, unit);
+	}
+
+	@Override
+	public boolean isShutdown() {
+		return eventLoopGroup.isShutdown();
+	}
+
+	@Override
+	public boolean isShuttingDown() {
+		return eventLoopGroup.isShuttingDown();
+	}
+
+	@Override
+	public boolean isTerminated() {
+		return eventLoopGroup.isTerminated();
+	}
+
+	@Override
+	public Iterator<EventExecutor> iterator() {
+		return eventLoopGroup.iterator();
+	}
+
+	@Override
 	public EventLoop next() {
 		if (localLoop.isSet()) {
 			return localLoop.get();
@@ -78,11 +135,6 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 		return next().register(channel);
 	}
 
-	@Override
-	public ChannelFuture register(ChannelPromise promise) {
-		return next().register(promise);
-	}
-
 	@Deprecated
 	@Override
 	public ChannelFuture register(Channel channel, ChannelPromise promise) {
@@ -90,33 +142,28 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 	}
 
 	@Override
-	public boolean isShuttingDown() {
-		return eventLoopGroup.isShuttingDown();
+	public ChannelFuture register(ChannelPromise promise) {
+		return next().register(promise);
 	}
 
 	@Override
-	public io.netty.util.concurrent.Future<?> shutdownGracefully() {
-		clean();
-		return eventLoopGroup.shutdownGracefully();
+	public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+		return next().schedule(callable, delay, unit);
 	}
 
 	@Override
-	public io.netty.util.concurrent.Future<?> shutdownGracefully(long quietPeriod,
-			long timeout,
-			TimeUnit unit) {
-		clean();
-		return eventLoopGroup.shutdownGracefully(quietPeriod, timeout, unit);
-	}
-
-	void clean() {
-		for (EventExecutor ex : eventLoopGroup) {
-			ex.execute(() -> localLoop.set(null));
-		}
+	public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+		return next().schedule(command, delay, unit);
 	}
 
 	@Override
-	public io.netty.util.concurrent.Future<?> terminationFuture() {
-		return eventLoopGroup.terminationFuture();
+	public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+		return next().scheduleAtFixedRate(command, initialDelay, period, unit);
+	}
+
+	@Override
+	public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+		return next().scheduleWithFixedDelay(command, initialDelay, delay, unit);
 	}
 
 	@Deprecated
@@ -128,6 +175,18 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 	}
 
 	@Override
+	public io.netty.util.concurrent.Future<?> shutdownGracefully() {
+		clean();
+		return eventLoopGroup.shutdownGracefully();
+	}
+
+	@Override
+	public io.netty.util.concurrent.Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+		clean();
+		return eventLoopGroup.shutdownGracefully(quietPeriod, timeout, unit);
+	}
+
+	@Override
 	@Deprecated
 	public List<Runnable> shutdownNow() {
 		clean();
@@ -135,8 +194,8 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 	}
 
 	@Override
-	public Iterator<EventExecutor> iterator() {
-		return eventLoopGroup.iterator();
+	public <T> io.netty.util.concurrent.Future<T> submit(Callable<T> task) {
+		return next().submit(task);
 	}
 
 	@Override
@@ -150,90 +209,13 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 	}
 
 	@Override
-	public <T> io.netty.util.concurrent.Future<T> submit(Callable<T> task) {
-		return next().submit(task);
+	public io.netty.util.concurrent.Future<?> terminationFuture() {
+		return eventLoopGroup.terminationFuture();
 	}
 
-	@Override
-	public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-		return next().schedule(command, delay, unit);
+	void clean() {
+		for (EventExecutor ex : eventLoopGroup) {
+			ex.execute(() -> localLoop.set(null));
+		}
 	}
-
-	@Override
-	public <V> ScheduledFuture<V> schedule(Callable<V> callable,
-			long delay,
-			TimeUnit unit) {
-		return next().schedule(callable, delay, unit);
-	}
-
-	@Override
-	public ScheduledFuture<?> scheduleAtFixedRate(Runnable command,
-			long initialDelay,
-			long period,
-			TimeUnit unit) {
-		return next().scheduleAtFixedRate(command, initialDelay, period, unit);
-	}
-
-	@Override
-	public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
-			long initialDelay,
-			long delay,
-			TimeUnit unit) {
-		return next().scheduleWithFixedDelay(command, initialDelay, delay, unit);
-	}
-
-	@Override
-	public boolean isShutdown() {
-		return eventLoopGroup.isShutdown();
-	}
-
-	@Override
-	public boolean isTerminated() {
-		return eventLoopGroup.isTerminated();
-	}
-
-	@Override
-	public boolean awaitTermination(long timeout, TimeUnit unit)
-			throws InterruptedException {
-		return eventLoopGroup.awaitTermination(timeout, unit);
-	}
-
-	@Override
-	public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-			throws InterruptedException {
-		return next().invokeAll(tasks);
-	}
-
-	@Override
-	public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks,
-			long timeout,
-			TimeUnit unit) throws InterruptedException {
-		return next().invokeAll(tasks, timeout, unit);
-	}
-
-	@Override
-	public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-			throws InterruptedException, ExecutionException {
-		return next().invokeAny(tasks);
-	}
-
-	@Override
-	public <T> T invokeAny(Collection<? extends Callable<T>> tasks,
-			long timeout,
-			TimeUnit unit)
-			throws InterruptedException, ExecutionException, TimeoutException {
-		return next().invokeAny(tasks, timeout, unit);
-	}
-
-	@Override
-	public void execute(Runnable command) {
-		next().execute(command);
-	}
-
-	@Override
-	public EventLoopGroup get() {
-		return eventLoopGroup;
-	}
-
-
 }
