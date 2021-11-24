@@ -72,13 +72,17 @@ public interface WebsocketOutbound extends NettyOutbound {
 	 * Prepare to send a close frame on subscribe then close the underlying channel
 	 *
 	 * @param statusCode
-	 *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+	 *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455#section-7.4</a>. For
 	 *            example, <tt>1000</tt> indicates normal closure.
 	 * @param reasonText
 	 *            Reason text. Set to null if no text.
 	 *
 	 * @return a {@link Mono} fulfilled when the send succeeded or failed, immediately
 	 * completed if already closed
+	 * @throws IllegalArgumentException when the status code MUST NOT be set as a status code in a
+	 * Close control frame.
+	 * Consider checking <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1">RFC 6455#section-7.4</a>
+	 * for a complete list of the close status codes.
 	 */
 	Mono<Void> sendClose(int statusCode, @Nullable String reasonText);
 
@@ -88,13 +92,17 @@ public interface WebsocketOutbound extends NettyOutbound {
 	 * @param rsv
 	 *            reserved bits used for protocol extensions
 	 * @param statusCode
-	 *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+	 *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455#section-7.4</a>. For
 	 *            example, <tt>1000</tt> indicates normal closure.
 	 * @param reasonText
 	 *            Reason text. Set to null if no text.
 	 *
 	 * @return a {@link Mono} fulfilled when the send succeeded or failed, immediately
 	 * completed if already closed
+	 * @throws IllegalArgumentException when the status code MUST NOT be set as a status code in a
+	 * Close control frame.
+	 * Consider checking <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1">RFC 6455#section-7.4</a>
+	 * for a complete list of the close status codes.
 	 */
 	Mono<Void> sendClose(int rsv, int statusCode, @Nullable String reasonText);
 
