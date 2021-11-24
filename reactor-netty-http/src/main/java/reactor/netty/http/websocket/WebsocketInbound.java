@@ -53,6 +53,12 @@ public interface WebsocketInbound extends NettyInbound {
 	/**
 	 * Receive the close status code and reason if sent by the remote peer,
 	 * or empty if the connection completes otherwise.
+	 * <p><strong>Note:</strong> Some close status codes are designated for use in applications expecting a status code
+	 * to indicate that the connection was closed etc. They are not meant to be set as a status code in a
+	 * Close control frame as such these status codes cannot be used with
+	 * {@code reactor.netty.http.websocket.WebsocketOutbound#sendClose*} methods.
+	 * Consider checking <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1">RFC 6455#section-7.4</a>
+	 * for a complete list of the close status codes.
 	 */
 	Mono<WebSocketCloseStatus> receiveCloseStatus();
 
