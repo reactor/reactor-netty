@@ -104,7 +104,7 @@ ext {
 		println "Netty version defined from command line: ${forceNettyVersion}"
 	}
 	nettyIoUringVersion = '0.0.10.Final'
-	nettyQuicVersion = '0.0.20.Final'
+	nettyQuicVersion = '0.0.22.Final'
 
 	// Testing
 	jacksonDatabindVersion = '2.13.0'
