@@ -55,7 +55,12 @@ dependencies {
 	api "io.netty:netty-handler-proxy:$nettyVersion"
 	api "io.netty:netty-resolver-dns:$nettyVersion"
 	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
-		api "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
+		if (osdetector.classifier == "osx-x86_64" || osdetector.classifier == "osx-aarch_64") {
+			api "io.netty:netty-resolver-dns-native-macos:$nettyVersion$os_suffix"
+		}
+		else {
+			api "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
+		}
 	}
 	else {
 		// MacOS binaries are not available for Netty SNAPSHOT version
