@@ -35,7 +35,7 @@ dependencies {
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	api "io.netty.incubator:netty-incubator-codec-quic:$nettyQuicVersion$os_suffix"
+	api "io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion$os_suffix"
 
 	// Testing
 
