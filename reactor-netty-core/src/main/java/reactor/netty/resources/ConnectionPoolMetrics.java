@@ -54,4 +54,21 @@ public interface ConnectionPoolMetrics {
 	 */
 	int pendingAcquireSize();
 
+	/**
+	 * Get the maximum number of live resources this Pool will allow.
+	 * A Pool might be unbounded, in which case this method returns Integer.MAX_VALUE.
+	 * @return the maximum number of live resources that can be allocated by this Pool
+	 */
+	int maxAllocatedSize();
+
+	/**
+	 * Get the maximum number of Pool.acquire() this Pool can queue in a pending state
+	 * when no available resource is immediately handy (and the Pool cannot allocate more
+	 * resources).
+	 * A Pool pending queue might be unbounded, in which case this method returns
+	 * Integer.MAX_VALUE.
+	 * @return the maximum number of pending acquire that can be enqueued by this Pool
+	 */
+	int maxPendingAcquireSize();
+
 }
