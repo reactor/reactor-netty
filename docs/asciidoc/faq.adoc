@@ -1,0 +1,12 @@
+[[faq]]
+= Frequently Asked Questions
+
+This section covers the following content:
+
+* <<faq.proxy-connect-method>>
+
+[[faq.proxy-connect-method]]
+== Connection to the proxy cannot be established
+include::proxy.adoc[tag=proxy-connect-method]
+
+

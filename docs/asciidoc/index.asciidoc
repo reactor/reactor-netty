@@ -55,3 +55,10 @@ https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/udp-client.adoc
 to "<<udp-client>>"
 endif::[]
 
+[appendix]
+include::faq.adoc[leveloffset=1]
+ifeval::["{backend}" == "html5"]
+https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/faq.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
+to "<<faq>>"
+endif::[]
+

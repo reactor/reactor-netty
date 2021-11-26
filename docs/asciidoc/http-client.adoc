@@ -383,6 +383,8 @@ include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..52]
 ----
 ====
 
+include::proxy.adoc[]
+
 == Metrics
 The HTTP client supports built-in integration with https://micrometer.io/[`Micrometer`].
 It exposes all metrics with a prefix of `reactor.netty.http.client`.

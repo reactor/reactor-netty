@@ -29,7 +29,8 @@ public class Application {
 				         .proxy(spec -> spec.type(ProxyProvider.Proxy.SOCKS4)
 				                            .host("proxy")
 				                            .port(8080)
-				                            .nonProxyHosts("localhost"))
+				                            .nonProxyHosts("localhost")
+				                            .connectTimeoutMillis(20_000)) //<1>
 				        .connectNow();
 
 		connection.onDispose()

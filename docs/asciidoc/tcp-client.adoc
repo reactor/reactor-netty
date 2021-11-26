@@ -296,19 +296,7 @@ include::{examplesdir}/sni/Application.java[lines=18..41]
 ----
 ====
 
-== Proxy Support
-
-The TCP client supports the proxy functionality provided by Netty and provides a way
-to specify "`non proxy hosts`" through the {javadoc}/reactor/netty/tcp/ProxyProvider.html[`ProxyProvider`] builder.
-The following example uses `ProxyProvider`:
-
-====
-[source,java,indent=0]
-.{examplesdir}/proxy/Application.java
-----
-include::{examplesdir}/proxy/Application.java[lines=18..38]
-----
-====
+include::proxy.adoc[]
 
 == Metrics
 The TCP client supports built-in integration with https://micrometer.io/[`Micrometer`].
