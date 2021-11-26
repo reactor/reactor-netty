@@ -310,6 +310,12 @@ include::{examplesdir}/proxy/Application.java[lines=18..38]
 ----
 ====
 
+NOTE: Netty's HTTP proxy support always uses `CONNECT` method in order to establish a tunnel to the specified proxy regardless of the scheme that is used `http` or `https`.
+(More information: https://github.com/netty/netty/issues/10475[Netty enforce HTTP proxy to support HTTP CONNECT method]).
+Some proxies might not support `CONNECT` method when the scheme is `http` or might need to be configured in order to support this way of communication.
+Sometimes this might be the reason for not being able to connect to the proxy. Consider checking the proxy documentation
+whether it supports or needs an additional configuration in order to support `CONNECT` method.
+
 == Metrics
 The TCP client supports built-in integration with https://micrometer.io/[`Micrometer`].
 It exposes all metrics with a prefix of `reactor.netty.tcp.client`.
