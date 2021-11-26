@@ -2,6 +2,7 @@
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/udp/client
 :javadoc: https://projectreactor.io/docs/netty/release/api
 :nettyjavadoc: https://netty.io/4.1/api
+:wirelogger: reactor.netty.udp.UdpClient
 
 [[udp-client]]
 = UDP Client
@@ -168,38 +169,7 @@ You can find more about Netty channel options at the following links:
 * https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[Socket Options]
 
 [[client-udp-connection-configurations-wire-logger]]
-=== Wire Logger
-
-Reactor Netty provides wire logging for when the traffic between the peers has to be inspected.
-By default, wire logging is disabled.
-To enable it, you must set the logger `reactor.netty.udp.UdpClient` level to `DEBUG`
-and apply the following configuration:
-
-====
-[source,java,indent=0]
-.{examplesdir}/wiretap/Application.java
-----
-include::{examplesdir}/wiretap/Application.java[lines=18..35]
-----
-<1> Enables the wire logging
-====
-
-By default, the wire logging uses {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP]
-when printing the content.
-When you need to change this to {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
-or {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL],
-you can configure the `UdpClient` as follows:
-
-====
-[source,java,indent=0]
-.{examplesdir}/wiretap/custom/Application.java
-----
-include::{examplesdir}/wiretap/custom/Application.java[lines=18..38]
-----
-<1> Enables the wire logging,
-{javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
-printing the content.
-====
+include::wire-logger.adoc[]
 
 [[client-udp-connection-configurations-event-loop-group]]
 === Event Loop Group
