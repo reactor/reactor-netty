@@ -26,6 +26,7 @@ public class Application {
 				          .proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP)
 				                             .host("proxy")
 				                             .port(8080)
+				                             .nonProxyHosts("localhost")
 				                             .connectTimeoutMillis(20_000)); //<1>
 
 		String response =
