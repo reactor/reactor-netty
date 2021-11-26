@@ -1,6 +1,7 @@
 :sourcedir: ./../../reactor-netty-http/src/main/java
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server
 :javadoc: https://projectreactor.io/docs/netty/release/api
+:wirelogger: reactor.netty.http.server.HttpServer
 
 [[http-server]]
 = HTTP Server
@@ -379,38 +380,7 @@ include::{examplesdir}/channeloptions/Application.java[lines=18..33]
 
 See <<tcp-server>> for more detail about TCP-level configuration.
 
-=== Wire Logger
-
-`Reactor Netty` provides wire logging for when you need to inspect the traffic between the peers.
-By default, wire logging is disabled.
-To enable it, you must set the logger `reactor.netty.http.server.HttpServer` level to `DEBUG`
-and apply the following configuration:
-
-====
-[source,java,indent=0]
-.{examplesdir}/wiretap/Application.java
-----
-include::{examplesdir}/wiretap/Application.java[lines=18..32]
-----
-<1> Enables the wire logging
-====
-
-By default, the wire logging uses {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP]
-when printing the content.
-When you need to change this to {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
-or {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL],
-you can configure the `HttpServer` as follows:
-
-====
-[source,java,indent=0]
-.{examplesdir}/wiretap/custom/Application.java
-----
-include::{examplesdir}/wiretap/custom/Application.java[lines=18..34]
-----
-<1> Enables the wire logging,
-{javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
-printing the content.
-====
+include::wire-logger.adoc[]
 
 == SSL and TLS
 

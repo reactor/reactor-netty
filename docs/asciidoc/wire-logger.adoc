@@ -1,0 +1,64 @@
+:formattersourcedir: ./../../reactor-netty-core/src/main/java
+
+=== Wire Logger
+
+Reactor Netty provides wire logging for when the traffic between the peers needs to be inspected.
+By default, wire logging is disabled.
+To enable it, you must set the logger `{wirelogger}` level to `DEBUG`
+and apply the following configuration:
+
+====
+[source,java,indent=0]
+.{examplesdir}/wiretap/Application.java
+----
+include::{examplesdir}/wiretap/Application.java[lines=18..32]
+----
+<1> Enables the wire logging
+====
+
+==== Wire Logger formatters
+Reactor Netty supports 3 different formatters:
+
+- {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP] - the default
+
+====
+[source,java,indent=0]
+.{sourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
+----
+include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java[lines=47..75]
+----
+====
+
+- {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
+
+====
+[source,java,indent=0]
+.{sourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
+----
+include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java[lines=34..45]
+----
+====
+
+- {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL]
+
+====
+[source,java,indent=0]
+.{sourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
+----
+include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java[lines=77..93]
+----
+====
+
+
+When you need to change the default formatter you can configure it as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/wiretap/custom/Application.java
+----
+include::{examplesdir}/wiretap/custom/Application.java[lines=18..34]
+----
+<1> Enables the wire logging,
+{javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
+printing the content.
+====
