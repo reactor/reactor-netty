@@ -60,7 +60,7 @@ Format
 
 === HTTP/2
 In case of `HTTP/2`, the following is added at the beginning of every log record: the id of the underlying connection,
-the number of the stream received on that connection, local and remote addresses.
+local and remote addresses, the id of the stream received on that connection.
 
 ====
 [source,text,indent=0]
@@ -72,9 +72,9 @@ Examples
 Format
 [<CONNECTION_ID>, L:<LOCAL_ADDRESS> <CONNECTION_OPENED_CLOSED> R:<REMOTE_ADDRESS>]<STREAM_ID>
 <CONNECTION_ID>: a1566d55
-<STREAM_ID>: (H2 - 5)
 <LOCAL_ADDRESS>: [0:0:0:0:0:0:0:1]:53446
 <REMOTE_ADDRESS>: [0:0:0:0:0:0:0:1]:53444
+<STREAM_ID>: (H2 - 5)
 <CONNECTION_OPENED_CLOSED>: - (connection opened)
                             ! (connection closed)
 ----
