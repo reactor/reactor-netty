@@ -73,12 +73,12 @@ final class MicrometerPooledConnectionProviderMeterRegistrar {
 		     .register(REGISTRY);
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + MAX_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::getMaxAllocatedSize)
-				.description("The maximum number of connections that can be acquired")
+				.description("The maximum number of active connections that are allowed")
 				.tags(tags)
 				.register(REGISTRY);
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + MAX_PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::getMaxPendingAcquireSize)
-				.description("The maximum number of requests that are waiting for a connection")
+				.description("The maximum number of requests that will be queued while waiting for a ready connection")
 				.tags(tags)
 				.register(REGISTRY);
 	}
