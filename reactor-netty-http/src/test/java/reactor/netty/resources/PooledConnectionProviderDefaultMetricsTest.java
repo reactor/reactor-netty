@@ -35,10 +35,12 @@ import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
+import static reactor.netty.Metrics.MAX_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.ID;
 import static reactor.netty.Metrics.IDLE_CONNECTIONS;
 import static reactor.netty.Metrics.PENDING_CONNECTIONS;
+import static reactor.netty.Metrics.MAX_PENDING_CONNECTIONS;
 import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
@@ -64,15 +66,19 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 
 	@Test
 	void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabled() throws Exception {
-		doTest(ConnectionProvider.create("test", 1), true);
+		// by default, when the max number of pending acquire is not specified, it will bet set to 2 * max-connection
+		// (see PoolFactory from PoolConnectionProvider.java)
+		doTest(ConnectionProvider.create("test", 1), true, 1, 2);
 	}
 
 	@Test
 	void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabled() throws Exception {
-		doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo().build(), false);
+		doTest(ConnectionProvider.builder("test").maxConnections(1).pendingAcquireMaxCount(10).metrics(true)
+				.lifo().build(), false, 1, 10);
 	}
 
-	private void doTest(ConnectionProvider provider, boolean clientMetricsEnabled) throws Exception {
+	private void doTest(ConnectionProvider provider, boolean clientMetricsEnabled,
+	                    int expectedMaxConnection, int expectedMaxPendingAcquire) throws Exception {
 		disposableServer =
 				createServer()
 				          .handle((req, res) -> res.header("Connection", "close")
@@ -99,13 +105,15 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 
 		              double totalConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr);
 		              double activeConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr);
-		              double idleConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr);
+			          double maxConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + MAX_CONNECTIONS, tagsArr);
+			          double idleConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr);
 		              double pendingConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr);
+					  double maxPendingConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + MAX_PENDING_CONNECTIONS, tagsArr);
 
-		              if (totalConnections == 1 && activeConnections == 1 &&
-		                      idleConnections == 0 && pendingConnections == 0) {
-		                  metrics.set(true);
-		              }
+			          if (totalConnections == 1 && activeConnections == 1 && idleConnections == 0 && pendingConnections == 0 &&
+					          maxConnections == expectedMaxConnection && maxPendingConnections == expectedMaxPendingAcquire) {
+				          metrics.set(true);
+			          }
 		          })
 		          .metrics(clientMetricsEnabled, Function.identity())
 		          .get()
@@ -123,6 +131,8 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr)).isEqualTo(0);
 		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr)).isEqualTo(0);
 		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr)).isEqualTo(0);
+		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + MAX_CONNECTIONS, tagsArr)).isEqualTo(expectedMaxConnection);
+		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + MAX_PENDING_CONNECTIONS, tagsArr)).isEqualTo(expectedMaxPendingAcquire);
 
 		fixed.disposeLater()
 		     .block(Duration.ofSeconds(30));

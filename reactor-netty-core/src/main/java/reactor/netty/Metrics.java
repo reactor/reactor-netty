@@ -142,6 +142,11 @@ public class Metrics {
 	public static final String ACTIVE_CONNECTIONS = ".active.connections";
 
 	/**
+	 * The maximum number of connections that can be acquired
+	 */
+	public static final String MAX_CONNECTIONS = ".max.connections";
+
+	/**
 	 * The number of the idle connections
 	 */
 	public static final String IDLE_CONNECTIONS = ".idle.connections";
@@ -150,6 +155,11 @@ public class Metrics {
 	 * The number of requests that are waiting for a connection
 	 */
 	public static final String PENDING_CONNECTIONS = ".pending.connections";
+
+	/**
+	 * The maximum number of requests that are waiting for a connection
+	 */
+	public static final String MAX_PENDING_CONNECTIONS = ".max.pending.connections";
 
 
 	// ByteBufAllocator Metrics

@@ -25,6 +25,8 @@ import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.ID;
 import static reactor.netty.Metrics.IDLE_CONNECTIONS;
+import static reactor.netty.Metrics.MAX_CONNECTIONS;
+import static reactor.netty.Metrics.MAX_PENDING_CONNECTIONS;
 import static reactor.netty.Metrics.PENDING_CONNECTIONS;
 import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.REGISTRY;
@@ -69,5 +71,15 @@ final class MicrometerPooledConnectionProviderMeterRegistrar {
 		     .description("The number of the request, that are pending acquire a connection")
 		     .tags(tags)
 		     .register(REGISTRY);
+
+		Gauge.builder(CONNECTION_PROVIDER_PREFIX + MAX_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::getMaxAllocatedSize)
+				.description("The maximum number of connections that can be acquired")
+				.tags(tags)
+				.register(REGISTRY);
+
+		Gauge.builder(CONNECTION_PROVIDER_PREFIX + MAX_PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::getMaxPendingAcquireSize)
+				.description("The maximum number of requests that are waiting for a connection")
+				.tags(tags)
+				.register(REGISTRY);
 	}
 }
