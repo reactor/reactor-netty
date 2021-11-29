@@ -30,9 +30,9 @@ Format
 [<CONNECTION_ID>, L:<LOCAL_ADDRESS> <CONNECTION_OPENED_CLOSED> R:<REMOTE_ADDRESS>]
 <CONNECTION_ID>: a1566d55
 <LOCAL_ADDRESS>: [0:0:0:0:0:0:0:1]:53446
-<REMOTE_ADDRESS>: [0:0:0:0:0:0:0:1]:53444
 <CONNECTION_OPENED_CLOSED>: - (connection opened)
                             ! (connection closed)
+<REMOTE_ADDRESS>: [0:0:0:0:0:0:0:1]:53444
 ----
 ====
 
@@ -52,9 +52,9 @@ Format
 <CONNECTION_ID>: a1566d55
 <REQUEST_NUMBER>: 5
 <LOCAL_ADDRESS>: [0:0:0:0:0:0:0:1]:53446
-<REMOTE_ADDRESS>: [0:0:0:0:0:0:0:1]:53444
 <CONNECTION_OPENED_CLOSED>: - (connection opened)
                             ! (connection closed)
+<REMOTE_ADDRESS>: [0:0:0:0:0:0:0:1]:53444
 ----
 ====
 
@@ -73,10 +73,10 @@ Format
 [<CONNECTION_ID>, L:<LOCAL_ADDRESS> <CONNECTION_OPENED_CLOSED> R:<REMOTE_ADDRESS>]<STREAM_ID>
 <CONNECTION_ID>: a1566d55
 <LOCAL_ADDRESS>: [0:0:0:0:0:0:0:1]:53446
-<REMOTE_ADDRESS>: [0:0:0:0:0:0:0:1]:53444
-<STREAM_ID>: (H2 - 5)
 <CONNECTION_OPENED_CLOSED>: - (connection opened)
                             ! (connection closed)
+<REMOTE_ADDRESS>: [0:0:0:0:0:0:0:1]:53444
+<STREAM_ID>: (H2 - 5)
 ----
 ====
 
