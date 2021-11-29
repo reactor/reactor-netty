@@ -4,9 +4,84 @@
 This section covers the following content:
 
 * <<faq.proxy-connect-method>>
+* <<faq.logging-prefix>>
+* <<faq.logging-correlation>>
 
 [[faq.proxy-connect-method]]
 == Connection to the proxy cannot be established
 include::proxy.adoc[tag=proxy-connect-method]
 
+[[faq.logging-prefix]]
+== What is it meaning of the information that is prepended to every log record?
+Reactor Netty adds information for the connection at the beginning of every log record (when this is possible).
+There is a slight difference in the details for the connection when you use `TCP`, `UDP`, `HTTP/1.1` or `HTTP/2`.
 
+=== TCP and UDP
+In case of `TCP` and `UDP`, the following is added at the beginning of every log record: the id of the underlying connection, local and remote addresses.
+
+====
+[source,text,indent=0]
+----
+Examples
+[a1566d55, L:/[0:0:0:0:0:0:0:1]:53446 - R:/[0:0:0:0:0:0:0:1]:53444]
+[a1566d55, L:/[0:0:0:0:0:0:0:1]:53446 ! R:/[0:0:0:0:0:0:0:1]:53444]
+
+Format
+[<CONNECTION_ID>, L:<LOCAL_ADDRESS> <CONNECTION_OPENED_CLOSED> R:<REMOTE_ADDRESS>]
+<CONNECTION_ID>: a1566d55
+<LOCAL_ADDRESS>: [0:0:0:0:0:0:0:1]:53446
+<REMOTE_ADDRESS>: [0:0:0:0:0:0:0:1]:53444
+<CONNECTION_OPENED_CLOSED>: - (connection opened)
+                            ! (connection closed)
+----
+====
+
+=== HTTP/1.1
+In case of `HTTP/1.1`, the following is added at the beginning of every log record: the id of the underlying connection,
+the serial number of the request received on that connection, local and remote addresses.
+
+====
+[source,text,indent=0]
+----
+Examples
+[a1566d55-5, L:/[0:0:0:0:0:0:0:1]:53446 - R:/[0:0:0:0:0:0:0:1]:53444]
+[a1566d55-5, L:/[0:0:0:0:0:0:0:1]:53446 ! R:/[0:0:0:0:0:0:0:1]:53444]
+
+Format
+[<CONNECTION_ID>-<REQUEST_NUMBER>, L:<LOCAL_ADDRESS> <CONNECTION_OPENED_CLOSED> R:<REMOTE_ADDRESS>]
+<CONNECTION_ID>: a1566d55
+<REQUEST_NUMBER>: 5
+<LOCAL_ADDRESS>: [0:0:0:0:0:0:0:1]:53446
+<REMOTE_ADDRESS>: [0:0:0:0:0:0:0:1]:53444
+<CONNECTION_OPENED_CLOSED>: - (connection opened)
+                            ! (connection closed)
+----
+====
+
+=== HTTP/2
+In case of `HTTP/2`, the following is added at the beginning of every log record: the id of the underlying connection,
+the number of the stream received on that connection, local and remote addresses.
+
+====
+[source,text,indent=0]
+----
+Examples
+[a1566d55, L:/[0:0:0:0:0:0:0:1]:53446 - R:/[0:0:0:0:0:0:0:1]:53444](H2 - 5)
+[a1566d55, L:/[0:0:0:0:0:0:0:1]:53446 ! R:/[0:0:0:0:0:0:0:1]:53444](H2 - 5)
+
+Format
+[<CONNECTION_ID>, L:<LOCAL_ADDRESS> <CONNECTION_OPENED_CLOSED> R:<REMOTE_ADDRESS>]<STREAM_ID>
+<CONNECTION_ID>: a1566d55
+<STREAM_ID>: (H2 - 5)
+<LOCAL_ADDRESS>: [0:0:0:0:0:0:0:1]:53446
+<REMOTE_ADDRESS>: [0:0:0:0:0:0:0:1]:53444
+<CONNECTION_OPENED_CLOSED>: - (connection opened)
+                            ! (connection closed)
+----
+====
+
+[[faq.logging-correlation]]
+== How can I extract all log records for a particular HTTP request?
+Reactor Netty adds information for the connection at the beginning of every log record (when this is possible).
+Use the id of the connection in order to extract all log records for a particular HTTP request.
+For more information see <<faq.logging-prefix>>
