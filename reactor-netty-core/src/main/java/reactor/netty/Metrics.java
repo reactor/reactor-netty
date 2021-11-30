@@ -142,7 +142,7 @@ public class Metrics {
 	public static final String ACTIVE_CONNECTIONS = ".active.connections";
 
 	/**
-	 * The maximum number of connections that can be acquired
+	 * The maximum number of active connections that are allowed
 	 */
 	public static final String MAX_CONNECTIONS = ".max.connections";
 
@@ -157,7 +157,7 @@ public class Metrics {
 	public static final String PENDING_CONNECTIONS = ".pending.connections";
 
 	/**
-	 * The maximum number of requests that are waiting for a connection
+	 * The maximum number of requests that will be queued while waiting for a ready connection
 	 */
 	public static final String MAX_PENDING_CONNECTIONS = ".max.pending.connections";
 
