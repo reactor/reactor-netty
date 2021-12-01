@@ -281,12 +281,13 @@ public final class ProxyProvider {
 		int port = parsePort(properties.getProperty(portProperty, defaultPort), portProperty);
 
 		String nonProxyHosts = properties.getProperty(HTTP_NON_PROXY_HOSTS, DEFAULT_NON_PROXY_HOSTS);
+		RegexShouldProxyPredicate transformedNonProxyHosts = RegexShouldProxyPredicate.fromWildcardedPattern(nonProxyHosts);
 
 		return ProxyProvider.builder()
 				.type(ProxyProvider.Proxy.HTTP)
 				.host(hostname)
 				.port(port)
-				.nonProxyHosts(nonProxyHosts)
+				.nonProxyHostsPredicate(transformedNonProxyHosts)
 				.build();
 	}
 
