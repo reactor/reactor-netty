@@ -69,16 +69,7 @@ final class HttpConnectionProvider implements ConnectionProvider {
 	static ConnectionProvider getOrCreate(ConnectionProvider http1ConnectionProvider) {
 		ConnectionProvider provider = h2ConnectionProvider.get();
 		if (provider == null) {
-			Builder builder =
-					ConnectionProvider.builder("http2")
-					                  .maxConnections(http1ConnectionProvider.maxConnections())
-					                  .pendingAcquireMaxCount(-1);
-			if (http1ConnectionProvider.maxConnectionsPerHost() != null) {
-				http1ConnectionProvider.maxConnectionsPerHost()
-				                       .forEach((address, maxConn) -> builder.forRemoteHost(address, spec -> spec.maxConnections(maxConn)));
-			}
-			h2ConnectionProvider.compareAndSet(null,
-					new Http2ConnectionProvider(http1ConnectionProvider, builder));
+			h2ConnectionProvider.compareAndSet(null, new Http2ConnectionProvider(http1ConnectionProvider));
 			provider = getOrCreate(http1ConnectionProvider);
 		}
 		return provider;

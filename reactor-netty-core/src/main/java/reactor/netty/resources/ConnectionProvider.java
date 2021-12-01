@@ -232,6 +232,28 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
+	 * Returns a builder to mutate properties of this {@link ConnectionProvider}
+	 *
+	 * @return a builder to mutate properties of this {@link ConnectionProvider}
+	 * @since 1.0.14
+	 */
+	@Nullable
+	default Builder mutate() {
+		return null;
+	}
+
+	/**
+	 * Returns {@link ConnectionProvider} name used for metrics
+	 *
+	 * @return {@link ConnectionProvider} name used for metrics
+	 * @since 1.0.14
+	 */
+	@Nullable
+	default String name() {
+		return null;
+	}
+
+	/**
 	 * Build a {@link ConnectionProvider} to cache and reuse a fixed maximum number of
 	 * {@link Connection}. Further connections will be pending acquisition depending on
 	 * pendingAcquireTime. The maximum number of connections is for the connections in a single
@@ -258,6 +280,15 @@ public interface ConnectionProvider extends Disposable {
 		private Builder(String name) {
 			super();
 			name(name);
+		}
+
+		Builder(Builder copy) {
+			super(copy);
+			this.name = copy.name;
+			this.inactivePoolDisposeInterval = copy.inactivePoolDisposeInterval;
+			this.poolInactivity = copy.poolInactivity;
+			this.disposeTimeout = copy.disposeTimeout;
+			copy.confPerRemoteHost.forEach((address, spec) -> this.confPerRemoteHost.put(address, new ConnectionPoolSpec<>(spec)));
 		}
 
 		/**
@@ -367,6 +398,18 @@ public interface ConnectionProvider extends Disposable {
 			if (DEFAULT_POOL_MAX_LIFE_TIME > -1) {
 				maxLifeTime(Duration.ofMillis(DEFAULT_POOL_MAX_LIFE_TIME));
 			}
+		}
+
+		ConnectionPoolSpec(ConnectionPoolSpec<SPEC> copy) {
+			this.evictionInterval = copy.evictionInterval;
+			this.maxConnections = copy.maxConnections;
+			this.pendingAcquireMaxCount = copy.pendingAcquireMaxCount;
+			this.pendingAcquireTimeout = copy.pendingAcquireTimeout;
+			this.maxIdleTime = copy.maxIdleTime;
+			this.maxLifeTime = copy.maxLifeTime;
+			this.metricsEnabled = copy.metricsEnabled;
+			this.leasingStrategy = copy.leasingStrategy;
+			this.registrar = copy.registrar;
 		}
 
 		/**

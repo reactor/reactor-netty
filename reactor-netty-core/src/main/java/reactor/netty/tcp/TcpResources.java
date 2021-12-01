@@ -235,6 +235,16 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	@Override
+	public Builder mutate() {
+		return defaultProvider.mutate();
+	}
+
+	@Override
+	public String name() {
+		return defaultProvider.name();
+	}
+
+	@Override
 	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoopGroup group) {
 		requireNonNull(channelType, "channelType");
 		requireNonNull(group, "group");
