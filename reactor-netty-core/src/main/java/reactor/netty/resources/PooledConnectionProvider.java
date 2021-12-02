@@ -73,6 +73,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 	final ConcurrentMap<PoolKey, InstrumentedPool<T>> channelPools = new ConcurrentHashMap<>();
 
+	final Builder builder;
 	final String name;
 	final Duration inactivePoolDisposeInterval;
 	final Duration poolInactivity;
@@ -84,6 +85,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 	// Used only for testing purposes
 	PooledConnectionProvider(Builder builder, @Nullable Clock clock) {
+		this.builder = builder;
 		this.name = builder.name;
 		this.inactivePoolDisposeInterval = builder.inactivePoolDisposeInterval;
 		this.poolInactivity = builder.poolInactivity;
@@ -193,6 +195,16 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	@Override
 	public int maxConnections() {
 		return defaultPoolFactory.maxConnections;
+	}
+
+	@Override
+	public Builder mutate() {
+		return new Builder(builder);
+	}
+
+	@Override
+	public String name() {
+		return name;
 	}
 
 	protected abstract CoreSubscriber<PooledRef<T>> createDisposableAcquire(

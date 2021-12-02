@@ -5,6 +5,8 @@ Pooled `ConnectionProvider` metrics
 | metric name | type | description
 | reactor.netty.connection.provider.total.connections | Gauge | The number of all connections, active or idle
 | reactor.netty.connection.provider.active.connections | Gauge | The number of the connections that have been successfully acquired and are in active use
+| reactor.netty.connection.provider.max.connections | Gauge | The maximum number of active connections that are allowed
 | reactor.netty.connection.provider.idle.connections | Gauge | The number of the idle connections
 | reactor.netty.connection.provider.pending.connections | Gauge | The number of requests that are waiting for a connection
+| reactor.netty.connection.provider.max.pending.connections | Gauge | The maximum number of requests that will be queued while waiting for a ready connection
 |=======

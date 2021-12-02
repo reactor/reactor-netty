@@ -50,6 +50,8 @@ class ProxyProviderTest {
 	private static final long CONNECT_TIMEOUT_1 = 100;
 	private static final long CONNECT_TIMEOUT_2 = 200;
 
+	private static final String DEFAULT_NON_PROXY_HOSTS_TRANSFORMED_TO_REGEX = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern(ProxyProvider.DEFAULT_NON_PROXY_HOSTS).toString();
+
 	@Test
 	void equalProxyProviders() {
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1)).isEqualTo(createProxy(ADDRESS_1, PASSWORD_1));
@@ -292,7 +294,7 @@ class ProxyProviderTest {
 		ProxyProvider provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(ProxyProvider.DEFAULT_NON_PROXY_HOSTS);
+		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(DEFAULT_NON_PROXY_HOSTS_TRANSFORMED_TO_REGEX);
 	}
 
 	@Test
@@ -303,7 +305,7 @@ class ProxyProviderTest {
 		ProxyProvider provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(ProxyProvider.DEFAULT_NON_PROXY_HOSTS);
+		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(DEFAULT_NON_PROXY_HOSTS_TRANSFORMED_TO_REGEX);
 	}
 
 	@Test
@@ -327,7 +329,7 @@ class ProxyProviderTest {
 		ProxyProvider provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo("non-host");
+		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo("\\Qnon-host\\E");
 	}
 
 	@Test
@@ -339,7 +341,31 @@ class ProxyProviderTest {
 		ProxyProvider provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo("non-host");
+		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo("\\Qnon-host\\E");
+	}
+
+	@Test
+	void proxyFromSystemProperties_customNonProxyHostsWithWildcardSetForHttpProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "*.non-host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider).isNotNull();
+		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(".*\\Q.non-host\\E");
+	}
+
+	@Test
+	void proxyFromSystemProperties_customNonProxyHostsWithWildcardSetForHttpsProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "*.non-host");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+
+		assertThat(provider).isNotNull();
+		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(".*\\Q.non-host\\E");
 	}
 
 	@Test

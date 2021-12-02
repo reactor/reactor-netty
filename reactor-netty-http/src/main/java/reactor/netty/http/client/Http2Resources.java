@@ -54,16 +54,7 @@ final class Http2Resources extends TcpResources {
 	}
 
 	static ConnectionProvider newConnectionProvider(ConnectionProvider parent) {
-		Builder builder =
-				ConnectionProvider.builder("http2")
-				                  .maxConnections(parent.maxConnections())
-				                  .pendingAcquireMaxCount(-1);
-		if (parent.maxConnectionsPerHost() != null) {
-			parent.maxConnectionsPerHost()
-			      .forEach((address, maxConn) -> builder.forRemoteHost(address, spec -> spec.maxConnections(maxConn)));
-		}
-
-		return new Http2ConnectionProvider(parent, builder);
+		return new Http2ConnectionProvider(parent);
 	}
 
 	static final AtomicReference<Http2Resources> http2Resources;

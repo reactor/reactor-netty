@@ -44,4 +44,14 @@ final class DelegatingConnectionPoolMetrics implements ConnectionPoolMetrics {
 	public int pendingAcquireSize() {
 		return delegate.pendingAcquireSize();
 	}
+
+	@Override
+	public int maxAllocatedSize() {
+		return delegate.getMaxAllocatedSize();
+	}
+
+	@Override
+	public int maxPendingAcquireSize() {
+		return delegate.getMaxPendingAcquireSize();
+	}
 }

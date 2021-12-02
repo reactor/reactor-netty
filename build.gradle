@@ -23,12 +23,12 @@ buildscript {
 		maven { url "https://repo.spring.io/plugins-release" }
 	}
 	dependencies {
-		classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.24.23' //applied in individual submodules
+		classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.25.0' //applied in individual submodules
 	}
 }
 
 plugins {
-	id "com.diffplug.spotless" version "6.0.0"
+	id "com.diffplug.spotless" version "6.0.1"
 	id 'org.asciidoctor.jvm.convert' version '3.3.2' apply false
 	id 'org.asciidoctor.jvm.pdf' version '3.3.2' apply false
 	id 'com.google.osdetector' version '1.7.0'
@@ -104,7 +104,7 @@ ext {
 		println "Netty version defined from command line: ${forceNettyVersion}"
 	}
 	nettyIoUringVersion = '0.0.10.Final'
-	nettyQuicVersion = '0.0.23.Final'
+	nettyQuicVersion = '0.0.24.Final'
 
 	// Testing
 	jacksonDatabindVersion = '2.13.0'
@@ -118,7 +118,7 @@ ext {
 	junitPlatformLauncherVersion = '1.8.2'
 	mockitoVersion = '4.1.0'
 	blockHoundVersion = '1.0.6.RELEASE'
-	bouncycastleVersion = '1.69'
+	bouncycastleVersion = '1.70'
 
 	jdk = JavaVersion.current().majorVersion
 	jdkJavadoc = "https://docs.oracle.com/javase/${jdk}/docs/api/"
