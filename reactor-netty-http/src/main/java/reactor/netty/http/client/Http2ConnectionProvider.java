@@ -83,7 +83,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		String name = parent.name() == null ? CONNECTION_PROVIDER_NAME : CONNECTION_PROVIDER_NAME + NAME_SEPARATOR + parent.name();
 		Builder builder = parent.mutate();
 		if (builder != null) {
-			return builder.name(name);
+			return builder.name(name).pendingAcquireMaxCount(-1);
 		}
 		else {
 			// this is the case when there is no pool
