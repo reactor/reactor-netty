@@ -74,9 +74,24 @@ import static reactor.netty.http.client.HttpClientState.UPGRADE_SUCCESSFUL;
 final class Http2ConnectionProvider extends PooledConnectionProvider<Connection> {
 	final ConnectionProvider parent;
 
-	Http2ConnectionProvider(ConnectionProvider parent, Builder builder) {
-		super(builder);
+	Http2ConnectionProvider(ConnectionProvider parent) {
+		super(initConfiguration(parent));
 		this.parent = parent;
+	}
+
+	static Builder initConfiguration(ConnectionProvider parent) {
+		String name = parent.name() == null ? CONNECTION_PROVIDER_NAME : CONNECTION_PROVIDER_NAME + NAME_SEPARATOR + parent.name();
+		Builder builder = parent.mutate();
+		if (builder != null) {
+			return builder.name(name).pendingAcquireMaxCount(-1);
+		}
+		else {
+			// this is the case when there is no pool
+			// only one connection is created and used for all requests
+			return ConnectionProvider.builder(name)
+			                         .maxConnections(parent.maxConnections())
+			                         .pendingAcquireMaxCount(-1);
+		}
 	}
 
 	@Override
@@ -137,6 +152,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		           }
 		       });
 	}
+
+	static final String CONNECTION_PROVIDER_NAME = "http2";
+	static final String NAME_SEPARATOR = ".";
 
 	static final Logger log = Loggers.getLogger(Http2ConnectionProvider.class);
 
