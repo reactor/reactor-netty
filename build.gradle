@@ -118,7 +118,7 @@ ext {
 	junitPlatformLauncherVersion = '1.8.2'
 	mockitoVersion = '4.1.0'
 	blockHoundVersion = '1.0.6.RELEASE'
-	bouncycastleVersion = '1.69'
+	bouncycastleVersion = '1.70'
 
 	jdk = JavaVersion.current().majorVersion
 	jdkJavadoc = "https://docs.oracle.com/javase/${jdk}/docs/api/"
