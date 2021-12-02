@@ -6,6 +6,7 @@ This section covers the following content:
 * <<faq.proxy-connect-method>>
 * <<faq.logging-prefix>>
 * <<faq.logging-correlation>>
+* <<faq.connection-closed>>
 
 [[faq.proxy-connect-method]]
 == Connection to the proxy cannot be established
@@ -85,3 +86,24 @@ Format
 Reactor Netty adds information for the connection at the beginning of every log record (when this is possible).
 Use the id of the connection in order to extract all log records for a particular HTTP request.
 For more information see <<faq.logging-prefix>>
+
+[[faq.connection-closed]]
+== How can I debug "Connection prematurely closed BEFORE response"?
+By default, Reactor Netty clients use connection pooling. When a connection is acquired from the connection pool, it is checked to see whether it is still open.
+However, the connection can be closed at any time after the acquisition. There are many reasons that can cause a connection to be closed.
+In most cases, the client might not send directly to the server. Instead, there might be other network components (proxies, load balancers, and so on) between them.
+
+If, on the client side, you observe `Connection prematurely closed BEFORE response`, perform the following checks to identify the reason for the connection being closed:
+
+* Obtain a https://en.wikipedia.org/wiki/Tcpdump[TCP dump] and check which peer sends a FIN/RST signal.
+* Check your network connection.
+* Check your Firewall and VPN.
+* Check for any proxies and load balancers. Do they have some kind of idle timeout configuration (the connection is closed when there is no incoming data for a certain period of time)?
+* Check the target server. Are there configurations related to any of the following?
+** idle timeout (the connection is closed when there is no incoming data for a certain period of time)
+** limit for buffering data in memory
+** multipart exceeds the max file size limit
+** bad request
+
+Consider checking <<Timeout Configuration>>. The section describes various timeout configuration options that are available for Reactor Netty clients.
+Configuring a proper timeout may improve or solve issues in the communication process.
