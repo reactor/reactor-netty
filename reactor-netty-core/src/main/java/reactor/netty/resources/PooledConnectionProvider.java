@@ -47,6 +47,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -70,6 +71,7 @@ import static reactor.netty.resources.ConnectionProvider.ConnectionPoolSpec.PEND
  */
 public abstract class PooledConnectionProvider<T extends Connection> implements ConnectionProvider {
 	final PoolFactory<T> defaultPoolFactory;
+	final Map<SocketAddress, PoolFactory<T>> poolFactoryPerRemoteHost = new HashMap<>();
 
 	final ConcurrentMap<PoolKey, InstrumentedPool<T>> channelPools = new ConcurrentHashMap<>();
 
@@ -78,6 +80,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	final Duration inactivePoolDisposeInterval;
 	final Duration poolInactivity;
 	final Duration disposeTimeout;
+	final Map<SocketAddress, Integer> maxConnections = new HashMap<>();
 
 	protected PooledConnectionProvider(Builder builder) {
 		this(builder, null);
@@ -91,6 +94,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		this.poolInactivity = builder.poolInactivity;
 		this.disposeTimeout = builder.disposeTimeout;
 		this.defaultPoolFactory = new PoolFactory<>(builder, builder.disposeTimeout, clock);
+		for (Map.Entry<SocketAddress, ConnectionPoolSpec<?>> entry : builder.confPerRemoteHost.entrySet()) {
+			poolFactoryPerRemoteHost.put(entry.getKey(), new PoolFactory<>(entry.getValue(), builder.disposeTimeout));
+			maxConnections.put(entry.getKey(), entry.getValue().maxConnections);
+		}
 		scheduleInactivePoolsDisposal();
 	}
 
@@ -198,6 +205,11 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	}
 
 	@Override
+	public Map<SocketAddress, Integer> maxConnectionsPerHost() {
+		return maxConnections;
+	}
+
+	@Override
 	public Builder mutate() {
 		return new Builder(builder);
 	}
@@ -221,7 +233,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			AddressResolverGroup<?> resolverGroup);
 
 	protected PoolFactory<T> poolFactory(SocketAddress remoteAddress) {
-		return this.defaultPoolFactory;
+		return poolFactoryPerRemoteHost.getOrDefault(remoteAddress, defaultPoolFactory);
 	}
 
 	final boolean compareAddresses(SocketAddress origin, SocketAddress target) {
