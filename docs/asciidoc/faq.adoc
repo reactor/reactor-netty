@@ -102,6 +102,9 @@ logger (`_reactor.netty.channel.LeakDetection`) that helps to identify where the
 or whether Reactor Netty already forwarded the ownership of the buffers to the application/framework.
 By default, this logger is disabled. To enable it, increase the log level to `DEBUG`.
 
+NOTE: Consider reducing the used memory when debugging memory leak issues (e.g `-XX:MaxDirectMemorySize`, `-Xms`, `-Xmx`).
+The less memory the application has, the sooner the memory leak will happen.
+
 [[faq.connection-closed]]
 == How can I debug "Connection prematurely closed BEFORE response"?
 By default, Reactor Netty clients use connection pooling. When a connection is acquired from the connection pool, it is checked to see whether it is still open.
