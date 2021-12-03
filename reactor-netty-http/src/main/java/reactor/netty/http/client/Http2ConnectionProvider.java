@@ -59,11 +59,9 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static reactor.netty.ConnectionObserver.State.DISCONNECTING;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 import static reactor.netty.http.client.HttpClientState.UPGRADE_REJECTED;
-import static reactor.netty.http.client.HttpClientState.UPGRADE_SUCCESSFUL;
 
 /**
  * A HTTP/2 implementation for pooled {@link ConnectionProvider}.
@@ -120,11 +118,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			DisposableAcquire da = (DisposableAcquire) owner;
 			da.pooledRef
 			  .invalidate()
-			  .subscribe(null, null, () -> {
-			      if (log.isDebugEnabled()) {
-			          logPoolState(channel, da.pool, "Channel removed from the pool");
-			      }
-			  });
+			  .subscribe();
 		}
 	}
 
@@ -136,7 +130,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 	}
 
 	static void registerClose(Channel channel) {
-		ConnectionObserver owner = channel.attr(OWNER).get();
+		ConnectionObserver owner = channel.parent().attr(OWNER).get();
 		channel.closeFuture()
 		       .addListener(f -> {
 		           Channel parent = channel.parent();
@@ -146,10 +140,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		               logStreamsState(channel, localEndpoint, "Stream closed");
 		           }
 
-		           if (localEndpoint.numActiveStreams() == 0) {
-		               channel.attr(OWNER).set(null);
-		               invalidate(owner, parent);
-		           }
+		           invalidate(owner, parent);
 		       });
 	}
 
@@ -259,10 +250,6 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.pooledRef = pooledRef;
 			Channel channel = pooledRef.poolable().channel();
 
-			if (log.isDebugEnabled()) {
-				logPoolState(channel, pool, "Channel activated");
-			}
-
 			ConnectionObserver current = channel.attr(OWNER)
 			                                    .getAndSet(this);
 
@@ -294,10 +281,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
-			if (newState == UPGRADE_SUCCESSFUL || newState == DISCONNECTING) {
-				release(connection.channel());
-			}
-			else if (newState == UPGRADE_REJECTED) {
+			if (newState == UPGRADE_REJECTED) {
 				invalidate(connection.channel().attr(OWNER).get(), connection.channel());
 			}
 
@@ -357,8 +341,6 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			else {
 				sink.error(future.cause());
 			}
-
-			release(this, channel);
 		}
 
 		boolean isH2cUpgrade() {
@@ -411,23 +393,6 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			}
 			return false;
 		}
-
-		static void release(Channel channel) {
-			release(channel.attr(OWNER).get(), channel);
-		}
-
-		static void release(@Nullable ConnectionObserver owner, Channel channel) {
-			if (owner instanceof DisposableAcquire) {
-				DisposableAcquire da = (DisposableAcquire) owner;
-				da.pooledRef
-				  .release()
-				  .subscribe(null, null, () -> {
-				      if (log.isDebugEnabled()) {
-				          logPoolState(channel, da.pool, "Channel deactivated");
-				      }
-				  });
-			}
-		}
 	}
 
 	static final class PendingConnectionObserver implements ConnectionObserver {
@@ -473,42 +438,18 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.config = (HttpClientConfig) config;
 			this.remoteAddress = remoteAddress;
 			this.resolver = resolver;
-			this.pool = poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE);
+			this.pool = poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
+					poolConFig -> new Http2Pool(poolConFig, poolFactory.maxLifeTime()));
 		}
 
 		Publisher<Connection> connectChannel() {
 			return parent.acquire(config, new DelegatingConnectionObserver(), remoteAddress, resolver)
-				         .map(conn -> {
-				             if (log.isDebugEnabled()) {
-				                 logPoolState(conn.channel(), pool, "Channel acquired from the parent pool");
-				             }
-
-				             return conn;
-				         });
+				         .map(conn -> conn);
 		}
 
 		static final BiPredicate<Connection, PooledRefMetadata> DEFAULT_EVICTION_PREDICATE =
-				(connection, metadata) -> !connection.channel().isActive() || !connection.isPersistent();
+				(connection, metadata) -> false;
 
-		static final Function<Connection, Publisher<Void>> DEFAULT_DESTROY_HANDLER =
-				connection -> {
-					Channel channel = connection.channel();
-					if (channel.isActive()) {
-						Http2FrameCodec frameCodec = channel.pipeline().get(Http2FrameCodec.class);
-						if (frameCodec != null && frameCodec.connection().local().numActiveStreams() == 0) {
-							ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
-							if (ops != null) {
-								ops.listener().onStateChange(ops, ConnectionObserver.State.DISCONNECTING);
-							}
-							else if (connection instanceof ConnectionObserver) {
-								((ConnectionObserver) connection).onStateChange(connection, ConnectionObserver.State.DISCONNECTING);
-							}
-							else {
-								connection.dispose();
-							}
-						}
-					}
-					return Mono.empty();
-				};
+		static final Function<Connection, Publisher<Void>> DEFAULT_DESTROY_HANDLER = connection -> Mono.empty();
 	}
 }
