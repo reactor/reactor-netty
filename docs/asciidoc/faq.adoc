@@ -6,6 +6,7 @@ This section covers the following content:
 * <<faq.proxy-connect-method>>
 * <<faq.logging-prefix>>
 * <<faq.logging-correlation>>
+* <<faq.memory-leaks>>
 * <<faq.connection-closed>>
 
 [[faq.proxy-connect-method]]
@@ -86,6 +87,23 @@ Format
 Reactor Netty adds information for the connection at the beginning of every log record (when this is possible).
 Use the id of the connection in order to extract all log records for a particular HTTP request.
 For more information see <<faq.logging-prefix>>
+
+[[faq.memory-leaks]]
+== How can I debug a memory leak?
+By default, Reactor Netty uses direct memory as this is more performant
+when there are many native I/O operations (working with sockets), as this can remove the copying operations.
+As allocation and deallocation are expensive operations, Reactor Netty also uses pooled buffers by default.
+For more information, see https://github.com/netty/netty/wiki/Reference-counted-objects[Reference Counted Objects].
+
+To be able to debug memory issues with the direct memory and the pooled buffers, Netty provides a special memory leak detection mechanism.
+Follow the instructions for https://github.com/netty/netty/wiki/Reference-counted-objects#troubleshooting-buffer-leaks[Troubleshooting Buffer Leaks]
+to enable this mechanism. In addition to the instructions provided by Netty, Reactor Netty provides a special
+logger (`_reactor.netty.channel.LeakDetection`) that helps to identify where the memory leak might be located inside Reactor Netty
+or whether Reactor Netty already forwarded the ownership of the buffers to the application/framework.
+By default, this logger is disabled. To enable it, increase the log level to `DEBUG`.
+
+NOTE: Consider reducing the used memory when debugging memory leak issues (e.g `-XX:MaxDirectMemorySize`, `-Xms`, `-Xmx`).
+The less memory the application has, the sooner the memory leak will happen.
 
 [[faq.connection-closed]]
 == How can I debug "Connection prematurely closed BEFORE response"?
