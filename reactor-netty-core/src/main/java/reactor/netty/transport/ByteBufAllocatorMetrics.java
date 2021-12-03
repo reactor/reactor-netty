@@ -17,11 +17,17 @@ package reactor.netty.transport;
 
 import io.micrometer.core.instrument.Gauge;
 import io.netty.buffer.ByteBufAllocatorMetric;
+import io.netty.buffer.PoolArenaMetric;
+import io.netty.buffer.PoolChunkListMetric;
+import io.netty.buffer.PoolChunkMetric;
 import io.netty.buffer.PooledByteBufAllocatorMetric;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static reactor.netty.Metrics.ACTIVE_DIRECT_MEMORY;
+import static reactor.netty.Metrics.ACTIVE_HEAP_MEMORY;
 import static reactor.netty.Metrics.BYTE_BUF_ALLOCATOR_PREFIX;
 import static reactor.netty.Metrics.CHUNK_SIZE;
 import static reactor.netty.Metrics.DIRECT_ARENAS;
@@ -57,12 +63,12 @@ final class ByteBufAllocatorMetrics {
 			String[] tags = new String[] {ID, key, TYPE, allocType};
 
 			Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + USED_HEAP_MEMORY, metrics, ByteBufAllocatorMetric::usedHeapMemory)
-			     .description("The number of the bytes of the heap memory.")
+			     .description("The number of bytes committed to heap buffer allocator.")
 			     .tags(tags)
 			     .register(REGISTRY);
 
 			Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + USED_DIRECT_MEMORY, metrics, ByteBufAllocatorMetric::usedDirectMemory)
-			     .description("The number of the bytes of the direct memory.")
+			     .description("The number of bytes committed to direct buffer allocator.")
 			     .tags(tags)
 			     .register(REGISTRY);
 
@@ -98,9 +104,37 @@ final class ByteBufAllocatorMetrics {
 				     .description("The chunk size for an arena.")
 				     .tags(tags)
 				     .register(REGISTRY);
+
+				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, pooledMetrics.heapArenas(), this::activeMemory)
+						.description("The actual bytes consumed by in-use buffers allocated from heap buffer pools.")
+						.tags(tags)
+						.register(REGISTRY);
+
+				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, pooledMetrics.directArenas(), this::activeMemory)
+						.description("The actual bytes consumed by in-use buffers allocated from direct buffer pools.")
+						.tags(tags)
+						.register(REGISTRY);
 			}
 
 			return metrics;
 		});
+	}
+
+	/**
+	 * Obtains an estimate of bytes actually allocated for in-use buffers.
+	 * @param arenas the list of pool arenas from where the buffers are allocated
+	 */
+	private double activeMemory(List<PoolArenaMetric> arenas) {
+		double totalUsed = 0;
+		for (PoolArenaMetric arenaMetrics : arenas) {
+			for (PoolChunkListMetric arenaMetric : arenaMetrics.chunkLists()) {
+				for (PoolChunkMetric chunkMetric : arenaMetric) {
+					// chunkMetric.chunkSize() returns maximum of bytes that can be served out of the chunk
+					// and chunkMetric.freeBytes() returns the bytes that are not yet allocated by in-use buffers
+					totalUsed += chunkMetric.chunkSize() - chunkMetric.freeBytes();
+				}
+			}
+		}
+		return totalUsed;
 	}
 }

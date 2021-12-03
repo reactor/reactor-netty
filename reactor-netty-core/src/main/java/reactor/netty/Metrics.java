@@ -180,14 +180,24 @@ public class Metrics {
 
 	// ByteBufAllocator Metrics
 	/**
-	 * The number of the bytes of the heap memory
+	 * The number of bytes committed to heap buffer allocator
 	 */
 	public static final String USED_HEAP_MEMORY = ".used.heap.memory";
 
 	/**
-	 * The number of the bytes of the direct memory
+	 * The number of bytes committed to direct buffer allocator
 	 */
 	public static final String USED_DIRECT_MEMORY = ".used.direct.memory";
+
+	/**
+	 * The actual bytes consumed by in-use buffers allocated from heap buffer pools
+	 */
+	public static final String ACTIVE_HEAP_MEMORY = ".active.heap.memory";
+
+	/**
+	 * The actual bytes consumed by in-use buffers allocated from direct buffer pools
+	 */
+	public static final String ACTIVE_DIRECT_MEMORY = ".active.direct.memory";
 
 	/**
 	 * The number of heap arenas
