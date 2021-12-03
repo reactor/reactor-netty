@@ -19,8 +19,6 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
@@ -64,8 +62,6 @@ import static reactor.netty.ReactorNetty.format;
  * @author Violeta Georgieva
  */
 final class DefaultPooledConnectionProvider extends PooledConnectionProvider<DefaultPooledConnectionProvider.PooledConnection> {
-	final Map<SocketAddress, PoolFactory<PooledConnection>> poolFactoryPerRemoteHost = new HashMap<>();
-	final Map<SocketAddress, Integer> maxConnections = new HashMap<>();
 
 	DefaultPooledConnectionProvider(Builder builder) {
 		this(builder, null);
@@ -74,15 +70,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 	// Used only for testing purposes
 	DefaultPooledConnectionProvider(Builder builder, @Nullable Clock clock) {
 		super(builder, clock);
-		for (Map.Entry<SocketAddress, ConnectionPoolSpec<?>> entry : builder.confPerRemoteHost.entrySet()) {
-			poolFactoryPerRemoteHost.put(entry.getKey(), new PoolFactory<>(entry.getValue(), builder.disposeTimeout));
-			maxConnections.put(entry.getKey(), entry.getValue().maxConnections);
-		}
-	}
-
-	@Override
-	public Map<SocketAddress, Integer> maxConnectionsPerHost() {
-		return maxConnections;
 	}
 
 	@Override
@@ -103,11 +90,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup) {
 		return new PooledConnectionAllocator(config, poolFactory, remoteAddress, resolverGroup).pool;
-	}
-
-	@Override
-	protected PoolFactory<PooledConnection> poolFactory(SocketAddress remoteAddress) {
-		return poolFactoryPerRemoteHost.getOrDefault(remoteAddress, defaultPoolFactory);
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultPooledConnectionProvider.class);
