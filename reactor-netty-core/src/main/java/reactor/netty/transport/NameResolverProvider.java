@@ -37,6 +37,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * A {@link NameResolverProvider} will produce {@link DnsAddressResolverGroup}.
@@ -179,11 +180,12 @@ public final class NameResolverProvider {
 		NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes);
 
 		/**
-		 * Configure the address that will be used to bind too. If `null` the default will be used.
-		 * @param localAddress the bind address
+		 * Set a new local address that will be used to bind.
+		 * By default, the host is configured for any local address, and the system picks up an ephemeral port.		 * @param localAddress the bind address
 		 * @return {@code this}
+		 * @since 1.0.14
 		 */
-		NameResolverSpec localAddress(SocketAddress localAddress);
+		NameResolverSpec localAddress(Supplier<? extends SocketAddress> bindAddressSupplier);
 
 		/**
 		 * Enables an {@link AddressResolverGroup} of {@link DnsNameResolver}s that supports random selection
@@ -469,7 +471,6 @@ public final class NameResolverProvider {
 				.maxPayloadSize(maxPayloadSize)
 				.maxQueriesPerResolve(maxQueriesPerResolve)
 				.ndots(ndots)
-				.localAddress(localAddress)
 				.queryTimeoutMillis(queryTimeout.toMillis())
 				.eventLoop(group.next())
 				.channelFactory(() -> loop.onChannel(DatagramChannel.class, group))
@@ -485,6 +486,9 @@ public final class NameResolverProvider {
 		}
 		if (searchDomains != null) {
 			builder.searchDomains(searchDomains);
+		}
+		if (localAddress != null) {
+			builder.localAddress(localAddress);
 		}
 		return roundRobinSelection ? new RoundRobinDnsAddressResolverGroup(builder) : new DnsAddressResolverGroup(builder);
 	}
@@ -640,8 +644,10 @@ public final class NameResolverProvider {
 		}
 
 		@Override
-		public NameResolverSpec localAddress(SocketAddress localAddress) {
-			this.localAddress = Objects.requireNonNull(localAddress);
+		public NameResolverSpec localAddress(Supplier<? extends SocketAddress> bindAddressSupplier)	{
+			if (bindAddressSupplier != null) {
+				this.localAddress = Objects.requireNonNull(bindAddressSupplier.get(), "bind Address supplier returned null");
+			}
 			return this;
 		}
 
