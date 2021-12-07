@@ -33,9 +33,11 @@ import io.netty.util.concurrent.Future;
 import reactor.netty.resources.LoopResources;
 import reactor.util.annotation.Nullable;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * A {@link NameResolverProvider} will produce {@link DnsAddressResolverGroup}.
@@ -176,6 +178,16 @@ public final class NameResolverProvider {
 		 * @return {@code this}
 		 */
 		NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes);
+
+		/**
+		 * Set a new local address supplier that supply the address to bind to.
+		 * By default, the host is configured for any local address, and the system picks up an ephemeral port.
+		 *
+		 * @param bindAddressSupplier A supplier of local address to bind to.
+		 * @return {@code this}
+		 * @since 1.0.14
+		 */
+		NameResolverSpec bindAddressSupplier(Supplier<? extends SocketAddress> bindAddressSupplier);
 
 		/**
 		 * Enables an {@link AddressResolverGroup} of {@link DnsNameResolver}s that supports random selection
@@ -388,6 +400,17 @@ public final class NameResolverProvider {
 	}
 
 	/**
+	 * Returns the configured supplier of local address to bind to or null.
+	 *
+	 * @return the configured supplier of local address to bind to or null
+	 * @since 1.0.14
+	 */
+	@Nullable
+	public Supplier<? extends SocketAddress> bindAddressSupplier() {
+		return bindAddressSupplier;
+	}
+
+	/**
 	 * Returns the configured list of search domains of the resolver or null.
 	 *
 	 * @return the configured list of search domains of the resolver or null
@@ -422,6 +445,7 @@ public final class NameResolverProvider {
 				Objects.equals(loopResources, that.loopResources) &&
 				queryTimeout.equals(that.queryTimeout) &&
 				resolvedAddressTypes == that.resolvedAddressTypes &&
+				Objects.equals(bindAddressSupplier, that.bindAddressSupplier) &&
 				// searchDomains is List so Objects.equals is OK
 				Objects.equals(searchDomains, that.searchDomains);
 	}
@@ -430,7 +454,7 @@ public final class NameResolverProvider {
 	public int hashCode() {
 		return Objects.hash(cacheMaxTimeToLive, cacheMinTimeToLive, cacheNegativeTimeToLive, completeOncePreferredResolved,
 				disableRecursionDesired, disableOptionalRecord, loggingFactory, loopResources, maxPayloadSize,
-				maxQueriesPerResolve, ndots, preferNative, queryTimeout, resolvedAddressTypes, roundRobinSelection,
+				maxQueriesPerResolve, ndots, preferNative, queryTimeout, resolvedAddressTypes, bindAddressSupplier, roundRobinSelection,
 				searchDomains);
 	}
 
@@ -474,6 +498,11 @@ public final class NameResolverProvider {
 		if (resolvedAddressTypes != null) {
 			builder.resolvedAddressTypes(resolvedAddressTypes);
 		}
+		if (bindAddressSupplier != null) {
+			// There is no check for bindAddressSupplier.get() == null
+			// This is deliberate, when null value is provided Netty will use the default behaviour
+			builder.localAddress(bindAddressSupplier.get());
+		}
 		if (searchDomains != null) {
 			builder.searchDomains(searchDomains);
 		}
@@ -495,6 +524,7 @@ public final class NameResolverProvider {
 	final boolean preferNative;
 	final Duration queryTimeout;
 	final ResolvedAddressTypes resolvedAddressTypes;
+	final Supplier<? extends SocketAddress> bindAddressSupplier;
 	final boolean roundRobinSelection;
 	final Iterable<String> searchDomains;
 
@@ -514,6 +544,7 @@ public final class NameResolverProvider {
 		this.preferNative = build.preferNative;
 		this.queryTimeout = build.queryTimeout;
 		this.resolvedAddressTypes = build.resolvedAddressTypes;
+		this.bindAddressSupplier = build.bindAddressSupplier;
 		this.roundRobinSelection = build.roundRobinSelection;
 		this.searchDomains = build.searchDomains;
 	}
@@ -543,6 +574,7 @@ public final class NameResolverProvider {
 		boolean preferNative = LoopResources.DEFAULT_NATIVE;
 		Duration queryTimeout = DEFAULT_QUERY_TIMEOUT;
 		ResolvedAddressTypes resolvedAddressTypes;
+		Supplier<? extends SocketAddress> bindAddressSupplier;
 		boolean roundRobinSelection;
 		Iterable<String> searchDomains;
 
@@ -624,6 +656,14 @@ public final class NameResolverProvider {
 		@Override
 		public NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes) {
 			this.resolvedAddressTypes = Objects.requireNonNull(resolvedAddressTypes);
+			return this;
+		}
+
+		@Override
+		public NameResolverSpec bindAddressSupplier(Supplier<? extends SocketAddress> bindAddressSupplier)	{
+			// If the default behaviour for bindAddress is the desired behaviour, one can provide a Supplier that returns null
+			Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
+			this.bindAddressSupplier = bindAddressSupplier;
 			return this;
 		}
 

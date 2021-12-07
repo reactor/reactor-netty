@@ -472,6 +472,7 @@ Default: {nettyjavadoc}/io/netty/resolver/DefaultHostsFileEntriesResolver.html[`
 Default: -1 (to determine the value from the OS on Unix or use a value of 1 otherwise).
 | `queryTimeout` | Sets the timeout of each DNS query performed by this resolver (resolution: milliseconds). Default: 5000.
 | `resolvedAddressTypes` | The list of the protocol families of the resolved address.
+| `bindAddressSupplier` | The supplier of the local address to bind to.
 | `roundRobinSelection` | Enables an
 {nettyjavadoc}/io/netty/resolver/AddressResolverGroup.html[`AddressResolverGroup`] of
 {nettyjavadoc}/io/netty/resolver/dns/DnsNameResolver.html[`DnsNameResolver`] that supports random selection
