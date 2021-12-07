@@ -181,7 +181,9 @@ public final class NameResolverProvider {
 
 		/**
 		 * Set a new local address that will be used to bind.
-		 * By default, the host is configured for any local address, and the system picks up an ephemeral port.		 * @param localAddress the bind address
+		 * By default, the host is configured for any local address, and the system picks up an ephemeral port.
+		 *
+		 * @param bindAddressSupplier A supplier of the address to bind to.
 		 * @return {@code this}
 		 * @since 1.0.14
 		 */
