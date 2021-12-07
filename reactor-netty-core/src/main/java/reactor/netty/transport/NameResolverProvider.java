@@ -180,14 +180,14 @@ public final class NameResolverProvider {
 		NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes);
 
 		/**
-		 * Set a new local address that will be used to bind.
+		 * Set a new local address supplier that the address to bind to.
 		 * By default, the host is configured for any local address, and the system picks up an ephemeral port.
 		 *
-		 * @param bindAddressSupplier A supplier of the address to bind to.
+		 * @param bindAddressSupplier A supplier of local address to bind to.
 		 * @return {@code this}
 		 * @since 1.0.14
 		 */
-		NameResolverSpec localAddress(Supplier<? extends SocketAddress> bindAddressSupplier);
+		NameResolverSpec bindAddressSupplier(Supplier<? extends SocketAddress> bindAddressSupplier);
 
 		/**
 		 * Enables an {@link AddressResolverGroup} of {@link DnsNameResolver}s that supports random selection
@@ -400,6 +400,16 @@ public final class NameResolverProvider {
 	}
 
 	/**
+	 * Returns the supplier of local address to bind to or null.
+	 *
+	 * @return the supplier of local address to bind to or null
+	 */
+	@Nullable
+	public Supplier<? extends SocketAddress> bindAddressSupplier() {
+		return bindAddressSupplier;
+	}
+
+	/**
 	 * Returns the configured list of search domains of the resolver or null.
 	 *
 	 * @return the configured list of search domains of the resolver or null
@@ -434,6 +444,7 @@ public final class NameResolverProvider {
 				Objects.equals(loopResources, that.loopResources) &&
 				queryTimeout.equals(that.queryTimeout) &&
 				resolvedAddressTypes == that.resolvedAddressTypes &&
+				Objects.equals(bindAddressSupplier, that.bindAddressSupplier) &&
 				// searchDomains is List so Objects.equals is OK
 				Objects.equals(searchDomains, that.searchDomains);
 	}
@@ -442,7 +453,7 @@ public final class NameResolverProvider {
 	public int hashCode() {
 		return Objects.hash(cacheMaxTimeToLive, cacheMinTimeToLive, cacheNegativeTimeToLive, completeOncePreferredResolved,
 				disableRecursionDesired, disableOptionalRecord, loggingFactory, loopResources, maxPayloadSize,
-				maxQueriesPerResolve, ndots, preferNative, queryTimeout, resolvedAddressTypes, roundRobinSelection,
+				maxQueriesPerResolve, ndots, preferNative, queryTimeout, resolvedAddressTypes, bindAddressSupplier, roundRobinSelection,
 				searchDomains);
 	}
 
@@ -486,11 +497,11 @@ public final class NameResolverProvider {
 		if (resolvedAddressTypes != null) {
 			builder.resolvedAddressTypes(resolvedAddressTypes);
 		}
+		if (bindAddressSupplier != null) {
+			builder.localAddress(bindAddressSupplier.get());
+		}
 		if (searchDomains != null) {
 			builder.searchDomains(searchDomains);
-		}
-		if (localAddress != null) {
-			builder.localAddress(localAddress);
 		}
 		return roundRobinSelection ? new RoundRobinDnsAddressResolverGroup(builder) : new DnsAddressResolverGroup(builder);
 	}
@@ -510,9 +521,9 @@ public final class NameResolverProvider {
 	final boolean preferNative;
 	final Duration queryTimeout;
 	final ResolvedAddressTypes resolvedAddressTypes;
+	final Supplier<? extends SocketAddress> bindAddressSupplier;
 	final boolean roundRobinSelection;
 	final Iterable<String> searchDomains;
-	final SocketAddress localAddress;
 
 	NameResolverProvider(Build build) {
 		this.cacheMaxTimeToLive = build.cacheMaxTimeToLive;
@@ -530,7 +541,7 @@ public final class NameResolverProvider {
 		this.preferNative = build.preferNative;
 		this.queryTimeout = build.queryTimeout;
 		this.resolvedAddressTypes = build.resolvedAddressTypes;
-		this.localAddress = build.localAddress;
+		this.bindAddressSupplier = build.bindAddressSupplier;
 		this.roundRobinSelection = build.roundRobinSelection;
 		this.searchDomains = build.searchDomains;
 	}
@@ -560,9 +571,9 @@ public final class NameResolverProvider {
 		boolean preferNative = LoopResources.DEFAULT_NATIVE;
 		Duration queryTimeout = DEFAULT_QUERY_TIMEOUT;
 		ResolvedAddressTypes resolvedAddressTypes;
+		Supplier<? extends SocketAddress> bindAddressSupplier;
 		boolean roundRobinSelection;
 		Iterable<String> searchDomains;
-		SocketAddress localAddress;
 
 		@Override
 		public NameResolverSpec cacheMaxTimeToLive(Duration cacheMaxTimeToLive) {
@@ -646,10 +657,9 @@ public final class NameResolverProvider {
 		}
 
 		@Override
-		public NameResolverSpec localAddress(Supplier<? extends SocketAddress> bindAddressSupplier)	{
-			if (bindAddressSupplier != null) {
-				this.localAddress = Objects.requireNonNull(bindAddressSupplier.get(), "bind Address supplier returned null");
-			}
+		public NameResolverSpec bindAddressSupplier(Supplier<? extends SocketAddress> bindAddressSupplier)	{
+			Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
+			this.bindAddressSupplier = bindAddressSupplier;
 			return this;
 		}
 

@@ -26,9 +26,12 @@ import org.junit.jupiter.api.condition.OS;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpResources;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -219,6 +222,20 @@ class NameResolverProviderTest {
 	void resolvedAddressTypesBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.resolvedAddressTypes(null));
+	}
+
+	@Test
+	void bindAddressSupplier() {
+		assertThat(builder.build().bindAddressSupplier()).isNull();
+		Supplier<SocketAddress> addressSupplier = () -> new InetSocketAddress("localhost", 9527);
+		builder.bindAddressSupplier(addressSupplier);
+		assertThat(builder.build().bindAddressSupplier()).isEqualTo(addressSupplier);
+	}
+
+	@Test
+	void bindAddressSupplierBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.bindAddressSupplier(null));
 	}
 
 	@Test
