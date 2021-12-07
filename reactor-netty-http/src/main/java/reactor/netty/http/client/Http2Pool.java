@@ -24,10 +24,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.BiFunction;
 
 import io.netty.handler.codec.http2.Http2FrameCodec;
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
@@ -246,23 +244,13 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	}
 
 	Mono<Void> destroyPoolable(Http2PooledRef ref) {
-		Mono<Void> userProvidedDestroy;
+		Mono<Void> mono = Mono.empty();
 		try {
-			userProvidedDestroy = Mono.from(destroyHandler().apply(this, ref));
-		}
-		catch (Throwable destroyFunctionError) {
-			userProvidedDestroy = Mono.error(destroyFunctionError);
-		}
-		return userProvidedDestroy;
-	}
-
-	BiFunction<Http2Pool, Http2PooledRef, Publisher<Void>> destroyHandler() {
-		return (pool, pooledRef) -> {
-			pooledRef.slot.decrementConcurrency();
-			Connection connection = pooledRef.poolable();
+			ref.slot.decrementConcurrency();
+			Connection connection = ref.poolable();
 			Http2FrameCodec frameCodec = connection.channel().pipeline().get(Http2FrameCodec.class);
 			if (frameCodec != null) {
-				if (pooledRef.slot.concurrency() == 0 && pooledRef.slot.invalidate()) {
+				if (ref.slot.concurrency() == 0 && ref.slot.invalidate()) {
 					releaseConnection(connection);
 				}
 			}
@@ -270,10 +258,13 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				// no need to guard here with invalidate()
 				// #findConnection will never give a connection that does not have Http2FrameCodec
 				poolConfig.allocationStrategy().returnPermits(1);
-				removeSlot(pooledRef.slot);
+				removeSlot(ref.slot);
 			}
-			return Mono.empty();
-		};
+		}
+		catch (Throwable destroyFunctionError) {
+			mono = Mono.error(destroyFunctionError);
+		}
+		return mono;
 	}
 
 	void doAcquire(Borrower borrower) {
