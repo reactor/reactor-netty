@@ -180,7 +180,7 @@ public final class NameResolverProvider {
 		NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes);
 
 		/**
-		 * Set a new local address supplier that the address to bind to.
+		 * Set a new local address supplier that supply the address to bind to.
 		 * By default, the host is configured for any local address, and the system picks up an ephemeral port.
 		 *
 		 * @param bindAddressSupplier A supplier of local address to bind to.
@@ -400,9 +400,10 @@ public final class NameResolverProvider {
 	}
 
 	/**
-	 * Returns the supplier of local address to bind to or null.
+	 * Returns the configured supplier of local address to bind to or null.
 	 *
-	 * @return the supplier of local address to bind to or null
+	 * @return the configured supplier of local address to bind to or null
+	 * @since 1.0.14
 	 */
 	@Nullable
 	public Supplier<? extends SocketAddress> bindAddressSupplier() {
