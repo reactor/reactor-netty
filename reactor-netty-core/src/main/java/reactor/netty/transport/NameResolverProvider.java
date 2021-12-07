@@ -499,6 +499,8 @@ public final class NameResolverProvider {
 			builder.resolvedAddressTypes(resolvedAddressTypes);
 		}
 		if (bindAddressSupplier != null) {
+			// There is no check for bindAddressSupplier.get() == null
+			// This is deliberate, when null value is provided Netty will use the default behaviour
 			builder.localAddress(bindAddressSupplier.get());
 		}
 		if (searchDomains != null) {
@@ -659,6 +661,7 @@ public final class NameResolverProvider {
 
 		@Override
 		public NameResolverSpec bindAddressSupplier(Supplier<? extends SocketAddress> bindAddressSupplier)	{
+			// If the default behaviour for bindAddress is the desired behaviour, one can provide a Supplier that returns null
 			Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
 			this.bindAddressSupplier = bindAddressSupplier;
 			return this;
