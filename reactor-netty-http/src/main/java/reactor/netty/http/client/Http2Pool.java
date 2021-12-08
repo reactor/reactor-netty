@@ -93,6 +93,7 @@ import static reactor.netty.ReactorNetty.format;
  *     <li>{@link PoolConfig#reuseIdleResourcesInLruOrder()} - FIFO is used when checking the connections.</li>
  *     <li>FIFO is used when obtaining the pending borrowers</li>
  *     <li>Warm up functionality is not supported</li>
+ *     <li>Setting minimum connections configuration is not supported</li>
  * </ul>
  * <p>This class is based on
  * https://github.com/reactor/reactor-pool/blob/v0.2.7/src/main/java/reactor/pool/SimpleDequePool.java
@@ -131,6 +132,9 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	long lastInteractionTimestamp;
 
 	Http2Pool(PoolConfig<Connection> poolConfig, long maxLifeTime) {
+		if (poolConfig.allocationStrategy().getPermits(0) != 0) {
+			throw new IllegalArgumentException("No support for configuring minimum number of connections");
+		}
 		this.clock = poolConfig.clock();
 		this.connections = new ConcurrentLinkedQueue<>();
 		this.lastInteractionTimestamp = clock.millis();

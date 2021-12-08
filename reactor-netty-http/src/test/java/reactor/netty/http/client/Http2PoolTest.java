@@ -38,6 +38,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 class Http2PoolTest {
 
@@ -452,6 +453,14 @@ class Http2PoolTest {
 				connection.dispose();
 			}
 		}
+	}
+
+	@Test
+	void minConnectionsConfigNotSupported() {
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.<Connection>empty()).sizeBetween(1, 2);
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> poolBuilder.build(config -> new Http2Pool(config, -1)));
 	}
 
 	@Test
