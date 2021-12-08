@@ -31,7 +31,6 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.Disposables;
 import reactor.core.Scannable;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.scheduler.Schedulers;
@@ -246,19 +245,13 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	Mono<Void> destroyPoolable(Http2PooledRef ref) {
 		Mono<Void> mono = Mono.empty();
 		try {
-			ref.slot.decrementConcurrency();
-			Connection connection = ref.poolable();
-			Http2FrameCodec frameCodec = connection.channel().pipeline().get(Http2FrameCodec.class);
-			if (frameCodec != null) {
-				if (ref.slot.concurrency() == 0 && ref.slot.invalidate()) {
+			if (ref.slot.decrementConcurrencyAndGet() == 0) {
+				ref.slot.invalidate();
+				Connection connection = ref.poolable();
+				Http2FrameCodec frameCodec = connection.channel().pipeline().get(Http2FrameCodec.class);
+				if (frameCodec != null) {
 					releaseConnection(connection);
 				}
-			}
-			else {
-				// no need to guard here with invalidate()
-				// #findConnection will never give a connection that does not have Http2FrameCodec
-				poolConfig.allocationStrategy().returnPermits(1);
-				removeSlot(ref.slot);
 			}
 		}
 		catch (Throwable destroyFunctionError) {
@@ -311,10 +304,12 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 						borrower.fail(new PoolShutdownException());
 						return;
 					}
-					if (slot.activate()) {
+					if (slot.incrementConcurrencyAndGet() > 1) {
 						borrower.stopPendingCountdown();
+						if (log.isDebugEnabled()) {
+							log.debug(format(slot.connection.channel(), "Channel activated"));
+						}
 						ACQUIRED.incrementAndGet(this);
-						slot.incrementConcurrency();
 						// we are ready here, the connection can be used for opening another stream
 						slot.deactivate();
 						poolConfig.acquisitionScheduler().schedule(() -> borrower.deliver(new Http2PooledRef(slot)));
@@ -355,9 +350,11 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 								                 Connection newInstance = sig.get();
 								                 assert newInstance != null;
 								                 Slot newSlot = new Slot(this, newInstance);
-								                 newSlot.activate();
+								                 if (log.isDebugEnabled()) {
+								                     log.debug(format(newInstance.channel(), "Channel activated"));
+								                 }
 								                 ACQUIRED.incrementAndGet(this);
-								                 newSlot.incrementConcurrency();
+								                 newSlot.incrementConcurrencyAndGet();
 								                 newSlot.deactivate();
 								                 borrower.deliver(new Http2PooledRef(newSlot));
 								             }
@@ -370,41 +367,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 								         })
 								         .contextWrite(borrower.currentContext());
 
-						if (permits == 1) {
-							primary.subscribe(alreadyPropagated -> {}, alreadyPropagatedOrLogged -> drain(), this::drain);
-						}
-						else {
-							int toWarmup = permits - 1;
-							if (log.isDebugEnabled()) {
-								log.debug("should warm up {} extra connections", toWarmup);
-							}
-
-							Flux<Void> warmupFlux =
-									Flux.range(1, toWarmup)
-									    .flatMap(i -> allocator.flatMap(poolable -> {
-									        if (log.isDebugEnabled()) {
-									            log.debug("warmed up extra connections {}/{}", i, toWarmup);
-									        }
-									        Slot newSlot = new Slot(this, poolable);
-									        if (!offerSlot(newSlot)) {
-									            poolConfig.allocationStrategy().returnPermits(1);
-									            releaseConnection(poolable);
-									            return Mono.<Void>empty();
-									        }
-									        return Mono.empty();
-									    })
-									    .onErrorResume(warmupError -> {
-									        if (log.isDebugEnabled()) {
-									            log.debug("failed to warm up extra connections {}/{}: {}", i, toWarmup, warmupError.toString());
-									        }
-									        poolConfig.allocationStrategy().returnPermits(1);
-									        return Mono.empty();
-									    }));
-
-							primary.onErrorResume(e -> Mono.empty())
-							       .thenMany(warmupFlux)
-							       .subscribe(aVoid -> {}, alreadyPropagatedOrLogged -> drain(), this::drain);
-						}
+						primary.subscribe(alreadyPropagated -> {}, alreadyPropagatedOrLogged -> drain(), this::drain);
 					}
 				}
 			}
@@ -439,7 +402,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 					}
 					resources.offer(slot);
 				}
-				else if (slot.isInvalidated()) {
+				else {
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Channel is closed, remove from pool"));
 					}
@@ -457,7 +420,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 					}
 					resources.offer(slot);
 				}
-				else if (slot.isInvalidated()) {
+				else {
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Max life time is reached, remove from pool"));
 					}
@@ -738,13 +701,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		static final AtomicIntegerFieldUpdater<Slot> CONCURRENCY =
 				AtomicIntegerFieldUpdater.newUpdater(Slot.class, "concurrency");
 
-		volatile int state;
-		static final AtomicIntegerFieldUpdater<Slot> STATE = AtomicIntegerFieldUpdater.newUpdater(Slot.class, "state");
-
-		static final int STATE_DEACTIVATED = 0;
-		static final int STATE_ACTIVATED = 1;
-		static final int STATE_INVALIDATED = 2;
-
 		final Connection connection;
 		final long creationTimestamp;
 		final Http2Pool pool;
@@ -753,17 +709,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			this.connection = connection;
 			this.creationTimestamp = pool.clock.millis();
 			this.pool = pool;
-			this.state = STATE_DEACTIVATED;
-		}
-
-		boolean activate() {
-			if (STATE.compareAndSet(this, STATE_DEACTIVATED, STATE_ACTIVATED)) {
-				if (log.isDebugEnabled()) {
-					log.debug(format(connection.channel(), "Channel activated"));
-				}
-				return true;
-			}
-			return false;
 		}
 
 		boolean canOpenStream() {
@@ -781,36 +726,26 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 
 		void deactivate() {
-			if (STATE.compareAndSet(this, STATE_ACTIVATED, STATE_DEACTIVATED)) {
-				if (log.isDebugEnabled()) {
-					log.debug(format(connection.channel(), "Channel deactivated"));
-				}
-				offerSlot(this);
+			if (log.isDebugEnabled()) {
+				log.debug(format(connection.channel(), "Channel deactivated"));
 			}
+			offerSlot(this);
 		}
 
-		void decrementConcurrency() {
-			CONCURRENCY.decrementAndGet(this);
+		int decrementConcurrencyAndGet() {
+			return CONCURRENCY.decrementAndGet(this);
 		}
 
-		void incrementConcurrency() {
-			CONCURRENCY.incrementAndGet(this);
+		int incrementConcurrencyAndGet() {
+			return CONCURRENCY.incrementAndGet(this);
 		}
 
-		boolean invalidate() {
-			if (STATE.compareAndSet(this, STATE_DEACTIVATED, STATE_INVALIDATED)) {
-				if (log.isDebugEnabled()) {
-					log.debug(format(connection.channel(), "Channel removed from pool"));
-				}
-				pool.poolConfig.allocationStrategy().returnPermits(1);
-				removeSlot(this);
-				return true;
+		void invalidate() {
+			if (log.isDebugEnabled()) {
+				log.debug(format(connection.channel(), "Channel removed from pool"));
 			}
-			return false;
-		}
-
-		boolean isInvalidated() {
-			return state == STATE_INVALIDATED;
+			pool.poolConfig.allocationStrategy().returnPermits(1);
+			removeSlot(this);
 		}
 
 		long lifeTime() {
