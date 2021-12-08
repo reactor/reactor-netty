@@ -362,6 +362,30 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				@Nullable AllocationStrategy allocationStrategy,
 				Function<T, Publisher<Void>> destroyHandler,
 				BiPredicate<T, PooledRefMetadata> evictionPredicate) {
+			if (disposeTimeout != null) {
+				return newPoolInternal(allocator, destroyHandler, evictionPredicate)
+						.buildPoolAndDecorateWith(InstrumentedPoolDecorators::gracefulShutdown);
+			}
+			return newPoolInternal(allocator, destroyHandler, evictionPredicate).buildPool();
+		}
+
+		public InstrumentedPool<T> newPool(
+				Publisher<T> allocator,
+				@Nullable AllocationStrategy allocationStrategy,
+				Function<T, Publisher<Void>> destroyHandler,
+				BiPredicate<T, PooledRefMetadata> evictionPredicate,
+				Function<PoolConfig<T>, InstrumentedPool<T>> poolFactory) {
+			if (disposeTimeout != null) {
+				return newPoolInternal(allocator, destroyHandler, evictionPredicate)
+						.build(poolFactory.andThen(InstrumentedPoolDecorators::gracefulShutdown));
+			}
+			return newPoolInternal(allocator, destroyHandler, evictionPredicate).build(poolFactory);
+		}
+
+		PoolBuilder<T, PoolConfig<T>> newPoolInternal(
+				Publisher<T> allocator,
+				Function<T, Publisher<Void>> destroyHandler,
+				BiPredicate<T, PooledRefMetadata> evictionPredicate) {
 			PoolBuilder<T, PoolConfig<T>> poolBuilder =
 					PoolBuilder.from(allocator)
 					           .destroyHandler(destroyHandler)
@@ -394,11 +418,11 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				poolBuilder = poolBuilder.idleResourceReuseMruOrder();
 			}
 
-			if (disposeTimeout != null) {
-				return poolBuilder.buildPoolAndDecorateWith(InstrumentedPoolDecorators::gracefulShutdown);
-			}
+			return poolBuilder;
+		}
 
-			return poolBuilder.buildPool();
+		public long maxLifeTime() {
+			return maxLifeTime;
 		}
 
 		@Override

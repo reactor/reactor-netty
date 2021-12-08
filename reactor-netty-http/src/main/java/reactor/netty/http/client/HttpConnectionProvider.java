@@ -44,8 +44,11 @@ final class HttpConnectionProvider implements ConnectionProvider {
 		if (((HttpClientConfig) config)._protocols == HttpClientConfig.h11) {
 			return http1ConnectionProvider.acquire(config, connectionObserver, remoteAddress, resolverGroup);
 		}
-		else {
+		else if (h2ConnectionProviderSupplier != null) {
 			return h2ConnectionProviderSupplier.get().acquire(config, connectionObserver, remoteAddress, resolverGroup);
+		}
+		else {
+			return getOrCreate(http1ConnectionProvider).acquire(config, connectionObserver, remoteAddress, resolverGroup);
 		}
 	}
 
@@ -58,15 +61,15 @@ final class HttpConnectionProvider implements ConnectionProvider {
 	final Supplier<ConnectionProvider> h2ConnectionProviderSupplier;
 
 	HttpConnectionProvider(ConnectionProvider http1ConnectionProvider) {
-		this(http1ConnectionProvider, () -> getOrCreate(http1ConnectionProvider));
+		this(http1ConnectionProvider, null);
 	}
 
-	HttpConnectionProvider(ConnectionProvider http1ConnectionProvider, Supplier<ConnectionProvider> h2ConnectionProviderSupplier) {
+	HttpConnectionProvider(ConnectionProvider http1ConnectionProvider, @Nullable Supplier<ConnectionProvider> h2ConnectionProviderSupplier) {
 		this.http1ConnectionProvider = http1ConnectionProvider;
 		this.h2ConnectionProviderSupplier = h2ConnectionProviderSupplier;
 	}
 
-	static ConnectionProvider getOrCreate(ConnectionProvider http1ConnectionProvider) {
+	ConnectionProvider getOrCreate(ConnectionProvider http1ConnectionProvider) {
 		ConnectionProvider provider = h2ConnectionProvider.get();
 		if (provider == null) {
 			h2ConnectionProvider.compareAndSet(null, new Http2ConnectionProvider(http1ConnectionProvider));
@@ -75,5 +78,5 @@ final class HttpConnectionProvider implements ConnectionProvider {
 		return provider;
 	}
 
-	static final AtomicReference<ConnectionProvider> h2ConnectionProvider = new AtomicReference<>();
+	final AtomicReference<ConnectionProvider> h2ConnectionProvider = new AtomicReference<>();
 }

@@ -29,12 +29,12 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
-import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -158,15 +159,14 @@ class Http2Tests extends BaseHttpTest {
 
 	@Test
 	void testMaxActiveStreams_1_CustomPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.create("testMaxActiveStreams_1", 1);
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testMaxActiveStreams_1_CustomPool")
+				                  .maxConnections(1)
+				                  .pendingAcquireTimeout(Duration.ofMillis(10)) // the default is 45s
+				                  .build();
 		doTestMaxActiveStreams(HttpClient.create(provider), 1, 1, 1);
 		provider.disposeLater()
 		        .block();
-	}
-
-	@Test
-	void testMaxActiveStreams_1_NoPool() throws Exception {
-		doTestMaxActiveStreams(HttpClient.newConnection(), 1, 1, 1);
 	}
 
 	@Test
@@ -188,6 +188,10 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	void doTestMaxActiveStreams(HttpClient baseClient, int maxActiveStreams, int expectedOnNext, int expectedOnError) throws Exception {
+		doTestMaxActiveStreams(baseClient, maxActiveStreams, 256, 32, expectedOnNext, expectedOnError);
+	}
+
+	void doTestMaxActiveStreams(HttpClient baseClient, int maxActiveStreams, int concurrency, int prefetch, int expectedOnNext, int expectedOnError) throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
@@ -221,7 +225,7 @@ class Http2Tests extends BaseHttpTest {
 				                  .aggregate()
 				                  .asString()
 				                  .materialize(),
-				    256, 32)
+				    concurrency, prefetch)
 				    .collectList()
 				    .doFinally(fin -> latch.countDown())
 				    .block(Duration.ofSeconds(30));
@@ -232,13 +236,13 @@ class Http2Tests extends BaseHttpTest {
 
 		int onNext = 0;
 		int onError = 0;
-		String msg = "Max active streams is reached";
+		String msg = "Pool#acquire(Duration) has been pending for more than the configured timeout of 10ms";
 		for (int i = 0; i < 2; i++) {
 			Signal<? extends String> signal = list.get(i);
 			if (signal.isOnNext()) {
 				onNext++;
 			}
-			else if (signal.getThrowable() instanceof IOException &&
+			else if (signal.getThrowable() instanceof PoolAcquireTimeoutException &&
 					signal.getThrowable().getMessage().contains(msg)) {
 				onError++;
 			}
@@ -493,5 +497,63 @@ class Http2Tests extends BaseHttpTest {
 		          .as(StepVerifier::create)
 		          .expectErrorMessage(expectedMessage)
 		          .verify(Duration.ofSeconds(30));
+	}
+
+	/**
+	 * https://github.com/reactor/reactor-netty/issues/1813
+	 */
+	@Test
+	void testTooManyPermitsReturned_DefaultPool() {
+		testTooManyPermitsReturned(createClient(() -> disposableServer.address()));
+	}
+
+	/**
+	 * https://github.com/reactor/reactor-netty/issues/1813
+	 */
+	@Test
+	void testTooManyPermitsReturned_CustomPool() {
+		ConnectionProvider provider = ConnectionProvider.create("testTooManyPermitsReturned_CustomPool", 2);
+		try {
+			testTooManyPermitsReturned(createClient(provider, () -> disposableServer.address()));
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	private void testTooManyPermitsReturned(HttpClient client) {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		disposableServer =
+				createServer()
+				        .protocol(HttpProtocol.H2)
+				        .secure(sslContextSpec -> sslContextSpec.sslContext(serverCtx))
+				        .handle((req, res) -> res.sendString(Mono.just("testTooManyPermitsReturned")))
+				        .bindNow();
+
+		HttpClient newClient =
+				client.secure(sslContextSpec -> sslContextSpec.sslContext(clientCtx))
+				      .protocol(HttpProtocol.H2);
+
+		IntStream.range(0, 10)
+		         .forEach(index ->
+		             newClient.get()
+		                      .uri("/")
+		                      .responseContent()
+		                      .aggregate()
+		                      .asString()
+		                      .as(StepVerifier::create)
+		                      .expectNext("testTooManyPermitsReturned")
+		                      .expectComplete()
+		                      .verify(Duration.ofSeconds(30)));
+	}
+
+	@Test
+	void testIssue1789() throws Exception {
+		doTestMaxActiveStreams(HttpClient.create(), 1, 1, 1, 2, 0);
 	}
 }

@@ -103,6 +103,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionPoolMetrics;
@@ -1954,60 +1955,180 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testConnectionLifeTimeFixedPool() throws Exception {
+	void testConnectionLifeTimeFixedPoolHttp1() throws Exception {
 		ConnectionProvider provider =
-				ConnectionProvider.builder("testConnectionLifeTimeFixedPool")
+				ConnectionProvider.builder("testConnectionLifeTimeFixedPoolHttp1")
 				                  .maxConnections(1)
 				                  .pendingAcquireTimeout(Duration.ofMillis(100))
 				                  .maxLifeTime(Duration.ofMillis(30))
 				                  .build();
-		ChannelId[] ids = doTestConnectionLifeTime(provider);
-		assertThat(ids[0]).isNotEqualTo(ids[1]);
+		try {
+			ChannelId[] ids = doTestConnectionLifeTime(createServer(),
+					createClient(provider, () -> disposableServer.address()));
+			assertThat(ids[0]).isNotEqualTo(ids[1]);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
 	}
 
 	@Test
-	void testConnectionLifeTimeElasticPool() throws Exception {
+	void testConnectionLifeTimeFixedPoolHttp2_1() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		ConnectionProvider provider =
-				ConnectionProvider.builder("testConnectionNoLifeTimeElasticPool")
+				ConnectionProvider.builder("testConnectionLifeTimeFixedPoolHttp2_1")
+				                  .maxConnections(1)
+				                  .pendingAcquireTimeout(Duration.ofMillis(100))
+				                  .maxLifeTime(Duration.ofMillis(30))
+				                  .build();
+		try {
+			ChannelId[] ids = doTestConnectionLifeTime(
+					createServer().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+					createClient(provider, () -> disposableServer.address()).protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
+			assertThat(ids[0]).isNotEqualTo(ids[1]);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testConnectionLifeTimeElasticPoolHttp1() throws Exception {
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testConnectionLifeTimeElasticPoolHttp1")
 				                  .maxConnections(Integer.MAX_VALUE)
 				                  .maxLifeTime(Duration.ofMillis(30))
 				                  .build();
-		ChannelId[] ids = doTestConnectionLifeTime(provider);
-		assertThat(ids[0]).isNotEqualTo(ids[1]);
+		try {
+			ChannelId[] ids = doTestConnectionLifeTime(createServer(),
+					createClient(provider, () -> disposableServer.address()));
+			assertThat(ids[0]).isNotEqualTo(ids[1]);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
 	}
 
 	@Test
-	void testConnectionNoLifeTimeFixedPool() throws Exception {
+	void testConnectionLifeTimeElasticPoolHttp2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		ConnectionProvider provider =
-				ConnectionProvider.builder("testConnectionNoLifeTimeFixedPool")
+				ConnectionProvider.builder("testConnectionLifeTimeElasticPoolHttp2")
+				                  .maxConnections(Integer.MAX_VALUE)
+				                  .maxLifeTime(Duration.ofMillis(30))
+				                  .build();
+		try {
+			ChannelId[] ids = doTestConnectionLifeTime(
+					createServer().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+					createClient(provider, () -> disposableServer.address()).protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
+			assertThat(ids[0]).isNotEqualTo(ids[1]);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testConnectionNoLifeTimeFixedPoolHttp1() throws Exception {
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testConnectionNoLifeTimeFixedPoolHttp1")
 				                  .maxConnections(1)
 				                  .pendingAcquireTimeout(Duration.ofMillis(100))
 				                  .build();
-		ChannelId[] ids = doTestConnectionLifeTime(provider);
-		assertThat(ids[0]).isEqualTo(ids[1]);
+		try {
+			ChannelId[] ids = doTestConnectionLifeTime(createServer(),
+					createClient(provider, () -> disposableServer.address()));
+			assertThat(ids[0]).isEqualTo(ids[1]);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
 	}
 
 	@Test
-	void testConnectionNoLifeTimeElasticPool() throws Exception {
+	void testConnectionNoLifeTimeFixedPoolHttp2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 		ConnectionProvider provider =
-				ConnectionProvider.create("testConnectionNoLifeTimeElasticPool", Integer.MAX_VALUE);
-		ChannelId[] ids = doTestConnectionLifeTime(provider);
-		assertThat(ids[0]).isEqualTo(ids[1]);
+				ConnectionProvider.builder("testConnectionNoLifeTimeFixedPoolHttp2")
+				                  .maxConnections(1)
+				                  .pendingAcquireTimeout(Duration.ofMillis(100))
+				                  .build();
+		try {
+			ChannelId[] ids = doTestConnectionLifeTime(
+					createServer().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+					createClient(provider, () -> disposableServer.address()).protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
+			assertThat(ids[0]).isEqualTo(ids[1]);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
 	}
 
-	private ChannelId[] doTestConnectionLifeTime(ConnectionProvider provider) throws Exception {
-		disposableServer =
-				createServer()
-				          .handle((req, resp) ->
-				              resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30))
-				                                                         .map(Objects::toString))))
-				          .bindNow();
+	@Test
+	void testConnectionNoLifeTimeElasticPoolHttp1() throws Exception {
+		ConnectionProvider provider =
+				ConnectionProvider.create("testConnectionNoLifeTimeElasticPoolHttp1", Integer.MAX_VALUE);
+		try {
+			ChannelId[] ids = doTestConnectionLifeTime(createServer(),
+					createClient(provider, () -> disposableServer.address()));
+			assertThat(ids[0]).isEqualTo(ids[1]);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
 
-		Flux<ChannelId> id = createHttpClientForContextWithAddress(provider)
-		                       .get()
-		                       .uri("/")
-		                       .responseConnection((res, conn) -> Mono.just(conn.channel().id())
-		                                                              .delayUntil(ch -> conn.inbound().receive()));
+	@Test
+	void testConnectionNoLifeTimeElasticPoolHttp2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		ConnectionProvider provider =
+				ConnectionProvider.create("testConnectionNoLifeTimeElasticPoolHttp2", Integer.MAX_VALUE);
+		try {
+			ChannelId[] ids = doTestConnectionLifeTime(
+					createServer().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+					createClient(provider, () -> disposableServer.address()).protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
+			assertThat(ids[0]).isEqualTo(ids[1]);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	private ChannelId[] doTestConnectionLifeTime(HttpServer server, HttpClient client) throws Exception {
+		disposableServer =
+				server.handle((req, resp) ->
+				          resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30))
+				                                                     .map(Objects::toString))))
+				      .bindNow();
+
+		Flux<ChannelId> id = client.get()
+		                           .uri("/")
+		                           .responseConnection((res, conn) -> {
+		                               Channel channel = !client.configuration().checkProtocol(HttpClientConfig.h2) ?
+		                                   conn.channel() : conn.channel().parent();
+		                               return Mono.just(channel.id())
+		                                          .delayUntil(ch -> conn.inbound().receive());
+		                           });
 
 		ChannelId id1 = id.blockLast(Duration.ofSeconds(30));
 		Thread.sleep(10);
@@ -2016,10 +2137,61 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(id1).isNotNull();
 		assertThat(id2).isNotNull();
 
-		provider.dispose();
 		return new ChannelId[] {id1, id2};
 	}
 
+	@Test
+	void testConnectionLifeTimeFixedPoolHttp2_2() {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		disposableServer =
+				createServer()
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(serverCtx))
+				        .handle((req, resp) ->
+				            resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30))
+				                                                       .map(Objects::toString))))
+				        .bindNow();
+
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testConnectionLifeTimeFixedPoolHttp2_2")
+				                  .maxConnections(1)
+				                  .maxLifeTime(Duration.ofMillis(30))
+				                  .build();
+
+		HttpClient client =
+				createClient(provider, () -> disposableServer.address())
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(clientCtx));
+
+		Flux<ChannelId> id = client.get()
+		                           .uri("/")
+		                           .responseConnection((res, conn) ->
+		                               Mono.just(conn.channel().parent().id())
+		                                   .delayUntil(ch -> conn.inbound().receive()));
+		try {
+			//warmup
+			id.blockLast(Duration.ofSeconds(5));
+
+			List<ChannelId> ids =
+					Flux.range(0, 3)
+					    .flatMap(i -> id)
+					    .collectList()
+					    .block(Duration.ofSeconds(5));
+
+			assertThat(ids).isNotNull().hasSize(3);
+
+			assertThat(ids.get(0)).isEqualTo(ids.get(1));
+			assertThat(ids.get(0)).isNotEqualTo(ids.get(2));
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
 
 	@Test
 	void testResourceUrlSetInResponse() {
