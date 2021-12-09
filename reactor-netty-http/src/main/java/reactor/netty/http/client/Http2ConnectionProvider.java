@@ -113,6 +113,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		return new PooledConnectionAllocator(parent, config, poolFactory, () -> remoteAddress, resolverGroup).pool;
 	}
 
+	@Override
+	protected void registerDefaultMetrics(String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
+		MicrometerHttp2ConnectionProviderMeterRegistrar.INSTANCE
+				.registerMetrics(name(), id, remoteAddress, metrics);
+	}
+
 	static void invalidate(@Nullable ConnectionObserver owner, Channel channel) {
 		if (owner instanceof DisposableAcquire) {
 			DisposableAcquire da = (DisposableAcquire) owner;

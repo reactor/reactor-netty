@@ -20,12 +20,16 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import reactor.core.publisher.Flux;
 import reactor.netty.DisposableServer;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.http.Http2SslContextSpec;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionPoolMetrics;
 import reactor.netty.resources.ConnectionProvider;
@@ -54,41 +58,82 @@ class HttpClientNoMicrometerTest {
 	}
 
 	@Test
-	void clientCreatedWithMetricsDoesntLoadGauge() {
+	void clientCreatedWithMetricsDoesntLoadGaugeHttp1() {
+		ConnectionProvider provider =
+				ConnectionProvider.builder("foo1")
+				                  .metrics(true, NoOpMeterRegistrar::new)
+				                  .build();
+		try {
+			doTestClientCreatedWithMetricsDoesntLoadGauge(HttpServer.create(), HttpClient.create(provider));
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void clientCreatedWithMetricsDoesntLoadGaugeHttp2() throws Exception {
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		ConnectionProvider provider =
+				ConnectionProvider.builder("foo2")
+				                  .metrics(true, NoOpMeterRegistrar::new)
+				                  .build();
+		try {
+			doTestClientCreatedWithMetricsDoesntLoadGauge(
+					HttpServer.create().protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+					HttpClient.create(provider).protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	private void doTestClientCreatedWithMetricsDoesntLoadGauge(HttpServer server, HttpClient client) {
 		//note that this test cannot really access and assert the NoClassDefFoundException, which is forcefully logged by Netty
 		//But when that error occurs, the channel cannot be initialized and the test will fail.
 
-		disposableServer =  HttpServer.create()
-				.port(0)
-				.route(r -> r.get("/foo", (in, out) -> out.sendString(Flux.just("bar"))))
-				.bindNow();
+		disposableServer =
+				server.port(0)
+				      .route(r -> r.get("/foo", (in, out) -> out.sendString(Flux.just("bar"))))
+				      .bindNow();
 
 		final NoOpHttpClientMetricsRecorder metricsRecorder = new NoOpHttpClientMetricsRecorder();
 
-		assertThatCode(() -> HttpClient
-				.create(ConnectionProvider.builder("foo")
-						.metrics(true, NoOpMeterRegistrar::new)
-						.build())
-				.metrics(true, () -> metricsRecorder)
-				.port(disposableServer.port())
-				.baseUrl("/foo")
-				.get()
-				.responseContent()
-				.aggregate()
-				.asString()
-				.block()
+		assertThatCode(() ->
+				client.metrics(true, () -> metricsRecorder)
+				      .port(disposableServer.port())
+				      .baseUrl("/foo")
+				      .get()
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .block()
 		).doesNotThrowAnyException();
 
 		//we still assert that the custom recorder did receive events, since it is not based on micrometer
-		assertThat(metricsRecorder.events).containsExactly(
-				"connectTime,status=SUCCESS",
-				"dataSent",
-				"dataReceived");
+		if (client.configuration().sslProvider() == null) {
+			assertThat(metricsRecorder.events).containsExactly(
+					"connectTime,status=SUCCESS",
+					"dataSent",
+					"dataReceived");
+		}
+		else {
+			assertThat(metricsRecorder.events).contains(
+					"connectTime,status=SUCCESS",
+					"tlsHandshakeTime,status=SUCCESS");
+
+		}
 	}
 
 	private static class NoOpHttpClientMetricsRecorder implements ChannelMetricsRecorder {
 
-		private List<String> events = new ArrayList<>();
+		private final List<String> events = new ArrayList<>();
 
 		@Override
 		public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
