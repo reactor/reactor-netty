@@ -161,6 +161,16 @@ public class Metrics {
 	 */
 	public static final String MAX_PENDING_CONNECTIONS = ".max.pending.connections";
 
+	/**
+	 * The number of the active HTTP/2 streams
+	 */
+	public static final String ACTIVE_STREAMS = ".active.streams";
+
+	/**
+	 * The number of requests that are waiting for opening HTTP/2 stream
+	 */
+	public static final String PENDING_STREAMS = ".pending.streams";
+
 
 	// ByteBufAllocator Metrics
 	/**

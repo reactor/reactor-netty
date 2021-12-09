@@ -379,6 +379,15 @@ These additional metrics are also available:
 
 include::conn-provider-metrics.adoc[]
 
+The following table provides information for the HTTP client metrics when it is configured to serve `HTTP/2` traffic:
+
+[width="100%",options="header"]
+|=======
+| metric name | type | description
+| reactor.netty.connection.provider.active.streams | Gauge | The number of the active HTTP/2 streams
+| reactor.netty.connection.provider.pending.streams | Gauge | The number of requests that are waiting for opening HTTP/2 stream
+|=======
+
 include::alloc-metrics.adoc[]
 
 The following example enables that integration:

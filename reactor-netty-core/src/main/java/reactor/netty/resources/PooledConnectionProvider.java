@@ -133,8 +133,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					else if (Metrics.isInstrumentationAvailable()) {
 						// work directly with the pool otherwise a weak reference is needed to ConnectionPoolMetrics
 						// we don't want to keep another map with weak references
-						MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE
-								.registerMetrics(name, id, remoteAddress, newPool.metrics());
+						registerDefaultMetrics(id, remoteAddress, newPool.metrics());
 					}
 				}
 				return newPool;
@@ -234,6 +233,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 	protected PoolFactory<T> poolFactory(SocketAddress remoteAddress) {
 		return poolFactoryPerRemoteHost.getOrDefault(remoteAddress, defaultPoolFactory);
+	}
+
+	protected void registerDefaultMetrics(String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
+		MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE.registerMetrics(name, id, remoteAddress, metrics);
 	}
 
 	final boolean compareAddresses(SocketAddress origin, SocketAddress target) {
