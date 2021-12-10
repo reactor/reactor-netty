@@ -383,6 +383,8 @@ public abstract class TransportConfig {
 					else if (alloc instanceof UnpooledByteBufAllocator) {
 						ByteBufAllocatorMetrics.INSTANCE.registerMetrics("unpooled", ((UnpooledByteBufAllocator) alloc).metric());
 					}
+
+					MicrometerEventLoopMeterRegistrar.INSTANCE.registerMetrics(channel.eventLoop());
 				}
 			}
 
