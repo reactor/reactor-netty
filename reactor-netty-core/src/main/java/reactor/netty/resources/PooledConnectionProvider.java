@@ -115,7 +115,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			SocketAddress remoteAddress = Objects.requireNonNull(remote.get(), "Remote Address supplier returned null");
 			PoolKey holder = new PoolKey(remoteAddress, config.channelHash());
 			PoolFactory<T> poolFactory = poolFactory(remoteAddress);
-			InstrumentedPool<T> pool = channelPools.computeIfAbsent(holder, poolKey -> {
+			InstrumentedPool<T> pool = channelPools.get(holder);
+			pool = pool != null ? pool : channelPools.computeIfAbsent(holder, poolKey -> {
 				if (log.isDebugEnabled()) {
 					log.debug("Creating a new [{}] client pool [{}] for [{}]", name, poolFactory, remoteAddress);
 				}
