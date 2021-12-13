@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import static reactor.netty.Metrics.EVENT_LOOP_PREFIX;
 import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.PENDING_TASKS;
 import static reactor.netty.Metrics.REGISTRY;
-import static reactor.netty.Metrics.STATUS;
 
 /**
  * Registers gauges for a given @{link {@link EventLoop}.
@@ -36,7 +35,7 @@ import static reactor.netty.Metrics.STATUS;
  * @author Pierre De Rop
  * @since 1.0.14
  */
-public final class MicrometerEventLoopMeterRegistrar {
+final class MicrometerEventLoopMeterRegistrar {
 
 	final static MicrometerEventLoopMeterRegistrar INSTANCE = new MicrometerEventLoopMeterRegistrar();
 
@@ -47,12 +46,11 @@ public final class MicrometerEventLoopMeterRegistrar {
 	void registerMetrics(EventLoop eventLoop) {
 			if (eventLoop instanceof SingleThreadEventExecutor) {
 				SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
-
-				cache.computeIfAbsent(singleThreadEventExecutor.threadProperties().name(), key -> {
+				String executorName = singleThreadEventExecutor.threadProperties().name();
+				cache.computeIfAbsent(executorName, key -> {
 					Gauge.builder(EVENT_LOOP_PREFIX + PENDING_TASKS, singleThreadEventExecutor::pendingTasks)
 							.description("Event loop pending scheduled tasks.")
-							.tag(NAME, singleThreadEventExecutor.threadProperties().name())
-							.tag(STATUS, singleThreadEventExecutor.threadProperties().state().name())
+							.tag(NAME, executorName)
 							.register(REGISTRY);
 					return eventLoop;
 				});

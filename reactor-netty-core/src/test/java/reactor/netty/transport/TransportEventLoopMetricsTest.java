@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,8 +37,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.EVENT_LOOP_PREFIX;
 import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.PENDING_TASKS;
-import static reactor.netty.Metrics.STATUS;
 
+/**
+ * Tests for event loop metrics
+ *
+ * @author Pierre De Rop
+ * @since 1.0.14
+ */
 class TransportEventLoopMetricsTest {
 
 	private MeterRegistry registry;
@@ -59,38 +64,47 @@ class TransportEventLoopMetricsTest {
 	@Test
 	void testEventLoopMetrics() throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
+		DisposableServer server = null;
+		Connection client = null;
 
-		DisposableServer server = TcpServer.create()
-				.port(0)
-				.metrics(true)
-				.doOnConnection(c -> {
-					EventLoop eventLoop = c.channel().eventLoop();
-					IntStream.range(0, 10).forEach(i -> eventLoop.execute(() -> {}));
-					if (eventLoop instanceof SingleThreadEventExecutor) {
-						SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
-						String[] tags = new String[]{
-								NAME, singleThreadEventExecutor.threadProperties().name(),
-								STATUS, singleThreadEventExecutor.threadProperties().state().name()
-						};
-						assertThat(getGaugeValue(EVENT_LOOP_PREFIX + PENDING_TASKS, tags)).isEqualTo(10);
-						latch.countDown();
-					}
-				})
-				.wiretap(true)
-				.bindNow();
+		try {
+			server = TcpServer.create()
+					.port(0)
+					.metrics(true)
+					.doOnConnection(c -> {
+						EventLoop eventLoop = c.channel().eventLoop();
+						IntStream.range(0, 10).forEach(i -> eventLoop.execute(() -> {}));
+						if (eventLoop instanceof SingleThreadEventExecutor) {
+							SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
+							String[] tags = new String[]{
+									NAME, singleThreadEventExecutor.threadProperties().name(),
+							};
+							assertThat(getGaugeValue(EVENT_LOOP_PREFIX + PENDING_TASKS, tags)).isEqualTo(10);
+							latch.countDown();
+						}
+					})
+					.wiretap(true)
+					.bindNow();
 
-		assertThat(server).isNotNull();
+			assertThat(server).isNotNull();
 
-		Connection client = TcpClient.create()
-				.port(server.port())
-				.wiretap(true)
-				.connectNow();
+			client = TcpClient.create()
+					.port(server.port())
+					.wiretap(true)
+					.connectNow();
 
-		assertThat(client).isNotNull();
-		assertThat(latch.await(5, TimeUnit.SECONDS)).as("Did not find 10 pending tasks from meter").isTrue();
+			assertThat(client).isNotNull();
+			assertThat(latch.await(5, TimeUnit.SECONDS)).as("Did not find 10 pending tasks from meter").isTrue();
+		}
 
-		client.disposeNow();
-		server.disposeNow();
+		finally {
+			if (client != null) {
+				client.disposeNow();
+			}
+			if (server != null) {
+				server.disposeNow();
+			}
+		}
 	}
 
 	private double getGaugeValue(String name, String... tags) {

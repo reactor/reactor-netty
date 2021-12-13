@@ -1,0 +1,7 @@
+`EventLoop` metrics
+
+[width="100%",options="header"]
+|=======
+| metric name | type | description
+| reactor.netty.eventloop.pending.tasks | Gauge | The number of tasks that are pending for processing on an event loop
+|=======
