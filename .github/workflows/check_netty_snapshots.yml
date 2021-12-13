@@ -29,4 +29,4 @@ jobs:
           distribution: 'adopt'
           java-version: '8'
       - name: Build with Gradle
-        run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.72.Final-SNAPSHOT'
+        run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.73.Final-SNAPSHOT'

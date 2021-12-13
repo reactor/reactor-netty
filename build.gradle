@@ -95,7 +95,7 @@ ext {
 	logbackVersion = '1.2.7'
 
 	// Netty
-	nettyDefaultVersion = '4.1.71.Final'
+	nettyDefaultVersion = '4.1.72.Final'
 	if (!project.hasProperty("forceNettyVersion")) {
 		nettyVersion = nettyDefaultVersion
 	}
