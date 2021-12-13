@@ -44,7 +44,7 @@ class Http2PoolTest {
 
 	@Test
 	void acquireInvalidate() {
-		Channel channel = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build());
+		EmbeddedChannel channel = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build());
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.just(Connection.from(channel)))
 				           .idleResourceReuseLruOrder()
@@ -75,13 +75,14 @@ class Http2PoolTest {
 			assertThat(http2Pool.metrics().acquiredSize()).isEqualTo(0);
 		}
 		finally {
+			channel.finishAndReleaseAll();
 			Connection.from(channel).dispose();
 		}
 	}
 
 	@Test
 	void acquireRelease() {
-		Channel channel = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build());
+		EmbeddedChannel channel = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build());
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.just(Connection.from(channel)))
 				           .idleResourceReuseLruOrder()
@@ -112,6 +113,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.metrics().acquiredSize()).isEqualTo(0);
 		}
 		finally {
+			channel.finishAndReleaseAll();
 			Connection.from(channel).dispose();
 		}
 	}
@@ -141,6 +143,7 @@ class Http2PoolTest {
 			connection = acquired1.poolable();
 			ChannelId id1 = connection.channel().id();
 			CountDownLatch latch = new CountDownLatch(1);
+			((EmbeddedChannel) connection.channel()).finishAndReleaseAll();
 			connection.onDispose(latch::countDown);
 			connection.dispose();
 
@@ -172,6 +175,7 @@ class Http2PoolTest {
 		}
 		finally {
 			if (connection != null) {
+				((EmbeddedChannel) connection.channel()).finishAndReleaseAll();
 				connection.dispose();
 			}
 		}
@@ -202,6 +206,7 @@ class Http2PoolTest {
 			connection = acquired1.poolable();
 			ChannelId id1 = connection.channel().id();
 			CountDownLatch latch = new CountDownLatch(1);
+			((EmbeddedChannel) connection.channel()).finishAndReleaseAll();
 			connection.onDispose(latch::countDown);
 			connection.dispose();
 
@@ -229,6 +234,7 @@ class Http2PoolTest {
 		}
 		finally {
 			if (connection != null) {
+				((EmbeddedChannel) connection.channel()).finishAndReleaseAll();
 				connection.dispose();
 			}
 		}
@@ -258,6 +264,7 @@ class Http2PoolTest {
 
 			connection = acquired1.poolable();
 			CountDownLatch latch = new CountDownLatch(1);
+			((EmbeddedChannel) connection.channel()).finishAndReleaseAll();
 			connection.onDispose(latch::countDown);
 			connection.dispose();
 
@@ -281,6 +288,7 @@ class Http2PoolTest {
 		}
 		finally {
 			if (connection != null) {
+				((EmbeddedChannel) connection.channel()).finishAndReleaseAll();
 				connection.dispose();
 			}
 		}
@@ -340,9 +348,11 @@ class Http2PoolTest {
 		}
 		finally {
 			if (connection1 != null) {
+				((EmbeddedChannel) connection1.channel()).finishAndReleaseAll();
 				connection1.dispose();
 			}
 			if (connection2 != null) {
+				((EmbeddedChannel) connection2.channel()).finishAndReleaseAll();
 				connection2.dispose();
 			}
 		}
@@ -398,9 +408,11 @@ class Http2PoolTest {
 		}
 		finally {
 			if (connection1 != null) {
+				((EmbeddedChannel) connection1.channel()).finishAndReleaseAll();
 				connection1.dispose();
 			}
 			if (connection2 != null) {
+				((EmbeddedChannel) connection2.channel()).finishAndReleaseAll();
 				connection2.dispose();
 			}
 		}
@@ -450,6 +462,7 @@ class Http2PoolTest {
 		}
 		finally {
 			if (connection != null) {
+				((EmbeddedChannel) connection.channel()).finishAndReleaseAll();
 				connection.dispose();
 			}
 		}
@@ -465,7 +478,7 @@ class Http2PoolTest {
 
 	@Test
 	void nonHttp2ConnectionEmittedOnce() {
-		Channel channel = new EmbeddedChannel();
+		EmbeddedChannel channel = new EmbeddedChannel();
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.just(Connection.from(channel)))
 				           .idleResourceReuseLruOrder()
@@ -491,6 +504,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.metrics().acquiredSize()).isEqualTo(0);
 		}
 		finally {
+			channel.finishAndReleaseAll();
 			Connection.from(channel).dispose();
 		}
 	}
