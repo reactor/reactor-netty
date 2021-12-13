@@ -28,9 +28,9 @@ import static reactor.netty.Metrics.PENDING_TASKS;
 import static reactor.netty.Metrics.REGISTRY;
 
 /**
- * Registers gauges for a given @{link {@link EventLoop}.
+ * Registers gauges for a given {@link EventLoop}.
  *
- * Every gauge uses thread name and state as tags.
+ * Every gauge uses thread name as tag.
  *
  * @author Pierre De Rop
  * @since 1.0.14
@@ -44,17 +44,17 @@ final class MicrometerEventLoopMeterRegistrar {
 	private MicrometerEventLoopMeterRegistrar() {}
 
 	void registerMetrics(EventLoop eventLoop) {
-			if (eventLoop instanceof SingleThreadEventExecutor) {
-				SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
-				String executorName = singleThreadEventExecutor.threadProperties().name();
-				cache.computeIfAbsent(executorName, key -> {
-					Gauge.builder(EVENT_LOOP_PREFIX + PENDING_TASKS, singleThreadEventExecutor::pendingTasks)
-							.description("Event loop pending scheduled tasks.")
-							.tag(NAME, executorName)
-							.register(REGISTRY);
-					return eventLoop;
-				});
-			}
+		if (eventLoop instanceof SingleThreadEventExecutor) {
+			SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
+			String executorName = singleThreadEventExecutor.threadProperties().name();
+			cache.computeIfAbsent(executorName, key -> {
+				Gauge.builder(EVENT_LOOP_PREFIX + PENDING_TASKS, singleThreadEventExecutor::pendingTasks)
+						.description("Event loop pending scheduled tasks.")
+						.tag(NAME, executorName)
+						.register(REGISTRY);
+				return eventLoop;
+			});
+		}
 	}
 
 }
