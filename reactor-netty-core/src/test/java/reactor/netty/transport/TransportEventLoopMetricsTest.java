@@ -26,9 +26,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
+import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
@@ -66,11 +68,14 @@ class TransportEventLoopMetricsTest {
 		final CountDownLatch latch = new CountDownLatch(1);
 		DisposableServer server = null;
 		Connection client = null;
+		LoopResources loop = null;
 
 		try {
+			loop = LoopResources.create(TransportEventLoopMetricsTest.class.getName(), 3, true);
 			server = TcpServer.create()
 					.port(0)
 					.metrics(true)
+					.runOn(loop)
 					.doOnConnection(c -> {
 						EventLoop eventLoop = c.channel().eventLoop();
 						IntStream.range(0, 10).forEach(i -> eventLoop.execute(() -> {}));
@@ -103,6 +108,9 @@ class TransportEventLoopMetricsTest {
 			}
 			if (server != null) {
 				server.disposeNow();
+			}
+			if (loop != null) {
+				loop.disposeLater().block(Duration.ofSeconds(10));
 			}
 		}
 	}
