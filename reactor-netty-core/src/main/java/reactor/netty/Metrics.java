@@ -69,6 +69,12 @@ public class Metrics {
 	public static final String UDP_CLIENT_PREFIX = "reactor.netty.udp.client";
 
 	/**
+	 * Name prefix that will be used for Event Loop Group metrics
+	 * registered in Micrometer's global registry
+	 */
+	public static final String EVENT_LOOP_PREFIX = "reactor.netty.eventloop";
+
+	/**
 	 * Name prefix that will be used for the PooledConnectionProvider's metrics
 	 * registered in Micrometer's global registry
 	 */
@@ -212,6 +218,12 @@ public class Metrics {
 	 * The chunk size for an arena
 	 */
 	public static final String CHUNK_SIZE = ".chunk.size";
+
+	// EventLoop Metrics
+	/**
+	 * The number of tasks that are pending for processing on an event loop
+	 */
+	public static final String PENDING_TASKS = ".pending.tasks";
 
 
 	// Tags

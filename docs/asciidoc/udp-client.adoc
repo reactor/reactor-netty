@@ -218,6 +218,7 @@ The following table provides information for the UDP client metrics:
 These additional metrics are also available:
 
 include::alloc-metrics.adoc[]
+include::eventloop-metrics.adoc[]
 
 The following example enables that integration:
 

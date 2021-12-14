@@ -290,6 +290,7 @@ These additional metrics are also available:
 include::conn-provider-metrics.adoc[]
 
 include::alloc-metrics.adoc[]
+include::eventloop-metrics.adoc[]
 
 The following example enables that integration:
 
