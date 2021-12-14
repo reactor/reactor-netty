@@ -13,8 +13,8 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
     }
 
     dependencies {
-      //compile "io.projectreactor.netty.incubator:reactor-netty-incubator-quic:0.0.3-SNAPSHOT"
-      compile "io.projectreactor.netty.incubator:reactor-netty-incubator-quic:0.0.2"
+      //compile "io.projectreactor.netty.incubator:reactor-netty-incubator-quic:0.0.4-SNAPSHOT"
+      compile "io.projectreactor.netty.incubator:reactor-netty-incubator-quic:0.0.3"
     }
 ```
 
