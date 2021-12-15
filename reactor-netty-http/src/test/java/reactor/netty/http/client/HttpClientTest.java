@@ -2152,7 +2152,7 @@ class HttpClientTest extends BaseHttpTest {
 				        .protocol(HttpProtocol.H2)
 				        .secure(spec -> spec.sslContext(serverCtx))
 				        .handle((req, resp) ->
-				            resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30))
+				            resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(40))
 				                                                       .map(Objects::toString))))
 				        .bindNow();
 
