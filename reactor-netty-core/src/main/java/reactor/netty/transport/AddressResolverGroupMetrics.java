@@ -36,7 +36,7 @@ import static reactor.netty.Metrics.SUCCESS;
 /**
  * @author Violeta Georgieva
  */
-final class AddressResolverGroupMetrics<T extends SocketAddress> extends AddressResolverGroup<T> {
+class AddressResolverGroupMetrics<T extends SocketAddress> extends AddressResolverGroup<T> {
 
 	static final ConcurrentMap<Integer, AddressResolverGroupMetrics<?>> cache = new ConcurrentHashMap<>();
 
@@ -50,76 +50,84 @@ final class AddressResolverGroupMetrics<T extends SocketAddress> extends Address
 
 	final ChannelMetricsRecorder recorder;
 
-	private AddressResolverGroupMetrics(AddressResolverGroup<T> resolverGroup, ChannelMetricsRecorder recorder) {
+	AddressResolverGroupMetrics(AddressResolverGroup<T> resolverGroup, ChannelMetricsRecorder recorder) {
 		this.resolverGroup = resolverGroup;
 		this.recorder = recorder;
 	}
 
 	@Override
 	protected AddressResolver<T> newResolver(EventExecutor executor) {
-		AddressResolver<T> resolver = resolverGroup.getResolver(executor);
+		return new DelegatingAddressResolver<>(recorder, resolverGroup.getResolver(executor));
+	}
 
-		return new AddressResolver<T>() {
+	static class DelegatingAddressResolver<T extends SocketAddress> implements AddressResolver<T> {
 
-			@Override
-			public boolean isSupported(SocketAddress address) {
-				return resolver.isSupported(address);
-			}
+		final ChannelMetricsRecorder recorder;
+		final AddressResolver<T> resolver;
 
-			@Override
-			public boolean isResolved(SocketAddress address) {
-				return resolver.isResolved(address);
-			}
+		DelegatingAddressResolver(ChannelMetricsRecorder recorder, AddressResolver<T> resolver) {
+			this.recorder = recorder;
+			this.resolver = resolver;
+		}
 
-			@Override
-			public Future<T> resolve(SocketAddress address) {
-				return resolveInternal(address, () -> resolver.resolve(address));
-			}
+		@Override
+		public boolean isSupported(SocketAddress address) {
+			return resolver.isSupported(address);
+		}
 
-			@Override
-			public Future<T> resolve(SocketAddress address, Promise<T> promise) {
-				return resolveInternal(address, () -> resolver.resolve(address, promise));
-			}
+		@Override
+		public boolean isResolved(SocketAddress address) {
+			return resolver.isResolved(address);
+		}
 
-			@Override
-			public Future<List<T>> resolveAll(SocketAddress address) {
-				return resolveAllInternal(address, () -> resolver.resolveAll(address));
-			}
+		@Override
+		public Future<T> resolve(SocketAddress address) {
+			return resolveInternal(address, () -> resolver.resolve(address));
+		}
 
-			@Override
-			public Future<List<T>> resolveAll(SocketAddress address, Promise<List<T>> promise) {
-				return resolveAllInternal(address, () -> resolver.resolveAll(address, promise));
-			}
+		@Override
+		public Future<T> resolve(SocketAddress address, Promise<T> promise) {
+			return resolveInternal(address, () -> resolver.resolve(address, promise));
+		}
 
-			@Override
-			public void close() {
-				resolver.close();
-			}
+		@Override
+		public Future<List<T>> resolveAll(SocketAddress address) {
+			return resolveAllInternal(address, () -> resolver.resolveAll(address));
+		}
 
-			Future<T> resolveInternal(SocketAddress address, Supplier<Future<T>> resolver) {
-				long resolveTimeStart = System.nanoTime();
-				return resolver.get()
-				               .addListener(
-				                   future -> record(resolveTimeStart,
-				                                    future.isSuccess() ? SUCCESS : ERROR,
-				                                    address));
-			}
+		@Override
+		public Future<List<T>> resolveAll(SocketAddress address, Promise<List<T>> promise) {
+			return resolveAllInternal(address, () -> resolver.resolveAll(address, promise));
+		}
 
-			Future<List<T>> resolveAllInternal(SocketAddress address, Supplier<Future<List<T>>> resolver) {
-				long resolveTimeStart = System.nanoTime();
-				return resolver.get()
-				               .addListener(
-				                   future -> record(resolveTimeStart,
-				                                    future.isSuccess() ? SUCCESS : ERROR,
-				                                    address));
-			}
+		@Override
+		public void close() {
+			resolver.close();
+		}
 
-			void record(long resolveTimeStart, String status, SocketAddress remoteAddress) {
-				recorder.recordResolveAddressTime(
-						remoteAddress,
-						Duration.ofNanos(System.nanoTime() - resolveTimeStart),
-						status);
-			}
-		};
+		Future<T> resolveInternal(SocketAddress address, Supplier<Future<T>> resolver) {
+			long resolveTimeStart = System.nanoTime();
+			return resolver.get()
+			               .addListener(
+			                   future -> record(resolveTimeStart,
+			                                    future.isSuccess() ? SUCCESS : ERROR,
+			                                    address));
+		}
+
+		Future<List<T>> resolveAllInternal(SocketAddress address, Supplier<Future<List<T>>> resolver) {
+			long resolveTimeStart = System.nanoTime();
+			return resolver.get()
+			               .addListener(
+			                   future -> record(resolveTimeStart,
+			                                    future.isSuccess() ? SUCCESS : ERROR,
+			                                    address));
+		}
+
+		void record(long resolveTimeStart, String status, SocketAddress remoteAddress) {
+			recorder.recordResolveAddressTime(
+					remoteAddress,
+					Duration.ofNanos(System.nanoTime() - resolveTimeStart),
+					status);
+		}
 	}
 }

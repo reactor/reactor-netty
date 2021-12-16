@@ -64,8 +64,11 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	final Timer.Builder addressResolverTimeBuilder;
 	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = new ConcurrentHashMap<>();
 
+	final String name;
 
 	public MicrometerChannelMetricsRecorder(String name, String protocol) {
+		this.name = name;
+
 		this.dataReceivedBuilder =
 				DistributionSummary.builder(name + DATA_RECEIVED)
 				                   .baseUnit("bytes")
@@ -94,6 +97,10 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		this.addressResolverTimeBuilder =
 				Timer.builder(name + ADDRESS_RESOLVER)
 				     .description("Time spent for resolving the address");
+	}
+
+	public String name() {
+		return this.name;
 	}
 
 	@Override

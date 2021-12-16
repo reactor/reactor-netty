@@ -35,6 +35,7 @@ import io.netty.resolver.dns.DnsAddressResolverGroup;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.util.annotation.Nullable;
@@ -222,7 +223,12 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	protected AddressResolverGroup<?> resolverInternal() {
 		AddressResolverGroup<?> resolverGroup = resolver != null ? resolver : defaultAddressResolverGroup();
 		if (metricsRecorder != null) {
-			return AddressResolverGroupMetrics.getOrCreate(resolverGroup, metricsRecorder);
+			if (metricsRecorder instanceof MicrometerChannelMetricsRecorder) {
+				return MicrometerAddressResolverGroupMetrics.getOrCreate(resolverGroup, metricsRecorder);
+			}
+			else {
+				return AddressResolverGroupMetrics.getOrCreate(resolverGroup, metricsRecorder);
+			}
 		}
 		else {
 			return resolverGroup;

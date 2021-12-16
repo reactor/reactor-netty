@@ -55,6 +55,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.channel.AbstractChannelMetricsHandler;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ContextAwareChannelMetricsRecorder;
+import reactor.netty.channel.MicrometerChannelMetricsHandler;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -590,14 +591,18 @@ public final class SslProvider {
 	}
 
 	static void addSslReadHandler(ChannelPipeline pipeline, boolean sslDebug) {
+		ChannelHandler handler = pipeline.get(NettyPipeline.ChannelMetricsHandler);
+		ChannelHandler sslReadHandler = handler instanceof MicrometerChannelMetricsHandler ?
+				new MicrometerSslReadHandler(((MicrometerChannelMetricsHandler) handler).recorder()) :
+				new SslReadHandler();
 		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
-			pipeline.addAfter(NettyPipeline.LoggingHandler, NettyPipeline.SslReader, new SslReadHandler());
+			pipeline.addAfter(NettyPipeline.LoggingHandler, NettyPipeline.SslReader, sslReadHandler);
 			if (sslDebug) {
 				pipeline.addBefore(NettyPipeline.SslHandler, NettyPipeline.SslLoggingHandler, LOGGING_HANDLER);
 			}
 		}
 		else {
-			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, new SslReadHandler());
+			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, sslReadHandler);
 		}
 	}
 
@@ -779,7 +784,7 @@ public final class SslProvider {
 		}
 	}
 
-	static final class SslReadHandler extends ChannelInboundHandlerAdapter {
+	static class SslReadHandler extends ChannelInboundHandlerAdapter {
 
 		boolean handshakeDone;
 
