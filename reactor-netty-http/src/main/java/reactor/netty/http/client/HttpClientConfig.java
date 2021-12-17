@@ -72,6 +72,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
@@ -567,9 +568,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpClientMetricsRecorder) {
-				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder ?
-						new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue) :
-						new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				ChannelHandler handler = metricsRecorder instanceof MicrometerChannelMetricsRecorder ?
+						new MicrometerHttpClientMetricsHandler((MicrometerHttpClientMetricsRecorder) metricsRecorder, uriTagValue) :
+						metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder ?
+								new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue) :
+								new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
 		}
@@ -599,9 +602,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpClientMetricsRecorder) {
-				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder ?
-						new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue) :
-						new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				ChannelHandler handler = metricsRecorder instanceof MicrometerChannelMetricsRecorder ?
+						new MicrometerHttpClientMetricsHandler((MicrometerHttpClientMetricsRecorder) metricsRecorder, uriTagValue) :
+						metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder ?
+								new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue) :
+								new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
 		}

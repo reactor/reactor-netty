@@ -74,7 +74,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 				contextView = ops.currentContextView();
 			}
 
-			dataSentTime = System.nanoTime();
+			startWrite(ctx.channel().remoteAddress());
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -97,7 +97,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof HttpResponse) {
 			status = ((HttpResponse) msg).status().codeAsText().toString();
 
-			dataReceivedTime = System.nanoTime();
+			startRead(ctx.channel().remoteAddress());
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -149,6 +149,25 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordDataSent(address, path, dataSent);
 	}
 
+	protected void startRead(SocketAddress address) {
+		dataReceivedTime = System.nanoTime();
+	}
+
+	protected void startWrite(SocketAddress address) {
+		dataSentTime = System.nanoTime();
+	}
+
+	protected void reset() {
+		path = null;
+		method = null;
+		status = null;
+		contextView = null;
+		dataReceived = 0;
+		dataSent = 0;
+		dataReceivedTime = 0;
+		dataSentTime = 0;
+	}
+
 	private String resolveUri(ChannelHandlerContext ctx) {
 		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 		if (channelOps instanceof HttpClientOperations) {
@@ -158,16 +177,5 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		else {
 			return "unknown";
 		}
-	}
-
-	private void reset() {
-		path = null;
-		method = null;
-		status = null;
-		contextView = null;
-		dataReceived = 0;
-		dataSent = 0;
-		dataReceivedTime = 0;
-		dataSentTime = 0;
 	}
 }

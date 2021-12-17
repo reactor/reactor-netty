@@ -545,9 +545,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
-				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder ?
-						new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
-						new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+				ChannelHandler handler = metricsRecorder instanceof MicrometerHttpServerMetricsRecorder ?
+						new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
+						metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder ?
+								new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
+								new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
 				p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, handler);
 				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
 					// MicrometerHttpServerMetricsRecorder does not implement metrics on protocol level
@@ -596,9 +598,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
-				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder ?
-						new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
-						new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+				ChannelHandler handler = metricsRecorder instanceof MicrometerHttpServerMetricsRecorder ?
+						new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
+						metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder ?
+								new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
+								new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
 				p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, handler);
 				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
 					// MicrometerHttpServerMetricsRecorder does not implement metrics on protocol level

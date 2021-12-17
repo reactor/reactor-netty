@@ -62,7 +62,12 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				return;
 			}
 
-			dataSentTime = System.nanoTime();
+			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+			if (channelOps instanceof HttpServerOperations) {
+				HttpServerOperations ops = (HttpServerOperations) channelOps;
+				startWrite(uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
+						ops.method().name(), ops.status().codeAsText().toString());
+			}
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -92,7 +97,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
-			dataReceivedTime = System.nanoTime();
+			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+			if (channelOps instanceof HttpServerOperations) {
+				HttpServerOperations ops = (HttpServerOperations) channelOps;
+				startRead(uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), ops.method().name());
+			}
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -154,5 +163,13 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 		// Always take the remote address from the operations in order to consider proxy information
 		recorder().recordDataSent(ops.remoteAddress(), path, dataSent);
+	}
+
+	protected void startRead(String path, String method) {
+		dataReceivedTime = System.nanoTime();
+	}
+
+	protected void startWrite(String path, String method, String status) {
+		dataSentTime = System.nanoTime();
 	}
 }
