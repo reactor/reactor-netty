@@ -94,7 +94,9 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		DistributionSummary dataReceived = dataReceivedCache.computeIfAbsent(new MeterKey(uri, address, null, null),
+		MeterKey meterKey = new MeterKey(uri, address, null, null);
+		DistributionSummary dataReceived = dataReceivedCache.get(meterKey);
+		dataReceived = dataReceived != null ? dataReceived : dataReceivedCache.computeIfAbsent(meterKey,
 				key -> filter(dataReceivedBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
 				                                 .register(REGISTRY)));
 		if (dataReceived != null) {
@@ -105,7 +107,9 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		DistributionSummary dataSent = dataSentCache.computeIfAbsent(new MeterKey(uri, address, null, null),
+		MeterKey meterKey = new MeterKey(uri, address, null, null);
+		DistributionSummary dataSent = dataSentCache.get(meterKey);
+		dataSent = dataSent != null ? dataSent : dataSentCache.computeIfAbsent(meterKey,
 				key -> filter(dataSentBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
 				                             .register(REGISTRY)));
 		if (dataSent != null) {
@@ -116,7 +120,9 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		Counter errors = errorsCache.computeIfAbsent(new MeterKey(uri, address, null, null),
+		MeterKey meterKey = new MeterKey(uri, address, null, null);
+		Counter errors = errorsCache.get(meterKey);
+		errors = errors != null ? errors : errorsCache.computeIfAbsent(meterKey,
 				key -> filter(errorsBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
 				                           .register(REGISTRY)));
 		if (errors != null) {

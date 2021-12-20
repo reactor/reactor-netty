@@ -42,7 +42,9 @@ final class AddressResolverGroupMetrics<T extends SocketAddress> extends Address
 
 	static AddressResolverGroupMetrics<?> getOrCreate(
 			AddressResolverGroup<?> resolverGroup, ChannelMetricsRecorder recorder) {
-		return cache.computeIfAbsent(Objects.hash(resolverGroup, recorder),
+		int hash = Objects.hash(resolverGroup, recorder);
+		AddressResolverGroupMetrics<?> resolverGroupMetrics = cache.get(hash);
+		return resolverGroupMetrics != null ? resolverGroupMetrics : cache.computeIfAbsent(hash,
 				key -> new AddressResolverGroupMetrics<>(resolverGroup, recorder));
 	}
 

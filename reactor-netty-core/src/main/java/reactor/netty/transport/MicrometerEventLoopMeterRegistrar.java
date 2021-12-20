@@ -47,6 +47,10 @@ final class MicrometerEventLoopMeterRegistrar {
 		if (eventLoop instanceof SingleThreadEventExecutor) {
 			SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
 			String executorName = singleThreadEventExecutor.threadProperties().name();
+			EventLoop executor = cache.get(executorName);
+			if (executor != null) {
+				return;
+			}
 			cache.computeIfAbsent(executorName, key -> {
 				Gauge.builder(EVENT_LOOP_PREFIX + PENDING_TASKS, singleThreadEventExecutor::pendingTasks)
 						.description("Event loop pending scheduled tasks.")
