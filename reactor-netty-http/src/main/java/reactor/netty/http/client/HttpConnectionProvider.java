@@ -24,6 +24,7 @@ import reactor.netty.transport.TransportConfig;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -55,6 +56,16 @@ final class HttpConnectionProvider implements ConnectionProvider {
 	@Override
 	public void disposeWhen(SocketAddress address) {
 		http1ConnectionProvider.disposeWhen(address);
+	}
+
+	@Override
+	public int maxConnections() {
+		return http1ConnectionProvider.maxConnections();
+	}
+
+	@Override
+	public Map<SocketAddress, Integer> maxConnectionsPerHost() {
+		return http1ConnectionProvider.maxConnectionsPerHost();
 	}
 
 	final ConnectionProvider http1ConnectionProvider;
