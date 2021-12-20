@@ -110,19 +110,13 @@ public class Cookies {
 				if (c == null) {
 					continue;
 				}
-				String cookieName = c.name();
-				Set<Cookie> existingCookiesOfName = cookies.get(cookieName);
-				existingCookiesOfName = existingCookiesOfName != null ? existingCookiesOfName :
-						cookies.computeIfAbsent(cookieName, k -> new HashSet<>());
+				Set<Cookie> existingCookiesOfName = cookies.computeIfAbsent(c.name(), k -> new HashSet<>());
 				existingCookiesOfName.add(c);
 			}
 			else {
 				decode = ((ServerCookieDecoder) decoder).decode(aCookieHeader);
 				for (Cookie cookie : decode) {
-					String cookieName = cookie.name();
-					Set<Cookie> existingCookiesOfName = cookies.get(cookieName);
-					existingCookiesOfName = existingCookiesOfName != null ? existingCookiesOfName :
-							cookies.computeIfAbsent(cookieName, k -> new HashSet<>());
+					Set<Cookie> existingCookiesOfName = cookies.computeIfAbsent(cookie.name(), k -> new HashSet<>());
 					existingCookiesOfName.add(cookie);
 				}
 			}

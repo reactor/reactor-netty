@@ -85,14 +85,9 @@ public final class ServerCookies extends Cookies {
 		for (String aCookieHeader : allCookieHeaders) {
 			List<Cookie> decode = serverCookieDecoder.decodeAll(aCookieHeader);
 			for (Cookie cookie : decode) {
-				String cookieName = cookie.name();
-				Set<Cookie> existingCookiesOfNameSet = cookies.get(cookieName);
-				existingCookiesOfNameSet = existingCookiesOfNameSet != null ? existingCookiesOfNameSet :
-						cookies.computeIfAbsent(cookieName, k -> new HashSet<>());
+				Set<Cookie> existingCookiesOfNameSet = cookies.computeIfAbsent(cookie.name(), k -> new HashSet<>());
 				existingCookiesOfNameSet.add(cookie);
-				List<Cookie> existingCookiesOfNameList = allCookies.get(cookieName);
-				existingCookiesOfNameList = existingCookiesOfNameList != null ? existingCookiesOfNameList :
-						allCookies.computeIfAbsent(cookieName, k -> new ArrayList<>());
+				List<Cookie> existingCookiesOfNameList = allCookies.computeIfAbsent(cookie.name(), k -> new ArrayList<>());
 				existingCookiesOfNameList.add(cookie);
 			}
 		}
