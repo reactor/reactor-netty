@@ -25,7 +25,7 @@ jobs:
       - name: Set up JDK 1.8
         uses: actions/setup-java@v2
         with:
-          distribution: 'adopt'
+          distribution: 'temurin'
           java-version: '8'
       - name: Check License
         run: ./gradlew clean spotlessCheck -PspotlessFrom='origin/${{ github.base_ref }}'
