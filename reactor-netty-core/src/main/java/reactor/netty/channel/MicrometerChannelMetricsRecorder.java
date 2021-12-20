@@ -99,7 +99,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		DistributionSummary ds = dataReceivedCache.computeIfAbsent(address,
+		DistributionSummary ds = dataReceivedCache.get(address);
+		ds = ds != null ? ds : dataReceivedCache.computeIfAbsent(address,
 				key -> filter(dataReceivedBuilder.tag(REMOTE_ADDRESS, address)
 				                                 .register(REGISTRY)));
 		if (ds != null) {
@@ -110,7 +111,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, long bytes) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		DistributionSummary ds = dataSentCache.computeIfAbsent(address,
+		DistributionSummary ds = dataSentCache.get(address);
+		ds = ds != null ? ds : dataSentCache.computeIfAbsent(address,
 				key -> filter(dataSentBuilder.tag(REMOTE_ADDRESS, address)
 				                             .register(REGISTRY)));
 		if (ds != null) {
@@ -121,7 +123,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		Counter c = errorsCache.computeIfAbsent(address,
+		Counter c = errorsCache.get(address);
+		c = c != null ? c : errorsCache.computeIfAbsent(address,
 				key -> filter(errorCountBuilder.tag(REMOTE_ADDRESS, address)
 				                               .register(REGISTRY)));
 		if (c != null) {
@@ -132,7 +135,9 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		Timer timer = tlsHandshakeTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
+		MeterKey meterKey = new MeterKey(null, address, null, status);
+		Timer timer = tlsHandshakeTimeCache.get(meterKey);
+		timer = timer != null ? timer : tlsHandshakeTimeCache.computeIfAbsent(meterKey,
 				key -> filter(tlsHandshakeTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
 				                                     .register(REGISTRY)));
 		if (timer != null) {
@@ -143,7 +148,9 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		Timer timer = connectTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
+		MeterKey meterKey = new MeterKey(null, address, null, status);
+		Timer timer = connectTimeCache.get(meterKey);
+		timer = timer != null ? timer : connectTimeCache.computeIfAbsent(meterKey,
 				key -> filter(connectTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
 				                                .register(REGISTRY)));
 		if (timer != null) {
@@ -154,7 +161,9 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		Timer timer = addressResolverTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
+		MeterKey meterKey = new MeterKey(null, address, null, status);
+		Timer timer = addressResolverTimeCache.get(meterKey);
+		timer = timer != null ? timer : addressResolverTimeCache.computeIfAbsent(meterKey,
 				key -> filter(addressResolverTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
 				                                        .register(REGISTRY)));
 		if (timer != null) {
