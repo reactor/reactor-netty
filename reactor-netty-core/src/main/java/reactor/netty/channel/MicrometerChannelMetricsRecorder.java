@@ -66,7 +66,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	final Timer.Builder addressResolverTimeBuilder;
 	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = new ConcurrentHashMap<>();
 
-	private final ConcurrentMap<String, Counter> totalConnectionsCache = new ConcurrentHashMap<>();
+	private final ConcurrentMap<MeterKey, Counter> totalConnectionsCache = new ConcurrentHashMap<>();
 	private final Counter.Builder totalConnectionsBuilder;
 
 	public MicrometerChannelMetricsRecorder(String name, String protocol) {
@@ -183,8 +183,11 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void incrementServerConnections(SocketAddress serverAddr, int amount) {
 		String address = reactor.netty.Metrics.formatSocketAddress(serverAddr);
-		Counter totalConnections = totalConnectionsCache.computeIfAbsent(address,
-				key -> filter(totalConnectionsBuilder.tags(LOCAL_ADDRESS, address).register(REGISTRY)));
+		MeterKey meterKey = new MeterKey(null, address, null, null);
+		Counter totalConnections = totalConnectionsCache.get(meterKey);
+		totalConnections = totalConnections != null ? totalConnections : totalConnectionsCache.computeIfAbsent(meterKey,
+						key -> filter(totalConnectionsBuilder.tags(LOCAL_ADDRESS, address).register(REGISTRY)));
+
 		if (totalConnections != null) {
 			totalConnections.increment(amount);
 		}

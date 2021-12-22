@@ -49,7 +49,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	protected final ConcurrentMap<MeterKey, Counter> activeConnectionsCache = new ConcurrentHashMap<>();
 
 	protected final Counter.Builder connectionsBuilder;
-	protected final ConcurrentMap<SocketAddress, Counter> connectionsCache = new ConcurrentHashMap<>();
+	protected final ConcurrentMap<MeterKey, Counter> connectionsCache = new ConcurrentHashMap<>();
 
 	private MicrometerHttpServerMetricsRecorder() {
 		super(HTTP_SERVER_PREFIX, HTTP);
@@ -137,9 +137,11 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void incrementActiveConnections(String uri, String method, int amount) {
-		Counter activeConnections =
-				activeConnectionsCache.computeIfAbsent(new MeterKey(uri, null, method, null),
-						key -> filter(activeConnectionsBuilder.tags(URI, uri, METHOD, method).register(REGISTRY)));
+		MeterKey meterKey = new MeterKey(uri, null, method, null);
+		Counter activeConnections = activeConnectionsCache.get(meterKey);
+		activeConnections = activeConnections != null ? activeConnections : activeConnectionsCache.computeIfAbsent(meterKey,
+				key -> filter(activeConnectionsBuilder.tags(URI, uri, METHOD, method)
+						.register(REGISTRY)));
 
 		if (activeConnections != null) {
 			activeConnections.increment(amount);
@@ -149,8 +151,9 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void incrementServerConnections(SocketAddress localAddress, int amount) {
 		String address = Metrics.formatSocketAddress(localAddress);
-		Counter connections =
-				connectionsCache.computeIfAbsent(localAddress,
+		MeterKey meterKey = new MeterKey(null, address, null, null);
+		Counter connections = connectionsCache.get(meterKey);
+		connections = connections != null ? connections : connectionsCache.computeIfAbsent(meterKey,
 						key -> filter(connectionsBuilder.tags(URI, HTTP, LOCAL_ADDRESS, address).register(REGISTRY)));
 
 		if (connections != null) {
