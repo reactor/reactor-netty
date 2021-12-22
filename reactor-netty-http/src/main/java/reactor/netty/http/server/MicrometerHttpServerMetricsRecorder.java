@@ -18,16 +18,22 @@ package reactor.netty.http.server;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
+import reactor.netty.Metrics;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
+import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.STATUS;
+import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 import static reactor.netty.Metrics.URI;
 
 /**
@@ -37,9 +43,24 @@ import static reactor.netty.Metrics.URI;
 final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpServerMetricsRecorder {
 
 	final static MicrometerHttpServerMetricsRecorder INSTANCE = new MicrometerHttpServerMetricsRecorder();
+	private final static String HTTP = "http";
+
+	protected final Counter.Builder activeConnectionsBuilder;
+	protected final ConcurrentMap<MeterKey, Counter> activeConnectionsCache = new ConcurrentHashMap<>();
+
+	protected final Counter.Builder connectionsBuilder;
+	protected final ConcurrentMap<SocketAddress, Counter> connectionsCache = new ConcurrentHashMap<>();
 
 	private MicrometerHttpServerMetricsRecorder() {
-		super(HTTP_SERVER_PREFIX, "http");
+		super(HTTP_SERVER_PREFIX, HTTP);
+
+		this.activeConnectionsBuilder =
+				Counter.builder(reactor.netty.Metrics.HTTP_SERVER_PREFIX + ACTIVE_CONNECTIONS)
+						.description("The number of http connections currently processing requests");
+
+		this.connectionsBuilder =
+				Counter.builder(HTTP_SERVER_PREFIX + TOTAL_CONNECTIONS)
+						.description("The number of all opened connections");
 	}
 
 	@Override
@@ -111,6 +132,29 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 				                           .register(REGISTRY)));
 		if (errors != null) {
 			errors.increment();
+		}
+	}
+
+	@Override
+	public void incrementActiveConnections(String uri, String method, int amount) {
+		Counter activeConnections =
+				activeConnectionsCache.computeIfAbsent(new MeterKey(uri, null, method, null),
+						key -> filter(activeConnectionsBuilder.tags(URI, uri, METHOD, method).register(REGISTRY)));
+
+		if (activeConnections != null) {
+			activeConnections.increment(amount);
+		}
+	}
+
+	@Override
+	public void incrementServerConnections(SocketAddress localAddress, int amount) {
+		String address = Metrics.formatSocketAddress(localAddress);
+		Counter connections =
+				connectionsCache.computeIfAbsent(localAddress,
+						key -> filter(connectionsBuilder.tags(URI, HTTP, LOCAL_ADDRESS, address).register(REGISTRY)));
+
+		if (connections != null) {
+			connections.increment(amount);
 		}
 	}
 

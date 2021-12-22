@@ -44,6 +44,18 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	}
 
 	@Override
+	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		recorder().incrementServerConnections(ctx.channel().localAddress(), 1);
+		ctx.fireChannelActive();
+	}
+
+	@Override
+	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+		recorder().incrementServerConnections(ctx.channel().localAddress(), -1);
+		ctx.fireChannelInactive();
+	}
+
+	@Override
 	public void channelRegistered(ChannelHandlerContext ctx) {
 		if (!onServer) {
 			ctx.pipeline()

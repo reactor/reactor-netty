@@ -21,11 +21,13 @@ import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TCP_CLIENT_PREFIX;
 import static reactor.netty.Metrics.TCP_SERVER_PREFIX;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 import static reactor.netty.Metrics.URI;
 
 import io.micrometer.core.instrument.Counter;
@@ -220,16 +222,17 @@ class TcpMetricsTests {
 	private void checkExpectationsPositive() {
 		InetSocketAddress ca = (InetSocketAddress) connection.channel().localAddress();
 		String clientAddress = ca.getHostString() + ":" + ca.getPort();
+		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
+		String serverAddress = sa.getHostString() + ":" + sa.getPort();
 		String[] timerTags = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "SUCCESS"};
 		String[] summaryTags = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
+		String[] totalConnectionsTags = new String[] {URI, "tcp", LOCAL_ADDRESS, serverAddress};
 
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, true);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 1, 5, true);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 1, 5, true);
 		checkCounter(SERVER_ERRORS, summaryTags, 0, false);
 
-		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
-		String serverAddress = sa.getHostString() + ":" + sa.getPort();
 		timerTags = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
 		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
 		checkTimer(CLIENT_CONNECT_TIME, timerTags, true);
@@ -237,6 +240,7 @@ class TcpMetricsTests {
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5, true);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 1, 5, true);
 		checkCounter(CLIENT_ERRORS, summaryTags, 0, false);
+		checkCounter(SERVER_TOTAL_CONNECTIONS, totalConnectionsTags, 1, true);
 	}
 
 	private void checkExpectationsNegative(int port) {
@@ -301,7 +305,7 @@ class TcpMetricsTests {
 		}
 	}
 
-
+	static final String SERVER_TOTAL_CONNECTIONS = TCP_SERVER_PREFIX + TOTAL_CONNECTIONS;
 	static final String SERVER_DATA_SENT = TCP_SERVER_PREFIX + DATA_SENT;
 	static final String SERVER_DATA_RECEIVED = TCP_SERVER_PREFIX + DATA_RECEIVED;
 	static final String SERVER_ERRORS = TCP_SERVER_PREFIX + ERRORS;

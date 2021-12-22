@@ -32,10 +32,12 @@ import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 import static reactor.netty.Metrics.URI;
 
 /**
@@ -64,6 +66,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	final Timer.Builder addressResolverTimeBuilder;
 	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = new ConcurrentHashMap<>();
 
+	private final ConcurrentMap<String, Counter> totalConnectionsCache = new ConcurrentHashMap<>();
+	private final Counter.Builder totalConnectionsBuilder;
 
 	public MicrometerChannelMetricsRecorder(String name, String protocol) {
 		this.dataReceivedBuilder =
@@ -94,6 +98,11 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		this.addressResolverTimeBuilder =
 				Timer.builder(name + ADDRESS_RESOLVER)
 				     .description("Time spent for resolving the address");
+
+		this.totalConnectionsBuilder =
+				Counter.builder(name + TOTAL_CONNECTIONS)
+						.description("The number of all opened connections")
+						.tag(URI, protocol);
 	}
 
 	@Override
@@ -168,6 +177,16 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 				                                        .register(REGISTRY)));
 		if (timer != null) {
 			timer.record(time);
+		}
+	}
+
+	@Override
+	public void incrementServerConnections(SocketAddress serverAddr, int amount) {
+		String address = reactor.netty.Metrics.formatSocketAddress(serverAddr);
+		Counter totalConnections = totalConnectionsCache.computeIfAbsent(address,
+				key -> filter(totalConnectionsBuilder.tags(LOCAL_ADDRESS, address).register(REGISTRY)));
+		if (totalConnections != null) {
+			totalConnections.increment(amount);
 		}
 	}
 

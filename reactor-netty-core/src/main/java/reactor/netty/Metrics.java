@@ -227,6 +227,8 @@ public class Metrics {
 
 
 	// Tags
+	public static final String LOCAL_ADDRESS = "local.address";
+
 	public static final String REMOTE_ADDRESS = "remote.address";
 
 	public static final String URI = "uri";

@@ -103,6 +103,6 @@ class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
 		String[] summaryTags = new String[]{REMOTE_ADDRESS, serverAddress, URI, "unknown"};
-		checkCounter(CLIENT_ERRORS, summaryTags, true, 2);
+		checkCounter(CLIENT_ERRORS, true, 2, summaryTags);
 	}
 }

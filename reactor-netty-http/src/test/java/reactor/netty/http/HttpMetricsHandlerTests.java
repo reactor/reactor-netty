@@ -16,6 +16,7 @@
 package reactor.netty.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
@@ -24,13 +25,14 @@ import static reactor.netty.Metrics.DATA_SENT_TIME;
 import static reactor.netty.Metrics.ERRORS;
 import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
 import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 import static reactor.netty.Metrics.URI;
-
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -71,22 +73,34 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	private MeterRegistry registry;
 
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
+	private volatile double currentTotalConnections;
+	private volatile double currentActiveConnections;
+
+	private static final String SERVER_TOTAL_CONNECTIONS = HTTP_SERVER_PREFIX + TOTAL_CONNECTIONS;
+	private static final String SERVER_ACTIVE_CONNECTIONS = HTTP_SERVER_PREFIX + ACTIVE_CONNECTIONS;
+	private static final String MYTAG = "myuritag";
+	private final static String HTTP = "http";
+	private final static String POST = "POST";
 
 	@BeforeEach
 	void setUp() {
-		httpServer = customizeServerOptions(
-				createServer()
-				          .host("127.0.0.1")
-				          .metrics(true, Function.identity())
-				          .route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
-				                                                    .send(req.receive().retain().delayElements(Duration.ofMillis(10))))
-				                       .post("/2", (req, res) -> res.header("Connection", "close")
-				                                                    .send(req.receive().retain().delayElements(Duration.ofMillis(10))))));
+		httpServer = customizeServerOptions(createServer()
+				.host("127.0.0.1")
+				.metrics(true, Function.identity())
+				.route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
+								.send(req.receive().retain().delayElements(Duration.ofMillis(10))))
+						.post("/2", (req, res) -> res.header("Connection", "close")
+								.send(req.receive().retain().delayElements(Duration.ofMillis(10))))
+						.post("/4", (req, res) -> res.header("Connection", "close")
+								.send(req.receive().retain().doOnNext(b ->
+										checkConnectionsMetrics(req.hostAddress(), false))))
+						.post("/5", (req, res) -> res.header("Connection", "close")
+								.send(req.receive().retain().doOnNext(b ->
+										checkConnectionsMetrics(req.hostAddress(), true))))));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
-		httpClient =
-				customizeClientOptions(createClient(provider, () -> disposableServer.address())
-				                                 .metrics(true, Function.identity()));
+		httpClient = customizeClientOptions(createClient(provider, () -> disposableServer.address())
+				.metrics(true, Function.identity()));
 
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
@@ -96,6 +110,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void tearDown() {
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
+
+		if (disposableServer != null) {
+			disposableServer.disposeNow();
+		}
 
 		Metrics.removeRegistry(registry);
 		registry.clear();
@@ -338,6 +356,56 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(recorder.onDataSentContextView).isTrue();
 	}
 
+	@Test
+	void testServerTotalActiveConnectionsMetrics() throws Exception {
+		testServerTotalActiveConnectionsMetrics(false);
+	}
+
+	@Test
+	void testServerTotalActiveConnectionsMetricsUriTagMapper() throws Exception {
+		testServerTotalActiveConnectionsMetrics(true);
+	}
+
+	private void testServerTotalActiveConnectionsMetrics(boolean uriTagMapper) throws Exception {
+		disposableServer = uriTagMapper ?
+				httpServer.metrics(true, u -> "/5".equals(u) ? MYTAG : u).bindNow() :
+				httpServer.bindNow();
+		String uri = uriTagMapper ? MYTAG : "/4";
+		String address = reactor.netty.Metrics.formatSocketAddress(disposableServer.address());
+		currentTotalConnections = getCounter(SERVER_TOTAL_CONNECTIONS, URI, HTTP, LOCAL_ADDRESS, address);
+		currentActiveConnections = getCounter(SERVER_ACTIVE_CONNECTIONS, URI, uri, METHOD, POST);
+		CountDownLatch latch = new CountDownLatch(1);
+
+		httpClient.doOnResponse((res, conn) ->
+						conn.channel()
+								.closeFuture()
+								.addListener(f -> latch.countDown()))
+				.metrics(true, Function.identity())
+				.post()
+				.uri(uriTagMapper ? "/5" : "/4")
+				.send(body)
+				.responseContent()
+				.aggregate()
+				.asString()
+				.as(StepVerifier::create)
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		checkCounter(SERVER_TOTAL_CONNECTIONS, true, currentTotalConnections, URI, HTTP, LOCAL_ADDRESS, address);
+		checkCounter(SERVER_ACTIVE_CONNECTIONS, true, currentActiveConnections, URI, uri, METHOD, POST);
+
+		disposableServer.disposeNow();
+	}
+
+	private void checkConnectionsMetrics(InetSocketAddress localAddress, boolean useUriMapper) {
+		String uri = useUriMapper ? MYTAG : "/4";
+		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		checkCounter(SERVER_TOTAL_CONNECTIONS, true, currentTotalConnections + 1, URI, HTTP, LOCAL_ADDRESS, address);
+		checkCounter(SERVER_ACTIVE_CONNECTIONS, true, currentActiveConnections + 1, URI, uri, METHOD, POST);
+	}
+
 	private void checkExpectationsExisting(String uri, String serverAddress, int index) {
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "POST", STATUS, "200"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
@@ -348,7 +416,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, 1);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, 1, 12);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, 1, 12);
-		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
+		checkCounter(SERVER_ERRORS, false, 0, summaryTags1);
 
 		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST", STATUS, "200"};
 		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST"};
@@ -363,10 +431,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, 1, 12);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, 1, 12);
-		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
+		checkCounter(CLIENT_ERRORS, false, 0, summaryTags1);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14 * index, 151 * index);
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 3*index, 84*index);
-		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
+		checkCounter(CLIENT_ERRORS, false, 0, summaryTags2);
 	}
 
 	private void checkExpectationsNonExisting(String serverAddress, int index) {
@@ -379,7 +447,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, index);
 		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, index);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, index, 0);
-		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
+		checkCounter(SERVER_ERRORS, false, 0, summaryTags1);
 
 		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "404"};
 		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET"};
@@ -393,10 +461,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTimer(CLIENT_CONNECT_TIME, timerTags3, index);
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, index, 0);
-		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
+		checkCounter(CLIENT_ERRORS, false, 0, summaryTags1);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, index, 123 * index);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 64 * index);
-		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
+		checkCounter(CLIENT_ERRORS, false, 0, summaryTags2);
 	}
 
 
@@ -426,7 +494,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(summary.totalAmount() >= expectedAmount).isTrue();
 	}
 
-	void checkCounter(String name, String[] tags, boolean exists, double expectedCount) {
+	void checkCounter(String name, boolean exists, double expectedCount, String... tags) {
 		Counter counter = registry.find(name).tags(tags).counter();
 		if (exists) {
 			assertThat(counter).isNotNull();
@@ -437,6 +505,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 	}
 
+	double getCounter(String name, String... tags) {
+		Counter counter = registry.find(name).tags(tags).counter();
+		if (counter != null) {
+			return counter.count();
+		}
+		else {
+			return 0;
+		}
+	}
 
 	private static final String SERVER_RESPONSE_TIME = HTTP_SERVER_PREFIX + RESPONSE_TIME;
 	private static final String SERVER_DATA_SENT_TIME = HTTP_SERVER_PREFIX + DATA_SENT_TIME;

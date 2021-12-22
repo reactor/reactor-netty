@@ -76,4 +76,14 @@ public interface ChannelMetricsRecorder {
 	 * @param status the status of the operation
 	 */
 	void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status);
+
+	/**
+	 * Updates the number of the channels currently opened and accepted by the server
+	 *
+	 * @param localAddress the server local address
+	 * @param amount The amount of server connection to add in the meter
+	 * @since 1.0.15
+	 */
+	default void incrementServerConnections(SocketAddress localAddress, int amount) { }
+
 }
