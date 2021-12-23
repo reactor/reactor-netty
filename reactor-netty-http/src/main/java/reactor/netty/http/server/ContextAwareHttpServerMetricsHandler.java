@@ -73,10 +73,4 @@ final class ContextAwareHttpServerMetricsHandler extends AbstractHttpServerMetri
 		// Always take the remote address from the operations in order to consider proxy information
 		recorder().recordDataSent(contextView, ops.remoteAddress(), path, dataSent);
 	}
-
-	@Override
-	protected void incrementActiveConnections(HttpServerOperations ops, String uri, String method, int amount) {
-		recorder().incrementActiveConnections(ops.currentContext(), uri, method, amount);
-	}
-
 }

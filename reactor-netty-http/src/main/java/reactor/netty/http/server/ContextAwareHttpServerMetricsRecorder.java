@@ -61,19 +61,6 @@ public abstract class ContextAwareHttpServerMetricsRecorder extends ContextAware
 	 */
 	public abstract void recordResponseTime(ContextView contextView, String uri, String method, String status, Duration time);
 
-	/**
-	 * Updates the number of active in-use http connections
-	 *
-	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
-	 * @param uri the requested URI
-	 * @param method the HTTP method
-	 * @param amount the number of connections to add in the meter
-	 * @since 1.0.15
-	 */
-	public void incrementActiveConnections(ContextView contextView, String uri, String method, int amount) {
-		// noop
-	}
-
 	@Override
 	public void recordDataReceivedTime(String uri, String method, Duration time) {
 		recordDataReceivedTime(Context.empty(), uri, method, time);
@@ -87,10 +74,5 @@ public abstract class ContextAwareHttpServerMetricsRecorder extends ContextAware
 	@Override
 	public void recordResponseTime(String uri, String method, String status, Duration time) {
 		recordResponseTime(Context.empty(), uri, method, status, time);
-	}
-
-	@Override
-	public void incrementActiveConnections(String uri, String method, int amount) {
-		incrementActiveConnections(Context.empty(), uri, method, amount);
 	}
 }

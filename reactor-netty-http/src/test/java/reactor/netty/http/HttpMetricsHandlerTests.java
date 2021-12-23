@@ -15,6 +15,40 @@
  */
 package reactor.netty.http;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty.buffer.ByteBuf;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
+import reactor.netty.BaseHttpTest;
+import reactor.netty.ByteBufFlux;
+import reactor.netty.Connection;
+import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.HttpServerMetricsRecorder;
+import reactor.netty.resources.ConnectionProvider;
+import reactor.test.StepVerifier;
+import reactor.util.context.Context;
+import reactor.util.context.ContextView;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECT_TIME;
@@ -33,46 +67,9 @@ import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 import static reactor.netty.Metrics.URI;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.netty.buffer.ByteBuf;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.netty.BaseHttpTest;
-import reactor.netty.ByteBufFlux;
-import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.server.ContextAwareHttpServerMetricsRecorder;
-import reactor.netty.http.server.HttpServer;
-import reactor.netty.http.server.HttpServerMetricsRecorder;
-import reactor.netty.resources.ConnectionProvider;
-import reactor.test.StepVerifier;
-import reactor.util.context.Context;
-import reactor.util.context.ContextView;
-
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.time.Duration;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 /**
- * <b>Note (Pierre): the testServerConnectionsContextAwareRecorder is partially commented because of the existing
- * https://github.com/reactor/reactor-netty/issues/1854 issue ("ContextView in default implementations before ContextAwareHttpServerMetricsRecorder").
- * Once #1854 is fixed, we can then uncomment some checks from testServerConnectionsContextAwareRecorder test.
- * </b>
  *  @author Violeta Georgieva
- *  @author Pierre De Rop
  */
 class HttpMetricsHandlerTests extends BaseHttpTest {
 	HttpServer httpServer;
@@ -100,8 +97,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 *  <li> /5 is used by testServerConnectionsMicrometer test where an uriTagValue mapper function is used</li>
 	 *  <li> /6 is used by testServerConnectionsRecorder test where no uriTagValue mapper function is used</li>
 	 *  <li> /7 is used by testServerConnectionsRecorder test where an uriTagValue mapper function is used</li>
-	 *  <li> /8 is used by testServerConnectionsContextAwareRecorder test where no uriTagValue mapper function is used</li>
-	 *  <li> /9 is used by testServerConnectionsContextAwareRecorder test where an uriTagValue mapper function is used</li>
 	 * </ul>
 	 */
 	@BeforeEach
@@ -124,15 +119,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 										checkServerConnectionsRecorder(req.hostAddress(), req.uri()))))
 						.post("/7", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().retain().doOnNext(b ->
-										checkServerConnectionsRecorder(req.hostAddress(), MYTAG))))
-						.post("/8", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().retain()
-										.contextWrite(Context.of("testContextAwareRecorder", "OK"))
-										.doOnNext(b -> checkServerConnectionsContextAwareRecorder(req.hostAddress(), req.uri()))))
-						.post("/9", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().retain()
-										.contextWrite(Context.of("testContextAwareRecorder", "OK"))
-										.doOnNext(b -> checkServerConnectionsContextAwareRecorder(req.hostAddress(), MYTAG))))));
+										checkServerConnectionsRecorder(req.hostAddress(), MYTAG))))));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
 		httpClient = customizeClientOptions(createClient(provider, () -> disposableServer.address())
@@ -156,7 +143,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		registry.close();
 
 		ServerRecorder.INSTANCE.reset();
-		ContextAwareServerRecorder.INSTANCE.reset();
 	}
 
 	@Test
@@ -415,16 +401,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		testServerConnectionsRecorder(true);
 	}
 
-	@Test
-	void testServerConnectionsContextAwareRecorder() throws Exception {
-		testServerConnectionsContextAwareRecorder(false);
-	}
-
-	@Test
-	void testServerConnectionsContextAwareRecorderUriTagMapper() throws Exception {
-		testServerConnectionsContextAwareRecorder(true);
-	}
-
 	private void testServerConnectionsMicrometer(boolean uriTagMapper) throws Exception {
 		disposableServer = uriTagMapper ?
 				httpServer.metrics(true, u -> "/5".equals(u) ? MYTAG : u).bindNow() :
@@ -453,6 +429,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		// ensure that the server counters have been updated. For the moment, wait 1 sec.
+		Thread.sleep(1000);
+		// now check the server counters
 		checkCounter(SERVER_TOTAL_CONNECTIONS, true, currentTotalConnections, URI, HTTP, LOCAL_ADDRESS, address);
 		checkCounter(SERVER_ACTIVE_CONNECTIONS, true, currentActiveConnections, URI, uri, METHOD, POST);
 
@@ -485,48 +465,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(ServerRecorder.INSTANCE.done.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
 		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
 		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
-
-		disposableServer.disposeNow();
-	}
-
-	private void testServerConnectionsContextAwareRecorder(boolean uriTagMapper) throws Exception {
-		disposableServer = uriTagMapper ?
-				httpServer.metrics(true, () -> ContextAwareServerRecorder.INSTANCE, u -> "/9".equals(u) ? MYTAG : u).bindNow() :
-				httpServer.metrics(true, () -> ContextAwareServerRecorder.INSTANCE, Function.identity()).bindNow();
-
-		currentTotalConnections = 0;
-		currentActiveConnections = 0;
-		CountDownLatch latch = new CountDownLatch(1);
-
-		httpClient.doOnResponse((res, conn) ->
-						conn.channel()
-								.closeFuture()
-								.addListener(f -> latch.countDown()))
-				.metrics(false, Function.identity())
-				.post()
-				.uri(uriTagMapper ? "/9" : "/8")
-				.send(body)
-				.responseContent()
-				.aggregate()
-				.asString()
-				.as(StepVerifier::create)
-				.expectNext("Hello World!")
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
-
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		assertThat(ContextAwareServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
-		assertThat(ContextAwareServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
-
-		// Currently, the two following checks can't work until the #1854 is fixed ("ContextView in default implementations before ContextAwareHttpServerMetricsRecorder")
-		// Once #1854 is fixed, we can then uncomment the two following checks.
-
-		/*
-		assertThat(ContextAwareServerRecorder.INSTANCE.onServerConnectionsContextView.get()).isTrue();
-		assertThat(ContextAwareServerRecorder.INSTANCE.onActiveConnectionsContextView.get()).isTrue();
-		*/
 
 		disposableServer.disposeNow();
 	}
@@ -544,15 +485,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get() >= currentActiveConnections + 1).isTrue();
 		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsMethod.get()).isEqualTo(POST);
 		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsUri.get()).isEqualTo(uri);
-	}
-
-	private void checkServerConnectionsContextAwareRecorder(InetSocketAddress localAddress, String uri) {
-		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
-		assertThat(ContextAwareServerRecorder.INSTANCE.onServerConnectionsAmount.get() >= currentTotalConnections + 1).isTrue();
-		assertThat(ContextAwareServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
-		assertThat(ContextAwareServerRecorder.INSTANCE.onActiveConnectionsAmount.get() >= currentActiveConnections + 1).isTrue();
-		assertThat(ContextAwareServerRecorder.INSTANCE.onActiveConnectionsMethod.get()).isEqualTo(POST);
-		assertThat(ContextAwareServerRecorder.INSTANCE.onActiveConnectionsUri.get()).isEqualTo(uri);
 	}
 
 	private void checkExpectationsExisting(String uri, String serverAddress, int index) {
@@ -749,6 +681,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		private final AtomicReference<String> onActiveConnectionsUri = new AtomicReference<>();
 		private final AtomicReference<String> onActiveConnectionsMethod = new AtomicReference<>();
 		private final AtomicInteger onActiveConnectionsAmount = new AtomicInteger();
+		private volatile CountDownLatch done = new CountDownLatch(4);
 
 		void reset() {
 			onServerConnectionsAmount.set(0);
@@ -756,12 +689,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			onActiveConnectionsUri.set(null);
 			onActiveConnectionsMethod.set(null);
 			onActiveConnectionsAmount.set(0);
+			done = new CountDownLatch(4);
 		}
 
 		@Override
 		public void incrementServerConnections(SocketAddress localAddress, int amount) {
 			onServerConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
 			onServerConnectionsAmount.addAndGet(amount);
+			// called twice: first time when socket is accepted, then when socket is closed
+			done.countDown();
 		}
 
 		@Override
@@ -769,6 +705,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			onActiveConnectionsUri.set(uri);
 			onActiveConnectionsMethod.set(method);
 			onActiveConnectionsAmount.addAndGet(amount);
+			// called twice: first time when server is receiving initial request, then when last response chunk is sent
+			done.countDown();
 		}
 
 		@Override
@@ -813,94 +751,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		@Override
 		public void recordConnectTime(SocketAddress socketAddress, Duration duration, String s) {
-		}
-
-		@Override
-		public void recordResolveAddressTime(SocketAddress socketAddress, Duration duration, String s) {
-		}
-	}
-
-	static final class ContextAwareServerRecorder extends ContextAwareHttpServerMetricsRecorder {
-
-		static final ContextAwareServerRecorder INSTANCE = new ContextAwareServerRecorder();
-
-		private final AtomicInteger onServerConnectionsAmount = new AtomicInteger();
-		private final AtomicReference<String>  onServerConnectionsLocalAddr = new AtomicReference<>();
-		private final AtomicBoolean onServerConnectionsContextView = new AtomicBoolean();
-
-		private final AtomicReference<String> onActiveConnectionsUri = new AtomicReference<>();
-		private final AtomicReference<String> onActiveConnectionsMethod = new AtomicReference<>();
-		private final AtomicInteger onActiveConnectionsAmount = new AtomicInteger();
-		private final AtomicBoolean onActiveConnectionsContextView = new AtomicBoolean();
-
-		void reset() {
-			onServerConnectionsAmount.set(0);
-			onServerConnectionsLocalAddr.set(null);
-			onServerConnectionsContextView.set(false);
-
-			onActiveConnectionsUri.set(null);
-			onActiveConnectionsMethod.set(null);
-			onActiveConnectionsAmount.set(0);
-			onActiveConnectionsContextView.set(false);
-		}
-
-		@Override
-		public void incrementServerConnections(ContextView contextView, SocketAddress localAddress, int amount) {
-			onServerConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
-			onServerConnectionsAmount.addAndGet(amount);
-			onServerConnectionsContextView.set("OK".equals(contextView.getOrDefault("testContextAwareRecorder", "KO")));
-		}
-
-		@Override
-		public void incrementActiveConnections(ContextView contextView, String uri, String method, int amount) {
-			onActiveConnectionsUri.set(uri);
-			onActiveConnectionsMethod.set(method);
-			onActiveConnectionsAmount.addAndGet(amount);
-			onActiveConnectionsContextView.set("OK".equals(contextView.getOrDefault("testContextAwareRecorder", "KO")));
-		}
-
-		@Override
-		public void incrementErrorsCount(ContextView contextView, SocketAddress remoteAddress, String uri) {
-		}
-
-		@Override
-		public void recordDataReceived(ContextView contextView, SocketAddress remoteAddress, String uri, long bytes) {
-		}
-
-		@Override
-		public void recordDataSent(ContextView contextView, SocketAddress remoteAddress, String uri, long bytes) {
-		}
-
-		@Override
-		public void recordDataReceivedTime(ContextView contextView, String uri, String method, Duration time) {
-		}
-
-		@Override
-		public void recordDataSentTime(ContextView contextView, String uri, String method, String status, Duration time) {
-		}
-
-		@Override
-		public void recordResponseTime(ContextView contextView, String uri, String method, String status, Duration time) {
-		}
-
-		@Override
-		public void incrementErrorsCount(ContextView contextView, SocketAddress socketAddress) {
-		}
-
-		@Override
-		public void recordConnectTime(ContextView contextView, SocketAddress socketAddress, Duration duration, String s) {
-		}
-
-		@Override
-		public void recordDataReceived(ContextView contextView, SocketAddress socketAddress, long l) {
-		}
-
-		@Override
-		public void recordDataSent(ContextView contextView, SocketAddress socketAddress, long l) {
-		}
-
-		@Override
-		public void recordTlsHandshakeTime(ContextView contextView, SocketAddress socketAddress, Duration duration, String s) {
 		}
 
 		@Override
