@@ -76,6 +76,18 @@ public abstract class ContextAwareChannelMetricsRecorder implements ChannelMetri
 	 */
 	public abstract void recordTlsHandshakeTime(ContextView contextView, SocketAddress remoteAddress, Duration time, String status);
 
+	/**
+	 * Updates the number of the channels currently opened and accepted by the server
+	 *
+	 * @param contextView The current {@link ContextView} associated with the Mono/Flux pipeline
+	 * @param localAddress the server local address
+	 * @param amount The amount of server connection to add in the meter
+	 * @since 1.0.15
+	 */
+	public void incrementServerConnections(ContextView contextView, SocketAddress localAddress, int amount) {
+		// noop
+	}
+
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress) {
 		incrementErrorsCount(Context.empty(), remoteAddress);
@@ -99,5 +111,17 @@ public abstract class ContextAwareChannelMetricsRecorder implements ChannelMetri
 	@Override
 	public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
 		recordTlsHandshakeTime(Context.empty(), remoteAddress, time, status);
+	}
+
+	/**
+	 * Updates the number of the channels currently opened and accepted by the server
+	 *
+	 * @param localAddress the server local address
+	 * @param amount The amount of server connection to add in the meter
+	 * @since 1.0.15
+	 */
+	@Override
+	public void incrementServerConnections(SocketAddress localAddress, int amount) {
+		incrementServerConnections(Context.empty(), localAddress, amount);
 	}
 }
