@@ -235,7 +235,9 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 			NameResolverProvider nameResolverProvider,
 			LoopResources loopResources,
 			boolean preferNative) {
-		return RESOLVERS_CACHE.computeIfAbsent(Objects.hash(nameResolverProvider, loopResources, preferNative),
+		int hash = Objects.hash(nameResolverProvider, loopResources, preferNative);
+		DnsAddressResolverGroup resolverGroup = RESOLVERS_CACHE.get(hash);
+		return resolverGroup != null ? resolverGroup : RESOLVERS_CACHE.computeIfAbsent(hash,
 				key -> nameResolverProvider.newNameResolverGroup(loopResources, preferNative));
 	}
 

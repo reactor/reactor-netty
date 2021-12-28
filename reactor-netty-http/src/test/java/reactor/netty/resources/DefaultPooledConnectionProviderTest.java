@@ -325,6 +325,8 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 			assertThat(provider.channelPools).hasSize(1);
 
+			Thread.sleep(1000);
+
 			@SuppressWarnings({"unchecked", "rawtypes"})
 			InstrumentedPool<DefaultPooledConnectionProvider.PooledConnection> channelPool =
 					provider.channelPools.values().toArray(new InstrumentedPool[0])[0];

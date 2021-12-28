@@ -44,7 +44,9 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataReceivedTime(String uri, String method, Duration time) {
-		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(new MeterKey(uri, null, method, null),
+		MeterKey meterKey = new MeterKey(uri, null, method, null);
+		Timer dataReceivedTime = dataReceivedTimeCache.get(meterKey);
+		dataReceivedTime = dataReceivedTime != null ? dataReceivedTime : dataReceivedTimeCache.computeIfAbsent(meterKey,
 				key -> filter(dataReceivedTimeBuilder.tags(URI, uri, METHOD, method)
 				                                     .register(REGISTRY)));
 		if (dataReceivedTime != null) {
@@ -54,7 +56,9 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSentTime(String uri, String method, String status, Duration time) {
-		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(new MeterKey(uri, null, method, status),
+		MeterKey meterKey = new MeterKey(uri, null, method, status);
+		Timer dataSentTime = dataSentTimeCache.get(meterKey);
+		dataSentTime = dataSentTime != null ? dataSentTime : dataSentTimeCache.computeIfAbsent(meterKey,
 				key -> filter(dataSentTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
 				                                 .register(REGISTRY)));
 		if (dataSentTime != null) {
@@ -64,7 +68,9 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordResponseTime(String uri, String method, String status, Duration time) {
-		Timer responseTime = responseTimeCache.computeIfAbsent(new MeterKey(uri, null, method, status),
+		MeterKey meterKey = new MeterKey(uri, null, method, status);
+		Timer responseTime = responseTimeCache.get(meterKey);
+		responseTime = responseTime != null ? responseTime : responseTimeCache.computeIfAbsent(meterKey,
 				key -> filter(responseTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
 				                                 .register(REGISTRY)));
 		if (responseTime != null) {
@@ -74,7 +80,9 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
-		DistributionSummary dataReceived = dataReceivedCache.computeIfAbsent(new MeterKey(uri, null, null, null),
+		MeterKey meterKey = new MeterKey(uri, null, null, null);
+		DistributionSummary dataReceived = dataReceivedCache.get(meterKey);
+		dataReceived = dataReceived != null ? dataReceived : dataReceivedCache.computeIfAbsent(meterKey,
 				key -> filter(dataReceivedBuilder.tags(URI, uri)
 				                                 .register(REGISTRY)));
 		if (dataReceived != null) {
@@ -84,7 +92,9 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
-		DistributionSummary dataSent = dataSentCache.computeIfAbsent(new MeterKey(uri, null, null, null),
+		MeterKey meterKey = new MeterKey(uri, null, null, null);
+		DistributionSummary dataSent = dataSentCache.get(meterKey);
+		dataSent = dataSent != null ? dataSent : dataSentCache.computeIfAbsent(meterKey,
 				key -> filter(dataSentBuilder.tags(URI, uri)
 				                             .register(REGISTRY)));
 		if (dataSent != null) {
@@ -94,7 +104,9 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
-		Counter errors = errorsCache.computeIfAbsent(new MeterKey(uri, null, null, null),
+		MeterKey meterKey = new MeterKey(uri, null, null, null);
+		Counter errors = errorsCache.get(meterKey);
+		errors = errors != null ? errors : errorsCache.computeIfAbsent(meterKey,
 				key -> filter(errorsBuilder.tags(URI, uri)
 				                           .register(REGISTRY)));
 		if (errors != null) {

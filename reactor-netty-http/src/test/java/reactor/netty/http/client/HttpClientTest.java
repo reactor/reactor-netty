@@ -2151,6 +2151,7 @@ class HttpClientTest extends BaseHttpTest {
 				createServer()
 				        .protocol(HttpProtocol.H2)
 				        .secure(spec -> spec.sslContext(serverCtx))
+				        .http2Settings(setting -> setting.maxConcurrentStreams(2))
 				        .handle((req, resp) ->
 				            resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30))
 				                                                       .map(Objects::toString))))

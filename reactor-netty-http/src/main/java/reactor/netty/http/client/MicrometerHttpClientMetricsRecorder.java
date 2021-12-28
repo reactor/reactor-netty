@@ -45,7 +45,9 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(new MeterKey(uri, address, method, status),
+		MeterKey meterKey = new MeterKey(uri, address, method, status);
+		Timer dataReceivedTime = dataReceivedTimeCache.get(meterKey);
+		dataReceivedTime = dataReceivedTime != null ? dataReceivedTime : dataReceivedTimeCache.computeIfAbsent(meterKey,
 				key -> filter(dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
 				                                     .register(REGISTRY)));
 		if (dataReceivedTime != null) {
@@ -56,7 +58,9 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(new MeterKey(uri, address, method, null),
+		MeterKey meterKey = new MeterKey(uri, address, method, null);
+		Timer dataSentTime = dataSentTimeCache.get(meterKey);
+		dataSentTime = dataSentTime != null ? dataSentTime : dataSentTimeCache.computeIfAbsent(meterKey,
 				key -> filter(dataSentTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method)
 				                                 .register(REGISTRY)));
 		if (dataSentTime != null) {
@@ -67,7 +71,9 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		Timer responseTime = responseTimeCache.computeIfAbsent(new MeterKey(uri, address, method, status),
+		MeterKey meterKey = new MeterKey(uri, address, method, status);
+		Timer responseTime = responseTimeCache.get(meterKey);
+		responseTime = responseTime != null ? responseTime : responseTimeCache.computeIfAbsent(meterKey,
 				key -> filter(responseTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
 				                                 .register(REGISTRY)));
 		if (responseTime != null) {

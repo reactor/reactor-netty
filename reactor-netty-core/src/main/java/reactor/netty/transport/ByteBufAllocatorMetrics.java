@@ -48,7 +48,12 @@ final class ByteBufAllocatorMetrics {
 	}
 
 	void registerMetrics(String allocType, ByteBufAllocatorMetric metrics) {
-		cache.computeIfAbsent(metrics.hashCode() + "", key -> {
+		String hash = metrics.hashCode() + "";
+		ByteBufAllocatorMetric cachedMetrics = cache.get(hash);
+		if (cachedMetrics != null) {
+			return;
+		}
+		cache.computeIfAbsent(hash, key -> {
 			String[] tags = new String[] {ID, key, TYPE, allocType};
 
 			Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + USED_HEAP_MEMORY, metrics, ByteBufAllocatorMetric::usedHeapMemory)

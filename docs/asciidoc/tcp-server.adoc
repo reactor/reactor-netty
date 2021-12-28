@@ -262,6 +262,7 @@ The following table provides information for the TCP server metrics:
 These additional metrics are also available:
 
 include::alloc-metrics.adoc[]
+include::eventloop-metrics.adoc[]
 
 The following example enables that integration:
 
