@@ -76,8 +76,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	private MeterRegistry registry;
 
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
-	private volatile double currentTotalConnections;
-	private volatile double currentActiveConnections;
 
 	private static final String SERVER_TOTAL_CONNECTIONS = HTTP_SERVER_PREFIX + TOTAL_CONNECTIONS;
 	private static final String SERVER_ACTIVE_CONNECTIONS = HTTP_SERVER_PREFIX + ACTIVE_CONNECTIONS;
@@ -406,8 +404,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		String uri = uriTagMapper ? MYTAG : "/4";
 		String address = reactor.netty.Metrics.formatSocketAddress(disposableServer.address());
-		currentTotalConnections = getCounter(SERVER_TOTAL_CONNECTIONS, 0, URI, HTTP, LOCAL_ADDRESS, address);
-		currentActiveConnections = getCounter(SERVER_ACTIVE_CONNECTIONS, 0, URI, uri, METHOD, POST);
 		CountDownLatch latch = new CountDownLatch(1);
 
 		httpClient.doOnResponse((res, conn) ->
@@ -431,8 +427,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		// ensure that the server counters have been updated. For the moment, wait 1 sec.
 		Thread.sleep(1000);
 		// now check the server counters
-		checkCounter(SERVER_TOTAL_CONNECTIONS, true, currentTotalConnections, URI, HTTP, LOCAL_ADDRESS, address);
-		checkCounter(SERVER_ACTIVE_CONNECTIONS, true, currentActiveConnections, URI, uri, METHOD, POST);
+		checkCounter(SERVER_TOTAL_CONNECTIONS, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+		checkCounter(SERVER_ACTIVE_CONNECTIONS, true, 0, URI, uri, METHOD, POST);
 
 		disposableServer.disposeNow();
 	}
@@ -442,8 +438,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				httpServer.metrics(true, () -> ServerRecorder.INSTANCE, u -> "/7".equals(u) ? MYTAG : u).bindNow() :
 				httpServer.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity()).bindNow();
 
-		currentTotalConnections = 0;
-		currentActiveConnections = 0;
 		CountDownLatch latch = new CountDownLatch(1);
 
 		httpClient.doOnResponse((res, conn) ->
@@ -472,15 +466,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	private void checkServerConnectionsMicrometer(InetSocketAddress localAddress, String uri) {
 		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
-		checkCounter(SERVER_TOTAL_CONNECTIONS, true, currentTotalConnections + 1, URI, HTTP, LOCAL_ADDRESS, address);
-		checkCounter(SERVER_ACTIVE_CONNECTIONS, true, currentActiveConnections + 1, URI, uri, METHOD, POST);
+		checkCounter(SERVER_TOTAL_CONNECTIONS, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
+		checkCounter(SERVER_ACTIVE_CONNECTIONS, true, 1, URI, uri, METHOD, POST);
 	}
 
 	private void checkServerConnectionsRecorder(InetSocketAddress localAddress, String uri) {
 		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
-		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get() >= currentTotalConnections + 1).isTrue();
+		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get() == 1).isTrue();
 		assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
-		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get() >= currentActiveConnections + 1).isTrue();
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get() == 1).isTrue();
 		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsMethod.get()).isEqualTo(POST);
 		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsUri.get()).isEqualTo(uri);
 	}
