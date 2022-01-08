@@ -18,6 +18,7 @@ package reactor.netty.transport;
 import io.micrometer.core.instrument.Gauge;
 import io.netty.buffer.ByteBufAllocatorMetric;
 import io.netty.buffer.PooledByteBufAllocatorMetric;
+import reactor.netty.util.MapUtil;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -48,12 +49,7 @@ final class ByteBufAllocatorMetrics {
 	}
 
 	void registerMetrics(String allocType, ByteBufAllocatorMetric metrics) {
-		String hash = metrics.hashCode() + "";
-		ByteBufAllocatorMetric cachedMetrics = cache.get(hash);
-		if (cachedMetrics != null) {
-			return;
-		}
-		cache.computeIfAbsent(hash, key -> {
+		MapUtil.computeIfAbsent(cache, metrics.hashCode() + "", key -> {
 			String[] tags = new String[] {ID, key, TYPE, allocType};
 
 			Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + USED_HEAP_MEMORY, metrics, ByteBufAllocatorMetric::usedHeapMemory)

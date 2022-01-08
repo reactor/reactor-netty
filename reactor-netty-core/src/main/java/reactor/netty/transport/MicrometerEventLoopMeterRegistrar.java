@@ -18,6 +18,7 @@ package reactor.netty.transport;
 import io.micrometer.core.instrument.Gauge;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
+import reactor.netty.util.MapUtil;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -47,11 +48,7 @@ final class MicrometerEventLoopMeterRegistrar {
 		if (eventLoop instanceof SingleThreadEventExecutor) {
 			SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
 			String executorName = singleThreadEventExecutor.threadProperties().name();
-			EventLoop executor = cache.get(executorName);
-			if (executor != null) {
-				return;
-			}
-			cache.computeIfAbsent(executorName, key -> {
+			MapUtil.computeIfAbsent(cache, executorName, key -> {
 				Gauge.builder(EVENT_LOOP_PREFIX + PENDING_TASKS, singleThreadEventExecutor::pendingTasks)
 						.description("Event loop pending scheduled tasks.")
 						.tag(NAME, executorName)
