@@ -21,6 +21,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.noop.NoopMeter;
+import reactor.netty.internal.util.MapUtils;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -83,8 +84,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		DistributionSummary ds = dataReceivedCache.get(address);
-		ds = ds != null ? ds : dataReceivedCache.computeIfAbsent(address,
+		DistributionSummary ds = MapUtils.computeIfAbsent(dataReceivedCache, address,
 				key -> filter(DistributionSummary.builder(name + DATA_RECEIVED)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_RECEIVED_DESCRIPTION)
@@ -98,8 +98,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, long bytes) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		DistributionSummary ds = dataSentCache.get(address);
-		ds = ds != null ? ds : dataSentCache.computeIfAbsent(address,
+		DistributionSummary ds = MapUtils.computeIfAbsent(dataSentCache, address,
 				key -> filter(DistributionSummary.builder(name + DATA_SENT)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_SENT_DESCRIPTION)
@@ -113,8 +112,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		Counter c = errorsCache.get(address);
-		c = c != null ? c : errorsCache.computeIfAbsent(address,
+		Counter c = MapUtils.computeIfAbsent(errorsCache, address,
 				key -> filter(Counter.builder(name + ERRORS)
 				                     .description(ERRORS_DESCRIPTION)
 				                     .tags(URI, protocol, REMOTE_ADDRESS, address)
@@ -128,8 +126,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, null, status);
-		Timer timer = tlsHandshakeTimeCache.get(meterKey);
-		timer = timer != null ? timer : tlsHandshakeTimeCache.computeIfAbsent(meterKey,
+		Timer timer = MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
 				key -> filter(Timer.builder(name + TLS_HANDSHAKE_TIME)
 				                   .description(TLS_HANDSHAKE_TIME_DESCRIPTION)
 				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
@@ -143,8 +140,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, null, status);
-		Timer timer = connectTimeCache.get(meterKey);
-		timer = timer != null ? timer : connectTimeCache.computeIfAbsent(meterKey,
+		Timer timer = MapUtils.computeIfAbsent(connectTimeCache, meterKey,
 				key -> filter(Timer.builder(name + CONNECT_TIME)
 				                   .description(CONNECT_TIME_DESCRIPTION)
 				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
@@ -158,8 +154,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, null, status);
-		Timer timer = addressResolverTimeCache.get(meterKey);
-		timer = timer != null ? timer : addressResolverTimeCache.computeIfAbsent(meterKey,
+		Timer timer = MapUtils.computeIfAbsent(addressResolverTimeCache, meterKey,
 				key -> filter(Timer.builder(name + ADDRESS_RESOLVER)
 				                   .description(ADDRESS_RESOLVER_TIME_DESCRIPTION)
 				                   .tags(REMOTE_ADDRESS, address, STATUS, status)

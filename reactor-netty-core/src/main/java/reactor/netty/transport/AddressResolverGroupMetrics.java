@@ -21,6 +21,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.internal.util.MapUtils;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -42,9 +43,7 @@ final class AddressResolverGroupMetrics<T extends SocketAddress> extends Address
 
 	static AddressResolverGroupMetrics<?> getOrCreate(
 			AddressResolverGroup<?> resolverGroup, ChannelMetricsRecorder recorder) {
-		int hash = Objects.hash(resolverGroup, recorder);
-		AddressResolverGroupMetrics<?> resolverGroupMetrics = cache.get(hash);
-		return resolverGroupMetrics != null ? resolverGroupMetrics : cache.computeIfAbsent(hash,
+		return MapUtils.computeIfAbsent(cache, Objects.hash(resolverGroup, recorder),
 				key -> new AddressResolverGroupMetrics<>(resolverGroup, recorder));
 	}
 
