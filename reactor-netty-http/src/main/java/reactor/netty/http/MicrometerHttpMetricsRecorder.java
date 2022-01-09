@@ -21,6 +21,7 @@ import io.micrometer.core.instrument.Timer;
 import reactor.netty.Metrics;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
+import reactor.netty.internal.util.MapUtils;
 
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,8 +65,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, null, null);
-		DistributionSummary dataReceived = dataReceivedCache.get(meterKey);
-		dataReceived = dataReceived != null ? dataReceived : dataReceivedCache.computeIfAbsent(meterKey,
+		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_RECEIVED_DESCRIPTION)
@@ -80,8 +80,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, null, null);
-		DistributionSummary dataSent = dataSentCache.get(meterKey);
-		dataSent = dataSent != null ? dataSent : dataSentCache.computeIfAbsent(meterKey,
+		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_SENT)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_SENT_DESCRIPTION)
@@ -96,8 +95,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, null, null);
-		Counter errors = errorsCache.get(meterKey);
-		errors = errors != null ? errors : errorsCache.computeIfAbsent(meterKey,
+		Counter errors = MapUtils.computeIfAbsent(errorsCache, meterKey,
 				key -> filter(Counter.builder(name() + ERRORS)
 				                     .description(ERRORS_DESCRIPTION)
 				                     .tags(REMOTE_ADDRESS, address, URI, uri)

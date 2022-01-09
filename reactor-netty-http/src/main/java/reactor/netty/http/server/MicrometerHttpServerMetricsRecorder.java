@@ -20,6 +20,7 @@ import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
+import reactor.netty.internal.util.MapUtils;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -51,8 +52,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataReceivedTime(String uri, String method, Duration time) {
 		MeterKey meterKey = new MeterKey(uri, null, method, null);
-		Timer dataReceivedTime = dataReceivedTimeCache.get(meterKey);
-		dataReceivedTime = dataReceivedTime != null ? dataReceivedTime : dataReceivedTimeCache.computeIfAbsent(meterKey,
+		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
 				                   .description(DATA_RECEIVED_TIME_DESCRIPTION)
 				                   .tags(URI, uri, METHOD, method)
@@ -65,8 +65,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataSentTime(String uri, String method, String status, Duration time) {
 		MeterKey meterKey = new MeterKey(uri, null, method, status);
-		Timer dataSentTime = dataSentTimeCache.get(meterKey);
-		dataSentTime = dataSentTime != null ? dataSentTime : dataSentTimeCache.computeIfAbsent(meterKey,
+		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
 				                   .description(DATA_SENT_TIME_DESCRIPTION)
 				                   .tags(URI, uri, METHOD, method, STATUS, status)
@@ -79,8 +78,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordResponseTime(String uri, String method, String status, Duration time) {
 		MeterKey meterKey = new MeterKey(uri, null, method, status);
-		Timer responseTime = responseTimeCache.get(meterKey);
-		responseTime = responseTime != null ? responseTime : responseTimeCache.computeIfAbsent(meterKey,
+		Timer responseTime = MapUtils.computeIfAbsent(responseTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + RESPONSE_TIME)
 				                   .description(RESPONSE_TIME_DESCRIPTION)
 				                   .tags(URI, uri, METHOD, method, STATUS, status)
@@ -93,8 +91,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
 		MeterKey meterKey = new MeterKey(uri, null, null, null);
-		DistributionSummary dataReceived = dataReceivedCache.get(meterKey);
-		dataReceived = dataReceived != null ? dataReceived : dataReceivedCache.computeIfAbsent(meterKey,
+		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_RECEIVED_DESCRIPTION).tags(URI, uri)
@@ -107,8 +104,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
 		MeterKey meterKey = new MeterKey(uri, null, null, null);
-		DistributionSummary dataSent = dataSentCache.get(meterKey);
-		dataSent = dataSent != null ? dataSent : dataSentCache.computeIfAbsent(meterKey,
+		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_SENT)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_SENT_DESCRIPTION)
@@ -122,8 +118,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
 		MeterKey meterKey = new MeterKey(uri, null, null, null);
-		Counter errors = errorsCache.get(meterKey);
-		errors = errors != null ? errors : errorsCache.computeIfAbsent(meterKey,
+		Counter errors = MapUtils.computeIfAbsent(errorsCache, meterKey,
 				key -> filter(Counter.builder(name() + ERRORS)
 				                     .description(ERRORS_DESCRIPTION)
 				                     .tags(URI, uri)
