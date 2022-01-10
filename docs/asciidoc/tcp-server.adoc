@@ -253,10 +253,10 @@ The following table provides information for the TCP server metrics:
 [width="100%",options="header"]
 |=======
 | metric name | type | description
+| reactor.netty.tcp.server.connections.total | Counter | The number of all opened connections
 | reactor.netty.tcp.server.data.received | DistributionSummary | Amount of the data received, in bytes
 | reactor.netty.tcp.server.data.sent | DistributionSummary | Amount of the data sent, in bytes
 | reactor.netty.tcp.server.errors | Counter | Number of errors that occurred
-| reactor.netty.tcp.server.connections.total | Counter | The number of all opened connections
 | reactor.netty.tcp.server.tls.handshake.time | Timer | Time spent for TLS handshake
 |=======
 
