@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,13 @@ import reactor.netty.http.MicrometerHttpMetricsRecorder;
 import java.net.SocketAddress;
 import java.time.Duration;
 
+import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
+import static reactor.netty.Metrics.DATA_SENT_TIME;
 import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
 import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
 
@@ -48,8 +51,10 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, address, method, status);
 		Timer dataReceivedTime = dataReceivedTimeCache.get(meterKey);
 		dataReceivedTime = dataReceivedTime != null ? dataReceivedTime : dataReceivedTimeCache.computeIfAbsent(meterKey,
-				key -> filter(dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
-				                                     .register(REGISTRY)));
+				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
+				                   .description(DATA_RECEIVED_TIME_DESCRIPTION)
+				                   .tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
+				                   .register(REGISTRY)));
 		if (dataReceivedTime != null) {
 			dataReceivedTime.record(time);
 		}
@@ -61,8 +66,10 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, address, method, null);
 		Timer dataSentTime = dataSentTimeCache.get(meterKey);
 		dataSentTime = dataSentTime != null ? dataSentTime : dataSentTimeCache.computeIfAbsent(meterKey,
-				key -> filter(dataSentTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method)
-				                                 .register(REGISTRY)));
+				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
+				                   .description(DATA_SENT_TIME_DESCRIPTION)
+				                   .tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method)
+				                   .register(REGISTRY)));
 		if (dataSentTime != null) {
 			dataSentTime.record(time);
 		}
@@ -74,8 +81,10 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, address, method, status);
 		Timer responseTime = responseTimeCache.get(meterKey);
 		responseTime = responseTime != null ? responseTime : responseTimeCache.computeIfAbsent(meterKey,
-				key -> filter(responseTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
-				                                 .register(REGISTRY)));
+				key -> filter(Timer.builder(name() + RESPONSE_TIME)
+				                   .description(RESPONSE_TIME_DESCRIPTION)
+				                   .tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
+				                   .register(REGISTRY)));
 		if (responseTime != null) {
 			responseTime.record(time);
 		}
