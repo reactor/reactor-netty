@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,9 @@ import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 
 final class MicrometerHttp2ConnectionProviderMeterRegistrar {
+	static final String ACTIVE_STREAMS_DESCRIPTION = "The number of the active HTTP/2 streams";
+	static final String PENDING_STREAMS_DESCRIPTION =
+			"The number of requests that are waiting for opening HTTP/2 stream";
 
 	static final MicrometerHttp2ConnectionProviderMeterRegistrar INSTANCE =
 			new MicrometerHttp2ConnectionProviderMeterRegistrar();
@@ -42,12 +45,12 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 		String[] tags = new String[]{ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName};
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + ACTIVE_STREAMS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
-		     .description("The number of the active HTTP/2 streams")
+		     .description(ACTIVE_STREAMS_DESCRIPTION)
 		     .tags(tags)
 		     .register(REGISTRY);
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
-		     .description("The number of requests that are waiting for opening HTTP/2 stream")
+		     .description(PENDING_STREAMS_DESCRIPTION)
 		     .tags(tags)
 		     .register(REGISTRY);
 	}
