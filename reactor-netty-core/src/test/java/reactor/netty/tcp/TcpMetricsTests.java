@@ -15,23 +15,9 @@
  */
 package reactor.netty.tcp;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
-import static reactor.netty.Metrics.CONNECT_TIME;
-import static reactor.netty.Metrics.DATA_RECEIVED;
-import static reactor.netty.Metrics.DATA_SENT;
-import static reactor.netty.Metrics.ERRORS;
-import static reactor.netty.Metrics.LOCAL_ADDRESS;
-import static reactor.netty.Metrics.REMOTE_ADDRESS;
-import static reactor.netty.Metrics.STATUS;
-import static reactor.netty.Metrics.TCP_CLIENT_PREFIX;
-import static reactor.netty.Metrics.TCP_SERVER_PREFIX;
-import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
-import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
-import static reactor.netty.Metrics.URI;
-
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -56,6 +42,21 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static reactor.netty.Metrics.CONNECTIONS_TOTAL;
+import static reactor.netty.Metrics.CONNECT_TIME;
+import static reactor.netty.Metrics.DATA_RECEIVED;
+import static reactor.netty.Metrics.DATA_SENT;
+import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
+import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.STATUS;
+import static reactor.netty.Metrics.TCP_CLIENT_PREFIX;
+import static reactor.netty.Metrics.TCP_SERVER_PREFIX;
+import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty.Metrics.URI;
 
 /**
  * @author Violeta Georgieva
@@ -240,7 +241,7 @@ class TcpMetricsTests {
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5, true);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 1, 5, true);
 		checkCounter(CLIENT_ERRORS, summaryTags, 0, false);
-		checkCounter(SERVER_TOTAL_CONNECTIONS, totalConnectionsTags, 1, true);
+		checkGauge(SERVER_CONNECTIONS_TOTAL, totalConnectionsTags, 1, true);
 	}
 
 	private void checkExpectationsNegative(int port) {
@@ -305,7 +306,18 @@ class TcpMetricsTests {
 		}
 	}
 
-	static final String SERVER_TOTAL_CONNECTIONS = TCP_SERVER_PREFIX + TOTAL_CONNECTIONS;
+	void checkGauge(String name, String[] tags, double expectedCount, boolean exists) {
+		Gauge counter = registry.find(name).tags(tags).gauge();
+		if (exists) {
+			assertThat(counter).isNotNull();
+			assertThat(counter.value() == expectedCount).isTrue();
+		}
+		else {
+			assertThat(counter).isNull();
+		}
+	}
+
+	static final String SERVER_CONNECTIONS_TOTAL = TCP_SERVER_PREFIX + CONNECTIONS_TOTAL;
 	static final String SERVER_DATA_SENT = TCP_SERVER_PREFIX + DATA_SENT;
 	static final String SERVER_DATA_RECEIVED = TCP_SERVER_PREFIX + DATA_RECEIVED;
 	static final String SERVER_ERRORS = TCP_SERVER_PREFIX + ERRORS;

@@ -198,7 +198,8 @@ task japicmp(type: JapicmpTask) {
 			// reactor.netty.resources
 			"reactor.netty.resources.ConnectionProvider#mutate()",
 			"reactor.netty.resources.ConnectionProvider#name()",
-			"reactor.netty.channel.ChannelMetricsRecorder#incrementServerConnections(java.net.SocketAddress,int)"
+			"reactor.netty.channel.ChannelMetricsRecorder#recordServerConnectionOpened(java.net.SocketAddress)",
+			"reactor.netty.channel.ChannelMetricsRecorder#recordServerConnectionClosed(java.net.SocketAddress)"
 	]
 	onlyIf { "$compatibleVersion" != "SKIP" }
 }

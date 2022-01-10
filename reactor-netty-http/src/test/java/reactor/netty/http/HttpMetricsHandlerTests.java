@@ -17,6 +17,7 @@ package reactor.netty.http;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -63,7 +64,7 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
-import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
+import static reactor.netty.Metrics.CONNECTIONS_TOTAL;
 import static reactor.netty.Metrics.URI;
 
 /**
@@ -77,7 +78,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
-	private static final String SERVER_TOTAL_CONNECTIONS = HTTP_SERVER_PREFIX + TOTAL_CONNECTIONS;
+	private static final String SERVER_CONNECTIONS_TOTAL = HTTP_SERVER_PREFIX + CONNECTIONS_TOTAL;
 	private static final String SERVER_ACTIVE_CONNECTIONS = HTTP_SERVER_PREFIX + ACTIVE_CONNECTIONS;
 	private static final String MYTAG = "myuritag";
 	private final static String HTTP = "http";
@@ -427,8 +428,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		// ensure that the server counters have been updated. For the moment, wait 1 sec.
 		Thread.sleep(1000);
 		// now check the server counters
-		checkCounter(SERVER_TOTAL_CONNECTIONS, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
-		checkCounter(SERVER_ACTIVE_CONNECTIONS, true, 0, URI, uri, METHOD, POST);
+		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+		checkGauge(SERVER_ACTIVE_CONNECTIONS, true, 0, URI, uri, METHOD, POST);
 
 		disposableServer.disposeNow();
 	}
@@ -466,8 +467,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	private void checkServerConnectionsMicrometer(InetSocketAddress localAddress, String uri) {
 		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
-		checkCounter(SERVER_TOTAL_CONNECTIONS, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
-		checkCounter(SERVER_ACTIVE_CONNECTIONS, true, 1, URI, uri, METHOD, POST);
+		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
+		checkGauge(SERVER_ACTIVE_CONNECTIONS, true, 1, URI, uri, METHOD, POST);
 	}
 
 	private void checkServerConnectionsRecorder(InetSocketAddress localAddress, String uri) {
@@ -489,7 +490,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, 1);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, 1, 12);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, 1, 12);
-		checkCounter(SERVER_ERRORS, false, 0, summaryTags1);
+		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
 
 		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST", STATUS, "200"};
 		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST"};
@@ -504,10 +505,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, 1, 12);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, 1, 12);
-		checkCounter(CLIENT_ERRORS, false, 0, summaryTags1);
+		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14 * index, 151 * index);
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 3*index, 84*index);
-		checkCounter(CLIENT_ERRORS, false, 0, summaryTags2);
+		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
 
 	private void checkExpectationsNonExisting(String serverAddress, int index) {
@@ -520,7 +521,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, index);
 		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, index);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, index, 0);
-		checkCounter(SERVER_ERRORS, false, 0, summaryTags1);
+		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
 
 		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "404"};
 		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET"};
@@ -534,10 +535,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTimer(CLIENT_CONNECT_TIME, timerTags3, index);
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, index, 0);
-		checkCounter(CLIENT_ERRORS, false, 0, summaryTags1);
+		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, index, 123 * index);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 64 * index);
-		checkCounter(CLIENT_ERRORS, false, 0, summaryTags2);
+		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
 
 
@@ -567,7 +568,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(summary.totalAmount() >= expectedAmount).isTrue();
 	}
 
-	void checkCounter(String name, boolean exists, double expectedCount, String... tags) {
+	void checkCounter(String name, String[] tags, boolean exists, double expectedCount) {
 		Counter counter = registry.find(name).tags(tags).counter();
 		if (exists) {
 			assertThat(counter).isNotNull();
@@ -578,13 +579,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 	}
 
-	double getCounter(String name, double defaultValue, String... tags) {
-		Counter counter = registry.find(name).tags(tags).counter();
-		if (counter != null) {
-			return counter.count();
+	void checkGauge(String name, boolean exists, double expectedCount, String... tags) {
+		Gauge gauge = registry.find(name).tags(tags).gauge();
+		if (exists) {
+			assertThat(gauge).isNotNull();
+			assertThat(gauge.value() == expectedCount).isTrue();
 		}
 		else {
-			return defaultValue;
+			assertThat(gauge).isNull();
 		}
 	}
 
@@ -685,19 +687,32 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 
 		@Override
-		public void incrementServerConnections(SocketAddress localAddress, int amount) {
+		public void recordServerConnectionOpened(SocketAddress localAddress) {
 			onServerConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
-			onServerConnectionsAmount.addAndGet(amount);
-			// called twice: first time when socket is accepted, then when socket is closed
+			onServerConnectionsAmount.addAndGet(1);
 			done.countDown();
 		}
 
 		@Override
-		public void incrementActiveConnections(String uri, String method, int amount) {
+		public void recordServerConnectionClosed(SocketAddress localAddress) {
+			onServerConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onServerConnectionsAmount.addAndGet(-1);
+			done.countDown();
+		}
+
+		@Override
+		public void recordServerConnectionActive(String uri, String method) {
 			onActiveConnectionsUri.set(uri);
 			onActiveConnectionsMethod.set(method);
-			onActiveConnectionsAmount.addAndGet(amount);
-			// called twice: first time when server is receiving initial request, then when last response chunk is sent
+			onActiveConnectionsAmount.addAndGet(1);
+			done.countDown();
+		}
+
+		@Override
+		public void recordServerConnectionInactive(String uri, String method) {
+			onActiveConnectionsUri.set(uri);
+			onActiveConnectionsMethod.set(method);
+			onActiveConnectionsAmount.addAndGet(-1);
 			done.countDown();
 		}
 

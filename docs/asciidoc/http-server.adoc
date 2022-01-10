@@ -563,8 +563,8 @@ The following table provides information for the HTTP server metrics:
 | reactor.netty.http.server.data.received | DistributionSummary | Amount of the data received, in bytes
 | reactor.netty.http.server.data.sent | DistributionSummary | Amount of the data sent, in bytes
 | reactor.netty.http.server.errors | Counter | Number of errors that occurred
-| reactor.netty.http.server.total.connections | Counter | The number of all opened connections
-| reactor.netty.http.server.active.connections | Counter | The number of http connections currently processing requests
+| reactor.netty.http.server.connections.total | Counter | The number of all opened connections
+| reactor.netty.http.server.connections.active | Counter | The number of http connections currently processing requests
 | reactor.netty.http.server.data.received.time | Timer | Time spent in consuming incoming data
 | reactor.netty.http.server.data.sent.time | Timer | Time spent in sending outgoing data
 | reactor.netty.http.server.response.time | Timer | Total time for the request/response

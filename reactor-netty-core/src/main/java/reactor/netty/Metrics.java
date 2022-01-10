@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -143,9 +143,19 @@ public class Metrics {
 	public static final String TOTAL_CONNECTIONS = ".total.connections";
 
 	/**
+	 * The number of all connections, active or idle
+	 */
+	public static final String CONNECTIONS_TOTAL = ".connections.total";
+
+	/**
 	 * The number of the connections that have been successfully acquired and are in active use
 	 */
 	public static final String ACTIVE_CONNECTIONS = ".active.connections";
+
+	/**
+	 * The number of the connections that have been successfully acquired and are in active use
+	 */
+	public static final String CONNECTIONS_ACTIVE = ".connections.active";
 
 	/**
 	 * The maximum number of active connections that are allowed

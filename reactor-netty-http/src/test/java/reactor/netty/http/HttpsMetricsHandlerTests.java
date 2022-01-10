@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,6 +103,6 @@ class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
 		String[] summaryTags = new String[]{REMOTE_ADDRESS, serverAddress, URI, "unknown"};
-		checkCounter(CLIENT_ERRORS, true, 2, summaryTags);
+		checkCounter(CLIENT_ERRORS, summaryTags, true, 2);
 	}
 }

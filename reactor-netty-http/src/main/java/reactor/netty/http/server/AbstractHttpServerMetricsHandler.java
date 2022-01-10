@@ -58,7 +58,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		// by the ChannelMetricsHandler itself. ChannelMetricsHandler is only present when the recorder is
 		// not our MicrometerHttpServerMetricsRecorder. See HttpServerConfig class.
 		if (recorder() instanceof MicrometerHttpServerMetricsRecorder) {
-			recorder().incrementServerConnections(ctx.channel().localAddress(), 1);
+			recorder().recordServerConnectionOpened(ctx.channel().localAddress());
 		}
 		ctx.fireChannelActive();
 	}
@@ -66,7 +66,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) {
 		if (recorder() instanceof MicrometerHttpServerMetricsRecorder) {
-			recorder().incrementServerConnections(ctx.channel().localAddress(), -1);
+			recorder().recordServerConnectionClosed(ctx.channel().localAddress());
 		}
 		ctx.fireChannelInactive();
 	}
@@ -98,8 +98,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
 					recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
 							ops.method().name(), ops.status().codeAsText().toString());
-					incrementActiveConnections(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-							ops.method().name(), -1);
+					recordInactiveConnection(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
+							ops.method().name());
 				}
 
 				dataSent = 0;
@@ -117,8 +117,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpServerOperations) {
 				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				incrementActiveConnections(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-						ops.method().name(), 1);
+				recordActiveConnection(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
+						ops.method().name());
 			}
 		}
 
@@ -183,7 +183,12 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordDataSent(ops.remoteAddress(), path, dataSent);
 	}
 
-	protected void incrementActiveConnections(HttpServerOperations ops, String uri, String method, int amount) {
-		recorder().incrementActiveConnections(uri, method, amount);
+	protected void recordActiveConnection(HttpServerOperations ops, String uri, String method) {
+		recorder().recordServerConnectionActive(uri, method);
 	}
+
+	protected void recordInactiveConnection(HttpServerOperations ops, String uri, String method) {
+		recorder().recordServerConnectionInactive(uri, method);
+	}
+
 }

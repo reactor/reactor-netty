@@ -56,12 +56,20 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	void recordResponseTime(String uri, String method, String status, Duration time);
 
 	/**
-	 * Updates the number of active in-use http connections
+	 * Record a new active in-use http connection
 	 *
 	 * @param uri the requested URI
 	 * @param method the HTTP method
-	 * @param amount the number of connections to add in the meter
 	 * @since 1.0.15
 	 */
-	default void incrementActiveConnections(String uri, String method, int amount) { }
+	default void recordServerConnectionActive(String uri, String method) { }
+
+	/**
+	 * Record an inactive http connection
+	 *
+	 * @param uri the requested URI
+	 * @param method the HTTP method
+	 * @since 1.0.15
+	 */
+	default void recordServerConnectionInactive(String uri, String method) { }
 }

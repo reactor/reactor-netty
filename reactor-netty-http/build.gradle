@@ -198,7 +198,8 @@ task japicmp(type: JapicmpTask) {
 	includeSynthetic = true
 	methodExcludes = [
 			// New methods with default implementation
-			"reactor.netty.http.server.HttpServerMetricsRecorder#incrementActiveConnections(java.lang.String, java.lang.String, int)"
+			"reactor.netty.http.server.HttpServerMetricsRecorder#recordServerConnectionActive(java.lang.String, java.lang.String)",
+			"reactor.netty.http.server.HttpServerMetricsRecorder#recordServerConnectionInactive(java.lang.String, java.lang.String)"
 	]
 	onlyIf { "$compatibleVersion" != "SKIP" }
 }
