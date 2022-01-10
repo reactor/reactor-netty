@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import static reactor.netty.Metrics.REGISTRY;
  * @since 1.0.14
  */
 final class MicrometerEventLoopMeterRegistrar {
+	static final String PENDING_TASKS_DESCRIPTION = "Event loop pending scheduled tasks.";
 
 	final static MicrometerEventLoopMeterRegistrar INSTANCE = new MicrometerEventLoopMeterRegistrar();
 
@@ -53,9 +54,9 @@ final class MicrometerEventLoopMeterRegistrar {
 			}
 			cache.computeIfAbsent(executorName, key -> {
 				Gauge.builder(EVENT_LOOP_PREFIX + PENDING_TASKS, singleThreadEventExecutor::pendingTasks)
-						.description("Event loop pending scheduled tasks.")
-						.tag(NAME, executorName)
-						.register(REGISTRY);
+				     .description(PENDING_TASKS_DESCRIPTION)
+				     .tag(NAME, executorName)
+				     .register(REGISTRY);
 				return eventLoop;
 			});
 		}

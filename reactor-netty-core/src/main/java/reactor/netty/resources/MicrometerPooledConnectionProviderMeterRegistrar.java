@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,15 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
  * @since 0.9
  */
 final class MicrometerPooledConnectionProviderMeterRegistrar {
+	static final String ACTIVE_CONNECTIONS_DESCRIPTION =
+			"The number of the connections that have been successfully acquired and are in active use";
+	static final String IDLE_CONNECTIONS_DESCRIPTION = "The number of the idle connections";
+	static final String MAX_CONNECTIONS_DESCRIPTIONS = "The maximum number of active connections that are allowed";
+	static final String MAX_PENDING_CONNECTIONS_DESCRIPTIONS =
+			"The maximum number of requests that will be queued while waiting for a ready connection";
+	static final String PENDING_CONNECTIONS_DESCRIPTION =
+			"The number of the request, that are pending acquire a connection";
+	static final String TOTAL_CONNECTIONS_DESCRIPTION = "The number of all connections, active or idle.";
 
 	static final MicrometerPooledConnectionProviderMeterRegistrar INSTANCE = new MicrometerPooledConnectionProviderMeterRegistrar();
 
@@ -53,33 +62,33 @@ final class MicrometerPooledConnectionProviderMeterRegistrar {
 		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
 		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName};
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
-		     .description("The number of all connections, active or idle.")
+		     .description(TOTAL_CONNECTIONS_DESCRIPTION)
 		     .tags(tags)
 		     .register(REGISTRY);
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
-		     .description("The number of the connections that have been successfully acquired and are in active use")
+		     .description(ACTIVE_CONNECTIONS_DESCRIPTION)
 		     .tags(tags)
 		     .register(REGISTRY);
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::idleSize)
-		     .description("The number of the idle connections")
+		     .description(IDLE_CONNECTIONS_DESCRIPTION)
 		     .tags(tags)
 		     .register(REGISTRY);
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
-		     .description("The number of the request, that are pending acquire a connection")
+		     .description(PENDING_CONNECTIONS_DESCRIPTION)
 		     .tags(tags)
 		     .register(REGISTRY);
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + MAX_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::getMaxAllocatedSize)
-				.description("The maximum number of active connections that are allowed")
-				.tags(tags)
-				.register(REGISTRY);
+		     .description(MAX_CONNECTIONS_DESCRIPTIONS)
+		     .tags(tags)
+		     .register(REGISTRY);
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + MAX_PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::getMaxPendingAcquireSize)
-				.description("The maximum number of requests that will be queued while waiting for a ready connection")
-				.tags(tags)
-				.register(REGISTRY);
+		     .description(MAX_PENDING_CONNECTIONS_DESCRIPTIONS)
+		     .tags(tags)
+		     .register(REGISTRY);
 	}
 }
