@@ -71,7 +71,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = new ConcurrentHashMap<>();
 
 	final ConcurrentMap<MeterKey, LongAdder> totalConnectionsCache = new ConcurrentHashMap<>();
-        final LongAdder totalConnectionsAdder = new LongAdder();
+	final LongAdder totalConnectionsAdder = new LongAdder();
 	final String name;
 	final String protocol;
 
