@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,15 @@ import static reactor.netty.Metrics.USED_HEAP_MEMORY;
  * @since 0.9
  */
 final class ByteBufAllocatorMetrics {
+	static final String CHUNK_SIZE_DESCRIPTION = "The chunk size for an arena.";
+	static final String DIRECT_ARENAS_DESCRIPTION = "The number of direct arenas.";
+	static final String HEAP_ARENAS_DESCRIPTION = "The number of heap arenas.";
+	static final String NORMAL_CACHE_SIZE_DESCRIPTION = "The size of the normal cache.";
+	static final String SMALL_CACHE_SIZE_DESCRIPTION = "The size of the small cache.";
+	static final String THREAD_LOCAL_CACHES_DESCRIPTION = "The number of thread local caches.";
+	static final String USED_DIRECT_MEMORY_DESCRIPTION = "The number of the bytes of the direct memory.";
+	static final String USED_HEAP_MEMORY_DESCRIPTION = "The number of the bytes of the heap memory.";
+
 	static final ByteBufAllocatorMetrics INSTANCE = new ByteBufAllocatorMetrics();
 
 	final ConcurrentMap<String, ByteBufAllocatorMetric> cache = new ConcurrentHashMap<>();
@@ -57,12 +66,12 @@ final class ByteBufAllocatorMetrics {
 			String[] tags = new String[] {ID, key, TYPE, allocType};
 
 			Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + USED_HEAP_MEMORY, metrics, ByteBufAllocatorMetric::usedHeapMemory)
-			     .description("The number of the bytes of the heap memory.")
+			     .description(USED_HEAP_MEMORY_DESCRIPTION)
 			     .tags(tags)
 			     .register(REGISTRY);
 
 			Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + USED_DIRECT_MEMORY, metrics, ByteBufAllocatorMetric::usedDirectMemory)
-			     .description("The number of the bytes of the direct memory.")
+			     .description(USED_DIRECT_MEMORY_DESCRIPTION)
 			     .tags(tags)
 			     .register(REGISTRY);
 
@@ -70,32 +79,32 @@ final class ByteBufAllocatorMetrics {
 				PooledByteBufAllocatorMetric pooledMetrics = (PooledByteBufAllocatorMetric) metrics;
 
 				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + HEAP_ARENAS, pooledMetrics, PooledByteBufAllocatorMetric::numHeapArenas)
-				     .description("The number of heap arenas.")
+				     .description(HEAP_ARENAS_DESCRIPTION)
 				     .tags(tags)
 				     .register(REGISTRY);
 
 				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + DIRECT_ARENAS, pooledMetrics, PooledByteBufAllocatorMetric::numDirectArenas)
-				     .description("The number of direct arenas.")
+				     .description(DIRECT_ARENAS_DESCRIPTION)
 				     .tags(tags)
 				     .register(REGISTRY);
 
 				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + THREAD_LOCAL_CACHES, pooledMetrics, PooledByteBufAllocatorMetric::numThreadLocalCaches)
-				     .description("The number of thread local caches.")
+				     .description(THREAD_LOCAL_CACHES_DESCRIPTION)
 				     .tags(tags)
 				     .register(REGISTRY);
 
 				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + SMALL_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::smallCacheSize)
-				     .description("The size of the small cache.")
+				     .description(SMALL_CACHE_SIZE_DESCRIPTION)
 				     .tags(tags)
 				     .register(REGISTRY);
 
 				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + NORMAL_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::normalCacheSize)
-				     .description("The size of the normal cache.")
+				     .description(NORMAL_CACHE_SIZE_DESCRIPTION)
 				     .tags(tags)
 				     .register(REGISTRY);
 
 				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + CHUNK_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::chunkSize)
-				     .description("The chunk size for an arena.")
+				     .description(CHUNK_SIZE_DESCRIPTION)
 				     .tags(tags)
 				     .register(REGISTRY);
 			}

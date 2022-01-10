@@ -56,6 +56,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	protected static final String DATA_SENT_DESCRIPTION = "Amount of the data sent, in bytes";
 	protected static final String ERRORS_DESCRIPTION = "Number of errors that occurred";
 	static final String TLS_HANDSHAKE_TIME_DESCRIPTION = "Time spent for TLS handshake";
+	static final String TOTAL_CONNECTIONS_DESCRIPTION = "The number of all opened connections";
 
 	final ConcurrentMap<String, DistributionSummary> dataReceivedCache = new ConcurrentHashMap<>();
 
@@ -70,7 +71,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = new ConcurrentHashMap<>();
 
 	final ConcurrentMap<MeterKey, LongAdder> totalConnectionsCache = new ConcurrentHashMap<>();
-
+        final LongAdder totalConnectionsAdder = new LongAdder();
 	final String name;
 	final String protocol;
 
@@ -87,7 +88,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 				key -> filter(DistributionSummary.builder(name + DATA_RECEIVED)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_RECEIVED_DESCRIPTION)
-				                                 .tag(URI, protocol).tag(REMOTE_ADDRESS, address)
+				                                 .tags(URI, protocol, REMOTE_ADDRESS, address)
 				                                 .register(REGISTRY)));
 		if (ds != null) {
 			ds.record(bytes);
@@ -102,7 +103,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 				key -> filter(DistributionSummary.builder(name + DATA_SENT)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_SENT_DESCRIPTION)
-				                                 .tag(URI, protocol).tag(REMOTE_ADDRESS, address)
+				                                 .tags(URI, protocol, REMOTE_ADDRESS, address)
 				                                 .register(REGISTRY)));
 		if (ds != null) {
 			ds.record(bytes);
@@ -116,7 +117,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		c = c != null ? c : errorsCache.computeIfAbsent(address,
 				key -> filter(Counter.builder(name + ERRORS)
 				                     .description(ERRORS_DESCRIPTION)
-				                     .tag(URI, protocol).tag(REMOTE_ADDRESS, address)
+				                     .tags(URI, protocol, REMOTE_ADDRESS, address)
 				                     .register(REGISTRY)));
 		if (c != null) {
 			c.increment();
@@ -208,12 +209,11 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		LongAdder adder = totalConnectionsCache.get(meterKey);
 		adder = adder != null ? adder : totalConnectionsCache.computeIfAbsent(meterKey,
 				key -> {
-					LongAdder longAdder = new LongAdder();
-					Gauge gauge = filter(Gauge.builder(name + CONNECTIONS_TOTAL, longAdder, LongAdder::longValue)
-						.description("The number of all opened connections")
-						.tags(URI, protocol, LOCAL_ADDRESS, address)
-						.register(REGISTRY));
-					return gauge != null ? longAdder : null;
+					Gauge gauge = filter(Gauge.builder(name + CONNECTIONS_TOTAL, totalConnectionsAdder, LongAdder::longValue)
+							.description(TOTAL_CONNECTIONS_DESCRIPTION)
+							.tags(URI, protocol, LOCAL_ADDRESS, address)
+							.register(REGISTRY));
+					return gauge != null ? totalConnectionsAdder : null;
 				});
 		return adder;
 	}

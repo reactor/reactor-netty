@@ -49,7 +49,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
+import static reactor.netty.Metrics.CONNECTIONS_ACTIVE;
+import static reactor.netty.Metrics.CONNECTIONS_TOTAL;
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
@@ -64,7 +65,6 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
-import static reactor.netty.Metrics.CONNECTIONS_TOTAL;
 import static reactor.netty.Metrics.URI;
 
 /**
@@ -79,7 +79,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
 	private static final String SERVER_CONNECTIONS_TOTAL = HTTP_SERVER_PREFIX + CONNECTIONS_TOTAL;
-	private static final String SERVER_ACTIVE_CONNECTIONS = HTTP_SERVER_PREFIX + ACTIVE_CONNECTIONS;
+	private static final String SERVER_CONNECTIONS_ACTIVE = HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE;
 	private static final String MYTAG = "myuritag";
 	private final static String HTTP = "http";
 	private final static String POST = "POST";
@@ -429,7 +429,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		Thread.sleep(1000);
 		// now check the server counters
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
-		checkGauge(SERVER_ACTIVE_CONNECTIONS, true, 0, URI, uri, METHOD, POST);
+		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, uri, METHOD, POST);
 
 		disposableServer.disposeNow();
 	}
@@ -468,7 +468,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	private void checkServerConnectionsMicrometer(InetSocketAddress localAddress, String uri) {
 		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
-		checkGauge(SERVER_ACTIVE_CONNECTIONS, true, 1, URI, uri, METHOD, POST);
+		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 1, URI, uri, METHOD, POST);
 	}
 
 	private void checkServerConnectionsRecorder(InetSocketAddress localAddress, String uri) {
