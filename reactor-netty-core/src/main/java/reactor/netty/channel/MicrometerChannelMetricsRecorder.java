@@ -81,7 +81,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 				key -> filter(DistributionSummary.builder(name + DATA_RECEIVED)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_RECEIVED_DESCRIPTION)
-				                                 .tag(URI, protocol).tag(REMOTE_ADDRESS, address)
+				                                 .tags(URI, protocol, REMOTE_ADDRESS, address)
 				                                 .register(REGISTRY)));
 		if (ds != null) {
 			ds.record(bytes);
@@ -96,7 +96,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 				key -> filter(DistributionSummary.builder(name + DATA_SENT)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_SENT_DESCRIPTION)
-				                                 .tag(URI, protocol).tag(REMOTE_ADDRESS, address)
+				                                 .tags(URI, protocol, REMOTE_ADDRESS, address)
 				                                 .register(REGISTRY)));
 		if (ds != null) {
 			ds.record(bytes);
@@ -110,7 +110,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		c = c != null ? c : errorsCache.computeIfAbsent(address,
 				key -> filter(Counter.builder(name + ERRORS)
 				                     .description(ERRORS_DESCRIPTION)
-				                     .tag(URI, protocol).tag(REMOTE_ADDRESS, address)
+				                     .tags(URI, protocol, REMOTE_ADDRESS, address)
 				                     .register(REGISTRY)));
 		if (c != null) {
 			c.increment();
