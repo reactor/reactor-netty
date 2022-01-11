@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import reactor.netty.http.HttpMetricsRecorder;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 
 /**
@@ -54,4 +55,20 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	 * @param time the total time in nanoseconds for the request/response
 	 */
 	void recordResponseTime(String uri, String method, String status, Duration time);
+
+	/**
+	 * Record a new active in-use http connection
+	 *
+	 * @param localAddress the local server address
+	 * @since 1.0.15
+	 */
+	default void recordServerConnectionActive(SocketAddress localAddress) { }
+
+	/**
+	 * Record an inactive http connection
+	 *
+	 * @param localAddress the local server address
+	 * @since 1.0.15
+	 */
+	default void recordServerConnectionInactive(SocketAddress localAddress) { }
 }

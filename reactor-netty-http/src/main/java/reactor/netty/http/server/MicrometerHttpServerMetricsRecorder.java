@@ -17,19 +17,25 @@ package reactor.netty.http.server;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Timer;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.LongAdder;
 
+import static reactor.netty.Metrics.CONNECTIONS_ACTIVE;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.DATA_SENT_TIME;
 import static reactor.netty.Metrics.ERRORS;
 import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
@@ -43,9 +49,13 @@ import static reactor.netty.Metrics.URI;
 final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpServerMetricsRecorder {
 
 	final static MicrometerHttpServerMetricsRecorder INSTANCE = new MicrometerHttpServerMetricsRecorder();
+	private final static String PROTOCOL_VALUE_HTTP = "http";
+	private final static String ACTIVE_CONNECTIONS_DESCRIPTION = "The number of http connections currently processing requests";
+	private final LongAdder activeConnectionsAdder = new LongAdder();
+	private final ConcurrentMap<String, LongAdder> activeConnectionsCache = new ConcurrentHashMap<>();
 
 	private MicrometerHttpServerMetricsRecorder() {
-		super(HTTP_SERVER_PREFIX, "http");
+		super(HTTP_SERVER_PREFIX, PROTOCOL_VALUE_HTTP);
 	}
 
 	@Override
@@ -134,6 +144,22 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	}
 
 	@Override
+	public void recordServerConnectionActive(SocketAddress localAddress) {
+		LongAdder adder = getServerConnectionAdder(localAddress);
+		if (adder != null) {
+			adder.increment();
+		}
+	}
+
+	@Override
+	public void recordServerConnectionInactive(SocketAddress localAddress) {
+		LongAdder adder = getServerConnectionAdder(localAddress);
+		if (adder != null) {
+			adder.decrement();
+		}
+	}
+
+	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
 		// noop
 	}
@@ -161,5 +187,21 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
 		throw new UnsupportedOperationException();
+	}
+
+	private LongAdder getServerConnectionAdder(SocketAddress localAddress) {
+		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		LongAdder adder = activeConnectionsCache.get(address);
+		adder = adder != null ? adder : activeConnectionsCache.computeIfAbsent(address,
+				key -> {
+					Gauge gauge = filter(Gauge.builder(reactor.netty.Metrics.HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE,
+							activeConnectionsAdder, LongAdder::longValue)
+							.tags(URI, PROTOCOL_VALUE_HTTP, LOCAL_ADDRESS, address)
+							.description(ACTIVE_CONNECTIONS_DESCRIPTION)
+							.register(REGISTRY));
+					return gauge != null ? activeConnectionsAdder : null;
+				});
+
+		return adder;
 	}
 }

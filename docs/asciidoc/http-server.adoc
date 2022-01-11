@@ -560,6 +560,8 @@ The following table provides information for the HTTP server metrics:
 [width="100%",options="header"]
 |=======
 | metric name | type | description
+| reactor.netty.http.server.connections.active | Counter | The number of http connections currently processing requests
+| reactor.netty.http.server.connections.total | Counter | The number of all opened connections
 | reactor.netty.http.server.data.received | DistributionSummary | Amount of the data received, in bytes
 | reactor.netty.http.server.data.sent | DistributionSummary | Amount of the data sent, in bytes
 | reactor.netty.http.server.errors | Counter | Number of errors that occurred

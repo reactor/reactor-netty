@@ -17,6 +17,7 @@ package reactor.netty.channel;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.noop.NoopMeter;
@@ -26,12 +27,15 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.LongAdder;
 
 import static reactor.netty.Metrics.ADDRESS_RESOLVER;
+import static reactor.netty.Metrics.CONNECTIONS_TOTAL;
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
@@ -52,6 +56,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	protected static final String DATA_SENT_DESCRIPTION = "Amount of the data sent, in bytes";
 	protected static final String ERRORS_DESCRIPTION = "Number of errors that occurred";
 	static final String TLS_HANDSHAKE_TIME_DESCRIPTION = "Time spent for TLS handshake";
+	static final String TOTAL_CONNECTIONS_DESCRIPTION = "The number of all opened connections";
 
 	final ConcurrentMap<String, DistributionSummary> dataReceivedCache = new ConcurrentHashMap<>();
 
@@ -65,6 +70,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = new ConcurrentHashMap<>();
 
+	final ConcurrentMap<String, LongAdder> totalConnectionsCache = new ConcurrentHashMap<>();
+	final LongAdder totalConnectionsAdder = new LongAdder();
 	final String name;
 	final String protocol;
 
@@ -162,6 +169,22 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		}
 	}
 
+	@Override
+	public void recordServerConnectionOpened(SocketAddress serverAddress) {
+		LongAdder totalConnectionAdder = getTotalConnectionsAdder(serverAddress);
+		if (totalConnectionAdder != null) {
+			totalConnectionAdder.increment();
+		}
+	}
+
+	@Override
+	public void recordServerConnectionClosed(SocketAddress serverAddress) {
+		LongAdder totalConnectionAdder = getTotalConnectionsAdder(serverAddress);
+		if (totalConnectionAdder != null) {
+			totalConnectionAdder.decrement();
+		}
+	}
+
 	@Nullable
 	protected static <M extends Meter> M filter(M meter) {
 		if (meter instanceof NoopMeter) {
@@ -178,5 +201,19 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	protected String protocol() {
 		return protocol;
+	}
+
+	private LongAdder getTotalConnectionsAdder(SocketAddress serverAddress) {
+		String address = reactor.netty.Metrics.formatSocketAddress(serverAddress);
+		LongAdder adder = totalConnectionsCache.get(address);
+		adder = adder != null ? adder : totalConnectionsCache.computeIfAbsent(address,
+				key -> {
+					Gauge gauge = filter(Gauge.builder(name + CONNECTIONS_TOTAL, totalConnectionsAdder, LongAdder::longValue)
+							.description(TOTAL_CONNECTIONS_DESCRIPTION)
+							.tags(URI, protocol, LOCAL_ADDRESS, address)
+							.register(REGISTRY));
+					return gauge != null ? totalConnectionsAdder : null;
+				});
+		return adder;
 	}
 }
