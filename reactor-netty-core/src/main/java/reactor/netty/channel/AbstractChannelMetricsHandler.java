@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,18 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	protected AbstractChannelMetricsHandler(@Nullable SocketAddress remoteAddress, boolean onServer) {
 		this.remoteAddress = remoteAddress;
 		this.onServer = onServer;
+	}
+
+	@Override
+	public void channelActive(ChannelHandlerContext ctx) {
+		recorder().recordServerConnectionOpened(ctx.channel().localAddress());
+		ctx.fireChannelActive();
+	}
+
+	@Override
+	public void channelInactive(ChannelHandlerContext ctx) {
+		recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+		ctx.fireChannelInactive();
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,6 +128,16 @@ public class Metrics {
 	 */
 	public static final String RESPONSE_TIME = ".response.time";
 
+	/**
+	 * The number of all connections, whether they are active or idle
+	 */
+	public static final String CONNECTIONS_TOTAL = ".connections.total";
+
+	/**
+	 * The number of connections that are currently in use
+	 */
+	public static final String CONNECTIONS_ACTIVE = ".connections.active";
+
 
 	// AddressResolverGroup Metrics
 	/**
@@ -237,6 +247,8 @@ public class Metrics {
 
 
 	// Tags
+	public static final String LOCAL_ADDRESS = "local.address";
+
 	public static final String REMOTE_ADDRESS = "remote.address";
 
 	public static final String URI = "uri";

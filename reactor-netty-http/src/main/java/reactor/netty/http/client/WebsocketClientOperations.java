@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,6 +114,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 			if (notRedirected(response)) {
 				try {
 					handshaker.finishHandshake(channel(), response);
+					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+					ctx.read();
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
 				catch (Exception e) {

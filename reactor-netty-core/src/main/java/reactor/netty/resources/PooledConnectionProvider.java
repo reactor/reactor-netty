@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
 import reactor.netty.transport.TransportConfig;
+import reactor.netty.internal.util.MapUtils;
 import reactor.pool.AllocationStrategy;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.Pool;
@@ -115,8 +116,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			SocketAddress remoteAddress = Objects.requireNonNull(remote.get(), "Remote Address supplier returned null");
 			PoolKey holder = new PoolKey(remoteAddress, config.channelHash());
 			PoolFactory<T> poolFactory = poolFactory(remoteAddress);
-			InstrumentedPool<T> pool = channelPools.get(holder);
-			pool = pool != null ? pool : channelPools.computeIfAbsent(holder, poolKey -> {
+			InstrumentedPool<T> pool = MapUtils.computeIfAbsent(channelPools, holder, poolKey -> {
 				if (log.isDebugEnabled()) {
 					log.debug("Creating a new [{}] client pool [{}] for [{}]", name, poolFactory, remoteAddress);
 				}

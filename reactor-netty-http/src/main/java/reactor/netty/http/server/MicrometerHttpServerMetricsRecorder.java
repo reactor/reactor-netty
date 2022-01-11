@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,29 @@ package reactor.netty.http.server;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Timer;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
+import reactor.netty.internal.util.MapUtils;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.LongAdder;
 
+import static reactor.netty.Metrics.CONNECTIONS_ACTIVE;
+import static reactor.netty.Metrics.DATA_RECEIVED;
+import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
+import static reactor.netty.Metrics.DATA_SENT;
+import static reactor.netty.Metrics.DATA_SENT_TIME;
+import static reactor.netty.Metrics.ERRORS;
 import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.REGISTRY;
+import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
 
@@ -37,18 +50,23 @@ import static reactor.netty.Metrics.URI;
 final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpServerMetricsRecorder {
 
 	final static MicrometerHttpServerMetricsRecorder INSTANCE = new MicrometerHttpServerMetricsRecorder();
+	private final static String PROTOCOL_VALUE_HTTP = "http";
+	private final static String ACTIVE_CONNECTIONS_DESCRIPTION = "The number of http connections currently processing requests";
+	private final LongAdder activeConnectionsAdder = new LongAdder();
+	private final ConcurrentMap<String, LongAdder> activeConnectionsCache = new ConcurrentHashMap<>();
 
 	private MicrometerHttpServerMetricsRecorder() {
-		super(HTTP_SERVER_PREFIX, "http");
+		super(HTTP_SERVER_PREFIX, PROTOCOL_VALUE_HTTP);
 	}
 
 	@Override
 	public void recordDataReceivedTime(String uri, String method, Duration time) {
 		MeterKey meterKey = new MeterKey(uri, null, method, null);
-		Timer dataReceivedTime = dataReceivedTimeCache.get(meterKey);
-		dataReceivedTime = dataReceivedTime != null ? dataReceivedTime : dataReceivedTimeCache.computeIfAbsent(meterKey,
-				key -> filter(dataReceivedTimeBuilder.tags(URI, uri, METHOD, method)
-				                                     .register(REGISTRY)));
+		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
+				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
+				                   .description(DATA_RECEIVED_TIME_DESCRIPTION)
+				                   .tags(URI, uri, METHOD, method)
+				                   .register(REGISTRY)));
 		if (dataReceivedTime != null) {
 			dataReceivedTime.record(time);
 		}
@@ -57,10 +75,11 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataSentTime(String uri, String method, String status, Duration time) {
 		MeterKey meterKey = new MeterKey(uri, null, method, status);
-		Timer dataSentTime = dataSentTimeCache.get(meterKey);
-		dataSentTime = dataSentTime != null ? dataSentTime : dataSentTimeCache.computeIfAbsent(meterKey,
-				key -> filter(dataSentTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
-				                                 .register(REGISTRY)));
+		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
+				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
+				                   .description(DATA_SENT_TIME_DESCRIPTION)
+				                   .tags(URI, uri, METHOD, method, STATUS, status)
+				                   .register(REGISTRY)));
 		if (dataSentTime != null) {
 			dataSentTime.record(time);
 		}
@@ -69,10 +88,11 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordResponseTime(String uri, String method, String status, Duration time) {
 		MeterKey meterKey = new MeterKey(uri, null, method, status);
-		Timer responseTime = responseTimeCache.get(meterKey);
-		responseTime = responseTime != null ? responseTime : responseTimeCache.computeIfAbsent(meterKey,
-				key -> filter(responseTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
-				                                 .register(REGISTRY)));
+		Timer responseTime = MapUtils.computeIfAbsent(responseTimeCache, meterKey,
+				key -> filter(Timer.builder(name() + RESPONSE_TIME)
+				                   .description(RESPONSE_TIME_DESCRIPTION)
+				                   .tags(URI, uri, METHOD, method, STATUS, status)
+				                   .register(REGISTRY)));
 		if (responseTime != null) {
 			responseTime.record(time);
 		}
@@ -81,9 +101,10 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
 		MeterKey meterKey = new MeterKey(uri, null, null, null);
-		DistributionSummary dataReceived = dataReceivedCache.get(meterKey);
-		dataReceived = dataReceived != null ? dataReceived : dataReceivedCache.computeIfAbsent(meterKey,
-				key -> filter(dataReceivedBuilder.tags(URI, uri)
+		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
+				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
+				                                 .baseUnit(BYTES_UNIT)
+				                                 .description(DATA_RECEIVED_DESCRIPTION).tags(URI, uri)
 				                                 .register(REGISTRY)));
 		if (dataReceived != null) {
 			dataReceived.record(bytes);
@@ -93,10 +114,12 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
 		MeterKey meterKey = new MeterKey(uri, null, null, null);
-		DistributionSummary dataSent = dataSentCache.get(meterKey);
-		dataSent = dataSent != null ? dataSent : dataSentCache.computeIfAbsent(meterKey,
-				key -> filter(dataSentBuilder.tags(URI, uri)
-				                             .register(REGISTRY)));
+		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
+				key -> filter(DistributionSummary.builder(name() + DATA_SENT)
+				                                 .baseUnit(BYTES_UNIT)
+				                                 .description(DATA_SENT_DESCRIPTION)
+				                                 .tags(URI, uri)
+				                                 .register(REGISTRY)));
 		if (dataSent != null) {
 			dataSent.record(bytes);
 		}
@@ -105,12 +128,29 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
 		MeterKey meterKey = new MeterKey(uri, null, null, null);
-		Counter errors = errorsCache.get(meterKey);
-		errors = errors != null ? errors : errorsCache.computeIfAbsent(meterKey,
-				key -> filter(errorsBuilder.tags(URI, uri)
-				                           .register(REGISTRY)));
+		Counter errors = MapUtils.computeIfAbsent(errorsCache, meterKey,
+				key -> filter(Counter.builder(name() + ERRORS)
+				                     .description(ERRORS_DESCRIPTION)
+				                     .tags(URI, uri)
+				                     .register(REGISTRY)));
 		if (errors != null) {
 			errors.increment();
+		}
+	}
+
+	@Override
+	public void recordServerConnectionActive(SocketAddress localAddress) {
+		LongAdder adder = getServerConnectionAdder(localAddress);
+		if (adder != null) {
+			adder.increment();
+		}
+	}
+
+	@Override
+	public void recordServerConnectionInactive(SocketAddress localAddress) {
+		LongAdder adder = getServerConnectionAdder(localAddress);
+		if (adder != null) {
+			adder.decrement();
 		}
 	}
 
@@ -142,5 +182,18 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
 		throw new UnsupportedOperationException();
+	}
+
+	private LongAdder getServerConnectionAdder(SocketAddress localAddress) {
+		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		return MapUtils.computeIfAbsent(activeConnectionsCache, address,
+				key -> {
+					Gauge gauge = filter(Gauge.builder(reactor.netty.Metrics.HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE,
+							activeConnectionsAdder, LongAdder::longValue)
+							.tags(URI, PROTOCOL_VALUE_HTTP, LOCAL_ADDRESS, address)
+							.description(ACTIVE_CONNECTIONS_DESCRIPTION)
+							.register(REGISTRY));
+					return gauge != null ? activeConnectionsAdder : null;
+				});
 	}
 }

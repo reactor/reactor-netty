@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,9 @@
  */
 package reactor.netty.http;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static reactor.netty.Metrics.CONNECT_TIME;
-import static reactor.netty.Metrics.DATA_RECEIVED;
-import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
-import static reactor.netty.Metrics.DATA_SENT;
-import static reactor.netty.Metrics.DATA_SENT_TIME;
-import static reactor.netty.Metrics.ERRORS;
-import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
-import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
-import static reactor.netty.Metrics.METHOD;
-import static reactor.netty.Metrics.REMOTE_ADDRESS;
-import static reactor.netty.Metrics.RESPONSE_TIME;
-import static reactor.netty.Metrics.STATUS;
-import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
-import static reactor.netty.Metrics.URI;
-
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -47,6 +32,7 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.HttpServerMetricsRecorder;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 import reactor.util.context.Context;
@@ -58,8 +44,28 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty.Metrics.CONNECTIONS_ACTIVE;
+import static reactor.netty.Metrics.CONNECTIONS_TOTAL;
+import static reactor.netty.Metrics.CONNECT_TIME;
+import static reactor.netty.Metrics.DATA_RECEIVED;
+import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
+import static reactor.netty.Metrics.DATA_SENT;
+import static reactor.netty.Metrics.DATA_SENT_TIME;
+import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
+import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
+import static reactor.netty.Metrics.METHOD;
+import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.RESPONSE_TIME;
+import static reactor.netty.Metrics.STATUS;
+import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty.Metrics.URI;
 
 /**
  * @author Violeta Georgieva
@@ -72,21 +78,39 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
+	private static final String SERVER_CONNECTIONS_TOTAL = HTTP_SERVER_PREFIX + CONNECTIONS_TOTAL;
+	private static final String SERVER_CONNECTIONS_ACTIVE = HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE;
+	private final static String HTTP = "http";
+
+	/**
+	 * Initialization done before running each test.
+	 * <ul>
+	 *  <li> /1 is used by testExistingEndpoint test</li>
+	 *  <li> /2 is used by testExistingEndpoint, and testUriTagValueFunctionNotSharedForClient tests</li>
+	 *  <li> /3 does not exists but is used by testNonExistingEndpoint, checkExpectationsNonExisting tests</li>
+	 *  <li> /4 is used by testServerConnectionsMicrometer test</li>
+	 *  <li> /5 is used by testServerConnectionsRecorder test</li>
+	 * </ul>
+	 */
 	@BeforeEach
 	void setUp() {
-		httpServer = customizeServerOptions(
-				createServer()
-				          .host("127.0.0.1")
-				          .metrics(true, Function.identity())
-				          .route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
-				                                                    .send(req.receive().retain().delayElements(Duration.ofMillis(10))))
-				                       .post("/2", (req, res) -> res.header("Connection", "close")
-				                                                    .send(req.receive().retain().delayElements(Duration.ofMillis(10))))));
+		httpServer = customizeServerOptions(createServer()
+				.host("127.0.0.1")
+				.metrics(true, Function.identity())
+				.route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
+								.send(req.receive().retain().delayElements(Duration.ofMillis(10))))
+						.post("/2", (req, res) -> res.header("Connection", "close")
+								.send(req.receive().retain().delayElements(Duration.ofMillis(10))))
+						.post("/4", (req, res) -> res.header("Connection", "close")
+								.send(req.receive().retain().doOnNext(b ->
+										checkServerConnectionsMicrometer(req.hostAddress()))))
+						.post("/5", (req, res) -> res.header("Connection", "close")
+								.send(req.receive().retain().doOnNext(b ->
+										checkServerConnectionsRecorder(req.hostAddress()))))));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
-		httpClient =
-				customizeClientOptions(createClient(provider, () -> disposableServer.address())
-				                                 .metrics(true, Function.identity()));
+		httpClient = customizeClientOptions(createClient(provider, () -> disposableServer.address())
+				.metrics(true, Function.identity()));
 
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
@@ -100,6 +124,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		Metrics.removeRegistry(registry);
 		registry.clear();
 		registry.close();
+
+		ServerRecorder.INSTANCE.reset();
 	}
 
 	@Test
@@ -338,6 +364,89 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(recorder.onDataSentContextView).isTrue();
 	}
 
+	@Test
+	void testServerConnectionsMicrometer() throws Exception {
+		disposableServer = httpServer.metrics(true, Function.identity()).bindNow();
+
+		String uri = "/4";
+		String address = reactor.netty.Metrics.formatSocketAddress(disposableServer.address());
+		CountDownLatch latch = new CountDownLatch(1);
+
+		httpClient.doOnResponse((res, conn) ->
+						conn.channel()
+								.closeFuture()
+								.addListener(f -> latch.countDown()))
+				.metrics(true, Function.identity())
+				.post()
+				.uri(uri)
+				.send(body)
+				.responseContent()
+				.aggregate()
+				.asString()
+				.as(StepVerifier::create)
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		// ensure that the server counters have been updated. For the moment, wait 1 sec.
+		Thread.sleep(1000);
+		// now check the server counters
+		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+
+		disposableServer.disposeNow();
+	}
+
+	@Test
+	void testServerConnectionsRecorder() throws Exception {
+		disposableServer = httpServer.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity()).bindNow();
+		String address = reactor.netty.Metrics.formatSocketAddress(disposableServer.address());
+
+		CountDownLatch latch = new CountDownLatch(1);
+
+		httpClient.doOnResponse((res, conn) ->
+						conn.channel()
+								.closeFuture()
+								.addListener(f -> latch.countDown()))
+				.metrics(true, Function.identity())
+				.post()
+				.uri("/5")
+				.send(body)
+				.responseContent()
+				.aggregate()
+				.asString()
+				.as(StepVerifier::create)
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(ServerRecorder.INSTANCE.done.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
+		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
+
+		disposableServer.disposeNow();
+	}
+
+	private void checkServerConnectionsMicrometer(InetSocketAddress localAddress) {
+		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
+		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
+	}
+
+	private void checkServerConnectionsRecorder(InetSocketAddress localAddress) {
+		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get() == 1).isTrue();
+		assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get() == 1).isTrue();
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isNull();
+	}
+
 	private void checkExpectationsExisting(String uri, String serverAddress, int index) {
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "POST", STATUS, "200"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
@@ -437,6 +546,16 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 	}
 
+	void checkGauge(String name, boolean exists, double expectedCount, String... tags) {
+		Gauge gauge = registry.find(name).tags(tags).gauge();
+		if (exists) {
+			assertThat(gauge).isNotNull();
+			assertThat(gauge.value() == expectedCount).isTrue();
+		}
+		else {
+			assertThat(gauge).isNull();
+		}
+	}
 
 	private static final String SERVER_RESPONSE_TIME = HTTP_SERVER_PREFIX + RESPONSE_TIME;
 	private static final String SERVER_DATA_SENT_TIME = HTTP_SERVER_PREFIX + DATA_SENT_TIME;
@@ -458,8 +577,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		static final ContextAwareRecorder INSTANCE = new ContextAwareRecorder();
 
-		AtomicBoolean onDataReceivedContextView = new AtomicBoolean();
-		AtomicBoolean onDataSentContextView = new AtomicBoolean();
+		final AtomicBoolean onDataReceivedContextView = new AtomicBoolean();
+		final AtomicBoolean onDataSentContextView = new AtomicBoolean();
 
 		@Override
 		public void incrementErrorsCount(ContextView contextView, SocketAddress remoteAddress, String uri) {
@@ -508,6 +627,102 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		@Override
 		public void recordTlsHandshakeTime(ContextView contextView, SocketAddress socketAddress, Duration duration, String s) {
+		}
+
+		@Override
+		public void recordResolveAddressTime(SocketAddress socketAddress, Duration duration, String s) {
+		}
+	}
+
+	static final class ServerRecorder implements HttpServerMetricsRecorder {
+
+		static final ServerRecorder INSTANCE = new ServerRecorder();
+		private final AtomicInteger onServerConnectionsAmount = new AtomicInteger();
+		private final AtomicReference<String> onServerConnectionsLocalAddr = new AtomicReference<>();
+		private final AtomicReference<String> onActiveConnectionsLocalAddr = new AtomicReference<>();
+		private final AtomicReference<String> onInactiveConnectionsLocalAddr = new AtomicReference<>();
+		private final AtomicInteger onActiveConnectionsAmount = new AtomicInteger();
+		private volatile CountDownLatch done = new CountDownLatch(4);
+
+		void reset() {
+			onServerConnectionsAmount.set(0);
+			onServerConnectionsLocalAddr.set(null);
+			onActiveConnectionsLocalAddr.set(null);
+			onInactiveConnectionsLocalAddr.set(null);
+			onActiveConnectionsAmount.set(0);
+			done = new CountDownLatch(4);
+		}
+
+		@Override
+		public void recordServerConnectionOpened(SocketAddress localAddress) {
+			onServerConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onServerConnectionsAmount.addAndGet(1);
+			done.countDown();
+		}
+
+		@Override
+		public void recordServerConnectionClosed(SocketAddress localAddress) {
+			onServerConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onServerConnectionsAmount.addAndGet(-1);
+			done.countDown();
+		}
+
+		@Override
+		public void recordServerConnectionActive(SocketAddress localAddress) {
+			onActiveConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onActiveConnectionsAmount.addAndGet(1);
+			done.countDown();
+		}
+
+		@Override
+		public void recordServerConnectionInactive(SocketAddress localAddress) {
+			onInactiveConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onActiveConnectionsAmount.addAndGet(-1);
+			done.countDown();
+		}
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+		}
+
+		@Override
+		public void recordDataReceivedTime(String uri, String method, Duration time) {
+		}
+
+		@Override
+		public void recordDataSentTime(String uri, String method, String status, Duration time) {
+		}
+
+		@Override
+		public void recordResponseTime(String uri, String method, String status, Duration time) {
+		}
+
+		@Override
+		public void recordDataReceived(SocketAddress socketAddress, long l) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress socketAddress, long l) {
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress socketAddress) {
+		}
+
+		@Override
+		public void recordTlsHandshakeTime(SocketAddress socketAddress, Duration duration, String s) {
+		}
+
+		@Override
+		public void recordConnectTime(SocketAddress socketAddress, Duration duration, String s) {
 		}
 
 		@Override
