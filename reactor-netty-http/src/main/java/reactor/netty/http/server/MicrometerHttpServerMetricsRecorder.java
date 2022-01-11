@@ -186,8 +186,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	private LongAdder getServerConnectionAdder(SocketAddress localAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
-		LongAdder adder = activeConnectionsCache.get(address);
-		adder = adder != null ? adder : activeConnectionsCache.computeIfAbsent(address,
+		return MapUtils.computeIfAbsent(activeConnectionsCache, address,
 				key -> {
 					Gauge gauge = filter(Gauge.builder(reactor.netty.Metrics.HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE,
 							activeConnectionsAdder, LongAdder::longValue)
@@ -196,7 +195,5 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 							.register(REGISTRY));
 					return gauge != null ? activeConnectionsAdder : null;
 				});
-
-		return adder;
 	}
 }

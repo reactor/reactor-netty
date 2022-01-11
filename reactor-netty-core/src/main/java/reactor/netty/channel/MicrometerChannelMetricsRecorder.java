@@ -200,8 +200,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	private LongAdder getTotalConnectionsAdder(SocketAddress serverAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(serverAddress);
-		LongAdder adder = totalConnectionsCache.get(address);
-		adder = adder != null ? adder : totalConnectionsCache.computeIfAbsent(address,
+		return MapUtils.computeIfAbsent(totalConnectionsCache, address,
 				key -> {
 					Gauge gauge = filter(Gauge.builder(name + CONNECTIONS_TOTAL, totalConnectionsAdder, LongAdder::longValue)
 							.description(TOTAL_CONNECTIONS_DESCRIPTION)
@@ -209,6 +208,5 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 							.register(REGISTRY));
 					return gauge != null ? totalConnectionsAdder : null;
 				});
-		return adder;
 	}
 }
