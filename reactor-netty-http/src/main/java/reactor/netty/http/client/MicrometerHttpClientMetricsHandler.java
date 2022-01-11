@@ -17,9 +17,14 @@ package reactor.netty.http.client;
 
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.handler.TracingRecordingHandler;
+import io.micrometer.tracing.handler.TracingRecordingHandlerSpanCustomizer;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.function.Function;
 
 import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
@@ -151,6 +156,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 			this.status = status;
 		}
 
+		// TODO: What do we do about these in tracing ?
 		@Override
 		public Tags getLowCardinalityTags() {
 			return Tags.of(REMOTE_ADDRESS, remoteAddress, URI, path, METHOD, method, STATUS, status);
@@ -169,9 +175,11 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 			this.remoteAddress = remoteAddress;
 		}
 
+		// TODO: What do we do about these in tracing ?
 		@Override
 		public Tags getLowCardinalityTags() {
 			return Tags.of(REMOTE_ADDRESS, remoteAddress, URI, path, METHOD, method);
 		}
 	}
+
 }

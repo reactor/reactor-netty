@@ -17,32 +17,41 @@ package reactor.netty;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.handler.TracingRecordingHandlerSpanCustomizer;
 import io.micrometer.tracing.test.SampleTestRunner;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientMetricsTracingRecordingHandlerSpanCustomizer;
+import reactor.netty.http.server.HttpServerMetricsTracingRecordingHandlerSpanCustomizer;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-class TestTest  extends SampleTestRunner {
+class TestTest extends SampleTestRunner {
 
 	TestTest() {
 		super(SamplerRunnerConfig
-				.builder()
-				.wavefrontApplicationName("test")
-				.wavefrontServiceName("test")
-				.wavefrontSource("<Wavefront Source>")
-				.wavefrontToken("<Wavefront Token>")
-				.wavefrontUrl("<Wavefront Url>")
-				.zipkinUrl("<Zipkin Url>")
-				.build(),
+						.builder()
+						.build(),
 				Metrics.REGISTRY);
 	}
 
 	@Override
+	public List<TracingRecordingHandlerSpanCustomizer> getTracingRecordingHandlerSpanCustomizers() {
+		return Arrays.asList(new HttpClientMetricsTracingRecordingHandlerSpanCustomizer(), new HttpServerMetricsTracingRecordingHandlerSpanCustomizer());
+	}
+
+	@Override
+	public TracingSetup[] getTracingSetup() {
+		return new TracingSetup[]{TracingSetup.ZIPKIN_BRAVE};
+	}
+
+	@Override
 	public BiConsumer<Tracer, MeterRegistry> yourCode() {
-		byte[] bytes = new byte[1024*8];
+		byte[] bytes = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(bytes);
 		return (tracer, meterRegistry) ->
