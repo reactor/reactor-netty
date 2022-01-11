@@ -24,6 +24,7 @@ import java.util.function.Function;
  * <p><strong>Note:</strong> This utility class is for internal use only. It can be removed at any time.
  *
  * @author zimatars
+ * @since 1.0.15
  */
 public final class MapUtils {
 
