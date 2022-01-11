@@ -114,6 +114,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 			if (notRedirected(response)) {
 				try {
 					handshaker.finishHandshake(channel(), response);
+					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+					ctx.read();
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
 				catch (Exception e) {

@@ -120,6 +120,8 @@ final class WebsocketServerOperations extends HttpServerOperations
 			          .addListener(f -> {
 			              if (replaced.rebind(this)) {
 			                  markPersistent(false);
+			                  // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+			                  channel.read();
 			              }
 			              else {
 			                  log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
