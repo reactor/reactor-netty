@@ -68,7 +68,7 @@ import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.URI;
 
 /**
- *  @author Violeta Georgieva
+ * @author Violeta Georgieva
  */
 class HttpMetricsHandlerTests extends BaseHttpTest {
 	HttpServer httpServer;
@@ -120,10 +120,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void tearDown() {
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
-
-		if (disposableServer != null) {
-			disposableServer.disposeNow();
-		}
 
 		Metrics.removeRegistry(registry);
 		registry.clear();
