@@ -25,7 +25,7 @@ import java.util.function.Function;
  *
  * @author zimatars
  */
-public class MapUtils {
+public final class MapUtils {
 
 	/**
 	 * ConcurrentHashMap.computeIfAbsent(k,v) locks bin when k present.
