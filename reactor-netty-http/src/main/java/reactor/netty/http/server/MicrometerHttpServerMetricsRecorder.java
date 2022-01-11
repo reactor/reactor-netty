@@ -35,6 +35,7 @@ import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.DATA_SENT_TIME;
 import static reactor.netty.Metrics.ERRORS;
 import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
@@ -51,7 +52,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	private final static String PROTOCOL_VALUE_HTTP = "http";
 	private final static String ACTIVE_CONNECTIONS_DESCRIPTION = "The number of http connections currently processing requests";
 	private final LongAdder activeConnectionsAdder = new LongAdder();
-	private final ConcurrentMap<MeterKey, LongAdder> activeConnectionsCache = new ConcurrentHashMap<>();
+	private final ConcurrentMap<String, LongAdder> activeConnectionsCache = new ConcurrentHashMap<>();
 
 	private MicrometerHttpServerMetricsRecorder() {
 		super(HTTP_SERVER_PREFIX, PROTOCOL_VALUE_HTTP);
@@ -143,18 +144,18 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	}
 
 	@Override
-	public void recordServerConnectionActive(String uri, String method) {
-		LongAdder adder = getServerConnectionAdder(uri, method);
+	public void recordServerConnectionActive(SocketAddress localAddress) {
+		LongAdder adder = getServerConnectionAdder(localAddress);
 		if (adder != null) {
-			adder.add(1);
+			adder.increment();
 		}
 	}
 
 	@Override
-	public void recordServerConnectionInactive(String uri, String method) {
-		LongAdder adder = getServerConnectionAdder(uri, method);
+	public void recordServerConnectionInactive(SocketAddress localAddress) {
+		LongAdder adder = getServerConnectionAdder(localAddress);
 		if (adder != null) {
-			adder.add(-1);
+			adder.decrement();
 		}
 	}
 
@@ -188,14 +189,14 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		throw new UnsupportedOperationException();
 	}
 
-	private LongAdder getServerConnectionAdder(String uri, String method) {
-		MeterKey meterKey = new MeterKey(uri, null, method, null);
-		LongAdder adder = activeConnectionsCache.get(meterKey);
-		adder = adder != null ? adder : activeConnectionsCache.computeIfAbsent(meterKey,
+	private LongAdder getServerConnectionAdder(SocketAddress localAddress) {
+		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		LongAdder adder = activeConnectionsCache.get(address);
+		adder = adder != null ? adder : activeConnectionsCache.computeIfAbsent(address,
 				key -> {
 					Gauge gauge = filter(Gauge.builder(reactor.netty.Metrics.HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE,
 							activeConnectionsAdder, LongAdder::longValue)
-							.tags(URI, uri, METHOD, method)
+							.tags(URI, PROTOCOL_VALUE_HTTP, LOCAL_ADDRESS, address)
 							.description(ACTIVE_CONNECTIONS_DESCRIPTION)
 							.register(REGISTRY));
 					return gauge != null ? activeConnectionsAdder : null;

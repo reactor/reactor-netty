@@ -70,7 +70,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = new ConcurrentHashMap<>();
 
-	final ConcurrentMap<MeterKey, LongAdder> totalConnectionsCache = new ConcurrentHashMap<>();
+	final ConcurrentMap<String, LongAdder> totalConnectionsCache = new ConcurrentHashMap<>();
 	final LongAdder totalConnectionsAdder = new LongAdder();
 	final String name;
 	final String protocol;
@@ -170,18 +170,18 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	@Override
-	public void recordServerConnectionOpened(SocketAddress serverAddr) {
-		LongAdder totalConnectionAdder = getTotalConnectionsAdder(serverAddr);
+	public void recordServerConnectionOpened(SocketAddress serverAddress) {
+		LongAdder totalConnectionAdder = getTotalConnectionsAdder(serverAddress);
 		if (totalConnectionAdder != null) {
-			totalConnectionAdder.add(1);
+			totalConnectionAdder.increment();
 		}
 	}
 
 	@Override
-	public void recordServerConnectionClosed(SocketAddress serverAddr) {
-		LongAdder totalConnectionAdder = getTotalConnectionsAdder(serverAddr);
+	public void recordServerConnectionClosed(SocketAddress serverAddress) {
+		LongAdder totalConnectionAdder = getTotalConnectionsAdder(serverAddress);
 		if (totalConnectionAdder != null) {
-			totalConnectionAdder.add(-1);
+			totalConnectionAdder.decrement();
 		}
 	}
 
@@ -203,11 +203,10 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		return protocol;
 	}
 
-	private LongAdder getTotalConnectionsAdder(SocketAddress serverAddr) {
-		String address = reactor.netty.Metrics.formatSocketAddress(serverAddr);
-		MeterKey meterKey = new MeterKey(null, address, null, null);
-		LongAdder adder = totalConnectionsCache.get(meterKey);
-		adder = adder != null ? adder : totalConnectionsCache.computeIfAbsent(meterKey,
+	private LongAdder getTotalConnectionsAdder(SocketAddress serverAddress) {
+		String address = reactor.netty.Metrics.formatSocketAddress(serverAddress);
+		LongAdder adder = totalConnectionsCache.get(address);
+		adder = adder != null ? adder : totalConnectionsCache.computeIfAbsent(address,
 				key -> {
 					Gauge gauge = filter(Gauge.builder(name + CONNECTIONS_TOTAL, totalConnectionsAdder, LongAdder::longValue)
 							.description(TOTAL_CONNECTIONS_DESCRIPTION)

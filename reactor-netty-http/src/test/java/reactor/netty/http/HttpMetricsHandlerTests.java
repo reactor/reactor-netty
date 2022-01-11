@@ -80,9 +80,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	private static final String SERVER_CONNECTIONS_TOTAL = HTTP_SERVER_PREFIX + CONNECTIONS_TOTAL;
 	private static final String SERVER_CONNECTIONS_ACTIVE = HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE;
-	private static final String MYTAG = "myuritag";
 	private final static String HTTP = "http";
-	private final static String POST = "POST";
 
 	/**
 	 * Initialization done before running each test.
@@ -90,10 +88,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 *  <li> /1 is used by testExistingEndpoint test</li>
 	 *  <li> /2 is used by testExistingEndpoint, and testUriTagValueFunctionNotSharedForClient tests</li>
 	 *  <li> /3 does not exists but is used by testNonExistingEndpoint, checkExpectationsNonExisting tests</li>
-	 *  <li> /4 is used by testServerConnectionsMicrometer test where no uriTagValue mapper function is used</li>
-	 *  <li> /5 is used by testServerConnectionsMicrometer test where an uriTagValue mapper function is used</li>
-	 *  <li> /6 is used by testServerConnectionsRecorder test where no uriTagValue mapper function is used</li>
-	 *  <li> /7 is used by testServerConnectionsRecorder test where an uriTagValue mapper function is used</li>
+	 *  <li> /4 is used by testServerConnectionsMicrometer test</li>
+	 *  <li> /5 is used by testServerConnectionsRecorder test</li>
 	 * </ul>
 	 */
 	@BeforeEach
@@ -107,16 +103,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 								.send(req.receive().retain().delayElements(Duration.ofMillis(10))))
 						.post("/4", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().retain().doOnNext(b ->
-										checkServerConnectionsMicrometer(req.hostAddress(), req.uri()))))
+										checkServerConnectionsMicrometer(req.hostAddress()))))
 						.post("/5", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().retain().doOnNext(b ->
-										checkServerConnectionsMicrometer(req.hostAddress(), MYTAG))))
-						.post("/6", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().retain().doOnNext(b ->
-										checkServerConnectionsRecorder(req.hostAddress(), req.uri()))))
-						.post("/7", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().retain().doOnNext(b ->
-										checkServerConnectionsRecorder(req.hostAddress(), MYTAG))))));
+										checkServerConnectionsRecorder(req.hostAddress()))))));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
 		httpClient = customizeClientOptions(createClient(provider, () -> disposableServer.address())
@@ -380,30 +370,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@Test
 	void testServerConnectionsMicrometer() throws Exception {
-		testServerConnectionsMicrometer(false);
-	}
+		disposableServer = httpServer.metrics(true, Function.identity()).bindNow();
 
-	@Test
-	void testServerConnectionsMicrometerUriTagMapper() throws Exception {
-		testServerConnectionsMicrometer(true);
-	}
-
-	@Test
-	void testServerConnectionsRecorder() throws Exception {
-		testServerConnectionsRecorder(false);
-	}
-
-	@Test
-	void testServerConnectionsRecorderUriTagMapper() throws Exception {
-		testServerConnectionsRecorder(true);
-	}
-
-	private void testServerConnectionsMicrometer(boolean uriTagMapper) throws Exception {
-		disposableServer = uriTagMapper ?
-				httpServer.metrics(true, u -> "/5".equals(u) ? MYTAG : u).bindNow() :
-				httpServer.metrics(true, Function.identity()).bindNow();
-
-		String uri = uriTagMapper ? MYTAG : "/4";
+		String uri = "/4";
 		String address = reactor.netty.Metrics.formatSocketAddress(disposableServer.address());
 		CountDownLatch latch = new CountDownLatch(1);
 
@@ -413,7 +382,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 								.addListener(f -> latch.countDown()))
 				.metrics(true, Function.identity())
 				.post()
-				.uri(uriTagMapper ? "/5" : "/4")
+				.uri(uri)
 				.send(body)
 				.responseContent()
 				.aggregate()
@@ -429,15 +398,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		Thread.sleep(1000);
 		// now check the server counters
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
-		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, uri, METHOD, POST);
+		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
 
 		disposableServer.disposeNow();
 	}
 
-	private void testServerConnectionsRecorder(boolean uriTagMapper) throws Exception {
-		disposableServer = uriTagMapper ?
-				httpServer.metrics(true, () -> ServerRecorder.INSTANCE, u -> "/7".equals(u) ? MYTAG : u).bindNow() :
-				httpServer.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity()).bindNow();
+	@Test
+	void testServerConnectionsRecorder() throws Exception {
+		disposableServer = httpServer.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity()).bindNow();
+		String address = reactor.netty.Metrics.formatSocketAddress(disposableServer.address());
 
 		CountDownLatch latch = new CountDownLatch(1);
 
@@ -447,7 +416,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 								.addListener(f -> latch.countDown()))
 				.metrics(true, Function.identity())
 				.post()
-				.uri(uriTagMapper ? "/7" : "/6")
+				.uri("/5")
 				.send(body)
 				.responseContent()
 				.aggregate()
@@ -461,23 +430,25 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(ServerRecorder.INSTANCE.done.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
 		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
 		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
 
 		disposableServer.disposeNow();
 	}
 
-	private void checkServerConnectionsMicrometer(InetSocketAddress localAddress, String uri) {
+	private void checkServerConnectionsMicrometer(InetSocketAddress localAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
-		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 1, URI, uri, METHOD, POST);
+		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
 	}
 
-	private void checkServerConnectionsRecorder(InetSocketAddress localAddress, String uri) {
+	private void checkServerConnectionsRecorder(InetSocketAddress localAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
 		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get() == 1).isTrue();
 		assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
 		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get() == 1).isTrue();
-		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsMethod.get()).isEqualTo(POST);
-		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsUri.get()).isEqualTo(uri);
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isNull();
 	}
 
 	private void checkExpectationsExisting(String uri, String serverAddress, int index) {
@@ -672,16 +643,16 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		static final ServerRecorder INSTANCE = new ServerRecorder();
 		private final AtomicInteger onServerConnectionsAmount = new AtomicInteger();
 		private final AtomicReference<String> onServerConnectionsLocalAddr = new AtomicReference<>();
-		private final AtomicReference<String> onActiveConnectionsUri = new AtomicReference<>();
-		private final AtomicReference<String> onActiveConnectionsMethod = new AtomicReference<>();
+		private final AtomicReference<String> onActiveConnectionsLocalAddr = new AtomicReference<>();
+		private final AtomicReference<String> onInactiveConnectionsLocalAddr = new AtomicReference<>();
 		private final AtomicInteger onActiveConnectionsAmount = new AtomicInteger();
 		private volatile CountDownLatch done = new CountDownLatch(4);
 
 		void reset() {
 			onServerConnectionsAmount.set(0);
 			onServerConnectionsLocalAddr.set(null);
-			onActiveConnectionsUri.set(null);
-			onActiveConnectionsMethod.set(null);
+			onActiveConnectionsLocalAddr.set(null);
+			onInactiveConnectionsLocalAddr.set(null);
 			onActiveConnectionsAmount.set(0);
 			done = new CountDownLatch(4);
 		}
@@ -701,17 +672,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 
 		@Override
-		public void recordServerConnectionActive(String uri, String method) {
-			onActiveConnectionsUri.set(uri);
-			onActiveConnectionsMethod.set(method);
+		public void recordServerConnectionActive(SocketAddress localAddress) {
+			onActiveConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
 			onActiveConnectionsAmount.addAndGet(1);
 			done.countDown();
 		}
 
 		@Override
-		public void recordServerConnectionInactive(String uri, String method) {
-			onActiveConnectionsUri.set(uri);
-			onActiveConnectionsMethod.set(method);
+		public void recordServerConnectionInactive(SocketAddress localAddress) {
+			onInactiveConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
 			onActiveConnectionsAmount.addAndGet(-1);
 			done.countDown();
 		}

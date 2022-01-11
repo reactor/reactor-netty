@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import reactor.netty.http.HttpMetricsRecorder;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 
 /**
@@ -58,18 +59,16 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	/**
 	 * Record a new active in-use http connection
 	 *
-	 * @param uri the requested URI
-	 * @param method the HTTP method
+	 * @param localAddress the local server address
 	 * @since 1.0.15
 	 */
-	default void recordServerConnectionActive(String uri, String method) { }
+	default void recordServerConnectionActive(SocketAddress localAddress) { }
 
 	/**
 	 * Record an inactive http connection
 	 *
-	 * @param uri the requested URI
-	 * @param method the HTTP method
+	 * @param localAddress the local server address
 	 * @since 1.0.15
 	 */
-	default void recordServerConnectionInactive(String uri, String method) { }
+	default void recordServerConnectionInactive(SocketAddress localAddress) { }
 }

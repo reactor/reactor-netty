@@ -98,8 +98,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
 					recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
 							ops.method().name(), ops.status().codeAsText().toString());
-					recordInactiveConnection(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-							ops.method().name());
+					recordInactiveConnection(ops);
 				}
 
 				dataSent = 0;
@@ -117,8 +116,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpServerOperations) {
 				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				recordActiveConnection(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-						ops.method().name());
+				recordActiveConnection(ops);
 			}
 		}
 
@@ -183,12 +181,12 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordDataSent(ops.remoteAddress(), path, dataSent);
 	}
 
-	protected void recordActiveConnection(HttpServerOperations ops, String uri, String method) {
-		recorder().recordServerConnectionActive(uri, method);
+	protected void recordActiveConnection(HttpServerOperations ops) {
+		recorder().recordServerConnectionActive(ops.hostAddress());
 	}
 
-	protected void recordInactiveConnection(HttpServerOperations ops, String uri, String method) {
-		recorder().recordServerConnectionInactive(uri, method);
+	protected void recordInactiveConnection(HttpServerOperations ops) {
+		recorder().recordServerConnectionInactive(ops.hostAddress());
 	}
 
 }

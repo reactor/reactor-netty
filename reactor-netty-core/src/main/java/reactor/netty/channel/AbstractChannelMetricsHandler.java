@@ -44,13 +44,13 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	}
 
 	@Override
-	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+	public void channelActive(ChannelHandlerContext ctx) {
 		recorder().recordServerConnectionOpened(ctx.channel().localAddress());
 		ctx.fireChannelActive();
 	}
 
 	@Override
-	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+	public void channelInactive(ChannelHandlerContext ctx) {
 		recorder().recordServerConnectionClosed(ctx.channel().localAddress());
 		ctx.fireChannelInactive();
 	}

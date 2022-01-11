@@ -128,6 +128,16 @@ public class Metrics {
 	 */
 	public static final String RESPONSE_TIME = ".response.time";
 
+	/**
+	 * The number of all connections, whether they are active or idle
+	 */
+	public static final String CONNECTIONS_TOTAL = ".connections.total";
+
+	/**
+	 * The number of connections that are currently in use
+	 */
+	public static final String CONNECTIONS_ACTIVE = ".connections.active";
+
 
 	// AddressResolverGroup Metrics
 	/**
@@ -143,19 +153,9 @@ public class Metrics {
 	public static final String TOTAL_CONNECTIONS = ".total.connections";
 
 	/**
-	 * The number of all connections, active or idle
-	 */
-	public static final String CONNECTIONS_TOTAL = ".connections.total";
-
-	/**
 	 * The number of the connections that have been successfully acquired and are in active use
 	 */
 	public static final String ACTIVE_CONNECTIONS = ".active.connections";
-
-	/**
-	 * The number of the connections that have been successfully acquired and are in active use
-	 */
-	public static final String CONNECTIONS_ACTIVE = ".connections.active";
 
 	/**
 	 * The maximum number of active connections that are allowed

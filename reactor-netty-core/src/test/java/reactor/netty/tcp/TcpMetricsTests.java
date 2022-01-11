@@ -15,6 +15,21 @@
  */
 package reactor.netty.tcp;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static reactor.netty.Metrics.CONNECT_TIME;
+import static reactor.netty.Metrics.CONNECTIONS_TOTAL;
+import static reactor.netty.Metrics.DATA_RECEIVED;
+import static reactor.netty.Metrics.DATA_SENT;
+import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.LOCAL_ADDRESS;
+import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.STATUS;
+import static reactor.netty.Metrics.TCP_CLIENT_PREFIX;
+import static reactor.netty.Metrics.TCP_SERVER_PREFIX;
+import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty.Metrics.URI;
+
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Gauge;
@@ -42,21 +57,6 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
-import static reactor.netty.Metrics.CONNECTIONS_TOTAL;
-import static reactor.netty.Metrics.CONNECT_TIME;
-import static reactor.netty.Metrics.DATA_RECEIVED;
-import static reactor.netty.Metrics.DATA_SENT;
-import static reactor.netty.Metrics.ERRORS;
-import static reactor.netty.Metrics.LOCAL_ADDRESS;
-import static reactor.netty.Metrics.REMOTE_ADDRESS;
-import static reactor.netty.Metrics.STATUS;
-import static reactor.netty.Metrics.TCP_CLIENT_PREFIX;
-import static reactor.netty.Metrics.TCP_SERVER_PREFIX;
-import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
-import static reactor.netty.Metrics.URI;
 
 /**
  * @author Violeta Georgieva
