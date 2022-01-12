@@ -3,8 +3,8 @@
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.bytebuf.allocator.used.heap.memory | Gauge | The number of bytes committed to heap buffer allocator
-| reactor.netty.bytebuf.allocator.used.direct.memory | Gauge | The number of bytes committed to direct buffer allocator
+| reactor.netty.bytebuf.allocator.used.heap.memory | Gauge | The number of bytes reserved by heap buffer allocator
+| reactor.netty.bytebuf.allocator.used.direct.memory | Gauge | The number of bytes reserved by direct buffer allocator
 | reactor.netty.bytebuf.allocator.used.heap.arenas | Gauge | The number of heap arenas (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.direct.arenas | Gauge | The number of direct arenas (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.threadlocal.caches | Gauge | The number of thread local caches (when `PooledByteBufAllocator`)

@@ -190,12 +190,12 @@ public class Metrics {
 
 	// ByteBufAllocator Metrics
 	/**
-	 * The number of bytes committed to heap buffer allocator
+	 * The number of bytes reserved by heap buffer allocator
 	 */
 	public static final String USED_HEAP_MEMORY = ".used.heap.memory";
 
 	/**
-	 * The number of bytes committed to direct buffer allocator
+	 * The number of bytes reserved by direct buffer allocator
 	 */
 	public static final String USED_DIRECT_MEMORY = ".used.direct.memory";
 

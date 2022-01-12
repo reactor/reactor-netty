@@ -104,10 +104,22 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 		List<ByteBuf> buffers = new ArrayList<>();
 
 		try {
+			double currentActiveHeap = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags);
+			double currentActiveDirect = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags);
+
 			IntStream.range(0, 10).mapToObj(i -> alloc.heapBuffer(102400)).forEach(buffers::add);
 			IntStream.range(0, 10).mapToObj(i -> alloc.directBuffer(102400)).forEach(buffers::add);
-			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags)).isGreaterThan(0);
-			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags)).isGreaterThan(0);
+			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags)).isGreaterThan(currentActiveHeap);
+			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags)).isGreaterThan(currentActiveDirect);
+
+			currentActiveHeap = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags);
+			currentActiveDirect = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags);
+
+			buffers.forEach(ByteBuf::release);
+			buffers.clear();
+
+			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags)).isLessThan(currentActiveHeap);
+			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags)).isLessThan(currentActiveDirect);
 		}
 		finally {
 			buffers.forEach(ByteBuf::release);
