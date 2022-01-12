@@ -31,6 +31,7 @@ public class Application {
 				          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000) //<1>
 				          .option(ChannelOption.SO_KEEPALIVE, true)            //<2>
 				          // The options below are available only when NIO transport (Java 11) is used
+						  // on Mac or Linux (Java does not currently support these extended options on Windows)
 				          //.option(NioChannelOption.of(ExtendedSocketOptions.TCP_KEEPIDLE), 300)
 				          //.option(NioChannelOption.of(ExtendedSocketOptions.TCP_KEEPINTERVAL), 60)
 				          //.option(NioChannelOption.of(ExtendedSocketOptions.TCP_KEEPCOUNT), 8);
