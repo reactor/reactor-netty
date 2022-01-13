@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import org.junit.jupiter.api.AfterEach;
@@ -28,11 +29,16 @@ import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty.Metrics.ACTIVE_DIRECT_MEMORY;
+import static reactor.netty.Metrics.ACTIVE_HEAP_MEMORY;
 import static reactor.netty.Metrics.BYTE_BUF_ALLOCATOR_PREFIX;
 import static reactor.netty.Metrics.CHUNK_SIZE;
 import static reactor.netty.Metrics.DIRECT_ARENAS;
@@ -93,8 +99,35 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 		String id = alloc.metric().hashCode() + "";
 		String[] tags = new String[]{ID, id, TYPE, "pooled"};
 		checkExpectations(BYTE_BUF_ALLOCATOR_PREFIX, tags);
-	}
 
+		// Verify ACTIVE_HEAP_MEMORY and ACTIVE_DIRECT_MEMORY meters
+		List<ByteBuf> buffers = new ArrayList<>();
+		boolean releaseBufList = true;
+
+		try {
+			double currentActiveHeap = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags);
+			double currentActiveDirect = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags);
+
+			IntStream.range(0, 10).mapToObj(i -> alloc.heapBuffer(102400)).forEach(buffers::add);
+			IntStream.range(0, 10).mapToObj(i -> alloc.directBuffer(102400)).forEach(buffers::add);
+			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags)).isGreaterThan(currentActiveHeap);
+			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags)).isGreaterThan(currentActiveDirect);
+
+			currentActiveHeap = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags);
+			currentActiveDirect = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags);
+
+			buffers.forEach(ByteBuf::release);
+			releaseBufList = false;
+
+			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags)).isLessThan(currentActiveHeap);
+			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags)).isLessThan(currentActiveDirect);
+		}
+		finally {
+			if (releaseBufList) {
+				buffers.forEach(ByteBuf::release);
+			}
+		}
+	}
 
 	private double getGaugeValue(String name, String... tags) {
 		Gauge gauge = registry.find(name).tags(tags).gauge();

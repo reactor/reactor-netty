@@ -16,13 +16,17 @@
 package reactor.netty.transport;
 
 import io.micrometer.core.instrument.Gauge;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufAllocatorMetric;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocatorMetric;
 import reactor.netty.internal.util.MapUtils;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static reactor.netty.Metrics.ACTIVE_DIRECT_MEMORY;
+import static reactor.netty.Metrics.ACTIVE_HEAP_MEMORY;
 import static reactor.netty.Metrics.BYTE_BUF_ALLOCATOR_PREFIX;
 import static reactor.netty.Metrics.CHUNK_SIZE;
 import static reactor.netty.Metrics.DIRECT_ARENAS;
@@ -47,8 +51,10 @@ final class ByteBufAllocatorMetrics {
 	static final String NORMAL_CACHE_SIZE_DESCRIPTION = "The size of the normal cache.";
 	static final String SMALL_CACHE_SIZE_DESCRIPTION = "The size of the small cache.";
 	static final String THREAD_LOCAL_CACHES_DESCRIPTION = "The number of thread local caches.";
-	static final String USED_DIRECT_MEMORY_DESCRIPTION = "The number of the bytes of the direct memory.";
-	static final String USED_HEAP_MEMORY_DESCRIPTION = "The number of the bytes of the heap memory.";
+	static final String USED_DIRECT_MEMORY_DESCRIPTION = "The number of bytes reserved by direct buffer allocator.";
+	static final String USED_HEAP_MEMORY_DESCRIPTION = "The number of bytes reserved by heap buffer allocator.";
+	static final String ACTIVE_DIRECT_MEMORY_DESCRIPTION = "The actual bytes consumed by in-use buffers allocated from heap buffer pools.";
+	static final String ACTIVE_HEAP_MEMORY_DESCRIPTION = "The actual bytes consumed by in-use buffers allocated from direct buffer pools.";
 
 	static final ByteBufAllocatorMetrics INSTANCE = new ByteBufAllocatorMetrics();
 
@@ -57,7 +63,7 @@ final class ByteBufAllocatorMetrics {
 	private ByteBufAllocatorMetrics() {
 	}
 
-	void registerMetrics(String allocType, ByteBufAllocatorMetric metrics) {
+	void registerMetrics(String allocType, ByteBufAllocatorMetric metrics, ByteBufAllocator alloc) {
 		MapUtils.computeIfAbsent(cache, metrics.hashCode() + "", key -> {
 			String[] tags = new String[] {ID, key, TYPE, allocType};
 
@@ -73,6 +79,7 @@ final class ByteBufAllocatorMetrics {
 
 			if (metrics instanceof PooledByteBufAllocatorMetric) {
 				PooledByteBufAllocatorMetric pooledMetrics = (PooledByteBufAllocatorMetric) metrics;
+				PooledByteBufAllocator pooledAlloc = (PooledByteBufAllocator) alloc;
 
 				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + HEAP_ARENAS, pooledMetrics, PooledByteBufAllocatorMetric::numHeapArenas)
 				     .description(HEAP_ARENAS_DESCRIPTION)
@@ -101,6 +108,16 @@ final class ByteBufAllocatorMetrics {
 
 				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + CHUNK_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::chunkSize)
 				     .description(CHUNK_SIZE_DESCRIPTION)
+				     .tags(tags)
+				     .register(REGISTRY);
+
+				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, pooledAlloc, PooledByteBufAllocator::pinnedHeapMemory)
+				     .description(ACTIVE_HEAP_MEMORY_DESCRIPTION)
+				     .tags(tags)
+				     .register(REGISTRY);
+
+				Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, pooledAlloc, PooledByteBufAllocator::pinnedDirectMemory)
+				     .description(ACTIVE_DIRECT_MEMORY_DESCRIPTION)
 				     .tags(tags)
 				     .register(REGISTRY);
 			}

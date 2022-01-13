@@ -3,12 +3,14 @@
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.bytebuf.allocator.used.heap.memory | Gauge | The number of the bytes of the heap memory
-| reactor.netty.bytebuf.allocator.used.direct.memory | Gauge | The number of the bytes of the direct memory
+| reactor.netty.bytebuf.allocator.used.heap.memory | Gauge | The number of bytes reserved by heap buffer allocator
+| reactor.netty.bytebuf.allocator.used.direct.memory | Gauge | The number of bytes reserved by direct buffer allocator
 | reactor.netty.bytebuf.allocator.used.heap.arenas | Gauge | The number of heap arenas (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.direct.arenas | Gauge | The number of direct arenas (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.threadlocal.caches | Gauge | The number of thread local caches (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.small.cache.size | Gauge | The size of the small cache (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.normal.cache.size | Gauge | The size of the normal cache (when `PooledByteBufAllocator`)
 | reactor.netty.bytebuf.allocator.used.chunk.size | Gauge | The chunk size for an arena (when `PooledByteBufAllocator`)
+| reactor.netty.bytebuf.allocator.active.heap.buffers | Gauge | The actual bytes consumed by in-use heap buffers (when `PooledByteBufAllocator`)
+| reactor.netty.bytebuf.allocator.active.direct.buffers | Gauge | The actual bytes consumed by in-use direct buffers (when `PooledByteBufAllocator`)
 |=======
