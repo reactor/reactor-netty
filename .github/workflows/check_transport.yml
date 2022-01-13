@@ -21,6 +21,10 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: Update /etc/hosts file
+        if: startsWith(matrix.os, 'ubuntu-')
+        # update /etc/hosts file as a workaround for sporadic "connection timed out" issues
+        run: echo -e "$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)\t$(hostname -f) $(hostname -s)" | sudo tee -a /etc/hosts
       - uses: gradle/wrapper-validation-action@v1
       - name: Set up JDK 1.8
         uses: actions/setup-java@v2
