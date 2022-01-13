@@ -22,6 +22,7 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
+import reactor.netty.observability.ReactorNettyHandlerContext;
 
 import java.net.SocketAddress;
 import java.util.List;
@@ -50,7 +51,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		return new MicrometerDelegatingAddressResolver<>((MicrometerChannelMetricsRecorder) recorder, resolverGroup.getResolver(executor));
 	}
 
-	static final class FutureHandlerContext extends Timer.HandlerContext {
+	static final class FutureHandlerContext extends Timer.HandlerContext implements ReactorNettyHandlerContext {
 		final String remoteAddress;
 
 		// status is not known beforehand
@@ -61,8 +62,19 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		}
 
 		@Override
+		public Tags getHighCardinalityTags() {
+			return Tags.of("reactor.netty.status", status);
+		}
+
+		@Override
 		public Tags getLowCardinalityTags() {
 			return Tags.of(REMOTE_ADDRESS, remoteAddress, STATUS, status);
+		}
+
+		// TODO: This is hostname resolution?
+		@Override
+		public String getSimpleName() {
+			return "address resolution";
 		}
 	}
 
@@ -91,7 +103,9 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Cannot cache the Timer anymore - need to test the performance
 			// Can we use sample.stop(Timer)
 			String remoteAddress = formatSocketAddress(address);
+			// TODO: Fix scopes
 			FutureHandlerContext handlerContext = new FutureHandlerContext(remoteAddress);
+			handlerContext.put(SocketAddress.class, address);
 			Timer.Sample sample = Timer.start(REGISTRY, handlerContext);
 			return resolver.get()
 			               .addListener(future -> {

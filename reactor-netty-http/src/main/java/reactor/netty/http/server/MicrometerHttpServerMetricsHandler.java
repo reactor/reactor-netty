@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
+import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
 import java.util.function.Function;
@@ -132,7 +133,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		}
 	}
 
-	static final class ReadHandlerContext extends Timer.HandlerContext {
+	static final class ReadHandlerContext extends Timer.HandlerContext implements ReactorNettyHandlerContext {
 
 		final String method;
 		final String path;
@@ -146,9 +147,14 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		public Tags getLowCardinalityTags() {
 			return Tags.of(URI, path, METHOD, method);
 		}
+
+		@Override
+		public String getSimpleName() {
+			return "foo read";
+		}
 	}
 
-	static final class WriteHandlerContext extends Timer.HandlerContext {
+	static final class WriteHandlerContext extends Timer.HandlerContext implements ReactorNettyHandlerContext {
 
 		final String method;
 		final String path;
@@ -169,6 +175,11 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		@Override
 		public Tags getLowCardinalityTags() {
 			return Tags.of(URI, path, METHOD, method, STATUS, status);
+		}
+
+		@Override
+		public String getSimpleName() {
+			return "foo write";
 		}
 	}
 }

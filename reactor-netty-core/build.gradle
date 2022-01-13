@@ -103,7 +103,9 @@ dependencies {
 	}
 
 	//Metrics
+	implementation platform('io.micrometer:micrometer-tracing-bom:1.0.0-SNAPSHOT')
 	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
+	compileOnly "io.micrometer:micrometer-tracing"
 
 	// Logging
 	compileOnly "org.slf4j:slf4j-api:$slf4jVersion"

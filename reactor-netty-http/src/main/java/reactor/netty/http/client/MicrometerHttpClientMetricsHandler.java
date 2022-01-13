@@ -17,14 +17,19 @@ package reactor.netty.http.client;
 
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.tracing.Span;
-import io.micrometer.tracing.Tracer;
-import io.micrometer.tracing.handler.TracingRecordingHandler;
-import io.micrometer.tracing.handler.TracingRecordingHandlerSpanCustomizer;
+import io.micrometer.core.instrument.tracing.context.HttpClientHandlerContext;
+import io.micrometer.core.instrument.transport.http.HttpClientRequest;
+import io.micrometer.core.instrument.transport.http.HttpClientResponse;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
-import java.time.Duration;
+import java.net.URI;
+import java.util.Collection;
 import java.util.function.Function;
 
 import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
@@ -52,6 +57,8 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	Timer.Sample dataSentTimeSample;
 	ReadHandlerContext responseTimeHandlerContext;
 	Timer.Sample responseTimeSample;
+
+	WriteRequestHandlerContext handlerContext;
 
 	MicrometerHttpClientMetricsHandler(MicrometerHttpClientMetricsRecorder recorder,
 			@Nullable Function<String, String> uriTagValue) {
@@ -120,23 +127,83 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		dataSentTimeSample = null;
 		responseTimeHandlerContext = null;
 		responseTimeSample = null;
+		handlerContext = null;
 	}
 
+	// reading the response
 	@Override
-	protected void startRead(SocketAddress address) {
-		dataReceivedTimeSample = Timer.start(REGISTRY, new ReadHandlerContext(method, path,
-				formatSocketAddress(address), status));
+	protected void startRead(HttpResponse msg, SocketAddress address) {
+		WriteResponseHandlerContext responseHandlerContext = new WriteResponseHandlerContext(handlerContext.getRequest(), address);
+		responseHandlerContext.setResponse(new HttpClientResponse() {
+			@Override
+			public int statusCode() {
+				return msg.status().code();
+			}
+
+			@Override
+			public Collection<String> headerNames() {
+				return msg.headers().names();
+			}
+
+			@Override
+			public Object unwrap() {
+				return msg;
+			}
+		});
+		dataReceivedTimeSample = Timer.start(REGISTRY, responseHandlerContext);
 	}
 
+	// writing the request
 	@Override
-	protected void startWrite(SocketAddress address) {
-		dataSentTimeSample = Timer.start(REGISTRY, new WriteHandlerContext(method, path, formatSocketAddress(address)));
-
-		responseTimeHandlerContext = new ReadHandlerContext(method, path, formatSocketAddress(address));
+	protected void startWrite(HttpRequest msg, SocketAddress address) {
+		responseTimeHandlerContext = new ReadHandlerContext(method, path, address, status);
 		responseTimeSample = Timer.start(REGISTRY, responseTimeHandlerContext);
+		try (Timer.Scope scope = responseTimeSample.makeCurrent()) {
+			HttpClientRequest httpClientRequest = new HttpClientRequest() {
+				@Override
+				public void header(String name, String value) {
+					msg.headers().set(name, value);
+				}
+
+				@Override
+				public String method() {
+					return msg.method().name();
+				}
+
+				@Override
+				public String path() {
+					// TODO: Resource consuming?
+					return java.net.URI.create(msg.uri()).getPath();
+				}
+
+				@Override
+				public String url() {
+					return msg.uri();
+				}
+
+				@Override
+				public String header(String name) {
+					return msg.headers().get(name);
+				}
+
+				@Override
+				public Collection<String> headerNames() {
+					return msg.headers().names();
+				}
+
+				@Override
+				public Object unwrap() {
+					return msg;
+				}
+			};
+			handlerContext = new WriteRequestHandlerContext(httpClientRequest, address);
+			handlerContext.put(SocketAddress.class, address);
+			dataSentTimeSample = Timer.start(REGISTRY, handlerContext);
+		}
+
 	}
 
-	static final class ReadHandlerContext extends Timer.HandlerContext {
+	static final class ReadHandlerContext extends Timer.HandlerContext implements ReactorNettyHandlerContext {
 
 		final String method;
 		final String path;
@@ -145,40 +212,76 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		// status might not be known beforehand
 		String status;
 
-		ReadHandlerContext(String method, String path, String remoteAddress) {
+		ReadHandlerContext(String method, String path, SocketAddress remoteAddress) {
 			this(method, path, remoteAddress, null);
 		}
 
-		ReadHandlerContext(String method, String path, String remoteAddress, @Nullable String status) {
+		ReadHandlerContext(String method, String path, SocketAddress remoteAddress, @Nullable String status) {
 			this.method = method;
 			this.path = path;
-			this.remoteAddress = remoteAddress;
+			this.remoteAddress = formatSocketAddress(remoteAddress);
 			this.status = status;
+			put(SocketAddress.class, remoteAddress);
 		}
 
-		// TODO: What do we do about these in tracing ?
+		@Override
+		public Tags getHighCardinalityTags() {
+			// TODO: Externalize the tags?
+			return Tags.of("http.status", status, "reactor.netty.type", "client", "reactor.netty.protocol", "http");
+		}
+
 		@Override
 		public Tags getLowCardinalityTags() {
 			return Tags.of(REMOTE_ADDRESS, remoteAddress, URI, path, METHOD, method, STATUS, status);
 		}
+
+		@Override
+		public String getSimpleName() {
+			return "http " + method + " " + path;
+		}
 	}
 
-	static final class WriteHandlerContext extends Timer.HandlerContext {
+	static class WriteRequestHandlerContext extends HttpClientHandlerContext implements ReactorNettyHandlerContext {
 
 		final String method;
 		final String path;
 		final String remoteAddress;
 
-		WriteHandlerContext(String method, String path, String remoteAddress) {
-			this.method = method;
-			this.path = path;
-			this.remoteAddress = remoteAddress;
+		WriteRequestHandlerContext(HttpClientRequest request, SocketAddress remoteAddress) {
+			super(request);
+			this.method = request.method();
+			this.path = request.path();
+			this.remoteAddress = formatSocketAddress(remoteAddress);
+			put(HttpClientRequest.class, request);
+			put(SocketAddress.class, remoteAddress);
 		}
 
-		// TODO: What do we do about these in tracing ?
 		@Override
 		public Tags getLowCardinalityTags() {
 			return Tags.of(REMOTE_ADDRESS, remoteAddress, URI, path, METHOD, method);
+		}
+
+		@Override
+		public String getSimpleName() {
+			return "request data sent";
+		}
+	}
+
+	static class WriteResponseHandlerContext extends WriteRequestHandlerContext implements ReactorNettyHandlerContext {
+
+		WriteResponseHandlerContext(HttpClientRequest request, SocketAddress remoteAddress) {
+			super(request, remoteAddress);
+		}
+
+		@Override
+		public HttpClientHandlerContext setResponse(HttpClientResponse response) {
+			put(HttpClientResponse.class, response);
+			return super.setResponse(response);
+		}
+
+		@Override
+		public String getSimpleName() {
+			return "response data received";
 		}
 	}
 

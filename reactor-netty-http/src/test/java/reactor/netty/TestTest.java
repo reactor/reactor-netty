@@ -16,20 +16,23 @@
 package reactor.netty;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.TimerRecordingHandler;
 import io.micrometer.tracing.Tracer;
-import io.micrometer.tracing.handler.TracingRecordingHandlerSpanCustomizer;
 import io.micrometer.tracing.test.SampleTestRunner;
+import io.micrometer.tracing.test.reporter.BuildingBlocks;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientMetricsTracingRecordingHandlerSpanCustomizer;
-import reactor.netty.http.server.HttpServerMetricsTracingRecordingHandlerSpanCustomizer;
+import reactor.netty.observability.ReactorNettyHttpClientRequestTracingRecordingHandler;
+import reactor.netty.observability.ReactorNettyHttpClientResponseTracingRecordingHandler;
+import reactor.netty.observability.ReactorNettyHttpServerTracingRecordingHandler;
+import reactor.netty.observability.ReactorNettyTracingRecordingHandler;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.Random;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+@SuppressWarnings("rawtypes")
 class TestTest extends SampleTestRunner {
 
 	TestTest() {
@@ -40,8 +43,13 @@ class TestTest extends SampleTestRunner {
 	}
 
 	@Override
-	public List<TracingRecordingHandlerSpanCustomizer> getTracingRecordingHandlerSpanCustomizers() {
-		return Arrays.asList(new HttpClientMetricsTracingRecordingHandlerSpanCustomizer(), new HttpServerMetricsTracingRecordingHandlerSpanCustomizer());
+	public BiConsumer<BuildingBlocks, LinkedList<TimerRecordingHandler>> customizeTimerRecordingHandlers() {
+		return (bb, timerRecordingHandlers) -> {
+			timerRecordingHandlers.add(timerRecordingHandlers.size() - 1, new ReactorNettyTracingRecordingHandler(bb.getTracer()));
+			timerRecordingHandlers.addFirst(new ReactorNettyHttpClientRequestTracingRecordingHandler(bb.getTracer(), bb.getHttpClientHandler()));
+			timerRecordingHandlers.addFirst(new ReactorNettyHttpClientResponseTracingRecordingHandler(bb.getTracer(), bb.getHttpClientHandler()));
+			timerRecordingHandlers.addFirst(new ReactorNettyHttpServerTracingRecordingHandler(bb.getTracer(), bb.getHttpServerHandler()));
+		};
 	}
 
 	@Override

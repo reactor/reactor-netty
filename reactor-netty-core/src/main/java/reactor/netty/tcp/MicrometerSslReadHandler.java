@@ -17,10 +17,17 @@ package reactor.netty.tcp;
 
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
+import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
+import reactor.netty.observability.ReactorNettyHandlerContext;
+
+import java.net.SocketAddress;
 
 import static reactor.netty.Metrics.ERROR;
 import static reactor.netty.Metrics.REGISTRY;
@@ -36,7 +43,7 @@ import static reactor.netty.Metrics.formatSocketAddress;
  */
 // MicrometerSslReadHandler is Timer.HandlerContext and ChannelInboundHandler in order to reduce allocations,
 // this is invoked on every TLS negotiation
-final class MicrometerSslReadHandler extends Timer.HandlerContext implements ChannelInboundHandler {
+final class MicrometerSslReadHandler extends Timer.HandlerContext implements ReactorNettyHandlerContext, ChannelOutboundHandler, ChannelInboundHandler {
 
 	final Timer.Builder tlsHandshakeTimeBuilder;
 
@@ -79,7 +86,6 @@ final class MicrometerSslReadHandler extends Timer.HandlerContext implements Cha
 
 	@Override
 	public void channelRegistered(ChannelHandlerContext ctx) {
-		sample = Timer.start(REGISTRY, this);
 
 		ctx.fireChannelRegistered();
 	}
@@ -111,6 +117,11 @@ final class MicrometerSslReadHandler extends Timer.HandlerContext implements Cha
 	}
 
 	@Override
+	public Tags getHighCardinalityTags() {
+		return Tags.of("reactor.netty.status", status);
+	}
+
+	@Override
 	public Tags getLowCardinalityTags() {
 		return Tags.of(REMOTE_ADDRESS, remoteAddress, STATUS, status);
 	}
@@ -133,6 +144,7 @@ final class MicrometerSslReadHandler extends Timer.HandlerContext implements Cha
 			// Important:
 			// Cannot cache the Timer anymore - need to test the performance
 			// Can we use sample.stop(Timer)
+			put(SocketAddress.class, ctx.channel().remoteAddress());
 			this.remoteAddress = formatSocketAddress(ctx.channel().remoteAddress());
 			if (handshake.isSuccess()) {
 				this.status = SUCCESS;
@@ -146,5 +158,52 @@ final class MicrometerSslReadHandler extends Timer.HandlerContext implements Cha
 			}
 		}
 		ctx.fireUserEventTriggered(evt);
+	}
+
+	@Override
+	public String getSimpleName() {
+		return "tls handshake";
+	}
+
+	@Override
+	public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+
+	}
+
+	@Override
+	public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+		ctx.connect(remoteAddress, localAddress, promise).addListener(future -> {
+			sample = Timer.start(REGISTRY, this);
+		});
+	}
+
+	@Override
+	public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+
+	}
+
+	@Override
+	public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+
+	}
+
+	@Override
+	public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+
+	}
+
+	@Override
+	public void read(ChannelHandlerContext ctx) throws Exception {
+
+	}
+
+	@Override
+	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+
+	}
+
+	@Override
+	public void flush(ChannelHandlerContext ctx) throws Exception {
+
 	}
 }
