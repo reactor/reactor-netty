@@ -102,6 +102,7 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 
 		// Verify ACTIVE_HEAP_MEMORY and ACTIVE_DIRECT_MEMORY meters
 		List<ByteBuf> buffers = new ArrayList<>();
+		boolean releaseBufList = true;
 
 		try {
 			double currentActiveHeap = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags);
@@ -116,13 +117,15 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 			currentActiveDirect = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags);
 
 			buffers.forEach(ByteBuf::release);
-			buffers.clear();
+			releaseBufList = false;
 
 			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags)).isLessThan(currentActiveHeap);
 			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags)).isLessThan(currentActiveDirect);
 		}
 		finally {
-			buffers.forEach(ByteBuf::release);
+			if (releaseBufList) {
+				buffers.forEach(ByteBuf::release);
+			}
 		}
 	}
 
