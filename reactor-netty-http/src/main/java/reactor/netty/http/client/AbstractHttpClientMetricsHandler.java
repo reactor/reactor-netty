@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelDuplexHandler;
@@ -124,6 +125,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	protected abstract HttpClientMetricsRecorder recorder();
 
+	// TODO: Do sth about the error handling
 	protected void recordException(ChannelHandlerContext ctx) {
 		recorder().incrementErrorsCount(ctx.channel().remoteAddress(),
 				path != null ? path : resolveUri(ctx));

@@ -66,7 +66,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			if (channelOps instanceof HttpServerOperations) {
 				HttpServerOperations ops = (HttpServerOperations) channelOps;
 				startWrite(uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-						ops.method().name(), ops.status().codeAsText().toString());
+						ops.method().name(), ops.status().codeAsText().toString(), ops.nettyRequest, (HttpResponse) msg);
 			}
 		}
 
@@ -100,7 +100,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpServerOperations) {
 				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				startRead(uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), ops.method().name());
+				startRead(uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), ops.method().name(), (HttpRequest) msg);
 			}
 		}
 
@@ -165,11 +165,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordDataSent(ops.remoteAddress(), path, dataSent);
 	}
 
-	protected void startRead(String path, String method) {
+	protected void startRead(String path, String method, HttpRequest ops) {
 		dataReceivedTime = System.nanoTime();
 	}
 
-	protected void startWrite(String path, String method, String status) {
+	protected void startWrite(String path, String method, String status, HttpRequest nettyRequest, HttpResponse ops) {
 		dataSentTime = System.nanoTime();
 	}
 }

@@ -16,7 +16,6 @@
 package reactor.netty.observability;
 
 import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.tracing.context.HttpClientHandlerContext;
 import io.micrometer.core.instrument.transport.http.HttpClientRequest;
@@ -26,11 +25,7 @@ import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.HttpClientTracingRecordingHandler;
 import io.micrometer.tracing.http.HttpClientHandler;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.time.Duration;
-
-public class ReactorNettyHttpClientRequestTracingRecordingHandler extends HttpClientTracingRecordingHandler {
+public class ReactorNettyHttpClientTracingRecordingHandler extends HttpClientTracingRecordingHandler {
 
 	/**
 	 * Creates a new instance of {@link HttpClientTracingRecordingHandler}.
@@ -38,8 +33,8 @@ public class ReactorNettyHttpClientRequestTracingRecordingHandler extends HttpCl
 	 * @param tracer  tracer
 	 * @param handler http client handler
 	 */
-	public ReactorNettyHttpClientRequestTracingRecordingHandler(Tracer tracer, HttpClientHandler handler) {
-		super(tracer, handler::handleSend, (httpClientResponse, span) -> span.end());
+	public ReactorNettyHttpClientTracingRecordingHandler(Tracer tracer, HttpClientHandler handler) {
+		super(tracer, handler);
 	}
 
 	@Override
@@ -48,13 +43,8 @@ public class ReactorNettyHttpClientRequestTracingRecordingHandler extends HttpCl
 	}
 
 	@Override
-	public String getSpanName(HttpClientHandlerContext ctx, Meter.Id id) {
-		return "data sent";
-	}
-
-	@Override
 	public boolean supportsContext(Timer.HandlerContext context) {
-		return context instanceof ReactorNettyHandlerContext && super.supportsContext(context) && context.get(HttpClientRequest.class) != null && context.get(HttpClientResponse.class) == null;
+		return context instanceof ReactorNettyHandlerContext && super.supportsContext(context) && context.get(HttpClientRequest.class) != null && context.get(HttpClientResponse.class) != null;
 	}
 
 }

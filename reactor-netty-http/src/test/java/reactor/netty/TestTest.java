@@ -22,8 +22,8 @@ import io.micrometer.tracing.test.SampleTestRunner;
 import io.micrometer.tracing.test.reporter.BuildingBlocks;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.observability.ReactorNettyHttpClientRequestTracingRecordingHandler;
-import reactor.netty.observability.ReactorNettyHttpClientResponseTracingRecordingHandler;
+import reactor.netty.http.server.HttpServer;
+import reactor.netty.observability.ReactorNettyHttpClientTracingRecordingHandler;
 import reactor.netty.observability.ReactorNettyHttpServerTracingRecordingHandler;
 import reactor.netty.observability.ReactorNettyTracingRecordingHandler;
 
@@ -46,8 +46,7 @@ class TestTest extends SampleTestRunner {
 	public BiConsumer<BuildingBlocks, LinkedList<TimerRecordingHandler>> customizeTimerRecordingHandlers() {
 		return (bb, timerRecordingHandlers) -> {
 			timerRecordingHandlers.add(timerRecordingHandlers.size() - 1, new ReactorNettyTracingRecordingHandler(bb.getTracer()));
-			timerRecordingHandlers.addFirst(new ReactorNettyHttpClientRequestTracingRecordingHandler(bb.getTracer(), bb.getHttpClientHandler()));
-			timerRecordingHandlers.addFirst(new ReactorNettyHttpClientResponseTracingRecordingHandler(bb.getTracer(), bb.getHttpClientHandler()));
+			timerRecordingHandlers.addFirst(new ReactorNettyHttpClientTracingRecordingHandler(bb.getTracer(), bb.getHttpClientHandler()));
 			timerRecordingHandlers.addFirst(new ReactorNettyHttpServerTracingRecordingHandler(bb.getTracer(), bb.getHttpServerHandler()));
 		};
 	}
@@ -62,15 +61,38 @@ class TestTest extends SampleTestRunner {
 		byte[] bytes = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(bytes);
-		return (tracer, meterRegistry) ->
-				HttpClient.create()
-						.wiretap(true)
-						.metrics(true, Function.identity())
-						.post()
-						.uri("https://httpbin.org/post")
-						.send(ByteBufMono.fromString(Mono.just(new String(bytes))))
-						.responseContent()
-						.aggregate()
-						.block();
+		return (tracer, meterRegistry) -> {
+
+			HttpClient client = HttpClient.create()
+					.wiretap(true)
+					.metrics(true, Function.identity());
+
+			HttpServer.create()
+					.host("localhost")
+					.port(6543)
+					.wiretap(true)
+					.metrics(true, Function.identity())
+					.route(r -> r.post("/post", (req, res) ->
+							res.send(req.receive().retain())))
+					.bindNow();
+
+			client
+					.post()
+					.uri("http://localhost:6543/post")
+					.send(ByteBufMono.fromString(Mono.just(new String(bytes))))
+					.responseContent()
+					.aggregate()
+					.block();
+
+//			HttpClient.create()
+//					.wiretap(true)
+//					.metrics(true, Function.identity())
+//					.post()
+//					.uri("https://httpbin.org/post")
+//					.send(ByteBufMono.fromString(Mono.just(new String(bytes))))
+//					.responseContent()
+//					.aggregate()
+//					.block();
+		};
 	}
 }

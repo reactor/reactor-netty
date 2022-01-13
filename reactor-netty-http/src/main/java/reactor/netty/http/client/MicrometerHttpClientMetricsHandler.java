@@ -22,13 +22,12 @@ import io.micrometer.core.instrument.transport.http.HttpClientRequest;
 import io.micrometer.core.instrument.transport.http.HttpClientResponse;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import reactor.netty.Metrics;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
-import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.function.Function;
 
@@ -53,12 +52,8 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	final MicrometerHttpClientMetricsRecorder recorder;
 	final Timer.Builder responseTimeBuilder;
 
-	Timer.Sample dataReceivedTimeSample;
-	Timer.Sample dataSentTimeSample;
-	ReadHandlerContext responseTimeHandlerContext;
+	WriteHandlerContext responseTimeHandlerContext;
 	Timer.Sample responseTimeSample;
-
-	WriteRequestHandlerContext handlerContext;
 
 	MicrometerHttpClientMetricsHandler(MicrometerHttpClientMetricsRecorder recorder,
 			@Nullable Function<String, String> uriTagValue) {
@@ -95,13 +90,17 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		// Important:
 		// Cannot cache the Timer anymore - need to test the performance
 		// Can we use sample.stop(Timer)
-		dataReceivedTimeSample.stop(dataReceivedTimeBuilder);
+		dataReceivedTimeBuilder
+//				.tags()
+				.register(REGISTRY)
+				.record(Duration.ofNanos(dataReceivedTime));
 
-		responseTimeHandlerContext.status = status;
+//		responseTimeHandlerContext.status = status;
 		responseTimeSample.stop(responseTimeBuilder);
 
 		recorder().recordDataReceived(address, path, dataReceived);
 	}
+
 
 	@Override
 	protected void recordWrite(SocketAddress address) {
@@ -115,7 +114,9 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		// Important:
 		// Cannot cache the Timer anymore - need to test the performance
 		// Can we use sample.stop(Timer)
-		dataSentTimeSample.stop(dataSentTimeBuilder);
+		dataSentTimeBuilder
+				.register(REGISTRY)
+				.record(Duration.ofNanos(dataSentTime));
 
 		recorder().recordDataSent(address, path, dataSent);
 	}
@@ -123,18 +124,14 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	@Override
 	protected void reset() {
 		super.reset();
-		dataReceivedTimeSample = null;
-		dataSentTimeSample = null;
 		responseTimeHandlerContext = null;
 		responseTimeSample = null;
-		handlerContext = null;
 	}
 
 	// reading the response
 	@Override
 	protected void startRead(HttpResponse msg, SocketAddress address) {
-		WriteResponseHandlerContext responseHandlerContext = new WriteResponseHandlerContext(handlerContext.getRequest(), address);
-		responseHandlerContext.setResponse(new HttpClientResponse() {
+		responseTimeHandlerContext.setResponse(new HttpClientResponse() {
 			@Override
 			public int statusCode() {
 				return msg.status().code();
@@ -150,57 +147,51 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 				return msg;
 			}
 		});
-		dataReceivedTimeSample = Timer.start(REGISTRY, responseHandlerContext);
+		dataReceivedTime = System.nanoTime();
 	}
 
 	// writing the request
 	@Override
 	protected void startWrite(HttpRequest msg, SocketAddress address) {
-		responseTimeHandlerContext = new ReadHandlerContext(method, path, address, status);
+		HttpClientRequest httpClientRequest = new HttpClientRequest() {
+			@Override
+			public void header(String name, String value) {
+				msg.headers().set(name, value);
+			}
+
+			@Override
+			public String method() {
+				return msg.method().name();
+			}
+
+			@Override
+			public String path() {
+				// TODO: Resource consuming?
+				return java.net.URI.create(msg.uri()).getPath();
+			}
+
+			@Override
+			public String url() {
+				return msg.uri();
+			}
+
+			@Override
+			public String header(String name) {
+				return msg.headers().get(name);
+			}
+
+			@Override
+			public Collection<String> headerNames() {
+				return msg.headers().names();
+			}
+
+			@Override
+			public Object unwrap() {
+				return msg;
+			}
+		};
+		responseTimeHandlerContext = new WriteHandlerContext(httpClientRequest, address);
 		responseTimeSample = Timer.start(REGISTRY, responseTimeHandlerContext);
-		try (Timer.Scope scope = responseTimeSample.makeCurrent()) {
-			HttpClientRequest httpClientRequest = new HttpClientRequest() {
-				@Override
-				public void header(String name, String value) {
-					msg.headers().set(name, value);
-				}
-
-				@Override
-				public String method() {
-					return msg.method().name();
-				}
-
-				@Override
-				public String path() {
-					// TODO: Resource consuming?
-					return java.net.URI.create(msg.uri()).getPath();
-				}
-
-				@Override
-				public String url() {
-					return msg.uri();
-				}
-
-				@Override
-				public String header(String name) {
-					return msg.headers().get(name);
-				}
-
-				@Override
-				public Collection<String> headerNames() {
-					return msg.headers().names();
-				}
-
-				@Override
-				public Object unwrap() {
-					return msg;
-				}
-			};
-			handlerContext = new WriteRequestHandlerContext(httpClientRequest, address);
-			handlerContext.put(SocketAddress.class, address);
-			dataSentTimeSample = Timer.start(REGISTRY, handlerContext);
-		}
-
 	}
 
 	static final class ReadHandlerContext extends Timer.HandlerContext implements ReactorNettyHandlerContext {
@@ -237,23 +228,29 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public String getSimpleName() {
-			return "http " + method + " " + path;
+			return method;
 		}
 	}
 
-	static class WriteRequestHandlerContext extends HttpClientHandlerContext implements ReactorNettyHandlerContext {
+	static class WriteHandlerContext extends HttpClientHandlerContext implements ReactorNettyHandlerContext {
 
 		final String method;
 		final String path;
 		final String remoteAddress;
 
-		WriteRequestHandlerContext(HttpClientRequest request, SocketAddress remoteAddress) {
+		WriteHandlerContext(HttpClientRequest request, SocketAddress remoteAddress) {
 			super(request);
 			this.method = request.method();
 			this.path = request.path();
 			this.remoteAddress = formatSocketAddress(remoteAddress);
 			put(HttpClientRequest.class, request);
 			put(SocketAddress.class, remoteAddress);
+		}
+
+		@Override
+		public HttpClientHandlerContext setResponse(HttpClientResponse response) {
+			put(HttpClientResponse.class, response);
+			return super.setResponse(response);
 		}
 
 		@Override
@@ -264,24 +261,6 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		@Override
 		public String getSimpleName() {
 			return "request data sent";
-		}
-	}
-
-	static class WriteResponseHandlerContext extends WriteRequestHandlerContext implements ReactorNettyHandlerContext {
-
-		WriteResponseHandlerContext(HttpClientRequest request, SocketAddress remoteAddress) {
-			super(request, remoteAddress);
-		}
-
-		@Override
-		public HttpClientHandlerContext setResponse(HttpClientResponse response) {
-			put(HttpClientResponse.class, response);
-			return super.setResponse(response);
-		}
-
-		@Override
-		public String getSimpleName() {
-			return "response data received";
 		}
 	}
 

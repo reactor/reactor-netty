@@ -16,19 +16,14 @@
 package reactor.netty.observability;
 
 import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.tracing.context.HttpClientHandlerContext;
 import io.micrometer.core.instrument.tracing.context.HttpServerHandlerContext;
+import io.micrometer.core.instrument.transport.http.HttpServerRequest;
+import io.micrometer.core.instrument.transport.http.HttpServerResponse;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
-import io.micrometer.tracing.handler.HttpClientTracingRecordingHandler;
 import io.micrometer.tracing.handler.HttpServerTracingRecordingHandler;
-import io.micrometer.tracing.http.HttpClientHandler;
 import io.micrometer.tracing.http.HttpServerHandler;
-
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 
 public class ReactorNettyHttpServerTracingRecordingHandler extends HttpServerTracingRecordingHandler {
 
@@ -36,7 +31,7 @@ public class ReactorNettyHttpServerTracingRecordingHandler extends HttpServerTra
 	 * Creates a new instance of {@link HttpServerTracingRecordingHandler}.
 	 *
 	 * @param tracer  tracer
-	 * @param handler http server handler
+	 * @param handler http client handler
 	 */
 	public ReactorNettyHttpServerTracingRecordingHandler(Tracer tracer, HttpServerHandler handler) {
 		super(tracer, handler);
@@ -49,6 +44,7 @@ public class ReactorNettyHttpServerTracingRecordingHandler extends HttpServerTra
 
 	@Override
 	public boolean supportsContext(Timer.HandlerContext context) {
-		return context instanceof ReactorNettyHandlerContext && super.supportsContext(context);
+		return context instanceof ReactorNettyHandlerContext && super.supportsContext(context) && context.get(HttpServerRequest.class) != null;
 	}
+
 }
