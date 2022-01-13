@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -301,14 +301,22 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				        .bindNow();
 
 		int requestsNum = 10;
-		CountDownLatch latch = new CountDownLatch(requestsNum);
+		CountDownLatch latch = new CountDownLatch(1);
 		DefaultPooledConnectionProvider provider =
 				(DefaultPooledConnectionProvider) ConnectionProvider.create("testConnectionReturnedToParentPoolWhenNoActiveStreams", 5);
+		AtomicInteger counter = new AtomicInteger();
 		HttpClient client =
 				createClient(provider, disposableServer.port())
 				        .protocol(HttpProtocol.H2)
 				        .secure(spec -> spec.sslContext(clientCtx))
-				        .doOnResponse((res, conn) -> conn.onDispose(latch::countDown));
+				        .observe((conn, state) -> {
+				            if (state == ConnectionObserver.State.CONNECTED) {
+				                counter.incrementAndGet();
+				            }
+				            if (state == ConnectionObserver.State.RELEASED && counter.decrementAndGet() == 0) {
+				                latch.countDown();
+				            }
+				        });
 
 		try {
 			Flux.range(0, requestsNum)
@@ -324,8 +332,6 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
 			assertThat(provider.channelPools).hasSize(1);
-
-			Thread.sleep(1000);
 
 			@SuppressWarnings({"unchecked", "rawtypes"})
 			InstrumentedPool<DefaultPooledConnectionProvider.PooledConnection> channelPool =
