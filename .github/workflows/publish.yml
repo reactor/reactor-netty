@@ -16,10 +16,6 @@ jobs:
       fullVersion: ${{ steps.version.outputs.fullVersion }}
     steps:
       - uses: actions/checkout@v2
-      - name: Update /etc/hosts file
-        if: startsWith(matrix.os, 'ubuntu-')
-          # update /etc/hosts file as a workaround for sporadic "connection timed out" issues
-        run: echo -e "$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)\t$(hostname -f) $(hostname -s)" | sudo tee -a /etc/hosts
       - name: setup java
         uses: actions/setup-java@v2
         with:
@@ -44,10 +40,6 @@ jobs:
     environment: snapshots
     steps:
       - uses: actions/checkout@v2
-      - name: Update /etc/hosts file
-        if: startsWith(matrix.os, 'ubuntu-')
-          # update /etc/hosts file as a workaround for sporadic "connection timed out" issues
-        run: echo -e "$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)\t$(hostname -f) $(hostname -s)" | sudo tee -a /etc/hosts
       - uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
@@ -68,10 +60,6 @@ jobs:
     environment: releases
     steps:
       - uses: actions/checkout@v2
-      - name: Update /etc/hosts file
-        if: startsWith(matrix.os, 'ubuntu-')
-          # update /etc/hosts file as a workaround for sporadic "connection timed out" issues
-        run: echo -e "$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)\t$(hostname -f) $(hostname -s)" | sudo tee -a /etc/hosts
       - uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
@@ -100,10 +88,6 @@ jobs:
     environment: releases
     steps:
       - uses: actions/checkout@v2
-      - name: Update /etc/hosts file
-        if: startsWith(matrix.os, 'ubuntu-')
-          # update /etc/hosts file as a workaround for sporadic "connection timed out" issues
-        run: echo -e "$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)\t$(hostname -f) $(hostname -s)" | sudo tee -a /etc/hosts
       - uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
