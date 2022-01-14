@@ -91,7 +91,7 @@ ext {
 	jsr305Version = '3.0.2'
 
 	// Logging
-	slf4jVersion = '1.7.32'
+	slf4jVersion = '1.7.33'
 	logbackVersion = '1.2.10'
 
 	// Netty
