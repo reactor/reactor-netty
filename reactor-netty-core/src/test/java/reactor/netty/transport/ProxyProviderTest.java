@@ -23,6 +23,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 import org.junit.jupiter.api.Test;
@@ -366,6 +367,42 @@ class ProxyProviderTest {
 
 		assertThat(provider).isNotNull();
 		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(".*\\Q.non-host\\E");
+	}
+
+	@Test
+	void proxyFromSystemProperties_basicAuthSetFromHttpProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.HTTP_PROXY_USER, "user");
+		properties.setProperty(ProxyProvider.HTTP_PROXY_PASSWORD, "password");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		assertThat(provider).isNotNull();
+
+		ProxyHandler handler = provider.newProxyHandler();
+		assertThat(handler.getClass()).isEqualTo(HttpProxyHandler.class);
+
+		HttpProxyHandler httpHandler = (HttpProxyHandler) handler;
+		assertThat(httpHandler.username()).isEqualTo("user");
+		assertThat(httpHandler.password()).isEqualTo("password");
+	}
+
+	@Test
+	void proxyFromSystemProperties_basicAuthSetFromHttpsProxy() {
+		Properties properties = new Properties();
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_USER, "user");
+		properties.setProperty(ProxyProvider.HTTPS_PROXY_PASSWORD, "password");
+
+		ProxyProvider provider = ProxyProvider.createFrom(properties);
+		assertThat(provider).isNotNull();
+
+		ProxyHandler handler = provider.newProxyHandler();
+		assertThat(handler.getClass()).isEqualTo(HttpProxyHandler.class);
+
+		HttpProxyHandler httpHandler = (HttpProxyHandler) handler;
+		assertThat(httpHandler.username()).isEqualTo("user");
+		assertThat(httpHandler.password()).isEqualTo("password");
 	}
 
 	@Test

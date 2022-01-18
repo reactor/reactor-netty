@@ -232,8 +232,12 @@ public final class ProxyProvider {
 
 	static final String HTTP_PROXY_HOST = "http.proxyHost";
 	static final String HTTP_PROXY_PORT = "http.proxyPort";
+	static final String HTTP_PROXY_USER = "http.proxyUser";
+	static final String HTTP_PROXY_PASSWORD = "http.proxyPassword";
 	static final String HTTPS_PROXY_HOST = "https.proxyHost";
 	static final String HTTPS_PROXY_PORT = "https.proxyPort";
+	static final String HTTPS_PROXY_USER = "https.proxyUser";
+	static final String HTTPS_PROXY_PASSWORD = "https.proxyPassword";
 	static final String HTTP_NON_PROXY_HOSTS = "http.nonProxyHosts";
 	static final String DEFAULT_NON_PROXY_HOSTS = "localhost|127.*|[::1]";
 
@@ -265,20 +269,29 @@ public final class ProxyProvider {
 	static ProxyProvider createHttpProxyFrom(Properties properties) {
 		String hostProperty;
 		String portProperty;
+		String userProperty;
+		String passwordProperty;
 		String defaultPort;
 		if (properties.containsKey(HTTPS_PROXY_HOST)) {
 			hostProperty = HTTPS_PROXY_HOST;
 			portProperty = HTTPS_PROXY_PORT;
+			userProperty = HTTPS_PROXY_USER;
+			passwordProperty = HTTPS_PROXY_PASSWORD;
 			defaultPort = "443";
 		}
 		else {
 			hostProperty = HTTP_PROXY_HOST;
 			portProperty = HTTP_PROXY_PORT;
+			userProperty = HTTP_PROXY_USER;
+			passwordProperty = HTTP_PROXY_PASSWORD;
 			defaultPort = "80";
 		}
 
 		String hostname = Objects.requireNonNull(properties.getProperty(hostProperty), hostProperty);
 		int port = parsePort(properties.getProperty(portProperty, defaultPort), portProperty);
+
+		String username = properties.getProperty(userProperty);
+		String password = properties.getProperty(passwordProperty);
 
 		String nonProxyHosts = properties.getProperty(HTTP_NON_PROXY_HOSTS, DEFAULT_NON_PROXY_HOSTS);
 		RegexShouldProxyPredicate transformedNonProxyHosts = RegexShouldProxyPredicate.fromWildcardedPattern(nonProxyHosts);
@@ -287,6 +300,8 @@ public final class ProxyProvider {
 				.type(ProxyProvider.Proxy.HTTP)
 				.host(hostname)
 				.port(port)
+				.username(username)
+				.password(u -> password)
 				.nonProxyHostsPredicate(transformedNonProxyHosts)
 				.build();
 	}
