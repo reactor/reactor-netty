@@ -90,6 +90,9 @@ If you want to raise an issue, please follow the recommendations below:
   `JVM` version.
 * If you want to raise a security vulnerability, please review our [Security Policy](https://github.com/reactor/reactor-netty/security/policy) for more details.
 
+## Contributing
+See our [Contributing Guide](https://github.com/reactor/.github/blob/main/CONTRIBUTING.md) for information about contributing to Reactor Netty.
+
 ## Building from Source
 You don't need to build from source to use `Reactor Netty` (binaries in
 [repo.spring.io](https://repo.spring.io)), but if you want to try out the latest and
