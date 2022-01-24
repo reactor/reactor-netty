@@ -506,7 +506,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 		static void addIdleTimeoutHandler(ChannelPipeline pipeline, @Nullable Duration idleTimeout) {
 			if (idleTimeout != null) {
-				pipeline.addBefore(NettyPipeline.HttpCodec,
+				String baseName = pipeline.get(NettyPipeline.HttpCodec) != null
+						? NettyPipeline.HttpCodec : NettyPipeline.H2CUpgradeHandler;
+				pipeline.addBefore(baseName,
 				                   NettyPipeline.IdleTimeoutHandler,
 				                   new IdleTimeoutHandler(idleTimeout.toMillis()));
 			}
