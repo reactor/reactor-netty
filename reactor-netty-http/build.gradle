@@ -135,7 +135,7 @@ dependencies {
 	testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 	testImplementation "io.micrometer:micrometer-core"
-	testImplementation "io.micrometer:micrometer-tracing-test"
+	testImplementation "io.micrometer:micrometer-tracing-integration-test"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
