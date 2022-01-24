@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -290,20 +290,26 @@ public final class ProxyProvider {
 		String hostname = Objects.requireNonNull(properties.getProperty(hostProperty), hostProperty);
 		int port = parsePort(properties.getProperty(portProperty, defaultPort), portProperty);
 
-		String username = properties.getProperty(userProperty);
-		String password = properties.getProperty(passwordProperty);
-
 		String nonProxyHosts = properties.getProperty(HTTP_NON_PROXY_HOSTS, DEFAULT_NON_PROXY_HOSTS);
 		RegexShouldProxyPredicate transformedNonProxyHosts = RegexShouldProxyPredicate.fromWildcardedPattern(nonProxyHosts);
 
-		return ProxyProvider.builder()
+		ProxyProvider.Builder proxy = ProxyProvider.builder()
 				.type(ProxyProvider.Proxy.HTTP)
 				.host(hostname)
 				.port(port)
-				.username(username)
-				.password(u -> password)
-				.nonProxyHostsPredicate(transformedNonProxyHosts)
-				.build();
+				.nonProxyHostsPredicate(transformedNonProxyHosts);
+
+		if (properties.containsKey(userProperty)) {
+			proxy = proxy.username(properties.getProperty(userProperty));
+
+			if (properties.containsKey(passwordProperty)) {
+				proxy = proxy.password(u -> properties.getProperty(passwordProperty));
+			} else {
+				throw new NullPointerException("Proxy username is set via '" + userProperty + "', but '" + passwordProperty + "' is not set.");
+			}
+		}
+
+		return proxy.build();
 	}
 
 	static ProxyProvider createSocksProxyFrom(Properties properties) {
