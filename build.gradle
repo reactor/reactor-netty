@@ -116,7 +116,7 @@ ext {
 	boringSslVersion = '2.0.47.Final'
 	junitVersion = '5.8.2'
 	junitPlatformLauncherVersion = '1.8.2'
-	mockitoVersion = '4.2.0'
+	mockitoVersion = '4.3.0'
 	blockHoundVersion = '1.0.6.RELEASE'
 	bouncycastleVersion = '1.70'
 
