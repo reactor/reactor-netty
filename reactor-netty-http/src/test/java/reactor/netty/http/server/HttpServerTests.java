@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2716,5 +2716,41 @@ class HttpServerTests extends BaseHttpTest {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> createServer().maxKeepAliveRequests(maxKeepAliveRequests))
 				.withMessage("maxKeepAliveRequests must be positive or -1");
+	}
+
+	@Test
+	void testIsFormUrlencodedWithCharset() {
+		doTestIsFormUrlencoded("application/x-www-form-urlencoded;charset=UTF-8", true);
+	}
+
+	@Test
+	void testIsFormUrlencodedWithoutCharset() {
+		doTestIsFormUrlencoded("application/x-www-form-urlencoded", true);
+	}
+
+	@Test
+	void testIsNotFormUrlencoded() {
+		doTestIsFormUrlencoded("application/json", false);
+	}
+
+	@SuppressWarnings("FutureReturnValueIgnored")
+	private void doTestIsFormUrlencoded(String headerValue, boolean expectation) {
+		EmbeddedChannel channel = new EmbeddedChannel();
+		HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+		request.headers().set(HttpHeaderNames.CONTENT_TYPE, headerValue);
+		HttpServerOperations ops = new HttpServerOperations(
+				Connection.from(channel),
+				ConnectionObserver.emptyListener(),
+				request,
+				null,
+				null,
+				ServerCookieDecoder.STRICT,
+				ServerCookieEncoder.STRICT,
+				DEFAULT_FORM_DECODER_SPEC,
+				null,
+				false);
+		assertThat(ops.isFormUrlencoded()).isEqualTo(expectation);
+		// "FutureReturnValueIgnored" is suppressed deliberately
+		channel.close();
 	}
 }
