@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -232,8 +232,12 @@ public final class ProxyProvider {
 
 	static final String HTTP_PROXY_HOST = "http.proxyHost";
 	static final String HTTP_PROXY_PORT = "http.proxyPort";
+	static final String HTTP_PROXY_USER = "http.proxyUser";
+	static final String HTTP_PROXY_PASSWORD = "http.proxyPassword";
 	static final String HTTPS_PROXY_HOST = "https.proxyHost";
 	static final String HTTPS_PROXY_PORT = "https.proxyPort";
+	static final String HTTPS_PROXY_USER = "https.proxyUser";
+	static final String HTTPS_PROXY_PASSWORD = "https.proxyPassword";
 	static final String HTTP_NON_PROXY_HOSTS = "http.nonProxyHosts";
 	static final String DEFAULT_NON_PROXY_HOSTS = "localhost|127.*|[::1]";
 
@@ -265,15 +269,21 @@ public final class ProxyProvider {
 	static ProxyProvider createHttpProxyFrom(Properties properties) {
 		String hostProperty;
 		String portProperty;
+		String userProperty;
+		String passwordProperty;
 		String defaultPort;
 		if (properties.containsKey(HTTPS_PROXY_HOST)) {
 			hostProperty = HTTPS_PROXY_HOST;
 			portProperty = HTTPS_PROXY_PORT;
+			userProperty = HTTPS_PROXY_USER;
+			passwordProperty = HTTPS_PROXY_PASSWORD;
 			defaultPort = "443";
 		}
 		else {
 			hostProperty = HTTP_PROXY_HOST;
 			portProperty = HTTP_PROXY_PORT;
+			userProperty = HTTP_PROXY_USER;
+			passwordProperty = HTTP_PROXY_PASSWORD;
 			defaultPort = "80";
 		}
 
@@ -283,12 +293,24 @@ public final class ProxyProvider {
 		String nonProxyHosts = properties.getProperty(HTTP_NON_PROXY_HOSTS, DEFAULT_NON_PROXY_HOSTS);
 		RegexShouldProxyPredicate transformedNonProxyHosts = RegexShouldProxyPredicate.fromWildcardedPattern(nonProxyHosts);
 
-		return ProxyProvider.builder()
+		ProxyProvider.Builder proxy = ProxyProvider.builder()
 				.type(ProxyProvider.Proxy.HTTP)
 				.host(hostname)
 				.port(port)
-				.nonProxyHostsPredicate(transformedNonProxyHosts)
-				.build();
+				.nonProxyHostsPredicate(transformedNonProxyHosts);
+
+		if (properties.containsKey(userProperty)) {
+			proxy = proxy.username(properties.getProperty(userProperty));
+
+			if (properties.containsKey(passwordProperty)) {
+				proxy = proxy.password(u -> properties.getProperty(passwordProperty));
+			}
+			else {
+				throw new NullPointerException("Proxy username is set via '" + userProperty + "', but '" + passwordProperty + "' is not set.");
+			}
+		}
+
+		return proxy.build();
 	}
 
 	static ProxyProvider createSocksProxyFrom(Properties properties) {
