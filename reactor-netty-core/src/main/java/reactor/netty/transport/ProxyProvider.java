@@ -304,7 +304,8 @@ public final class ProxyProvider {
 
 			if (properties.containsKey(passwordProperty)) {
 				proxy = proxy.password(u -> properties.getProperty(passwordProperty));
-			} else {
+			}
+			else {
 				throw new NullPointerException("Proxy username is set via '" + userProperty + "', but '" + passwordProperty + "' is not set.");
 			}
 		}
