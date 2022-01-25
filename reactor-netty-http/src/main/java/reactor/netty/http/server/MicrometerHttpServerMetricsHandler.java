@@ -17,17 +17,19 @@ package reactor.netty.http.server;
 
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.tracing.context.HttpServerHandlerContext;
+import io.micrometer.core.instrument.transport.http.HttpServerRequest;
+import io.micrometer.core.instrument.transport.http.HttpServerResponse;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
+import java.time.Duration;
+import java.util.Collection;
 import java.util.function.Function;
 
-import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
-import static reactor.netty.Metrics.DATA_SENT_TIME;
-import static reactor.netty.Metrics.METHOD;
-import static reactor.netty.Metrics.REGISTRY;
-import static reactor.netty.Metrics.RESPONSE_TIME;
-import static reactor.netty.Metrics.STATUS;
-import static reactor.netty.Metrics.URI;
+import static reactor.netty.Metrics.*;
 
 /**
  * @author Violeta Georgieva
@@ -40,27 +42,25 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	final MicrometerHttpServerMetricsRecorder recorder;
 	final Timer.Builder responseTimeBuilder;
 
-	Timer.Sample dataReceivedTimeSample;
-	Timer.Sample dataSentTimeSample;
 	WriteHandlerContext responseTimeHandlerContext;
 	Timer.Sample responseTimeSample;
 
 	MicrometerHttpServerMetricsHandler(MicrometerHttpServerMetricsRecorder recorder,
-			@Nullable Function<String, String> uriTagValue) {
+	                                   @Nullable Function<String, String> uriTagValue) {
 		super(uriTagValue);
 		this.recorder = recorder;
 
 		this.dataReceivedTimeBuilder =
 				Timer.builder(recorder.name() + DATA_RECEIVED_TIME)
-				     .description("Time spent in consuming incoming data");
+						.description("Time spent in consuming incoming data");
 
 		this.dataSentTimeBuilder =
 				Timer.builder(recorder.name() + DATA_SENT_TIME)
-				     .description("Time spent in sending outgoing data");
+						.description("Time spent in sending outgoing data");
 
 		this.responseTimeBuilder =
 				Timer.builder(recorder.name() + RESPONSE_TIME)
-				 .description("Total time for the request/response");
+						.description("Total time for the request/response");
 	}
 
 	@Override
@@ -80,12 +80,10 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		// Important:
 		// Cannot cache the Timer anymore - need to test the performance
 		// Can we use sample.stop(Timer)
-		dataReceivedTimeSample.stop(dataReceivedTimeBuilder);
+		dataReceivedTimeBuilder.register(REGISTRY).record(Duration.ofNanos(dataReceivedTime));
 
 		// Always take the remote address from the operations in order to consider proxy information
 		recorder().recordDataReceived(ops.remoteAddress(), path, dataReceived);
-
-		dataReceivedTimeSample = null;
 	}
 
 	@Override
@@ -100,39 +98,90 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		// Important:
 		// Cannot cache the Timer anymore - need to test the performance
 		// Can we use sample.stop(Timer)
-		dataSentTimeSample.stop(dataSentTimeBuilder);
+		dataSentTimeBuilder.register(REGISTRY).record(Duration.ofNanos(dataSentTime));
 
 		responseTimeSample.stop(responseTimeBuilder);
 
 		// Always take the remote address from the operations in order to consider proxy information
 		recorder().recordDataSent(ops.remoteAddress(), path, dataSent);
 
-		dataSentTimeSample = null;
 		responseTimeHandlerContext = null;
 		responseTimeSample = null;
 	}
 
 	@Override
-	protected void startRead(String path, String method) {
-		dataReceivedTimeSample = Timer.start(REGISTRY, new ReadHandlerContext(method, path));
-
-		responseTimeHandlerContext = new WriteHandlerContext(method, path);
+	protected void startRead(String path, String method, HttpRequest ops) {
+		responseTimeHandlerContext = new WriteHandlerContext(toHttpServerRequest(ops));
 		responseTimeSample = Timer.start(REGISTRY, responseTimeHandlerContext);
 	}
 
-	@Override
-	protected void startWrite(String path, String method, String status) {
-		dataSentTimeSample = Timer.start(REGISTRY, new WriteHandlerContext(method, path, status));
+	private HttpServerRequest toHttpServerRequest(HttpRequest ops) {
+		return new HttpServerRequest() {
+			@Override
+			public String method() {
+				return ops.method().name();
+			}
 
-		if (responseTimeSample == null) {
-			responseTimeSample = Timer.start(REGISTRY, new WriteHandlerContext(method, path, status));
-		}
-		else {
-			responseTimeHandlerContext.status = status;
-		}
+			@Override
+			public String path() {
+				return java.net.URI.create(ops.uri()).getPath();
+			}
+
+			@Override
+			public String url() {
+				return ops.uri();
+			}
+
+			@Override
+			public String header(String name) {
+				return ops.headers().get(name);
+			}
+
+			@Override
+			public Collection<String> headerNames() {
+				return ops.headers().names();
+			}
+
+			@Override
+			public Object unwrap() {
+				return ops;
+			}
+		};
 	}
 
-	static final class ReadHandlerContext extends Timer.HandlerContext {
+	// response
+	@Override
+	protected void startWrite(String path, String method, String status, HttpRequest nettyRequest, HttpResponse ops) {
+		if (responseTimeSample == null) {
+			responseTimeSample = Timer.start(REGISTRY, responseTimeHandlerContext);
+		}
+		responseTimeHandlerContext.setResponse(toHttpServerResponse(ops));
+		responseTimeHandlerContext.status = status;
+		dataSentTimeBuilder
+				.register(REGISTRY)
+				.record(Duration.ofNanos(dataSentTime));
+	}
+
+	private HttpServerResponse toHttpServerResponse(HttpResponse ops) {
+		return new HttpServerResponse() {
+			@Override
+			public int statusCode() {
+				return ops.status().code();
+			}
+
+			@Override
+			public Collection<String> headerNames() {
+				return ops.headers().names();
+			}
+
+			@Override
+			public Object unwrap() {
+				return ops;
+			}
+		};
+	}
+
+	static final class ReadHandlerContext extends Timer.HandlerContext implements ReactorNettyHandlerContext {
 
 		final String method;
 		final String path;
@@ -143,32 +192,51 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		}
 
 		@Override
+		public Tags getHighCardinalityTags() {
+			// TODO: Externalize the tags?
+			return Tags.of("reactor.netty.type", "server", "reactor.netty.protocol", "http");
+		}
+
+		@Override
 		public Tags getLowCardinalityTags() {
 			return Tags.of(URI, path, METHOD, method);
 		}
+
+		@Override
+		public String getSimpleName() {
+			return method + " " + path;
+		}
 	}
 
-	static final class WriteHandlerContext extends Timer.HandlerContext {
-
-		final String method;
-		final String path;
+	static class WriteHandlerContext extends HttpServerHandlerContext implements ReactorNettyHandlerContext {
 
 		// status might not be known beforehand
 		String status;
 
-		WriteHandlerContext(String method, String path) {
-			this(method, path, null);
+		final String method;
+		final String path;
+
+		WriteHandlerContext(HttpServerRequest request) {
+			super(request);
+			this.method = request.method();
+			this.path = request.path();
+			put(HttpServerRequest.class, request);
 		}
 
-		WriteHandlerContext(String method, String path, @Nullable String status) {
-			this.method = method;
-			this.path = path;
-			this.status = status;
+		@Override
+		public HttpServerHandlerContext setResponse(io.micrometer.core.instrument.transport.http.HttpServerResponse response) {
+			put(io.micrometer.core.instrument.transport.http.HttpServerResponse.class, response);
+			return super.setResponse(response);
 		}
 
 		@Override
 		public Tags getLowCardinalityTags() {
 			return Tags.of(URI, path, METHOD, method, STATUS, status);
+		}
+
+		@Override
+		public String getSimpleName() {
+			return "request data received";
 		}
 	}
 }

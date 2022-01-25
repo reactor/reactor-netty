@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -61,7 +62,7 @@ public class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandl
 
 	// ConnectMetricsHandler is Timer.HandlerContext and ChannelOutboundHandler in order to reduce allocations,
 	// this is invoked on every connection establishment
-	static final class ConnectMetricsHandler extends Timer.HandlerContext implements ChannelOutboundHandler {
+	static final class ConnectMetricsHandler extends Timer.HandlerContext implements ReactorNettyHandlerContext, ChannelOutboundHandler {
 
 		final Timer.Builder connectTimeBuilder;
 
@@ -103,6 +104,7 @@ public class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandl
 			// Important:
 			// Cannot cache the Timer anymore - need to test the performance
 			// Can we use sample.stop(Timer)
+			put(SocketAddress.class, remoteAddress);
 			this.remoteAddress = formatSocketAddress(remoteAddress);
 			Timer.Sample sample = Timer.start(REGISTRY, this);
 			ctx.connect(remoteAddress, localAddress, promise)
@@ -141,6 +143,13 @@ public class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandl
 		}
 
 		@Override
+		public Tags getHighCardinalityTags() {
+			// TODO: Add netty protocol
+			// TODO: Externalize the tags?
+			return Tags.of("reactor.netty.status", status, "reactor.netty.type", "client", "reactor.netty.protocol", "TODO:");
+		}
+
+		@Override
 		public Tags getLowCardinalityTags() {
 			return Tags.of(REMOTE_ADDRESS, remoteAddress, STATUS, status);
 		}
@@ -165,6 +174,11 @@ public class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandl
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.write(msg, promise);
+		}
+
+		@Override
+		public String getSimpleName() {
+			return "connect";
 		}
 	}
 }

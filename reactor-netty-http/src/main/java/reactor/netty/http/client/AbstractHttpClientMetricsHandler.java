@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelDuplexHandler;
@@ -74,7 +75,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 				contextView = ops.currentContextView();
 			}
 
-			startWrite(ctx.channel().remoteAddress());
+			startWrite(((HttpRequest) msg), ctx.channel().remoteAddress());
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -97,7 +98,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof HttpResponse) {
 			status = ((HttpResponse) msg).status().codeAsText().toString();
 
-			startRead(ctx.channel().remoteAddress());
+			startRead((HttpResponse) msg, ctx.channel().remoteAddress());
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -124,6 +125,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	protected abstract HttpClientMetricsRecorder recorder();
 
+	// TODO: Do sth about the error handling
 	protected void recordException(ChannelHandlerContext ctx) {
 		recorder().incrementErrorsCount(ctx.channel().remoteAddress(),
 				path != null ? path : resolveUri(ctx));
@@ -149,11 +151,11 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordDataSent(address, path, dataSent);
 	}
 
-	protected void startRead(SocketAddress address) {
+	protected void startRead(HttpResponse msg, SocketAddress address) {
 		dataReceivedTime = System.nanoTime();
 	}
 
-	protected void startWrite(SocketAddress address) {
+	protected void startWrite(HttpRequest msg, SocketAddress address) {
 		dataSentTime = System.nanoTime();
 	}
 
