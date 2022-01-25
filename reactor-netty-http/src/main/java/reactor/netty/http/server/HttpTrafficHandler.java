@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -506,7 +506,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 		static void addIdleTimeoutHandler(ChannelPipeline pipeline, @Nullable Duration idleTimeout) {
 			if (idleTimeout != null) {
-				pipeline.addBefore(NettyPipeline.HttpCodec,
+				String baseName = pipeline.get(NettyPipeline.HttpCodec) != null
+						? NettyPipeline.HttpCodec : NettyPipeline.H2CUpgradeHandler;
+				pipeline.addBefore(baseName,
 				                   NettyPipeline.IdleTimeoutHandler,
 				                   new IdleTimeoutHandler(idleTimeout.toMillis()));
 			}

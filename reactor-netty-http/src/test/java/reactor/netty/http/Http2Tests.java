@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,6 +122,31 @@ class Http2Tests extends BaseHttpTest {
 
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void testIdleTimeoutWithHttp11AndH2cHandlesRequestsCorrectly() {
+		disposableServer =
+				createServer()
+				          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
+				          .idleTimeout(Duration.ofSeconds(60))
+				          .route(routes ->
+				              routes.post("/echo", (req, res) -> res.send(req.receive().retain())))
+				          .bindNow();
+
+		StepVerifier.create(
+				createClient(disposableServer.port())
+				          .protocol(HttpProtocol.H2C)
+				          .post()
+				          .uri("/echo")
+				          .send(ByteBufFlux.fromString(Mono.just("Hello world!")))
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+						  .timeout(Duration.ofSeconds(10))
+				)
+				.expectNext("Hello world!")
+				.verifyComplete();
 	}
 
 	@Test
