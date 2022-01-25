@@ -1,0 +1,85 @@
+== Connection Pool
+By default, `TcpClient` uses a "`fixed`" connection pool with `500` as the maximum number of active channels
+and `1000` as the maximum number of further channel acquisition attempts allowed to be kept in a pending state
+(for the rest of the configurations check the system properties or the builder configurations below).
+This means that the implementation creates a new channel if someone tries to acquire a channel
+as long as less than `500` have been created and are managed by the pool.
+When the maximum number of channels in the pool is reached, up to `1000` new attempts to
+acquire a channel are delayed (pending) until a channel is closed (and thus a slot is free and a new connection can be opened),
+and further attempts are declined with an error.
+
+NOTE: Connections used by the `TcpClient` are never returned to the pool, but closed. When a connection is closed, a slot is freed
+in the pool and thus a new connection can be opened when needed. This behaviour is specific only for `TcpClient`
+and is intentional because only the user/framework knows if the actual protocol is compatible with reusing connections.
+(opposed to `HttpClient` where the protocol is known and Reactor Netty can return the connection to the pool when this is possible)
+
+====
+[source,java,indent=0]
+../../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
+----
+include::./../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java[lines=117..127]
+----
+====
+
+When you need to change the default settings, you can configure the `ConnectionProvider` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/pool/config/Application.java
+----
+include::{examplesdir}/pool/config/Application.java[lines=18..41]
+----
+<1> Configures the maximum time for the pending acquire operation to 60 seconds.
+====
+
+The following listing shows the available configurations:
+[width="100%",options="header"]
+|=======
+| Configuration name | Description
+| `disposeInactivePoolsInBackground` | When this option is enabled, connection pools are regularly checked in the background,
+and those that are empty and been inactive for a specified time become eligible for disposal. By default, this background
+disposal of inactive pools is disabled.
+| `disposeTimeout` | When `ConnectionProvider#dispose()` or `ConnectionProvider#disposeLater()` is called,
+trigger a graceful shutdown for the connection pools, with this grace period timeout.
+From there on, all calls for acquiring a connection will fail fast with an exception.
+However, for the provided `Duration`, pending acquires will get a chance to be served.
+Note: The rejection of new acquires and the grace timer start immediately,
+irrespective of subscription to the `Mono` returned by `ConnectionProvider#disposeLater()`.
+Subsequent calls return the same `Mono`, effectively getting notifications from the first graceful
+shutdown call and ignoring subsequently provided timeouts. By default, dispose timeout is not specified.
+| `maxConnections` | The maximum number of connections (per connection pool) before start pending. Default to
+2 * available number of processors (but with a minimum value of 16).
+| `metrics` | Enables/disables built-in integration with Micrometer. `ConnectionProvider.MeterRegistrar` can be provided
+for integration with another metrics system. By default, metrics are not enabled.
+| `pendingAcquireMaxCount` | The maximum number of extra attempts at acquiring a connection to keep in a pending queue.
+If -1 is specified, the pending queue does not have upper limit. Default to 2 * max connections.
+| `pendingAcquireTimeout` | The maximum time before which a pending acquire must complete, or a TimeoutException is
+thrown (resolution: ms). If -1 is specified, no such timeout is applied. Default: 45 seconds.
+|=======
+
+If you need to disable the connection pool, you can apply the following configuration:
+
+====
+[source,java,indent=0]
+.{examplesdir}/pool/Application.java
+----
+include::{examplesdir}/pool/Application.java[lines=18..35]
+----
+====
+
+=== Metrics
+The pooled `ConnectionProvider` supports built-in integration with https://micrometer.io/[`Micrometer`].
+It exposes all metrics with a prefix of `reactor.netty.connection.provider`.
+
+include::conn-provider-metrics.adoc[]
+
+The following example enables that integration:
+
+====
+[source,java,indent=0]
+.{examplesdir}/pool/metrics/Application.java
+----
+include::{examplesdir}/pool/metrics/Application.java[lines=18..45]
+----
+<1> Enables the built-in integration with Micrometer
+====
