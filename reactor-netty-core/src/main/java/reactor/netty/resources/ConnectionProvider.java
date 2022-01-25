@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -464,6 +464,8 @@ public interface ConnectionProvider extends Disposable {
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} max idle time (resolution: ms).
 		 * Default to {@link #DEFAULT_POOL_MAX_IDLE_TIME} if specified otherwise - no max idle time.
+		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
+		 * A TCP connection is always closed and never returned to the pool.
 		 *
 		 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms)
 		 * @return {@literal this}
@@ -477,6 +479,8 @@ public interface ConnectionProvider extends Disposable {
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} max life time (resolution: ms).
 		 * Default to {@link #DEFAULT_POOL_MAX_LIFE_TIME} if specified otherwise - no max life time.
+		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
+		 * A TCP connection is always closed and never returned to the pool.
 		 *
 		 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms)
 		 * @return {@literal this}
@@ -535,6 +539,8 @@ public interface ConnectionProvider extends Disposable {
 		 * Configure the pool so that if there are idle connections (i.e. pool is under-utilized),
 		 * the next acquire operation will get the <b>Most Recently Used</b> connection
 		 * (MRU, i.e. the connection that was released last among the current idle connections).
+		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
+		 * A TCP connection is always closed and never returned to the pool.
 		 *
 		 * @return {@literal this}
 		 */
@@ -547,6 +553,8 @@ public interface ConnectionProvider extends Disposable {
 		 * Configure the pool so that if there are idle connections (i.e. pool is under-utilized),
 		 * the next acquire operation will get the <b>Least Recently Used</b> connection
 		 * (LRU, i.e. the connection that was released first among the current idle connections).
+		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
+		 * A TCP connection is always closed and never returned to the pool.
 		 *
 		 * @return {@literal this}
 		 */
@@ -561,6 +569,8 @@ public interface ConnectionProvider extends Disposable {
 		 * that are applicable for removal.
 		 * Default to {@link #EVICT_IN_BACKGROUND_DISABLED} - the background eviction is disabled.
 		 * Providing an {@code evictionInterval} of {@link Duration#ZERO zero} means the background eviction is disabled.
+		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
+		 * A TCP connection is always closed and never returned to the pool.
 		 *
 		 * @param evictionInterval specifies the interval to be used for checking the connection pool, (resolution: ns)
 		 * @return {@literal this}

@@ -1,5 +1,5 @@
 == Connection Pool
-By default, Reactor Netty client uses a "`fixed`" connection pool with `500` as the maximum number of active channels
+By default, `HttpClient` uses a "`fixed`" connection pool with `500` as the maximum number of active channels
 and `1000` as the maximum number of further channel acquisition attempts allowed to be kept in a pending state
 (for the rest of the configurations check the system properties or the builder configurations below).
 This means that the implementation creates a new channel if someone tries to acquire a channel

@@ -277,7 +277,7 @@ See <<tcp-client>> for more about `TCP` level configurations.
 
 include::wire-logger.adoc[]
 
-include::conn-provider.adoc[]
+include::http-client-conn-provider.adoc[]
 
 == SSL and TLS
 When you need SSL or TLS, you can apply the configuration shown in the next example.

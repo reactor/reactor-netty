@@ -231,7 +231,7 @@ include::{examplesdir}/eventloop/Application.java[lines=18..37]
 ----
 ====
 
-include::conn-provider.adoc[]
+include::tcp-client-conn-provider.adoc[]
 
 == SSL and TLS
 
