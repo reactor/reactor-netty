@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import reactor.netty.transport.ServerTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.Metrics;
+import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -955,7 +956,9 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 						log.debug(format(connection.channel(), "Handler is being applied: {}"), handler);
 					}
 					HttpServerOperations ops = (HttpServerOperations) connection;
-					Mono<Void> mono = Mono.fromDirect(handler.apply(ops, ops));
+					Mono<Void> mono = Mono.deferContextual(Mono::just)
+					                      .doOnNext(ctx -> ops.currentContext = Context.of(ctx))
+					                      .then(Mono.fromDirect(handler.apply(ops, ops)));
 					if (ops.mapHandle != null) {
 						mono = ops.mapHandle.apply(mono, connection);
 					}

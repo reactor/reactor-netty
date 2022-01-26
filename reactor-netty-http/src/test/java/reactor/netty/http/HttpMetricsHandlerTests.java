@@ -31,6 +31,7 @@ import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.server.ContextAwareHttpServerMetricsRecorder;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerMetricsRecorder;
 import reactor.netty.resources.ConnectionProvider;
@@ -337,10 +338,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testContextAwareRecorder() throws Exception {
+	void testContextAwareRecorderOnClient() throws Exception {
 		disposableServer = httpServer.bindNow();
 
-		ContextAwareRecorder recorder = ContextAwareRecorder.INSTANCE;
+		ClientContextAwareRecorder recorder = ClientContextAwareRecorder.INSTANCE;
 		CountDownLatch latch = new CountDownLatch(1);
 		httpClient.doOnResponse((res, conn) -> conn.channel()
 		                                           .closeFuture()
@@ -353,6 +354,35 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .aggregate()
 		          .asString()
 		          .contextWrite(Context.of("testContextAwareRecorder", "OK"))
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		assertThat(recorder.onDataReceivedContextView).isTrue();
+		assertThat(recorder.onDataSentContextView).isTrue();
+	}
+
+	@Test
+	void testContextAwareRecorderOnServer() throws Exception {
+		ServerContextAwareRecorder recorder = ServerContextAwareRecorder.INSTANCE;
+		disposableServer =
+				httpServer.metrics(true, () -> recorder)
+				          .mapHandle((mono, conn) -> mono.contextWrite(Context.of("testContextAwareRecorder", "OK")))
+				          .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		httpClient.doOnResponse((res, conn) -> conn.channel()
+		                                           .closeFuture()
+		                                           .addListener(f -> latch.countDown()))
+		          .post()
+		          .uri("/1")
+		          .send(body)
+		          .responseContent()
+		          .aggregate()
+		          .asString()
 		          .as(StepVerifier::create)
 		          .expectNext("Hello World!")
 		          .expectComplete()
@@ -573,9 +603,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	private static final String CLIENT_CONNECT_TIME = HTTP_CLIENT_PREFIX + CONNECT_TIME;
 	private static final String CLIENT_TLS_HANDSHAKE_TIME = HTTP_CLIENT_PREFIX + TLS_HANDSHAKE_TIME;
 
-	static final class ContextAwareRecorder extends ContextAwareHttpClientMetricsRecorder {
+	static final class ClientContextAwareRecorder extends ContextAwareHttpClientMetricsRecorder {
 
-		static final ContextAwareRecorder INSTANCE = new ContextAwareRecorder();
+		static final ClientContextAwareRecorder INSTANCE = new ClientContextAwareRecorder();
 
 		final AtomicBoolean onDataReceivedContextView = new AtomicBoolean();
 		final AtomicBoolean onDataSentContextView = new AtomicBoolean();
@@ -607,6 +637,64 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		@Override
 		public void recordResponseTime(ContextView contextView, SocketAddress remoteAddress, String uri,
 				String method, String status, Duration time) {
+		}
+
+		@Override
+		public void incrementErrorsCount(ContextView contextView, SocketAddress socketAddress) {
+		}
+
+		@Override
+		public void recordConnectTime(ContextView contextView, SocketAddress socketAddress, Duration duration, String s) {
+		}
+
+		@Override
+		public void recordDataReceived(ContextView contextView, SocketAddress socketAddress, long l) {
+		}
+
+		@Override
+		public void recordDataSent(ContextView contextView, SocketAddress socketAddress, long l) {
+		}
+
+		@Override
+		public void recordTlsHandshakeTime(ContextView contextView, SocketAddress socketAddress, Duration duration, String s) {
+		}
+
+		@Override
+		public void recordResolveAddressTime(SocketAddress socketAddress, Duration duration, String s) {
+		}
+	}
+
+	static final class ServerContextAwareRecorder extends ContextAwareHttpServerMetricsRecorder {
+
+		static final ServerContextAwareRecorder INSTANCE = new ServerContextAwareRecorder();
+
+		final AtomicBoolean onDataReceivedContextView = new AtomicBoolean();
+		final AtomicBoolean onDataSentContextView = new AtomicBoolean();
+
+		@Override
+		public void incrementErrorsCount(ContextView contextView, SocketAddress remoteAddress, String uri) {
+		}
+
+		@Override
+		public void recordDataReceived(ContextView contextView, SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(ContextView contextView, SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void recordDataReceivedTime(ContextView contextView, String uri, String method, Duration time) {
+			onDataReceivedContextView.set("OK".equals(contextView.getOrDefault("testContextAwareRecorder", "KO")));
+		}
+
+		@Override
+		public void recordDataSentTime(ContextView contextView, String uri, String method, String status, Duration time) {
+			onDataSentContextView.set("OK".equals(contextView.getOrDefault("testContextAwareRecorder", "KO")));
+		}
+
+		@Override
+		public void recordResponseTime(ContextView contextView, String uri, String method, String status, Duration time) {
 		}
 
 		@Override
