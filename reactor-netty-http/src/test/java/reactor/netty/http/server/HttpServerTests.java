@@ -2721,6 +2721,7 @@ class HttpServerTests extends BaseHttpTest {
 	@Test
 	void testIsFormUrlencodedWithCharset() {
 		doTestIsFormUrlencoded("application/x-www-form-urlencoded;charset=UTF-8", true);
+		doTestIsFormUrlencoded("application/x-www-form-urlencoded ;charset=UTF-8", true);
 	}
 
 	@Test
@@ -2730,7 +2731,9 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIsNotFormUrlencoded() {
+		doTestIsFormUrlencoded("", false);
 		doTestIsFormUrlencoded("application/json", false);
+		doTestIsFormUrlencoded("application/x-www-form-urlencoded-bad", false);
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")

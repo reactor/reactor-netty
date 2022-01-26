@@ -294,9 +294,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public boolean isFormUrlencoded() {
-		String contentType = requestHeaders().get(HttpHeaderNames.CONTENT_TYPE);
-		return contentType != null &&
-				contentType.startsWith(HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString());
+		CharSequence mimeType = HttpUtil.getMimeType(nettyRequest);
+		return mimeType != null &&
+				HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.contentEqualsIgnoreCase(mimeType.toString().trim());
 	}
 
 	@Override
