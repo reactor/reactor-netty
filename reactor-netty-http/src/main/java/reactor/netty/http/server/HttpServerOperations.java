@@ -116,6 +116,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	Function<? super String, Map<String, String>> paramsResolver;
 	Consumer<? super HttpHeaders> trailerHeadersConsumer;
 
+	volatile Context currentContext;
+
 	HttpServerOperations(HttpServerOperations replaced) {
 		super(replaced);
 		this.compressionPredicate = replaced.compressionPredicate;
@@ -123,6 +125,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieHolder = replaced.cookieHolder;
+		this.currentContext = replaced.currentContext;
 		this.formDecoderProvider = replaced.formDecoderProvider;
 		this.mapHandle = replaced.mapHandle;
 		this.nettyRequest = replaced.nettyRequest;
@@ -161,6 +164,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
 		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers(), decoder);
+		this.currentContext = Context.empty();
 		this.formDecoderProvider = formDecoderProvider;
 		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
@@ -268,6 +272,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return cookieHolder.getAllCachedCookies();
 		}
 		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public Context currentContext() {
+		return currentContext;
 	}
 
 	@Override
