@@ -30,4 +30,4 @@ jobs:
       - name: Check License
         run: ./gradlew clean spotlessCheck -PspotlessFrom='origin/${{ github.base_ref }}'
       - name: Build with Gradle
-        run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }}
+        run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -PpreferIPv4Stack

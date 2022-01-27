@@ -67,6 +67,7 @@ import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * @author tjreactive
@@ -839,6 +840,7 @@ class WebsocketTest extends BaseHttpTest {
 
 	@Test
 	void testIssue460() {
+		assumeThat(Boolean.parseBoolean(System.getProperty("java.net.preferIPv4Stack", "false"))).isFalse();
 		disposableServer =
 				createServer()
 				          .host("::1")
