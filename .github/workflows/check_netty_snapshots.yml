@@ -3,7 +3,7 @@ name: Check Netty SNAPSHOTS
 on:
   schedule:
     - cron: "0 14 * * *"
-
+permissions: read-all
 jobs:
   build:
 

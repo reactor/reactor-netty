@@ -13,11 +13,15 @@ on:
     branches: [ main ]
   schedule:
     - cron: '0 12 * * 6'
-
+permissions: read-all
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+
+    permissions:
+      # required for all workflows
+      security-events: write
 
     strategy:
       fail-fast: false
