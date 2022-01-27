@@ -956,9 +956,11 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 						log.debug(format(connection.channel(), "Handler is being applied: {}"), handler);
 					}
 					HttpServerOperations ops = (HttpServerOperations) connection;
-					Mono<Void> mono = Mono.deferContextual(Mono::just)
-					                      .doOnNext(ctx -> ops.currentContext = Context.of(ctx))
-					                      .then(Mono.fromDirect(handler.apply(ops, ops)));
+					Publisher<Void> publisher = handler.apply(ops, ops);
+					Mono<Void> mono = Mono.deferContextual(ctx -> {
+						ops.currentContext = Context.of(ctx);
+						return Mono.fromDirect(publisher);
+					});
 					if (ops.mapHandle != null) {
 						mono = ops.mapHandle.apply(mono, connection);
 					}
