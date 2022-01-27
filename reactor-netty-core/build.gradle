@@ -193,14 +193,6 @@ task japicmp(type: JapicmpTask) {
 	txtOutputFile = file("${project.buildDir}/reports/japi.txt")
 	ignoreMissingClasses = true
 	includeSynthetic = true
-	methodExcludes = [
-			// New methods with default implementation
-			// reactor.netty.resources
-			"reactor.netty.resources.ConnectionProvider#mutate()",
-			"reactor.netty.resources.ConnectionProvider#name()",
-			"reactor.netty.channel.ChannelMetricsRecorder#recordServerConnectionOpened(java.net.SocketAddress)",
-			"reactor.netty.channel.ChannelMetricsRecorder#recordServerConnectionClosed(java.net.SocketAddress)"
-	]
 	onlyIf { "$compatibleVersion" != "SKIP" }
 }
 
