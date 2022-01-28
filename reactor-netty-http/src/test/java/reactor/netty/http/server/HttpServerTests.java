@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -2756,4 +2757,39 @@ class HttpServerTests extends BaseHttpTest {
 		// "FutureReturnValueIgnored" is suppressed deliberately
 		channel.close();
 	}
+
+	/**
+	 * This test verifies if server h2 streams are closed properly when the server does not consume client post data chunks
+	 */
+	@Test
+	void testIssue1978() throws Exception {
+		int count = 5;
+		CountDownLatch latch = new CountDownLatch(count);
+		disposableServer =
+				createServer()
+						.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+						.handle((req, res) -> {
+							req.withConnection(conn -> conn.channel().closeFuture().addListener(f -> latch.countDown()));
+							return res.sendString(Mono.just("test"));
+						})
+						.bindNow();
+
+		byte[] content = new byte[1024];
+		Random rndm = new Random();
+		rndm.nextBytes(content);
+
+		HttpClient client = createClient(disposableServer.port()).protocol(HttpProtocol.H2C);
+		Flux.range(0, count)
+				.flatMap(i ->
+						client.post()
+								.uri("/")
+								.send(Flux.just(Unpooled.wrappedBuffer(content), Unpooled.wrappedBuffer(content),
+										Unpooled.wrappedBuffer(content), Unpooled.wrappedBuffer(content)))
+								.responseContent()
+								.aggregate()
+								.asString())
+				.blockLast(Duration.ofSeconds(10));
+
+		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+	}    
 }
