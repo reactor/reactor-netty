@@ -2791,5 +2791,5 @@ class HttpServerTests extends BaseHttpTest {
 				.blockLast(Duration.ofSeconds(10));
 
 		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
-	}    
+	}
 }
