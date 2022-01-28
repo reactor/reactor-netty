@@ -597,7 +597,7 @@ the connection establishment attempt fails. Default: 30s.
 * `SO_KEEPALIVE` - When the connection stays idle for some time (the time is implementation dependent, but the default is typically two hours),
 TCP automatically sends a `keepalive` probe to the remote peer.
 By default, https://docs.oracle.com/javase/8/docs/api/java/net/SocketOptions.html#SO_KEEPALIVE[`SO_KEEPALIVE`] is not enabled.
-When you run with `Epoll`/`NIO` (since *Java 11*) transport, you may also configure:
+When you run with `Epoll`/`NIO` (https://bugs.openjdk.java.net/browse/JDK-8194298[since *Java 11* on *Mac or Linux*]) transport, you may also configure:
 ** `TCP_KEEPIDLE` - The maximum time (resolution: seconds) that this connection stays idle before TCP starts sending `keepalive` probes,
 if `SO_KEEPALIVE` has been set. The maximum time is implementation dependent, but the default is typically two hours.
 ** `TCP_KEEPINTVL` (Epoll)/`TCP_KEEPINTERVAL` (NIO) - The time (resolution: seconds) between individual `keepalive` probes.
