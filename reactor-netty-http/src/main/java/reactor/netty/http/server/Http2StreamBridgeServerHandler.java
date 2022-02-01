@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.ReferenceCountUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -61,6 +62,11 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 	SocketAddress remoteAddress;
 
 	Boolean secured;
+
+	/**
+	 * Flag to indicate if a request is not yet fully responded.
+	 */
+	boolean pendingResponse;
 
 	Http2StreamBridgeServerHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
@@ -101,6 +107,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			HttpRequest request = (HttpRequest) msg;
 			HttpServerOperations ops;
 			try {
+				pendingResponse = true;
 				ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						request,
@@ -117,11 +124,21 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 						secured);
 			}
 			catch (RuntimeException e) {
+				pendingResponse = false;
 				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg);
 				return;
 			}
 			ops.bind();
 			listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
+		}
+		else if (!pendingResponse) {
+			if (HttpServerOperations.log.isDebugEnabled()) {
+				HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
+						"since response has been sent already: {}"), msg);
+			}
+			ReferenceCountUtil.release(msg);
+			ctx.read();
+			return;
 		}
 		ctx.fireChannelRead(msg);
 	}
@@ -137,6 +154,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			//"FutureReturnValueIgnored" this is deliberate
 			ChannelFuture f = ctx.write(msg, promise);
 			if (msg instanceof LastHttpContent) {
+				pendingResponse = false;
 				f.addListener(this);
 			}
 		}
