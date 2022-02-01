@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -119,7 +119,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				.registerMetrics(name(), id, remoteAddress, metrics);
 	}
 
-	static void invalidate(@Nullable ConnectionObserver owner, Channel channel) {
+	static void invalidate(@Nullable ConnectionObserver owner) {
 		if (owner instanceof DisposableAcquire) {
 			DisposableAcquire da = (DisposableAcquire) owner;
 			da.pooledRef
@@ -146,7 +146,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		               logStreamsState(channel, localEndpoint, "Stream closed");
 		           }
 
-		           invalidate(owner, parent);
+		           invalidate(owner);
 		       });
 	}
 
@@ -288,7 +288,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		@Override
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == UPGRADE_REJECTED) {
-				invalidate(connection.channel().attr(OWNER).get(), connection.channel());
+				invalidate(connection.channel().attr(OWNER).get());
 			}
 
 			obs.onStateChange(connection, newState);
@@ -375,13 +375,13 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 					if (ops != null) {
 						sink.success(ops);
-						invalidate(this, channel);
+						invalidate(this);
 						return true;
 					}
 				}
 				else if (!ApplicationProtocolNames.HTTP_2.equals(handler.applicationProtocol())) {
 					channel.attr(OWNER).set(null);
-					invalidate(this, channel);
+					invalidate(this);
 					sink.error(new IOException("Unknown protocol [" + protocol + "]."));
 					return true;
 				}
@@ -393,7 +393,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 				if (ops != null) {
 					sink.success(ops);
-					invalidate(this, channel);
+					invalidate(this);
 					return true;
 				}
 			}
