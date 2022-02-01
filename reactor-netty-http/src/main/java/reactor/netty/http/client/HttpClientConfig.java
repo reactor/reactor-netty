@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -607,11 +607,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 	}
 
-	static Future<Http2StreamChannel> openStream(Channel channel, ConnectionObserver observer,
-			ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
+	static Future<Http2StreamChannel> openStream(Channel channel, Http2ConnectionProvider.DisposableAcquire owner,
+			ConnectionObserver observer, ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
 		Http2StreamChannelBootstrap bootstrap = new Http2StreamChannelBootstrap(channel);
 		bootstrap.option(ChannelOption.AUTO_READ, false);
-		bootstrap.handler(new H2Codec(observer, opsFactory, acceptGzip));
+		bootstrap.handler(new H2Codec(owner, observer, opsFactory, acceptGzip));
 		return bootstrap.open();
 	}
 
@@ -662,14 +662,21 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			ReadTimeoutHandler responseTimeoutHandler =
 					(ReadTimeoutHandler) pipeline.get(NettyPipeline.ResponseTimeoutHandler);
 			Http2MultiplexHandler http2MultiplexHandler;
+			ConnectionObserver channelOwner = ctx.channel().attr(OWNER).get();
+			Http2ConnectionProvider.DisposableAcquire owner = null;
+			ConnectionObserver obs = null;
+			if (channelOwner instanceof Http2ConnectionProvider.DisposableAcquire) {
+				owner = (Http2ConnectionProvider.DisposableAcquire) channelOwner;
+				obs = owner.obs;
+			}
 			if (responseTimeoutHandler != null) {
 				pipeline.remove(NettyPipeline.ResponseTimeoutHandler);
 				http2MultiplexHandler = new Http2MultiplexHandler(new H2Codec(opsFactory, acceptGzip),
-						new H2Codec(opsFactory, acceptGzip, responseTimeoutHandler.getReaderIdleTimeInMillis()));
+						new H2Codec(owner, obs, opsFactory, acceptGzip, responseTimeoutHandler.getReaderIdleTimeInMillis()));
 			}
 			else {
-				http2MultiplexHandler =
-						new Http2MultiplexHandler(new H2Codec(opsFactory, acceptGzip), new H2Codec(opsFactory, acceptGzip));
+				http2MultiplexHandler = new Http2MultiplexHandler(new H2Codec(opsFactory, acceptGzip),
+						new H2Codec(owner, obs, opsFactory, acceptGzip));
 			}
 			pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, http2FrameCodec)
 			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, http2MultiplexHandler);
@@ -685,49 +692,54 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final boolean acceptGzip;
 		final ConnectionObserver observer;
 		final ChannelOperations.OnSetup opsFactory;
+		final Http2ConnectionProvider.DisposableAcquire owner;
 		final long responseTimeoutMillis;
 
 		H2Codec(boolean acceptGzip) {
-			this(null, null, acceptGzip, -1);
+			// Handle inbound streams (server pushes)
+			// TODO this is not supported
+			this(null, null, null, acceptGzip, -1);
 		}
 
 		H2Codec(@Nullable ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
-			this(null, opsFactory, acceptGzip, -1);
-		}
-
-		H2Codec(@Nullable ChannelOperations.OnSetup opsFactory, boolean acceptGzip, long responseTimeoutMillis) {
-			this(null, opsFactory, acceptGzip, responseTimeoutMillis);
-		}
-
-		H2Codec(@Nullable ConnectionObserver observer, @Nullable ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
-			this(observer, opsFactory, acceptGzip, -1);
+			// Handle inbound streams (server pushes)
+			// TODO this is not supported
+			this(null, null, opsFactory, acceptGzip, -1);
 		}
 
 		H2Codec(
+				@Nullable Http2ConnectionProvider.DisposableAcquire owner,
+				@Nullable ConnectionObserver observer,
+				@Nullable ChannelOperations.OnSetup opsFactory,
+				boolean acceptGzip) {
+			// Handle outbound and upgrade streams
+			this(owner, observer, opsFactory, acceptGzip, -1);
+		}
+
+		H2Codec(
+				@Nullable Http2ConnectionProvider.DisposableAcquire owner,
 				@Nullable ConnectionObserver observer,
 				@Nullable ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
 				long responseTimeoutMillis) {
+			// Handle outbound and upgrade streams
 			this.acceptGzip = acceptGzip;
 			this.observer = observer;
 			this.opsFactory = opsFactory;
+			this.owner = owner;
 			this.responseTimeoutMillis = responseTimeoutMillis;
 		}
 
 		@Override
 		protected void initChannel(Channel ch) {
 			ConnectionObserver obs = this.observer;
-			if (obs == null) {
-				ConnectionObserver owner = ch.parent().attr(OWNER).get();
-				if (owner instanceof Http2ConnectionProvider.DisposableAcquire) {
-					obs = ((Http2ConnectionProvider.DisposableAcquire) owner).obs;
-				}
-			}
-			if (obs != null && opsFactory != null) {
+			if (obs != null && opsFactory != null && owner != null) {
+				Http2ConnectionProvider.registerClose(ch, owner);
 				addStreamHandlers(ch, obs, opsFactory);
 			}
 			else {
-				// TODO handle server pushes
+				// Handle server pushes (inbound streams)
+				// TODO this is not supported
 			}
 		}
 
