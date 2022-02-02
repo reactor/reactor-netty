@@ -93,6 +93,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -120,6 +121,7 @@ import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.TransportConfig;
 import reactor.test.StepVerifier;
+import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuple3;
@@ -2761,34 +2763,85 @@ class HttpServerTests extends BaseHttpTest {
 	/**
 	 * This test verifies if server h2 streams are closed properly when the server does not consume client post data chunks
 	 */
-	@Test
-	void testIssue1978() throws Exception {
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testIssue1978H2CNoDelay(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		doTestIssue1978(serverProtocols, clientProtocols, null, null, 0);
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testIssue1978H2CWithDelay(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		doTestIssue1978(serverProtocols, clientProtocols, null, null, 50);
+	}
+
+	/**
+	 * This test verifies if server h2 streams are closed properly when the server does not consume client post data chunks
+	 */
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testIssue1978H2NoDelay(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1978(serverProtocols, clientProtocols, serverCtx, clientCtx, 0);
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testIssue1978H2WithDelay(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1978(serverProtocols, clientProtocols, serverCtx, clientCtx, 50);
+	}
+
+	private void doTestIssue1978(
+			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx,
+			long serverDelay) throws Exception {
 		int count = 5;
 		CountDownLatch latch = new CountDownLatch(count);
+
+		Mono<String> mono = Mono.just("testIssue1978");
+		Mono<String> serverResponse = serverDelay == 0 ? mono : mono.delayElement(Duration.ofMillis(serverDelay));
+
+		HttpServer mainServer =
+				HttpServer.create()
+				          .protocol(serverProtocols)
+				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(8 * 1024));
+		HttpServer server = serverCtx != null ?
+				mainServer.secure(sslContextSpec -> sslContextSpec.sslContext(serverCtx)) : mainServer;
+
 		disposableServer =
-				createServer()
-						.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
-						.handle((req, res) -> {
-							req.withConnection(conn -> conn.channel().closeFuture().addListener(f -> latch.countDown()));
-							return res.sendString(Mono.just("test"));
-						})
-						.bindNow();
+				server.handle((req, res) -> {
+				          req.withConnection(conn -> conn.channel().closeFuture().addListener(f -> latch.countDown()));
+				          return res.sendString(serverResponse);
+				      })
+				      .bindNow();
 
 		byte[] content = new byte[1024];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
+		String strContent = new String(content, Charset.defaultCharset());
 
-		HttpClient client = createClient(disposableServer.port()).protocol(HttpProtocol.H2C);
+		Flux<String> flux = Flux.just(strContent, strContent, strContent, strContent);
+
+		HttpClient mainClient = HttpClient.create().port(disposableServer.port()).protocol(clientProtocols);
+		HttpClient client = clientCtx != null ?
+				mainClient.secure(sslContextSpec -> sslContextSpec.sslContext(clientCtx)) : mainClient;
+
 		Flux.range(0, count)
-				.flatMap(i ->
-						client.post()
-								.uri("/")
-								.send(Flux.just(Unpooled.wrappedBuffer(content), Unpooled.wrappedBuffer(content),
-										Unpooled.wrappedBuffer(content), Unpooled.wrappedBuffer(content)))
-								.responseContent()
-								.aggregate()
-								.asString())
-				.blockLast(Duration.ofSeconds(10));
+		    .flatMap(i ->
+		        client.post()
+		              .uri("/")
+		              .send(ByteBufFlux.fromString(flux))
+		              .responseContent()
+		              .aggregate()
+		              .asString())
+		    .blockLast(Duration.ofSeconds(10));
 
 		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 	}

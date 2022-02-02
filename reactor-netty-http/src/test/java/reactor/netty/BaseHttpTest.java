@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 package reactor.netty;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.provider.Arguments;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
@@ -23,6 +25,7 @@ import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * Provides utility methods for {@link HttpServer} and {@link HttpClient} creation.
@@ -124,5 +127,22 @@ public class BaseHttpTest {
 		return HttpClient.newConnection()
 		                 .port(port)
 		                 .wiretap(true);
+	}
+
+	protected static Stream<Arguments> h2CompatibleCombinations() {
+		return Stream.of(
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2}),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2}),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11})
+		);
+	}
+
+	protected static Stream<Arguments> h2cCompatibleCombinations() {
+		return Stream.of(
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C}, new HttpProtocol[]{HttpProtocol.H2C}),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C}),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})
+		);
 	}
 }

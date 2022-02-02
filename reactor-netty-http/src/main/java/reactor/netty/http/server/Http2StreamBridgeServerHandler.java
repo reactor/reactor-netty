@@ -156,6 +156,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			if (msg instanceof LastHttpContent) {
 				pendingResponse = false;
 				f.addListener(this);
+				ctx.read();
 			}
 		}
 	}
