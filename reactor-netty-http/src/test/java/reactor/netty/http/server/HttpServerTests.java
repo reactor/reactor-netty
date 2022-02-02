@@ -2766,13 +2766,13 @@ class HttpServerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
 	void testIssue1978H2CNoDelay(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
-		doTestIssue1978(serverProtocols, clientProtocols, null, null, 0);
+		doTestIssue1978(serverProtocols, clientProtocols, null, null, 0, 0);
 	}
 
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
 	void testIssue1978H2CWithDelay(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
-		doTestIssue1978(serverProtocols, clientProtocols, null, null, 50);
+		doTestIssue1978(serverProtocols, clientProtocols, null, null, 50, 20);
 	}
 
 	/**
@@ -2785,7 +2785,7 @@ class HttpServerTests extends BaseHttpTest {
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-		doTestIssue1978(serverProtocols, clientProtocols, serverCtx, clientCtx, 0);
+		doTestIssue1978(serverProtocols, clientProtocols, serverCtx, clientCtx, 0, 0);
 	}
 
 	@ParameterizedTest
@@ -2795,13 +2795,13 @@ class HttpServerTests extends BaseHttpTest {
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-		doTestIssue1978(serverProtocols, clientProtocols, serverCtx, clientCtx, 50);
+		doTestIssue1978(serverProtocols, clientProtocols, serverCtx, clientCtx, 50, 20);
 	}
 
 	private void doTestIssue1978(
 			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx,
-			long serverDelay) throws Exception {
+			long serverDelay, long clientDelay) throws Exception {
 		int count = 5;
 		CountDownLatch latch = new CountDownLatch(count);
 
@@ -2828,6 +2828,7 @@ class HttpServerTests extends BaseHttpTest {
 		String strContent = new String(content, Charset.defaultCharset());
 
 		Flux<String> flux = Flux.just(strContent, strContent, strContent, strContent);
+		Flux<String> clientRequest = clientDelay == 0 ? flux : flux.delayElements(Duration.ofMillis(clientDelay));
 
 		HttpClient mainClient = HttpClient.create().port(disposableServer.port()).protocol(clientProtocols);
 		HttpClient client = clientCtx != null ?
@@ -2837,7 +2838,7 @@ class HttpServerTests extends BaseHttpTest {
 		    .flatMap(i ->
 		        client.post()
 		              .uri("/")
-		              .send(ByteBufFlux.fromString(flux))
+		              .send(ByteBufFlux.fromString(clientRequest))
 		              .responseContent()
 		              .aggregate()
 		              .asString())

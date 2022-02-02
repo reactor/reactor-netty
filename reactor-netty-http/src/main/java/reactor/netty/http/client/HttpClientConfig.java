@@ -732,10 +732,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		@Override
 		protected void initChannel(Channel ch) {
-			ConnectionObserver obs = this.observer;
-			if (obs != null && opsFactory != null && owner != null) {
+			if (observer != null && opsFactory != null && owner != null) {
 				Http2ConnectionProvider.registerClose(ch, owner);
-				addStreamHandlers(ch, obs, opsFactory);
+				addStreamHandlers(ch, observer.then(StreamConnectionObserver.INSTANCE), opsFactory);
 			}
 			else {
 				// Handle server pushes (inbound streams)
@@ -932,6 +931,23 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			}
 			if (doOnResponseError != null && (ops.responseState != null) && !(error instanceof RedirectClientException)) {
 				doOnResponseError.accept(connection.as(HttpClientOperations.class), error);
+			}
+		}
+	}
+
+	static final class StreamConnectionObserver implements ConnectionObserver {
+
+		static final StreamConnectionObserver INSTANCE = new StreamConnectionObserver();
+
+		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
+		public void onStateChange(Connection connection, State state) {
+			if (state == State.DISCONNECTING) {
+				if (!connection.isPersistent() && connection.channel().isActive()) {
+					// Will be released by closeFuture
+					// "FutureReturnValueIgnored" this is deliberate
+					connection.channel().close();
+				}
 			}
 		}
 	}
