@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.netty.handler.codec.http2.Http2FrameCodec;
+import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
@@ -717,7 +718,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 
 		boolean canOpenStream() {
 			Http2FrameCodec frameCodec = connection.channel().pipeline().get(Http2FrameCodec.class);
-			if (frameCodec != null) {
+			Http2MultiplexHandler multiplexHandler = connection.channel().pipeline().get(Http2MultiplexHandler.class);
+			if (frameCodec != null && multiplexHandler != null) {
 				int maxActiveStreams = frameCodec.connection().local().maxActiveStreams();
 				int concurrency = this.concurrency;
 				return concurrency < maxActiveStreams;

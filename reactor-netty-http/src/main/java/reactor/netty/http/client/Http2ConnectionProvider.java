@@ -135,8 +135,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				localEndpoint.maxActiveStreams());
 	}
 
-	static void registerClose(Channel channel) {
-		ConnectionObserver owner = channel.parent().attr(OWNER).get();
+	static void registerClose(Channel channel, ConnectionObserver owner) {
 		channel.closeFuture()
 		       .addListener(f -> {
 		           Channel parent = channel.parent();
@@ -281,7 +280,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				return;
 			}
 
-			HttpClientConfig.openStream(channel, obs, opsFactory, acceptGzip)
+			HttpClientConfig.openStream(channel, this, obs, opsFactory, acceptGzip)
 			                .addListener(this);
 		}
 

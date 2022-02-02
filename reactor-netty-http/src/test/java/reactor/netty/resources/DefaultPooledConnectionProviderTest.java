@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -43,9 +45,11 @@ import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.server.HttpServer;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 import reactor.netty.internal.shaded.reactor.pool.PoolShutdownException;
 import reactor.test.StepVerifier;
+import reactor.util.annotation.Nullable;
 
 import javax.net.ssl.SSLException;
 import java.io.IOException;
@@ -59,6 +63,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -295,20 +300,30 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 		disposableServer =
 				createServer()
+				        .wiretap(false)
 				        .protocol(HttpProtocol.H2)
 				        .secure(spec -> spec.sslContext(serverCtx))
 				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().retain())))
 				        .bindNow();
 
 		int requestsNum = 10;
-		CountDownLatch latch = new CountDownLatch(requestsNum);
+		CountDownLatch latch = new CountDownLatch(1);
 		DefaultPooledConnectionProvider provider =
 				(DefaultPooledConnectionProvider) ConnectionProvider.create("testConnectionReturnedToParentPoolWhenNoActiveStreams", 5);
+		AtomicInteger counter = new AtomicInteger();
 		HttpClient client =
 				createClient(provider, disposableServer.port())
+						.wiretap(false)
 				        .protocol(HttpProtocol.H2)
 				        .secure(spec -> spec.sslContext(clientCtx))
-				        .doOnResponse((res, conn) -> conn.onDispose(latch::countDown));
+				        .observe((conn, state) -> {
+				            if (state == ConnectionObserver.State.CONNECTED) {
+				                counter.incrementAndGet();
+				            }
+				            if (state == ConnectionObserver.State.RELEASED && counter.decrementAndGet() == 0) {
+				                latch.countDown();
+				            }
+				        });
 
 		try {
 			Flux.range(0, requestsNum)
@@ -324,8 +339,6 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
 			assertThat(provider.channelPools).hasSize(1);
-
-			Thread.sleep(1000);
 
 			@SuppressWarnings({"unchecked", "rawtypes"})
 			InstrumentedPool<DefaultPooledConnectionProvider.PooledConnection> channelPool =
@@ -399,6 +412,97 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			assertThat(onNext).isEqualTo(1);
 			assertThat(onError).isEqualTo(1);
 		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testIssue1982H2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		doTestIssue1982(serverProtocols, clientProtocols, null, null);
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testIssue1982H2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1982(serverProtocols, clientProtocols, serverCtx, clientCtx);
+	}
+
+	private void doTestIssue1982(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) throws Exception {
+		HttpServer server = serverCtx != null ?
+				HttpServer.create().secure(sslContextSpec -> sslContextSpec.sslContext(serverCtx)) :
+				HttpServer.create();
+		disposableServer =
+				server.protocol(serverProtocols)
+				      .http2Settings(h2 -> h2.maxConcurrentStreams(20))
+				      .handle((req, res) ->
+				          res.sendString(Mono.just("testIssue1982")
+				                             .delayElement(Duration.ofMillis(100))))
+				      .bindNow();
+
+		DefaultPooledConnectionProvider provider =
+				(DefaultPooledConnectionProvider) ConnectionProvider.create("", 5);
+		CountDownLatch latch = new CountDownLatch(1);
+		AtomicInteger counter = new AtomicInteger();
+		HttpClient mainClient = clientCtx != null ?
+				HttpClient.create(provider).port(disposableServer.port()).secure(sslContextSpec -> sslContextSpec.sslContext(clientCtx)) :
+				HttpClient.create(provider).port(disposableServer.port());
+
+		HttpClient client =
+				mainClient.protocol(clientProtocols)
+				          .observe((conn, state) -> {
+				              if (state == ConnectionObserver.State.CONNECTED) {
+				                  counter.incrementAndGet();
+				              }
+				              if (state == ConnectionObserver.State.RELEASED && counter.decrementAndGet() == 0) {
+				                  latch.countDown();
+				              }
+				          });
+		try {
+			Flux.range(0, 80)
+			    .flatMap(i ->
+			        client.get()
+			              .uri("/")
+			              .responseContent()
+			              .aggregate()
+			              .asString())
+			    .blockLast(Duration.ofSeconds(10));
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			@SuppressWarnings({"unchecked", "rawtypes"})
+			InstrumentedPool<DefaultPooledConnectionProvider.PooledConnection> channelPool =
+					provider.channelPools.values().toArray(new InstrumentedPool[0])[0];
+			InstrumentedPool.PoolMetrics metrics = channelPool.metrics();
+			assertThat(metrics.acquiredSize()).isEqualTo(0);
+			assertThat(metrics.allocatedSize()).isEqualTo(metrics.idleSize());
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@SuppressWarnings("UnusedMethod")
+	private static Stream<Arguments> h2CompatibleCombinations() {
+		return Stream.of(
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2}),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2}),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11})
+		);
+	}
+
+	@SuppressWarnings("UnusedMethod")
+	private static Stream<Arguments> h2cCompatibleCombinations() {
+		return Stream.of(
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C}, new HttpProtocol[]{HttpProtocol.H2C}),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C}),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})
+		);
 	}
 
 	static final class TestPromise extends DefaultChannelPromise {

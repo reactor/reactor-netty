@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,11 @@
 package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
+import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -44,7 +46,8 @@ class Http2PoolTest {
 
 	@Test
 	void acquireInvalidate() {
-		EmbeddedChannel channel = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build());
+		EmbeddedChannel channel = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+				new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.just(Connection.from(channel)))
 				           .idleResourceReuseLruOrder()
@@ -82,7 +85,8 @@ class Http2PoolTest {
 
 	@Test
 	void acquireRelease() {
-		EmbeddedChannel channel = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build());
+		EmbeddedChannel channel = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+				new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.just(Connection.from(channel)))
 				           .idleResourceReuseLruOrder()
