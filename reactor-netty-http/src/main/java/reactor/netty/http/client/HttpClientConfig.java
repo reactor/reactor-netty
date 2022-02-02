@@ -734,7 +734,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		protected void initChannel(Channel ch) {
 			if (observer != null && opsFactory != null && owner != null) {
 				Http2ConnectionProvider.registerClose(ch, owner);
-				addStreamHandlers(ch, observer.then(StreamConnectionObserver.INSTANSE), opsFactory);
+				addStreamHandlers(ch, observer.then(StreamConnectionObserver.INSTANCE), opsFactory);
 			}
 			else {
 				// Handle server pushes (inbound streams)
@@ -937,7 +937,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	static final class StreamConnectionObserver implements ConnectionObserver {
 
-		static final StreamConnectionObserver INSTANSE = new StreamConnectionObserver();
+		static final StreamConnectionObserver INSTANCE = new StreamConnectionObserver();
 
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
