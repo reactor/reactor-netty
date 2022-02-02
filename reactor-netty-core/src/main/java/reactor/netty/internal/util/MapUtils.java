@@ -29,7 +29,7 @@ import java.util.function.Function;
 public final class MapUtils {
 
 	/**
-	 * ConcurrentHashMap.computeIfAbsent(k,v) locks bin when k present.
+	 * ConcurrentHashMap.computeIfAbsent(k,v) locks when k is present.
 	 * Add pre-screen before locking inside computeIfAbsent.
 	 * <p><strong>Note:</strong> This utility is not for a general purpose usage.
 	 * Carefully consider the removal operations from the map.
