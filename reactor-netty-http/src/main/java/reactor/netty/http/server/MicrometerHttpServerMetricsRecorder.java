@@ -54,6 +54,9 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	private final static String ACTIVE_CONNECTIONS_DESCRIPTION = "The number of http connections currently processing requests";
 	private final LongAdder activeConnectionsAdder = new LongAdder();
 	private final ConcurrentMap<String, LongAdder> activeConnectionsCache = new ConcurrentHashMap<>();
+	private final ConcurrentMap<String, DistributionSummary> dataReceivedCache = new ConcurrentHashMap<>();
+	private final ConcurrentMap<String, DistributionSummary> dataSentCache = new ConcurrentHashMap<>();
+	private final ConcurrentMap<String, Counter> errorsCache = new ConcurrentHashMap<>();
 
 	private MicrometerHttpServerMetricsRecorder() {
 		super(HTTP_SERVER_PREFIX, PROTOCOL_VALUE_HTTP);
@@ -100,8 +103,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
-		MeterKey meterKey = new MeterKey(uri, null, null, null);
-		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
+		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, uri,
 				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_RECEIVED_DESCRIPTION).tags(URI, uri)
@@ -113,8 +115,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
-		MeterKey meterKey = new MeterKey(uri, null, null, null);
-		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
+		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, uri,
 				key -> filter(DistributionSummary.builder(name() + DATA_SENT)
 				                                 .baseUnit(BYTES_UNIT)
 				                                 .description(DATA_SENT_DESCRIPTION)
@@ -127,8 +128,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
-		MeterKey meterKey = new MeterKey(uri, null, null, null);
-		Counter errors = MapUtils.computeIfAbsent(errorsCache, meterKey,
+		Counter errors = MapUtils.computeIfAbsent(errorsCache, uri,
 				key -> filter(Counter.builder(name() + ERRORS)
 				                     .description(ERRORS_DESCRIPTION)
 				                     .tags(URI, uri)
