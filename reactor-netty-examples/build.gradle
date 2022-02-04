@@ -18,7 +18,7 @@ dependencies {
 
 	api "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 
-	api "io.micrometer:micrometer-core:$micrometerVersion"
+	api "io.micrometer:micrometer-api:$micrometerVersion"
 
 	api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
 

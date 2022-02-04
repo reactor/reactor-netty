@@ -543,7 +543,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 
 	/**
 	 * Whether to enable metrics to be collected and registered in Micrometer's
-	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
+	 * {@link io.micrometer.api.instrument.Metrics#globalRegistry globalRegistry}
 	 * under the name {@link reactor.netty.Metrics#HTTP_SERVER_PREFIX}.
 	 * <p>{@code uriTagValue} function receives the actual uri and returns the uri tag value
 	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag.
@@ -567,9 +567,10 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 */
 	public final HttpServer metrics(boolean enable, Function<String, String> uriTagValue) {
 		if (enable) {
-			if (!Metrics.isInstrumentationAvailable()) {
+			// TODO: MeterRegistry has been moved and Reactor's code has not been updated
+			if (!reactor.netty.Metrics.isInstrumentationAvailable()) {
 				throw new UnsupportedOperationException(
-						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
+						"To enable metrics, you must add the dependency `io.micrometer:micrometer-api`" +
 								" to the class path first");
 			}
 			HttpServer dup = duplicate();

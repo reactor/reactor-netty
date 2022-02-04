@@ -15,11 +15,9 @@
  */
 package reactor.netty.observability;
 
-import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.tracing.context.HttpServerHandlerContext;
-import io.micrometer.core.instrument.transport.http.HttpServerRequest;
-import io.micrometer.core.instrument.transport.http.HttpServerResponse;
+import io.micrometer.api.instrument.observation.Observation;
+import io.micrometer.api.instrument.transport.http.HttpServerRequest;
+import io.micrometer.api.instrument.transport.http.context.HttpServerHandlerContext;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.HttpServerTracingRecordingHandler;
@@ -38,12 +36,12 @@ public class ReactorNettyHttpServerTracingRecordingHandler extends HttpServerTra
 	}
 
 	@Override
-	public void tagSpan(HttpServerHandlerContext context, Meter.Id id, Span span) {
+	public void tagSpan(HttpServerHandlerContext context, Span span) {
 		ReactorNettyHttpClientTags.tagSpan(context, span);
 	}
 
 	@Override
-	public boolean supportsContext(Timer.HandlerContext context) {
+	public boolean supportsContext(Observation.Context context) {
 		return context instanceof ReactorNettyHandlerContext && super.supportsContext(context) && context.get(HttpServerRequest.class) != null;
 	}
 

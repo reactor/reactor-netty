@@ -15,11 +15,13 @@
  */
 package reactor.netty;
 
-import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.api.instrument.MeterRegistry;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+
+import static io.micrometer.api.instrument.Metrics.globalRegistry;
 
 /**
  * Constants and utilities around metrics.
@@ -28,7 +30,7 @@ import java.net.SocketAddress;
  * @since 0.9
  */
 public class Metrics {
-	public static final MeterRegistry REGISTRY = io.micrometer.core.instrument.Metrics.globalRegistry;
+	public static final MeterRegistry REGISTRY = globalRegistry;
 
 
 	// Names
@@ -245,6 +247,29 @@ public class Metrics {
 
 	public static final String ERROR = "ERROR";
 
+	static final boolean isMicrometerAvailable;
+
+	static {
+		boolean micrometer;
+		try {
+			globalRegistry.getRegistries();
+			micrometer = true;
+		}
+		catch (Throwable t) {
+			micrometer = false;
+		}
+		isMicrometerAvailable = micrometer;
+	}
+
+	/**
+	 * Check if the current runtime supports metrics / instrumentation, by
+	 * verifying if Micrometer is on the classpath.
+	 *
+	 * @return true if the Micrometer instrumentation facade is available
+	 */
+	public static final boolean isInstrumentationAvailable() {
+		return isMicrometerAvailable;
+	}
 
 	@Nullable
 	public static String formatSocketAddress(@Nullable SocketAddress socketAddress) {

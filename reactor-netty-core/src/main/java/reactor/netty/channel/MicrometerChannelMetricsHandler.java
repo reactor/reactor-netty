@@ -15,8 +15,9 @@
  */
 package reactor.netty.channel;
 
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
+import io.micrometer.api.instrument.Tags;
+import io.micrometer.api.instrument.Timer;
+import io.micrometer.api.instrument.observation.Observation;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
@@ -29,8 +30,6 @@ import java.net.SocketAddress;
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.ERROR;
 import static reactor.netty.Metrics.REGISTRY;
-import static reactor.netty.Metrics.REMOTE_ADDRESS;
-import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.Metrics.formatSocketAddress;
 
@@ -60,20 +59,18 @@ public class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandl
 		return recorder;
 	}
 
-	// ConnectMetricsHandler is Timer.HandlerContext and ChannelOutboundHandler in order to reduce allocations,
+	// ConnectMetricsHandler is Observation.Context and ChannelOutboundHandler in order to reduce allocations,
 	// this is invoked on every connection establishment
-	static final class ConnectMetricsHandler extends Timer.HandlerContext implements ReactorNettyHandlerContext, ChannelOutboundHandler {
+	static final class ConnectMetricsHandler extends Observation.Context implements ReactorNettyHandlerContext, ChannelOutboundHandler {
 
-		final Timer.Builder connectTimeBuilder;
+		final MicrometerChannelMetricsRecorder recorder;
 
 		// remote address and status are not known beforehand
 		String remoteAddress;
 		String status;
 
 		ConnectMetricsHandler(MicrometerChannelMetricsRecorder recorder) {
-			this.connectTimeBuilder =
-					Timer.builder(recorder.name() + CONNECT_TIME)
-					     .description("Time spent for connecting to the remote address");
+			this.recorder = recorder;
 		}
 
 		@Override
@@ -106,14 +103,14 @@ public class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandl
 			// Can we use sample.stop(Timer)
 			put(SocketAddress.class, remoteAddress);
 			this.remoteAddress = formatSocketAddress(remoteAddress);
-			Timer.Sample sample = Timer.start(REGISTRY, this);
+			Observation observation = Observation.start(recorder.name() + CONNECT_TIME, this, REGISTRY);
 			ctx.connect(remoteAddress, localAddress, promise)
 			   .addListener(future -> {
 			       ctx.pipeline().remove(this);
 
 			       status = future.isSuccess() ? SUCCESS : ERROR;
 
-			       sample.stop(connectTimeBuilder);
+			       observation.stop();
 			});
 		}
 
@@ -146,12 +143,15 @@ public class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandl
 		public Tags getHighCardinalityTags() {
 			// TODO: Add netty protocol
 			// TODO: Externalize the tags?
-			return Tags.of("reactor.netty.status", status, "reactor.netty.type", "client", "reactor.netty.protocol", "TODO:");
+			return Tags.of(ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_STATUS.of(status),
+					ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_TYPE.of("client"),
+					ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL.of("TODO"));
 		}
 
 		@Override
 		public Tags getLowCardinalityTags() {
-			return Tags.of(REMOTE_ADDRESS, remoteAddress, STATUS, status);
+			return Tags.of(ConnectObservations.ConnectTimeLowCardinalityTags.REMOTE_ADDRESS.of(remoteAddress),
+					ConnectObservations.ConnectTimeLowCardinalityTags.STATUS.of(status));
 		}
 
 		@Override
@@ -177,7 +177,7 @@ public class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandl
 		}
 
 		@Override
-		public String getSimpleName() {
+		public String getContextualName() {
 			return "connect";
 		}
 	}

@@ -15,8 +15,6 @@
  */
 package reactor.netty.observability;
 
-import io.micrometer.core.instrument.Timer;
-
 /**
  * Abstraction over all Reactor Netty contexts.
  *
@@ -24,10 +22,4 @@ import io.micrometer.core.instrument.Timer;
  */
 public interface ReactorNettyHandlerContext {
 
-	/**
-	 * Returns a simple name.
-	 *
-	 * @return simple name for e.g. spans
-	 */
-	String getSimpleName();
 }

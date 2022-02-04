@@ -15,11 +15,11 @@
  */
 package reactor.netty.channel;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.noop.NoopMeter;
+import io.micrometer.api.instrument.Counter;
+import io.micrometer.api.instrument.DistributionSummary;
+import io.micrometer.api.instrument.Meter;
+import io.micrometer.api.instrument.Timer;
+import io.micrometer.api.instrument.noop.NoopMeter;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -70,9 +70,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		this.name = name;
 
 		this.dataReceivedBuilder =
-				DistributionSummary.builder(name + DATA_RECEIVED)
-				                   .baseUnit("bytes")
-				                   .description("Amount of the data received, in bytes")
+				ChannelMeters.toSummaryBuilder(name + DATA_RECEIVED, ChannelMeters.DATA_RECEIVED)
 				                   .tag(URI, protocol);
 
 		this.dataSentBuilder =
@@ -107,7 +105,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary ds = dataReceivedCache.computeIfAbsent(address,
-				key -> filter(dataReceivedBuilder.tag(REMOTE_ADDRESS, address)
+				key -> filter(dataReceivedBuilder.tag(ChannelMeters.DataReceivedTags.REMOTE_ADDRESS.getKey(), address)
 				                                 .register(REGISTRY)));
 		if (ds != null) {
 			ds.record(bytes);

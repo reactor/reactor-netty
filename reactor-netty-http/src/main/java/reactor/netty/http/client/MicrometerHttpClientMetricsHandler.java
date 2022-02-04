@@ -15,14 +15,14 @@
  */
 package reactor.netty.http.client;
 
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.tracing.context.HttpClientHandlerContext;
-import io.micrometer.core.instrument.transport.http.HttpClientRequest;
-import io.micrometer.core.instrument.transport.http.HttpClientResponse;
+import io.micrometer.api.instrument.Tags;
+import io.micrometer.api.instrument.Timer;
+import io.micrometer.api.instrument.observation.Observation;
+import io.micrometer.api.instrument.transport.http.HttpClientRequest;
+import io.micrometer.api.instrument.transport.http.HttpClientResponse;
+import io.micrometer.api.instrument.transport.http.context.HttpClientHandlerContext;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import reactor.netty.Metrics;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
@@ -50,10 +50,9 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	final Timer.Builder dataReceivedTimeBuilder;
 	final Timer.Builder dataSentTimeBuilder;
 	final MicrometerHttpClientMetricsRecorder recorder;
-	final Timer.Builder responseTimeBuilder;
+	Observation responseTimeObservation;
 
 	WriteHandlerContext responseTimeHandlerContext;
-	Timer.Sample responseTimeSample;
 
 	MicrometerHttpClientMetricsHandler(MicrometerHttpClientMetricsRecorder recorder,
 			@Nullable Function<String, String> uriTagValue) {
@@ -68,9 +67,6 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 				Timer.builder(recorder.name() + DATA_SENT_TIME)
 				     .description("Time spent in sending outgoing data");
 
-		this.responseTimeBuilder =
-				Timer.builder(recorder.name() + RESPONSE_TIME)
-				     .description("Total time for the request/response");
 	}
 
 	@Override
@@ -96,7 +92,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 				.record(Duration.ofNanos(dataReceivedTime));
 
 //		responseTimeHandlerContext.status = status;
-		responseTimeSample.stop(responseTimeBuilder);
+		responseTimeObservation.stop();
 
 		recorder().recordDataReceived(address, path, dataReceived);
 	}
@@ -125,7 +121,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	protected void reset() {
 		super.reset();
 		responseTimeHandlerContext = null;
-		responseTimeSample = null;
+		responseTimeObservation = null;
 	}
 
 	// reading the response
@@ -191,45 +187,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 			}
 		};
 		responseTimeHandlerContext = new WriteHandlerContext(httpClientRequest, address);
-		responseTimeSample = Timer.start(REGISTRY, responseTimeHandlerContext);
-	}
-
-	static final class ReadHandlerContext extends Timer.HandlerContext implements ReactorNettyHandlerContext {
-
-		final String method;
-		final String path;
-		final String remoteAddress;
-
-		// status might not be known beforehand
-		String status;
-
-		ReadHandlerContext(String method, String path, SocketAddress remoteAddress) {
-			this(method, path, remoteAddress, null);
-		}
-
-		ReadHandlerContext(String method, String path, SocketAddress remoteAddress, @Nullable String status) {
-			this.method = method;
-			this.path = path;
-			this.remoteAddress = formatSocketAddress(remoteAddress);
-			this.status = status;
-			put(SocketAddress.class, remoteAddress);
-		}
-
-		@Override
-		public Tags getHighCardinalityTags() {
-			// TODO: Externalize the tags?
-			return Tags.of("http.status", status, "reactor.netty.type", "client", "reactor.netty.protocol", "http");
-		}
-
-		@Override
-		public Tags getLowCardinalityTags() {
-			return Tags.of(REMOTE_ADDRESS, remoteAddress, URI, path, METHOD, method, STATUS, status);
-		}
-
-		@Override
-		public String getSimpleName() {
-			return method;
-		}
+		responseTimeObservation = Observation.start(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, REGISTRY);
 	}
 
 	static class WriteHandlerContext extends HttpClientHandlerContext implements ReactorNettyHandlerContext {
@@ -259,7 +217,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		}
 
 		@Override
-		public String getSimpleName() {
+		public String getContextualName() {
 			return "request data sent";
 		}
 	}

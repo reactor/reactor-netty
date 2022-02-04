@@ -15,17 +15,16 @@
  */
 package reactor.netty.observability;
 
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.tracing.context.HttpClientHandlerContext;
-import io.micrometer.tracing.Span;
-
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+import io.micrometer.api.instrument.Tag;
+import io.micrometer.api.instrument.observation.Observation;
+import io.micrometer.tracing.Span;
+
 final class ReactorNettyHttpClientTags {
 
-	static void tagSpan(Timer.HandlerContext context, Span span) {
+	static void tagSpan(Observation.Context context, Span span) {
 		SocketAddress address = context.get(SocketAddress.class);
 		if (address != null && address instanceof InetSocketAddress) {
 			InetSocketAddress inet = (InetSocketAddress) address;

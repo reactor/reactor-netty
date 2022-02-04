@@ -1,3 +1,5 @@
+:root-target: ./../../build/
+
 [[faq]]
 = Frequently Asked Questions
 
@@ -8,6 +10,7 @@ This section covers the following content:
 * <<faq.logging-correlation>>
 * <<faq.memory-leaks>>
 * <<faq.connection-closed>>
+* <<faq.observability>>
 
 [[faq.proxy-connect-method]]
 == Connection to the proxy cannot be established
@@ -125,3 +128,10 @@ If, on the client side, you observe `Connection prematurely closed BEFORE respon
 
 Consider checking <<Timeout Configuration>>. The section describes various timeout configuration options that are available for Reactor Netty clients.
 Configuring a proper timeout may improve or solve issues in the communication process.
+
+[[faq.observability]]
+== Observability metadata
+
+include::{root-target}_metrics.adoc[]
+
+include::{root-target}_spans.adoc[]

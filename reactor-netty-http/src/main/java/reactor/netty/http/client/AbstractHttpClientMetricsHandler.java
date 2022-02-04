@@ -15,7 +15,11 @@
  */
 package reactor.netty.http.client;
 
-import io.micrometer.core.instrument.Timer;
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.function.Function;
+
+import io.micrometer.api.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelDuplexHandler;
@@ -27,10 +31,6 @@ import io.netty.handler.codec.http.LastHttpContent;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
-
-import java.net.SocketAddress;
-import java.time.Duration;
-import java.util.function.Function;
 
 /**
  * @author Violeta Georgieva

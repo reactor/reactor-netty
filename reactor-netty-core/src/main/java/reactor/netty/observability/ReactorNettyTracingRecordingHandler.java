@@ -15,15 +15,14 @@
  */
 package reactor.netty.observability;
 
-import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.Timer;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+
+import io.micrometer.api.instrument.Tag;
+import io.micrometer.api.instrument.observation.Observation;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.DefaultTracingRecordingHandler;
-
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 
 public class ReactorNettyTracingRecordingHandler extends DefaultTracingRecordingHandler {
 
@@ -32,7 +31,7 @@ public class ReactorNettyTracingRecordingHandler extends DefaultTracingRecording
 	}
 
 	@Override
-	public void tagSpan(Timer.HandlerContext context, Meter.Id id, Span span) {
+	public void tagSpan(Observation.Context context, Span span) {
 		// TODO: Duplication
 		SocketAddress address = context.get(SocketAddress.class);
 		if (address != null && address instanceof InetSocketAddress) {
@@ -46,17 +45,16 @@ public class ReactorNettyTracingRecordingHandler extends DefaultTracingRecording
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public String getSpanName(Timer.HandlerContext context, Meter.Id id) {
-		ReactorNettyHandlerContext reactorNettyHandlerContext = (ReactorNettyHandlerContext) context;
-		String name = reactorNettyHandlerContext.getSimpleName();
+	public String getSpanName(Observation.Context context) {
+		String name = context.getContextualName();
 		if (name != null) {
 			return name;
 		}
-		return super.getSpanName(context, id);
+		return super.getSpanName(context);
 	}
 
 	@Override
-	public boolean supportsContext(Timer.HandlerContext handlerContext) {
+	public boolean supportsContext(Observation.Context handlerContext) {
 		return handlerContext instanceof ReactorNettyHandlerContext;
 	}
 }

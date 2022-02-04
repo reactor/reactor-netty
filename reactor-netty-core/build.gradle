@@ -104,7 +104,7 @@ dependencies {
 
 	//Metrics
 	implementation platform('io.micrometer:micrometer-tracing-bom:1.0.0-SNAPSHOT')
-	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
+	compileOnly "io.micrometer:micrometer-api:$micrometerVersion"
 	compileOnly "io.micrometer:micrometer-tracing"
 
 	// Logging
@@ -130,7 +130,7 @@ dependencies {
 	testImplementation "org.mockito:mockito-core:$mockitoVersion"
 	testImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
-	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
+	testImplementation "io.micrometer:micrometer-api:$micrometerVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"

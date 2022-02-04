@@ -15,11 +15,17 @@
  */
 package reactor.netty;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.TimerRecordingHandler;
+import java.util.Deque;
+import java.util.Random;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
+import io.micrometer.api.instrument.MeterRegistry;
+import io.micrometer.api.instrument.observation.ObservationHandler;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.test.SampleTestRunner;
 import io.micrometer.tracing.test.reporter.BuildingBlocks;
+import org.junit.jupiter.api.BeforeAll;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
@@ -27,25 +33,27 @@ import reactor.netty.observability.ReactorNettyHttpClientTracingRecordingHandler
 import reactor.netty.observability.ReactorNettyHttpServerTracingRecordingHandler;
 import reactor.netty.observability.ReactorNettyTracingRecordingHandler;
 
-import java.util.LinkedList;
-import java.util.Random;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-
 @SuppressWarnings("rawtypes")
 class TestTest extends SampleTestRunner {
 
 	TestTest() {
-		super(SamplerRunnerConfig
+		super(SampleRunnerConfig
 						.builder()
 						.build(),
 				Metrics.REGISTRY);
 	}
 
+	@BeforeAll
+	static void setup() {
+		Metrics.REGISTRY.withTimerObservationHandler();
+	}
+
 	@Override
-	public BiConsumer<BuildingBlocks, LinkedList<TimerRecordingHandler>> customizeTimerRecordingHandlers() {
+	public BiConsumer<BuildingBlocks, Deque<ObservationHandler>> customizeObservationHandlers() {
 		return (bb, timerRecordingHandlers) -> {
-			timerRecordingHandlers.add(timerRecordingHandlers.size() - 1, new ReactorNettyTracingRecordingHandler(bb.getTracer()));
+			ObservationHandler defaultHandler = timerRecordingHandlers.removeLast();
+			timerRecordingHandlers.addLast(new ReactorNettyTracingRecordingHandler(bb.getTracer()));
+			timerRecordingHandlers.addLast(defaultHandler);
 			timerRecordingHandlers.addFirst(new ReactorNettyHttpClientTracingRecordingHandler(bb.getTracer(), bb.getHttpClientHandler()));
 			timerRecordingHandlers.addFirst(new ReactorNettyHttpServerTracingRecordingHandler(bb.getTracer(), bb.getHttpServerHandler()));
 		};
@@ -53,7 +61,7 @@ class TestTest extends SampleTestRunner {
 
 	@Override
 	public TracingSetup[] getTracingSetup() {
-		return new TracingSetup[]{TracingSetup.ZIPKIN_BRAVE};
+		return new TracingSetup[] {TracingSetup.ZIPKIN_BRAVE};
 	}
 
 	@Override

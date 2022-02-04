@@ -15,18 +15,18 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
+import java.net.SocketAddress;
+import java.util.List;
+import java.util.function.Supplier;
+
+import io.micrometer.api.instrument.Tags;
+import io.micrometer.api.instrument.observation.Observation;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.observability.ReactorNettyHandlerContext;
-
-import java.net.SocketAddress;
-import java.util.List;
-import java.util.function.Supplier;
 
 import static reactor.netty.Metrics.ADDRESS_RESOLVER;
 import static reactor.netty.Metrics.ERROR;
@@ -51,7 +51,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		return new MicrometerDelegatingAddressResolver<>((MicrometerChannelMetricsRecorder) recorder, resolverGroup.getResolver(executor));
 	}
 
-	static final class FutureHandlerContext extends Timer.HandlerContext implements ReactorNettyHandlerContext {
+	static final class FutureHandlerContext extends Observation.Context implements ReactorNettyHandlerContext {
 		final String remoteAddress;
 
 		// status is not known beforehand
@@ -73,20 +73,18 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 
 		// TODO: This is hostname resolution?
 		@Override
-		public String getSimpleName() {
+		public String getContextualName() {
 			return "address resolution";
 		}
 	}
 
 	static final class MicrometerDelegatingAddressResolver<T extends SocketAddress> extends DelegatingAddressResolver<T> {
 
-		final Timer.Builder addressResolverTimeBuilder;
+		final String name;
 
-		MicrometerDelegatingAddressResolver(MicrometerChannelMetricsRecorder recorder, AddressResolver<T> resolver) {
-			super(recorder, resolver);
-			this.addressResolverTimeBuilder =
-					Timer.builder(recorder.name() + ADDRESS_RESOLVER)
-					     .description("Time spent for resolving the address");
+		MicrometerDelegatingAddressResolver(MicrometerChannelMetricsRecorder micrometerRecorder, AddressResolver<T> resolver) {
+			super(micrometerRecorder, resolver);
+			this.name = micrometerRecorder.name() + ADDRESS_RESOLVER;
 		}
 
 		@Override
@@ -103,15 +101,14 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Cannot cache the Timer anymore - need to test the performance
 			// Can we use sample.stop(Timer)
 			String remoteAddress = formatSocketAddress(address);
-			// TODO: Fix scopes
 			FutureHandlerContext handlerContext = new FutureHandlerContext(remoteAddress);
 			handlerContext.put(SocketAddress.class, address);
-			Timer.Sample sample = Timer.start(REGISTRY, handlerContext);
+			Observation observation = Observation.start(this.name, handlerContext, REGISTRY);
 			return resolver.get()
-			               .addListener(future -> {
-			                   handlerContext.status = future.isSuccess() ? SUCCESS : ERROR;
-			                   sample.stop(addressResolverTimeBuilder);
-			               });
+					.addListener(future -> {
+						handlerContext.status = future.isSuccess() ? SUCCESS : ERROR;
+						observation.stop();
+					});
 		}
 
 		@Override
@@ -129,12 +126,12 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Can we use sample.stop(Timer)
 			String remoteAddress = formatSocketAddress(address);
 			FutureHandlerContext handlerContext = new FutureHandlerContext(remoteAddress);
-			Timer.Sample sample = Timer.start(REGISTRY, handlerContext);
+			Observation sample = Observation.start(this.name, handlerContext, REGISTRY);
 			return resolver.get()
-			               .addListener(future -> {
-			                   handlerContext.status = future.isSuccess() ? SUCCESS : ERROR;
-			                   sample.stop(addressResolverTimeBuilder);
-			               });
+					.addListener(future -> {
+						handlerContext.status = future.isSuccess() ? SUCCESS : ERROR;
+						sample.stop();
+					});
 		}
 	}
 }
