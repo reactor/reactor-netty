@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,6 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.HttpProtocol;
-import reactor.netty.http.HttpResources;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.resources.ConnectionProvider;
@@ -390,7 +389,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a {@link HttpClient}
 	 */
 	public static HttpClient create() {
-		return new HttpClientConnect(new HttpConnectionProvider(HttpResources.get(), Http2Resources::get));
+		return new HttpClientConnect(new HttpConnectionProvider());
 	}
 
 	/**

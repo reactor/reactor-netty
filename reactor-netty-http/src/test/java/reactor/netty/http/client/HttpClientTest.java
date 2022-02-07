@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,6 +105,7 @@ import reactor.netty.SocketUtils;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.HttpResources;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionPoolMetrics;
 import reactor.netty.resources.ConnectionProvider;
@@ -3128,6 +3129,69 @@ class HttpClientTest extends BaseHttpTest {
 		finally {
 			loop.disposeLater()
 			    .block();
+		}
+	}
+
+	@Test
+	void testIssue1943Http11() {
+		doTestIssue1943(HttpProtocol.HTTP11);
+	}
+
+	@Test
+	void testIssue1943H2C() {
+		doTestIssue1943(HttpProtocol.H2C);
+	}
+
+	private void doTestIssue1943(HttpProtocol protocol) {
+		LoopResources serverLoop = LoopResources.create("testIssue1943");
+		disposableServer =
+				createServer()
+				        .protocol(protocol)
+				        .runOn(serverLoop)
+				        .handle((req, res) -> res.sendString(Mono.just("testIssue1943")))
+				        .bindNow();
+
+		HttpClient client = createClient(disposableServer.port()).protocol(protocol);
+		HttpClientConfig config = client.configuration();
+
+		LoopResources loopResources1 = config.loopResources();
+		ConnectionProvider provider1 = ((HttpConnectionProvider) config.connectionProvider()).http1ConnectionProvider();
+		AddressResolverGroup<?> resolverGroup1 = config.defaultAddressResolverGroup();
+
+		try {
+		client.get()
+		      .uri("/")
+		      .responseContent()
+		      .aggregate()
+		      .asString()
+		      .as(StepVerifier::create)
+		      .expectNext("testIssue1943")
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
+
+		HttpResources.reset();
+
+		LoopResources loopResources2 = config.loopResources();
+		ConnectionProvider provider2 = ((HttpConnectionProvider) config.connectionProvider()).http1ConnectionProvider();
+		AddressResolverGroup<?> resolverGroup2 = config.defaultAddressResolverGroup();
+
+		assertThat(loopResources1).isNotSameAs(loopResources2);
+		assertThat(provider1).isNotSameAs(provider2);
+		assertThat(resolverGroup1).isNotSameAs(resolverGroup2);
+
+		client.get()
+		      .uri("/")
+		      .responseContent()
+		      .aggregate()
+		      .asString()
+		      .as(StepVerifier::create)
+		      .expectNext("testIssue1943")
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
+		}
+		finally {
+			serverLoop.disposeLater()
+			          .block(Duration.ofSeconds(5));
 		}
 	}
 }

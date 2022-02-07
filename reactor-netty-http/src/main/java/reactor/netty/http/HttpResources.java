@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package reactor.netty.http;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import io.netty.resolver.AddressResolverGroup;
 import reactor.core.publisher.Mono;
@@ -46,6 +47,10 @@ public final class HttpResources extends TcpResources {
 	public static void disposeLoopsAndConnections() {
 		HttpResources resources = httpResources.getAndSet(null);
 		if (resources != null) {
+			ConnectionProvider provider = resources.http2ConnectionProvider.get();
+			if (provider != null) {
+				provider.dispose();
+			}
 			resources._dispose();
 		}
 	}
@@ -83,7 +88,12 @@ public final class HttpResources extends TcpResources {
 		return Mono.defer(() -> {
 			HttpResources resources = httpResources.getAndSet(null);
 			if (resources != null) {
-				return resources._disposeLater(quietPeriod, timeout);
+				ConnectionProvider provider = resources.http2ConnectionProvider.get();
+				Mono<Void> disposeProvider = Mono.empty();
+				if (provider != null) {
+					disposeProvider = provider.disposeLater();
+				}
+				return Mono.when(disposeProvider, resources._disposeLater(quietPeriod, timeout));
 			}
 			return Mono.empty();
 		});
@@ -130,13 +140,37 @@ public final class HttpResources extends TcpResources {
 		return getOrCreate(httpResources, loops, null, ON_HTTP_NEW, "http");
 	}
 
+	final AtomicReference<ConnectionProvider> http2ConnectionProvider;
+
 	HttpResources(LoopResources loops, ConnectionProvider provider) {
 		super(loops, provider);
+		http2ConnectionProvider = new AtomicReference<>();
 	}
 
 	@Override
 	public AddressResolverGroup<?> getOrCreateDefaultResolver() {
 		return super.getOrCreateDefaultResolver();
+	}
+
+	/**
+	 * Safely checks whether a {@link ConnectionProvider} for HTTP/2 traffic exists
+	 * and proceed with a creation if it does not exist.
+	 *
+	 * @param create the create function provides the current {@link ConnectionProvider} for HTTP/1.1 traffic
+	 * in case some {@link ConnectionProvider} configuration is needed.
+	 * @return an existing or new {@link ConnectionProvider} for HTTP/2 traffic
+	 * @since 1.0.16
+	 */
+	public ConnectionProvider getOrCreateHttp2ConnectionProvider(Function<ConnectionProvider, ConnectionProvider> create) {
+		ConnectionProvider provider = http2ConnectionProvider.get();
+		if (provider == null) {
+			ConnectionProvider newProvider = create.apply(this);
+			if (!http2ConnectionProvider.compareAndSet(null, newProvider)) {
+				newProvider.dispose();
+			}
+			provider = getOrCreateHttp2ConnectionProvider(create);
+		}
+		return provider;
 	}
 
 	static final BiFunction<LoopResources, ConnectionProvider, HttpResources> ON_HTTP_NEW;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import io.netty.resolver.AddressResolverGroup;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.http.HttpResources;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.transport.TransportConfig;
 import reactor.util.annotation.Nullable;
@@ -26,6 +27,7 @@ import reactor.util.annotation.Nullable;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -43,51 +45,60 @@ final class HttpConnectionProvider implements ConnectionProvider {
 			@Nullable Supplier<? extends SocketAddress> remoteAddress,
 			@Nullable AddressResolverGroup<?> resolverGroup) {
 		if (((HttpClientConfig) config)._protocols == HttpClientConfig.h11) {
-			return http1ConnectionProvider.acquire(config, connectionObserver, remoteAddress, resolverGroup);
+			return http1ConnectionProvider().acquire(config, connectionObserver, remoteAddress, resolverGroup);
 		}
-		else if (h2ConnectionProviderSupplier != null) {
-			return h2ConnectionProviderSupplier.get().acquire(config, connectionObserver, remoteAddress, resolverGroup);
+		else if (http1ConnectionProvider == null) {
+			return HttpResources.get().getOrCreateHttp2ConnectionProvider(HTTP2_CONNECTION_PROVIDER_FACTORY)
+					.acquire(config, connectionObserver, remoteAddress, resolverGroup);
 		}
 		else {
-			return getOrCreate(http1ConnectionProvider).acquire(config, connectionObserver, remoteAddress, resolverGroup);
+			return getOrCreate().acquire(config, connectionObserver, remoteAddress, resolverGroup);
 		}
 	}
 
 	@Override
 	public void disposeWhen(SocketAddress address) {
-		http1ConnectionProvider.disposeWhen(address);
+		http1ConnectionProvider().disposeWhen(address);
 	}
 
 	@Override
 	public int maxConnections() {
-		return http1ConnectionProvider.maxConnections();
+		return http1ConnectionProvider().maxConnections();
 	}
 
 	@Override
 	public Map<SocketAddress, Integer> maxConnectionsPerHost() {
-		return http1ConnectionProvider.maxConnectionsPerHost();
+		return http1ConnectionProvider().maxConnectionsPerHost();
 	}
 
 	final ConnectionProvider http1ConnectionProvider;
-	final Supplier<ConnectionProvider> h2ConnectionProviderSupplier;
 
-	HttpConnectionProvider(ConnectionProvider http1ConnectionProvider) {
-		this(http1ConnectionProvider, null);
+	final AtomicReference<ConnectionProvider> h2ConnectionProvider = new AtomicReference<>();
+
+	HttpConnectionProvider() {
+		this(null);
 	}
 
-	HttpConnectionProvider(ConnectionProvider http1ConnectionProvider, @Nullable Supplier<ConnectionProvider> h2ConnectionProviderSupplier) {
+	HttpConnectionProvider(@Nullable ConnectionProvider http1ConnectionProvider) {
 		this.http1ConnectionProvider = http1ConnectionProvider;
-		this.h2ConnectionProviderSupplier = h2ConnectionProviderSupplier;
 	}
 
-	ConnectionProvider getOrCreate(ConnectionProvider http1ConnectionProvider) {
+	ConnectionProvider getOrCreate() {
 		ConnectionProvider provider = h2ConnectionProvider.get();
 		if (provider == null) {
-			h2ConnectionProvider.compareAndSet(null, new Http2ConnectionProvider(http1ConnectionProvider));
-			provider = getOrCreate(http1ConnectionProvider);
+			ConnectionProvider newProvider = HTTP2_CONNECTION_PROVIDER_FACTORY.apply(http1ConnectionProvider);
+			if (!h2ConnectionProvider.compareAndSet(null, newProvider)) {
+				newProvider.dispose();
+			}
+			provider = getOrCreate();
 		}
 		return provider;
 	}
 
-	final AtomicReference<ConnectionProvider> h2ConnectionProvider = new AtomicReference<>();
+	ConnectionProvider http1ConnectionProvider() {
+		return http1ConnectionProvider != null ? http1ConnectionProvider : HttpResources.get();
+	}
+
+	static final Function<ConnectionProvider, ConnectionProvider> HTTP2_CONNECTION_PROVIDER_FACTORY =
+			Http2ConnectionProvider::new;
 }

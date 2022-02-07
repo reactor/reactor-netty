@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import reactor.netty.resources.ConnectionProvider;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty.http.client.HttpConnectionProvider.HTTP2_CONNECTION_PROVIDER_FACTORY;
 
 /**
  * @author Violeta Georgieva
@@ -39,7 +40,7 @@ class HttpConnectionProviderTest {
 					.isEqualTo(provider.maxConnections());
 			// Http2ConnectionProvider inherits the configuration from the configured provider
 			assertThat(configuredConnectionProvider.maxConnections())
-					.isEqualTo(configuredConnectionProvider.getOrCreate(provider).maxConnections());
+					.isEqualTo(configuredConnectionProvider.getOrCreate().maxConnections());
 		}
 		finally {
 			provider.disposeLater()
@@ -56,7 +57,8 @@ class HttpConnectionProviderTest {
 				.isEqualTo(((ConnectionProvider) HttpResources.get()).maxConnections());
 		// Http2ConnectionProvider inherits the configuration from HttpResources
 		assertThat(configuredConnectionProvider.maxConnections())
-				.isEqualTo(configuredConnectionProvider.getOrCreate(HttpResources.get()).maxConnections());
+				.isEqualTo(HttpResources.get().getOrCreateHttp2ConnectionProvider(HTTP2_CONNECTION_PROVIDER_FACTORY)
+						.maxConnections());
 	}
 
 	@Test
@@ -70,7 +72,7 @@ class HttpConnectionProviderTest {
 					.isEqualTo(provider.maxConnectionsPerHost());
 			// Http2ConnectionProvider inherits the configuration from the configured provider
 			assertThat(configuredConnectionProvider.maxConnectionsPerHost())
-					.isEqualTo(configuredConnectionProvider.getOrCreate(provider).maxConnectionsPerHost());
+					.isEqualTo(configuredConnectionProvider.getOrCreate().maxConnectionsPerHost());
 		}
 		finally {
 			provider.disposeLater()
@@ -87,6 +89,7 @@ class HttpConnectionProviderTest {
 				.isEqualTo(((ConnectionProvider) HttpResources.get()).maxConnectionsPerHost());
 		// Http2ConnectionProvider inherits the configuration from HttpResources
 		assertThat(configuredConnectionProvider.maxConnectionsPerHost())
-				.isEqualTo(configuredConnectionProvider.getOrCreate(HttpResources.get()).maxConnectionsPerHost());
+				.isEqualTo(HttpResources.get().getOrCreateHttp2ConnectionProvider(HTTP2_CONNECTION_PROVIDER_FACTORY)
+						.maxConnectionsPerHost());
 	}
 }
