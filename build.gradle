@@ -85,6 +85,7 @@ ext {
 
 	//Metrics
 	micrometerVersion = '2.0.0-SNAPSHOT' //optional baseline
+	micrometerDocsVersion = '1.0.0-SNAPSHOT' //optional baseline
 
 	braveVersion = '5.13.7'
 

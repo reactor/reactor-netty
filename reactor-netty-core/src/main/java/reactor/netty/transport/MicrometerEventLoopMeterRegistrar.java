@@ -15,7 +15,6 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.api.instrument.Gauge;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import reactor.netty.internal.util.MapUtils;
@@ -23,9 +22,9 @@ import reactor.netty.internal.util.MapUtils;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static reactor.netty.Metrics.EVENT_LOOP_PREFIX;
-import static reactor.netty.Metrics.NAME;
-import static reactor.netty.Metrics.PENDING_TASKS;
+import static reactor.netty.transport.EventLoopMeters.PENDING_TASKS;
+import static reactor.netty.transport.EventLoopMeters.EventLoopMetersTags.NAME;
+
 //import static reactor.netty.Metrics.REGISTRY;
 
 /**
@@ -34,12 +33,11 @@ import static reactor.netty.Metrics.PENDING_TASKS;
  * Every gauge uses thread name as tag.
  *
  * @author Pierre De Rop
+ * @author Violeta Georgieva
  * @since 1.0.14
  */
 final class MicrometerEventLoopMeterRegistrar {
 	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
-
-	static final String PENDING_TASKS_DESCRIPTION = "Event loop pending scheduled tasks.";
 
 	final static MicrometerEventLoopMeterRegistrar INSTANCE = new MicrometerEventLoopMeterRegistrar();
 
@@ -52,13 +50,11 @@ final class MicrometerEventLoopMeterRegistrar {
 			SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
 			String executorName = singleThreadEventExecutor.threadProperties().name();
 			MapUtils.computeIfAbsent(cache, executorName, key -> {
-				Gauge.builder(EVENT_LOOP_PREFIX + PENDING_TASKS, singleThreadEventExecutor::pendingTasks)
-				     .description(PENDING_TASKS_DESCRIPTION)
-				     .tag(NAME, executorName)
-				     .register(REGISTRY);
+				EventLoopMeters.toGaugeBuilder(PENDING_TASKS, singleThreadEventExecutor::pendingTasks)
+				               .tag(NAME.getKey(), executorName)
+				               .register(REGISTRY);
 				return eventLoop;
 			});
 		}
 	}
-
 }

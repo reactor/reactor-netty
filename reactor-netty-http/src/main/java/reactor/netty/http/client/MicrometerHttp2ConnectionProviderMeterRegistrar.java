@@ -15,26 +15,21 @@
  */
 package reactor.netty.http.client;
 
-import io.micrometer.api.instrument.Gauge;
 import reactor.netty.Metrics;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 
 import java.net.SocketAddress;
 
-import static reactor.netty.Metrics.ACTIVE_STREAMS;
-import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
-import static reactor.netty.Metrics.ID;
-import static reactor.netty.Metrics.NAME;
-import static reactor.netty.Metrics.PENDING_STREAMS;
+import static reactor.netty.http.client.Http2ConnectionProviderMeters.ACTIVE_STREAMS;
+import static reactor.netty.http.client.Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.ID;
+import static reactor.netty.http.client.Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.NAME;
+import static reactor.netty.http.client.Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.REMOTE_ADDRESS;
+import static reactor.netty.http.client.Http2ConnectionProviderMeters.PENDING_STREAMS;
+
 //import static reactor.netty.Metrics.REGISTRY;
-import static reactor.netty.Metrics.REMOTE_ADDRESS;
 
 final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
-
-	static final String ACTIVE_STREAMS_DESCRIPTION = "The number of the active HTTP/2 streams";
-	static final String PENDING_STREAMS_DESCRIPTION =
-			"The number of requests that are waiting for opening HTTP/2 stream";
 
 	static final MicrometerHttp2ConnectionProviderMeterRegistrar INSTANCE =
 			new MicrometerHttp2ConnectionProviderMeterRegistrar();
@@ -44,16 +39,14 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 
 	void registerMetrics(String poolName, String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
 		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
-		String[] tags = new String[]{ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName};
+		String[] tags = new String[]{ID.getKey(), id, REMOTE_ADDRESS.getKey(), addressAsString, NAME.getKey(), poolName};
 
-		Gauge.builder(CONNECTION_PROVIDER_PREFIX + ACTIVE_STREAMS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
-		     .description(ACTIVE_STREAMS_DESCRIPTION)
-		     .tags(tags)
-		     .register(REGISTRY);
+		Http2ConnectionProviderMeters.toGaugeBuilder(ACTIVE_STREAMS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
+		                             .tags(tags)
+		                             .register(REGISTRY);
 
-		Gauge.builder(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
-		     .description(PENDING_STREAMS_DESCRIPTION)
-		     .tags(tags)
-		     .register(REGISTRY);
+		Http2ConnectionProviderMeters.toGaugeBuilder(PENDING_STREAMS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
+		                             .tags(tags)
+		                             .register(REGISTRY);
 	}
 }

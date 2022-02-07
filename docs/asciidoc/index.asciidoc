@@ -62,3 +62,10 @@ https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/faq.adoc[Sugges
 to "<<faq>>"
 endif::[]
 
+[appendix]
+include::observability.adoc[leveloffset=1]
+ifeval::["{backend}" == "html5"]
+https://github.com/reactor/reactor-netty/edit/main/docs/asciidoc/observability.adoc[Suggest Edit^, title="Suggest an edit to the above section via github", role="fa fa-edit"]
+to "<<faq>>"
+endif::[]
+

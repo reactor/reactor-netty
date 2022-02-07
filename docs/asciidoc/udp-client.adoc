@@ -208,9 +208,12 @@ The following table provides information for the UDP client metrics:
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.udp.client.data.received | DistributionSummary | Amount of the data received, in bytes
-| reactor.netty.udp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes
-| reactor.netty.udp.client.errors | Counter | Number of errors that occurred
+| reactor.netty.udp.client.data.received | DistributionSummary | Amount of the data received, in bytes.
+See <<observability-metrics-data-received>>
+| reactor.netty.udp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
+See <<observability-metrics-data-sent>>
+| reactor.netty.udp.client.errors | Counter | Number of errors that occurred.
+See <<observability-metrics-errors-count>>
 | reactor.netty.udp.client.connect.time | Timer | Time spent for connecting to the remote address
 | reactor.netty.udp.client.address.resolver | Timer | Time spent for resolving the address
 |=======

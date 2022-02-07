@@ -26,6 +26,7 @@ asciidoctorj {
 }
 
 asciidoctor {
+	dependsOn "generateObservabilityDocs"
 	sourceDir "$rootDir/docs/asciidoc/"
 	sources {
 		include "index.asciidoc"
@@ -69,4 +70,28 @@ task docsZip(type: Zip, dependsOn: [asciidoctor, asciidoctorPdf]) {
 		}
 	}
 	from(asciidoctor) { into("docs/") }
+}
+
+configurations {
+	adoc
+}
+
+dependencies {
+	adoc "io.micrometer:micrometer-docs-generator-spans:$micrometerDocsVersion"
+	adoc "io.micrometer:micrometer-docs-generator-metrics:$micrometerDocsVersion"
+}
+
+task generateObservabilityDocs(dependsOn: ["generateObservabilityMetricsDocs", "generateObservabilitySpansDocs"]) {
+}
+
+task generateObservabilityMetricsDocs(type: JavaExec) {
+	mainClass = "io.micrometer.docs.metrics.DocsFromSources"
+	classpath configurations.adoc
+	args project.rootDir.getAbsolutePath(), ".*", project.rootProject.buildDir.getAbsolutePath()
+}
+
+task generateObservabilitySpansDocs(type: JavaExec) {
+	mainClass = "io.micrometer.docs.spans.DocsFromSources"
+	classpath configurations.adoc
+	args project.rootDir.getAbsolutePath(), ".*", project.rootProject.buildDir.getAbsolutePath()
 }

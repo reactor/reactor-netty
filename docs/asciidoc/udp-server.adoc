@@ -202,9 +202,12 @@ The following table provides information for the UDP server metrics:
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.udp.server.data.received | DistributionSummary | Amount of the data received, in bytes
-| reactor.netty.udp.server.data.sent | DistributionSummary | Amount of the data sent, in bytes
-| reactor.netty.udp.server.errors | Counter | Number of errors that occurred
+| reactor.netty.udp.server.data.received | DistributionSummary | Amount of the data received, in bytes.
+See <<observability-metrics-data-received>>
+| reactor.netty.udp.server.data.sent | DistributionSummary | Amount of the data sent, in bytes.
+See <<observability-metrics-data-sent>>
+| reactor.netty.udp.server.errors | Counter | Number of errors that occurred.
+See <<observability-metrics-errors-count>>
 |=======
 
 These additional metrics are also available:

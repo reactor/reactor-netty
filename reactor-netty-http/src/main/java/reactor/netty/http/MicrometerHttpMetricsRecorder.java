@@ -19,6 +19,7 @@ import io.micrometer.api.instrument.Counter;
 import io.micrometer.api.instrument.DistributionSummary;
 import io.micrometer.api.instrument.Timer;
 import reactor.netty.Metrics;
+import reactor.netty.channel.ChannelMeters;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.internal.util.MapUtils;
@@ -31,8 +32,6 @@ import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.ERRORS;
 //import static reactor.netty.Metrics.REGISTRY;
-import static reactor.netty.Metrics.REMOTE_ADDRESS;
-import static reactor.netty.Metrics.URI;
 
 /**
  * An {@link HttpMetricsRecorder} implementation for integration with Micrometer.
@@ -43,8 +42,6 @@ import static reactor.netty.Metrics.URI;
 public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecorder implements HttpMetricsRecorder {
 	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
 
-	protected static final String DATA_RECEIVED_TIME_DESCRIPTION = "Time spent in consuming incoming data";
-	protected static final String DATA_SENT_TIME_DESCRIPTION = "Time spent in sending outgoing data";
 	protected static final String RESPONSE_TIME_DESCRIPTION = "Total time for the request/response";
 
 	protected final ConcurrentMap<MeterKey, Timer> dataReceivedTimeCache = new ConcurrentHashMap<>();
@@ -68,11 +65,10 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, null, null);
 		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
-				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
-				                                 .baseUnit(BYTES_UNIT)
-				                                 .description(DATA_RECEIVED_DESCRIPTION)
-				                                 .tags(REMOTE_ADDRESS, address, URI, uri)
-				                                 .register(REGISTRY)));
+				key -> filter(ChannelMeters.toSummaryBuilder(name() + DATA_RECEIVED, ChannelMeters.DATA_RECEIVED)
+				                           .tags(ChannelMeters.DataReceivedTags.REMOTE_ADDRESS.getKey(), address,
+				                                 ChannelMeters.DataReceivedTags.URI.getKey(), uri)
+				                           .register(REGISTRY)));
 		if (dataReceived != null) {
 			dataReceived.record(bytes);
 		}
@@ -83,11 +79,10 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, null, null);
 		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
-				key -> filter(DistributionSummary.builder(name() + DATA_SENT)
-				                                 .baseUnit(BYTES_UNIT)
-				                                 .description(DATA_SENT_DESCRIPTION)
-				                                 .tags(REMOTE_ADDRESS, address, URI, uri)
-				                                 .register(REGISTRY)));
+				key -> filter(ChannelMeters.toSummaryBuilder(name() + DATA_SENT, ChannelMeters.DATA_SENT)
+				                           .tags(ChannelMeters.DataSentTags.REMOTE_ADDRESS.getKey(), address,
+				                                 ChannelMeters.DataSentTags.URI.getKey(), uri)
+				                           .register(REGISTRY)));
 		if (dataSent != null) {
 			dataSent.record(bytes);
 		}
@@ -98,10 +93,10 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, null, null);
 		Counter errors = MapUtils.computeIfAbsent(errorsCache, meterKey,
-				key -> filter(Counter.builder(name() + ERRORS)
-				                     .description(ERRORS_DESCRIPTION)
-				                     .tags(REMOTE_ADDRESS, address, URI, uri)
-				                     .register(REGISTRY)));
+				key -> filter(ChannelMeters.toCounterBuilder(name() + ERRORS)
+				                           .tags(ChannelMeters.ErrorsCountTags.REMOTE_ADDRESS.getKey(), address,
+				                                 ChannelMeters.ErrorsCountTags.URI.getKey(), uri)
+				                           .register(REGISTRY)));
 		if (errors != null) {
 			errors.increment();
 		}
