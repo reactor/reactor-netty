@@ -17,7 +17,7 @@ package reactor.netty.resources;
 
 import java.net.SocketAddress;
 
-import io.micrometer.core.instrument.Gauge;
+import io.micrometer.api.instrument.Gauge;
 import reactor.netty.Metrics;
 import reactor.pool.InstrumentedPool;
 
@@ -29,7 +29,7 @@ import static reactor.netty.Metrics.MAX_CONNECTIONS;
 import static reactor.netty.Metrics.MAX_PENDING_CONNECTIONS;
 import static reactor.netty.Metrics.PENDING_CONNECTIONS;
 import static reactor.netty.Metrics.NAME;
-import static reactor.netty.Metrics.REGISTRY;
+//import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 
@@ -44,6 +44,8 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
  * @since 0.9
  */
 final class MicrometerPooledConnectionProviderMeterRegistrar {
+	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
+
 	static final String ACTIVE_CONNECTIONS_DESCRIPTION =
 			"The number of the connections that have been successfully acquired and are in active use";
 	static final String IDLE_CONNECTIONS_DESCRIPTION = "The number of the idle connections";

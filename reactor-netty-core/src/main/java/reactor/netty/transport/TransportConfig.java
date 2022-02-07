@@ -36,13 +36,13 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.AttributeKey;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.Metrics;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;

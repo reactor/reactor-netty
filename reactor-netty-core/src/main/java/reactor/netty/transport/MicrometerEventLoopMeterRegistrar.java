@@ -15,7 +15,7 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.core.instrument.Gauge;
+import io.micrometer.api.instrument.Gauge;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import reactor.netty.internal.util.MapUtils;
@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentMap;
 import static reactor.netty.Metrics.EVENT_LOOP_PREFIX;
 import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.PENDING_TASKS;
-import static reactor.netty.Metrics.REGISTRY;
+//import static reactor.netty.Metrics.REGISTRY;
 
 /**
  * Registers gauges for a given {@link EventLoop}.
@@ -37,6 +37,8 @@ import static reactor.netty.Metrics.REGISTRY;
  * @since 1.0.14
  */
 final class MicrometerEventLoopMeterRegistrar {
+	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
+
 	static final String PENDING_TASKS_DESCRIPTION = "Event loop pending scheduled tasks.";
 
 	final static MicrometerEventLoopMeterRegistrar INSTANCE = new MicrometerEventLoopMeterRegistrar();

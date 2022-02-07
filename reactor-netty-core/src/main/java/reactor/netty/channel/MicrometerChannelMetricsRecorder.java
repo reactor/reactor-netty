@@ -15,12 +15,12 @@
  */
 package reactor.netty.channel;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.noop.NoopMeter;
+import io.micrometer.api.instrument.Counter;
+import io.micrometer.api.instrument.DistributionSummary;
+import io.micrometer.api.instrument.Gauge;
+import io.micrometer.api.instrument.Meter;
+import io.micrometer.api.instrument.Timer;
+import io.micrometer.api.instrument.noop.NoopMeter;
 import reactor.netty.internal.util.MapUtils;
 import reactor.util.annotation.Nullable;
 
@@ -37,7 +37,7 @@ import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.ERRORS;
 import static reactor.netty.Metrics.LOCAL_ADDRESS;
-import static reactor.netty.Metrics.REGISTRY;
+//import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
@@ -50,6 +50,8 @@ import static reactor.netty.Metrics.URI;
  * @since 0.9
  */
 public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder {
+	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
+
 	static final String ADDRESS_RESOLVER_TIME_DESCRIPTION = "Time spent for resolving the address";
 	protected static final String BYTES_UNIT = "bytes";
 	static final String CONNECT_TIME_DESCRIPTION = "Time spent for connecting to the remote address";

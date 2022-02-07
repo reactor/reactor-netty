@@ -15,7 +15,7 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.core.instrument.Gauge;
+import io.micrometer.api.instrument.Gauge;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufAllocatorMetric;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -33,7 +33,7 @@ import static reactor.netty.Metrics.DIRECT_ARENAS;
 import static reactor.netty.Metrics.HEAP_ARENAS;
 import static reactor.netty.Metrics.ID;
 import static reactor.netty.Metrics.NORMAL_CACHE_SIZE;
-import static reactor.netty.Metrics.REGISTRY;
+//import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.SMALL_CACHE_SIZE;
 import static reactor.netty.Metrics.THREAD_LOCAL_CACHES;
 import static reactor.netty.Metrics.TYPE;
@@ -45,6 +45,8 @@ import static reactor.netty.Metrics.USED_HEAP_MEMORY;
  * @since 0.9
  */
 final class ByteBufAllocatorMetrics {
+	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
+
 	static final String CHUNK_SIZE_DESCRIPTION = "The chunk size for an arena.";
 	static final String DIRECT_ARENAS_DESCRIPTION = "The number of direct arenas.";
 	static final String HEAP_ARENAS_DESCRIPTION = "The number of heap arenas.";

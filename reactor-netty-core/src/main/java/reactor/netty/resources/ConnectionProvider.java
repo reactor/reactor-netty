@@ -20,9 +20,9 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.Metrics;
 import reactor.netty.ReactorNetty;
 import reactor.netty.transport.TransportConfig;
-import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -493,10 +493,10 @@ public interface ConnectionProvider extends Disposable {
 
 		/**
 		 * Whether to enable metrics to be collected and registered in Micrometer's
-		 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
+		 * {@link io.micrometer.api.instrument.Metrics#globalRegistry globalRegistry}
 		 * under the name {@link reactor.netty.Metrics#CONNECTION_PROVIDER_PREFIX}.
 		 * Applications can separately register their own
-		 * {@link io.micrometer.core.instrument.config.MeterFilter filters} associated with this name.
+		 * {@link io.micrometer.api.instrument.config.MeterFilter filters} associated with this name.
 		 * For example, to put an upper bound on the number of tags produced:
 		 * <pre class="code">
 		 * MeterFilter filter = ... ;
@@ -511,7 +511,7 @@ public interface ConnectionProvider extends Disposable {
 			if (metricsEnabled) {
 				if (!Metrics.isInstrumentationAvailable()) {
 					throw new UnsupportedOperationException(
-							"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
+							"To enable metrics, you must add the dependency `io.micrometer:micrometer-api`" +
 									" to the class path first");
 				}
 			}
