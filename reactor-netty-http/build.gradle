@@ -107,7 +107,7 @@ dependencies {
 	}
 
 	//Metrics
-	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
+	compileOnly "io.micrometer:micrometer-api:$micrometerVersion"
 
 	// Logging
 	compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
@@ -131,7 +131,7 @@ dependencies {
 	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
-	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
+	testImplementation "io.micrometer:micrometer-api:$micrometerVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"

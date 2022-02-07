@@ -15,10 +15,10 @@
  */
 package reactor.netty.http.server;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.Timer;
+import io.micrometer.api.instrument.Counter;
+import io.micrometer.api.instrument.DistributionSummary;
+import io.micrometer.api.instrument.Gauge;
+import io.micrometer.api.instrument.Timer;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 import reactor.netty.internal.util.MapUtils;
@@ -38,7 +38,7 @@ import static reactor.netty.Metrics.ERRORS;
 import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
 import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.METHOD;
-import static reactor.netty.Metrics.REGISTRY;
+//import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
@@ -48,6 +48,7 @@ import static reactor.netty.Metrics.URI;
  * @since 0.9
  */
 final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpServerMetricsRecorder {
+	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
 
 	final static MicrometerHttpServerMetricsRecorder INSTANCE = new MicrometerHttpServerMetricsRecorder();
 	private final static String PROTOCOL_VALUE_HTTP = "http";

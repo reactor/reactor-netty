@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.client;
 
-import io.micrometer.core.instrument.Gauge;
+import io.micrometer.api.instrument.Gauge;
 import reactor.netty.Metrics;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 
@@ -26,10 +26,12 @@ import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.ID;
 import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.PENDING_STREAMS;
-import static reactor.netty.Metrics.REGISTRY;
+//import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 
 final class MicrometerHttp2ConnectionProviderMeterRegistrar {
+	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
+
 	static final String ACTIVE_STREAMS_DESCRIPTION = "The number of the active HTTP/2 streams";
 	static final String PENDING_STREAMS_DESCRIPTION =
 			"The number of requests that are waiting for opening HTTP/2 stream";

@@ -15,9 +15,9 @@
  */
 package reactor.netty.http;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.Timer;
+import io.micrometer.api.instrument.Counter;
+import io.micrometer.api.instrument.DistributionSummary;
+import io.micrometer.api.instrument.Timer;
 import reactor.netty.Metrics;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.ERRORS;
-import static reactor.netty.Metrics.REGISTRY;
+//import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.URI;
 
@@ -41,6 +41,8 @@ import static reactor.netty.Metrics.URI;
  * @since 0.9
  */
 public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecorder implements HttpMetricsRecorder {
+	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
+
 	protected static final String DATA_RECEIVED_TIME_DESCRIPTION = "Time spent in consuming incoming data";
 	protected static final String DATA_SENT_TIME_DESCRIPTION = "Time spent in sending outgoing data";
 	protected static final String RESPONSE_TIME_DESCRIPTION = "Total time for the request/response";
