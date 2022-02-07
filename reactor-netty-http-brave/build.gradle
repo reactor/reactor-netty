@@ -88,4 +88,7 @@ task japicmp(type: JapicmpTask) {
 	onlyIf { "$compatibleVersion" != "SKIP" }
 }
 
+tasks.japicmp.dependsOn(downloadBaseline)
+tasks.check.dependsOn(japicmp)
+
 description = "Brave instrumentation for Reactor Netty HTTP"
