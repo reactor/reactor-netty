@@ -10,9 +10,9 @@ updates:
   labels:
   - type/dependency-upgrade
   ignore:
-  - dependency-name: io.micrometer:micrometer-core
+  - dependency-name: io.micrometer:micrometer-api
     versions:
-    - "> 1.5.0"
+    - "> 2.0.0"
   - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
     versions:
     - ">= 10.0.a"
