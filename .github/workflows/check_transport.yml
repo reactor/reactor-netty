@@ -4,33 +4,33 @@ on:
   pull_request: {}
 permissions: read-all
 jobs:
-    preliminary:
-        name: preliminary sanity checks
-        runs-on: ubuntu-20.04
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  fetch-depth: 0 #needed by spotless
-            - uses: actions/setup-java@v2
-              with:
-                  distribution: 'temurin'
-                  java-version: 8
-            - name: spotless (license header)
-              if: always()
-              run: ./gradlew clean spotlessCheck -PspotlessFrom=origin/${{ github.base_ref }}
-            - name: api compatibility
-              if: always()
-              run: ./gradlew clean japicmp
-            - name: how to fix
-              if: failure()
-                # the foreground (38;5) color code 022 is green
-              run: |
-                  echo "Tips for fixing errors in preliminary job:"
-                  echo -e "\033[38;5;255;48;5;022m ✅ License headers of touched java files can be automatically fixed by running:\033[0m\n\033[38;5;208;48;5;022m./gradlew spotlessApply\033[0m"
-                  echo ""
-                  echo -e "\033[38;5;255;48;5;202m ⚠️ JApiCmp failures should be considered carefully and discussed with maintainers in the PR\033[0m"
-                  echo "If there are failures, the detail should be available in the logs of the api compatibility step above"
-                  exit -1
+  preliminary:
+    name: preliminary sanity checks
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 #needed by spotless
+      - uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: 8
+      - name: spotless (license header)
+        if: always()
+        run: ./gradlew clean spotlessCheck -PspotlessFrom=origin/${{ github.base_ref }}
+      - name: api compatibility
+        if: always()
+        run: ./gradlew clean japicmp
+      - name: how to fix
+        if: failure()
+        # the foreground (38;5) color code 022 is green
+        run: |
+          echo "Tips for fixing errors in preliminary job:"
+          echo -e "\033[38;5;255;48;5;022m ✅ License headers of touched java files can be automatically fixed by running:\033[0m\n\033[38;5;208;48;5;022m./gradlew spotlessApply\033[0m"
+          echo ""
+          echo -e "\033[38;5;255;48;5;202m ⚠️ JApiCmp failures should be considered carefully and discussed with maintainers in the PR\033[0m"
+          echo "If there are failures, the detail should be available in the logs of the api compatibility step above"
+          exit -1
 
   build:
     needs: preliminary
