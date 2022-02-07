@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.channel.AbstractChannelMetricsHandler;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ContextAwareChannelMetricsRecorder;
+import reactor.netty.channel.MicrometerChannelMetricsHandler;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -523,7 +524,7 @@ public final class SslProvider {
 	public void addSslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug) {
 		Objects.requireNonNull(channel, "channel");
 		if (sniProvider != null) {
-			sniProvider.addSniHandler(channel, sslDebug);
+			sniProvider.addSniHandler(channel, sslDebug, remoteAddress == null);
 			return;
 		}
 
@@ -559,7 +560,7 @@ public final class SslProvider {
 			pipeline.addFirst(NettyPipeline.SslHandler, sslHandler);
 		}
 
-		addSslReadHandler(pipeline, sslDebug);
+		addSslReadHandler(pipeline, sslDebug, remoteAddress == null);
 	}
 
 	@Override
@@ -589,15 +590,19 @@ public final class SslProvider {
 		return Objects.hash(builderHashCode);
 	}
 
-	static void addSslReadHandler(ChannelPipeline pipeline, boolean sslDebug) {
+	static void addSslReadHandler(ChannelPipeline pipeline, boolean sslDebug, boolean onServer) {
+		ChannelHandler handler = pipeline.get(NettyPipeline.ChannelMetricsHandler);
+		ChannelHandler sslReadHandler = handler instanceof MicrometerChannelMetricsHandler ?
+				new MicrometerSslReadHandler(((MicrometerChannelMetricsHandler) handler).recorder(), onServer) :
+				new SslReadHandler();
 		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
-			pipeline.addAfter(NettyPipeline.LoggingHandler, NettyPipeline.SslReader, new SslReadHandler());
+			pipeline.addAfter(NettyPipeline.LoggingHandler, NettyPipeline.SslReader, sslReadHandler);
 			if (sslDebug) {
 				pipeline.addBefore(NettyPipeline.SslHandler, NettyPipeline.SslLoggingHandler, LOGGING_HANDLER);
 			}
 		}
 		else {
-			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, new SslReadHandler());
+			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, sslReadHandler);
 		}
 	}
 
@@ -779,7 +784,7 @@ public final class SslProvider {
 		}
 	}
 
-	static final class SslReadHandler extends ChannelInboundHandlerAdapter {
+	static class SslReadHandler extends ChannelInboundHandlerAdapter {
 
 		boolean handshakeDone;
 
