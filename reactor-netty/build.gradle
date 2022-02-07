@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+* Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ dependencies {
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
+	compileOnly "io.micrometer:micrometer-api:$micrometerVersion"
 	compileOnly "io.netty:netty-codec-haproxy:$nettyVersion"
 	compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
 	compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
