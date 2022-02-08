@@ -54,7 +54,6 @@ public final class ReactorNettyHttpClientTracingObservationHandler extends HttpC
 	public boolean supportsContext(Observation.Context context) {
 		return context instanceof ReactorNettyHandlerContext &&
 				super.supportsContext(context) &&
-				context.get(HttpClientRequest.class) != null &&
-				context.get(HttpClientResponse.class) != null;
+				context.get(HttpClientRequest.class) != null;
 	}
 }

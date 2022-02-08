@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.observability;
 
+import io.micrometer.api.instrument.Tag;
 import io.micrometer.api.instrument.observation.Observation;
 import io.micrometer.api.instrument.transport.http.HttpServerRequest;
 import io.micrometer.api.instrument.transport.http.context.HttpServerHandlerContext;
@@ -46,7 +47,9 @@ public final class ReactorNettyHttpServerTracingObservationHandler extends HttpS
 
 	@Override
 	public void tagSpan(HttpServerHandlerContext context, Span span) {
-		ReactorNettyObservabilityUtils.tagSpan(context, span);
+		for (Tag tag : context.getHighCardinalityTags()) {
+			span.tag(tag.getKey(), tag.getValue());
+		}
 	}
 
 	@Override

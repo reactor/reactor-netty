@@ -23,12 +23,16 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import io.micrometer.api.instrument.MeterRegistry;
+import io.micrometer.api.instrument.Metrics;
 import io.micrometer.api.instrument.observation.ObservationHandler;
+import io.micrometer.api.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.test.SampleTestRunner;
 import io.micrometer.tracing.test.reporter.BuildingBlocks;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufMono;
@@ -43,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SuppressWarnings("rawtypes")
 class ObservabilitySmokeTest extends SampleTestRunner {
 	static final io.micrometer.api.instrument.MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
+	static final SimpleMeterRegistry simpleMeterRegistry = new SimpleMeterRegistry();
 
 	static SelfSignedCertificate ssc;
 
@@ -53,6 +58,17 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
+		Metrics.addRegistry(simpleMeterRegistry);
+	}
+
+	@AfterEach
+	void setupRegistry() {
+		simpleMeterRegistry.clear();
+	}
+
+	@AfterAll
+	static void clean() {
+		Metrics.removeRegistry(simpleMeterRegistry);
 	}
 
 	@Override

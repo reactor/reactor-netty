@@ -50,6 +50,16 @@ enum ConnectSpans implements DocumentedSpan {
 	enum ConnectTimeHighCardinalityTags implements TagKey {
 
 		/**
+		 * Remote address.
+		 */
+		REMOTE_ADDRESS {
+			@Override
+			public String getKey() {
+				return "remote.address";
+			}
+		},
+
+		/**
 		 * Reactor Netty status.
 		 */
 		REACTOR_NETTY_STATUS {
