@@ -108,6 +108,7 @@ dependencies {
 
 	//Metrics
 	compileOnly "io.micrometer:micrometer-api:$micrometerVersion"
+	compileOnly "io.micrometer:micrometer-tracing:$micrometerTracingVersion"
 
 	// Logging
 	compileOnly "org.slf4j:slf4j-api:$slf4jVersion"

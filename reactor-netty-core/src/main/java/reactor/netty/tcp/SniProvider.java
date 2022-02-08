@@ -49,7 +49,7 @@ final class SniProvider {
 		else {
 			pipeline.addFirst(NettyPipeline.SslHandler, newSniHandler());
 		}
-		SslProvider.addSslReadHandler(pipeline, sslDebug, onServer);
+		SslProvider.addSslReadHandler(pipeline, sslDebug, onServer, true);
 	}
 
 	final Map<String, SslProvider> confPerDomainName;

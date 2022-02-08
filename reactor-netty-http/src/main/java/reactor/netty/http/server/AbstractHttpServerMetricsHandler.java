@@ -81,7 +81,12 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				return;
 			}
 
-			dataSentTime = System.nanoTime();
+			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+			if (channelOps instanceof HttpServerOperations) {
+				HttpServerOperations ops = (HttpServerOperations) channelOps;
+				startWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
+						ops.method().name(), ops.status().codeAsText().toString());
+			}
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -112,11 +117,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
-			dataReceivedTime = System.nanoTime();
 			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpServerOperations) {
 				HttpServerOperations ops = (HttpServerOperations) channelOps;
 				recordActiveConnection(ops);
+				startRead(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), ops.method().name());
 			}
 		}
 
@@ -189,4 +194,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordServerConnectionInactive(ops.hostAddress());
 	}
 
+	protected void startRead(HttpServerOperations ops, String path, String method) {
+		dataReceivedTime = System.nanoTime();
+	}
+
+	protected void startWrite(HttpServerOperations ops, String path, String method, String status) {
+		dataSentTime = System.nanoTime();
+	}
 }

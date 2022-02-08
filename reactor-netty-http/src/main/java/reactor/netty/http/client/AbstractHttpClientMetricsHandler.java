@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 				contextView = ops.currentContextView();
 			}
 
-			dataSentTime = System.nanoTime();
+			startWrite((HttpRequest) msg, ctx.channel().remoteAddress());
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -97,7 +97,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof HttpResponse) {
 			status = ((HttpResponse) msg).status().codeAsText().toString();
 
-			dataReceivedTime = System.nanoTime();
+			startRead((HttpResponse) msg, ctx.channel().remoteAddress());
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -124,6 +124,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	protected abstract HttpClientMetricsRecorder recorder();
 
+	// TODO Do sth about the error handling
 	protected void recordException(ChannelHandlerContext ctx) {
 		recorder().incrementErrorsCount(ctx.channel().remoteAddress(),
 				path != null ? path : resolveUri(ctx));
@@ -149,6 +150,25 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordDataSent(address, path, dataSent);
 	}
 
+	protected void reset() {
+		path = null;
+		method = null;
+		status = null;
+		contextView = null;
+		dataReceived = 0;
+		dataSent = 0;
+		dataReceivedTime = 0;
+		dataSentTime = 0;
+	}
+
+	protected void startRead(HttpResponse msg, SocketAddress address) {
+		dataReceivedTime = System.nanoTime();
+	}
+
+	protected void startWrite(HttpRequest msg, SocketAddress address) {
+		dataSentTime = System.nanoTime();
+	}
+
 	private String resolveUri(ChannelHandlerContext ctx) {
 		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 		if (channelOps instanceof HttpClientOperations) {
@@ -158,16 +178,5 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		else {
 			return "unknown";
 		}
-	}
-
-	private void reset() {
-		path = null;
-		method = null;
-		status = null;
-		contextView = null;
-		dataReceived = 0;
-		dataSent = 0;
-		dataReceivedTime = 0;
-		dataSentTime = 0;
 	}
 }

@@ -545,9 +545,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
-				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder ?
-						new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
-						new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+				ChannelHandler handler = metricsRecorder instanceof MicrometerHttpServerMetricsRecorder ?
+						new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
+						metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder ?
+								new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
+								new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
 				p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, handler);
 				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
 					// For sake of performance, we can remove the ChannelMetricsHandler because the MicrometerHttpServerMetricsRecorder
@@ -596,9 +598,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
-				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder ?
-						new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
-						new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+				ChannelHandler handler = metricsRecorder instanceof MicrometerHttpServerMetricsRecorder ?
+						new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
+						metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder ?
+								new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue) :
+								new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
 				p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, handler);
 				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
 					// For sake of performance, we can remove the ChannelMetricsHandler because the MicrometerHttpServerMetricsRecorder
@@ -931,7 +935,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 					pipeline.addFirst(NettyPipeline.NonSslRedirectDetector, nonSslRedirectDetector);
 				}
 				else {
-					sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+					sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG, false);
 				}
 
 				if ((protocols & h11orH2) == h11orH2) {

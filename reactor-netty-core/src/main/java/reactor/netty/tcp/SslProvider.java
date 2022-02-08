@@ -522,6 +522,10 @@ public final class SslProvider {
 	}
 
 	public void addSslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug) {
+		addSslHandler(channel, remoteAddress, sslDebug, true);
+	}
+
+	public void addSslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug, boolean enableTracing) {
 		Objects.requireNonNull(channel, "channel");
 		if (sniProvider != null) {
 			sniProvider.addSniHandler(channel, sslDebug, remoteAddress == null);
@@ -560,7 +564,7 @@ public final class SslProvider {
 			pipeline.addFirst(NettyPipeline.SslHandler, sslHandler);
 		}
 
-		addSslReadHandler(pipeline, sslDebug, remoteAddress == null);
+		addSslReadHandler(pipeline, sslDebug, remoteAddress == null, enableTracing);
 	}
 
 	@Override
@@ -590,9 +594,9 @@ public final class SslProvider {
 		return Objects.hash(builderHashCode);
 	}
 
-	static void addSslReadHandler(ChannelPipeline pipeline, boolean sslDebug, boolean onServer) {
+	static void addSslReadHandler(ChannelPipeline pipeline, boolean sslDebug, boolean onServer, boolean enableTracing) {
 		ChannelHandler handler = pipeline.get(NettyPipeline.ChannelMetricsHandler);
-		ChannelHandler sslReadHandler = handler instanceof MicrometerChannelMetricsHandler ?
+		ChannelHandler sslReadHandler = handler instanceof MicrometerChannelMetricsHandler && enableTracing ?
 				new MicrometerSslReadHandler(((MicrometerChannelMetricsHandler) handler).recorder(), onServer) :
 				new SslReadHandler();
 		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
