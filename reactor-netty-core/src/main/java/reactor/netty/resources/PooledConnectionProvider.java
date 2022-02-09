@@ -16,6 +16,7 @@
 package reactor.netty.resources;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.resolver.AddressResolverGroup;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
@@ -71,6 +72,11 @@ import static reactor.netty.resources.ConnectionProvider.ConnectionPoolSpec.PEND
  * @since 1.0.0
  */
 public abstract class PooledConnectionProvider<T extends Connection> implements ConnectionProvider {
+	/**
+	 * Context key used to propagate the caller event loop in the connection pool subscription.
+	 */
+	final static String CONTEXT_CALLER_EVENTLOOP = " callereventloop";
+
 	final PoolFactory<T> defaultPoolFactory;
 	final Map<SocketAddress, PoolFactory<T>> poolFactoryPerRemoteHost = new HashMap<>();
 
@@ -140,7 +146,9 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				return newPool;
 			});
 
+			EventLoop eventLoop = config.loopResources().onClient(config.isPreferNative()).next();
 			pool.acquire(Duration.ofMillis(poolFactory.pendingAcquireTimeout))
+			    .contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop))
 			    .subscribe(createDisposableAcquire(config, connectionObserver,
 			            poolFactory.pendingAcquireTimeout, pool, sink));
 		});

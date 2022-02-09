@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.function.Function;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoop;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
@@ -494,7 +495,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		Publisher<PooledConnection> connectChannel() {
 			return Mono.create(sink -> {
 				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink);
-				TransportConnector.connect(config, remoteAddress, resolver, initializer)
+				EventLoop callerEventLoop = sink.currentContext().get(CONTEXT_CALLER_EVENTLOOP);
+				TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop)
 				                  .subscribe(initializer);
 			});
 		}
