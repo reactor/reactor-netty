@@ -43,6 +43,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
+import static io.micrometer.api.instrument.Metrics.globalRegistry;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -70,7 +71,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 			DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
 			if (remote != null && resolverGroup != null) {
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
-				TransportConnector.connect(config, remote, resolverGroup, channelInitializer)
+				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, globalRegistry.getCurrentObservation())
 				                  .subscribe(disposableConnect);
 			}
 			else {

@@ -74,7 +74,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 				contextView = ops.currentContextView();
 			}
 
-			startWrite((HttpRequest) msg, ctx.channel().remoteAddress());
+			startWrite((HttpRequest) msg, ctx.channel().remoteAddress(), ctx);
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -165,7 +165,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		dataReceivedTime = System.nanoTime();
 	}
 
-	protected void startWrite(HttpRequest msg, SocketAddress address) {
+	protected void startWrite(HttpRequest msg, SocketAddress address, ChannelHandlerContext ctx) {
 		dataSentTime = System.nanoTime();
 	}
 

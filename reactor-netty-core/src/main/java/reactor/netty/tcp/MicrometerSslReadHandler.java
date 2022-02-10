@@ -20,11 +20,13 @@ import io.micrometer.api.instrument.observation.Observation;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.util.AttributeKey;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 
 import java.net.SocketAddress;
 
+import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.ERROR;
 //import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.SUCCESS;
@@ -64,7 +66,16 @@ final class MicrometerSslReadHandler extends Observation.Context implements Reac
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
-		observation = Observation.start(recorder.name() + TLS_HANDSHAKE_TIME, this, REGISTRY);
+		Observation parentObservation = (Observation) ctx.channel().attr(AttributeKey.valueOf(Observation.class.getName())).get();
+		observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, REGISTRY);
+		// TODO: Context Propagation API should do this for us ( -> to thread local)
+		if (parentObservation != null) {
+			try (Observation.Scope scope = parentObservation.openScope()) {
+				observation.start();
+			}
+		} else {
+			observation.start();
+		}
 		ctx.read(); //consume handshake
 	}
 

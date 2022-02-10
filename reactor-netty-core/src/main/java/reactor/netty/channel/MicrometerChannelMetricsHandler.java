@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.AttributeKey;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
@@ -29,6 +30,7 @@ import java.net.SocketAddress;
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.ERROR;
 //import static reactor.netty.Metrics.REGISTRY;
+import static reactor.netty.Metrics.PENDING_CONNECTIONS;
 import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.Metrics.formatSocketAddress;
 
@@ -110,7 +112,15 @@ public class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandl
 			// Cannot cache the Timer anymore - need to test the performance
 			put(SocketAddress.class, remoteAddress);
 			this.remoteAddress = formatSocketAddress(remoteAddress);
-			Observation observation = Observation.start(recorder.name() + CONNECT_TIME, this, REGISTRY);
+			Observation parentObservation = (Observation) ctx.channel().attr(AttributeKey.valueOf(Observation.class.getName())).get();
+			final Observation observation = Observation.createNotStarted(recorder.name() + CONNECT_TIME, this, REGISTRY);
+			if (parentObservation != null) {
+				try (Observation.Scope scope = parentObservation.openScope()) {
+					observation.start();
+				}
+			} else {
+				observation.start();
+			}
 			ctx.connect(remoteAddress, localAddress, promise)
 			   .addListener(future -> {
 			       ctx.pipeline().remove(this);

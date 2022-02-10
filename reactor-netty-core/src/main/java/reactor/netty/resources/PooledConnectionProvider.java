@@ -15,6 +15,7 @@
  */
 package reactor.netty.resources;
 
+import io.micrometer.api.instrument.observation.Observation;
 import io.netty.channel.Channel;
 import io.netty.resolver.AddressResolverGroup;
 import org.reactivestreams.Publisher;
@@ -42,6 +43,7 @@ import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.Context;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -60,6 +62,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static io.micrometer.api.instrument.Metrics.globalRegistry;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.resources.ConnectionProvider.ConnectionPoolSpec.PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED;
 
@@ -140,9 +143,15 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				return newPool;
 			});
 
+			// TODO: Read from reactor context - if not there, read from thread local
+
+			// TODO: Context Propagation API should do this for us ( from reactive / or from thread local)
+
+			Observation currentObservation = globalRegistry.getCurrentObservation();
 			pool.acquire(Duration.ofMillis(poolFactory.pendingAcquireTimeout))
+					.contextWrite(Context.of(Observation.class, currentObservation))
 			    .subscribe(createDisposableAcquire(config, connectionObserver,
-			            poolFactory.pendingAcquireTimeout, pool, sink));
+			            poolFactory.pendingAcquireTimeout, pool, sink, currentObservation));
 		});
 	}
 
@@ -224,7 +233,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			ConnectionObserver connectionObserver,
 			long pendingAcquireTimeout,
 			InstrumentedPool<T> pool,
-			MonoSink<Connection> sink);
+			MonoSink<Connection> sink, Observation currentObservation);
 
 	protected abstract InstrumentedPool<T> createPool(
 			TransportConfig config,

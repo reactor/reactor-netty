@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
+import io.micrometer.api.instrument.observation.Observation;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.resolver.AddressResolverGroup;
@@ -78,9 +79,9 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			ConnectionObserver connectionObserver,
 			long pendingAcquireTimeout,
 			InstrumentedPool<PooledConnection> pool,
-			MonoSink<Connection> sink) {
+			MonoSink<Connection> sink, Observation currentObservation) {
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				pendingAcquireTimeout, pool, sink);
+				pendingAcquireTimeout, pool, sink, currentObservation);
 	}
 
 	@Override
@@ -105,6 +106,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		final InstrumentedPool<PooledConnection> pool;
 		final boolean retried;
 		final MonoSink<Connection> sink;
+		final Observation currentObservation;
 
 		PooledRef<PooledConnection> pooledRef;
 		Subscription subscription;
@@ -114,7 +116,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				ChannelOperations.OnSetup opsFactory,
 				long pendingAcquireTimeout,
 				InstrumentedPool<PooledConnection> pool,
-				MonoSink<Connection> sink) {
+				MonoSink<Connection> sink, Observation currentObservation) {
 			this.cancellations = Disposables.composite();
 			this.obs = obs;
 			this.opsFactory = opsFactory;
@@ -122,6 +124,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			this.pool = pool;
 			this.retried = false;
 			this.sink = sink;
+			this.currentObservation = currentObservation;
 		}
 
 		DisposableAcquire(DisposableAcquire parent) {
@@ -132,6 +135,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			this.pool = parent.pool;
 			this.retried = true;
 			this.sink = parent.sink;
+			this.currentObservation = null;
 		}
 
 		@Override
@@ -162,6 +166,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			pooledConnection.pooledRef = pooledRef;
 
 			Channel c = pooledConnection.channel;
+
+			c.attr(AttributeKey.valueOf(Observation.class.getName())).compareAndSet(null, currentObservation);
 
 			if (c.eventLoop().inEventLoop()) {
 				run();
@@ -406,7 +412,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 				ConnectionObserver obs = channel.attr(OWNER)
 				                                .getAndSet(ConnectionObserver.emptyListener());
-
+				channel.attr(AttributeKey.valueOf(Observation.class.getName())).set(null);
 				if (pooledRef == null) {
 					return;
 				}
@@ -493,8 +499,9 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		Publisher<PooledConnection> connectChannel() {
 			return Mono.create(sink -> {
+				Observation observation = sink.currentContext().get(Observation.class);
 				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink);
-				TransportConnector.connect(config, remoteAddress, resolver, initializer)
+				TransportConnector.connect(config, remoteAddress, resolver, initializer, observation)
 				                  .subscribe(initializer);
 			});
 		}

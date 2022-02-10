@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import io.micrometer.api.instrument.observation.Observation;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http2.Http2Connection;
@@ -98,7 +99,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			ConnectionObserver connectionObserver,
 			long pendingAcquireTimeout,
 			InstrumentedPool<Connection> pool,
-			MonoSink<Connection> sink) {
+			MonoSink<Connection> sink,
+			Observation currentObservation) {
+		// TODO: Observation added
 		boolean acceptGzip = config instanceof HttpClientConfig && ((HttpClientConfig) config).acceptGzip;
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
 				acceptGzip, pendingAcquireTimeout, pool, sink);

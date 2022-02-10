@@ -26,11 +26,13 @@ import io.micrometer.api.instrument.MeterRegistry;
 import io.micrometer.api.instrument.Metrics;
 import io.micrometer.api.instrument.observation.ObservationHandler;
 import io.micrometer.api.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.test.SampleTestRunner;
 import io.micrometer.tracing.test.reporter.BuildingBlocks;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.assertj.core.api.BDDAssertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,7 +54,13 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	static SelfSignedCertificate ssc;
 
 	ObservabilitySmokeTest() {
-		super(SampleTestRunner.SampleRunnerConfig.builder().build(), REGISTRY);
+		super(SampleTestRunner.SampleRunnerConfig.builder()
+				.wavefrontApplicationName("reactor-netty-demo")
+				.wavefrontServiceName("reactory-netty-test")
+				// TODO: Add these to test against Wavefront. Remember not to commit it!
+				.wavefrontToken("")
+				.wavefrontUrl("")
+				.build(), REGISTRY);
 	}
 
 	@BeforeAll
@@ -83,12 +91,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	}
 
 	@Override
-	public TracingSetup[] getTracingSetup() {
-		return new TracingSetup[] {TracingSetup.ZIPKIN_BRAVE};
-	}
-
-	@Override
-	public BiConsumer<Tracer, MeterRegistry> yourCode() {
+	public BiConsumer<Tracer, MeterRegistry> yourCode() throws Exception {
 		byte[] bytes = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(bytes);
@@ -114,6 +117,9 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 					          .route(r -> r.post("/post", (req, res) -> res.send(req.receive().retain())))
 					          .bindNow();
 
+			Span span = tracer.currentSpan();
+			System.out.println(span);
+
 			String content = new String(bytes);
 			String response =
 					client.port(server.port())
@@ -124,9 +130,12 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 					      .responseContent()
 					      .aggregate()
 					      .asString()
-					      .block(Duration.ofSeconds(5));
+					      .block();
 
 			assertThat(response).isEqualTo(content);
+
+			span = tracer.currentSpan();
+			System.out.println(span);
 
 			client.secure()
 			      .post()
@@ -135,7 +144,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 			      .responseContent()
 			      .aggregate()
 			      .asString()
-			      .block(Duration.ofSeconds(5));
+			      .block();
 		};
 	}
 }

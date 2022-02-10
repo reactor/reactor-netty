@@ -15,6 +15,7 @@
  */
 package reactor.netty.transport;
 
+import io.micrometer.api.instrument.observation.Observation;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
@@ -51,6 +52,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import static io.micrometer.api.instrument.Metrics.globalRegistry;
+import static reactor.netty.Metrics.ADDRESS_RESOLVER;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -80,7 +83,7 @@ public final class TransportConnector {
 		Objects.requireNonNull(bindAddress, "bindAddress");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
 
-		return doInitAndRegister(config, channelInitializer, isDomainSocket)
+		return doInitAndRegister(config, channelInitializer, isDomainSocket, globalRegistry.getCurrentObservation())
 				.flatMap(channel -> {
 					MonoChannelPromise promise = new MonoChannelPromise(channel);
 					// "FutureReturnValueIgnored" this is deliberate
@@ -96,23 +99,24 @@ public final class TransportConnector {
 	 * @param remoteAddress the {@link SocketAddress} to connect to
 	 * @param resolverGroup the resolver which will resolve the address of the unresolved named address
 	 * @param channelInitializer the {@link ChannelInitializer} that will be used for initializing the channel pipeline
+	 * @param observation
 	 * @return a {@link Mono} of {@link Channel}
 	 */
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
-			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer) {
+			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer, @Nullable Observation observation) {
 		Objects.requireNonNull(config, "config");
 		Objects.requireNonNull(remoteAddress, "remoteAddress");
 		Objects.requireNonNull(resolverGroup, "resolverGroup");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
 
 		boolean isDomainAddress = remoteAddress instanceof DomainSocketAddress;
-		return doInitAndRegister(config, channelInitializer, isDomainAddress)
+		return doInitAndRegister(config, channelInitializer, isDomainAddress, observation)
 				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup)
 						.onErrorResume(RetryConnectException.class,
 								t -> {
 									AtomicInteger index = new AtomicInteger(1);
 									return Mono.defer(() ->
-											doInitAndRegister(config, channelInitializer, isDomainAddress)
+											doInitAndRegister(config, channelInitializer, isDomainAddress, observation)
 													.flatMap(ch -> {
 														MonoChannelPromise mono = new MonoChannelPromise(ch);
 														doConnect(t.addresses, config.bindAddress(), mono, index.get());
@@ -214,7 +218,7 @@ public final class TransportConnector {
 	static Mono<Channel> doInitAndRegister(
 			TransportConfig config,
 			ChannelInitializer<Channel> channelInitializer,
-			boolean isDomainSocket) {
+			boolean isDomainSocket, @Nullable Observation observation) {
 		EventLoopGroup elg = config.eventLoopGroup();
 
 		ChannelFactory<? extends Channel> channelFactory = config.connectionFactory(elg, isDomainSocket);
@@ -222,6 +226,8 @@ public final class TransportConnector {
 		Channel channel = null;
 		try {
 			channel = channelFactory.newChannel();
+			// TODO: Check for null
+			channel.attr(AttributeKey.valueOf(Observation.class.getName())).set(observation);
 			if (channelInitializer instanceof ServerTransport.AcceptorInitializer) {
 				((ServerTransport.AcceptorInitializer) channelInitializer).acceptor.enableAutoReadTask(channel);
 			}
@@ -280,6 +286,15 @@ public final class TransportConnector {
 				}
 			}
 
+			// TODO: Imagine that it works
+//			Observation parentObservation = (Observation) channel.attr(AttributeKey.valueOf(Observation.class.getName())).get();
+//			if (parentObservation != null) {
+//				try (Observation.Scope scope = parentObservation.openScope()) {
+//					observation.start();
+//				}
+//			} else {
+//				observation.start();
+//			}
 			Future<List<SocketAddress>> resolveFuture = resolver.resolveAll(remoteAddress);
 
 			if (config instanceof ClientTransportConfig) {
