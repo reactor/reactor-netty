@@ -2,6 +2,7 @@ name: publish
 on:
   push:
     branches: # For branches, better to list them explicitly than regexp include
+      - main
       - 1.0.x
 permissions: read-all
 jobs:
