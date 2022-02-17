@@ -20,8 +20,10 @@ import io.micrometer.api.instrument.DistributionSummary;
 import io.micrometer.api.instrument.Gauge;
 import io.micrometer.api.instrument.MeterRegistry;
 import io.micrometer.api.instrument.Metrics;
+import io.micrometer.api.instrument.Tags;
 import io.micrometer.api.instrument.Timer;
 import io.micrometer.api.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.tck.MeterRegistryAssert;
 import io.netty.buffer.ByteBuf;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -552,6 +554,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	void checkTimer(String name, String[] tags, long expectedCount) {
+		MeterRegistryAssert.assertThat(registry).hasTimerWithNameAndTags(name, Tags.of(tags));
+
 		Timer timer = registry.find(name).tags(tags).timer();
 		assertThat(timer).isNotNull();
 		assertThat(timer.count()).isEqualTo(expectedCount);

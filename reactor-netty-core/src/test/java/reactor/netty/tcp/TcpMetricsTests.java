@@ -35,8 +35,10 @@ import io.micrometer.api.instrument.DistributionSummary;
 import io.micrometer.api.instrument.Gauge;
 import io.micrometer.api.instrument.MeterRegistry;
 import io.micrometer.api.instrument.Metrics;
+import io.micrometer.api.instrument.Tags;
 import io.micrometer.api.instrument.Timer;
 import io.micrometer.api.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.tck.MeterRegistryAssert;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.junit.jupiter.api.AfterEach;
@@ -274,6 +276,8 @@ class TcpMetricsTests {
 	void checkTimer(String name, String[] tags, boolean exists) {
 		Timer timer = registry.find(name).tags(tags).timer();
 		if (exists) {
+			MeterRegistryAssert.assertThat(registry).hasTimerWithNameAndTags(name, Tags.of(tags));
+
 			assertThat(timer).isNotNull();
 			assertThat(timer.count()).isEqualTo(1);
 			assertThat(timer.totalTime(TimeUnit.NANOSECONDS) >= 0).isTrue();

@@ -129,6 +129,7 @@ dependencies {
 	testImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 	testImplementation "io.micrometer:micrometer-api:$micrometerVersion"
+	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
