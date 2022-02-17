@@ -52,8 +52,10 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, address, method, status);
 		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
-				                   .description(DATA_RECEIVED_TIME_DESCRIPTION)
-				                   .tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
+				                   .tags(HttpClientMeters.DataReceivedTimeTags.REMOTE_ADDRESS.getKey(), address,
+				                         HttpClientMeters.DataReceivedTimeTags.URI.getKey(), uri,
+				                         HttpClientMeters.DataReceivedTimeTags.METHOD.getKey(), method,
+				                         HttpClientMeters.DataReceivedTimeTags.STATUS.getKey(), status)
 				                   .register(REGISTRY)));
 		if (dataReceivedTime != null) {
 			dataReceivedTime.record(time);
@@ -66,8 +68,9 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, address, method, null);
 		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
-				                   .description(DATA_SENT_TIME_DESCRIPTION)
-				                   .tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method)
+				                   .tags(HttpClientMeters.DataSentTimeTags.REMOTE_ADDRESS.getKey(), address,
+				                         HttpClientMeters.DataSentTimeTags.URI.getKey(), uri,
+				                         HttpClientMeters.DataSentTimeTags.METHOD.getKey(), method)
 				                   .register(REGISTRY)));
 		if (dataSentTime != null) {
 			dataSentTime.record(time);
