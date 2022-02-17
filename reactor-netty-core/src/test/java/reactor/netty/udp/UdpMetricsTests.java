@@ -19,8 +19,10 @@ import io.micrometer.api.instrument.Counter;
 import io.micrometer.api.instrument.DistributionSummary;
 import io.micrometer.api.instrument.MeterRegistry;
 import io.micrometer.api.instrument.Metrics;
+import io.micrometer.api.instrument.Tags;
 import io.micrometer.api.instrument.Timer;
 import io.micrometer.api.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.tck.MeterRegistryAssert;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.DatagramPacket;
@@ -205,6 +207,8 @@ class UdpMetricsTests {
 
 
 	private void checkClientConnectTime(String[] tags) {
+		MeterRegistryAssert.assertThat(registry).hasTimerWithNameAndTags(CLIENT_CONNECT_TIME, Tags.of(tags));
+
 		Timer timer = registry.find(CLIENT_CONNECT_TIME).tags(tags).timer();
 		assertThat(timer).isNotNull();
 		assertThat(timer.count()).isEqualTo(1);
