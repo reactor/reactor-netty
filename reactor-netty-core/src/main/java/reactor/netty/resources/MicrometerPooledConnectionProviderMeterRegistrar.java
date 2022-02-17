@@ -17,7 +17,7 @@ package reactor.netty.resources;
 
 import java.net.SocketAddress;
 
-import io.micrometer.core.instrument.Gauge;
+import io.micrometer.api.instrument.Gauge;
 import reactor.netty.Metrics;
 import reactor.pool.InstrumentedPool;
 

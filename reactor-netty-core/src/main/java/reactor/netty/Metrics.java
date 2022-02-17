@@ -15,7 +15,7 @@
  */
 package reactor.netty;
 
-import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.api.instrument.MeterRegistry;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;
@@ -28,7 +28,7 @@ import java.net.SocketAddress;
  * @since 0.9
  */
 public class Metrics {
-	public static final MeterRegistry REGISTRY = io.micrometer.core.instrument.Metrics.globalRegistry;
+	public static final MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
 
 
 	// Names

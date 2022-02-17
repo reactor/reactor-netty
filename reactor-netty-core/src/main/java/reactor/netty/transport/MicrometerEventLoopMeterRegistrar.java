@@ -15,7 +15,7 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.core.instrument.Gauge;
+import io.micrometer.api.instrument.Gauge;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import reactor.netty.internal.util.MapUtils;
