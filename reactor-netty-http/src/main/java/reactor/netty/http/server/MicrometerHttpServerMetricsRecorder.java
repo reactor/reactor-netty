@@ -19,7 +19,6 @@ import io.micrometer.api.instrument.Counter;
 import io.micrometer.api.instrument.DistributionSummary;
 import io.micrometer.api.instrument.Gauge;
 import io.micrometer.api.instrument.Timer;
-import reactor.netty.channel.ChannelMeters;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 import reactor.netty.internal.util.MapUtils;
