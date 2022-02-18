@@ -96,11 +96,16 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (remote == null) {
 			remote = ch.remoteAddress();
 		}
-		ChannelHandler handler = recorder instanceof MicrometerChannelMetricsRecorder ?
-				new MicrometerChannelMetricsHandler((MicrometerChannelMetricsRecorder) recorder, remote, onServer) :
-				recorder instanceof ContextAwareChannelMetricsRecorder ?
-						new ContextAwareChannelMetricsHandler((ContextAwareChannelMetricsRecorder) recorder, remote, onServer) :
-						new ChannelMetricsHandler(recorder, remote, onServer);
+		ChannelHandler handler;
+		if (recorder instanceof MicrometerChannelMetricsRecorder) {
+			handler = new MicrometerChannelMetricsHandler((MicrometerChannelMetricsRecorder) recorder, remote, onServer);
+		}
+		else if (recorder instanceof ContextAwareChannelMetricsRecorder) {
+			handler = new ContextAwareChannelMetricsHandler((ContextAwareChannelMetricsRecorder) recorder, remote, onServer);
+		}
+		else {
+			handler = new ChannelMetricsHandler(recorder, remote, onServer);
+		}
 		ch.pipeline()
 		  .addFirst(NettyPipeline.ChannelMetricsHandler, handler);
 	}
