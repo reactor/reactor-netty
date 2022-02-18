@@ -36,12 +36,10 @@ import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.ERRORS;
-import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
-import static reactor.netty.Metrics.URI;
 
 /**
  * A {@link ChannelMetricsRecorder} implementation for integration with Micrometer.
@@ -51,13 +49,8 @@ import static reactor.netty.Metrics.URI;
  */
 public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder {
 	static final String ADDRESS_RESOLVER_TIME_DESCRIPTION = "Time spent for resolving the address";
-	protected static final String BYTES_UNIT = "bytes";
 	static final String CONNECT_TIME_DESCRIPTION = "Time spent for connecting to the remote address";
-	protected static final String DATA_RECEIVED_DESCRIPTION = "Amount of the data received, in bytes";
-	protected static final String DATA_SENT_DESCRIPTION = "Amount of the data sent, in bytes";
-	protected static final String ERRORS_DESCRIPTION = "Number of errors that occurred";
 	static final String TLS_HANDSHAKE_TIME_DESCRIPTION = "Time spent for TLS handshake";
-	static final String TOTAL_CONNECTIONS_DESCRIPTION = "The number of all opened connections";
 
 	final ConcurrentMap<String, DistributionSummary> dataReceivedCache = new ConcurrentHashMap<>();
 
@@ -72,7 +65,9 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = new ConcurrentHashMap<>();
 
 	final ConcurrentMap<String, LongAdder> totalConnectionsCache = new ConcurrentHashMap<>();
+
 	final LongAdder totalConnectionsAdder = new LongAdder();
+
 	final String name;
 	final String protocol;
 
@@ -86,9 +81,9 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary ds = MapUtils.computeIfAbsent(dataReceivedCache, address,
 				key -> filter(DistributionSummary.builder(name + DATA_RECEIVED)
-				                                 .baseUnit(BYTES_UNIT)
-				                                 .description(DATA_RECEIVED_DESCRIPTION)
-				                                 .tags(URI, protocol, REMOTE_ADDRESS, address)
+				                                 .baseUnit(ChannelMeters.DATA_RECEIVED.getBaseUnit())
+				                                 .tags(ChannelMeters.ChannelMetersTags.URI.getKey(), protocol,
+				                                       ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.getKey(), address)
 				                                 .register(REGISTRY)));
 		if (ds != null) {
 			ds.record(bytes);
@@ -100,9 +95,9 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary ds = MapUtils.computeIfAbsent(dataSentCache, address,
 				key -> filter(DistributionSummary.builder(name + DATA_SENT)
-				                                 .baseUnit(BYTES_UNIT)
-				                                 .description(DATA_SENT_DESCRIPTION)
-				                                 .tags(URI, protocol, REMOTE_ADDRESS, address)
+				                                 .baseUnit(ChannelMeters.DATA_SENT.getBaseUnit())
+				                                 .tags(ChannelMeters.ChannelMetersTags.URI.getKey(), protocol,
+				                                       ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.getKey(), address)
 				                                 .register(REGISTRY)));
 		if (ds != null) {
 			ds.record(bytes);
@@ -114,8 +109,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		Counter c = MapUtils.computeIfAbsent(errorsCache, address,
 				key -> filter(Counter.builder(name + ERRORS)
-				                     .description(ERRORS_DESCRIPTION)
-				                     .tags(URI, protocol, REMOTE_ADDRESS, address)
+				                     .tags(ChannelMeters.ChannelMetersTags.URI.getKey(), protocol,
+				                           ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.getKey(), address)
 				                     .register(REGISTRY)));
 		if (c != null) {
 			c.increment();
@@ -198,14 +193,15 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		return protocol;
 	}
 
+	@Nullable
 	private LongAdder getTotalConnectionsAdder(SocketAddress serverAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(serverAddress);
 		return MapUtils.computeIfAbsent(totalConnectionsCache, address,
 				key -> {
 					Gauge gauge = filter(Gauge.builder(name + CONNECTIONS_TOTAL, totalConnectionsAdder, LongAdder::longValue)
-							.description(TOTAL_CONNECTIONS_DESCRIPTION)
-							.tags(URI, protocol, LOCAL_ADDRESS, address)
-							.register(REGISTRY));
+					                          .tags(ChannelMeters.ConnectionsTotalMeterTags.URI.getKey(), protocol,
+					                                ChannelMeters.ConnectionsTotalMeterTags.LOCAL_ADDRESS.getKey(), address)
+					                          .register(REGISTRY));
 					return gauge != null ? totalConnectionsAdder : null;
 				});
 	}

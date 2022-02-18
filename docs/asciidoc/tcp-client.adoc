@@ -277,9 +277,12 @@ The following table provides information for the TCP client metrics:
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.tcp.client.data.received | DistributionSummary | Amount of the data received, in bytes
-| reactor.netty.tcp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes
-| reactor.netty.tcp.client.errors | Counter | Number of errors that occurred
+| reactor.netty.tcp.client.data.received | DistributionSummary | Amount of the data received, in bytes.
+See <<observability-metrics-data-received>>
+| reactor.netty.tcp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
+See <<observability-metrics-data-sent>>
+| reactor.netty.tcp.client.errors | Counter | Number of errors that occurred.
+See <<observability-metrics-errors-count>>
 | reactor.netty.tcp.client.tls.handshake.time | Timer | Time spent for TLS handshake
 | reactor.netty.tcp.client.connect.time | Timer | Time spent for connecting to the remote address
 | reactor.netty.tcp.client.address.resolver | Timer | Time spent for resolving the address
