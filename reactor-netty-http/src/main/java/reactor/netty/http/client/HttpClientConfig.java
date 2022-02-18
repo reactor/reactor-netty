@@ -567,9 +567,16 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpClientMetricsRecorder) {
-				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder ?
-						new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue) :
-						new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				ChannelHandler handler;
+				if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder) {
+					handler = new MicrometerHttpClientMetricsHandler((MicrometerHttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				}
+				else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder) {
+					handler = new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				}
+				else {
+					handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				}
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
 		}
@@ -599,9 +606,16 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpClientMetricsRecorder) {
-				ChannelHandler handler = metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder ?
-						new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue) :
-						new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				ChannelHandler handler;
+				if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder) {
+					handler = new MicrometerHttpClientMetricsHandler((MicrometerHttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				}
+				else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder) {
+					handler = new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				}
+				else {
+					handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				}
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
 		}

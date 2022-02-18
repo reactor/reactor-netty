@@ -381,6 +381,7 @@ See <<observability-metrics-http-client-data-received-time>>
 | reactor.netty.http.client.data.sent.time | Timer | Time spent in sending outgoing data.
 See <<observability-metrics-http-client-data-sent-time>>
 | reactor.netty.http.client.response.time | Timer | Total time for the request/response
+See <<observability-metrics-http-client-response-time>>
 |=======
 
 These additional metrics are also available:
