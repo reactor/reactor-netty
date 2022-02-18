@@ -261,7 +261,8 @@ See <<observability-metrics-data-received>>
 See <<observability-metrics-data-sent>>
 | reactor.netty.tcp.server.errors | Counter | Number of errors that occurred.
 See <<observability-metrics-errors-count>>
-| reactor.netty.tcp.server.tls.handshake.time | Timer | Time spent for TLS handshake
+| reactor.netty.tcp.server.tls.handshake.time | Timer | Time spent for TLS handshake.
+See <<observability-metrics-tls-handshake-time>>
 |=======
 
 These additional metrics are also available:

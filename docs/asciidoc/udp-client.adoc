@@ -214,8 +214,10 @@ See <<observability-metrics-data-received>>
 See <<observability-metrics-data-sent>>
 | reactor.netty.udp.client.errors | Counter | Number of errors that occurred.
 See <<observability-metrics-errors-count>>
-| reactor.netty.udp.client.connect.time | Timer | Time spent for connecting to the remote address
-| reactor.netty.udp.client.address.resolver | Timer | Time spent for resolving the address
+| reactor.netty.udp.client.connect.time | Timer | Time spent for connecting to the remote address.
+See <<observability-metrics-connect-time>>
+| reactor.netty.udp.client.address.resolver | Timer | Time spent for resolving the address.
+See <<observability-metrics-hostname-resolution-time>>
 |=======
 
 These additional metrics are also available:

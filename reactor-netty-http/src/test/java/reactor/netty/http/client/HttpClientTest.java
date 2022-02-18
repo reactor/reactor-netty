@@ -2925,7 +2925,7 @@ class HttpClientTest extends BaseHttpTest {
 
 			assertThat(resolversInternal.get()).isNotNull();
 			assertThat(resolversInternal.get().get(0)).isSameAs(resolversInternal.get().get(1));
-			assertThat(resolversInternal.get().get(0).getClass().getSimpleName()).isEqualTo("AddressResolverGroupMetrics");
+			assertThat(resolversInternal.get().get(0).getClass().getSimpleName()).isEqualTo("MicrometerAddressResolverGroupMetrics");
 		}
 		finally {
 			// Closing the executor cleans the AddressResolverGroup internal structures and closes the resolver

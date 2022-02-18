@@ -185,11 +185,11 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		}
 	}
 
-	protected String name() {
+	public String name() {
 		return name;
 	}
 
-	protected String protocol() {
+	public String protocol() {
 		return protocol;
 	}
 

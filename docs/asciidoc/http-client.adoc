@@ -370,9 +370,12 @@ See <<observability-metrics-data-received>>
 See <<observability-metrics-data-sent>>
 | reactor.netty.http.client.errors | Counter | Number of errors that occurred.
 See <<observability-metrics-errors-count>>
-| reactor.netty.http.client.tls.handshake.time | Timer | Time spent for TLS handshake
-| reactor.netty.http.client.connect.time | Timer | Time spent for connecting to the remote address
-| reactor.netty.http.client.address.resolver | Timer | Time spent for resolving the address
+| reactor.netty.http.client.tls.handshake.time | Timer | Time spent for TLS handshake.
+See <<observability-metrics-tls-handshake-time>>
+| reactor.netty.http.client.connect.time | Timer | Time spent for connecting to the remote address.
+See <<observability-metrics-connect-time>>
+| reactor.netty.http.client.address.resolver | Timer | Time spent for resolving the address.
+See <<observability-metrics-hostname-resolution-time>>
 | reactor.netty.http.client.data.received.time | Timer | Time spent in consuming incoming data.
 See <<observability-metrics-http-client-data-received-time>>
 | reactor.netty.http.client.data.sent.time | Timer | Time spent in sending outgoing data.
