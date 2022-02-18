@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,9 +96,16 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (remote == null) {
 			remote = ch.remoteAddress();
 		}
-		ChannelHandler handler = recorder instanceof ContextAwareChannelMetricsRecorder ?
-				new ContextAwareChannelMetricsHandler((ContextAwareChannelMetricsRecorder) recorder, remote, onServer) :
-				new ChannelMetricsHandler(recorder, remote, onServer);
+		ChannelHandler handler;
+		if (recorder instanceof MicrometerChannelMetricsRecorder) {
+			handler = new MicrometerChannelMetricsHandler((MicrometerChannelMetricsRecorder) recorder, remote, onServer);
+		}
+		else if (recorder instanceof ContextAwareChannelMetricsRecorder) {
+			handler = new ContextAwareChannelMetricsHandler((ContextAwareChannelMetricsRecorder) recorder, remote, onServer);
+		}
+		else {
+			handler = new ChannelMetricsHandler(recorder, remote, onServer);
+		}
 		ch.pipeline()
 		  .addFirst(NettyPipeline.ChannelMetricsHandler, handler);
 	}

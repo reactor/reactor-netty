@@ -29,6 +29,9 @@ import java.net.SocketAddress;
  */
 public class Metrics {
 	public static final MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
+	static {
+		REGISTRY.withTimerObservationHandler();
+	}
 
 
 	// Names
