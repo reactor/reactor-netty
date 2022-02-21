@@ -72,7 +72,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	}
 
 	@AfterEach
-	void setupRegistry() {
+	void cleanRegistry() {
 		if (disposableServer != null) {
 			disposableServer.disposeNow();
 		}
