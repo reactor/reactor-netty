@@ -16,6 +16,7 @@
 package reactor.netty.http.client;
 
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Tags;
 import reactor.netty.Metrics;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 
@@ -42,7 +43,7 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 
 	void registerMetrics(String poolName, String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
 		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
-		String[] tags = new String[]{ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName};
+		Tags tags = Tags.of(ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName);
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + ACTIVE_STREAMS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
 		     .description(ACTIVE_STREAMS_DESCRIPTION)
