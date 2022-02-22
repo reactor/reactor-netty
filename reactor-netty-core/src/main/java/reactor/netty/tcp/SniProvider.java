@@ -40,6 +40,7 @@ final class SniProvider {
 	 *
 	 * @param channel the channel
 	 * @param sslDebug if true SSL debugging on the server side will be enabled
+	 * @param enableTracing if true enables the integration with Micrometer Tracing
 	 */
 	void addSniHandler(Channel channel, boolean sslDebug, boolean enableTracing) {
 		ChannelPipeline pipeline = channel.pipeline();
