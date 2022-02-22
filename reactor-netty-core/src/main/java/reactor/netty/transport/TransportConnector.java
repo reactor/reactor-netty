@@ -118,6 +118,7 @@ public final class TransportConnector {
 		Objects.requireNonNull(remoteAddress, "remoteAddress");
 		Objects.requireNonNull(resolverGroup, "resolverGroup");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
+		Objects.requireNonNull(eventLoop, "eventLoop");
 
 		boolean isDomainAddress = remoteAddress instanceof DomainSocketAddress;
 		return doInitAndRegister(config, channelInitializer, isDomainAddress, eventLoop)
