@@ -18,6 +18,7 @@ package reactor.netty.channel;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.observation.Observation;
+import io.micrometer.contextpropagation.ContextContainer;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -109,6 +110,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
+		@SuppressWarnings("try")
 		public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
 				SocketAddress localAddress, ChannelPromise promise) throws Exception {
 			// Cannot invoke the recorder anymore:
@@ -117,7 +119,11 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			//
 			// Move the implementation from the recorder here
 			this.remoteAddress = formatSocketAddress(remoteAddress);
-			Observation observation = Observation.start(recorder.name() + CONNECT_TIME, this, REGISTRY);
+			ContextContainer container = ContextContainer.restore(ctx.channel());
+			Observation observation;
+			try (ContextContainer.Scope scope = container.restoreThreadLocalValues()) {
+				observation = Observation.start(recorder.name() + CONNECT_TIME, this, REGISTRY);
+			}
 			ctx.connect(remoteAddress, localAddress, promise)
 			   .addListener(future -> {
 			       ctx.pipeline().remove(this);
@@ -210,9 +216,13 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
+		@SuppressWarnings("try")
 		public void channelActive(ChannelHandlerContext ctx) throws Exception {
 			this.remoteAddress = formatSocketAddress(ctx.channel().remoteAddress());
-			observation = Observation.start(recorder.name() + TLS_HANDSHAKE_TIME, this, REGISTRY);
+			ContextContainer container = ContextContainer.restore(ctx.channel());
+			try (ContextContainer.Scope scope = container.restoreThreadLocalValues()) {
+				observation = Observation.start(recorder.name() + TLS_HANDSHAKE_TIME, this, REGISTRY);
+			}
 			ctx.pipeline().get(SslHandler.class)
 					.handshakeFuture()
 					.addListener(f -> {

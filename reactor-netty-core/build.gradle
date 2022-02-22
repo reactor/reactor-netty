@@ -106,6 +106,8 @@ dependencies {
 	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
 	compileOnly "io.micrometer:micrometer-tracing-api:$micrometerTracingVersion"
 
+	api "io.micrometer:context-propagation-api:${contextPropagationVersion}"
+
 	// Logging
 	compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
 

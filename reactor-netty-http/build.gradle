@@ -47,7 +47,9 @@ sourceSets {
 configurations {
 	noMicrometerTestImplementation {
 		extendsFrom implementation
-		exclude group: 'io.micrometer'
+		// TODO temporary because 'context-propagation-api' has group 'io.micrometer'
+		exclude group: 'io.micrometer', module: 'micrometer-core'
+		exclude group: 'io.micrometer', module: 'micrometer-tracing-api'
 	}
 	noMicrometerTestRuntimeOnly.extendsFrom(runtimeOnly)
 }
@@ -109,6 +111,8 @@ dependencies {
 	//Metrics
 	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
 	compileOnly "io.micrometer:micrometer-tracing-api:$micrometerTracingVersion"
+
+	api "io.micrometer:context-propagation-api:${contextPropagationVersion}"
 
 	// Logging
 	compileOnly "org.slf4j:slf4j-api:$slf4jVersion"

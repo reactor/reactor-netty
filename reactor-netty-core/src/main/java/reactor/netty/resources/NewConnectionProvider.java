@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import io.micrometer.contextpropagation.ContextContainer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.unix.DomainSocketAddress;
@@ -70,7 +71,9 @@ final class NewConnectionProvider implements ConnectionProvider {
 			DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
 			if (remote != null && resolverGroup != null) {
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
-				TransportConnector.connect(config, remote, resolverGroup, channelInitializer)
+				ContextContainer container = ContextContainer.create().captureThreadLocalValues();
+				container.captureContext(sink.currentContext());
+				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, container)
 				                  .subscribe(disposableConnect);
 			}
 			else {
