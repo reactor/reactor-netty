@@ -70,6 +70,8 @@ public final class TransportConnector {
 	 * @param config the transport configuration
 	 * @param channelInitializer the {@link ChannelInitializer} that will be used for initializing the channel pipeline
 	 * @param bindAddress the local address
+	 * @param isDomainSocket true if {@link io.netty.channel.unix.DomainSocketChannel} or
+	 * {@link io.netty.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
 	 * @return a {@link Mono} of {@link Channel}
 	 */
 	@SuppressWarnings("FutureReturnValueIgnored")
