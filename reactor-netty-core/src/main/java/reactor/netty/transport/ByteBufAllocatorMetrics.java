@@ -16,6 +16,7 @@
 package reactor.netty.transport;
 
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Tags;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufAllocatorMetric;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -65,7 +66,7 @@ final class ByteBufAllocatorMetrics {
 
 	void registerMetrics(String allocType, ByteBufAllocatorMetric metrics, ByteBufAllocator alloc) {
 		MapUtils.computeIfAbsent(cache, metrics.hashCode() + "", key -> {
-			String[] tags = new String[] {ID, key, TYPE, allocType};
+			Tags tags = Tags.of(ID, key, TYPE, allocType);
 
 			Gauge.builder(BYTE_BUF_ALLOCATOR_PREFIX + USED_HEAP_MEMORY, metrics, ByteBufAllocatorMetric::usedHeapMemory)
 			     .description(USED_HEAP_MEMORY_DESCRIPTION)

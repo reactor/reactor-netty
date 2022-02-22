@@ -18,6 +18,7 @@ package reactor.netty.resources;
 import java.net.SocketAddress;
 
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Tags;
 import reactor.netty.Metrics;
 import reactor.pool.InstrumentedPool;
 
@@ -60,7 +61,7 @@ final class MicrometerPooledConnectionProviderMeterRegistrar {
 
 	void registerMetrics(String poolName, String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
 		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
-		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName};
+		Tags tags = Tags.of(ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName);
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
 		     .description(TOTAL_CONNECTIONS_DESCRIPTION)
 		     .tags(tags)
