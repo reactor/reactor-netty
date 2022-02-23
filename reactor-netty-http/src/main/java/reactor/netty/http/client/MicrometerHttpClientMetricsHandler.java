@@ -182,7 +182,6 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	}
 
 	static final class ResponseTimeHandlerContext extends HttpClientContext implements ReactorNettyHandlerContext {
-		static final String CONTEXTUAL_NAME = "response received";
 		static final String TYPE = "client";
 
 		final String method;
@@ -200,11 +199,6 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 			this.protocol = protocol;
 			this.remoteAddress = formatSocketAddress(remoteAddress);
 			put(HttpClientRequest.class, request);
-		}
-
-		@Override
-		public String getContextualName() {
-			return CONTEXTUAL_NAME;
 		}
 
 		@Override
