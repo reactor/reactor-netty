@@ -36,7 +36,7 @@ plugins {
 	id 'io.spring.nohttp' version '0.0.10'
 	id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
 	//we now need version of Artifactory gradle plugin deployed on Maven Central, see above
-	id 'me.champeau.gradle.japicmp' version '0.3.0' apply false
+	id 'me.champeau.gradle.japicmp' version '0.3.1' apply false
 	id 'de.undercouch.download' version '5.0.1' apply false
 	id 'io.spring.javadoc' version '0.0.1' apply false
 	id 'io.spring.javadoc-aggregate' version '0.0.1' apply false
@@ -106,7 +106,7 @@ ext {
 		println "Netty version defined from command line: ${forceNettyVersion}"
 	}
 	nettyIoUringVersion = '0.0.12.Final'
-	nettyQuicVersion = '0.0.25.Final'
+	nettyQuicVersion = '0.0.26.Final'
 
 	// Testing
 	jacksonDatabindVersion = '2.13.1'
@@ -115,7 +115,7 @@ ext {
 	awaitilityVersion = '4.1.1'
 	hoverflyJavaVersion = '0.14.1'
 	tomcatVersion = '9.0.58'
-	boringSslVersion = '2.0.48.Final'
+	boringSslVersion = '2.0.50.Final'
 	junitVersion = '5.8.2'
 	junitPlatformLauncherVersion = '1.8.2'
 	mockitoVersion = '4.3.1'

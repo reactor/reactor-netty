@@ -179,7 +179,6 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	}
 
 	static final class ResponseTimeHandlerContext extends HttpServerContext implements ReactorNettyHandlerContext {
-		static final String CONTEXTUAL_NAME = "response sent";
 		static final String TYPE = "server";
 
 		final String method;
@@ -202,11 +201,6 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		@Override
 		public Timer getTimer() {
 			return recorder.getResponseTimeTimer(getName(), path, method, status);
-		}
-
-		@Override
-		public String getContextualName() {
-			return CONTEXTUAL_NAME;
 		}
 
 		@Override
