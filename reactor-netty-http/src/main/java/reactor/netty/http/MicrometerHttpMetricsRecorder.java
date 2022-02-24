@@ -42,8 +42,6 @@ import static reactor.netty.channel.ChannelMeters.ChannelMetersTags.URI;
  * @since 0.9
  */
 public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecorder implements HttpMetricsRecorder {
-	protected static final String RESPONSE_TIME_DESCRIPTION = "Total time for the request/response";
-
 	protected final ConcurrentMap<MeterKey, Timer> dataReceivedTimeCache = new ConcurrentHashMap<>();
 
 	protected final ConcurrentMap<MeterKey, Timer> dataSentTimeCache = new ConcurrentHashMap<>();

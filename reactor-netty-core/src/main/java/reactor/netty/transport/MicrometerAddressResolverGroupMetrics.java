@@ -16,6 +16,7 @@
 package reactor.netty.transport;
 
 import io.micrometer.api.instrument.Tags;
+import io.micrometer.api.instrument.Timer;
 import io.micrometer.api.instrument.observation.Observation;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
@@ -73,13 +74,20 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 
 		final String protocol;
 		final String remoteAddress;
+		final MicrometerChannelMetricsRecorder recorder;
 
 		// status is not known beforehand
 		String status;
 
-		FutureHandlerContext(String protocol, String remoteAddress) {
+		FutureHandlerContext(MicrometerChannelMetricsRecorder recorder, String protocol, String remoteAddress) {
+			this.recorder = recorder;
 			this.protocol = protocol;
 			this.remoteAddress = remoteAddress;
+		}
+
+		@Override
+		public Timer getTimer() {
+			return recorder.getResolveAddressTimer(getName(), remoteAddress, status);
 		}
 
 		@Override
@@ -122,7 +130,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Important:
 			// Cannot cache the Timer anymore - need to test the performance
 			String remoteAddress = formatSocketAddress(address);
-			FutureHandlerContext handlerContext = new FutureHandlerContext(protocol, remoteAddress);
+			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, protocol, remoteAddress);
 			Observation sample = Observation.start(name + ADDRESS_RESOLVER, handlerContext, REGISTRY);
 			return resolver.get()
 			               .addListener(future -> {
@@ -144,7 +152,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Important:
 			// Cannot cache the Timer anymore - need to test the performance
 			String remoteAddress = formatSocketAddress(address);
-			FutureHandlerContext handlerContext = new FutureHandlerContext(protocol, remoteAddress);
+			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, protocol, remoteAddress);
 			Observation observation = Observation.start(name + ADDRESS_RESOLVER, handlerContext, REGISTRY);
 			return resolver.get()
 			               .addListener(future -> {

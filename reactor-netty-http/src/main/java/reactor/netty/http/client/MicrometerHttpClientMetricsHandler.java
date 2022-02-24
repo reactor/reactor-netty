@@ -16,6 +16,7 @@
 package reactor.netty.http.client;
 
 import io.micrometer.api.instrument.Tags;
+import io.micrometer.api.instrument.Timer;
 import io.micrometer.api.instrument.observation.Observation;
 import io.micrometer.api.instrument.transport.http.HttpClientRequest;
 import io.micrometer.api.instrument.transport.http.HttpClientResponse;
@@ -105,7 +106,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		super.startWrite(msg, address);
 
 		HttpClientRequest httpClientRequest = new ObservationHttpClientRequest(msg, method, path);
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(httpClientRequest, address, recorder.protocol());
+		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, httpClientRequest, address, recorder.protocol());
 		responseTimeObservation = Observation.start(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, REGISTRY);
 	}
 
@@ -189,17 +190,24 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		final String path;
 		final String protocol;
 		final String remoteAddress;
+		final MicrometerHttpClientMetricsRecorder recorder;
 
 		// status might not be known beforehand
 		String status;
 
-		ResponseTimeHandlerContext(HttpClientRequest request, SocketAddress remoteAddress, String protocol) {
+		ResponseTimeHandlerContext(MicrometerHttpClientMetricsRecorder recorder, HttpClientRequest request, SocketAddress remoteAddress, String protocol) {
 			super(request);
+			this.recorder = recorder;
 			this.method = request.method();
 			this.path = request.path();
 			this.protocol = protocol;
 			this.remoteAddress = formatSocketAddress(remoteAddress);
 			put(HttpClientRequest.class, request);
+		}
+
+		@Override
+		public Timer getTimer() {
+			return recorder.getResponseTimeTimer(getName(), remoteAddress, path, method, status);
 		}
 
 		@Override

@@ -16,6 +16,7 @@
 package reactor.netty.http.server;
 
 import io.micrometer.api.instrument.Tags;
+import io.micrometer.api.instrument.Timer;
 import io.micrometer.api.instrument.observation.Observation;
 import io.micrometer.api.instrument.transport.http.HttpServerRequest;
 import io.micrometer.api.instrument.transport.http.HttpServerResponse;
@@ -90,6 +91,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		super.startRead(ops, path, method);
 
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(
+				recorder,
 				new ObservationHttpServerRequest(ops.nettyRequest, method, path), recorder.protocol());
 		responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, REGISTRY);
 	}
@@ -101,6 +103,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 		if (responseTimeObservation == null) {
 			responseTimeHandlerContext = new ResponseTimeHandlerContext(
+					recorder,
 					new ObservationHttpServerRequest(ops.nettyRequest, method, path), recorder.protocol());
 			responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, REGISTRY);
 		}
@@ -182,16 +185,23 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		final String method;
 		final String path;
 		final String protocol;
+		final MicrometerHttpServerMetricsRecorder recorder;
 
 		// status might not be known beforehand
 		String status;
 
-		ResponseTimeHandlerContext(HttpServerRequest request, String protocol) {
+		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, HttpServerRequest request, String protocol) {
 			super(request);
+			this.recorder = recorder;
 			this.method = request.method();
 			this.path = request.path();
 			this.protocol = protocol;
 			put(HttpServerRequest.class, request);
+		}
+
+		@Override
+		public Timer getTimer() {
+			return recorder.getResponseTimeTimer(getName(), path, method, status);
 		}
 
 		@Override
