@@ -38,6 +38,7 @@ import reactor.core.publisher.Operators;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
+import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.PooledConnectionProvider;
@@ -99,9 +100,15 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			long pendingAcquireTimeout,
 			InstrumentedPool<Connection> pool,
 			MonoSink<Connection> sink) {
-		boolean acceptGzip = config instanceof HttpClientConfig && ((HttpClientConfig) config).acceptGzip;
+		boolean acceptGzip = false;
+		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
+		Function<String, String> uriTagValue = null;
+		if (config instanceof HttpClientConfig) {
+			acceptGzip = ((HttpClientConfig) config).acceptGzip;
+			uriTagValue = ((HttpClientConfig) config).uriTagValue;
+		}
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				acceptGzip, pendingAcquireTimeout, pool, sink);
+				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, sink, uriTagValue);
 	}
 
 	@Override
@@ -194,10 +201,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final ConnectionObserver obs;
 		final ChannelOperations.OnSetup opsFactory;
 		final boolean acceptGzip;
+		final ChannelMetricsRecorder metricsRecorder;
 		final long pendingAcquireTimeout;
 		final InstrumentedPool<Connection> pool;
 		final boolean retried;
 		final MonoSink<Connection> sink;
+		final Function<String, String> uriTagValue;
 
 		PooledRef<Connection> pooledRef;
 		Subscription subscription;
@@ -206,17 +215,21 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				ConnectionObserver obs,
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
+				@Nullable ChannelMetricsRecorder metricsRecorder,
 				long pendingAcquireTimeout,
 				InstrumentedPool<Connection> pool,
-				MonoSink<Connection> sink) {
+				MonoSink<Connection> sink,
+				@Nullable Function<String, String> uriTagValue) {
 			this.cancellations = Disposables.composite();
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.acceptGzip = acceptGzip;
+			this.metricsRecorder = metricsRecorder;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
 			this.pool = pool;
 			this.retried = false;
 			this.sink = sink;
+			this.uriTagValue = uriTagValue;
 		}
 
 		DisposableAcquire(DisposableAcquire parent) {
@@ -224,10 +237,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.obs = parent.obs;
 			this.opsFactory = parent.opsFactory;
 			this.acceptGzip = parent.acceptGzip;
+			this.metricsRecorder = parent.metricsRecorder;
 			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
 			this.pool = parent.pool;
 			this.retried = true;
 			this.sink = parent.sink;
+			this.uriTagValue = parent.uriTagValue;
 		}
 
 		@Override
@@ -280,7 +295,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				return;
 			}
 
-			HttpClientConfig.openStream(channel, this, obs, opsFactory, acceptGzip)
+			HttpClientConfig.openStream(channel, this, obs, opsFactory, acceptGzip, metricsRecorder, uriTagValue)
 			                .addListener(this);
 		}
 

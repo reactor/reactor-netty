@@ -36,6 +36,11 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 		this.recorder = recorder;
 	}
 
+	ContextAwareHttpClientMetricsHandler(ContextAwareHttpClientMetricsHandler copy) {
+		super(copy);
+		this.recorder = copy.recorder;
+	}
+
 	@Override
 	protected ContextAwareHttpClientMetricsRecorder recorder() {
 		return recorder;

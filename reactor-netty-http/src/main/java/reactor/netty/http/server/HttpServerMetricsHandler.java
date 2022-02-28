@@ -31,6 +31,11 @@ final class HttpServerMetricsHandler extends AbstractHttpServerMetricsHandler {
 		this.recorder = recorder;
 	}
 
+	HttpServerMetricsHandler(HttpServerMetricsHandler copy) {
+		super(copy);
+		this.recorder = copy.recorder;
+	}
+
 	@Override
 	protected HttpServerMetricsRecorder recorder() {
 		return recorder;
