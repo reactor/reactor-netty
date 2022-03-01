@@ -29,6 +29,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -154,8 +155,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	void testExistingEndpoint(@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+	void testExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
@@ -210,8 +211,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	void testNonExistingEndpoint(@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
@@ -264,8 +265,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	void testUriTagValueFunction(@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+	void testUriTagValueFunction(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, s -> "testUriTagValueResolver").bindNow();
 
@@ -303,8 +304,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 */
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	void testUriTagValueFunctionNotSharedForClient(@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+	void testUriTagValueFunctionNotSharedForClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		disposableServer =
 				customizeServerOptions(httpServer, serverCtx, serverProtocols).metrics(true,
 				                s -> {
@@ -371,8 +372,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	void testContextAwareRecorderOnClient(@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+	void testContextAwareRecorderOnClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		ClientContextAwareRecorder recorder = ClientContextAwareRecorder.INSTANCE;
@@ -402,8 +403,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	void testContextAwareRecorderOnServer(@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+	void testContextAwareRecorderOnServer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		ServerContextAwareRecorder recorder = ServerContextAwareRecorder.INSTANCE;
 		disposableServer =
 				customizeServerOptions(httpServer, serverCtx, serverProtocols).metrics(true, () -> recorder)
@@ -434,8 +435,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	void testServerConnectionsMicrometer(@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+	void testServerConnectionsMicrometer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, Function.identity()).bindNow();
 
@@ -473,8 +474,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	void testServerConnectionsRecorder(@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-			HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+	void testServerConnectionsRecorder(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity()).bindNow();
 		String address = formatSocketAddress(disposableServer.address());
@@ -664,8 +665,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	static Stream<Arguments> httpCompatibleProtocols() {
 		return Stream.of(
-				Arguments.of(null, null, new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}),
-				Arguments.of(serverCtx11, clientCtx11, new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11})
+				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
+						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11))
 		);
 	}
 
