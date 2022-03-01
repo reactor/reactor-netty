@@ -397,6 +397,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testServerConnectionsMicrometer() throws Exception {
 		disposableServer = httpServer.metrics(true, Function.identity()).bindNow();
 
+		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
+		httpClient = httpClient.doAfterRequest((req, conn) ->
+				clientAddress.set(conn.channel().localAddress())
+		);
+
 		String uri = "/4";
 		String address = formatSocketAddress(disposableServer.address());
 		CountDownLatch latch = new CountDownLatch(1);
@@ -424,6 +429,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		// now check the server counters
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
 		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+
+		// These metrics are meant only for the servers,
+		// connections metrics for the clients are available from the connection pool
+		address = formatSocketAddress(clientAddress.get());
+		checkGauge(CLIENT_CONNECTIONS_TOTAL, false, 0, URI, HTTP, LOCAL_ADDRESS, address);
+		checkGauge(CLIENT_CONNECTIONS_ACTIVE, false, 0, URI, HTTP, LOCAL_ADDRESS, address);
 
 		disposableServer.disposeNow();
 	}
@@ -599,6 +610,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	private static final String SERVER_DATA_RECEIVED = HTTP_SERVER_PREFIX + DATA_RECEIVED;
 	private static final String SERVER_ERRORS = HTTP_SERVER_PREFIX + ERRORS;
 
+	private static final String CLIENT_CONNECTIONS_ACTIVE = HTTP_CLIENT_PREFIX + CONNECTIONS_ACTIVE;
+	private static final String CLIENT_CONNECTIONS_TOTAL = HTTP_CLIENT_PREFIX + CONNECTIONS_TOTAL;
 	private static final String CLIENT_RESPONSE_TIME = HTTP_CLIENT_PREFIX + RESPONSE_TIME;
 	private static final String CLIENT_DATA_SENT_TIME = HTTP_CLIENT_PREFIX + DATA_SENT_TIME;
 	private static final String CLIENT_DATA_RECEIVED_TIME = HTTP_CLIENT_PREFIX + DATA_RECEIVED_TIME;
