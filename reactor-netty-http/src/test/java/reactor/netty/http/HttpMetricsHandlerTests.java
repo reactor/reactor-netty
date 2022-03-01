@@ -69,6 +69,7 @@ import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.URI;
+import static reactor.netty.Metrics.formatSocketAddress;
 
 /**
  * @author Violeta Georgieva
@@ -397,7 +398,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		disposableServer = httpServer.metrics(true, Function.identity()).bindNow();
 
 		String uri = "/4";
-		String address = reactor.netty.Metrics.formatSocketAddress(disposableServer.address());
+		String address = formatSocketAddress(disposableServer.address());
 		CountDownLatch latch = new CountDownLatch(1);
 
 		httpClient.doOnResponse((res, conn) ->
@@ -430,7 +431,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@Test
 	void testServerConnectionsRecorder() throws Exception {
 		disposableServer = httpServer.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity()).bindNow();
-		String address = reactor.netty.Metrics.formatSocketAddress(disposableServer.address());
+		String address = formatSocketAddress(disposableServer.address());
 
 		CountDownLatch latch = new CountDownLatch(1);
 
@@ -461,13 +462,13 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	private void checkServerConnectionsMicrometer(InetSocketAddress localAddress) {
-		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		String address = formatSocketAddress(localAddress);
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
 		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
 	}
 
 	private void checkServerConnectionsRecorder(InetSocketAddress localAddress) {
-		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		String address = formatSocketAddress(localAddress);
 		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get() == 1).isTrue();
 		assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
 		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get() == 1).isTrue();
@@ -747,28 +748,28 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		@Override
 		public void recordServerConnectionOpened(SocketAddress localAddress) {
-			onServerConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onServerConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onServerConnectionsAmount.addAndGet(1);
 			done.countDown();
 		}
 
 		@Override
 		public void recordServerConnectionClosed(SocketAddress localAddress) {
-			onServerConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onServerConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onServerConnectionsAmount.addAndGet(-1);
 			done.countDown();
 		}
 
 		@Override
 		public void recordServerConnectionActive(SocketAddress localAddress) {
-			onActiveConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onActiveConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onActiveConnectionsAmount.addAndGet(1);
 			done.countDown();
 		}
 
 		@Override
 		public void recordServerConnectionInactive(SocketAddress localAddress) {
-			onInactiveConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onInactiveConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onActiveConnectionsAmount.addAndGet(-1);
 			done.countDown();
 		}
