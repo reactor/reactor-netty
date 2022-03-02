@@ -158,7 +158,12 @@ final class MicrometerSslReadHandler extends Observation.Context implements Reac
 			}
 			else {
 				status = ERROR;
-				observation.stop();
+
+				// We must check if observation is not null before closing it, because the channelActive
+				// method may not have been called if socket was closed while handshaking
+				if (observation != null) {
+					observation.stop();
+				}
 				ctx.fireExceptionCaught(handshake.cause());
 			}
 		}
