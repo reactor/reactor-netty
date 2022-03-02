@@ -198,6 +198,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		return protocol;
 	}
 
+	@Nullable
 	private LongAdder getTotalConnectionsAdder(SocketAddress serverAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(serverAddress);
 		return MapUtils.computeIfAbsent(totalConnectionsCache, address,
