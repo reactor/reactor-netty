@@ -92,7 +92,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(
 				recorder,
-				new ObservationHttpServerRequest(ops.nettyRequest, method, path), recorder.protocol());
+				new ObservationHttpServerRequest(ops.nettyRequest, method, path));
 		responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, REGISTRY);
 	}
 
@@ -104,7 +104,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		if (responseTimeObservation == null) {
 			responseTimeHandlerContext = new ResponseTimeHandlerContext(
 					recorder,
-					new ObservationHttpServerRequest(ops.nettyRequest, method, path), recorder.protocol());
+					new ObservationHttpServerRequest(ops.nettyRequest, method, path));
 			responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, REGISTRY);
 		}
 		responseTimeHandlerContext.setResponse(new ObservationHttpServerResponse(ops.nettyResponse));
@@ -183,18 +183,16 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 		final String method;
 		final String path;
-		final String protocol;
 		final MicrometerHttpServerMetricsRecorder recorder;
 
 		// status might not be known beforehand
 		String status;
 
-		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, HttpServerRequest request, String protocol) {
+		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, HttpServerRequest request) {
 			super(request);
 			this.recorder = recorder;
 			this.method = request.method();
 			this.path = request.path();
-			this.protocol = protocol;
 			put(HttpServerRequest.class, request);
 		}
 
@@ -206,7 +204,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		@Override
 		public Tags getHighCardinalityTags() {
 			// TODO cache
-			return Tags.of(REACTOR_NETTY_PROTOCOL.of(protocol), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(TYPE));
+			return Tags.of(REACTOR_NETTY_PROTOCOL.of(recorder.protocol()), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(TYPE));
 		}
 
 		@Override

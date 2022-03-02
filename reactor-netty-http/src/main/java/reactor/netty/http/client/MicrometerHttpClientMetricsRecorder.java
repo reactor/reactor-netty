@@ -88,7 +88,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	}
 
 	@Nullable
-	Timer getResponseTimeTimer(String name, String address, String uri, String method, String status) {
+	final Timer getResponseTimeTimer(String name, String address, String uri, String method, String status) {
 		MeterKey meterKey = new MeterKey(uri, address, method, status);
 		return MapUtils.computeIfAbsent(responseTimeCache, meterKey,
 				key -> filter(Timer.builder(name)

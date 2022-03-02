@@ -27,7 +27,7 @@ import io.micrometer.api.instrument.observation.TimerObservationHandler;
  * @author Pierre De Rop
  * @since 1.1.0
  */
-public class ReactorNettyTimerObservationHandler extends TimerObservationHandler {
+public final class ReactorNettyTimerObservationHandler extends TimerObservationHandler {
 	public ReactorNettyTimerObservationHandler(MeterRegistry meterRegistry) {
 		super(meterRegistry);
 	}

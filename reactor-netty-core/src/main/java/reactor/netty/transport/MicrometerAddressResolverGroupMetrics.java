@@ -72,16 +72,14 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		static final String CONTEXTUAL_NAME = "hostname resolution";
 		static final String TYPE = "client";
 
-		final String protocol;
 		final String remoteAddress;
 		final MicrometerChannelMetricsRecorder recorder;
 
 		// status is not known beforehand
 		String status;
 
-		FutureHandlerContext(MicrometerChannelMetricsRecorder recorder, String protocol, String remoteAddress) {
+		FutureHandlerContext(MicrometerChannelMetricsRecorder recorder, String remoteAddress) {
 			this.recorder = recorder;
-			this.protocol = protocol;
 			this.remoteAddress = remoteAddress;
 		}
 
@@ -97,7 +95,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 
 		@Override
 		public Tags getHighCardinalityTags() {
-			return Tags.of(REACTOR_NETTY_PROTOCOL.of(protocol), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(TYPE));
+			return Tags.of(REACTOR_NETTY_PROTOCOL.of(recorder.protocol()), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(TYPE));
 		}
 
 		@Override
@@ -109,12 +107,10 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 	static final class MicrometerDelegatingAddressResolver<T extends SocketAddress> extends DelegatingAddressResolver<T> {
 
 		final String name;
-		final String protocol;
 
 		MicrometerDelegatingAddressResolver(MicrometerChannelMetricsRecorder recorder, AddressResolver<T> resolver) {
 			super(recorder, resolver);
 			this.name = recorder.name();
-			this.protocol = recorder.protocol();
 		}
 
 		@Override
@@ -130,7 +126,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Important:
 			// Cannot cache the Timer anymore - need to test the performance
 			String remoteAddress = formatSocketAddress(address);
-			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, protocol, remoteAddress);
+			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, remoteAddress);
 			Observation sample = Observation.start(name + ADDRESS_RESOLVER, handlerContext, REGISTRY);
 			return resolver.get()
 			               .addListener(future -> {
@@ -152,7 +148,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Important:
 			// Cannot cache the Timer anymore - need to test the performance
 			String remoteAddress = formatSocketAddress(address);
-			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, protocol, remoteAddress);
+			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, remoteAddress);
 			Observation observation = Observation.start(name + ADDRESS_RESOLVER, handlerContext, REGISTRY);
 			return resolver.get()
 			               .addListener(future -> {
