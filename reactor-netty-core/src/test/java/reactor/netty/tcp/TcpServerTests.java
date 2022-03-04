@@ -611,7 +611,7 @@ class TcpServerTests {
 
 		DisposableServer server =
 				TcpServer.create()
-				         .handle((in, out) -> in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
+				         .handle((in, out) -> in.withConnection(c -> c.addHandlerLast(new JsonObjectDecoder()))
 				                                .receive()
 				                                .asString()
 				                                .log("serve")
@@ -627,7 +627,7 @@ class TcpServerTests {
 		Connection client = TcpClient.create()
 		                             .port(server.port())
 		                             .handle((in, out) -> {
-		                                 in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
+		                                 in.withConnection(c -> c.addHandlerLast(new JsonObjectDecoder()))
 		                                   .receive()
 		                                   .asString()
 		                                   .log("receive")

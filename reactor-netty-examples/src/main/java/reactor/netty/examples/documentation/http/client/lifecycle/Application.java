@@ -26,10 +26,10 @@ public class Application {
 		HttpClient client =
 				HttpClient.create()
 				          .doOnConnected(conn ->
-				              conn.addHandler(new ReadTimeoutHandler(10, TimeUnit.SECONDS)))   //<1>
+				              conn.addHandlerFirst(new ReadTimeoutHandler(10, TimeUnit.SECONDS)))   //<1>
 				          .doOnChannelInit((observer, channel, remoteAddress) ->
 				              channel.pipeline()
-				                     .addFirst(new LoggingHandler("reactor.netty.examples"))); //<2>
+				                     .addFirst(new LoggingHandler("reactor.netty.examples")));      //<2>
 
 		client.get()
 		      .uri("https://example.com/")

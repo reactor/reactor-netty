@@ -256,7 +256,7 @@ public class TcpClientTests {
 
 	@Test
 	void tcpClientHandlesLineFeedDataFixedPool() throws InterruptedException {
-		Consumer<? super Connection> channelInit = c -> c.addHandler("codec", new LineBasedFrameDecoder(8 * 1024));
+		Consumer<? super Connection> channelInit = c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024));
 
 		ConnectionProvider p = ConnectionProvider.newConnection();
 
@@ -269,7 +269,7 @@ public class TcpClientTests {
 
 	@Test
 	void tcpClientHandlesLineFeedDataElasticPool() throws InterruptedException {
-		Consumer<? super Connection> channelInit = c -> c.addHandler("codec", new LineBasedFrameDecoder(8 * 1024));
+		Consumer<? super Connection> channelInit = c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024));
 
 		tcpClientHandlesLineFeedData(
 				TcpClient.create(ConnectionProvider.create("tcpClientHandlesLineFeedDataElasticPool", Integer.MAX_VALUE))

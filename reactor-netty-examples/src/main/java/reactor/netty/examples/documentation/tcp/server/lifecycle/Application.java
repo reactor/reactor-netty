@@ -27,10 +27,10 @@ public class Application {
 		DisposableServer server =
 				TcpServer.create()
 				         .doOnConnection(conn ->
-				             conn.addHandler(new ReadTimeoutHandler(10, TimeUnit.SECONDS))) //<1>
+				             conn.addHandlerFirst(new ReadTimeoutHandler(10, TimeUnit.SECONDS))) //<1>
 				         .doOnChannelInit((observer, channel, remoteAddress) ->
 				             channel.pipeline()
-				                    .addFirst(new LoggingHandler("reactor.netty.examples")))//<2>
+				                    .addFirst(new LoggingHandler("reactor.netty.examples")))     //<2>
 				         .bindNow();
 
 		server.onDispose()

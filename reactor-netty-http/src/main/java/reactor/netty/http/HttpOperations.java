@@ -252,6 +252,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public HttpOperations<INBOUND, OUTBOUND> addHandler(String name, ChannelHandler handler) {
 		super.addHandler(name, handler);
 

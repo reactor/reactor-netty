@@ -26,10 +26,10 @@ public class Application {
 	public static void main(String[] args) {
 		Connection server =
 				UdpServer.create()
-				         .doOnBound(conn -> conn.addHandler(new LineBasedFrameDecoder(8192))) //<1>
+				         .doOnBound(conn -> conn.addHandlerLast(new LineBasedFrameDecoder(8192))) //<1>
 				         .doOnChannelInit((observer, channel, remoteAddress) ->
 				             channel.pipeline()
-				                    .addFirst(new LoggingHandler("reactor.netty.examples")))  //<2>
+				                    .addFirst(new LoggingHandler("reactor.netty.examples")))      //<2>
 				         .bindNow(Duration.ofSeconds(30));
 
 		server.onDispose()

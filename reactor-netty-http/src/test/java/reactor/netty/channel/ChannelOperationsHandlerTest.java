@@ -74,7 +74,7 @@ class ChannelOperationsHandlerTest extends BaseHttpTest {
 		AtomicInteger counter = new AtomicInteger();
 		disposableServer =
 				createServer()
-				          .doOnConnection(conn -> conn.addHandler(new LineBasedFrameDecoder(10)))
+				          .doOnConnection(conn -> conn.addHandlerLast(new LineBasedFrameDecoder(10)))
 				          .handle((req, res) ->
 				                  req.receive()
 				                     .asString()

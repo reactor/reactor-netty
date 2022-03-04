@@ -28,10 +28,10 @@ public class Application {
 				UdpClient.create()
 				         .host("example.com")
 				         .port(80)
-				         .doOnConnected(conn -> conn.addHandler(new LineBasedFrameDecoder(8192))) //<1>
+				         .doOnConnected(conn -> conn.addHandlerLast(new LineBasedFrameDecoder(8192))) //<1>
 				         .doOnChannelInit((observer, channel, remoteAddress) ->
 				             channel.pipeline()
-				                    .addFirst(new LoggingHandler("reactor.netty.examples")))      //<2>
+				                    .addFirst(new LoggingHandler("reactor.netty.examples")))           //<2>
 				         .connectNow(Duration.ofSeconds(30));
 
 		connection.onDispose()

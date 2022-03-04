@@ -193,6 +193,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public HttpClientOperations addHandler(ChannelHandler handler) {
 		super.addHandler(handler);
 		return this;
@@ -562,7 +563,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		listener().onStateChange(this, HttpClientState.REQUEST_SENT);
 		if (responseTimeout != null) {
-			addHandler(NettyPipeline.ResponseTimeoutHandler,
+			addHandlerFirst(NettyPipeline.ResponseTimeoutHandler,
 					new ReadTimeoutHandler(responseTimeout.toMillis(), TimeUnit.MILLISECONDS));
 		}
 		channel().read();

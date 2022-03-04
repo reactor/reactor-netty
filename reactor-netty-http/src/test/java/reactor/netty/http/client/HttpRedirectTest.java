@@ -687,7 +687,7 @@ class HttpRedirectTest extends BaseHttpTest {
 		ConnectionProvider provider = ConnectionProvider.create("doTestBuffersForRedirectWithContentShouldBeReleased", 1);
 		final List<Integer> redirectBufferRefCounts = new ArrayList<>();
 		HttpClient.create(provider)
-		          .doOnRequest((r, c) -> c.addHandler("test-buffer-released", new ChannelInboundHandlerAdapter() {
+		          .doOnRequest((r, c) -> c.addHandlerLast("test-buffer-released", new ChannelInboundHandlerAdapter() {
 
 		              @Override
 		              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
