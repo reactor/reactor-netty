@@ -15,8 +15,8 @@
  */
 package reactor.netty.examples.documentation.http.client.metrics;
 
-import io.micrometer.api.instrument.Metrics;
-import io.micrometer.api.instrument.config.MeterFilter;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.config.MeterFilter;
 import reactor.netty.http.client.HttpClient;
 
 public class Application {
