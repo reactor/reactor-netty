@@ -15,9 +15,9 @@
  */
 package reactor.netty.channel;
 
-import io.micrometer.api.instrument.Meter;
-import io.micrometer.api.instrument.docs.DocumentedMeter;
-import io.micrometer.api.instrument.docs.TagKey;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.docs.DocumentedMeter;
+import io.micrometer.core.instrument.docs.TagKey;
 
 /**
  * Channel meters.

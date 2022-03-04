@@ -15,13 +15,13 @@
  */
 package reactor.netty.udp;
 
-import io.micrometer.api.instrument.Counter;
-import io.micrometer.api.instrument.DistributionSummary;
-import io.micrometer.api.instrument.MeterRegistry;
-import io.micrometer.api.instrument.Metrics;
-import io.micrometer.api.instrument.Tags;
-import io.micrometer.api.instrument.Timer;
-import io.micrometer.api.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.core.tck.MeterRegistryAssert;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

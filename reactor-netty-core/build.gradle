@@ -103,7 +103,7 @@ dependencies {
 	}
 
 	//Metrics
-	compileOnly "io.micrometer:micrometer-api:$micrometerVersion"
+	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
 	compileOnly "io.micrometer:micrometer-tracing-api:$micrometerTracingVersion"
 
 	// Logging
@@ -129,7 +129,7 @@ dependencies {
 	testImplementation "org.mockito:mockito-core:$mockitoVersion"
 	testImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
-	testImplementation "io.micrometer:micrometer-api:$micrometerVersion"
+	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
@@ -196,9 +196,6 @@ task japicmp(type: JapicmpTask) {
 	ignoreMissingClasses = true
 	includeSynthetic = true
 	onlyIf { "$compatibleVersion" != "SKIP" }
-	fieldExcludes=[
-			"reactor.netty.Metrics#REGISTRY"
-	]
 }
 
 tasks.japicmp.dependsOn(downloadBaseline)

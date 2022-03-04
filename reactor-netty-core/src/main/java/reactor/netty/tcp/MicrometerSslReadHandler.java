@@ -15,9 +15,9 @@
  */
 package reactor.netty.tcp;
 
-import io.micrometer.api.instrument.Tags;
-import io.micrometer.api.instrument.Timer;
-import io.micrometer.api.instrument.observation.Observation;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.observation.Observation;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;

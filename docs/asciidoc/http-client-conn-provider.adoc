@@ -30,6 +30,10 @@ include::{examplesdir}/pool/config/Application.java[lines=18..50]
 <4> Every two minutes, the connection pool is regularly checked for connections that are applicable for removal.
 ====
 
+NOTE: Notice that only the default `HttpClient` (`HttpClient.create()`) uses `500` as the maximum number of active channels. In the example above, when
+instantiating a custom `ConnectionProvider`, we are changing this value to `50` using `maxConnections`. Also, if you don't set this parameter the
+default `maxConnections` is used (2 * available number of processors).
+
 The following listing shows the available configurations:
 [width="100%",options="header"]
 |=======

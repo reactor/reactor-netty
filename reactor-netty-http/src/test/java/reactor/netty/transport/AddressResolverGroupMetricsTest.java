@@ -15,11 +15,11 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.api.instrument.MeterRegistry;
-import io.micrometer.api.instrument.Metrics;
-import io.micrometer.api.instrument.Tags;
-import io.micrometer.api.instrument.Timer;
-import io.micrometer.api.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.core.tck.MeterRegistryAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

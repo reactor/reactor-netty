@@ -15,7 +15,7 @@
  */
 package reactor.netty;
 
-import io.micrometer.api.instrument.MeterRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 import reactor.netty.observability.ReactorNettyTimerObservationHandler;
 import reactor.util.annotation.Nullable;
 
@@ -29,7 +29,7 @@ import java.net.SocketAddress;
  * @since 0.9
  */
 public class Metrics {
-	public static final MeterRegistry REGISTRY = io.micrometer.api.instrument.Metrics.globalRegistry;
+	public static final MeterRegistry REGISTRY = io.micrometer.core.instrument.Metrics.globalRegistry;
 	static {
 		REGISTRY.observationConfig().observationHandler(new ReactorNettyTimerObservationHandler(REGISTRY));
 	}

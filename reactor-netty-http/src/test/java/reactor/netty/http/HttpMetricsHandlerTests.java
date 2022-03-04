@@ -15,20 +15,29 @@
  */
 package reactor.netty.http;
 
-import io.micrometer.api.instrument.Counter;
-import io.micrometer.api.instrument.DistributionSummary;
-import io.micrometer.api.instrument.Gauge;
-import io.micrometer.api.instrument.MeterRegistry;
-import io.micrometer.api.instrument.Metrics;
-import io.micrometer.api.instrument.Tags;
-import io.micrometer.api.instrument.Timer;
-import io.micrometer.api.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.core.tck.MeterRegistryAssert;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
@@ -37,12 +46,15 @@ import reactor.netty.http.server.ContextAwareHttpServerMetricsRecorder;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerMetricsRecorder;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.test.StepVerifier;
+import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +62,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.CONNECTIONS_ACTIVE;
@@ -69,6 +82,7 @@ import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.URI;
+import static reactor.netty.Metrics.formatSocketAddress;
 
 /**
  * @author Violeta Georgieva
@@ -81,9 +95,19 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
-	private static final String SERVER_CONNECTIONS_TOTAL = HTTP_SERVER_PREFIX + CONNECTIONS_TOTAL;
-	private static final String SERVER_CONNECTIONS_ACTIVE = HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE;
-	private final static String HTTP = "http";
+	static SelfSignedCertificate ssc;
+	static Http11SslContextSpec serverCtx11;
+	static Http11SslContextSpec clientCtx11;
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+		serverCtx11 = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())
+		                                  .configure(builder -> builder.sslProvider(SslProvider.JDK));
+		clientCtx11 = Http11SslContextSpec.forClient()
+		                                  .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE)
+		                                                               .sslProvider(SslProvider.JDK));
+	}
 
 	/**
 	 * Initialization done before running each test.
@@ -97,7 +121,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 */
 	@BeforeEach
 	void setUp() {
-		httpServer = customizeServerOptions(createServer()
+		httpServer = createServer()
 				.host("127.0.0.1")
 				.metrics(true, Function.identity())
 				.route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
@@ -109,11 +133,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 										checkServerConnectionsMicrometer(req.hostAddress()))))
 						.post("/5", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().retain().doOnNext(b ->
-										checkServerConnectionsRecorder(req.hostAddress()))))));
+										checkServerConnectionsRecorder(req.hostAddress())))));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
-		httpClient = customizeClientOptions(createClient(provider, () -> disposableServer.address())
-				.metrics(true, Function.identity()));
+		httpClient = createClient(provider, () -> disposableServer.address())
+				.metrics(true, Function.identity());
 
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
@@ -131,12 +155,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		ServerRecorder.INSTANCE.reset();
 	}
 
-	@Test
-	void testExistingEndpoint() throws Exception {
-		disposableServer = httpServer.bindNow();
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = httpClient.doAfterRequest((req, conn) ->
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 			serverAddress.set(conn.channel().remoteAddress())
 		);
 
@@ -160,7 +186,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
 		Thread.sleep(1000);
-		checkExpectationsExisting("/1", sa.getHostString() + ":" + sa.getPort(), 1);
+		checkExpectationsExisting("/1", sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null);
 
 		CountDownLatch latch2 = new CountDownLatch(1);
 		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
@@ -182,15 +208,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		sa = (InetSocketAddress) serverAddress.get();
 
 		Thread.sleep(1000);
-		checkExpectationsExisting("/2", sa.getHostString() + ":" + sa.getPort(), 2);
+		checkExpectationsExisting("/2", sa.getHostString() + ":" + sa.getPort(), 2, serverCtx != null);
 	}
 
-	@Test
-	void testNonExistingEndpoint() throws Exception {
-		disposableServer = httpServer.bindNow();
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = httpClient.doAfterRequest((req, conn) ->
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 			serverAddress.set(conn.channel().remoteAddress())
 		);
 
@@ -213,7 +241,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
 		Thread.sleep(1000);
-		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), 1);
+		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null);
 
 		CountDownLatch latch2 = new CountDownLatch(1);
 		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
@@ -234,15 +262,18 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		sa = (InetSocketAddress) serverAddress.get();
 
 		Thread.sleep(1000);
-		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), 2);
+		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), 2, serverCtx != null);
 	}
 
-	@Test
-	void testUriTagValueFunction() throws Exception {
-		disposableServer = httpServer.metrics(true, s -> "testUriTagValueResolver").bindNow();
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testUriTagValueFunction(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.metrics(true, s -> "testUriTagValueResolver").bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = httpClient.doAfterRequest((req, conn) ->
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 			serverAddress.set(conn.channel().remoteAddress())
 		);
 
@@ -267,16 +298,18 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
 		Thread.sleep(1000);
-		checkExpectationsExisting("testUriTagValueResolver", sa.getHostString() + ":" + sa.getPort(), 1);
+		checkExpectationsExisting("testUriTagValueResolver", sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null);
 	}
 
 	/**
 	 * https://github.com/reactor/reactor-netty/issues/1559
 	 */
-	@Test
-	void testUriTagValueFunctionNotSharedForClient() throws Exception {
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testUriTagValueFunctionNotSharedForClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		disposableServer =
-				httpServer.metrics(true,
+				customizeServerOptions(httpServer, serverCtx, serverProtocols).metrics(true,
 				                s -> {
 				                    if ("/1".equals(s)) {
 				                        return "testUriTagValueFunctionNotShared_1";
@@ -288,7 +321,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				          .bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = httpClient.doAfterRequest((req, conn) ->
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 				serverAddress.set(conn.channel().remoteAddress())
 		);
 
@@ -313,7 +346,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
 		Thread.sleep(1000);
-		checkExpectationsExisting("testUriTagValueFunctionNotShared_1", sa.getHostString() + ":" + sa.getPort(), 1);
+		checkExpectationsExisting("testUriTagValueFunctionNotShared_1", sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null);
 
 		CountDownLatch latch2 = new CountDownLatch(1);
 		httpClient.doOnResponse((res, conn) -> conn.channel()
@@ -336,15 +369,18 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		sa = (InetSocketAddress) serverAddress.get();
 
 		Thread.sleep(1000);
-		checkExpectationsExisting("testUriTagValueFunctionNotShared_2", sa.getHostString() + ":" + sa.getPort(), 2);
+		checkExpectationsExisting("testUriTagValueFunctionNotShared_2", sa.getHostString() + ":" + sa.getPort(), 2, serverCtx != null);
 	}
 
-	@Test
-	void testContextAwareRecorderOnClient() throws Exception {
-		disposableServer = httpServer.bindNow();
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testContextAwareRecorderOnClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		ClientContextAwareRecorder recorder = ClientContextAwareRecorder.INSTANCE;
 		CountDownLatch latch = new CountDownLatch(1);
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
 		httpClient.doOnResponse((res, conn) -> conn.channel()
 		                                           .closeFuture()
 		                                           .addListener(f -> latch.countDown()))
@@ -367,15 +403,18 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(recorder.onDataSentContextView).isTrue();
 	}
 
-	@Test
-	void testContextAwareRecorderOnServer() throws Exception {
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testContextAwareRecorderOnServer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		ServerContextAwareRecorder recorder = ServerContextAwareRecorder.INSTANCE;
 		disposableServer =
-				httpServer.metrics(true, () -> recorder)
+				customizeServerOptions(httpServer, serverCtx, serverProtocols).metrics(true, () -> recorder)
 				          .mapHandle((mono, conn) -> mono.contextWrite(Context.of("testContextAwareRecorder", "OK")))
 				          .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(1);
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
 		httpClient.doOnResponse((res, conn) -> conn.channel()
 		                                           .closeFuture()
 		                                           .addListener(f -> latch.countDown()))
@@ -396,14 +435,23 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(recorder.onDataSentContextView).isTrue();
 	}
 
-	@Test
-	void testServerConnectionsMicrometer() throws Exception {
-		disposableServer = httpServer.metrics(true, Function.identity()).bindNow();
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testServerConnectionsMicrometer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.metrics(true, Function.identity()).bindNow();
+
+		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
+		httpClient = httpClient.doAfterRequest((req, conn) ->
+				clientAddress.set(conn.channel().localAddress())
+		);
 
 		String uri = "/4";
-		String address = reactor.netty.Metrics.formatSocketAddress(disposableServer.address());
+		String address = formatSocketAddress(disposableServer.address());
 		CountDownLatch latch = new CountDownLatch(1);
 
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
 		httpClient.doOnResponse((res, conn) ->
 						conn.channel()
 								.closeFuture()
@@ -428,16 +476,26 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
 		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
 
+		// These metrics are meant only for the servers,
+		// connections metrics for the clients are available from the connection pool
+		address = formatSocketAddress(clientAddress.get());
+		checkGauge(CLIENT_CONNECTIONS_TOTAL, false, 0, URI, HTTP, LOCAL_ADDRESS, address);
+		checkGauge(CLIENT_CONNECTIONS_ACTIVE, false, 0, URI, HTTP, LOCAL_ADDRESS, address);
+
 		disposableServer.disposeNow();
 	}
 
-	@Test
-	void testServerConnectionsRecorder() throws Exception {
-		disposableServer = httpServer.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity()).bindNow();
-		String address = reactor.netty.Metrics.formatSocketAddress(disposableServer.address());
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testServerConnectionsRecorder(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity()).bindNow();
+		String address = formatSocketAddress(disposableServer.address());
 
 		CountDownLatch latch = new CountDownLatch(1);
 
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
 		httpClient.doOnResponse((res, conn) ->
 						conn.channel()
 								.closeFuture()
@@ -464,14 +522,39 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		disposableServer.disposeNow();
 	}
 
+	@Test
+	void testIssue896() throws Exception {
+		disposableServer = httpServer.noSSL()
+		                             .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		httpClient.observe((conn, state) -> conn.channel()
+		                                        .closeFuture()
+		                                        .addListener(f -> latch.countDown()))
+		          .secure(spec -> spec.sslContext(clientCtx11))
+		          .post()
+		          .uri("/1")
+		          .send(ByteBufFlux.fromString(Mono.just("hello")))
+		          .responseContent()
+		          .subscribe();
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		Thread.sleep(1000);
+		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
+		String serverAddress = sa.getHostString() + ":" + sa.getPort();
+		String[] summaryTags = new String[]{REMOTE_ADDRESS, serverAddress, URI, "unknown"};
+		checkCounter(CLIENT_ERRORS, summaryTags, true, 2);
+	}
+
 	private void checkServerConnectionsMicrometer(InetSocketAddress localAddress) {
-		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		String address = formatSocketAddress(localAddress);
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
 		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
 	}
 
 	private void checkServerConnectionsRecorder(InetSocketAddress localAddress) {
-		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		String address = formatSocketAddress(localAddress);
 		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get() == 1).isTrue();
 		assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
 		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get() == 1).isTrue();
@@ -479,7 +562,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isNull();
 	}
 
-	private void checkExpectationsExisting(String uri, String serverAddress, int index) {
+	private void checkExpectationsExisting(String uri, String serverAddress, int index, boolean checkTls) {
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "POST", STATUS, "200"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
 		String[] summaryTags1 = new String[] {URI, uri};
@@ -501,7 +584,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, 1);
 		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, 1);
 		checkTimer(CLIENT_CONNECT_TIME, timerTags3, index);
-		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
+		if (checkTls) {
+			checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
+		}
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, 1, 12);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, 1, 12);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
@@ -510,7 +595,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
 
-	private void checkExpectationsNonExisting(String serverAddress, int index) {
+	private void checkExpectationsNonExisting(String serverAddress, int index, boolean checkTls) {
 		String uri = "/3";
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "GET", STATUS, "404"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "GET"};
@@ -532,7 +617,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, index);
 		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, index);
 		checkTimer(CLIENT_CONNECT_TIME, timerTags3, index);
-		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
+		if (checkTls) {
+			checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
+		}
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, index, 0);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, index, 123 * index);
@@ -541,16 +628,16 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 
-	protected HttpServer customizeServerOptions(HttpServer httpServer) {
-		return httpServer;
+	HttpServer customizeServerOptions(HttpServer httpServer, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
+		return ctx == null ? httpServer.protocol(protocols) : httpServer.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
 
-	protected HttpClient customizeClientOptions(HttpClient httpClient) {
-		return httpClient;
+	HttpClient customizeClientOptions(HttpClient httpClient, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
+		return ctx == null ? httpClient.protocol(protocols) : httpClient.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
 
-	protected void checkTlsTimer(String name, String[] tags, long expectedCount) {
-		//no-op
+	void checkTlsTimer(String name, String[] tags, long expectedCount) {
+		checkTimer(name, tags, expectedCount);
 	}
 
 	void checkTimer(String name, String[] tags, long expectedCount) {
@@ -591,6 +678,18 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 	}
 
+	static Stream<Arguments> httpCompatibleProtocols() {
+		return Stream.of(
+				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
+						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11))
+		);
+	}
+
+	private static final String HTTP = "http";
+
+	private static final String SERVER_CONNECTIONS_ACTIVE = HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE;
+	private static final String SERVER_CONNECTIONS_TOTAL = HTTP_SERVER_PREFIX + CONNECTIONS_TOTAL;
 	private static final String SERVER_RESPONSE_TIME = HTTP_SERVER_PREFIX + RESPONSE_TIME;
 	private static final String SERVER_DATA_SENT_TIME = HTTP_SERVER_PREFIX + DATA_SENT_TIME;
 	private static final String SERVER_DATA_RECEIVED_TIME = HTTP_SERVER_PREFIX + DATA_RECEIVED_TIME;
@@ -598,6 +697,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	private static final String SERVER_DATA_RECEIVED = HTTP_SERVER_PREFIX + DATA_RECEIVED;
 	private static final String SERVER_ERRORS = HTTP_SERVER_PREFIX + ERRORS;
 
+	private static final String CLIENT_CONNECTIONS_ACTIVE = HTTP_CLIENT_PREFIX + CONNECTIONS_ACTIVE;
+	private static final String CLIENT_CONNECTIONS_TOTAL = HTTP_CLIENT_PREFIX + CONNECTIONS_TOTAL;
 	private static final String CLIENT_RESPONSE_TIME = HTTP_CLIENT_PREFIX + RESPONSE_TIME;
 	private static final String CLIENT_DATA_SENT_TIME = HTTP_CLIENT_PREFIX + DATA_SENT_TIME;
 	private static final String CLIENT_DATA_RECEIVED_TIME = HTTP_CLIENT_PREFIX + DATA_RECEIVED_TIME;
@@ -747,28 +848,28 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		@Override
 		public void recordServerConnectionOpened(SocketAddress localAddress) {
-			onServerConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onServerConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onServerConnectionsAmount.addAndGet(1);
 			done.countDown();
 		}
 
 		@Override
 		public void recordServerConnectionClosed(SocketAddress localAddress) {
-			onServerConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onServerConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onServerConnectionsAmount.addAndGet(-1);
 			done.countDown();
 		}
 
 		@Override
 		public void recordServerConnectionActive(SocketAddress localAddress) {
-			onActiveConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onActiveConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onActiveConnectionsAmount.addAndGet(1);
 			done.countDown();
 		}
 
 		@Override
 		public void recordServerConnectionInactive(SocketAddress localAddress) {
-			onInactiveConnectionsLocalAddr.set(reactor.netty.Metrics.formatSocketAddress(localAddress));
+			onInactiveConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onActiveConnectionsAmount.addAndGet(-1);
 			done.countDown();
 		}

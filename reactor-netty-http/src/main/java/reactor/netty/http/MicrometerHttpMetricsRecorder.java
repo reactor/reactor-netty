@@ -15,9 +15,9 @@
  */
 package reactor.netty.http;
 
-import io.micrometer.api.instrument.Counter;
-import io.micrometer.api.instrument.DistributionSummary;
-import io.micrometer.api.instrument.Timer;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Timer;
 import reactor.netty.Metrics;
 import reactor.netty.channel.ChannelMeters;
 import reactor.netty.channel.MeterKey;

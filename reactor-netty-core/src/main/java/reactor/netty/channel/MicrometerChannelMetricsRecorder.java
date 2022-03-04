@@ -15,12 +15,12 @@
  */
 package reactor.netty.channel;
 
-import io.micrometer.api.instrument.Counter;
-import io.micrometer.api.instrument.DistributionSummary;
-import io.micrometer.api.instrument.Gauge;
-import io.micrometer.api.instrument.Meter;
-import io.micrometer.api.instrument.Timer;
-import io.micrometer.api.instrument.noop.NoopMeter;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.noop.NoopMeter;
 import reactor.netty.internal.util.MapUtils;
 import reactor.util.annotation.Nullable;
 
