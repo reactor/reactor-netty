@@ -15,10 +15,10 @@
  */
 package reactor.netty.http.server;
 
-import io.micrometer.api.instrument.Counter;
-import io.micrometer.api.instrument.DistributionSummary;
-import io.micrometer.api.instrument.Gauge;
-import io.micrometer.api.instrument.Timer;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Timer;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 import reactor.netty.internal.util.MapUtils;

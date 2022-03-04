@@ -15,8 +15,8 @@
  */
 package reactor.netty.http.client;
 
-import io.micrometer.api.instrument.Gauge;
-import io.micrometer.api.instrument.Tags;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Tags;
 import reactor.netty.Metrics;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 
