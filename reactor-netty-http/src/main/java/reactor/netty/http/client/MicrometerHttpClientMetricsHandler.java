@@ -15,11 +15,11 @@
  */
 package reactor.netty.http.client;
 
-import io.micrometer.api.instrument.Tags;
-import io.micrometer.api.instrument.observation.Observation;
-import io.micrometer.api.instrument.transport.http.HttpClientRequest;
-import io.micrometer.api.instrument.transport.http.HttpClientResponse;
-import io.micrometer.api.instrument.transport.http.context.HttpClientContext;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.observation.Observation;
+import io.micrometer.core.instrument.transport.http.HttpClientRequest;
+import io.micrometer.core.instrument.transport.http.HttpClientResponse;
+import io.micrometer.core.instrument.transport.http.context.HttpClientContext;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import reactor.netty.observability.ReactorNettyHandlerContext;
