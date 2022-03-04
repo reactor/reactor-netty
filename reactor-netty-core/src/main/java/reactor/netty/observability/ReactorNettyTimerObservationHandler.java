@@ -15,10 +15,10 @@
  */
 package reactor.netty.observability;
 
-import io.micrometer.api.instrument.MeterRegistry;
-import io.micrometer.api.instrument.Timer;
-import io.micrometer.api.instrument.observation.Observation;
-import io.micrometer.api.instrument.observation.TimerObservationHandler;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.observation.Observation;
+import io.micrometer.core.instrument.observation.TimerObservationHandler;
 
 /**
  * Reactor Netty timer observation handler.

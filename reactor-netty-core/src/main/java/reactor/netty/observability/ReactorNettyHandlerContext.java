@@ -15,7 +15,7 @@
  */
 package reactor.netty.observability;
 
-import io.micrometer.api.instrument.Timer;
+import io.micrometer.core.instrument.Timer;
 import reactor.util.annotation.Nullable;
 
 /**
