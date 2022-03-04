@@ -15,8 +15,8 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.api.instrument.Gauge;
-import io.micrometer.api.instrument.Tags;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Tags;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufAllocatorMetric;
 import io.netty.buffer.PooledByteBufAllocator;

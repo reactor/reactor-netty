@@ -32,11 +32,11 @@ import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableChannel;
 import reactor.netty.channel.ChannelMetricsRecorder;
-import reactor.netty.internal.util.Metrics;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -120,9 +120,9 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 
 	/**
 	 * Whether to enable metrics to be collected and registered in Micrometer's
-	 * {@link io.micrometer.api.instrument.Metrics#globalRegistry globalRegistry}.
+	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}.
 	 * Applications can separately register their own
-	 * {@link io.micrometer.api.instrument.config.MeterFilter filters}.
+	 * {@link io.micrometer.core.instrument.config.MeterFilter filters}.
 	 * For example, to put an upper bound on the number of tags produced:
 	 * <pre class="code">
 	 * MeterFilter filter = ... ;
@@ -137,7 +137,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 		if (enable) {
 			if (!Metrics.isInstrumentationAvailable()) {
 				throw new UnsupportedOperationException(
-					"To enable metrics, you must add the dependency `io.micrometer:micrometer-api`" +
+					"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
 						" to the class path first");
 			}
 			T dup = duplicate();
