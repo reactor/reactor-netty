@@ -27,7 +27,6 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
-import reactor.netty.internal.util.Metrics;
 import reactor.netty.transport.TransportConfig;
 import reactor.netty.internal.util.MapUtils;
 import reactor.pool.AllocationStrategy;
@@ -42,6 +41,7 @@ import reactor.pool.decorators.InstrumentedPoolDecorators;
 import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetAddress;
