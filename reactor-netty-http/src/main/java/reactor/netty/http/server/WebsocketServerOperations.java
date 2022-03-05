@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
@@ -34,6 +33,7 @@ import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty5.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
+import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -59,7 +59,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
 	final WebSocketServerHandshaker           handshaker;
-	final ChannelPromise                      handshakerResult;
+	final Future<Void>                        handshakerResult;
 	final Sinks.One<WebSocketCloseStatus>     onCloseState;
 	final boolean                             proxyPing;
 
@@ -87,7 +87,6 @@ final class WebsocketServerOperations extends HttpServerOperations
 			removeHandler(NettyPipeline.AccessLogHandler);
 			removeHandler(NettyPipeline.HttpMetricsHandler);
 
-			handshakerResult = channel.newPromise();
 			HttpRequest request = new DefaultFullHttpRequest(replaced.version(),
 					replaced.method(),
 					replaced.uri());
@@ -112,21 +111,21 @@ final class WebsocketServerOperations extends HttpServerOperations
 				}
 			}
 
-			handshaker.handshake(channel,
-			                     request,
-			                     replaced.responseHeaders
-			                             .remove(HttpHeaderNames.TRANSFER_ENCODING),
-			                     handshakerResult)
-			          .addListener(f -> {
-			              if (replaced.rebind(this)) {
-			                  markPersistent(false);
-			                  // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
-			                  channel.read();
-			              }
-			              else {
-			                  log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
-			              }
-			          });
+			handshakerResult =
+					handshaker.handshake(channel,
+					                     request,
+					                     replaced.responseHeaders
+					                             .remove(HttpHeaderNames.TRANSFER_ENCODING))
+					          .addListener(f -> {
+					              if (replaced.rebind(this)) {
+					                  markPersistent(false);
+					                  // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+					                  channel.read();
+					              }
+					              else {
+					                  log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
+					              }
+					          });
 		}
 	}
 
@@ -180,7 +179,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Outbound error happened"), err);
 			}
-			sendCloseNow(new CloseWebSocketFrame(WebSocketCloseStatus.PROTOCOL_ERROR),
+			sendCloseNow(new CloseWebSocketFrame(channel().bufferAllocator(), WebSocketCloseStatus.PROTOCOL_ERROR),
 					f -> terminate());
 		}
 	}
@@ -190,27 +189,28 @@ final class WebsocketServerOperations extends HttpServerOperations
 		if (log.isDebugEnabled()) {
 			log.debug(format(channel(), "Cancelling Websocket inbound. Closing Websocket"));
 		}
-		sendCloseNow(new CloseWebSocketFrame(), WebSocketCloseStatus.ABNORMAL_CLOSURE, f -> terminate());
+		sendCloseNow(new CloseWebSocketFrame(true, 0, channel().bufferAllocator().allocate(0)),
+				WebSocketCloseStatus.ABNORMAL_CLOSURE, f -> terminate());
 	}
 
 	@Override
 	public Mono<Void> sendClose() {
-		return sendClose(new CloseWebSocketFrame());
+		return sendClose(new CloseWebSocketFrame(true, 0, channel().bufferAllocator().allocate(0)));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int rsv) {
-		return sendClose(new CloseWebSocketFrame(true, rsv));
+		return sendClose(new CloseWebSocketFrame(channel().bufferAllocator(), true, rsv));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int statusCode, @Nullable String reasonText) {
-		return sendClose(new CloseWebSocketFrame(statusCode, reasonText));
+		return sendClose(new CloseWebSocketFrame(channel().bufferAllocator(), statusCode, reasonText));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int rsv, int statusCode, @Nullable String reasonText) {
-		return sendClose(new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
+		return sendClose(new CloseWebSocketFrame(channel().bufferAllocator(), true, rsv, statusCode, reasonText));
 	}
 
 	@Override

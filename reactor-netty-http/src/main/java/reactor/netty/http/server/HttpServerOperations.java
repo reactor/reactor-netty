@@ -846,7 +846,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		public void onComplete() {
 			if (ops.channel()
 			       .isActive()) {
-				ops.sendCloseNow(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE), this);
+				ops.sendCloseNow(new CloseWebSocketFrame(ops.channel().bufferAllocator(),
+						WebSocketCloseStatus.NORMAL_CLOSURE), this);
 			}
 		}
 

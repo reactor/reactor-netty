@@ -16,9 +16,12 @@
 package reactor.netty.http.websocket;
 
 import java.nio.charset.Charset;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
@@ -109,11 +112,11 @@ public interface WebsocketOutbound extends NettyOutbound {
 	@Override
 	default NettyOutbound sendString(Publisher<? extends String> dataStream, Charset charset) {
 		return sendObject(Flux.from(dataStream)
-		                      .map(stringToWebsocketFrame));
+		                      .map(str -> stringToWebsocketFrame.apply(alloc(), str)));
 	}
 
-	Function<? super String, ? extends WebSocketFrame>  stringToWebsocketFrame  =
+	BiFunction<? super BufferAllocator, ? super String, ? extends WebSocketFrame> stringToWebsocketFrame  =
 			TextWebSocketFrame::new;
-	Function<? super ByteBuf, ? extends WebSocketFrame> bytebufToWebsocketFrame =
+	Function<? super Buffer, ? extends WebSocketFrame> bytebufToWebsocketFrame =
 			BinaryWebSocketFrame::new;
 }

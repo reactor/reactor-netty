@@ -166,7 +166,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 		if (log.isDebugEnabled()) {
 			log.debug(format(channel(), "Cancelling Websocket inbound. Closing Websocket"));
 		}
-		sendCloseNow(new CloseWebSocketFrame(), WebSocketCloseStatus.ABNORMAL_CLOSURE);
+		sendCloseNow(new CloseWebSocketFrame(true, 0, channel().bufferAllocator().allocate(0)),
+				WebSocketCloseStatus.ABNORMAL_CLOSURE);
 	}
 
 	@Override
@@ -190,7 +191,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Outbound error happened"), err);
 			}
-			sendCloseNow(new CloseWebSocketFrame(WebSocketCloseStatus.PROTOCOL_ERROR));
+			sendCloseNow(new CloseWebSocketFrame(channel().bufferAllocator(), WebSocketCloseStatus.PROTOCOL_ERROR));
 		}
 	}
 
@@ -201,22 +202,22 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	public Mono<Void> sendClose() {
-		return sendClose(new CloseWebSocketFrame());
+		return sendClose(new CloseWebSocketFrame(true, 0, channel().bufferAllocator().allocate(0)));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int rsv) {
-		return sendClose(new CloseWebSocketFrame(true, rsv));
+		return sendClose(new CloseWebSocketFrame(channel().bufferAllocator(), true, rsv));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int statusCode, @Nullable String reasonText) {
-		return sendClose(new CloseWebSocketFrame(statusCode, reasonText));
+		return sendClose(new CloseWebSocketFrame(channel().bufferAllocator(), statusCode, reasonText));
 	}
 
 	@Override
 	public Mono<Void> sendClose(int rsv, int statusCode, @Nullable String reasonText) {
-		return sendClose(new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
+		return sendClose(new CloseWebSocketFrame(channel().bufferAllocator(), true, rsv, statusCode, reasonText));
 	}
 
 	@Override
