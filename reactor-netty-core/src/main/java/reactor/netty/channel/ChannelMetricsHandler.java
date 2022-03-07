@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,10 @@ package reactor.netty.channel;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.ssl.SslHandler;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -47,6 +49,11 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 	}
 
 	@Override
+	public ChannelHandler tlsMetricsHandler() {
+		return new TlsMetricsHandler(recorder);
+	}
+
+	@Override
 	public ChannelMetricsRecorder recorder() {
 		return recorder;
 	}
@@ -72,6 +79,32 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 						Duration.ofNanos(System.nanoTime() - connectTimeStart),
 						future.isSuccess() ? SUCCESS : ERROR);
 			});
+		}
+	}
+
+	static class TlsMetricsHandler extends ChannelInboundHandlerAdapter {
+		protected final ChannelMetricsRecorder recorder;
+		TlsMetricsHandler(ChannelMetricsRecorder recorder) {
+			this.recorder = recorder;
+		}
+
+		@Override
+		public void channelActive(ChannelHandlerContext ctx) {
+			long tlsHandshakeTimeStart = System.nanoTime();
+			ctx.pipeline().get(SslHandler.class)
+					.handshakeFuture()
+					.addListener(f -> {
+						ctx.pipeline().remove(this);
+						recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, f.isSuccess() ? SUCCESS : ERROR);
+					});
+			ctx.fireChannelActive();
+		}
+
+		protected void recordTlsHandshakeTime(ChannelHandlerContext ctx, long tlsHandshakeTimeStart, String status) {
+			recorder.recordTlsHandshakeTime(
+					ctx.channel().remoteAddress(),
+					Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
+					status);
 		}
 	}
 }

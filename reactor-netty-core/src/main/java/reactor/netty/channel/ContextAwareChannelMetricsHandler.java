@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,11 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 	@Override
 	public ChannelHandler connectMetricsHandler() {
 		return new ContextAwareConnectMetricsHandler(recorder());
+	}
+
+	@Override
+	public ChannelHandler tlsMetricsHandler() {
+		return new TlsMetricsHandler(recorder);
 	}
 
 	@Override
@@ -120,6 +125,24 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 			}
 			else {
 				recorder.recordConnectTime(address, Duration.ofNanos(System.nanoTime() - connectTimeStart), status);
+			}
+		}
+	}
+
+	static final class TlsMetricsHandler extends ChannelMetricsHandler.TlsMetricsHandler {
+		TlsMetricsHandler(ContextAwareChannelMetricsRecorder recorder) {
+			super(recorder);
+		}
+
+		@Override
+		protected void recordTlsHandshakeTime(ChannelHandlerContext ctx, long tlsHandshakeTimeStart, String status) {
+			Connection connection = Connection.from(ctx.channel());
+			if (connection instanceof ConnectionObserver) {
+				((ContextAwareChannelMetricsRecorder) recorder).recordTlsHandshakeTime(
+						((ConnectionObserver) connection).currentContext(),
+						ctx.channel().remoteAddress(),
+						Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
+						status);
 			}
 		}
 	}

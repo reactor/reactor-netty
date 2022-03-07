@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -48,20 +47,13 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.core.Exceptions;
-import reactor.netty.Connection;
-import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
-import reactor.netty.channel.AbstractChannelMetricsHandler;
-import reactor.netty.channel.ChannelMetricsRecorder;
-import reactor.netty.channel.ContextAwareChannelMetricsRecorder;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
-import static reactor.netty.Metrics.ERROR;
-import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -780,23 +772,7 @@ public final class SslProvider {
 	}
 
 	static final class SslReadHandler extends ChannelInboundHandlerAdapter {
-
 		boolean handshakeDone;
-
-		ChannelMetricsRecorder recorder;
-
-		long tlsHandshakeTimeStart;
-
-		@Override
-		public void channelRegistered(ChannelHandlerContext ctx) {
-			ChannelHandler handler = ctx.pipeline().get(NettyPipeline.ChannelMetricsHandler);
-			if (handler != null) {
-				recorder = ((AbstractChannelMetricsHandler) handler).recorder();
-				tlsHandshakeTimeStart = System.nanoTime();
-			}
-
-			ctx.fireChannelRegistered();
-		}
 
 		@Override
 		public void channelActive(ChannelHandlerContext ctx) {
@@ -822,37 +798,13 @@ public final class SslProvider {
 				}
 				SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
 				if (handshake.isSuccess()) {
-					if (recorder != null) {
-						recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, SUCCESS);
-					}
 					ctx.fireChannelActive();
 				}
 				else {
-					if (recorder != null) {
-						recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, ERROR);
-					}
 					ctx.fireExceptionCaught(handshake.cause());
 				}
 			}
 			ctx.fireUserEventTriggered(evt);
-		}
-
-		void recordTlsHandshakeTime(ChannelHandlerContext ctx, long tlsHandshakeTimeStart, String status) {
-			if (recorder instanceof ContextAwareChannelMetricsRecorder) {
-				Connection connection = Connection.from(ctx.channel());
-				if (connection instanceof ConnectionObserver) {
-					((ContextAwareChannelMetricsRecorder) recorder).recordTlsHandshakeTime(
-							((ConnectionObserver) connection).currentContext(),
-							ctx.channel().remoteAddress(),
-							Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
-							status);
-					return;
-				}
-			}
-			recorder.recordTlsHandshakeTime(
-					ctx.channel().remoteAddress(),
-					Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
-					status);
 		}
 	}
 
