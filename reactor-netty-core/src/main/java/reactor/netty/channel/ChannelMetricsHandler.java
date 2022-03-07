@@ -89,7 +89,7 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 		}
 
 		@Override
-		public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		public void channelActive(ChannelHandlerContext ctx) {
 			long tlsHandshakeTimeStart = System.nanoTime();
 			ctx.pipeline().get(SslHandler.class)
 					.handshakeFuture()

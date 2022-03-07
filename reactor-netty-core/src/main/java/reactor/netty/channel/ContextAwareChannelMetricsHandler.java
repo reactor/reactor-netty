@@ -129,7 +129,7 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 		}
 	}
 
-	static class TlsMetricsHandler extends ChannelMetricsHandler.TlsMetricsHandler {
+	static final class TlsMetricsHandler extends ChannelMetricsHandler.TlsMetricsHandler {
 		TlsMetricsHandler(ContextAwareChannelMetricsRecorder recorder) {
 			super(recorder);
 		}
