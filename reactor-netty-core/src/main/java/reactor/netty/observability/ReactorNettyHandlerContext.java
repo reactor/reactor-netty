@@ -15,6 +15,9 @@
  */
 package reactor.netty.observability;
 
+import io.micrometer.core.instrument.Timer;
+import reactor.util.annotation.Nullable;
+
 /**
  * Abstraction over all Reactor Netty contexts.
  *
@@ -22,4 +25,12 @@ package reactor.netty.observability;
  * @since 1.1.0
  */
 public interface ReactorNettyHandlerContext {
+
+	/**
+	 * Obtain the timer associated to this reactor netty context.
+	 * @return the current reactor netty handler context timer
+	 */
+	@Nullable
+	Timer getTimer();
+
 }

@@ -20,6 +20,7 @@ import reactor.netty.Metrics;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 import reactor.netty.internal.util.MapUtils;
+import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -80,14 +81,18 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(uri, address, method, status);
-		Timer responseTime = MapUtils.computeIfAbsent(responseTimeCache, meterKey,
-				key -> filter(Timer.builder(name() + RESPONSE_TIME)
-				                   .description(RESPONSE_TIME_DESCRIPTION)
-				                   .tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
-				                   .register(REGISTRY)));
+		Timer responseTime = getResponseTimeTimer(name() + RESPONSE_TIME, address, uri, method, status);
 		if (responseTime != null) {
 			responseTime.record(time);
 		}
+	}
+
+	@Nullable
+	final Timer getResponseTimeTimer(String name, String address, String uri, String method, String status) {
+		MeterKey meterKey = new MeterKey(uri, address, method, status);
+		return MapUtils.computeIfAbsent(responseTimeCache, meterKey,
+				key -> filter(Timer.builder(name)
+						.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
+						.register(REGISTRY)));
 	}
 }

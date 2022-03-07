@@ -48,10 +48,6 @@ import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
  * @since 0.9
  */
 public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder {
-	static final String ADDRESS_RESOLVER_TIME_DESCRIPTION = "Time spent for resolving the address";
-	static final String CONNECT_TIME_DESCRIPTION = "Time spent for connecting to the remote address";
-	static final String TLS_HANDSHAKE_TIME_DESCRIPTION = "Time spent for TLS handshake";
-
 	final ConcurrentMap<String, DistributionSummary> dataReceivedCache = new ConcurrentHashMap<>();
 
 	final ConcurrentMap<String, DistributionSummary> dataSentCache = new ConcurrentHashMap<>();
@@ -120,43 +116,55 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(null, address, null, status);
-		Timer timer = MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
-				key -> filter(Timer.builder(name + TLS_HANDSHAKE_TIME)
-				                   .description(TLS_HANDSHAKE_TIME_DESCRIPTION)
-				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
-				                   .register(REGISTRY)));
+		Timer timer = getTlsHandshakeTimer(name + TLS_HANDSHAKE_TIME, address, status);
 		if (timer != null) {
 			timer.record(time);
 		}
+	}
+
+	@Nullable
+	public final Timer getTlsHandshakeTimer(String name, String address, String status) {
+		MeterKey meterKey = new MeterKey(null, address, null, status);
+		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
+				key -> filter(Timer.builder(name)
+						.tags(REMOTE_ADDRESS, address, STATUS, status)
+						.register(REGISTRY)));
 	}
 
 	@Override
 	public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(null, address, null, status);
-		Timer timer = MapUtils.computeIfAbsent(connectTimeCache, meterKey,
-				key -> filter(Timer.builder(name + CONNECT_TIME)
-				                   .description(CONNECT_TIME_DESCRIPTION)
-				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
-				                   .register(REGISTRY)));
+		Timer timer = getConnectTimer(name + CONNECT_TIME, address, status);
 		if (timer != null) {
 			timer.record(time);
 		}
 	}
 
+	@Nullable
+	final Timer getConnectTimer(String name, String address, String status) {
+		MeterKey meterKey = new MeterKey(null, address, null, status);
+		return MapUtils.computeIfAbsent(connectTimeCache, meterKey,
+				key -> filter(Timer.builder(name)
+						.tags(REMOTE_ADDRESS, address, STATUS, status)
+						.register(REGISTRY)));
+	}
+
 	@Override
 	public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(null, address, null, status);
-		Timer timer = MapUtils.computeIfAbsent(addressResolverTimeCache, meterKey,
-				key -> filter(Timer.builder(name + ADDRESS_RESOLVER)
-				                   .description(ADDRESS_RESOLVER_TIME_DESCRIPTION)
-				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
-				                   .register(REGISTRY)));
+		Timer timer = getResolveAddressTimer(name + ADDRESS_RESOLVER, address, status);
 		if (timer != null) {
 			timer.record(time);
 		}
+	}
+
+	@Nullable
+	public final Timer getResolveAddressTimer(String name, String address, String status) {
+		MeterKey meterKey = new MeterKey(null, address, null, status);
+		return MapUtils.computeIfAbsent(addressResolverTimeCache, meterKey,
+				key -> filter(Timer.builder(name)
+						.tags(REMOTE_ADDRESS, address, STATUS, status)
+						.register(REGISTRY)));
 	}
 
 	@Override

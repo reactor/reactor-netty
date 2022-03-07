@@ -16,6 +16,7 @@
 package reactor.netty.channel;
 
 import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.observation.Observation;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -79,6 +80,11 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		ConnectMetricsHandler(MicrometerChannelMetricsRecorder recorder) {
 			this.recorder = recorder;
+		}
+
+		@Override
+		public Timer getTimer() {
+			return recorder.getConnectTimer(getName(), remoteAddress, status);
 		}
 
 		@Override

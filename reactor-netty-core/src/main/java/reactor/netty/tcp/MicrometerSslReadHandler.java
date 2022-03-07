@@ -16,6 +16,7 @@
 package reactor.netty.tcp;
 
 import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.observation.Observation;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -61,6 +62,11 @@ final class MicrometerSslReadHandler extends Observation.Context implements Reac
 	MicrometerSslReadHandler(MicrometerChannelMetricsRecorder recorder, boolean onServer) {
 		this.recorder = recorder;
 		this.type = onServer ? TYPE_SERVER : TYPE_CLIENT;
+	}
+
+	@Override
+	public Timer getTimer() {
+		return recorder.getTlsHandshakeTimer(getName(), remoteAddress, status);
 	}
 
 	@Override

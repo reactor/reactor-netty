@@ -16,6 +16,7 @@
 package reactor.netty.http.server;
 
 import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.observation.Observation;
 import io.micrometer.core.instrument.transport.http.HttpServerRequest;
 import io.micrometer.core.instrument.transport.http.HttpServerResponse;
@@ -90,7 +91,8 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		super.startRead(ops, path, method);
 
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(
-				new ObservationHttpServerRequest(ops.nettyRequest, method, path), recorder.protocol());
+				recorder,
+				new ObservationHttpServerRequest(ops.nettyRequest, method, path));
 		responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, REGISTRY);
 	}
 
@@ -101,7 +103,8 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 		if (responseTimeObservation == null) {
 			responseTimeHandlerContext = new ResponseTimeHandlerContext(
-					new ObservationHttpServerRequest(ops.nettyRequest, method, path), recorder.protocol());
+					recorder,
+					new ObservationHttpServerRequest(ops.nettyRequest, method, path));
 			responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, REGISTRY);
 		}
 		responseTimeHandlerContext.setResponse(new ObservationHttpServerResponse(ops.nettyResponse));
@@ -180,23 +183,28 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 		final String method;
 		final String path;
-		final String protocol;
+		final MicrometerHttpServerMetricsRecorder recorder;
 
 		// status might not be known beforehand
 		String status;
 
-		ResponseTimeHandlerContext(HttpServerRequest request, String protocol) {
+		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, HttpServerRequest request) {
 			super(request);
+			this.recorder = recorder;
 			this.method = request.method();
 			this.path = request.path();
-			this.protocol = protocol;
 			put(HttpServerRequest.class, request);
+		}
+
+		@Override
+		public Timer getTimer() {
+			return recorder.getResponseTimeTimer(getName(), path, method, status);
 		}
 
 		@Override
 		public Tags getHighCardinalityTags() {
 			// TODO cache
-			return Tags.of(REACTOR_NETTY_PROTOCOL.of(protocol), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(TYPE));
+			return Tags.of(REACTOR_NETTY_PROTOCOL.of(recorder.protocol()), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(TYPE));
 		}
 
 		@Override
