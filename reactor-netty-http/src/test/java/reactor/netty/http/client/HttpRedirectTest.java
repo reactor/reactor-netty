@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -687,7 +687,7 @@ class HttpRedirectTest extends BaseHttpTest {
 		ConnectionProvider provider = ConnectionProvider.create("doTestBuffersForRedirectWithContentShouldBeReleased", 1);
 		final List<Integer> redirectBufferRefCounts = new ArrayList<>();
 		HttpClient.create(provider)
-		          .doOnRequest((r, c) -> c.addHandler("test-buffer-released", new ChannelInboundHandlerAdapter() {
+		          .doOnRequest((r, c) -> c.addHandlerLast("test-buffer-released", new ChannelInboundHandlerAdapter() {
 
 		              @Override
 		              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {

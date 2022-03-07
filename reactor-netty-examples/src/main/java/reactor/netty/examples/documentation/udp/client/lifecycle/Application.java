@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,10 +28,10 @@ public class Application {
 				UdpClient.create()
 				         .host("example.com")
 				         .port(80)
-				         .doOnConnected(conn -> conn.addHandler(new LineBasedFrameDecoder(8192))) //<1>
+				         .doOnConnected(conn -> conn.addHandlerLast(new LineBasedFrameDecoder(8192))) //<1>
 				         .doOnChannelInit((observer, channel, remoteAddress) ->
 				             channel.pipeline()
-				                    .addFirst(new LoggingHandler("reactor.netty.examples")))      //<2>
+				                    .addFirst(new LoggingHandler("reactor.netty.examples")))           //<2>
 				         .connectNow(Duration.ofSeconds(30));
 
 		connection.onDispose()

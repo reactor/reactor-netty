@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -256,7 +256,7 @@ public class TcpClientTests {
 
 	@Test
 	void tcpClientHandlesLineFeedDataFixedPool() throws InterruptedException {
-		Consumer<? super Connection> channelInit = c -> c.addHandler("codec", new LineBasedFrameDecoder(8 * 1024));
+		Consumer<? super Connection> channelInit = c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024));
 
 		ConnectionProvider p = ConnectionProvider.newConnection();
 
@@ -269,7 +269,7 @@ public class TcpClientTests {
 
 	@Test
 	void tcpClientHandlesLineFeedDataElasticPool() throws InterruptedException {
-		Consumer<? super Connection> channelInit = c -> c.addHandler("codec", new LineBasedFrameDecoder(8 * 1024));
+		Consumer<? super Connection> channelInit = c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024));
 
 		tcpClientHandlesLineFeedData(
 				TcpClient.create(ConnectionProvider.create("tcpClientHandlesLineFeedDataElasticPool", Integer.MAX_VALUE))

@@ -754,7 +754,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			ChannelOperations.addReactiveBridge(ch, opsFactory, obs);
 
 			if (responseTimeoutMillis > -1) {
-				Connection.from(ch).addHandler(NettyPipeline.ResponseTimeoutHandler,
+				Connection.from(ch).addHandlerFirst(NettyPipeline.ResponseTimeoutHandler,
 						new ReadTimeoutHandler(responseTimeoutMillis, TimeUnit.MILLISECONDS));
 			}
 

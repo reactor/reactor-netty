@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,10 +27,10 @@ public class Application {
 		DisposableServer server =
 				HttpServer.create()
 				          .doOnConnection(conn ->
-				              conn.addHandler(new ReadTimeoutHandler(10, TimeUnit.SECONDS))) //<1>
+				              conn.addHandlerFirst(new ReadTimeoutHandler(10, TimeUnit.SECONDS))) //<1>
 				          .doOnChannelInit((observer, channel, remoteAddress) ->
 				              channel.pipeline()
-				                     .addFirst(new LoggingHandler("reactor.netty.examples")))//<2>
+				                     .addFirst(new LoggingHandler("reactor.netty.examples")))    //<2>
 				          .bindNow();
 
 		server.onDispose()

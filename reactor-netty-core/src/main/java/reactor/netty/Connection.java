@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,8 +84,10 @@ public interface Connection extends DisposableChannel {
 	 * @param handler handler instance
 	 *
 	 * @return this Connection
-
+	 * @deprecated as of 1.0.17. Use {@link #addHandlerFirst(ChannelHandler)} or {@link #addHandlerLast(ChannelHandler)}.
+	 * This method will be removed in version 1.2.0.
 	 */
+	@Deprecated
 	default Connection addHandler(ChannelHandler handler) {
 		return addHandler(handler.getClass().getSimpleName(), handler);
 	}
@@ -107,7 +109,10 @@ public interface Connection extends DisposableChannel {
 	 * @param handler handler instance
 	 *
 	 * @return this Connection
+	 * @deprecated as of 1.0.17. Use {@link #addHandlerFirst(String, ChannelHandler)} or
+	 * {@link #addHandlerLast(String, ChannelHandler)}. This method will be removed in version 1.2.0.
 	 */
+	@Deprecated
 	default Connection addHandler(String name, ChannelHandler handler) {
 		if (handler instanceof ChannelOutboundHandler) {
 			addHandlerFirst(name, handler);
