@@ -60,8 +60,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
@@ -2974,13 +2974,13 @@ class HttpClientTest extends BaseHttpTest {
 	void testCustomHandlerAddedOnChannelInitAlwaysAvailable() {
 		doTestCustomHandlerAddedOnCallbackAlwaysAvailable(
 				client -> client.doOnChannelInit((observer, channel, address) ->
-						Connection.from(channel).addHandlerLast("custom", new ChannelDuplexHandler())));
+						Connection.from(channel).addHandlerLast("custom", new ChannelHandlerAdapter(){})));
 	}
 
 	@Test
 	void testCustomHandlerAddedOnChannelConnectedAlwaysAvailable() {
 		doTestCustomHandlerAddedOnCallbackAlwaysAvailable(
-				client -> client.doOnConnected(conn -> conn.addHandlerLast("custom", new ChannelDuplexHandler())));
+				client -> client.doOnConnected(conn -> conn.addHandlerLast("custom", new ChannelHandlerAdapter(){})));
 	}
 
 	private void doTestCustomHandlerAddedOnCallbackAlwaysAvailable(Function<HttpClient, HttpClient> customizer) {
