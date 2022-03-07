@@ -56,3 +56,10 @@ jobs:
           java-version: '8'
       - name: Build with Gradle
         run: ./gradlew clean check --no-daemon -x spotlessCheck -PforceTransport=${{ matrix.transport }}
+      - name: Archive tests output
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests_output_${{ matrix.os }}_${{ matrix.transport }}
+          path: reactor-netty-http/build/test-results/test/binary/output.bin
+
