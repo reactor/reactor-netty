@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -611,7 +611,7 @@ class TcpServerTests {
 
 		DisposableServer server =
 				TcpServer.create()
-				         .handle((in, out) -> in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
+				         .handle((in, out) -> in.withConnection(c -> c.addHandlerLast(new JsonObjectDecoder()))
 				                                .receive()
 				                                .asString()
 				                                .log("serve")
@@ -627,7 +627,7 @@ class TcpServerTests {
 		Connection client = TcpClient.create()
 		                             .port(server.port())
 		                             .handle((in, out) -> {
-		                                 in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
+		                                 in.withConnection(c -> c.addHandlerLast(new JsonObjectDecoder()))
 		                                   .receive()
 		                                   .asString()
 		                                   .log("receive")

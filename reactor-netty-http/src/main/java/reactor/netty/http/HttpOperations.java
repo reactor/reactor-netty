@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -252,6 +252,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public HttpOperations<INBOUND, OUTBOUND> addHandler(String name, ChannelHandler handler) {
 		super.addHandler(name, handler);
 

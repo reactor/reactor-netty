@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ class ChannelOperationsHandlerTest extends BaseHttpTest {
 		AtomicInteger counter = new AtomicInteger();
 		disposableServer =
 				createServer()
-				          .doOnConnection(conn -> conn.addHandler(new LineBasedFrameDecoder(10)))
+				          .doOnConnection(conn -> conn.addHandlerLast(new LineBasedFrameDecoder(10)))
 				          .handle((req, res) ->
 				                  req.receive()
 				                     .asString()

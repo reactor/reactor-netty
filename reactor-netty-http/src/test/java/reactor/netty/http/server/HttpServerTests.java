@@ -318,6 +318,7 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void flushOnComplete() {
 
 		Flux<String> flux = Flux.range(0, 100)
