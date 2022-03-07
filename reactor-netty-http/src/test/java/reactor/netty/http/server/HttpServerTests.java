@@ -1449,8 +1449,18 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testDecodingFailureLastHttpContent() throws Exception {
+		AtomicReference<Throwable> error = new AtomicReference<>();
 		disposableServer =
 				createServer()
+				          .doOnConnection(conn -> conn.channel().pipeline().addAfter(NettyPipeline.HttpTrafficHandler, null,
+				                  new ChannelInboundHandlerAdapter() {
+
+				                      @Override
+				                      public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+				                          error.set(cause);
+				                          ctx.fireExceptionCaught(cause);
+				                      }
+				          }))
 				          .route(r -> r.put("/1", (req, res) -> req.receive()
 				                                                   .then(res.sendString(Mono.just("test"))
 				                                                            .then()))
@@ -1459,8 +1469,13 @@ class HttpServerTests extends BaseHttpTest {
 
 		doTestDecodingFailureLastHttpContent("PUT /1 HTTP/1.1\r\nHost: a.example.com\r\n" +
 				"Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n", "400 Bad Request", "connection: close");
+
+		assertThat(error.get()).isNull();
+
 		doTestDecodingFailureLastHttpContent("PUT /2 HTTP/1.1\r\nHost: a.example.com\r\n" +
 				"Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n", "200 OK");
+
+		assertThat(error.get()).isNull();
 	}
 
 	private void doTestDecodingFailureLastHttpContent(String message, String... expectations) throws Exception {

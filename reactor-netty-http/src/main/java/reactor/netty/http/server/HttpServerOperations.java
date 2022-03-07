@@ -760,6 +760,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (msg instanceof HttpRequest) {
 			request = (HttpRequest) msg;
 		}
+		else {
+			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+			if (ops instanceof HttpServerOperations) {
+				request = ((HttpServerOperations) ops).nettyRequest;
+			}
+		}
 		listener.onStateChange(new FailedHttpServerRequest(conn, listener, request, response, secure), REQUEST_DECODING_FAILED);
 	}
 
