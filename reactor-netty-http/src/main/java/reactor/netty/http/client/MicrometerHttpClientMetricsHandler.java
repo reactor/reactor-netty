@@ -72,15 +72,11 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		recorder().recordDataReceived(address, path, dataReceived);
 
-		// TODO
-		// Cannot invoke the recorder any more:
+		// Cannot invoke the recorder anymore:
 		// 1. The recorder is one instance only, it is invoked for all requests that can happen
 		// 2. The recorder does not have knowledge about request lifecycle
 		//
 		// Move the implementation from the recorder here
-		//
-		// Important:
-		// Cannot cache the Timer anymore - need to test the performance
 		responseTimeHandlerContext.status = status;
 		responseTimeObservation.stop();
 	}

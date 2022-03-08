@@ -115,16 +115,12 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 
 		@Override
 		Future<List<T>> resolveAllInternal(SocketAddress address, Supplier<Future<List<T>>> resolver) {
-			// TODO
-			// Cannot invoke the recorder any more:
+			// Cannot invoke the recorder anymore:
 			// 1. The recorder is one instance only, it is invoked for all name resolutions that can happen
 			// 2. The recorder does not have knowledge about name resolution lifecycle
 			// 3. There is no connection so we cannot hold the context information in the Channel
 			//
 			// Move the implementation from the recorder here
-			//
-			// Important:
-			// Cannot cache the Timer anymore - need to test the performance
 			String remoteAddress = formatSocketAddress(address);
 			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, remoteAddress);
 			Observation sample = Observation.start(name + ADDRESS_RESOLVER, handlerContext, REGISTRY);
@@ -137,16 +133,12 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 
 		@Override
 		Future<T> resolveInternal(SocketAddress address, Supplier<Future<T>> resolver) {
-			// TODO
-			// Cannot invoke the recorder any more:
+			// Cannot invoke the recorder anymore:
 			// 1. The recorder is one instance only, it is invoked for all name resolutions that can happen
 			// 2. The recorder does not have knowledge about name resolution lifecycle
 			// 3. There is no connection so we cannot hold the context information in the Channel
 			//
 			// Move the implementation from the recorder here
-			//
-			// Important:
-			// Cannot cache the Timer anymore - need to test the performance
 			String remoteAddress = formatSocketAddress(address);
 			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, remoteAddress);
 			Observation observation = Observation.start(name + ADDRESS_RESOLVER, handlerContext, REGISTRY);
