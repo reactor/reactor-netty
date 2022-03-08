@@ -111,15 +111,11 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		@Override
 		public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
 				SocketAddress localAddress, ChannelPromise promise) throws Exception {
-			// TODO
-			// Cannot invoke the recorder any more:
+			// Cannot invoke the recorder anymore:
 			// 1. The recorder is one instance only, it is invoked for all connection establishments that can happen
 			// 2. The recorder does not have knowledge about connection establishment lifecycle
 			//
 			// Move the implementation from the recorder here
-			//
-			// Important:
-			// Cannot cache the Timer anymore - need to test the performance
 			this.remoteAddress = formatSocketAddress(remoteAddress);
 			Observation observation = Observation.start(recorder.name() + CONNECT_TIME, this, REGISTRY);
 			ctx.connect(remoteAddress, localAddress, promise)
