@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,25 @@ import reactor.netty.http.client.HttpClient;
 public class Application {
 
 	public static void main(String[] args) {
-		HttpClient client = HttpClient.newConnection();
+		HttpClient client =
+				HttpClient.newConnection()
+				          .doOnConnected(conn -> System.out.println("Connection " + conn.channel()));
 
 		String response =
+				// A new connection is established for every request
 				client.get()
-				      .uri("https://example.com/")
+				      .uri("https://httpbin.org/get")
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .block();
+
+		System.out.println("Response " + response);
+
+		response =
+				// A new connection is established for every request
+				client.post()
+				      .uri("https://httpbin.org/post")
 				      .responseContent()
 				      .aggregate()
 				      .asString()

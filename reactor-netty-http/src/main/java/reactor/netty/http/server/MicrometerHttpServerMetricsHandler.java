@@ -71,15 +71,11 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		// Always take the remote address from the operations in order to consider proxy information
 		recorder().recordDataSent(ops.remoteAddress(), path, dataSent);
 
-		// TODO
-		// Cannot invoke the recorder any more:
+		// Cannot invoke the recorder anymore:
 		// 1. The recorder is one instance only, it is invoked for all requests that can happen
 		// 2. The recorder does not have knowledge about request lifecycle
 		//
 		// Move the implementation from the recorder here
-		//
-		// Important:
-		// Cannot cache the Timer anymore - need to test the performance
 		responseTimeObservation.stop();
 
 		responseTimeHandlerContext = null;
@@ -203,7 +199,6 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 		@Override
 		public Tags getHighCardinalityTags() {
-			// TODO cache
 			return Tags.of(REACTOR_NETTY_PROTOCOL.of(recorder.protocol()), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(TYPE));
 		}
 
