@@ -79,7 +79,7 @@ If you need to disable the connection pool, you can apply the following configur
 [source,java,indent=0]
 .{examplesdir}/pool/Application.java
 ----
-include::{examplesdir}/pool/Application.java[lines=18..35]
+include::{examplesdir}/pool/Application.java[lines=18..49]
 ----
 ====
 
