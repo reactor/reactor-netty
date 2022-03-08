@@ -77,8 +77,8 @@ task downloadBaseline(type: Download) {
 }
 
 task japicmp(type: JapicmpTask) {
-	oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-http-brave-${compatibleVersion}.jar")
-	newClasspath = files(jar.archiveFile, project(':reactor-netty-core').jar)
+	oldClasspath.from(files("${buildDir}/baselineLibs/reactor-netty-http-brave-${compatibleVersion}.jar"))
+	newClasspath.from(files(jar.archiveFile, project(':reactor-netty-core').jar))
 	onlyBinaryIncompatibleModified = true
 	failOnModification = true
 	failOnSourceIncompatibility = true
