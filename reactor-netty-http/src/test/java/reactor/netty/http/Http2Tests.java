@@ -15,18 +15,28 @@
  */
 package reactor.netty.http;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.concurrent.DefaultPromise;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.reactivestreams.Publisher;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
+import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
@@ -37,6 +47,7 @@ import reactor.util.function.Tuple2;
 
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -47,6 +58,7 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Holds HTTP/2 specific tests.
@@ -147,6 +159,39 @@ class Http2Tests extends BaseHttpTest {
 				)
 				.expectNext("Hello world!")
 				.verifyComplete();
+	}
+
+	@Test
+	void testIdleTimeoutWithHttp11AndH2cHandlesHttp11RequestsCorrectly() {
+		ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+		Logger logger = (Logger) LoggerFactory.getLogger(DefaultPromise.class);
+		logger.addAppender(listAppender);
+		listAppender.start();
+
+		disposableServer =
+				createServer()
+				          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
+				          .idleTimeout(Duration.ofSeconds(60))
+				          .route(routes ->
+				              routes.post("/echo", (req, res) -> res.send(req.receive().retain())))
+				          .bindNow();
+
+		StepVerifier.create(
+				createClient(disposableServer.port())
+				          .protocol(HttpProtocol.HTTP11)
+				          .post()
+				          .uri("/echo")
+				          .send(ByteBufFlux.fromString(Mono.just("Hello world!")))
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+						  .timeout(Duration.ofSeconds(10))
+				)
+				.expectNext("Hello world!")
+				.verifyComplete();
+
+		// ensure no WARN with error
+		assertFalse(listAppender.list.stream().anyMatch(event -> event.getLevel() == Level.WARN));
 	}
 
 	@Test
