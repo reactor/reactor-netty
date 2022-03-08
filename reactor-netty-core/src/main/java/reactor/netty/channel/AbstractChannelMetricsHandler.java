@@ -67,6 +67,12 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 			             NettyPipeline.ConnectMetricsHandler,
 			             connectMetricsHandler());
 		}
+		if (ctx.pipeline().get(NettyPipeline.SslHandler) != null) {
+			ctx.pipeline()
+				.addBefore(NettyPipeline.SslHandler,
+						 NettyPipeline.TlsMetricsHandler,
+						 tlsMetricsHandler());
+		}
 
 		ctx.fireChannelRegistered();
 	}
@@ -119,6 +125,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	}
 
 	public abstract ChannelHandler connectMetricsHandler();
+	public abstract ChannelHandler tlsMetricsHandler();
 
 	public abstract ChannelMetricsRecorder recorder();
 

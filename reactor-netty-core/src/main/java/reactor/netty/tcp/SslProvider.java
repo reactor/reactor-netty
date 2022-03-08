@@ -32,7 +32,6 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -48,21 +47,13 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.core.Exceptions;
-import reactor.netty.Connection;
-import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
-import reactor.netty.channel.AbstractChannelMetricsHandler;
-import reactor.netty.channel.ChannelMetricsRecorder;
-import reactor.netty.channel.ContextAwareChannelMetricsRecorder;
-import reactor.netty.channel.MicrometerChannelMetricsHandler;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
-import static reactor.netty.Metrics.ERROR;
-import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -522,13 +513,9 @@ public final class SslProvider {
 	}
 
 	public void addSslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug) {
-		addSslHandler(channel, remoteAddress, sslDebug, true);
-	}
-
-	public void addSslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug, boolean enableTracing) {
 		Objects.requireNonNull(channel, "channel");
 		if (sniProvider != null) {
-			sniProvider.addSniHandler(channel, sslDebug, enableTracing);
+			sniProvider.addSniHandler(channel, sslDebug);
 			return;
 		}
 
@@ -564,7 +551,7 @@ public final class SslProvider {
 			pipeline.addFirst(NettyPipeline.SslHandler, sslHandler);
 		}
 
-		addSslReadHandler(pipeline, sslDebug, remoteAddress == null, enableTracing);
+		addSslReadHandler(pipeline, sslDebug);
 	}
 
 	@Override
@@ -594,19 +581,15 @@ public final class SslProvider {
 		return Objects.hash(builderHashCode);
 	}
 
-	static void addSslReadHandler(ChannelPipeline pipeline, boolean sslDebug, boolean onServer, boolean enableTracing) {
-		ChannelHandler handler = pipeline.get(NettyPipeline.ChannelMetricsHandler);
-		ChannelHandler sslReadHandler = handler instanceof MicrometerChannelMetricsHandler && enableTracing ?
-				new MicrometerSslReadHandler(((MicrometerChannelMetricsHandler) handler).recorder(), onServer) :
-				new SslReadHandler();
+	static void addSslReadHandler(ChannelPipeline pipeline, boolean sslDebug) {
 		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
-			pipeline.addAfter(NettyPipeline.LoggingHandler, NettyPipeline.SslReader, sslReadHandler);
+			pipeline.addAfter(NettyPipeline.LoggingHandler, NettyPipeline.SslReader, new SslReadHandler());
 			if (sslDebug) {
 				pipeline.addBefore(NettyPipeline.SslHandler, NettyPipeline.SslLoggingHandler, LOGGING_HANDLER);
 			}
 		}
 		else {
-			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, sslReadHandler);
+			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, new SslReadHandler());
 		}
 	}
 
@@ -788,24 +771,8 @@ public final class SslProvider {
 		}
 	}
 
-	static class SslReadHandler extends ChannelInboundHandlerAdapter {
-
+	static final class SslReadHandler extends ChannelInboundHandlerAdapter {
 		boolean handshakeDone;
-
-		ChannelMetricsRecorder recorder;
-
-		long tlsHandshakeTimeStart;
-
-		@Override
-		public void channelRegistered(ChannelHandlerContext ctx) {
-			ChannelHandler handler = ctx.pipeline().get(NettyPipeline.ChannelMetricsHandler);
-			if (handler != null) {
-				recorder = ((AbstractChannelMetricsHandler) handler).recorder();
-				tlsHandshakeTimeStart = System.nanoTime();
-			}
-
-			ctx.fireChannelRegistered();
-		}
 
 		@Override
 		public void channelActive(ChannelHandlerContext ctx) {
@@ -831,37 +798,13 @@ public final class SslProvider {
 				}
 				SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
 				if (handshake.isSuccess()) {
-					if (recorder != null) {
-						recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, SUCCESS);
-					}
 					ctx.fireChannelActive();
 				}
 				else {
-					if (recorder != null) {
-						recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, ERROR);
-					}
 					ctx.fireExceptionCaught(handshake.cause());
 				}
 			}
 			ctx.fireUserEventTriggered(evt);
-		}
-
-		void recordTlsHandshakeTime(ChannelHandlerContext ctx, long tlsHandshakeTimeStart, String status) {
-			if (recorder instanceof ContextAwareChannelMetricsRecorder) {
-				Connection connection = Connection.from(ctx.channel());
-				if (connection instanceof ConnectionObserver) {
-					((ContextAwareChannelMetricsRecorder) recorder).recordTlsHandshakeTime(
-							((ConnectionObserver) connection).currentContext(),
-							ctx.channel().remoteAddress(),
-							Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
-							status);
-					return;
-				}
-			}
-			recorder.recordTlsHandshakeTime(
-					ctx.channel().remoteAddress(),
-					Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
-					status);
 		}
 	}
 

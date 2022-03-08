@@ -40,9 +40,8 @@ final class SniProvider {
 	 *
 	 * @param channel the channel
 	 * @param sslDebug if true SSL debugging on the server side will be enabled
-	 * @param enableTracing if true enables the integration with Micrometer Tracing
 	 */
-	void addSniHandler(Channel channel, boolean sslDebug, boolean enableTracing) {
+	void addSniHandler(Channel channel, boolean sslDebug) {
 		ChannelPipeline pipeline = channel.pipeline();
 		if (pipeline.get(NettyPipeline.NonSslRedirectDetector) != null) {
 			pipeline.addAfter(NettyPipeline.NonSslRedirectDetector, NettyPipeline.SslHandler, newSniHandler());
@@ -50,7 +49,7 @@ final class SniProvider {
 		else {
 			pipeline.addFirst(NettyPipeline.SslHandler, newSniHandler());
 		}
-		SslProvider.addSslReadHandler(pipeline, sslDebug, true, enableTracing);
+		SslProvider.addSslReadHandler(pipeline, sslDebug);
 	}
 
 	final Map<String, SslProvider> confPerDomainName;

@@ -945,7 +945,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 					pipeline.addFirst(NettyPipeline.NonSslRedirectDetector, nonSslRedirectDetector);
 				}
 				else {
-					sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG, false);
+					sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
 				}
 
 				if ((protocols & h11orH2) == h11orH2) {

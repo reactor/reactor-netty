@@ -20,8 +20,10 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.observation.Observation;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.ssl.SslHandler;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
@@ -31,6 +33,7 @@ import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.ERROR;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.SUCCESS;
+import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.formatSocketAddress;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_STATUS;
@@ -58,6 +61,10 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 	@Override
 	public ChannelHandler connectMetricsHandler() {
 		return new ConnectMetricsHandler(recorder);
+	}
+	@Override
+	public ChannelHandler tlsMetricsHandler() {
+		return new TlsMetricsHandler(recorder, onServer);
 	}
 
 	@Override
@@ -185,6 +192,111 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.write(msg, promise);
+		}
+	}
+
+	static final class TlsMetricsHandler extends Observation.Context implements ReactorNettyHandlerContext, ChannelInboundHandler {
+		static final String CONTEXTUAL_NAME = "tls handshake";
+		static final String TYPE_CLIENT = "client";
+		static final String TYPE_SERVER = "server";
+
+		final MicrometerChannelMetricsRecorder recorder;
+		final String type;
+		Observation observation;
+
+		// remote address and status are not known beforehand
+		String remoteAddress;
+		String status;
+
+		TlsMetricsHandler(MicrometerChannelMetricsRecorder recorder, boolean onServer) {
+			this.recorder = recorder;
+			this.type = onServer ? TYPE_SERVER : TYPE_CLIENT;
+		}
+
+		@Override
+		public void channelActive(ChannelHandlerContext ctx) throws Exception {
+			this.remoteAddress = formatSocketAddress(ctx.channel().remoteAddress());
+			observation = Observation.start(recorder.name() + TLS_HANDSHAKE_TIME, this, REGISTRY);
+			ctx.pipeline().get(SslHandler.class)
+					.handshakeFuture()
+					.addListener(f -> {
+						ctx.pipeline().remove(this);
+						status = f.isSuccess() ? SUCCESS : ERROR;
+						observation.stop();
+					});
+
+			ctx.fireChannelActive();
+		}
+
+		@Override
+		public void channelInactive(ChannelHandlerContext ctx) {
+			ctx.fireChannelInactive();
+		}
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) {
+			ctx.fireChannelRead(msg);
+		}
+
+		@Override
+		public void channelReadComplete(ChannelHandlerContext ctx) {
+			ctx.fireChannelReadComplete();
+		}
+
+		@Override
+		public void channelRegistered(ChannelHandlerContext ctx) {
+			ctx.fireChannelRegistered();
+		}
+
+		@Override
+		public void channelUnregistered(ChannelHandlerContext ctx) {
+			ctx.fireChannelUnregistered();
+		}
+
+		@Override
+		public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+			ctx.fireChannelWritabilityChanged();
+		}
+
+		@Override
+		@SuppressWarnings("deprecation")
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireExceptionCaught(cause);
+		}
+
+		@Override
+		public String getContextualName() {
+			return CONTEXTUAL_NAME;
+		}
+
+		@Override
+		public Tags getHighCardinalityTags() {
+			return Tags.of(REACTOR_NETTY_PROTOCOL.of(recorder.protocol()), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(type));
+		}
+
+		@Override
+		public Tags getLowCardinalityTags() {
+			return Tags.of(REMOTE_ADDRESS.of(remoteAddress), STATUS.of(status));
+		}
+
+		@Override
+		public void handlerAdded(ChannelHandlerContext ctx) {
+			// noop
+		}
+
+		@Override
+		public void handlerRemoved(ChannelHandlerContext ctx) {
+			// noop
+		}
+
+		@Override
+		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+			ctx.fireUserEventTriggered(evt);
+		}
+
+		@Override
+		public Timer getTimer() {
+			return recorder.getTlsHandshakeTimer(getName(), remoteAddress, status);
 		}
 	}
 }
