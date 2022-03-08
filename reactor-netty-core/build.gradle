@@ -185,8 +185,8 @@ task downloadBaseline(type: Download) {
 }
 
 task japicmp(type: JapicmpTask) {
-	oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-core-${compatibleVersion}-original.jar")
-	newClasspath = files(jar.archiveFile)
+	oldClasspath.from(files("${buildDir}/baselineLibs/reactor-netty-core-${compatibleVersion}-original.jar"))
+	newClasspath.from(files(jar.archiveFile))
 	onlyBinaryIncompatibleModified = true
 	failOnModification = true
 	failOnSourceIncompatibility = true
