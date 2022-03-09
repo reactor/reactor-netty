@@ -131,65 +131,6 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	void testIdleTimeoutWithHttp11AndH2cHandlesRequestsCorrectly() {
-		disposableServer =
-				createServer()
-				          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
-				          .idleTimeout(Duration.ofSeconds(60))
-				          .route(routes ->
-				              routes.post("/echo", (req, res) -> res.send(req.receive().retain())))
-				          .bindNow();
-
-		StepVerifier.create(
-				createClient(disposableServer.port())
-				          .protocol(HttpProtocol.H2C)
-				          .post()
-				          .uri("/echo")
-				          .send(ByteBufFlux.fromString(Mono.just("Hello world!")))
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-						  .timeout(Duration.ofSeconds(10))
-				)
-				.expectNext("Hello world!")
-				.verifyComplete();
-	}
-
-	@Test
-	void testIdleTimeoutWithHttp11AndH2cHandlesHttp11RequestsCorrectly() {
-		ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
-		Logger logger = (Logger) LoggerFactory.getLogger(DefaultPromise.class);
-		logger.addAppender(listAppender);
-		listAppender.start();
-
-		disposableServer =
-				createServer()
-				          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
-				          .idleTimeout(Duration.ofSeconds(60))
-				          .route(routes ->
-				              routes.post("/echo", (req, res) -> res.send(req.receive().retain())))
-				          .bindNow();
-
-		StepVerifier.create(
-				createClient(disposableServer.port())
-				          .protocol(HttpProtocol.HTTP11)
-				          .post()
-				          .uri("/echo")
-				          .send(ByteBufFlux.fromString(Mono.just("Hello world!")))
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-						  .timeout(Duration.ofSeconds(10))
-				)
-				.expectNext("Hello world!")
-				.verifyComplete();
-
-		// ensure no WARN with error
-		assertThat(listAppender.list)
-				.noneMatch(event -> event.getLevel() == Level.WARN);
-	}
-
-	@Test
 	void testIssue1071MaxContentLengthSpecified() {
 		doTestIssue1071(1024, "doTestIssue1071", 200);
 	}
