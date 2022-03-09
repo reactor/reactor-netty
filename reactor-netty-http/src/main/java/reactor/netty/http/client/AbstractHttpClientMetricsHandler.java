@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,18 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	protected AbstractHttpClientMetricsHandler(@Nullable Function<String, String> uriTagValue) {
 		this.uriTagValue = uriTagValue;
+	}
+
+	protected AbstractHttpClientMetricsHandler(AbstractHttpClientMetricsHandler copy) {
+		this.contextView = copy.contextView;
+		this.dataReceived = copy.dataReceived;
+		this.dataReceivedTime = copy.dataReceivedTime;
+		this.dataSent = copy.dataSent;
+		this.dataSentTime = copy.dataSentTime;
+		this.method = copy.method;
+		this.path = copy.path;
+		this.status = copy.status;
+		this.uriTagValue = copy.uriTagValue;
 	}
 
 	@Override

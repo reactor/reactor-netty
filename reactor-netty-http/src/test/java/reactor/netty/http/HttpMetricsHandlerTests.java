@@ -23,6 +23,7 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -43,6 +44,7 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.ContextAwareHttpServerMetricsRecorder;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerMetricsRecorder;
+import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.test.StepVerifier;
@@ -54,6 +56,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -95,16 +99,23 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	static SelfSignedCertificate ssc;
 	static Http11SslContextSpec serverCtx11;
+	static Http2SslContextSpec serverCtx2;
 	static Http11SslContextSpec clientCtx11;
+	static Http2SslContextSpec clientCtx2;
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 		serverCtx11 = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())
 		                                  .configure(builder -> builder.sslProvider(SslProvider.JDK));
+		serverCtx2 = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())
+		                                .configure(builder -> builder.sslProvider(SslProvider.JDK));
 		clientCtx11 = Http11SslContextSpec.forClient()
 		                                  .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE)
 		                                                               .sslProvider(SslProvider.JDK));
+		clientCtx2 = Http2SslContextSpec.forClient()
+		                                .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE)
+		                                .sslProvider(SslProvider.JDK));
 	}
 
 	/**
@@ -122,16 +133,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		httpServer = createServer()
 				.host("127.0.0.1")
 				.metrics(true, Function.identity())
+				.httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
 				.route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().retain().delayElements(Duration.ofMillis(10))))
 						.post("/2", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().retain().delayElements(Duration.ofMillis(10))))
 						.post("/4", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().retain().doOnNext(b ->
-										checkServerConnectionsMicrometer(req.hostAddress()))))
+										checkServerConnectionsMicrometer(req))))
 						.post("/5", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().retain().doOnNext(b ->
-										checkServerConnectionsRecorder(req.hostAddress())))));
+										checkServerConnectionsRecorder(req)))));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
 		httpClient = createClient(provider, () -> disposableServer.address())
@@ -149,8 +161,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		Metrics.removeRegistry(registry);
 		registry.clear();
 		registry.close();
-
-		ServerRecorder.INSTANCE.reset();
 	}
 
 	@ParameterizedTest
@@ -183,8 +193,23 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
+		int[] numWrites = new int[]{14, 25};
+		int[] bytesWrite = new int[]{160, 243};
+		int connIndex = 1;
+		if (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) {
+			numWrites = new int[]{14, 28};
+			bytesWrite = new int[]{151, 310};
+			connIndex = 2;
+		}
+		else if (clientProtocols.length == 2 &&
+				Arrays.equals(clientProtocols, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})) {
+			numWrites = new int[]{17, 28};
+			bytesWrite = new int[]{315, 435};
+		}
+
 		Thread.sleep(1000);
-		checkExpectationsExisting("/1", sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null);
+		checkExpectationsExisting("/1", sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null,
+				numWrites[0], bytesWrite[0]);
 
 		CountDownLatch latch2 = new CountDownLatch(1);
 		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
@@ -206,7 +231,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		sa = (InetSocketAddress) serverAddress.get();
 
 		Thread.sleep(1000);
-		checkExpectationsExisting("/2", sa.getHostString() + ":" + sa.getPort(), 2, serverCtx != null);
+		checkExpectationsExisting("/2", sa.getHostString() + ":" + sa.getPort(), connIndex, serverCtx != null,
+				numWrites[1], bytesWrite[1]);
 	}
 
 	@ParameterizedTest
@@ -238,8 +264,32 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
+		List<HttpProtocol> protocols = Arrays.asList(clientProtocols);
+		int[] numWrites = new int[]{5, 7};
+		int[] numReads = new int[]{1, 2};
+		int[] bytesWrite = new int[]{106, 122};
+		int[] bytesRead = new int[]{37, 48};
+		int connIndex = 1;
+		if (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) {
+			numWrites = new int[]{1, 2};
+			bytesWrite = new int[]{123, 246};
+			bytesRead = new int[]{64, 128};
+			connIndex = 2;
+		}
+		else if (clientProtocols.length == 2 &&
+				Arrays.equals(clientProtocols, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})) {
+			numWrites = new int[]{4, 6};
+			numReads = new int[]{2, 3};
+			bytesWrite = new int[]{287, 345};
+			bytesRead = new int[]{108, 119};
+		}
+		else if (protocols.contains(HttpProtocol.H2) || protocols.contains(HttpProtocol.H2C)) {
+			numReads = new int[]{2, 3};
+		}
+
 		Thread.sleep(1000);
-		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null);
+		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), 1, 1, serverCtx != null,
+				numWrites[0], numReads[0], bytesWrite[0], bytesRead[0]);
 
 		CountDownLatch latch2 = new CountDownLatch(1);
 		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
@@ -260,7 +310,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		sa = (InetSocketAddress) serverAddress.get();
 
 		Thread.sleep(1000);
-		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), 2, serverCtx != null);
+		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), connIndex, 2, serverCtx != null,
+				numWrites[1], numReads[1], bytesWrite[1], bytesRead[1]);
 	}
 
 	@ParameterizedTest
@@ -295,8 +346,20 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
+		int numWrites = 14;
+		int bytesWrite = 160;
+		if (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) {
+			bytesWrite = 151;
+		}
+		else if (clientProtocols.length == 2 &&
+				Arrays.equals(clientProtocols, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})) {
+			numWrites = 17;
+			bytesWrite = 315;
+		}
+
 		Thread.sleep(1000);
-		checkExpectationsExisting("testUriTagValueResolver", sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null);
+		checkExpectationsExisting("testUriTagValueResolver", sa.getHostString() + ":" + sa.getPort(), 1,
+				serverCtx != null, numWrites, bytesWrite);
 	}
 
 	/**
@@ -343,8 +406,20 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
+		int[] numWrites = new int[]{14, 28};
+		int[] bytesWrite = new int[]{160, 320};
+		if (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) {
+			bytesWrite = new int[]{151, 302};
+		}
+		else if (clientProtocols.length == 2 &&
+				Arrays.equals(clientProtocols, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})) {
+			numWrites = new int[]{17, 34};
+			bytesWrite = new int[]{315, 630};
+		}
+
 		Thread.sleep(1000);
-		checkExpectationsExisting("testUriTagValueFunctionNotShared_1", sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null);
+		checkExpectationsExisting("testUriTagValueFunctionNotShared_1", sa.getHostString() + ":" + sa.getPort(),
+				1, serverCtx != null, numWrites[0], bytesWrite[0]);
 
 		CountDownLatch latch2 = new CountDownLatch(1);
 		httpClient.doOnResponse((res, conn) -> conn.channel()
@@ -367,7 +442,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		sa = (InetSocketAddress) serverAddress.get();
 
 		Thread.sleep(1000);
-		checkExpectationsExisting("testUriTagValueFunctionNotShared_2", sa.getHostString() + ":" + sa.getPort(), 2, serverCtx != null);
+		checkExpectationsExisting("testUriTagValueFunctionNotShared_2", sa.getHostString() + ":" + sa.getPort(),
+				2, serverCtx != null, numWrites[1], bytesWrite[1]);
 	}
 
 	@ParameterizedTest
@@ -437,6 +513,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsMicrometer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, Function.identity()).bindNow();
 
@@ -471,8 +548,13 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		// ensure that the server counters have been updated. For the moment, wait 1 sec.
 		Thread.sleep(1000);
 		// now check the server counters
-		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
-		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+		if (isHttp11) {
+			checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+			checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+		}
+		else {
+			checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
+		}
 
 		// These metrics are meant only for the servers,
 		// connections metrics for the clients are available from the connection pool
@@ -487,8 +569,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsRecorder(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		// Invoke ServerRecorder.INSTANCE.reset() here as disposableServer.dispose (AfterEach) might be invoked after
+		// ServerRecorder.INSTANCE.reset() (AfterEach) and thus leave ServerRecorder.INSTANCE in a bad state
+		ServerRecorder.INSTANCE.reset();
+		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
-				.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity()).bindNow();
+				.metrics(true, () -> {
+							ServerRecorder.INSTANCE.done = isHttp11 ? new CountDownLatch(4) : new CountDownLatch(1);
+							return ServerRecorder.INSTANCE;
+						},
+						Function.identity())
+				.bindNow();
 		String address = formatSocketAddress(disposableServer.address());
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -512,10 +603,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		assertThat(ServerRecorder.INSTANCE.done.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
-		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
-		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
-		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
-		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
+		if (isHttp11) {
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
+			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
+			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
+		}
+		else {
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
+		}
 
 		disposableServer.disposeNow();
 	}
@@ -545,22 +641,29 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkCounter(CLIENT_ERRORS, summaryTags, true, 2);
 	}
 
-	private void checkServerConnectionsMicrometer(InetSocketAddress localAddress) {
-		String address = formatSocketAddress(localAddress);
+	private void checkServerConnectionsMicrometer(HttpServerRequest request) {
+		String address = formatSocketAddress(request.hostAddress());
+		boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
-		checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
+		if (!isHttp2) {
+			checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
+		}
 	}
 
-	private void checkServerConnectionsRecorder(InetSocketAddress localAddress) {
-		String address = formatSocketAddress(localAddress);
-		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get() == 1).isTrue();
+	private void checkServerConnectionsRecorder(HttpServerRequest request) {
+		String address = formatSocketAddress(request.hostAddress());
+		boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
+		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
 		assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
-		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get() == 1).isTrue();
-		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+		if (!isHttp2) {
+			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(1);
+			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+		}
 		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isNull();
 	}
 
-	private void checkExpectationsExisting(String uri, String serverAddress, int index, boolean checkTls) {
+	private void checkExpectationsExisting(String uri, String serverAddress, int connIndex, boolean checkTls,
+			int numWrites, double expectedSentAmount) {
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "POST", STATUS, "200"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
 		String[] summaryTags1 = new String[] {URI, uri};
@@ -581,19 +684,20 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, 1);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, 1);
 		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, 1);
-		checkTimer(CLIENT_CONNECT_TIME, timerTags3, index);
+		checkTimer(CLIENT_CONNECT_TIME, timerTags3, connIndex);
 		if (checkTls) {
-			checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
+			checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, connIndex);
 		}
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, 1, 12);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, 1, 12);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14 * index, 151 * index);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, numWrites, expectedSentAmount);
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 3*index, 84*index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
 
-	private void checkExpectationsNonExisting(String serverAddress, int index, boolean checkTls) {
+	private void checkExpectationsNonExisting(String serverAddress, int connIndex, int index, boolean checkTls,
+			int numWrites, int numReads, double expectedSentAmount, double expectedReceivedAmount) {
 		String uri = "/3";
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "GET", STATUS, "404"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "GET"};
@@ -614,14 +718,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, index);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, index);
 		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, index);
-		checkTimer(CLIENT_CONNECT_TIME, timerTags3, index);
+		checkTimer(CLIENT_CONNECT_TIME, timerTags3, connIndex);
 		if (checkTls) {
-			checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
+			checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, connIndex);
 		}
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, index, 0);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, index, 123 * index);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 64 * index);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, numWrites, expectedSentAmount);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, numReads, expectedReceivedAmount);
 		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
 
@@ -648,15 +752,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	private void checkDistributionSummary(String name, String[] tags, long expectedCount, double expectedAmount) {
 		DistributionSummary summary = registry.find(name).tags(tags).summary();
 		assertThat(summary).isNotNull();
-		assertThat(summary.count()).isEqualTo(expectedCount);
-		assertThat(summary.totalAmount() >= expectedAmount).isTrue();
+		assertThat(summary.count()).isGreaterThanOrEqualTo(expectedCount);
+		assertThat(summary.totalAmount()).isGreaterThanOrEqualTo(expectedAmount);
 	}
 
 	void checkCounter(String name, String[] tags, boolean exists, double expectedCount) {
 		Counter counter = registry.find(name).tags(tags).counter();
 		if (exists) {
 			assertThat(counter).isNotNull();
-			assertThat(counter.count() >= expectedCount).isTrue();
+			assertThat(counter.count()).isGreaterThanOrEqualTo(expectedCount);
 		}
 		else {
 			assertThat(counter).isNull();
@@ -667,7 +771,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		Gauge gauge = registry.find(name).tags(tags).gauge();
 		if (exists) {
 			assertThat(gauge).isNotNull();
-			assertThat(gauge.value() == expectedCount).isTrue();
+			assertThat(gauge.value()).isEqualTo(expectedCount);
 		}
 		else {
 			assertThat(gauge).isNull();
@@ -678,7 +782,21 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		return Stream.of(
 				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
-						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11))
+						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11)),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2},
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11},
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http11SslContextSpec", clientCtx11)),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2},
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11},
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C}, new HttpProtocol[]{HttpProtocol.H2C}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, null, null)
 		);
 	}
 
