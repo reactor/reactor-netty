@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,19 @@
  */
 package reactor.netty.http;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.Appender;
+import ch.qos.logback.core.read.ListAppender;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.concurrent.DefaultPromise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -550,5 +553,44 @@ class HttpProtocolsTests extends BaseHttpTest {
 		              expectedHeaderValue.equals(t.getT2().get("foo", "empty")))
 		      .expectComplete()
 		      .verify(Duration.ofSeconds(5));
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testIdleTimeoutAddedCorrectly(HttpServer server, HttpClient client) {
+		ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+		Logger logger = (Logger) LoggerFactory.getLogger(DefaultPromise.class);
+		logger.addAppender(listAppender);
+		listAppender.start();
+
+		disposableServer =
+				server.idleTimeout(Duration.ofSeconds(60))
+						.route(routes ->
+								routes.post("/echo", (req, res) -> res.send(req.receive().retain())))
+						.bindNow();
+
+		StepVerifier.create(
+						client.port(disposableServer.port())
+								.post()
+								.uri("/echo")
+								.send(ByteBufFlux.fromString(Mono.just("Hello world!")))
+								.responseContent()
+								.aggregate()
+								.asString()
+								.timeout(Duration.ofSeconds(10))
+				)
+				.expectNext("Hello world!")
+				.verifyComplete();
+
+		try {
+			// Wait till all logs are flushed
+			Thread.sleep(200);
+		}
+		catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// ensure no WARN with error
+		assertThat(listAppender.list)
+				.noneMatch(event -> event.getLevel() == Level.WARN);
 	}
 }
