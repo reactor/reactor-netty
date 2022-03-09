@@ -279,12 +279,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		else if (clientProtocols.length == 2 &&
 				Arrays.equals(clientProtocols, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})) {
 			numWrites = new int[]{4, 6};
-			numReads = new int[]{3, 4};
+			numReads = new int[]{2, 4};
 			bytesWrite = new int[]{287, 345};
 			bytesRead = new int[]{108, 119};
 		}
 		else if (protocols.contains(HttpProtocol.H2)) {
-			numReads = new int[]{3, 4};
+			numReads = new int[]{2, 4};
 		}
 		else if (protocols.contains(HttpProtocol.H2C)) {
 			numReads = new int[]{2, 3};
@@ -755,7 +755,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	private void checkDistributionSummary(String name, String[] tags, long expectedCount, double expectedAmount) {
 		DistributionSummary summary = registry.find(name).tags(tags).summary();
 		assertThat(summary).isNotNull();
-		assertThat(summary.count()).isEqualTo(expectedCount);
+		assertThat(summary.count()).isGreaterThanOrEqualTo(expectedCount);
 		assertThat(summary.totalAmount()).isGreaterThanOrEqualTo(expectedAmount);
 	}
 
