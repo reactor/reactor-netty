@@ -701,6 +701,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		@Override
+		public ChannelHandler tlsMetricsHandler() {
+			return null;
+		}
+
+		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 			ctx.fireExceptionCaught(cause);
 		}
