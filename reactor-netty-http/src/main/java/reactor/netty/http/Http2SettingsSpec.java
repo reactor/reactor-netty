@@ -85,6 +85,14 @@ public final class Http2SettingsSpec {
 		 * @return {@code this}
 		 */
 		//Builder pushEnabled(boolean pushEnabled);
+
+		/**
+		 * Sets the {@code SETTINGS_MIN_CONNECTIONS} value.
+		 *
+		 * @param minConnections the {@code SETTINGS_MIN_CONNECTIONS} value
+		 * @return {@code this}
+		 */
+		Builder minConnections(int minConnections);
 	}
 
 	/**
@@ -157,6 +165,16 @@ public final class Http2SettingsSpec {
 		return pushEnabled;
 	}
 
+	/**
+	 * Returns the configured minimum connections to create before adding more than one stream.
+	 * Defaults to 0.
+	 *
+	 * @return TODO
+	 */
+	public int minConnections() {
+		return minConnections;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -171,7 +189,8 @@ public final class Http2SettingsSpec {
 				Objects.equals(maxConcurrentStreams, that.maxConcurrentStreams) &&
 				Objects.equals(maxFrameSize, that.maxFrameSize) &&
 				maxHeaderListSize.equals(that.maxHeaderListSize) &&
-				Objects.equals(pushEnabled, that.pushEnabled);
+				Objects.equals(pushEnabled, that.pushEnabled) &&
+				minConnections == that.minConnections;
 	}
 
 	@Override
@@ -185,6 +204,7 @@ public final class Http2SettingsSpec {
 	final Integer maxFrameSize;
 	final Long maxHeaderListSize;
 	final Boolean pushEnabled;
+	final int minConnections;
 
 	Http2SettingsSpec(Build build) {
 		Http2Settings settings = build.http2Settings;
@@ -194,10 +214,12 @@ public final class Http2SettingsSpec {
 		maxFrameSize = settings.maxFrameSize();
 		maxHeaderListSize = settings.maxHeaderListSize();
 		pushEnabled = settings.pushEnabled();
+		minConnections = build.minConnections;
 	}
 
 	static final class Build implements Builder {
 		final Http2Settings http2Settings = Http2Settings.defaultSettings();
+		private int minConnections;
 
 		@Override
 		public Http2SettingsSpec build() {
@@ -241,5 +263,12 @@ public final class Http2SettingsSpec {
 			return this;
 		}
 		*/
+
+		@Override
+		public Builder minConnections(int minConnections) {
+			this.minConnections = minConnections;
+			return this;
+		}
+
 	}
 }

@@ -91,14 +91,18 @@ import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
+import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
@@ -107,6 +111,7 @@ import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.HttpServerRoutes;
 import reactor.netty.resources.ConnectionPoolMetrics;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
@@ -2079,6 +2084,111 @@ class HttpClientTest extends BaseHttpTest {
 			        .block(Duration.ofSeconds(5));
 		}
 	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {0, 4})
+	void samstest(final int minConnections) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		int maxConns = 10;
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testConnectionNoLifeTimeFixedPoolHttp2")
+				                  .maxConnections(maxConns)
+				                  //.pendingAcquireTimeout(Duration.ofMillis(100))
+				                  .build();
+
+        final AtomicInteger ctr = new AtomicInteger(1);
+
+		final class ServerPaths {
+			final static String HANG = "/hang";
+			final static String HELLO = "/hello";
+		}
+
+		// TODO This test needs work to make it bullet-proof
+		final Consumer<HttpServerRoutes> routes = base -> {
+			base.get(ServerPaths.HELLO, (req, resp) -> {
+				System.out.println("hello called!");
+				return resp.sendString(Mono.just("Hello World!").doOnNext(s -> System.out.println("hello returning!")));
+			}).get(ServerPaths.HANG, (req, resp) -> {
+					System.out.println("hang called!");
+					return resp.sendString(
+							Mono.just("You waited for this?").delayElement(Duration.ofMillis(5_000))
+									.doOnNext(s -> System.out.println("hang returning!"))
+					);
+				});
+		};
+
+        final DisposableServer disposableServer =
+            createServer()
+                .doOnConnection(conn -> {
+                    System.out.println(ctr.getAndIncrement() + ". A conn was made to the server!");
+                })
+                .protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx))
+				.route(routes)
+                .bindNow();
+
+        Set<ChannelId> channelIds = new java.util.HashSet<>();
+
+		assertThat(maxConns).isGreaterThan(minConnections);
+
+        final HttpClient client =
+            createClient(
+                    provider,
+                    disposableServer.port()
+            ).protocol(HttpProtocol.H2)
+			.http2Settings(settings -> settings.minConnections(minConnections))
+            .secure(spec -> spec.sslContext(clientCtx))
+            .doOnConnected(conn -> {
+                channelIds.add(conn.channel().id());
+            });
+
+		try {
+			final Function<String, Flux<ChannelId>> getChannelIds = path ->
+					client.get()
+							.uri(path)
+							.responseConnection((res, conn) -> {
+								assertThat(client.configuration().checkProtocol(HttpClientConfig.h2))
+										.isTrue()
+										.describedAs("Should be an HTTP/2 connection");
+								final Channel streamParent = conn.channel().parent();
+								return Mono.just(streamParent.id())
+										.delayUntil(ch -> conn.inbound().receive());
+							});
+
+			// hows this for some hack..
+			final List<ChannelId> fastReqs = new ArrayList<>();
+            final List<ChannelId> hangingReqs = new ArrayList<>();
+
+			// I will clean all this up to avoid thread sleep + other hacks.  Just fast-track to design PR..
+			Flux.range(1, 2).flatMap(ignore -> getChannelIds.apply("/hang"))
+					.subscribeOn(Schedulers.boundedElastic())
+					.subscribe(hangingReqs::add);
+
+			Thread.sleep(1_000);
+
+			Flux.range(1, 2).flatMap(ignore -> getChannelIds.apply("/hello"))
+					.subscribeOn(Schedulers.boundedElastic())
+					.subscribe(fastReqs::add);
+
+			Thread.sleep(10_000);
+
+			final List<ChannelId> ids = new ArrayList<>();
+			ids.addAll(hangingReqs);
+			ids.addAll(fastReqs);
+
+			final int expectedSize =
+					minConnections == 0 ? hangingReqs.size() : minConnections;
+            assertThat(channelIds).hasSize(expectedSize);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
 
 	@Test
 	void testConnectionNoLifeTimeElasticPoolHttp1() throws Exception {

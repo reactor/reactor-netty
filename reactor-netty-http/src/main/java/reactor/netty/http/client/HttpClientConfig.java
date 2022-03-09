@@ -468,6 +468,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		return (_protocols & protocol) == protocol;
 	}
 
+	// TODO clean up names and whatnot.  maybe better structure around http2 stuff if RN
+	// team does accept this.
+	int http2MinConnections() {
+		return http2Settings != null ? http2Settings.minConnections() : 0;
+	}
+
 	Http2Settings http2Settings() {
 		Http2Settings settings = Http2Settings.defaultSettings();
 
@@ -768,6 +774,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final boolean                                    acceptGzip;
 		final HttpResponseDecoderSpec                    decoder;
 		final Http2Settings                              http2Settings;
+		final int                                        http2MinConnections;
 		final ChannelMetricsRecorder                     metricsRecorder;
 		final ConnectionObserver                         observer;
 		final Function<String, String>                   uriTagValue;
@@ -776,6 +783,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			this.acceptGzip = initializer.acceptGzip;
 			this.decoder = initializer.decoder;
 			this.http2Settings = initializer.http2Settings;
+			this.http2MinConnections = initializer.http2MinConnections;
 			this.metricsRecorder = initializer.metricsRecorder;
 			this.observer = observer;
 			this.uriTagValue = initializer.uriTagValue;
@@ -812,6 +820,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final boolean                                    acceptGzip;
 		final HttpResponseDecoderSpec                    decoder;
 		final Http2Settings                              http2Settings;
+		final int                                        http2MinConnections;
 		final ChannelMetricsRecorder                     metricsRecorder;
 		final ChannelOperations.OnSetup                  opsFactory;
 		final int                                        protocols;
@@ -822,6 +831,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			this.acceptGzip = config.acceptGzip;
 			this.decoder = config.decoder;
 			this.http2Settings = config.http2Settings();
+			this.http2MinConnections = config.http2MinConnections();
 			this.metricsRecorder = config.metricsRecorderInternal();
 			this.opsFactory = config.channelOperationsProvider();
 			this.protocols = config._protocols;

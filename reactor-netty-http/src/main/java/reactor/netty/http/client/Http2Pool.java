@@ -132,18 +132,29 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 
 	long lastInteractionTimestamp;
 
-	Http2Pool(PoolConfig<Connection> poolConfig, long maxLifeTime) {
-		if (poolConfig.allocationStrategy().getPermits(0) != 0) {
-			throw new IllegalArgumentException("No support for configuring minimum number of connections");
-		}
+	/**
+	 * The minimum amount of connections to create before creating more than 1 stream
+	 * on any given connection.
+	 */
+	int minConnections;
+
+	Http2Pool(PoolConfig<Connection> poolConfig, long maxLifeTime, int minConnections) {
 		this.clock = poolConfig.clock();
 		this.connections = new ConcurrentLinkedQueue<>();
 		this.lastInteractionTimestamp = clock.millis();
 		this.maxLifeTime = maxLifeTime;
 		this.pending = new ConcurrentLinkedDeque<>();
 		this.poolConfig = poolConfig;
+		if (minConnections < 0) {
+			throw new IllegalArgumentException("HTTP/2 minimum connections must be non-negative.");
+		}
+		this.minConnections = minConnections;
 
 		recordInteractionTimestamp();
+	}
+
+	Http2Pool(PoolConfig<Connection> poolConfig, long maxLifeTime) {
+		this(poolConfig, maxLifeTime, 0);
 	}
 
 	@Override
@@ -384,10 +395,15 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 	}
 
+	// TODO think on better names for this.  Some kind of signal that this only
+	// returns a connection from the
 	@Nullable
 	Slot findConnection(ConcurrentLinkedQueue<Slot> resources) {
 		int resourcesCount = resources.size();
-		while (resourcesCount > 0) {
+		// TODO this is the KEY idea.  I'm curious on reactor-netty's team
+		// thought on this.  Completely wrong place even if we do some name changes,
+		// cleanup, etc?
+		while (resourcesCount > (minConnections == 0 ? 0 : minConnections + 1)) {
 			// There are connections in the queue
 
 			resourcesCount--;
