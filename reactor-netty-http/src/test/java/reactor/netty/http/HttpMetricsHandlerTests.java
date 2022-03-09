@@ -279,14 +279,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		else if (clientProtocols.length == 2 &&
 				Arrays.equals(clientProtocols, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})) {
 			numWrites = new int[]{4, 6};
-			numReads = new int[]{2, 4};
+			numReads = new int[]{2, 3};
 			bytesWrite = new int[]{287, 345};
 			bytesRead = new int[]{108, 119};
 		}
-		else if (protocols.contains(HttpProtocol.H2)) {
-			numReads = new int[]{2, 4};
-		}
-		else if (protocols.contains(HttpProtocol.H2C)) {
+		else if (protocols.contains(HttpProtocol.H2) || protocols.contains(HttpProtocol.H2C)) {
 			numReads = new int[]{2, 3};
 		}
 
