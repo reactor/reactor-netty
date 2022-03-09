@@ -511,7 +511,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				String baseName = null;
 				if (pipeline.get(NettyPipeline.HttpCodec) != null) {
 					baseName = NettyPipeline.HttpCodec;
-				} else if (pipeline.get(NettyPipeline.H2CUpgradeHandler) != null) {
+				}
+				else if (pipeline.get(NettyPipeline.H2CUpgradeHandler) != null) {
 					baseName = NettyPipeline.H2CUpgradeHandler;
 				} else {
 					ChannelHandler httpServerCodec = pipeline.get(HttpServerCodec.class);
