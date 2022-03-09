@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
@@ -49,6 +50,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
+import reactor.netty.channel.AbstractChannelMetricsHandler;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http2SettingsSpec;
@@ -404,8 +406,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			ChannelOperations.OnSetup opsFactory) {
+			ChannelOperations.OnSetup opsFactory,
+			@Nullable Function<String, String> uriTagValue) {
 		ChannelPipeline pipeline = ch.pipeline();
 		if (accessLogEnabled) {
 			pipeline.addLast(NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H2.create(accessLog));
@@ -422,6 +426,45 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		ChannelOperations.addReactiveBridge(ch, opsFactory, listener);
+
+		if (metricsRecorder != null) {
+			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
+				ChannelHandler handler;
+				Channel parent = ch.parent();
+				ChannelHandler existingHandler = parent.pipeline().get(NettyPipeline.HttpMetricsHandler);
+				if (existingHandler != null) {
+					// This use case can happen only in HTTP/2 clear text connection upgrade
+					if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
+						parent.pipeline().replace(NettyPipeline.HttpMetricsHandler, NettyPipeline.ChannelMetricsHandler,
+								new H2ChannelMetricsHandler(metricsRecorder));
+					}
+					else {
+						parent.pipeline().remove(NettyPipeline.HttpMetricsHandler);
+					}
+					if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
+						handler = new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsHandler) existingHandler);
+					}
+					else if (metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder) {
+						handler = new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsHandler) existingHandler);
+					}
+					else {
+						handler = new HttpServerMetricsHandler((HttpServerMetricsHandler) existingHandler);
+					}
+				}
+				else {
+					if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
+						handler = new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+					}
+					else if (metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder) {
+						handler = new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+					}
+					else {
+						handler = new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+					}
+				}
+				pipeline.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
+			}
+		}
 
 		if (log.isDebugEnabled()) {
 			log.debug(format(ch, "Initialized HTTP/2 stream pipeline {}"), pipeline);
@@ -471,8 +514,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			Http2Settings http2Settings,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
+			@Nullable Function<String, String> uriTagValue,
 			boolean validate) {
 		p.remove(NettyPipeline.ReactiveBridge);
 
@@ -489,7 +534,17 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
 		 .addLast(NettyPipeline.H2MultiplexHandler,
 		          new Http2MultiplexHandler(new H2Codec(accessLogEnabled, accessLog, compressPredicate, cookieDecoder,
-		                  cookieEncoder, formDecoderProvider, forwardedHeaderHandler, listener, mapHandle, minCompressionSize, opsFactory)));
+		                  cookieEncoder, formDecoderProvider, forwardedHeaderHandler, listener, mapHandle,
+		                  metricsRecorder, minCompressionSize, opsFactory, uriTagValue)));
+
+		if (metricsRecorder != null) {
+			if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
+				// For sake of performance, we can replace the ChannelMetricsHandler because the MicrometerHttpServerMetricsRecorder
+				// is interested only in connections metrics .
+				p.replace(NettyPipeline.ChannelMetricsHandler, NettyPipeline.ChannelMetricsHandler,
+						new H2ChannelMetricsHandler(metricsRecorder));
+			}
+		}
 	}
 
 	static void configureHttp11OrH2CleartextPipeline(ChannelPipeline p,
@@ -517,8 +572,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		Http11OrH2CleartextCodec upgrader = new Http11OrH2CleartextCodec(accessLogEnabled, accessLog, compressPredicate,
 				cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null, formDecoderProvider,
-				forwardedHeaderHandler, http2Settings, listener, mapHandle, minCompressionSize, opsFactory,
-				decoder.validateHeaders());
+				forwardedHeaderHandler, http2Settings, listener, mapHandle, metricsRecorder, minCompressionSize, opsFactory,
+				uriTagValue, decoder.validateHeaders());
 
 		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader);
 		CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler = new CleartextHttp2ServerUpgradeHandler(
@@ -647,25 +702,74 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 */
 	static final boolean SSL_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_SERVER_DEBUG, "false"));
 
+	static final class H2ChannelMetricsHandler extends AbstractChannelMetricsHandler {
+
+		final ChannelMetricsRecorder recorder;
+
+		H2ChannelMetricsHandler(ChannelMetricsRecorder recorder) {
+			super(null, true);
+			this.recorder = recorder;
+		}
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) {
+			ctx.fireChannelRead(msg);
+		}
+
+		@Override
+		public void channelRegistered(ChannelHandlerContext ctx) {
+			ctx.fireChannelRegistered();
+		}
+
+		@Override
+		public ChannelHandler connectMetricsHandler() {
+			return null;
+		}
+
+		@Override
+		public ChannelHandler tlsMetricsHandler() {
+			return null;
+		}
+
+		@Override
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireExceptionCaught(cause);
+		}
+
+		@Override
+		public ChannelMetricsRecorder recorder() {
+			return recorder;
+		}
+
+		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
+		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+			//"FutureReturnValueIgnored" this is deliberate
+			ctx.write(msg, promise);
+		}
+	}
+
 	static final class H2CleartextCodec extends ChannelHandlerAdapter {
 
 		final Http11OrH2CleartextCodec upgrader;
 		final boolean addHttp2FrameCodec;
+		final boolean removeMetricsHandler;
 
 		/**
 		 * Used when full H2 preface is received
 		 */
 		H2CleartextCodec(Http11OrH2CleartextCodec upgrader) {
-			this(upgrader, true);
+			this(upgrader, true, true);
 		}
 
 		/**
 		 * Used when upgrading from HTTP/1.1 to H2. When an upgrade happens {@link Http2FrameCodec}
 		 * is added by {@link Http2ServerUpgradeCodec}
 		 */
-		H2CleartextCodec(Http11OrH2CleartextCodec upgrader, boolean addHttp2FrameCodec) {
+		H2CleartextCodec(Http11OrH2CleartextCodec upgrader, boolean addHttp2FrameCodec, boolean removeMetricsHandler) {
 			this.upgrader = upgrader;
 			this.addHttp2FrameCodec = addHttp2FrameCodec;
+			this.removeMetricsHandler = removeMetricsHandler;
 		}
 
 		@Override
@@ -686,6 +790,17 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			if (pipeline.get(NettyPipeline.CompressionHandler) != null) {
 				pipeline.remove(NettyPipeline.CompressionHandler);
 			}
+			if (removeMetricsHandler && pipeline.get(NettyPipeline.HttpMetricsHandler) != null) {
+				AbstractHttpServerMetricsHandler handler =
+						(AbstractHttpServerMetricsHandler) pipeline.get(NettyPipeline.HttpMetricsHandler);
+				if (handler.recorder() instanceof MicrometerHttpServerMetricsRecorder) {
+					pipeline.replace(NettyPipeline.HttpMetricsHandler, NettyPipeline.ChannelMetricsHandler,
+							new H2ChannelMetricsHandler(handler.recorder()));
+				}
+				else {
+					pipeline.remove(NettyPipeline.HttpMetricsHandler);
+				}
+			}
 			pipeline.remove(NettyPipeline.HttpTrafficHandler);
 			pipeline.remove(NettyPipeline.ReactiveBridge);
 		}
@@ -703,8 +818,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ConnectionObserver                                      listener;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 		                                                              mapHandle;
+		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
+		final Function<String, String>                                uriTagValue;
 
 		H2Codec(
 				boolean accessLogEnabled,
@@ -716,8 +833,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				ConnectionObserver listener,
 				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+				@Nullable ChannelMetricsRecorder metricsRecorder,
 				int minCompressionSize,
-				ChannelOperations.OnSetup opsFactory) {
+				ChannelOperations.OnSetup opsFactory,
+				@Nullable Function<String, String> uriTagValue) {
 			this.accessLogEnabled = accessLogEnabled;
 			this.accessLog = accessLog;
 			this.compressPredicate = compressPredicate;
@@ -727,15 +846,18 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
 			this.listener = listener;
 			this.mapHandle = mapHandle;
+			this.metricsRecorder = metricsRecorder;
 			this.minCompressionSize = minCompressionSize;
 			this.opsFactory = opsFactory;
+			this.uriTagValue = uriTagValue;
 		}
 
 		@Override
 		protected void initChannel(Channel ch) {
 			ch.pipeline().remove(this);
 			addStreamHandlers(ch, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-					formDecoderProvider, forwardedHeaderHandler, listener, mapHandle, minCompressionSize, opsFactory);
+					formDecoderProvider, forwardedHeaderHandler, listener, mapHandle, metricsRecorder,
+					minCompressionSize, opsFactory, uriTagValue);
 		}
 	}
 
@@ -753,8 +875,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ConnectionObserver                                      listener;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 		                                                              mapHandle;
+		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
+		final Function<String, String>                                uriTagValue;
 
 		Http11OrH2CleartextCodec(
 				boolean accessLogEnabled,
@@ -768,8 +892,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				Http2Settings http2Settings,
 				ConnectionObserver listener,
 				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+				@Nullable ChannelMetricsRecorder metricsRecorder,
 				int minCompressionSize,
 				ChannelOperations.OnSetup opsFactory,
+				@Nullable Function<String, String> uriTagValue,
 				boolean validate) {
 			this.accessLogEnabled = accessLogEnabled;
 			this.accessLog = accessLog;
@@ -791,8 +917,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.http2FrameCodec = http2FrameCodecBuilder.build();
 			this.listener = listener;
 			this.mapHandle = mapHandle;
+			this.metricsRecorder = metricsRecorder;
 			this.minCompressionSize = minCompressionSize;
 			this.opsFactory = opsFactory;
+			this.uriTagValue = uriTagValue;
 		}
 
 		/**
@@ -802,14 +930,15 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		protected void initChannel(Channel ch) {
 			ch.pipeline().remove(this);
 			addStreamHandlers(ch, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-					formDecoderProvider, forwardedHeaderHandler, listener, mapHandle, minCompressionSize, opsFactory);
+					formDecoderProvider, forwardedHeaderHandler, listener, mapHandle, metricsRecorder,
+					minCompressionSize, opsFactory, uriTagValue);
 		}
 
 		@Override
 		@Nullable
 		public HttpServerUpgradeHandler.UpgradeCodec newUpgradeCodec(CharSequence protocol) {
 			if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-				return new Http2ServerUpgradeCodec(http2FrameCodec, new H2CleartextCodec(this, false));
+				return new Http2ServerUpgradeCodec(http2FrameCodec, new H2CleartextCodec(this, false, false));
 			}
 			else {
 				return null;
@@ -869,8 +998,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
 				configureH2Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-						formDecoderProvider, forwardedHeaderHandler, http2Settings, listener, mapHandle, minCompressionSize,
-						opsFactory, decoder.validateHeaders());
+						formDecoderProvider, forwardedHeaderHandler, http2Settings, listener, mapHandle,
+						metricsRecorder, minCompressionSize, opsFactory, uriTagValue, decoder.validateHeaders());
 				return;
 			}
 
@@ -986,8 +1115,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							http2Settings,
 							observer,
 							mapHandle,
+							metricsRecorder,
 							minCompressionSize,
 							opsFactory,
+							uriTagValue,
 							decoder.validateHeaders());
 				}
 			}
@@ -1045,8 +1176,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							http2Settings,
 							observer,
 							mapHandle,
+							metricsRecorder,
 							minCompressionSize,
 							opsFactory,
+							uriTagValue,
 							decoder.validateHeaders());
 					needRead = true;
 				}

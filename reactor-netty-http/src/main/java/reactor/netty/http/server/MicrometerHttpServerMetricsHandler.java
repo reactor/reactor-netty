@@ -58,6 +58,15 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		this.responseTimeName = recorder.name() + RESPONSE_TIME;
 	}
 
+	MicrometerHttpServerMetricsHandler(MicrometerHttpServerMetricsHandler copy) {
+		super(copy);
+		this.recorder = copy.recorder;
+		this.responseTimeName = copy.responseTimeName;
+
+		this.responseTimeHandlerContext = copy.responseTimeHandlerContext;
+		this.responseTimeObservation = copy.responseTimeObservation;
+	}
+
 	@Override
 	protected HttpServerMetricsRecorder recorder() {
 		return recorder;

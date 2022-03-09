@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,11 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 			@Nullable Function<String, String> uriTagValue) {
 		super(uriTagValue);
 		this.recorder = recorder;
+	}
+
+	ContextAwareHttpClientMetricsHandler(ContextAwareHttpClientMetricsHandler copy) {
+		super(copy);
+		this.recorder = copy.recorder;
 	}
 
 	@Override

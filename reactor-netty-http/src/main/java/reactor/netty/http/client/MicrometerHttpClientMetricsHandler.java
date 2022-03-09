@@ -59,6 +59,14 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		this.recorder = recorder;
 	}
 
+	MicrometerHttpClientMetricsHandler(MicrometerHttpClientMetricsHandler copy) {
+		super(copy);
+		this.recorder = copy.recorder;
+
+		this.responseTimeHandlerContext = copy.responseTimeHandlerContext;
+		this.responseTimeObservation = copy.responseTimeObservation;
+	}
+
 	@Override
 	protected HttpClientMetricsRecorder recorder() {
 		return recorder;

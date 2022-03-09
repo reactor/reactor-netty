@@ -24,6 +24,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http2.Http2StreamChannel;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.annotation.Nullable;
 
@@ -52,12 +53,20 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		this.uriTagValue = uriTagValue;
 	}
 
+	protected AbstractHttpServerMetricsHandler(AbstractHttpServerMetricsHandler copy) {
+		this.dataReceived = copy.dataReceived;
+		this.dataReceivedTime = copy.dataReceivedTime;
+		this.dataSent = copy.dataSent;
+		this.dataSentTime = copy.dataSentTime;
+		this.uriTagValue = copy.uriTagValue;
+	}
+
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
 		// For custom user recorders, we don't propagate the channelActive event, because this will be done
 		// by the ChannelMetricsHandler itself. ChannelMetricsHandler is only present when the recorder is
 		// not our MicrometerHttpServerMetricsRecorder. See HttpServerConfig class.
-		if (recorder() instanceof MicrometerHttpServerMetricsRecorder) {
+		if (!(ctx.channel() instanceof Http2StreamChannel) && recorder() instanceof MicrometerHttpServerMetricsRecorder) {
 			recorder().recordServerConnectionOpened(ctx.channel().localAddress());
 		}
 		ctx.fireChannelActive();
@@ -65,7 +74,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) {
-		if (recorder() instanceof MicrometerHttpServerMetricsRecorder) {
+		if (!(ctx.channel() instanceof Http2StreamChannel) && recorder() instanceof MicrometerHttpServerMetricsRecorder) {
 			recorder().recordServerConnectionClosed(ctx.channel().localAddress());
 		}
 		ctx.fireChannelInactive();
@@ -103,7 +112,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
 					recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
 							ops.method().name(), ops.status().codeAsText().toString());
-					recordInactiveConnection(ops);
+					if (!ops.isHttp2()) {
+						// This metric is not applicable for HTTP/2
+						recordInactiveConnection(ops);
+					}
 				}
 
 				dataSent = 0;
@@ -120,7 +132,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpServerOperations) {
 				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				recordActiveConnection(ops);
+				if (!ops.isHttp2()) {
+					// This metric is not applicable for HTTP/2
+					recordActiveConnection(ops);
+				}
 				startRead(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), ops.method().name());
 			}
 		}

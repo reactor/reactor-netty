@@ -61,6 +61,18 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		this.uriTagValue = uriTagValue;
 	}
 
+	protected AbstractHttpClientMetricsHandler(AbstractHttpClientMetricsHandler copy) {
+		this.contextView = copy.contextView;
+		this.dataReceived = copy.dataReceived;
+		this.dataReceivedTime = copy.dataReceivedTime;
+		this.dataSent = copy.dataSent;
+		this.dataSentTime = copy.dataSentTime;
+		this.method = copy.method;
+		this.path = copy.path;
+		this.status = copy.status;
+		this.uriTagValue = copy.uriTagValue;
+	}
+
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {

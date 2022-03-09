@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,11 @@ final class HttpClientMetricsHandler extends AbstractHttpClientMetricsHandler {
 	HttpClientMetricsHandler(HttpClientMetricsRecorder recorder, @Nullable Function<String, String> uriTagValue) {
 		super(uriTagValue);
 		this.recorder = recorder;
+	}
+
+	HttpClientMetricsHandler(HttpClientMetricsHandler copy) {
+		super(copy);
+		this.recorder = copy.recorder;
 	}
 
 	@Override
