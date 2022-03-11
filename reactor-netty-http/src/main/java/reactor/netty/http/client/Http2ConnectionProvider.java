@@ -145,11 +145,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 	static void registerClose(Channel channel, ConnectionObserver owner) {
 		channel.closeFuture()
 		       .addListener(f -> {
-		           Channel parent = channel.parent();
-		           Http2FrameCodec frameCodec = parent.pipeline().get(Http2FrameCodec.class);
-		           Http2Connection.Endpoint<Http2LocalFlowController> localEndpoint = frameCodec.connection().local();
 		           if (log.isDebugEnabled()) {
-		               logStreamsState(channel, localEndpoint, "Stream closed");
+		               Http2FrameCodec frameCodec = channel.parent().pipeline().get(Http2FrameCodec.class);
+		               if (frameCodec != null) {
+		                   Http2Connection.Endpoint<Http2LocalFlowController> localEndpoint = frameCodec.connection().local();
+		                   logStreamsState(channel, localEndpoint, "Stream closed");
+		               }
 		           }
 
 		           invalidate(owner);
@@ -332,7 +333,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			if (future.isSuccess()) {
 				Http2StreamChannel ch = future.getNow();
 
-				if (!frameCodec.connection().local().canOpenStream()) {
+				if (!channel.isActive() || frameCodec == null || !frameCodec.connection().local().canOpenStream()) {
+					invalidate(this);
 					if (!retried) {
 						if (log.isDebugEnabled()) {
 							log.debug(format(ch, "Immediately aborted pooled channel, max active streams is reached, " +
@@ -359,6 +361,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				}
 			}
 			else {
+				invalidate(this);
 				sink.error(future.cause());
 			}
 		}
