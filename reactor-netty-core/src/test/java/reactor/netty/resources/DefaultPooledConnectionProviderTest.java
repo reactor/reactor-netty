@@ -64,6 +64,7 @@ import reactor.netty.transport.ClientTransportConfig;
 import reactor.netty.transport.NameResolverProvider;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolAcquirePendingLimitException;
+import reactor.pool.PoolConfig;
 import reactor.pool.PooledRef;
 import reactor.scheduler.clock.SchedulerClock;
 import reactor.test.StepVerifier;
@@ -541,6 +542,11 @@ class DefaultPooledConnectionProviderTest {
 
 		@Override
 		public Mono<PooledRef<PooledConnection>> acquire(Duration timeout) {
+			return null;
+		}
+
+		@Override
+		public PoolConfig<PooledConnection> config() {
 			return null;
 		}
 
