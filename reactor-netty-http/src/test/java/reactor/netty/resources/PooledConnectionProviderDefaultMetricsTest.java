@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.DisposableServer;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
@@ -221,11 +220,17 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testConnectionPoolPendingAcquireSize() {
-		DisposableServer server =
+	void testConnectionPoolPendingAcquireSize() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+						.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		disposableServer =
 				HttpServer.create()
 						.port(0)
-						.protocol(HttpProtocol.H2C)
+						.protocol(HttpProtocol.H2)
+						.secure(spec -> spec.sslContext(serverCtx))
 						.handle((req, res) ->
 								res.sendString(Flux.range(0, 10)
 										.map(i -> "test")
@@ -233,32 +238,37 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 						.bindNow();
 
 		ConnectionProvider provider = ConnectionProvider
-				.builder("pool")
+				.builder("testConnectionPoolPendingAcquireSize")
 				.pendingAcquireMaxCount(1000)
 				.maxConnections(500)
+				.metrics(true)
 				.build();
 
-		HttpClient client =
-				HttpClient.create(provider)
-						.port(server.port())
-						.metrics(true, Function.identity())
-						.protocol(HttpProtocol.H2C);
+		try {
+			HttpClient client =
+					HttpClient.create(provider)
+							.port(disposableServer.port())
+							.protocol(HttpProtocol.H2)
+							.secure(spec -> spec.sslContext(clientCtx));
 
-		Flux.range(0, 2000)
-				.flatMap(i ->
-						client.get()
-								.uri("/")
-								.responseContent()
-								.aggregate()
-								.asString()
-								.timeout(Duration.ofMillis(ThreadLocalRandom.current().nextInt(1, 35)), Mono.just("timeout")))
-				.blockLast(Duration.ofSeconds(10));
+			Flux.range(0, 1000)
+					.flatMap(i ->
+							client.get()
+									.uri("/")
+									.responseContent()
+									.aggregate()
+									.asString()
+									.timeout(Duration.ofMillis(ThreadLocalRandom.current().nextInt(1, 35)), Mono.just("timeout")))
+					.blockLast(Duration.ofSeconds(30));
 
-		provider.disposeLater()
-				.block(Duration.ofSeconds(30));
-		server.disposeNow();
-
-		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, "http2.pool")).isEqualTo(0);
+			Thread.sleep(1000);
+			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, "http2.testConnectionPoolPendingAcquireSize")).isEqualTo(0);
+		}
+		finally {
+			provider.disposeLater()
+					.block(Duration.ofSeconds(30));
+		}
+		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, "http2.testConnectionPoolPendingAcquireSize")).isEqualTo(0);
 	}
 
 	private double getGaugeValue(String gaugeName, String poolName) {
