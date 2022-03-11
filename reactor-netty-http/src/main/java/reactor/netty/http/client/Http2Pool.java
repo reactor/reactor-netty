@@ -114,10 +114,23 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	static final AtomicReferenceFieldUpdater<Http2Pool, ConcurrentLinkedQueue> CONNECTIONS =
 			AtomicReferenceFieldUpdater.newUpdater(Http2Pool.class, ConcurrentLinkedQueue.class, "connections");
 
+	/**
+	 * Pending borrowers queue. Never invoke directly the poll/add/remove methods and instead of that,
+	 * use addPending/pollPending/removePending methods which take care of maintaining the pending queue size.
+	 * @see #removePending(ConcurrentLinkedDeque, Borrower)
+	 * @see #addPending(ConcurrentLinkedDeque, Borrower, boolean)
+	 * @see #pollPending(ConcurrentLinkedDeque, boolean)
+	 * @see #PENDING_SIZE
+	 * @see #pendingSize
+	 */
 	volatile ConcurrentLinkedDeque<Borrower> pending;
 	@SuppressWarnings("rawtypes")
 	static final AtomicReferenceFieldUpdater<Http2Pool, ConcurrentLinkedDeque> PENDING =
 			AtomicReferenceFieldUpdater.newUpdater(Http2Pool.class, ConcurrentLinkedDeque.class, "pending");
+
+	volatile int pendingSize;
+	private static final AtomicIntegerFieldUpdater<Http2Pool> PENDING_SIZE =
+			AtomicIntegerFieldUpdater.newUpdater(Http2Pool.class, "pendingSize");
 
 	@SuppressWarnings("rawtypes")
 	static final ConcurrentLinkedDeque TERMINATED = new ConcurrentLinkedDeque();
@@ -180,7 +193,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			ConcurrentLinkedDeque<Borrower> q = PENDING.getAndSet(this, TERMINATED);
 			if (q != TERMINATED) {
 				Borrower p;
-				while ((p = q.pollFirst()) != null) {
+				while ((p = pollPending(q, true)) != null) {
 					p.fail(new PoolShutdownException());
 				}
 
@@ -226,7 +239,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 
 	@Override
 	public int pendingAcquireSize() {
-		return PENDING.get(this).size();
+		return pendingSize;
 	}
 
 	@Override
@@ -243,7 +256,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	void cancelAcquire(Borrower borrower) {
 		if (!isDisposed()) {
 			ConcurrentLinkedDeque<Borrower> q = pending;
-			q.remove(borrower);
+			removePending(q, borrower);
 		}
 	}
 
@@ -294,13 +307,13 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				return;
 			}
 
-			int borrowersCount = borrowers.size();
+			int borrowersCount = pendingSize;
 
 			if (borrowersCount != 0) {
 				// find a connection that can be used for opening a new stream
 				Slot slot = findConnection(resources);
 				if (slot != null) {
-					Borrower borrower = borrowers.pollFirst();
+					Borrower borrower = pollPending(borrowers, true);
 					if (borrower == null) {
 						resources.offer(slot);
 						continue;
@@ -320,7 +333,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 						poolConfig.acquisitionScheduler().schedule(() -> borrower.deliver(new Http2PooledRef(slot)));
 					}
 					else {
-						borrowers.offerFirst(borrower);
+						addPending(borrowers, borrower, true);
 						continue;
 					}
 				}
@@ -328,10 +341,10 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 					int permits = poolConfig.allocationStrategy().getPermits(1);
 					if (permits <= 0) {
 						if (maxPending >= 0) {
-							borrowersCount = borrowers.size();
+							borrowersCount = pendingSize;
 							int toCull = borrowersCount - maxPending;
 							for (int i = 0; i < toCull; i++) {
-								Borrower extraneous = borrowers.pollFirst();
+								Borrower extraneous = pollPending(borrowers, true);
 								if (extraneous != null) {
 									pendingAcquireLimitReached(extraneous, maxPending);
 								}
@@ -339,7 +352,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 						}
 					}
 					else {
-						Borrower borrower = borrowers.pollFirst();
+						Borrower borrower = pollPending(borrowers, true);
 						if (borrower == null) {
 							continue;
 						}
@@ -468,13 +481,12 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		if (pendingQueue == TERMINATED) {
 			return;
 		}
-		pendingQueue.offerLast(borrower);
-		int postOffer = pendingQueue.size();
+		int postOffer = addPending(pendingQueue, borrower, false);
 
 		if (WIP.getAndIncrement(this) == 0) {
 			ConcurrentLinkedQueue<Slot> ir = connections;
 			if (maxPending >= 0 && postOffer > maxPending && ir.isEmpty() && poolConfig.allocationStrategy().estimatePermitCount() == 0) {
-				Borrower toCull = pendingQueue.pollLast();
+				Borrower toCull = pollPending(pendingQueue, false);
 				if (toCull != null) {
 					pendingAcquireLimitReached(toCull, maxPending);
 				}
@@ -491,6 +503,31 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 
 	void recordInteractionTimestamp() {
 		this.lastInteractionTimestamp = clock.millis();
+	}
+
+	@Nullable
+	Borrower pollPending(ConcurrentLinkedDeque<Borrower> borrowers, boolean pollFirst) {
+		Borrower borrower = pollFirst ? borrowers.pollFirst() : borrowers.pollLast();
+		if (borrower != null) {
+			PENDING_SIZE.decrementAndGet(this);
+		}
+		return borrower;
+	}
+
+	void removePending(ConcurrentLinkedDeque<Borrower> borrowers, Borrower borrower) {
+		if (borrowers.remove(borrower)) {
+			PENDING_SIZE.decrementAndGet(this);
+		}
+	}
+
+	int addPending(ConcurrentLinkedDeque<Borrower> borrowers, Borrower borrower, boolean first) {
+		if (first) {
+			borrowers.offerFirst(borrower);
+		}
+		else {
+			borrowers.offerLast(borrower);
+		}
+		return PENDING_SIZE.incrementAndGet(this);
 	}
 
 	static boolean offerSlot(Slot slot) {
