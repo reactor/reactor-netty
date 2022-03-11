@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,7 @@ import reactor.netty.transport.ClientTransportConfig;
 import reactor.netty.transport.NameResolverProvider;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolAcquirePendingLimitException;
+import reactor.pool.PoolConfig;
 import reactor.pool.PooledRef;
 import reactor.scheduler.clock.SchedulerClock;
 import reactor.test.StepVerifier;
@@ -541,6 +542,11 @@ class DefaultPooledConnectionProviderTest {
 
 		@Override
 		public Mono<PooledRef<PooledConnection>> acquire(Duration timeout) {
+			return null;
+		}
+
+		@Override
+		public PoolConfig<PooledConnection> config() {
 			return null;
 		}
 
