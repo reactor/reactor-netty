@@ -523,7 +523,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	int addPending(ConcurrentLinkedDeque<Borrower> borrowers, Borrower borrower, boolean first) {
 		if (first) {
 			borrowers.offerFirst(borrower);
-		} else {
+		}
+		else {
 			borrowers.offerLast(borrower);
 		}
 		return PENDING_SIZE.incrementAndGet(this);
