@@ -25,8 +25,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
+import reactor.netty.DisposableServer;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
@@ -35,6 +37,7 @@ import reactor.netty.http.server.HttpServer;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -217,6 +220,46 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + MAX_PENDING_CONNECTIONS, poolName)).isEqualTo(expectedMaxPendingAcquire);
 	}
 
+	@Test
+	void testConnectionPoolPendingAcquireSize() {
+		DisposableServer server =
+				HttpServer.create()
+						.port(0)
+						.protocol(HttpProtocol.H2C)
+						.handle((req, res) ->
+								res.sendString(Flux.range(0, 10)
+										.map(i -> "test")
+										.delayElements(Duration.ofMillis(4))))
+						.bindNow();
+
+		ConnectionProvider provider = ConnectionProvider
+				.builder("pool")
+				.pendingAcquireMaxCount(1000)
+				.maxConnections(500)
+				.build();
+
+		HttpClient client =
+				HttpClient.create(provider)
+						.port(server.port())
+						.metrics(true, Function.identity())
+						.protocol(HttpProtocol.H2C);
+
+		Flux.range(0, 2000)
+				.flatMap(i ->
+						client.get()
+								.uri("/")
+								.responseContent()
+								.aggregate()
+								.asString()
+								.timeout(Duration.ofMillis(ThreadLocalRandom.current().nextInt(1, 35)), Mono.just("timeout")))
+				.blockLast(Duration.ofSeconds(10));
+
+		provider.disposeLater()
+				.block(Duration.ofSeconds(30));
+		server.disposeNow();
+
+		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, "http2.pool")).isEqualTo(0);
+	}
 
 	private double getGaugeValue(String gaugeName, String poolName) {
 		Gauge gauge = registry.find(gaugeName).tag(NAME, poolName).gauge();
