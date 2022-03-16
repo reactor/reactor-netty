@@ -39,6 +39,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.ContextAwareHttpServerMetricsRecorder;
@@ -167,18 +168,21 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
+		CountDownLatch latch = new CountDownLatch(2);
+		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.childObserve(observeConnectionClosed(latchRef))
+				.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 			serverAddress.set(conn.channel().remoteAddress())
 		);
 
-		CountDownLatch latch1 = new CountDownLatch(1);
 		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
 		                                  conn.channel()
 		                                      .closeFuture()
-		                                      .addListener(f -> latch1.countDown()))
+		                                      .addListener(f -> latch.countDown()))
 		                              .post()
 		                              .uri("/1")
 		                              .send(body)
@@ -189,7 +193,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -207,11 +211,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			bytesWrite = new int[]{315, 435};
 		}
 
-		Thread.sleep(1000);
 		checkExpectationsExisting("/1", sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null,
 				numWrites[0], bytesWrite[0]);
 
-		CountDownLatch latch2 = new CountDownLatch(1);
+		CountDownLatch latch2 = new CountDownLatch(2);
+		latchRef.set(latch2);
+
 		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
 		                                  conn.channel()
 		                                      .closeFuture()
@@ -230,7 +235,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		sa = (InetSocketAddress) serverAddress.get();
 
-		Thread.sleep(1000);
 		checkExpectationsExisting("/2", sa.getHostString() + ":" + sa.getPort(), connIndex, serverCtx != null,
 				numWrites[1], bytesWrite[1]);
 	}
@@ -239,18 +243,22 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
+		CountDownLatch latch = new CountDownLatch(2);
+		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
+
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.childObserve(observeConnectionClosed(latchRef))
+				.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 			serverAddress.set(conn.channel().remoteAddress())
 		);
 
-		CountDownLatch latch1 = new CountDownLatch(1);
 		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
 		                                  conn.channel()
 		                                      .closeFuture()
-		                                      .addListener(f -> latch1.countDown()))
+		                                      .addListener(f -> latch.countDown()))
 		                              .headers(h -> h.add("Connection", "close"))
 		                              .get()
 		                              .uri("/3")
@@ -260,7 +268,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -287,11 +295,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			numReads = new int[]{2, 3};
 		}
 
-		Thread.sleep(1000);
 		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), 1, 1, serverCtx != null,
 				numWrites[0], numReads[0], bytesWrite[0], bytesRead[0]);
 
-		CountDownLatch latch2 = new CountDownLatch(1);
+		CountDownLatch latch2 = new CountDownLatch(2);
+		latchRef.set(latch2);
+
 		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
 		                                  conn.channel()
 		                                      .closeFuture()
@@ -308,8 +317,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		sa = (InetSocketAddress) serverAddress.get();
-
-		Thread.sleep(1000);
 		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), connIndex, 2, serverCtx != null,
 				numWrites[1], numReads[1], bytesWrite[1], bytesRead[1]);
 	}
@@ -318,8 +325,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testUriTagValueFunction(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		CountDownLatch latch = new CountDownLatch(2);
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
-				.metrics(true, s -> "testUriTagValueResolver").bindNow();
+				.metrics(true, s -> "testUriTagValueResolver")
+				.childObserve(observeConnectionClosed(latch))
+				.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
@@ -330,7 +340,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
 		                                  conn.channel()
 		                                      .closeFuture()
-		                                      .addListener(f -> latch1.countDown()))
+		                                      .addListener(f -> latch.countDown()))
 		                              .metrics(true, s -> "testUriTagValueResolver")
 		                              .post()
 		                              .uri("/1")
@@ -342,7 +352,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -357,7 +367,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			bytesWrite = 315;
 		}
 
-		Thread.sleep(1000);
 		checkExpectationsExisting("testUriTagValueResolver", sa.getHostString() + ":" + sa.getPort(), 1,
 				serverCtx != null, numWrites, bytesWrite);
 	}
@@ -369,6 +378,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testUriTagValueFunctionNotSharedForClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		CountDownLatch latch = new CountDownLatch(2);
+		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
 		disposableServer =
 				customizeServerOptions(httpServer, serverCtx, serverProtocols).metrics(true,
 				                s -> {
@@ -379,17 +390,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				                        return "testUriTagValueFunctionNotShared_2";
 				                    }
 				                })
-				          .bindNow();
+						.childObserve(observeConnectionClosed(latchRef))
+						.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 				serverAddress.set(conn.channel().remoteAddress())
 		);
 
-		CountDownLatch latch1 = new CountDownLatch(1);
 		httpClient.doOnResponse((res, conn) -> conn.channel()
 		                                           .closeFuture()
-		                                           .addListener(f -> latch1.countDown()))
+		                                           .addListener(f -> latch.countDown()))
 		          .metrics(true, s -> "testUriTagValueFunctionNotShared_1")
 		          .post()
 		          .uri("/1")
@@ -402,7 +413,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -417,11 +428,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			bytesWrite = new int[]{315, 630};
 		}
 
-		Thread.sleep(1000);
 		checkExpectationsExisting("testUriTagValueFunctionNotShared_1", sa.getHostString() + ":" + sa.getPort(),
 				1, serverCtx != null, numWrites[0], bytesWrite[0]);
 
-		CountDownLatch latch2 = new CountDownLatch(1);
+		CountDownLatch latch2 = new CountDownLatch(2);
+		latchRef.set(latch2);
 		httpClient.doOnResponse((res, conn) -> conn.channel()
 		                                           .closeFuture()
 		                                           .addListener(f -> latch2.countDown()))
@@ -437,11 +448,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		sa = (InetSocketAddress) serverAddress.get();
 
-		Thread.sleep(1000);
 		checkExpectationsExisting("testUriTagValueFunctionNotShared_2", sa.getHostString() + ":" + sa.getPort(),
 				2, serverCtx != null, numWrites[1], bytesWrite[1]);
 	}
@@ -514,8 +524,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testServerConnectionsMicrometer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+		CountDownLatch latch = new CountDownLatch(2);
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
-				.metrics(true, Function.identity()).bindNow();
+				.metrics(true, Function.identity())
+				.childObserve(observeConnectionClosed(latch))
+				.bindNow();
 
 		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
 		httpClient = httpClient.doAfterRequest((req, conn) ->
@@ -524,7 +537,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		String uri = "/4";
 		String address = formatSocketAddress(disposableServer.address());
-		CountDownLatch latch = new CountDownLatch(1);
 
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
 		httpClient.doOnResponse((res, conn) ->
@@ -545,8 +557,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		// ensure that the server counters have been updated. For the moment, wait 1 sec.
-		Thread.sleep(1000);
 		// now check the server counters
 		if (isHttp11) {
 			checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
@@ -621,24 +631,43 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		disposableServer = httpServer.noSSL()
 		                             .bindNow();
 
-		CountDownLatch latch = new CountDownLatch(1);
-		httpClient.observe((conn, state) -> conn.channel()
-		                                        .closeFuture()
-		                                        .addListener(f -> latch.countDown()))
-		          .secure(spec -> spec.sslContext(clientCtx11))
-		          .post()
-		          .uri("/1")
-		          .send(ByteBufFlux.fromString(Mono.just("hello")))
-		          .responseContent()
-		          .subscribe();
+		// the observe method is called three times; first one when a NotSSLRecordException is caught, second
+		// time when the DecoderException is caught, and third one when the connection becomes inactive
+		CountDownLatch latch = new CountDownLatch(3);
+		httpClient.observe((conn, state) -> {
+					if (state == ConnectionObserver.State.DISCONNECTING) {
+						latch.countDown();
+					}
+				})
+				.secure(spec -> spec.sslContext(clientCtx11))
+				.post()
+				.uri("/1")
+				.send(ByteBufFlux.fromString(Mono.just("hello")))
+				.responseContent()
+				.subscribe();
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		Thread.sleep(1000);
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
 		String[] summaryTags = new String[]{REMOTE_ADDRESS, serverAddress, URI, "unknown"};
 		checkCounter(CLIENT_ERRORS, summaryTags, true, 2);
+	}
+
+	ConnectionObserver observeConnectionClosed(CountDownLatch latch) {
+		return (connection, state) -> {
+			if (state == ConnectionObserver.State.DISCONNECTING && !connection.channel().isOpen())	 {
+				latch.countDown();
+			}
+		};
+	}
+
+	ConnectionObserver observeConnectionClosed(AtomicReference<CountDownLatch> latchRef) {
+		return (connection, state) -> {
+			if (state == ConnectionObserver.State.DISCONNECTING && !connection.channel().isOpen())	 {
+				latchRef.get().countDown();
+			}
+		};
 	}
 
 	private void checkServerConnectionsMicrometer(HttpServerRequest request) {
