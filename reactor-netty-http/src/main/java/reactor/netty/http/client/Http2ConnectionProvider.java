@@ -99,6 +99,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			ConnectionObserver connectionObserver,
 			long pendingAcquireTimeout,
 			InstrumentedPool<Connection> pool,
+			Context propagationContext,
 			MonoSink<Connection> sink) {
 		boolean acceptGzip = false;
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
@@ -108,7 +109,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			uriTagValue = ((HttpClientConfig) config).uriTagValue;
 		}
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, sink, uriTagValue);
+				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, propagationContext, sink, uriTagValue);
 	}
 
 	@Override
@@ -205,6 +206,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final ChannelMetricsRecorder metricsRecorder;
 		final long pendingAcquireTimeout;
 		final InstrumentedPool<Connection> pool;
+		final Context propagationContext;
 		final boolean retried;
 		final MonoSink<Connection> sink;
 		final Function<String, String> uriTagValue;
@@ -219,6 +221,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				long pendingAcquireTimeout,
 				InstrumentedPool<Connection> pool,
+				Context propagationContext,
 				MonoSink<Connection> sink,
 				@Nullable Function<String, String> uriTagValue) {
 			this.cancellations = Disposables.composite();
@@ -228,6 +231,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.metricsRecorder = metricsRecorder;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
 			this.pool = pool;
+			this.propagationContext = propagationContext;
 			this.retried = false;
 			this.sink = sink;
 			this.uriTagValue = uriTagValue;
@@ -241,6 +245,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.metricsRecorder = parent.metricsRecorder;
 			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
 			this.pool = parent.pool;
+			this.propagationContext = parent.propagationContext;
 			this.retried = true;
 			this.sink = parent.sink;
 			this.uriTagValue = parent.uriTagValue;

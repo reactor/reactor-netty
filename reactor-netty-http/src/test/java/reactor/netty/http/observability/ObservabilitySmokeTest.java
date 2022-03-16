@@ -18,7 +18,9 @@ package reactor.netty.http.observability;
 import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Deque;
+import java.util.List;
 import java.util.Random;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -36,15 +38,19 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufMono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.http.Http2SslContextSpec;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.observability.ReactorNettyTracingObservationHandler;
-import reactor.test.StepVerifier;
+import reactor.netty.resources.ConnectionProvider;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.REGISTRY;
 
 @SuppressWarnings("rawtypes")
@@ -97,49 +103,85 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	}
 
 	@Override
-	public TracingSetup[] getTracingSetup() {
-		return new TracingSetup[] {TracingSetup.ZIPKIN_BRAVE};
-	}
-
-	@Override
 	public SampleTestRunnerConsumer yourCode() {
 		return (bb, meterRegistry) -> {
-			Http11SslContextSpec serverCtxHttp11 = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+			Http2SslContextSpec serverCtxHttp = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 			disposableServer =
 					HttpServer.create()
-					          .wiretap(true)
 					          .metrics(true, Function.identity())
-					          .secure(spec -> spec.sslContext(serverCtxHttp11))
+					          .secure(spec -> spec.sslContext(serverCtxHttp))
+					          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2)
 					          .route(r -> r.post("/post", (req, res) -> res.send(req.receive().retain())))
 					          .bindNow();
 
-			Http11SslContextSpec clientCtxHttp11 =
-					Http11SslContextSpec.forClient()
-					                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-			HttpClient client =
-					HttpClient.create()
-					          .port(disposableServer.port())
-					          .host("localhost")
-					          .wiretap(true)
-					          .metrics(true, Function.identity())
-					          .secure(spec -> spec.sslContext(clientCtxHttp11));
+			HttpClient client;
 
-			client.post()
-			      .uri("/post")
-			      .send(ByteBufMono.fromString(Mono.just(content)))
-			      .responseSingle((res, bytebuf) -> bytebuf.asString())
-			      .as(StepVerifier::create)
-			      .expectNext(content)
-			      .expectComplete()
-			      .verify(Duration.ofSeconds(10));
+			// Default connection pool
+			client = HttpClient.create();
+			sendHttp11Request(client);
+			sendHttp2Request(client);
+
+			// Disabled connection pool
+			client = HttpClient.newConnection();
+			sendHttp11Request(client);
+			sendHttp2Request(client);
+
+			// Custom connection pool
+			ConnectionProvider provider = ConnectionProvider.create("observability", 1);
+			try {
+				client = HttpClient.create(provider);
+				sendHttp11Request(client);
+				sendHttp2Request(client);
+			}
+			finally {
+				provider.disposeLater()
+				        .block(Duration.ofSeconds(5));
+			}
 
 			Span current = bb.getTracer().currentSpan();
+			assertThat(current).isNotNull();
 
 			SpansAssert.assertThat(bb.getFinishedSpans().stream().filter(f -> f.getTraceId().equals(current.context().traceId()))
 			           .collect(Collectors.toList()))
+			           .hasASpanWithName("hostname resolution")
 			           .hasASpanWithName("connect")
 			           .hasASpanWithName("tls handshake")
 			           .hasASpanWithName("POST");
 		};
+	}
+
+	static void sendHttp2Request(HttpClient client) {
+		Http2SslContextSpec clientCtxHttp2 =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		sendRequest(client.secure(spec -> spec.sslContext(clientCtxHttp2)).protocol(HttpProtocol.H2));
+	}
+
+	static void sendHttp11Request(HttpClient client) {
+		Http11SslContextSpec clientCtxHttp11 =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		sendRequest(client.secure(spec -> spec.sslContext(clientCtxHttp11)));
+	}
+
+	static void sendRequest(HttpClient client) {
+		HttpClient localClient =
+				client.port(disposableServer.port())
+				      .host("localhost")
+				      .metrics(true, Function.identity());
+
+		List<String> responses =
+				Flux.range(0, 2)
+				    .flatMap(i ->
+				        localClient.post()
+				                   .uri("/post")
+				                   .send(ByteBufMono.fromString(Mono.just(content)))
+				                   .responseSingle((res, byteBuf) -> byteBuf.asString()))
+				    .collectList()
+				    .block(Duration.ofSeconds(10));
+
+		assertThat(responses).isEqualTo(Arrays.asList(content, content));
 	}
 }

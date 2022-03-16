@@ -15,6 +15,7 @@
  */
 package reactor.netty.resources;
 
+import io.micrometer.contextpropagation.ContextContainer;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.resolver.AddressResolverGroup;
@@ -43,6 +44,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.Context;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -146,11 +148,15 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				return newPool;
 			});
 
+			ContextContainer container = ContextContainer.create().captureThreadLocalValues();
+			container.captureContext(sink.currentContext());
+			Context currentPropagationContext = container.save(Context.empty());
 			EventLoop eventLoop = config.loopResources().onClient(config.isPreferNative()).next();
 			pool.acquire(Duration.ofMillis(poolFactory.pendingAcquireTimeout))
-			    .contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop))
+			    .contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop)
+			                            .putAll(currentPropagationContext.readOnly()))
 			    .subscribe(createDisposableAcquire(config, connectionObserver,
-			            poolFactory.pendingAcquireTimeout, pool, sink));
+			            poolFactory.pendingAcquireTimeout, pool, currentPropagationContext, sink));
 		});
 	}
 
@@ -232,6 +238,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			ConnectionObserver connectionObserver,
 			long pendingAcquireTimeout,
 			InstrumentedPool<T> pool,
+			Context propagationContext,
 			MonoSink<Connection> sink);
 
 	protected abstract InstrumentedPool<T> createPool(

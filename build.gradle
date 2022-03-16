@@ -88,6 +88,8 @@ ext {
 	micrometerTracingVersion = '1.0.0-M3' //optional baseline
 	micrometerDocsVersion = '1.0.0-M2' //optional baseline
 
+	contextPropagationVersion = '1.0.0-M1'
+
 	braveVersion = '5.13.7'
 
 	jsr305Version = '3.0.2'

@@ -30,6 +30,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import io.micrometer.contextpropagation.ContextContainer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -773,6 +774,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		protected void initChannel(Channel ch) {
 			if (observer != null && opsFactory != null && owner != null) {
 				Http2ConnectionProvider.registerClose(ch, owner);
+				ContextContainer container = ContextContainer.restore(owner.propagationContext);
+				container.save(ch);
+
 				addStreamHandlers(ch, observer.then(new StreamConnectionObserver(owner.currentContext())), opsFactory);
 			}
 			else {

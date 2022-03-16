@@ -17,6 +17,7 @@ package reactor.netty.http.client;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -86,7 +87,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 				contextView = ops.currentContextView();
 			}
 
-			startWrite((HttpRequest) msg, ctx.channel().remoteAddress());
+			startWrite((HttpRequest) msg, ctx.channel());
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -109,7 +110,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof HttpResponse) {
 			status = ((HttpResponse) msg).status().codeAsText().toString();
 
-			startRead((HttpResponse) msg, ctx.channel().remoteAddress());
+			startRead((HttpResponse) msg);
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -172,11 +173,11 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		dataSentTime = 0;
 	}
 
-	protected void startRead(HttpResponse msg, SocketAddress address) {
+	protected void startRead(HttpResponse msg) {
 		dataReceivedTime = System.nanoTime();
 	}
 
-	protected void startWrite(HttpRequest msg, SocketAddress address) {
+	protected void startWrite(HttpRequest msg, Channel channel) {
 		dataSentTime = System.nanoTime();
 	}
 
