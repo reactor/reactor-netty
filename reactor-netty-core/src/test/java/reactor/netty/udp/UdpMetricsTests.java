@@ -243,8 +243,8 @@ class UdpMetricsTests {
 
 		static final ContextAwareRecorder INSTANCE = new ContextAwareRecorder();
 
-		AtomicBoolean onDataReceivedContextView = new AtomicBoolean();
-		AtomicBoolean onDataSentContextView = new AtomicBoolean();
+		final AtomicBoolean onDataReceivedContextView = new AtomicBoolean();
+		final AtomicBoolean onDataSentContextView = new AtomicBoolean();
 
 		@Override
 		public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {

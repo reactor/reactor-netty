@@ -343,7 +343,7 @@ class ClientTransportTest {
 
 	static final class TestClientTransportConfig extends ClientTransportConfig<TestClientTransportConfig> {
 
-		AtomicReference<AddressResolverGroup<?>> defaultResolver = new AtomicReference<>();
+		final AtomicReference<AddressResolverGroup<?>> defaultResolver = new AtomicReference<>();
 
 		TestClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 				Supplier<? extends SocketAddress> remoteAddress) {
