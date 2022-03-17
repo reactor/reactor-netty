@@ -76,7 +76,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
-	HttpServerFormDecoderProvider                                 formDecoderProvider;
+	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final Duration                                                idleTimeout;
 	final ConnectionObserver                                      listener;

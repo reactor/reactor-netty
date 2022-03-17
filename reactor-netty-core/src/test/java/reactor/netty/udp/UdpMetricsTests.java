@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -243,8 +243,8 @@ class UdpMetricsTests {
 
 		static final ContextAwareRecorder INSTANCE = new ContextAwareRecorder();
 
-		AtomicBoolean onDataReceivedContextView = new AtomicBoolean();
-		AtomicBoolean onDataSentContextView = new AtomicBoolean();
+		final AtomicBoolean onDataReceivedContextView = new AtomicBoolean();
+		final AtomicBoolean onDataSentContextView = new AtomicBoolean();
 
 		@Override
 		public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {

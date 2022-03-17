@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -343,7 +343,7 @@ class ClientTransportTest {
 
 	static final class TestClientTransportConfig extends ClientTransportConfig<TestClientTransportConfig> {
 
-		AtomicReference<AddressResolverGroup<?>> defaultResolver = new AtomicReference<>();
+		final AtomicReference<AddressResolverGroup<?>> defaultResolver = new AtomicReference<>();
 
 		TestClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 				Supplier<? extends SocketAddress> remoteAddress) {
