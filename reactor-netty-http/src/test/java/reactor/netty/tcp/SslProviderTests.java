@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -238,7 +238,7 @@ class SslProviderTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testAdd() throws Exception {
+	void testAdd() {
 		SslProvider.Builder builder =
 				SslProvider.builder()
 				           .sslContext(serverSslContextBuilder)
@@ -267,7 +267,7 @@ class SslProviderTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testAddAll() throws Exception {
+	void testAddAll() {
 		Map<String, Consumer<? super SslProvider.SslContextSpec>> map = new HashMap<>();
 		map.put("localhost", spec -> spec.sslContext(localhostSslContext));
 
