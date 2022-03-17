@@ -277,7 +277,6 @@ subprojects {
 			showExceptions true
 			exceptionFormat "full"
 			maxGranularity 3
-			events "FAILED"
 		}
 
 		onOutput { descriptor, event ->
