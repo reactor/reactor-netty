@@ -26,5 +26,7 @@ public class CustomBlockHoundIntegration implements BlockHoundIntegration {
 		builder.allowBlockingCallsInside("java.nio.file.TempFileHelper", "createTempFile");
 
 		builder.allowBlockingCallsInside("reactor.core.scheduler.BoundedElasticScheduler$BoundedServices", "pick");
+		builder.allowBlockingCallsInside("io.netty.handler.ssl.BouncyCastle", "isInUse");
+
 	}
 }
