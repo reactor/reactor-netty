@@ -3027,12 +3027,10 @@ class HttpClientTest extends BaseHttpTest {
 		AtomicBoolean onDisconnected = new AtomicBoolean();
 		HttpClient client =
 				createHttpClientForContextWithAddress()
-				        .doOnRequest((req, conn) -> {
-				            onRequest.set(conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null);
-				        })
-				        .doOnResponse((req, conn) -> {
-				            onResponse.set(conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null);
-				        })
+				        .doOnRequest((req, conn) ->
+				            onRequest.set(conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null))
+				        .doOnResponse((req, conn) ->
+				            onResponse.set(conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null))
 				        .doOnDisconnected(conn ->
 				            onDisconnected.set(conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null))
 						.responseTimeout(Duration.ofMillis(100));

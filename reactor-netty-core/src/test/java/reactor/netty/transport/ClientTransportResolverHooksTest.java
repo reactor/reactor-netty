@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,9 +43,8 @@ class ClientTransportResolverHooksTest {
 		final DisposableServer server = TcpServer.create().port(0).bindNow();
 
 		TcpClient.create()
-				.doOnChannelInit((connectionObserver, channel, remoteAddress) -> {
-					channel.attr(TRACE_ID_KEY).set(TRACE_ID_VALUE);
-				})
+				.doOnChannelInit((connectionObserver, channel, remoteAddress) ->
+					channel.attr(TRACE_ID_KEY).set(TRACE_ID_VALUE))
 				.host("localhost")
 				.port(server.port())
 				.doOnResolve(conn -> doOnResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
@@ -70,9 +69,8 @@ class ClientTransportResolverHooksTest {
 		final DisposableServer server = TcpServer.create().port(0).bindNow();
 
 		TcpClient.create()
-				.doOnChannelInit((connectionObserver, channel, remoteAddress) -> {
-					channel.attr(TRACE_ID_KEY).set(TRACE_ID_VALUE);
-				})
+				.doOnChannelInit((connectionObserver, channel, remoteAddress) ->
+					channel.attr(TRACE_ID_KEY).set(TRACE_ID_VALUE))
 				.host("idontexist")
 				.port(server.port())
 				.doOnResolve(conn -> doOnResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
