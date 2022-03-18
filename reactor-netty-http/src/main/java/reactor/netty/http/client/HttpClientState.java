@@ -80,7 +80,7 @@ public enum HttpClientState implements ConnectionObserver.State {
 		}
 	},
 	/**
-	 * The H2C upgrade was was unsuccessful due to the server not issuing
+	 * The H2C upgrade was unsuccessful due to the server not issuing
 	 * with a 101 Switching Protocols response. This may indicate that the server
 	 * does not support H2C.
 	 */

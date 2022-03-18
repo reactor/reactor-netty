@@ -349,7 +349,7 @@ class HttpClientConnect extends HttpClient {
 					// In some rare cases the connection might be acquired immediately, before the channel close
 					// event and the eviction functionality be able to remove it from the pool, this may lead to I/O
 					// errors.
-					// Mark the connection as non-persistent here so that it never be returned to the pool and leave
+					// Mark the connection as non-persistent here so that it is never returned to the pool and leave
 					// the channel close event to invalidate it.
 					ops.markPersistent(false);
 					// Disable retry if the headers or/and the body were sent
@@ -367,7 +367,7 @@ class HttpClientConnect extends HttpClient {
 						// In some rare cases the connection might be acquired immediately, before the channel close
 						// event and the eviction functionality be able to remove it from the pool, this may lead to I/O
 						// errors.
-						// Mark the connection as non-persistent here so that it never be returned to the pool and leave
+						// Mark the connection as non-persistent here so that it is never returned to the pool and leave
 						// the channel close event to invalidate it.
 						ops.markPersistent(false);
 						ops.retrying = true;

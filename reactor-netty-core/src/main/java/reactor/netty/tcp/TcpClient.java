@@ -50,7 +50,7 @@ import static java.util.Objects.requireNonNull;
 import static reactor.netty.ReactorNetty.format;
 
 /**
- * A TcpClient allows to build in a safe immutable way a TCP client that
+ * A TcpClient allows building in a safe immutable way a TCP client that
  * is materialized and connecting when {@link #connect()} is ultimately called.
  * <p>
  * <p> Example:

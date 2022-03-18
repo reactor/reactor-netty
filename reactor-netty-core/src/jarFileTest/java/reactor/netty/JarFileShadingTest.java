@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.fail;
 
 /**
  * This test must be executed with Gradle because it requires a shadow JAR.
- * For example it can be run with {@code ./gradlew jarFileTest --tests *JarFileShadingTest}
+ * For example, it can be run with {@code ./gradlew jarFileTest --tests *JarFileShadingTest}
  */
 class JarFileShadingTest extends AbstractJarFileTest {
 

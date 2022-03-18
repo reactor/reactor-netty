@@ -345,7 +345,7 @@ public interface ConnectionProvider extends Disposable {
 		 * Connection pool configuration for a specific remote host.
 		 *
 		 * @param remoteHost the remote host
-		 * @param spec connection pool configuration for a this remote host
+		 * @param spec connection pool configuration for this remote host
 		 * @return {@literal this}
 		 * @throws NullPointerException if remoteHost or/and spec are null
 		 */

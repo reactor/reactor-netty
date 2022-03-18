@@ -41,7 +41,7 @@ import reactor.util.annotation.Nullable;
 import static reactor.netty.ReactorNetty.format;
 
 /**
- * A UdpClient allows to build in a safe immutable way a UDP client that is materialized
+ * A UdpClient allows building in a safe immutable way a UDP client that is materialized
  * and connecting when {@link #connect()} is ultimately called.
  * <p>
  * <p> Example:

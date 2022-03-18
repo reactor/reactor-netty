@@ -111,7 +111,7 @@ public interface WebsocketSpec {
 		/**
 		 * Sets flag whether the websocket compression extension is enabled
 		 * if the client request presents websocket extensions headers.
-		 * By default compression is disabled.
+		 * By default, compression is disabled.
 		 *
 		 * @param compress whether the websocket compression extension is enabled
 		 * if the client request presents websocket extensions headers.

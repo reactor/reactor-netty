@@ -42,7 +42,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 
 	/**
 	 * Specifies whether the Http Server applies a strict {@code Forwarded} header validation.
-	 * By default it is enabled and strict validation is used.
+	 * By default, it is enabled and strict validation is used.
 	 * @since 1.0.8
 	 * @deprecated The system property is used for backwards compatibility and will be removed in version 1.2.0.
 	 */

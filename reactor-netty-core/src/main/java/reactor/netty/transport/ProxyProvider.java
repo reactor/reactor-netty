@@ -505,7 +505,7 @@ public final class ProxyProvider {
 		}
 
 		/**
-		 * The test returns true when the nonProxyHost {@link Predicate} is true and we should not go through the
+		 * The test returns true when the nonProxyHost {@link Predicate} is true, and we should not go through the
 		 * configured proxy.
 		 *
 		 * @param socketAddress the address we are choosing to connect via proxy or not
@@ -622,7 +622,7 @@ public final class ProxyProvider {
 
 		/**
 		 * The proxy connect timeout in millis. Default to 10000 ms.
-		 * If this value set as non positive value, there is no connect timeout.
+		 * If this value set as non-positive value, there is no connect timeout.
 		 *
 		 * @param connectTimeoutMillis The proxy connect timeout in millis.
 		 * @return {@code this}

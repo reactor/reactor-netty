@@ -40,7 +40,7 @@ import static reactor.netty.transport.logging.AdvancedByteBufFormat.TEXTUAL;
  * adds the serial number of the request received on that connection.
  * <p>
  * In case of {@link AdvancedByteBufFormat#TEXTUAL} logs all events in a
- * textual representation so it's human readable and less verbose.
+ * textual representation, so it's human readable and less verbose.
  * <p>
  * Hint: Logger escapes newlines as "\n" to reduce output.
  *

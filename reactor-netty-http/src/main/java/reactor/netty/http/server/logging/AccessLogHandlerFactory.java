@@ -37,7 +37,7 @@ public enum AccessLogHandlerFactory {
 	H2;
 
 	/**
-	 * Create a access log handler, {@link AccessLogHandlerH1} or {@link AccessLogHandlerH2}.
+	 * Create an access log handler, {@link AccessLogHandlerH1} or {@link AccessLogHandlerH2}.
 	 *
 	 * @param accessLog apply an {@link AccessLog} by an {@link AccessLogArgProvider}
 	 * @return the access log handler

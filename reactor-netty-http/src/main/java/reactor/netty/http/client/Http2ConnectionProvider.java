@@ -65,7 +65,7 @@ import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 import static reactor.netty.http.client.HttpClientState.UPGRADE_REJECTED;
 
 /**
- * A HTTP/2 implementation for pooled {@link ConnectionProvider}.
+ * An HTTP/2 implementation for pooled {@link ConnectionProvider}.
  *
  * @author Violeta Georgieva
  * @since 1.0.0
@@ -386,7 +386,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			if (handler != null) {
 				String protocol = handler.applicationProtocol() != null ? handler.applicationProtocol() : ApplicationProtocolNames.HTTP_1_1;
 				if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
-					// No information for the negotiated application-level protocol
+					// No information for the negotiated application-level protocol,
 					// or it is HTTP/1.1, continue as an HTTP/1.1 request
 					// and remove the connection from this pool.
 					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);

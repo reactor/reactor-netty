@@ -137,7 +137,7 @@ public interface AccessLogArgProvider {
 	 * Returns resolved HTTP cookies.
 	 * <p>
 	 * Warning: Be cautious with cookies information and what kind of sensitive data is written to the logs.
-	 * By default no cookies information is written to the access log.
+	 * By default, no cookies information is written to the access log.
 	 *
 	 * @return Resolved HTTP cookies
 	 * @since 1.0.6

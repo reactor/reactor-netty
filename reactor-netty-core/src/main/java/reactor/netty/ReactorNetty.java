@@ -77,7 +77,7 @@ public final class ReactorNetty {
 
 	/**
 	 * Specifies whether the channel ID will be prepended to the log message when possible.
-	 * By default it will be prepended.
+	 * By default, it will be prepended.
 	 */
 	static final boolean LOG_CHANNEL_INFO =
 			Boolean.parseBoolean(System.getProperty("reactor.netty.logChannelInfo", "true"));
@@ -183,7 +183,7 @@ public final class ReactorNetty {
 
 	/**
 	 * Specifies whether the Http Server access log will be enabled.
-	 * By default it is disabled.
+	 * By default, it is disabled.
 	 */
 	public static final String ACCESS_LOG_ENABLED = "reactor.netty.http.server.accessLogEnabled";
 

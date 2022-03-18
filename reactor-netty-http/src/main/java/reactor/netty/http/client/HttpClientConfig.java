@@ -98,9 +98,9 @@ import static reactor.netty.http.client.Http2ConnectionProvider.OWNER;
 public final class HttpClientConfig extends ClientTransportConfig<HttpClientConfig> {
 
 	/**
-	 * Return the configure base URL to use for this request/response or null.
+	 * Return the configured base URL to use for this request/response or null.
 	 *
-	 * @return the configure base URL to use for this request/response or null
+	 * @return the configured base URL to use for this request/response or null
 	 */
 	@Nullable
 	public String baseUrl() {
