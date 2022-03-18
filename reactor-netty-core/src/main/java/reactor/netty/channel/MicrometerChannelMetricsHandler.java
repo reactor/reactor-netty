@@ -112,7 +112,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		@Override
 		@SuppressWarnings("try")
 		public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-				SocketAddress localAddress, ChannelPromise promise) throws Exception {
+				SocketAddress localAddress, ChannelPromise promise) {
 			// Cannot invoke the recorder anymore:
 			// 1. The recorder is one instance only, it is invoked for all connection establishments that can happen
 			// 2. The recorder does not have knowledge about connection establishment lifecycle
@@ -217,7 +217,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		@SuppressWarnings("try")
-		public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		public void channelActive(ChannelHandlerContext ctx) {
 			this.remoteAddress = formatSocketAddress(ctx.channel().remoteAddress());
 			ContextContainer container = ContextContainer.restore(ctx.channel());
 			try (ContextContainer.Scope scope = container.restoreThreadLocalValues()) {
