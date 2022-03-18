@@ -118,7 +118,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Cannot invoke the recorder anymore:
 			// 1. The recorder is one instance only, it is invoked for all name resolutions that can happen
 			// 2. The recorder does not have knowledge about name resolution lifecycle
-			// 3. There is no connection so we cannot hold the context information in the Channel
+			// 3. There is no connection, so we cannot hold the context information in the Channel
 			//
 			// Move the implementation from the recorder here
 			String remoteAddress = formatSocketAddress(address);
@@ -136,7 +136,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Cannot invoke the recorder anymore:
 			// 1. The recorder is one instance only, it is invoked for all name resolutions that can happen
 			// 2. The recorder does not have knowledge about name resolution lifecycle
-			// 3. There is no connection so we cannot hold the context information in the Channel
+			// 3. There is no connection, so we cannot hold the context information in the Channel
 			//
 			// Move the implementation from the recorder here
 			String remoteAddress = formatSocketAddress(address);

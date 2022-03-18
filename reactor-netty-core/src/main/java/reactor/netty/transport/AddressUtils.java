@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
  *
  * Numeric IPv4 and IPv6 addresses will be detected and parsed by using Netty's
  * {@link NetUtil#createByteArrayFromIpAddressString} utility method and the
- * InetSocketAddress instances will created in a way that these instances are resolved
+ * InetSocketAddress instances will be created in a way that these instances are resolved
  * initially. This removes the need to do unnecessary reverse DNS lookups.
  */
 public final class AddressUtils {

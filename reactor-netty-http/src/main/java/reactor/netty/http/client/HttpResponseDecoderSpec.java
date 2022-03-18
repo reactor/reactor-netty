@@ -46,7 +46,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 
 	/**
 	 * The maximum length of the content of the HTTP/2.0 clear-text upgrade request.
-	 * By default the client will allow an upgrade request with up to 65536 as
+	 * By default, the client will allow an upgrade request with up to 65536 as
 	 * the maximum length of the aggregated content.
 	 */
 	public static final int DEFAULT_H2C_MAX_CONTENT_LENGTH = 65536;
@@ -64,7 +64,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 	}
 
 	/**
-	 * Configure whether or not to throw an exception on a channel inactive
+	 * Configure whether to throw an exception on a channel inactive
 	 * in case there was a missing response
 	 *
 	 * @param failOnMissingResponse true - throw an exception on a channel inactive
@@ -77,7 +77,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 	}
 
 	/**
-	 * Configure whether or not the HTTP decoding will continue even after HTTP CONNECT.
+	 * Configure whether the HTTP decoding will continue even after HTTP CONNECT.
 	 *
 	 * @param parseHttpAfterConnectRequest true to continue HTTP decoding, otherwise false
 	 * @return this option builder for further configuration

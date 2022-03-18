@@ -40,7 +40,7 @@ public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDec
 
 	/**
 	 * The maximum length of the content of the HTTP/2.0 clear-text upgrade request.
-	 * By default the server will reject an upgrade request with non-empty content,
+	 * By default, the server will reject an upgrade request with non-empty content,
 	 * because the upgrade request is most likely a GET request.
 	 */
 	public static final int DEFAULT_H2C_MAX_CONTENT_LENGTH = 0;

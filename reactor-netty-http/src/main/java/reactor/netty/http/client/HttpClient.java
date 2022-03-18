@@ -62,7 +62,7 @@ import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
 /**
- * An HttpClient allows to build in a safe immutable way an http client that is
+ * An HttpClient allows building in a safe immutable way an http client that is
  * materialized and connecting when {@link HttpClient#connect()} is ultimately called.
  * {@code Transfer-Encoding: chunked} will be applied for those HTTP methods for which
  * a request body is expected. {@code Content-Length} provided via request headers
@@ -220,7 +220,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 * {@link #followRedirect(boolean, Consumer)}/{@link #followRedirect(BiPredicate, Consumer)}.
 		 *
 		 * @param formCallback called when form generator is created
-		 * @param progress called after form is being sent and passed with a {@link Flux} of latest in-flight or uploaded bytes
+		 * @param progress called after form is being sent and passed with a {@link Flux} of the latest in-flight or uploaded bytes
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
@@ -1105,7 +1105,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Intercept the connection lifecycle and allows to delay, transform or inject a
+	 * Intercept the connection lifecycle and allows delaying, transform or inject a
 	 * context.
 	 *
 	 * @param connector A bi function mapping the default connection and configured

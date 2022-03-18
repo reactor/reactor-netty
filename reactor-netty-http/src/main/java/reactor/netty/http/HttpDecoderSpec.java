@@ -114,7 +114,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	}
 
 	/**
-	 * Configure whether or not to validate headers when decoding requests. Defaults to
+	 * Configure whether to validate headers when decoding requests. Defaults to
 	 * {@link #DEFAULT_VALIDATE_HEADERS}.
 	 *
 	 * @param validate true to validate headers, false otherwise
@@ -126,9 +126,9 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	}
 
 	/**
-	 * Return the configuration whether or not to validate headers when decoding requests.
+	 * Return the configuration whether to validate headers when decoding requests.
 	 *
-	 * @return the configuration whether or not to validate headers when decoding requests
+	 * @return the configuration whether to validate headers when decoding requests
 	 */
 	public boolean validateHeaders() {
 		return validateHeaders;
@@ -159,7 +159,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	}
 
 	/**
-	 * Configure whether or not to allow duplicate {@code Content-Length} headers. Defaults to
+	 * Configure whether to allow duplicate {@code Content-Length} headers. Defaults to
 	 * {@link #DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS} which means that a message with duplicate
 	 * {@code Content-Length} headers is rejected. When this is configured to {@code true},
 	 * duplicate {@code Content-Length} headers are accepted only if they are all the same value, otherwise
@@ -176,9 +176,9 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	}
 
 	/**
-	 * Return the configuration whether or not to allow duplicate {@code Content-Length} headers.
+	 * Return the configuration whether to allow duplicate {@code Content-Length} headers.
 	 *
-	 * @return the configuration whether or not to allow duplicate {@code Content-Length} headers
+	 * @return the configuration whether to allow duplicate {@code Content-Length} headers
 	 * @since 1.0.8
 	 */
 	public boolean allowDuplicateContentLengths() {

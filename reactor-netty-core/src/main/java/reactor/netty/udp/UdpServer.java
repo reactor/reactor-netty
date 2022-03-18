@@ -42,7 +42,7 @@ import reactor.util.annotation.Nullable;
 import static reactor.netty.ReactorNetty.format;
 
 /**
- * A UdpServer allows to build in a safe immutable way a UDP server that is materialized
+ * A UdpServer allows building in a safe immutable way a UDP server that is materialized
  * and connecting when {@link #bind()} is ultimately called.
  * <p>
  * <p> Example:

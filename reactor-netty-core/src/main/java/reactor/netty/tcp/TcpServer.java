@@ -43,7 +43,7 @@ import reactor.util.Loggers;
 import static reactor.netty.ReactorNetty.format;
 
 /**
- * A TcpServer allows to build in a safe immutable way a TCP server that is materialized
+ * A TcpServer allows building in a safe immutable way a TCP server that is materialized
  * and connecting when {@link #bind()} is ultimately called.
  * <p>
  * <p> Example:

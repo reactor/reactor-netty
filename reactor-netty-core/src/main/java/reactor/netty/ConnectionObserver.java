@@ -20,7 +20,7 @@ import reactor.util.context.Context;
 /**
  * Event listeners for connection lifecycle.
  *
- * A normal event cycle is as follow :
+ * A normal event cycle is as follows :
  * <ol>
  *     <li>onUncaughtException</li>
  *     <li>onStateChange</li>

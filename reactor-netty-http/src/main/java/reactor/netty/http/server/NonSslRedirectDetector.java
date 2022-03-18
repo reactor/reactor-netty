@@ -28,9 +28,9 @@ import java.net.SocketAddress;
 import java.util.List;
 
 /**
- * The handler detects if it's a SSL record header or a HTTP request from
+ * The handler detects if it's an SSL record header or an HTTP request from
  * the first 5 bytes of the incoming message, and hands the message over
- * to a SSL handler if it's a SSL record header or {@link NonSslRedirectHandler}
+ * to an SSL handler if it's an SSL record header or {@link NonSslRedirectHandler}
  * if it's a potential HTTP request.
  *
  * @author James Chen

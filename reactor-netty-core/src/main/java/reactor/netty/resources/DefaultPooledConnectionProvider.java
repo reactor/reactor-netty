@@ -429,7 +429,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				                         logPoolState(pooledRef.poolable().channel, pool,
 				                                 "Failed cleaning the channel from pool", t);
 				                     }
-				                     // EmitResult is ignored as it is guaranteed that this call happens in an event loop
+				                     // EmitResult is ignored as it is guaranteed that this call happens in an event loop,
 				                     // and it is guarded by release(), so tryEmitEmpty() should happen just once
 				                     onTerminate.tryEmitEmpty();
 				                     obs.onStateChange(connection, State.RELEASED);
@@ -438,7 +438,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				                     if (log.isDebugEnabled()) {
 				                         logPoolState(pooledRef.poolable().channel, pool, "Channel cleaned");
 				                     }
-				                     // EmitResult is ignored as it is guaranteed that this call happens in an event loop
+				                     // EmitResult is ignored as it is guaranteed that this call happens in an event loop,
 				                     // and it is guarded by release(), so tryEmitEmpty() should happen just once
 				                     onTerminate.tryEmitEmpty();
 				                     obs.onStateChange(connection, State.RELEASED);

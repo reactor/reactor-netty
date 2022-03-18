@@ -47,7 +47,7 @@ public interface HttpInfos {
 	String fullPath();
 
 	/**
-	 * Return an unique id for the request. The id is a combination
+	 * Return a unique id for the request. The id is a combination
 	 * of the id of the underlying connection and the serial number of the request
 	 * received on that connection.
 	 * <p>Format of the id:
@@ -83,9 +83,9 @@ public interface HttpInfos {
 	boolean isWebsocket();
 
 	/**
-	 * Returns the resolved request method (HTTP 1.1 etc)
+	 * Returns the resolved request method (HTTP 1.1 etc.)
 	 *
-	 * @return the resolved request method (HTTP 1.1 etc)
+	 * @return the resolved request method (HTTP 1.1 etc.)
 	 */
 	HttpMethod method();
 

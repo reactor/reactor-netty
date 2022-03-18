@@ -372,7 +372,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		return Mono.fromRunnable(() -> {
 			configuration().eventLoopGroup();
 
-			// By default the host name resolver uses the event loop group configured on client level
+			// By default, the host name resolver uses the event loop group configured on client level
 			configuration().resolverInternal();
 		});
 	}

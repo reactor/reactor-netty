@@ -479,7 +479,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			// when there is no response state
 			onInboundComplete();
 			afterInboundComplete();
-			// EmitResult is ignored as it is guaranteed that this call happens in an event loop
+			// EmitResult is ignored as it is guaranteed that this call happens in an event loop,
 			// and it is guarded by rebind(connection), so tryEmitEmpty() should happen just once
 			onTerminate.tryEmitEmpty();
 			listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);

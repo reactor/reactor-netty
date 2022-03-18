@@ -125,7 +125,7 @@ public interface Connection extends DisposableChannel {
 
 	/**
 	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
-	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
+	 * that is just before the reactor-added handlers like {@link NettyPipeline#ReactiveBridge}.
 	 * If a handler with a similar name already exists, this operation is skipped.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
@@ -146,7 +146,7 @@ public interface Connection extends DisposableChannel {
 
 	/**
 	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
-	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
+	 * that is just before the reactor-added handlers like {@link NettyPipeline#ReactiveBridge}.
 	 * If a handler with a similar name already exists, this operation is skipped.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
@@ -240,7 +240,7 @@ public interface Connection extends DisposableChannel {
 	 * Return true (default) if it will release on terminal protocol events thus
 	 * keeping alive the channel if possible.
 	 *
-	 * @return whether or not the underlying {@link Connection} will be disposed on
+	 * @return whether the underlying {@link Connection} will be disposed on
 	 * terminal handler event
 	 */
 	default boolean isPersistent() {
