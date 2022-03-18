@@ -239,33 +239,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		List<HttpProtocol> protocols = Arrays.asList(clientProtocols);
-		int[] numWrites = new int[]{5, 7};
-		int[] numReads = new int[]{1, 2};
-		int[] bytesWrite = new int[]{106, 122};
-		int[] bytesRead = new int[]{37, 48};
-		int connIndex = 1;
-		if (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) {
-			numWrites = new int[]{1, 2};
-			bytesWrite = new int[]{123, 246};
-			bytesRead = new int[]{64, 128};
-			connIndex = 2;
-		}
-		else if (clientProtocols.length == 2 &&
-				Arrays.equals(clientProtocols, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})) {
-			numWrites = new int[]{4, 6};
-			numReads = new int[]{2, 3};
-			bytesWrite = new int[]{287, 345};
-			bytesRead = new int[]{108, 119};
-		}
-		else if (protocols.contains(HttpProtocol.H2) || protocols.contains(HttpProtocol.H2C)) {
-			numReads = new int[]{2, 3};
-		}
+		boolean HTTP11 = (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
+		int expectedDisconnects = HTTP11 ? 4 /* 2 for client + 2 for server */ : 3 /* 2 for client, 1 for server */;
 
-		CountDownLatch latch = new CountDownLatch(
-				2 /* number of expected client disconnects to observe */ +
-				connIndex /* number of expected server disconnects to observe */);
-
+		CountDownLatch latch = new CountDownLatch(expectedDisconnects);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
 
@@ -292,12 +269,34 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+
+		List<HttpProtocol> protocols = Arrays.asList(clientProtocols);
+		int[] numWrites = new int[]{5, 7};
+		int[] numReads = new int[]{1, 2};
+		int[] bytesWrite = new int[]{106, 122};
+		int[] bytesRead = new int[]{37, 48};
+		int connIndex = 1;
+		if (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) {
+			numWrites = new int[]{1, 2};
+			bytesWrite = new int[]{123, 246};
+			bytesRead = new int[]{64, 128};
+			connIndex = 2;
+		}
+		else if (clientProtocols.length == 2 &&
+				Arrays.equals(clientProtocols, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})) {
+			numWrites = new int[]{4, 6};
+			numReads = new int[]{2, 3};
+			bytesWrite = new int[]{287, 345};
+			bytesRead = new int[]{108, 119};
+		}
+		else if (protocols.contains(HttpProtocol.H2) || protocols.contains(HttpProtocol.H2C)) {
+			numReads = new int[]{2, 3};
+		}
+
 		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), 1, 1, serverCtx != null,
 				numWrites[0], numReads[0], bytesWrite[0], bytesRead[0]);
 
-		CountDownLatch latch2 = new CountDownLatch(
-						2 /* number of expected client disconnects to observe */ +
-						connIndex /* number of expected server disconnects to observe */);
+		CountDownLatch latch2 = new CountDownLatch(expectedDisconnects);
 		latchRef.set(latch2);
 
 		StepVerifier.create(httpClient.observe(observerDisconnect)
@@ -311,7 +310,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-
 		sa = (InetSocketAddress) serverAddress.get();
 
 		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), connIndex, 2, serverCtx != null,
