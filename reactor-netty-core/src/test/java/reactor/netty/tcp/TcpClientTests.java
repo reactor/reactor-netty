@@ -345,7 +345,7 @@ public class TcpClientTests {
 		                                                  return Mono.delay(Duration.ofSeconds(1));
 		                                              default:
 		                                                  latch.countDown();
-		                                                  return Mono.<Long>empty();
+		                                                  return Mono.empty();
 		                                          }
 		                                    })))
 		      .subscribe(System.out::println);
