@@ -2608,8 +2608,8 @@ class HttpServerTests extends BaseHttpTest {
 				        .handle((req, res) -> req.receive()
 				                                 .doOnNext(b -> msgLatch.countDown())
 				                                 .doOnError(t -> {
-				                                     errLatch.countDown();
 				                                     error.set(t);
+					                                 errLatch.countDown();
 				                                 })
 				                                 .then(res.send()))
 				        .bindNow();
