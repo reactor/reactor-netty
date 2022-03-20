@@ -17,14 +17,14 @@ package reactor.netty.http.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty5.channel.ChannelDuplexHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http2.Http2StreamChannel;
+import io.netty5.util.concurrent.Future;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.annotation.Nullable;
 
@@ -35,7 +35,7 @@ import java.util.function.Function;
  * @author Violeta Georgieva
  * @since 1.0.8
  */
-abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
+abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 
 	long dataReceived;
 
@@ -81,13 +81,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpResponse) {
 			if (((HttpResponse) msg).status().equals(HttpResponseStatus.CONTINUE)) {
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(msg, promise);
-				return;
+				return ctx.write(msg);
 			}
 
 			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
@@ -106,26 +103,26 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		}
 
 		if (msg instanceof LastHttpContent) {
-			promise.addListener(future -> {
-				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-				if (channelOps instanceof HttpServerOperations) {
-					HttpServerOperations ops = (HttpServerOperations) channelOps;
-					recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-							ops.method().name(), ops.status().codeAsText().toString());
-					if (!ops.isHttp2() && ops.hostAddress() != null) {
-						// This metric is not applicable for HTTP/2
-						// ops.hostAddress() == null when request decoding failed, in this case
-						// we do not report active connection, so we do not report inactive connection
-						recordInactiveConnection(ops);
-					}
-				}
+			return ctx.write(msg)
+			          .addListener(future -> {
+			              ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+			              if (channelOps instanceof HttpServerOperations) {
+			                  HttpServerOperations ops = (HttpServerOperations) channelOps;
+			                  recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
+			                          ops.method().name(), ops.status().codeAsText().toString());
+			                  if (!ops.isHttp2() && ops.hostAddress() != null) {
+			                      // This metric is not applicable for HTTP/2
+			                      // ops.hostAddress() == null when request decoding failed, in this case
+			                      // we do not report active connection, so we do not report inactive connection
+			                      recordInactiveConnection(ops);
+			                  }
+			              }
 
 				dataSent = 0;
 			});
 		}
 
-		//"FutureReturnValueIgnored" this is deliberate
-		ctx.write(msg, promise);
+		return ctx.write(msg);
 	}
 
 	@Override

@@ -21,11 +21,10 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 import io.netty.buffer.ByteBuf;
-import io.netty5.channel.ChannelDuplexHandler;
 import io.netty5.channel.ChannelFuture;
 import io.netty5.channel.ChannelFutureListener;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.LastHttpContent;
@@ -34,6 +33,7 @@ import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty5.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.concurrent.Future;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -48,7 +48,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Violeta Georgieva
  */
-final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implements ChannelFutureListener {
+final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter implements ChannelFutureListener {
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieDecoder                                     cookieDecoder;
@@ -144,20 +144,18 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof ByteBuf) {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
+			return ctx.write(new DefaultHttpContent((ByteBuf) msg));
 		}
 		else {
-			//"FutureReturnValueIgnored" this is deliberate
-			ChannelFuture f = ctx.write(msg, promise);
+			Future<Void> f = ctx.write(msg);
 			if (msg instanceof LastHttpContent) {
 				pendingResponse = false;
 				f.addListener(this);
 				ctx.read();
 			}
+			return f;
 		}
 	}
 

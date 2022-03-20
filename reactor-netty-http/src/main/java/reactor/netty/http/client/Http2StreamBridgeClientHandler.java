@@ -16,11 +16,11 @@
 package reactor.netty.http.client;
 
 import io.netty.buffer.ByteBuf;
-import io.netty5.channel.ChannelDuplexHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
+import io.netty5.util.concurrent.Future;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelOperations;
@@ -35,7 +35,7 @@ import static reactor.netty.ReactorNetty.format;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-final class Http2StreamBridgeClientHandler extends ChannelDuplexHandler {
+final class Http2StreamBridgeClientHandler extends ChannelHandlerAdapter {
 
 	final ConnectionObserver observer;
 	final ChannelOperations.OnSetup opsFactory;
@@ -63,15 +63,12 @@ final class Http2StreamBridgeClientHandler extends ChannelDuplexHandler {
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof ByteBuf) {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
+			return ctx.write(new DefaultHttpContent((ByteBuf) msg));
 		}
 		else {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(msg, promise);
+			return ctx.write(msg);
 		}
 	}
 }

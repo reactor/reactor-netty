@@ -18,12 +18,12 @@ package reactor.netty.http.client;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelDuplexHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.util.concurrent.Future;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
@@ -36,7 +36,7 @@ import java.util.function.Function;
  * @author Violeta Georgieva
  * @since 1.0.8
  */
-abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
+abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	String path;
 
@@ -75,8 +75,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
 			method = ((HttpRequest) msg).method().name();
 
@@ -99,10 +98,9 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 		if (msg instanceof LastHttpContent) {
 			SocketAddress address = ctx.channel().remoteAddress();
-			promise.addListener(future -> recordWrite(address));
+			return ctx.write(msg).addListener(future -> recordWrite(address));
 		}
-		//"FutureReturnValueIgnored" this is deliberate
-		ctx.write(msg, promise);
+		return ctx.write(msg);
 	}
 
 	@Override
