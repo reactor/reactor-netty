@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,17 +40,6 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	static final Pattern FORWARDED_PROTO_PATTERN  = Pattern.compile("proto=\"?([^;,\"]+)\"?");
 	static final Pattern FORWARDED_FOR_PATTERN    = Pattern.compile("for=\"?([^;,\"]+)\"?");
 
-	/**
-	 * Specifies whether the Http Server applies a strict {@code Forwarded} header validation.
-	 * By default, it is enabled and strict validation is used.
-	 * @since 1.0.8
-	 * @deprecated The system property is used for backwards compatibility and will be removed in version 1.2.0.
-	 */
-	@Deprecated
-	static final String FORWARDED_HEADER_VALIDATION = "reactor.netty.http.server.forwarded.strictValidation";
-	static final boolean DEFAULT_FORWARDED_HEADER_VALIDATION =
-			Boolean.parseBoolean(System.getProperty(FORWARDED_HEADER_VALIDATION, "true"));
-
 	@Override
 	public ConnectionInfo apply(ConnectionInfo connectionInfo, HttpRequest request) {
 		String forwardedHeader = request.headers().get(FORWARDED_HEADER);
@@ -65,8 +54,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		Matcher hostMatcher = FORWARDED_HOST_PATTERN.matcher(forwarded);
 		if (hostMatcher.find()) {
 			connectionInfo = connectionInfo.withHostAddress(
-					AddressUtils.parseAddress(hostMatcher.group(1), connectionInfo.getHostAddress().getPort(),
-							DEFAULT_FORWARDED_HEADER_VALIDATION));
+					AddressUtils.parseAddress(hostMatcher.group(1), connectionInfo.getHostAddress().getPort(), true));
 		}
 		Matcher protoMatcher = FORWARDED_PROTO_PATTERN.matcher(forwarded);
 		if (protoMatcher.find()) {
@@ -75,8 +63,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		Matcher forMatcher = FORWARDED_FOR_PATTERN.matcher(forwarded);
 		if (forMatcher.find()) {
 			connectionInfo = connectionInfo.withRemoteAddress(
-					AddressUtils.parseAddress(forMatcher.group(1).trim(), connectionInfo.getRemoteAddress().getPort(),
-							DEFAULT_FORWARDED_HEADER_VALIDATION));
+					AddressUtils.parseAddress(forMatcher.group(1).trim(), connectionInfo.getRemoteAddress().getPort(), true));
 		}
 		return connectionInfo;
 	}
@@ -96,7 +83,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 				if (portStr.chars().allMatch(Character::isDigit)) {
 					port = Integer.parseInt(portStr);
 				}
-				else if (DEFAULT_FORWARDED_HEADER_VALIDATION) {
+				else {
 					throw new IllegalArgumentException("Failed to parse a port from " + portHeader);
 				}
 			}
