@@ -193,21 +193,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	@SuppressWarnings("deprecation")
-	public HttpClientOperations addHandler(ChannelHandler handler) {
-		super.addHandler(handler);
-		return this;
-	}
-
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public HttpClientOperations addHandler(String name, ChannelHandler handler) {
-		// Returned value is deliberately ignored
-		super.addHandler(name, handler);
-		return this;
-	}
-
-	@Override
 	public HttpClientOperations replaceHandler(String name, ChannelHandler handler) {
 		super.replaceHandler(name, handler);
 		return this;
