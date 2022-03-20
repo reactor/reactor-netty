@@ -239,8 +239,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		boolean HTTP11 = (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
-		int expectedDisconnects = HTTP11 ? 4 /* 2 for client + 2 for server */ : 3 /* 2 for client, 1 for server */;
+		// For HTTP11, we expect to observe 2 DISCONNECTS for client, and 2 DISCONNECT for server.
+		// Else, we expect to observe 2 DISCONNECTS for client, and 1 DISCONNECT for server.
+		boolean HTTP11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+		int expectedDisconnects = HTTP11 ? 4 : 3;
 
 		CountDownLatch latch = new CountDownLatch(expectedDisconnects);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
