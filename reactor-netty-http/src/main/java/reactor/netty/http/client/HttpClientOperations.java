@@ -40,6 +40,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
+import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaders;
@@ -534,7 +535,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		else if (markSentBody()) {
 			//"FutureReturnValueIgnored" this is deliberate
-			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+			channel().writeAndFlush(new EmptyLastHttpContent(channel().bufferAllocator()));
 		}
 		listener().onStateChange(this, HttpClientState.REQUEST_SENT);
 		if (responseTimeout != null) {
@@ -653,7 +654,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received last HTTP packet"));
 			}
-			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
+			if (!(msg instanceof EmptyLastHttpContent)) {
 				if (redirecting != null) {
 					ReferenceCountUtil.release(msg);
 				}

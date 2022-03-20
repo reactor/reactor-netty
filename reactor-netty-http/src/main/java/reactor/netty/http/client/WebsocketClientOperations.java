@@ -22,11 +22,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpObjectAggregator;
-import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -157,7 +157,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			}
 			onInboundComplete();
 		}
-		else if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
+		else if (!(msg instanceof EmptyLastHttpContent)) {
 			super.onInboundNext(ctx, msg);
 		}
 	}
