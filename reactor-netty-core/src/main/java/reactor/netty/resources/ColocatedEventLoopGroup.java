@@ -15,24 +15,15 @@
  */
 package reactor.netty.resources;
 
-import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelFuture;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.FastThreadLocal;
-import io.netty5.util.concurrent.ScheduledFuture;
+import io.netty5.util.concurrent.Future;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -67,40 +58,8 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 	}
 
 	@Override
-	public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-		return eventLoopGroup.awaitTermination(timeout, unit);
-	}
-
-	@Override
-	public void execute(Runnable command) {
-		next().execute(command);
-	}
-
-	@Override
 	public EventLoopGroup get() {
 		return eventLoopGroup;
-	}
-
-	@Override
-	public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException {
-		return next().invokeAll(tasks);
-	}
-
-	@Override
-	public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-			throws InterruptedException {
-		return next().invokeAll(tasks, timeout, unit);
-	}
-
-	@Override
-	public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
-		return next().invokeAny(tasks);
-	}
-
-	@Override
-	public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-			throws InterruptedException, ExecutionException, TimeoutException {
-		return next().invokeAny(tasks, timeout, unit);
 	}
 
 	@Override
@@ -111,11 +70,6 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 	@Override
 	public boolean isShuttingDown() {
 		return eventLoopGroup.isShuttingDown();
-	}
-
-	@Override
-	public boolean isTerminated() {
-		return eventLoopGroup.isTerminated();
 	}
 
 	@Override
@@ -130,85 +84,13 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 	}
 
 	@Override
-	public ChannelFuture register(Channel channel) {
-		return next().register(channel);
-	}
-
-	@Deprecated
-	@Override
-	public ChannelFuture register(Channel channel, ChannelPromise promise) {
-		return next().register(channel, promise);
-	}
-
-	@Override
-	public ChannelFuture register(ChannelPromise promise) {
-		return next().register(promise);
-	}
-
-	@Override
-	public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-		return next().schedule(callable, delay, unit);
-	}
-
-	@Override
-	public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-		return next().schedule(command, delay, unit);
-	}
-
-	@Override
-	public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-		return next().scheduleAtFixedRate(command, initialDelay, period, unit);
-	}
-
-	@Override
-	public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-		return next().scheduleWithFixedDelay(command, initialDelay, delay, unit);
-	}
-
-	@Deprecated
-	@Override
-	@SuppressWarnings({"FutureReturnValueIgnored", "InlineMeSuggester"})
-	public void shutdown() {
-		//"FutureReturnValueIgnored" this is deliberate
-		shutdownGracefully();
-	}
-
-	@Override
-	public io.netty5.util.concurrent.Future<?> shutdownGracefully() {
-		clean();
-		return eventLoopGroup.shutdownGracefully();
-	}
-
-	@Override
-	public io.netty5.util.concurrent.Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+	public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
 		clean();
 		return eventLoopGroup.shutdownGracefully(quietPeriod, timeout, unit);
 	}
 
 	@Override
-	@Deprecated
-	public List<Runnable> shutdownNow() {
-		clean();
-		return eventLoopGroup.shutdownNow();
-	}
-
-	@Override
-	public <T> io.netty5.util.concurrent.Future<T> submit(Callable<T> task) {
-		return next().submit(task);
-	}
-
-	@Override
-	public io.netty5.util.concurrent.Future<?> submit(Runnable task) {
-		return next().submit(task);
-	}
-
-	@Override
-	public <T> io.netty5.util.concurrent.Future<T> submit(Runnable task, T result) {
-		return next().submit(task, result);
-	}
-
-	@Override
-	public io.netty5.util.concurrent.Future<?> terminationFuture() {
+	public Future<Void> terminationFuture() {
 		return eventLoopGroup.terminationFuture();
 	}
 
