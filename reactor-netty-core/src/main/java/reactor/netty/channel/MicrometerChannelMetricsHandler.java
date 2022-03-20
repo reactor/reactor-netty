@@ -21,9 +21,8 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelOutboundHandler;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.handler.ssl.SslHandler;
+import io.netty5.util.concurrent.Future;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
@@ -72,10 +71,10 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		return recorder;
 	}
 
-	// ConnectMetricsHandler is Observation.Context and ChannelOutboundHandler in order to reduce allocations,
+	// ConnectMetricsHandler is Observation.Context and ChannelHandler in order to reduce allocations,
 	// this is invoked on every connection establishment
 	// This handler is not shared and as such it is different object per connection.
-	static final class ConnectMetricsHandler extends Observation.Context implements ReactorNettyHandlerContext, ChannelOutboundHandler {
+	static final class ConnectMetricsHandler extends Observation.Context implements ReactorNettyHandlerContext, ChannelHandler {
 		static final String CONTEXTUAL_NAME = "connect";
 		static final String TYPE = "client";
 
@@ -95,23 +94,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.bind(localAddress, promise);
-		}
-
-		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.close(promise);
-		}
-
-		@Override
 		@SuppressWarnings("try")
-		public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-				SocketAddress localAddress, ChannelPromise promise) {
+		public Future<Void> connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress) {
 			// Cannot invoke the recorder anymore:
 			// 1. The recorder is one instance only, it is invoked for all connection establishments that can happen
 			// 2. The recorder does not have knowledge about connection establishment lifecycle
@@ -123,39 +107,14 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			try (ContextContainer.Scope scope = container.restoreThreadLocalValues()) {
 				observation = Observation.start(recorder.name() + CONNECT_TIME, this, OBSERVATION_REGISTRY);
 			}
-			ctx.connect(remoteAddress, localAddress, promise)
-			   .addListener(future -> {
-			       ctx.pipeline().remove(this);
+			return ctx.connect(remoteAddress, localAddress)
+			          .addListener(future -> {
+			              ctx.pipeline().remove(this);
 
-			       status = future.isSuccess() ? SUCCESS : ERROR;
+			              status = future.isSuccess() ? SUCCESS : ERROR;
 
-			       observation.stop();
+			              observation.stop();
 			});
-		}
-
-		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.deregister(promise);
-		}
-
-		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.disconnect(promise);
-		}
-
-		@Override
-		@SuppressWarnings("deprecation")
-		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-			ctx.fireExceptionCaught(cause);
-		}
-
-		@Override
-		public void flush(ChannelHandlerContext ctx) {
-			ctx.flush();
 		}
 
 		@Override
@@ -172,28 +131,6 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
 			return KeyValues.of(REMOTE_ADDRESS.getKeyName(), remoteAddress, STATUS.getKeyName(), status);
-		}
-
-		@Override
-		public void handlerAdded(ChannelHandlerContext ctx) {
-			// noop
-		}
-
-		@Override
-		public void handlerRemoved(ChannelHandlerContext ctx) {
-			// noop
-		}
-
-		@Override
-		public void read(ChannelHandlerContext ctx) {
-			ctx.read();
-		}
-
-		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(msg, promise);
 		}
 	}
 
