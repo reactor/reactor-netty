@@ -1485,32 +1485,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue614() {
-		disposableServer =
-				createServer()
-				          .route(routes ->
-				              routes.post("/dump", (req, res) -> {
-				                  if (req.requestHeaders().contains("Transfer-Encoding")) {
-				                      return Mono.error(new Exception("Transfer-Encoding is not expected"));
-				                  }
-				                  return res.sendString(Mono.just("OK"));
-				              }))
-				          .bindNow();
-
-		StepVerifier.create(
-				createHttpClientForContextWithAddress()
-				        .post()
-				        .uri("/dump")
-				        .sendForm((req, form) -> form.attr("attribute", "value"))
-				        .responseContent()
-				        .aggregate()
-				        .asString())
-				    .expectNext("OK")
-				    .expectComplete()
-				    .verify(Duration.ofSeconds(30));
-	}
-
-	@Test
 	void testIssue632() throws Exception {
 		disposableServer =
 				createServer()
