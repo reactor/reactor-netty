@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.cookie.Cookie;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;

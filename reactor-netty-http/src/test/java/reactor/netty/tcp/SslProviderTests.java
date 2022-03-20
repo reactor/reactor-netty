@@ -23,14 +23,14 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.ssl.JdkSslContext;
-import io.netty.handler.ssl.OpenSsl;
-import io.netty.handler.ssl.OpenSslContext;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty5.handler.ssl.JdkSslContext;
+import io.netty5.handler.ssl.OpenSsl;
+import io.netty5.handler.ssl.OpenSslContext;
+import io.netty5.handler.ssl.SslContext;
+import io.netty5.handler.ssl.SslHandler;
+import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -142,7 +142,7 @@ class SslProviderTests extends BaseHttpTest {
 				      .bindNow();
 		assertThat(protocols.size()).isEqualTo(2);
 		assertThat(protocols.contains("h2")).isTrue();
-		assertThat(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
+		assertThat(io.netty5.handler.ssl.SslProvider.isAlpnSupported(io.netty5.handler.ssl.SslProvider.OPENSSL) ?
 		                                       sslContext instanceof OpenSslContext :
 		                                       sslContext instanceof JdkSslContext).isTrue();
 	}
@@ -155,7 +155,7 @@ class SslProviderTests extends BaseHttpTest {
 				      .bindNow();
 		assertThat(protocols.size()).isEqualTo(2);
 		assertThat(protocols.contains("h2")).isTrue();
-		assertThat(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
+		assertThat(io.netty5.handler.ssl.SslProvider.isAlpnSupported(io.netty5.handler.ssl.SslProvider.OPENSSL) ?
 		                                       sslContext instanceof OpenSslContext :
 		                                       sslContext instanceof JdkSslContext).isTrue();
 	}
@@ -169,7 +169,7 @@ class SslProviderTests extends BaseHttpTest {
 				      .bindNow();
 		assertThat(protocols.size()).isEqualTo(2);
 		assertThat(protocols.contains("h2")).isTrue();
-		assertThat(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
+		assertThat(io.netty5.handler.ssl.SslProvider.isAlpnSupported(io.netty5.handler.ssl.SslProvider.OPENSSL) ?
 		                                       sslContext instanceof OpenSslContext :
 		                                       sslContext instanceof JdkSslContext).isTrue();
 	}

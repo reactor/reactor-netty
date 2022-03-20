@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  */
 package reactor.netty.http;
 
-import io.netty.handler.codec.http2.Http2SecurityUtil;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import io.netty5.handler.codec.http2.Http2SecurityUtil;
+import io.netty5.handler.ssl.ApplicationProtocolConfig;
+import io.netty5.handler.ssl.ApplicationProtocolNames;
+import io.netty5.handler.ssl.SslContext;
+import io.netty5.handler.ssl.SslContextBuilder;
+import io.netty5.handler.ssl.SslProvider;
+import io.netty5.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.netty.tcp.AbstractProtocolSslContextSpec;
 
 import javax.net.ssl.KeyManager;
@@ -32,13 +32,13 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.function.Consumer;
 
-import static io.netty.handler.ssl.SslProvider.JDK;
-import static io.netty.handler.ssl.SslProvider.OPENSSL;
+import static io.netty5.handler.ssl.SslProvider.JDK;
+import static io.netty5.handler.ssl.SslProvider.OPENSSL;
 
 /**
  * SslContext builder that provides default configuration specific to HTTP/2 as follows:
  * <ul>
- *     <li>{@link io.netty.handler.ssl.SslProvider} will be set depending on {@code OpenSsl.isAlpnSupported()}</li>
+ *     <li>{@link io.netty5.handler.ssl.SslProvider} will be set depending on {@code OpenSsl.isAlpnSupported()}</li>
  *     <li>{@link Http2SecurityUtil#CIPHERS}</li>
  *     <li>Application protocol negotiation configuration is enabled</li>
  *     <li>HTTP/1.1 and HTTP/2 support in order to support upgrade to HTTP/2</li>

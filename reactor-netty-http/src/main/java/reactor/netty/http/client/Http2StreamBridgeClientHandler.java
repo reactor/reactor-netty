@@ -16,11 +16,11 @@
 package reactor.netty.http.client;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpContent;
-import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
+import io.netty5.channel.ChannelDuplexHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelPromise;
+import io.netty5.handler.codec.http.DefaultHttpContent;
+import io.netty5.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelOperations;

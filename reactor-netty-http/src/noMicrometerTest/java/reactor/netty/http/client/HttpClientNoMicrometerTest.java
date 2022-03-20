@@ -20,8 +20,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

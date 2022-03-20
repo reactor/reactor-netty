@@ -17,13 +17,13 @@ package reactor.netty.http.server.logging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
-import io.netty.handler.codec.http2.DefaultHttp2Headers;
-import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
-import io.netty.handler.codec.http2.Http2Headers;
+import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.codec.http.HttpMethod;
+import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http2.DefaultHttp2DataFrame;
+import io.netty5.handler.codec.http2.DefaultHttp2Headers;
+import io.netty5.handler.codec.http2.DefaultHttp2HeadersFrame;
+import io.netty5.handler.codec.http2.Http2Headers;
 import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;

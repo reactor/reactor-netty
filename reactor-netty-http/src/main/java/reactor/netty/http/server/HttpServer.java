@@ -25,14 +25,14 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import io.netty.channel.group.ChannelGroup;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
-import io.netty.handler.ssl.JdkSslContext;
-import io.netty.handler.ssl.OpenSsl;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.channel.group.ChannelGroup;
+import io.netty5.handler.codec.http.HttpRequest;
+import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty5.handler.ssl.JdkSslContext;
+import io.netty5.handler.ssl.OpenSsl;
+import io.netty5.handler.ssl.SslContext;
+import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -362,7 +362,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
-	 * Configure the {@link io.netty.handler.codec.http.HttpServerCodec}'s request decoding options.
+	 * Configure the {@link io.netty5.handler.codec.http.HttpServerCodec}'s request decoding options.
 	 *
 	 * @param requestDecoderOptions a function to mutate the provided Http request decoder options
 	 * @return a new {@link HttpServer}

@@ -24,12 +24,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.cookie.CookieDecoder;
-import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.cookie.CookieDecoder;
+import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
 
 /**
  * Store cookies for the http channel.

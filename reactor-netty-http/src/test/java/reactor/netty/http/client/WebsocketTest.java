@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,20 +31,20 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.CorruptedFrameException;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
-import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
+import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.codec.CorruptedFrameException;
+import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
+import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty5.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty5.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty5.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty5.handler.codec.http.websocketx.WebSocketClientHandshakeException;
+import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
+import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty5.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -1233,7 +1233,7 @@ class WebsocketTest extends BaseHttpTest {
 		AtomicBoolean clientHandler = new AtomicBoolean();
 		HttpClient client = createClient(disposableServer::address);
 
-		String perMessageDeflateEncoder = "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder";
+		String perMessageDeflateEncoder = "io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder";
 		BiFunction<WebsocketInbound, WebsocketOutbound, Mono<Tuple2<String, String>>> receiver =
 				(in, out) -> {
 				    in.withConnection(conn ->

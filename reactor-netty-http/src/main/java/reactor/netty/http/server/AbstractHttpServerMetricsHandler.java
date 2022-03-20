@@ -17,14 +17,14 @@ package reactor.netty.http.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.http2.Http2StreamChannel;
+import io.netty5.channel.ChannelDuplexHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelPromise;
+import io.netty5.handler.codec.http.HttpRequest;
+import io.netty5.handler.codec.http.HttpResponse;
+import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http2.Http2StreamChannel;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.annotation.Nullable;
 

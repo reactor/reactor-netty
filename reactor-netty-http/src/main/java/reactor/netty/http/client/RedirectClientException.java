@@ -17,9 +17,9 @@ package reactor.netty.http.client;
 
 import java.util.Objects;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.HttpResponseStatus;
 
 /**
  * An error for signalling that an error occurred during a communication over HTTP version

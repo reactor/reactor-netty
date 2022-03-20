@@ -21,8 +21,8 @@ import io.micrometer.observation.Observation;
 import io.micrometer.observation.transport.http.HttpServerRequest;
 import io.micrometer.observation.transport.http.HttpServerResponse;
 import io.micrometer.observation.transport.http.context.HttpServerContext;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty5.handler.codec.http.HttpRequest;
+import io.netty5.handler.codec.http.HttpResponse;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 

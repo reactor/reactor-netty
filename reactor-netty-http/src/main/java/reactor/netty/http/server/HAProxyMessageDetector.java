@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ package reactor.netty.http.server;
 import java.util.List;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.ProtocolDetectionResult;
-import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
-import io.netty.handler.codec.haproxy.HAProxyProtocolVersion;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ProtocolDetectionResult;
+import io.netty.contrib.handler.codec.haproxy.HAProxyMessageDecoder;
+import io.netty.contrib.handler.codec.haproxy.HAProxyProtocolVersion;
 import reactor.netty.NettyPipeline;
 
 /**

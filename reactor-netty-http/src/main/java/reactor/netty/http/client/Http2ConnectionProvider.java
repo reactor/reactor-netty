@@ -15,18 +15,18 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http2.Http2Connection;
-import io.netty.handler.codec.http2.Http2FrameCodec;
-import io.netty.handler.codec.http2.Http2LocalFlowController;
-import io.netty.handler.codec.http2.Http2StreamChannel;
-import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.handler.codec.http2.Http2Connection;
+import io.netty5.handler.codec.http2.Http2FrameCodec;
+import io.netty5.handler.codec.http2.Http2LocalFlowController;
+import io.netty5.handler.codec.http2.Http2StreamChannel;
+import io.netty5.handler.ssl.ApplicationProtocolNames;
+import io.netty5.handler.ssl.SslHandler;
+import io.netty5.resolver.AddressResolverGroup;
+import io.netty5.util.AttributeKey;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;

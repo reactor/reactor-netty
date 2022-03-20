@@ -28,18 +28,18 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.cookie.DefaultCookie;
-import io.netty.handler.ssl.OpenSsl;
-import io.netty.handler.ssl.SslContext;
+import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.HttpMethod;
+import io.netty5.handler.codec.http.HttpUtil;
+import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
+import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.cookie.DefaultCookie;
+import io.netty5.handler.ssl.OpenSsl;
+import io.netty5.handler.ssl.SslContext;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
@@ -298,7 +298,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 * or the returned {@link Flux} might be necessary if the remote never
 		 * terminates itself.
 		 * <p> If the upgrade fails, the returned {@link Flux} will emit a
-		 * {@link io.netty.handler.codec.http.websocketx.WebSocketHandshakeException}
+		 * {@link io.netty5.handler.codec.http.websocketx.WebSocketHandshakeException}
 		 *
 		 * @param receiver extracting receiver
 		 * @param <V> the extracted flux type
@@ -314,7 +314,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 * disposed OR when a close frame has been received, forwarding onComplete to
 		 * the returned flux subscription.
 		 * <p> If the upgrade fails, the returned {@link Flux} will emit a
-		 * {@link io.netty.handler.codec.http.websocketx.WebSocketHandshakeException}
+		 * {@link io.netty5.handler.codec.http.websocketx.WebSocketHandshakeException}
 		 *
 		 * @return a {@link ByteBufFlux} of the inbound websocket content
 		 */
@@ -959,7 +959,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Configure the {@link io.netty.handler.codec.http.HttpClientCodec}'s response decoding options.
+	 * Configure the {@link io.netty5.handler.codec.http.HttpClientCodec}'s response decoding options.
 	 *
 	 * @param responseDecoderOptions a function to mutate the provided Http response decoder options
 	 * @return a new {@link HttpClient}
@@ -1196,7 +1196,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 
 	/**
 	 * Specifies the maximum duration allowed between each network-level read operation while reading a given response
-	 * (resolution: ms). In other words, {@link io.netty.handler.timeout.ReadTimeoutHandler} is added to the channel
+	 * (resolution: ms). In other words, {@link io.netty5.handler.timeout.ReadTimeoutHandler} is added to the channel
 	 * pipeline after sending the request and is removed when the response is fully received.
 	 * If the {@code maxReadOperationInterval} is {@code null}, any previous setting will be removed and no
 	 * {@code maxReadOperationInterval} will be applied.
@@ -1209,7 +1209,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *                                 (resolution: ms).
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.11
-	 * @see io.netty.handler.timeout.ReadTimeoutHandler
+	 * @see io.netty5.handler.timeout.ReadTimeoutHandler
 	 */
 	public final HttpClient responseTimeout(@Nullable Duration maxReadOperationInterval) {
 		if (Objects.equals(maxReadOperationInterval, configuration().responseTimeout)) {

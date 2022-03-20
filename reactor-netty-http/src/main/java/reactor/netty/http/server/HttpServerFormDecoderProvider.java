@@ -15,11 +15,11 @@
  */
 package reactor.netty.http.server;
 
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.multipart.Attribute;
-import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
-import io.netty.handler.codec.http.multipart.FileUpload;
-import io.netty.handler.codec.http.multipart.HttpData;
+import io.netty5.handler.codec.http.HttpRequest;
+import io.netty5.handler.codec.http.multipart.Attribute;
+import io.netty5.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty5.handler.codec.http.multipart.FileUpload;
+import io.netty5.handler.codec.http.multipart.HttpData;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;

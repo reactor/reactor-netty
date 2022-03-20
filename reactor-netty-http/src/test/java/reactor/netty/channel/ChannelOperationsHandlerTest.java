@@ -29,10 +29,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.netty.channel.ChannelHandler;
-import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.timeout.WriteTimeoutHandler;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.handler.codec.LineBasedFrameDecoder;
+import io.netty5.handler.codec.http.HttpMethod;
+import io.netty5.handler.timeout.WriteTimeoutHandler;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

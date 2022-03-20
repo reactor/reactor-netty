@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.resolver.AddressResolverGroup;
+import io.netty5.resolver.AddressResolverGroup;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;

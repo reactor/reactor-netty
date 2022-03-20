@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
  */
 package reactor.netty.http;
 
-import io.netty.handler.ssl.IdentityCipherSuiteFilter;
-import io.netty.handler.ssl.OpenSsl;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
+import io.netty5.handler.ssl.IdentityCipherSuiteFilter;
+import io.netty5.handler.ssl.OpenSsl;
+import io.netty5.handler.ssl.SslContext;
+import io.netty5.handler.ssl.SslContextBuilder;
 import reactor.netty.tcp.AbstractProtocolSslContextSpec;
 
 import javax.net.ssl.KeyManager;
@@ -29,13 +29,13 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.function.Consumer;
 
-import static io.netty.handler.ssl.SslProvider.JDK;
-import static io.netty.handler.ssl.SslProvider.OPENSSL;
+import static io.netty5.handler.ssl.SslProvider.JDK;
+import static io.netty5.handler.ssl.SslProvider.OPENSSL;
 
 /**
  * SslContext builder that provides default configuration specific to HTTP/1.x as follows:
  * <ul>
- *     <li>{@link io.netty.handler.ssl.SslProvider} will be set depending on {@code OpenSsl.isAvailable()}</li>
+ *     <li>{@link io.netty5.handler.ssl.SslProvider} will be set depending on {@code OpenSsl.isAvailable()}</li>
  *     <li>The default cipher suites will be used</li>
  *     <li>Application protocol negotiation configuration is disabled</li>
  * </ul>
