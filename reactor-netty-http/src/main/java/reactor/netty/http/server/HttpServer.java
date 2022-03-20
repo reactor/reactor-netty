@@ -45,7 +45,6 @@ import reactor.netty.http.server.logging.AccessLogArgProvider;
 import reactor.netty.http.server.logging.AccessLogFactory;
 import reactor.netty.internal.util.Metrics;
 import reactor.netty.tcp.SslProvider;
-import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ServerTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -80,77 +79,6 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 */
 	public static HttpServer create() {
 		return HttpServerBind.INSTANCE;
-	}
-
-	/**
-	 * Prepare an {@link HttpServer}
-	 * <p>
-	 * <strong>Note:</strong>
-	 * There isn't only one method that replaces this deprecated method.
-	 * The configuration that can be done with this deprecated method,
-	 * can also be done with the other methods exposed by {@link HttpServer}.
-	 * </p>
-	 * <p>Examples:</p>
-	 * <p>Configuration via the deprecated '.from(...)' method</p>
-	 * <pre>
-	 * {@code
-	 * HttpServer.from(
-	 *     TcpServer.attr(...) // configures the channel attributes
-	 *              .bindAddress(...) // configures the bind (local) address
-	 *              .childAttr(...) // configures the child channel attributes
-	 *              .childObserve() // configures the child channel connection observer
-	 *              .childOption(...) // configures the child channel options
-	 *              .channelGroup(...) // configures the channel group
-	 *              .doOnBound(...) // configures the doOnBound callback
-	 *              .doOnChannelInit(...) // configures the channel handler
-	 *              .doOnConnection(...) // configures the doOnConnection callback
-	 *              .doOnUnbound(...) // configures the doOnUnbound callback
-	 *              .metrics(...) // configures the metrics
-	 *              .observe() // configures the connection observer
-	 *              .option(...) // configures the channel options
-	 *              .runOn(...) // configures the event loop group
-	 *              .secure() // configures the SSL
-	 *              .wiretap()) // configures the wire logging
-	 * }
-	 * </pre>
-	 *
-	 * <p>Configuration via the other methods exposed by {@link HttpServer}</p>
-	 * <pre>
-	 * {@code
-	 * HttpServer.attr(...) // configures the channel attributes
-	 *           .bindAddress(...) // configures the bind (local) address
-	 *           .childAttr(...) // configures the child channel attributes
-	 *           .childObserve() // configures the child channel connection observer
-	 *           .childOption(...) // configures the child channel options
-	 *           .channelGroup(...) // configures the channel group
-	 *           .doOnBound(...) // configures the doOnBound callback
-	 *           .doOnChannelInit(...) // configures the channel handler
-	 *           .doOnConnection(...) // configures the doOnConnection callback
-	 *           .doOnUnbound(...) // configures the doOnUnbound callback
-	 *           .metrics(...) // configures the metrics
-	 *           .observe() // configures the connection observer
-	 *           .option(...) // configures the channel options
-	 *           .runOn(...) // configures the event loop group
-	 *           .secure() // configures the SSL
-	 *           .wiretap() // configures the wire logging
-	 * }
-	 * </pre>
-	 *
-	 * <p>Wire logging in plain text</p>
-	 * <pre>
-	 * {@code
-	 * HttpServer.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
-	 * }
-	 * </pre>
-	 *
-	 * @return a new {@link HttpServer}
-	 * @deprecated Use the other methods exposed by {@link HttpServer} to achieve the same configurations.
-	 * This method will be removed in version 1.1.0.
-	 */
-	@Deprecated
-	public static HttpServer from(TcpServer tcpServer) {
-		Objects.requireNonNull(tcpServer, "tcpServer");
-		return HttpServerBind.applyTcpServerConfig(tcpServer.configuration());
 	}
 
 	/**
