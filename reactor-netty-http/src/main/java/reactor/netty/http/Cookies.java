@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,21 +47,6 @@ public class Cookies {
 	public static Cookies newClientResponseHolder(HttpHeaders headers, ClientCookieDecoder decoder) {
 		return new Cookies(headers, HttpHeaderNames.SET_COOKIE, true, decoder);
 	}
-
-	/**
-	 * Return a new cookies holder from server request headers.
-	 *
-	 * @param headers server request headers
-	 * @return a new cookies holder from server request headers
-	 * @deprecated as of 1.0.8.
-	 * Prefer {@link reactor.netty.http.server.ServerCookies#newServerRequestHolder(HttpHeaders, ServerCookieDecoder)}.
-	 * This method will be removed in version 1.2.0.
-	 */
-	@Deprecated
-	public static Cookies newServerRequestHolder(HttpHeaders headers, ServerCookieDecoder decoder) {
-		return new Cookies(headers, HttpHeaderNames.COOKIE, false, decoder);
-	}
-
 
 	final static int NOT_READ = 0;
 	final static int READING  = 1;

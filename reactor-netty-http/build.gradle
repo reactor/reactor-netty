@@ -206,7 +206,8 @@ task japicmp(type: JapicmpTask) {
 	includeSynthetic = true
 	onlyIf { "$compatibleVersion" != "SKIP" }
 	methodExcludes = [
-			// Deprecated method is removed
+			// Deprecated methods are removed
+			'reactor.netty.http.Cookies#newServerRequestHolder(io.netty.handler.codec.http.HttpHeaders, io.netty.handler.codec.http.cookie.ServerCookieDecoder)',
 			'reactor.netty.http.HttpOperations#addHandler(java.lang.String, io.netty.channel.ChannelHandler)',
 
 			'reactor.netty.http.client.HttpClient#from(reactor.netty.tcp.TcpClient)',
