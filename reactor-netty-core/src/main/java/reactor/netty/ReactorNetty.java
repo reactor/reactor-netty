@@ -413,7 +413,7 @@ public final class ReactorNetty {
 		ChannelPipeline p = c.channel().pipeline();
 		return p.get(SslHandler.class) != null  ||
 				p.get(NettyPipeline.CompressionHandler) != null ||
-				(!(c.channel().eventLoop() instanceof NioEventLoop) &&
+				(!(c.channel().executor() instanceof NioEventLoop) &&
 						!"file".equals(file.toUri().getScheme()));
 	}
 

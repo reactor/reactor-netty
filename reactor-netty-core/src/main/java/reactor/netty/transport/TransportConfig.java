@@ -384,7 +384,7 @@ public abstract class TransportConfig {
 						ByteBufAllocatorMetrics.INSTANCE.registerMetrics("unpooled", ((UnpooledByteBufAllocator) alloc).metric(), alloc);
 					}
 
-					MicrometerEventLoopMeterRegistrar.INSTANCE.registerMetrics(channel.eventLoop());
+					MicrometerEventLoopMeterRegistrar.INSTANCE.registerMetrics(channel.executor());
 				}
 			}
 

@@ -175,11 +175,11 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			ContextContainer container = ContextContainer.restore(propagationContext);
 			container.save(c);
 
-			if (c.eventLoop().inEventLoop()) {
+			if (c.executor().inEventLoop()) {
 				run();
 			}
 			else {
-				c.eventLoop().execute(this);
+				c.executor().execute(this);
 			}
 		}
 
@@ -231,7 +231,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 						log.debug(format(c, "Immediately aborted pooled channel, re-acquiring new channel"));
 					}
 					pool.acquire(Duration.ofMillis(pendingAcquireTimeout))
-							.contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, c.eventLoop()))
+							.contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, c.executor()))
 							.subscribe(new DisposableAcquire(this));
 				}
 				else {

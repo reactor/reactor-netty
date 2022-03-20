@@ -86,7 +86,7 @@ public final class TransportConnector {
 				.flatMap(channel -> {
 					MonoChannelPromise promise = new MonoChannelPromise(channel);
 					// "FutureReturnValueIgnored" this is deliberate
-					channel.eventLoop().execute(() -> channel.bind(bindAddress, promise.unvoid()));
+					channel.executor().execute(() -> channel.bind(bindAddress, promise.unvoid()));
 					return promise;
 				});
 	}
@@ -221,7 +221,7 @@ public final class TransportConnector {
 			ChannelPromise connectPromise,
 			int index) {
 		Channel channel = connectPromise.channel();
-		channel.eventLoop().execute(() -> {
+		channel.executor().execute(() -> {
 			SocketAddress remoteAddress = addresses.get(index);
 
 			if (log.isDebugEnabled()) {
@@ -312,7 +312,7 @@ public final class TransportConnector {
 		try {
 			AddressResolver<SocketAddress> resolver;
 			try {
-				resolver = (AddressResolver<SocketAddress>) resolverGroup.getResolver(channel.eventLoop());
+				resolver = (AddressResolver<SocketAddress>) resolverGroup.getResolver(channel.executor());
 			}
 			catch (Throwable t) {
 				// "FutureReturnValueIgnored" this is deliberate
@@ -548,7 +548,7 @@ public final class TransportConnector {
 
 		@Override
 		public void subscribe(CoreSubscriber<? super Channel> actual) {
-			EventLoop eventLoop = channel.eventLoop();
+			EventLoop eventLoop = channel.executor();
 			if (eventLoop.inEventLoop()) {
 				_subscribe(actual);
 			}

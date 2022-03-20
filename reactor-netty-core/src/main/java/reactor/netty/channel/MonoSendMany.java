@@ -147,7 +147,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			this.actualContext = actual.currentContext();
 			this.requested = MAX_SIZE;
 			this.ctx = parent.ctx;
-			this.eventLoop = ctx.channel().eventLoop();
+			this.eventLoop = ctx.channel().executor();
 
 			this.asyncFlush = new AsyncFlush();
 
