@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.function.Function;
 
+import static reactor.netty.http.server.logging.AbstractAccessLogArgProvider.DATE_TIME_FORMATTER;
 import static reactor.netty.http.server.logging.AbstractAccessLogArgProvider.MISSING;
 
 /**
@@ -32,10 +33,9 @@ class BaseAccessLogHandler extends ChannelDuplexHandler {
 	static final String DEFAULT_LOG_FORMAT =
 			"{} - {} [{}] \"{} {} {}\" {} {} {}";
 
-	@SuppressWarnings("deprecation")
 	static final Function<AccessLogArgProvider, AccessLog> DEFAULT_ACCESS_LOG =
 			args -> AccessLog.create(DEFAULT_LOG_FORMAT, applyAddress(args.remoteAddress()), args.user(),
-					args.zonedDateTime(), args.method(), args.uri(), args.protocol(), args.status(),
+					args.accessDateTime().format(DATE_TIME_FORMATTER), args.method(), args.uri(), args.protocol(), args.status(),
 					args.contentLength() > -1 ? args.contentLength() : MISSING, args.duration());
 
 	final Function<AccessLogArgProvider, AccessLog> accessLog;

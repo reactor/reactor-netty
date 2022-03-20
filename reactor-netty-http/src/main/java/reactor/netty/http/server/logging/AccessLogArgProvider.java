@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,16 +30,6 @@ import java.util.Set;
  * @since 1.0.1
  */
 public interface AccessLogArgProvider {
-
-	/**
-	 * Returns the date-time string with a time-zone, (e.g. "30/Oct/2020:03:52:11 +0000").
-	 *
-	 * @return the date-time string with a time-zone
-	 * @deprecated as of 1.0.6. Prefer using {@link #accessDateTime()} This method will be removed in version 1.2.0.
-	 */
-	@Nullable
-	@Deprecated
-	String zonedDateTime();
 
 	/**
 	 * Returns the date-time of the moment when the request was received

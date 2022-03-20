@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,19 +69,15 @@ class AccessLogArgProviderTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	void onRequest() {
 		assertThat(accessLogArgProvider.accessDateTime()).isNull();
-		assertThat(accessLogArgProvider.zonedDateTime()).isNull();
 		assertThat(accessLogArgProvider.startTime).isZero();
 		accessLogArgProvider.onRequest();
 		assertThat(accessLogArgProvider.accessDateTime()).isNotNull();
-		assertThat(accessLogArgProvider.zonedDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.startTime).isNotNull();
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	void clear() {
 		assertAccessLogArgProviderInitState();
 		accessLogArgProvider.onRequest();
@@ -90,7 +86,6 @@ class AccessLogArgProviderTests {
 				.increaseContentLength(100);
 		accessLogArgProvider.cookies(Collections.emptyMap());
 		assertThat(accessLogArgProvider.accessDateTime()).isNotNull();
-		assertThat(accessLogArgProvider.zonedDateTime()).isNotNull();
 		assertThat(accessLogArgProvider.method()).isEqualTo(HttpMethod.POST.name());
 		assertThat(accessLogArgProvider.uri()).isEqualTo(URI);
 		assertThat(accessLogArgProvider.protocol()).isEqualTo(HttpVersion.HTTP_1_1.text());
@@ -102,10 +97,8 @@ class AccessLogArgProviderTests {
 		assertAccessLogArgProviderInitState();
 	}
 
-	@SuppressWarnings("deprecation")
 	private void assertAccessLogArgProviderInitState() {
 		assertThat(accessLogArgProvider.accessDateTime()).isNull();
-		assertThat(accessLogArgProvider.zonedDateTime()).isNull();
 		assertThat(accessLogArgProvider.method()).isNull();
 		assertThat(accessLogArgProvider.uri()).isNull();
 		assertThat(accessLogArgProvider.protocol()).isNull();
