@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.buffer.ByteBuf;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelFutureListener;
+import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
@@ -239,7 +239,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 					// FAIL_ZERO_SUBSCRIBER
 					onCloseState.tryEmitValue(new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
 					return channel().writeAndFlush(frame)
-					                .addListener(ChannelFutureListener.CLOSE);
+					                .addListener(channel(), ChannelFutureListeners.CLOSE);
 				}
 				frame.release();
 				return channel().newSucceededFuture();
@@ -267,7 +267,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			// FAIL_ZERO_SUBSCRIBER
 			onCloseState.tryEmitValue(closeStatus);
 			channel().writeAndFlush(frame)
-			         .addListener(ChannelFutureListener.CLOSE);
+			         .addListener(channel(), ChannelFutureListeners.CLOSE);
 		}
 		else {
 			frame.release();

@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.server;
 
-import io.netty5.channel.ChannelFutureListener;
+import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
@@ -59,7 +59,7 @@ final class NonSslRedirectHandler extends ChannelHandlerAdapter {
 				HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), HttpResponseStatus.PERMANENT_REDIRECT);
 				response.headers().set(LOCATION, url);
 				ctx.channel().writeAndFlush(response)
-						.addListener(ChannelFutureListener.CLOSE);
+						.addListener(ctx, ChannelFutureListeners.CLOSE);
 			}
 		}
 		else {
