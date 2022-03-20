@@ -15,8 +15,8 @@
  */
 package reactor.netty.examples.documentation.udp.server.lifecycle;
 
-import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty5.handler.codec.LineBasedFrameDecoder;
+import io.netty5.handler.logging.LoggingHandler;
 import reactor.netty.Connection;
 import reactor.netty.udp.UdpServer;
 import java.time.Duration;

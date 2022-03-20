@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package reactor.netty.examples.documentation.udp.client.wiretap.custom;
 
-import io.netty.handler.logging.LogLevel;
+import io.netty5.handler.logging.LogLevel;
 import reactor.netty.Connection;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.netty.udp.UdpClient;
