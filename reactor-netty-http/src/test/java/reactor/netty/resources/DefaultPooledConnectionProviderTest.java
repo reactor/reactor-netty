@@ -16,10 +16,8 @@
 package reactor.netty.resources;
 
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelOutboundHandlerAdapter;
-import io.netty5.channel.ChannelPromise;
-import io.netty5.channel.DefaultChannelPromise;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.ssl.SslContext;
@@ -27,6 +25,9 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.FutureContextListener;
+import io.netty5.util.concurrent.Promise;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -269,13 +270,15 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				client.doOnChannelInit(
 				        (o, c, address) ->
 				            c.pipeline()
-				             .addFirst(new ChannelOutboundHandlerAdapter() {
+				             .addFirst(new ChannelHandlerAdapter() {
 
 				                 @Override
-				                 public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-				                         SocketAddress localAddress, ChannelPromise promise) throws Exception {
-				                     super.connect(ctx, remoteAddress, localAddress,
-				                             new TestPromise(ctx.channel(), promise, closeCount));
+				                 public Future<Void> connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
+				                                             SocketAddress localAddress) {
+				                     Promise<Void> promise = ctx.newPromise();
+				                     ctx.connect(remoteAddress, localAddress)
+				                        .addListener(ctx.channel(), new TestPromise(promise, closeCount));
+				                     return promise.asFuture();
 				                 }
 				             }))
 				      .get()
@@ -484,32 +487,28 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		}
 	}
 
-	static final class TestPromise extends DefaultChannelPromise {
+	static final class TestPromise implements FutureContextListener<Channel, Void> {
 
-		final ChannelPromise parent;
+		final Promise<Void> parent;
 		final AtomicInteger closeCount;
 
-		public TestPromise(Channel channel, ChannelPromise parent, AtomicInteger closeCount) {
-			super(channel);
+		public TestPromise(Promise<Void> parent, AtomicInteger closeCount) {
 			this.parent = parent;
 			this.closeCount = closeCount;
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public boolean trySuccess(Void result) {
-			boolean r;
+		public void operationComplete(Channel channel, Future<? extends Void> future) {
 			if (closeCount.getAndDecrement() > 0) {
 				//"FutureReturnValueIgnored" this is deliberate
-				channel().close();
-				r = parent.trySuccess(result);
+				channel.close();
+				parent.trySuccess(null);
 			}
 			else {
-				r = parent.trySuccess(result);
+				parent.trySuccess(null);
 				//"FutureReturnValueIgnored" this is deliberate
-				channel().close();
+				channel.close();
 			}
-			return r;
 		}
 	}
 }
