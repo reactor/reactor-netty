@@ -60,7 +60,7 @@ import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.NetUtil;
-import io.netty5.util.concurrent.DefaultEventExecutor;
+import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -775,7 +775,7 @@ class TcpServerTests {
 
 	@Test
 	void testChannelGroupClosesAllConnections() throws Exception {
-		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
+		ChannelGroup group = new DefaultChannelGroup(new SingleThreadEventExecutor());
 
 		CountDownLatch latch1 = new CountDownLatch(1);
 		CountDownLatch latch2 = new CountDownLatch(1);
@@ -814,7 +814,7 @@ class TcpServerTests {
 		CountDownLatch configured = new CountDownLatch(1);
 		CountDownLatch disconnected = new CountDownLatch(1);
 
-		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
+		ChannelGroup group = new DefaultChannelGroup(new SingleThreadEventExecutor());
 
 		DisposableServer server =
 				TcpServer.create()
@@ -916,7 +916,7 @@ class TcpServerTests {
 				         })
 				         // Register a channel group, when invoking disposeNow()
 				         // the implementation will wait for the active requests to finish
-				         .channelGroup(new DefaultChannelGroup(new DefaultEventExecutor()))
+				         .channelGroup(new DefaultChannelGroup(new SingleThreadEventExecutor()))
 				         .handle((in, out) -> out.sendString(Mono.just("delay1000")
 				                                                 .delayElement(Duration.ofSeconds(1))))
 				         .wiretap(true)

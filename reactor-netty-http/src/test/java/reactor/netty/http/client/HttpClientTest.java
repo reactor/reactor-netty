@@ -88,7 +88,7 @@ import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.dns.DnsAddressResolverGroup;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.concurrent.DefaultEventExecutor;
+import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -1454,7 +1454,7 @@ class HttpClientTest extends BaseHttpTest {
 		ConnectionProvider connectionProvider =
 				ConnectionProvider.create("testChannelGroupClosesAllConnections", Integer.MAX_VALUE);
 
-		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
+		ChannelGroup group = new DefaultChannelGroup(new SingleThreadEventExecutor());
 
 		CountDownLatch latch1 = new CountDownLatch(3);
 		CountDownLatch latch2 = new CountDownLatch(3);
