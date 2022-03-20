@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.HttpDecoderSpecTest.checkDefaultAllowDuplicateContentLengths;
 import static reactor.netty.http.HttpDecoderSpecTest.checkDefaultInitialBufferSize;
-import static reactor.netty.http.HttpDecoderSpecTest.checkDefaultMaxChunkSize;
 import static reactor.netty.http.HttpDecoderSpecTest.checkDefaultMaxHeaderSize;
 import static reactor.netty.http.HttpDecoderSpecTest.checkDefaultMaxInitialLineLength;
 import static reactor.netty.http.HttpDecoderSpecTest.checkDefaultValidateHeaders;
@@ -48,7 +47,6 @@ class HttpResponseDecoderSpecTest {
 
 		checkDefaultMaxInitialLineLength(conf);
 		checkDefaultMaxHeaderSize(conf);
-		checkDefaultMaxChunkSize(conf);
 		checkDefaultValidateHeaders(conf);
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
@@ -66,7 +64,6 @@ class HttpResponseDecoderSpecTest {
 
 		checkDefaultMaxInitialLineLength(conf);
 		checkDefaultMaxHeaderSize(conf);
-		checkDefaultMaxChunkSize(conf);
 		checkDefaultValidateHeaders(conf);
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
@@ -84,7 +81,6 @@ class HttpResponseDecoderSpecTest {
 
 		checkDefaultMaxInitialLineLength(conf);
 		checkDefaultMaxHeaderSize(conf);
-		checkDefaultMaxChunkSize(conf);
 		checkDefaultValidateHeaders(conf);
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);

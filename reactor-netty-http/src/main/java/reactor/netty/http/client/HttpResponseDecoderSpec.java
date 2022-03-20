@@ -30,7 +30,6 @@ import java.util.Objects;
  *     <tr><td>{@link #DEFAULT_FAIL_ON_MISSING_RESPONSE}</td><td>false</td></tr>
  *     <tr><td>{@link #DEFAULT_H2C_MAX_CONTENT_LENGTH}</td><td>65536</td></tr>
  *     <tr><td>{@link #DEFAULT_INITIAL_BUFFER_SIZE}</td><td>128</td></tr>
- *     <tr><td>{@link #DEFAULT_MAX_CHUNK_SIZE}</td><td>8192</td></tr>
  *     <tr><td>{@link #DEFAULT_MAX_HEADER_SIZE}</td><td>8192</td></tr>
  *     <tr><td>{@link #DEFAULT_MAX_INITIAL_LINE_LENGTH}</td><td>4096</td></tr>
  *     <tr><td>{@link #DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST}</td><td>false</td></tr>
@@ -114,7 +113,6 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 	HttpResponseDecoderSpec build() {
 		HttpResponseDecoderSpec decoder = new HttpResponseDecoderSpec();
 		decoder.initialBufferSize = initialBufferSize;
-		decoder.maxChunkSize = maxChunkSize;
 		decoder.maxHeaderSize = maxHeaderSize;
 		decoder.maxInitialLineLength = maxInitialLineLength;
 		decoder.validateHeaders = validateHeaders;
