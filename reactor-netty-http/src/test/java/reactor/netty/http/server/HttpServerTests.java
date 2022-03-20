@@ -120,7 +120,6 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
-import reactor.netty.transport.TransportConfig;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
@@ -1778,24 +1777,6 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	void testTcpConfiguration_1() throws Exception {
-		CountDownLatch latch = new CountDownLatch(10);
-		LoopResources loop = LoopResources.create("testTcpConfiguration");
-		ChannelGroup group = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-		doTestTcpConfiguration(
-				HttpServer.create().tcpConfiguration(tcp -> configureTcpServer(tcp, loop, group, latch)),
-				HttpClient.create().tcpConfiguration(tcp -> configureTcpClient(tcp, loop, group, latch))
-		);
-
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
-
-		FutureMono.from(group.close())
-		          .then(loop.disposeLater())
-		          .block(Duration.ofSeconds(30));
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
 	void testTcpConfiguration_2() throws Exception {
 		CountDownLatch latch = new CountDownLatch(10);
 		LoopResources loop = LoopResources.create("testTcpConfiguration");
@@ -1860,36 +1841,6 @@ class HttpServerTests extends BaseHttpTest {
 		          .option(ChannelOption.valueOf("testTcpConfiguration"), "testTcpConfiguration")
 		          .observe((conn, state) -> latch.countDown())
 		          .doOnChannelInit((observer, channel, address) -> latch.countDown());
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
-	void testTcpConfigurationUnsupported_1() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> HttpServer.create()
-		                                    .tcpConfiguration(tcp -> tcp.doOnBind(TransportConfig::attributes)));
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
-	void testTcpConfigurationUnsupported_2() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> HttpServer.create()
-		                                    .tcpConfiguration(tcp -> {
-		                                        tcp.bind();
-		                                        return tcp;
-		                                    }));
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
-	void testTcpConfigurationUnsupported_3() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> HttpServer.create()
-		                                    .tcpConfiguration(tcp -> {
-		                                        tcp.configuration();
-		                                        return tcp;
-		                                    }));
 	}
 
 	@Test

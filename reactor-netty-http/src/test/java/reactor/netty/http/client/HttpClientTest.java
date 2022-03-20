@@ -114,7 +114,6 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
-import reactor.netty.transport.TransportConfig;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -2372,44 +2371,6 @@ class HttpClientTest extends BaseHttpTest {
 		                                    .responseContent()
 		                                    .aggregate()
 		                                    .block(Duration.ofSeconds(30)));
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
-	void testTcpConfigurationUnsupported_1() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> HttpClient.create()
-		                                    .tcpConfiguration(tcp -> tcp.doOnConnect(TransportConfig::attributes)));
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
-	void testTcpConfigurationUnsupported_2() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> HttpClient.create()
-		                                    .tcpConfiguration(tcp -> tcp.handle((req, res) -> res.sendString(Mono.just("test")))));
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
-	void testTcpConfigurationUnsupported_3() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> HttpClient.create()
-		                                    .tcpConfiguration(tcp -> {
-		                                        tcp.connect();
-		                                        return tcp;
-		                                    }));
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
-	void testTcpConfigurationUnsupported_4() {
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> HttpClient.create()
-		                                    .tcpConfiguration(tcp -> {
-		                                        tcp.configuration();
-		                                        return tcp;
-		                                    }));
 	}
 
 	@Test
