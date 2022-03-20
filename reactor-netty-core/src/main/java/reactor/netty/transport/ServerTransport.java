@@ -26,19 +26,19 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.handler.codec.DecoderException;
-import io.netty.util.AttributeKey;
+import io.netty5.bootstrap.ServerBootstrap;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelConfig;
+import io.netty5.channel.ChannelFutureListener;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInboundHandlerAdapter;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.handler.codec.DecoderException;
+import io.netty5.util.AttributeKey;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
@@ -454,7 +454,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			if (ops == null && (error instanceof IOException || AbortedException.isConnectionReset(error) ||
 					// DecoderException at this point might be SSL handshake issue or other TLS related issue.
 					// In case of HTTP if there is an HTTP decoding issue, it is propagated with
-					// io.netty.handler.codec.DecoderResultProvider
+					// io.netty5.handler.codec.DecoderResultProvider
 					// and not with throwing an exception
 					error instanceof DecoderException)) {
 				if (log.isDebugEnabled()) {

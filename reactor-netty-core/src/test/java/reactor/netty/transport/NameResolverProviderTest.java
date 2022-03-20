@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
  */
 package reactor.netty.transport;
 
-import io.netty.handler.logging.LogLevel;
-import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.resolver.dns.DnsServerAddressStreamProviders;
-import io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.resolver.ResolvedAddressTypes;
+import io.netty5.resolver.dns.DnsServerAddressStreamProviders;
+import io.netty5.resolver.dns.macos.MacOSDnsServerAddressStreamProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;

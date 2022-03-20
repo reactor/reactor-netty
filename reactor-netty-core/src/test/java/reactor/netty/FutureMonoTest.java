@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,11 @@
  */
 package reactor.netty;
 
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.Promise;
+import io.netty5.util.concurrent.DefaultPromise;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.GenericFutureListener;
+import io.netty5.util.concurrent.ImmediateEventExecutor;
+import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -165,7 +165,7 @@ class FutureMonoTest {
 	static GenericFutureListener<? extends Future<?>>[] resolveListeners(Promise<Void> promise) {
 		try {
 			final Field listeners = DefaultPromise.class.getDeclaredField("listeners");
-			final Class<?> aClass = Class.forName("io.netty.util.concurrent.DefaultFutureListeners");
+			final Class<?> aClass = Class.forName("io.netty5.util.concurrent.DefaultFutureListeners");
 			final Field listeners1 = aClass.getDeclaredField("listeners");
 
 			listeners.setAccessible(true);

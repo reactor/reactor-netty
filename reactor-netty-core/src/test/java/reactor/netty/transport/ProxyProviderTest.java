@@ -22,10 +22,10 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.proxy.HttpProxyHandler;
-import io.netty.handler.proxy.ProxyHandler;
-import io.netty.handler.proxy.Socks5ProxyHandler;
+import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty.contrib.handler.proxy.HttpProxyHandler;
+import io.netty.contrib.handler.proxy.ProxyHandler;
+import io.netty.contrib.handler.proxy.Socks5ProxyHandler;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

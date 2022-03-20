@@ -25,12 +25,12 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.unix.DomainDatagramPacket;
-import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.util.CharsetUtil;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.nio.NioEventLoopGroup;
+import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.channel.unix.DomainDatagramPacket;
+import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;

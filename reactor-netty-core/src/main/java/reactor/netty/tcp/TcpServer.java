@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.ssl.JdkSslContext;
-import io.netty.handler.ssl.OpenSsl;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.group.ChannelGroup;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.handler.ssl.JdkSslContext;
+import io.netty5.handler.ssl.OpenSsl;
+import io.netty5.handler.ssl.SslContext;
+import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;

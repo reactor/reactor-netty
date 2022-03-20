@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,22 +17,22 @@ package reactor.netty.resources;
 
 import java.util.concurrent.ThreadFactory;
 
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollDatagramChannel;
-import io.netty.channel.epoll.EpollDomainDatagramChannel;
-import io.netty.channel.epoll.EpollDomainSocketChannel;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollServerDomainSocketChannel;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.epoll.EpollSocketChannel;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.unix.DomainDatagramChannel;
-import io.netty.channel.unix.DomainSocketChannel;
-import io.netty.channel.unix.ServerDomainSocketChannel;
+import io.netty5.channel.Channel;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.epoll.Epoll;
+import io.netty5.channel.epoll.EpollDatagramChannel;
+import io.netty5.channel.epoll.EpollDomainDatagramChannel;
+import io.netty5.channel.epoll.EpollDomainSocketChannel;
+import io.netty5.channel.epoll.EpollEventLoopGroup;
+import io.netty5.channel.epoll.EpollServerDomainSocketChannel;
+import io.netty5.channel.epoll.EpollServerSocketChannel;
+import io.netty5.channel.epoll.EpollSocketChannel;
+import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.ServerSocketChannel;
+import io.netty5.channel.socket.SocketChannel;
+import io.netty5.channel.unix.DomainDatagramChannel;
+import io.netty5.channel.unix.DomainSocketChannel;
+import io.netty5.channel.unix.ServerDomainSocketChannel;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -108,7 +108,7 @@ final class DefaultLoopEpoll implements DefaultLoop {
 	static {
 		boolean epollCheck = false;
 		try {
-			Class.forName("io.netty.channel.epoll.Epoll");
+			Class.forName("io.netty5.channel.epoll.Epoll");
 			epollCheck = Epoll.isAvailable();
 		}
 		catch (ClassNotFoundException cnfe) {

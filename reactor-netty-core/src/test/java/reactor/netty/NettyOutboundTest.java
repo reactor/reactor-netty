@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,20 +35,20 @@ import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.DefaultFileRegion;
-import io.netty.channel.FileRegion;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.MessageToMessageEncoder;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.handler.stream.ChunkedNioFile;
-import io.netty.handler.stream.ChunkedWriteHandler;
-import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
+import io.netty5.channel.ChannelFuture;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.DefaultFileRegion;
+import io.netty5.channel.FileRegion;
+import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.codec.MessageToMessageEncoder;
+import io.netty5.handler.ssl.SslContext;
+import io.netty5.handler.ssl.SslContextBuilder;
+import io.netty5.handler.ssl.SslHandler;
+import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.handler.stream.ChunkedNioFile;
+import io.netty5.handler.stream.ChunkedWriteHandler;
+import io.netty5.util.CharsetUtil;
+import io.netty5.util.ReferenceCountUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;

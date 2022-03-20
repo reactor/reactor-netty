@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,8 +39,8 @@ class ChannelBindExceptionTest {
 		assertThat(ex.localHost()).isEqualTo("test");
 		assertThat(ex.localPort()).isEqualTo(4956);
 
-		// Not possible to mock io.netty.channel.unix.Errors.NativeIoException or create a new instance because of Jni errors
-		// java.lang.UnsatisfiedLinkError: 'int io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOENT()'
+		// Not possible to mock io.netty5.channel.unix.Errors.NativeIoException or create a new instance because of Jni errors
+		// java.lang.UnsatisfiedLinkError: 'int io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOENT()'
 		ex = ChannelBindException.fail(new InetSocketAddress("test", 4956), new IOException("bind(..) failed: Address already in use"));
 		assertThat(ex.getCause()).isEqualTo(null);
 		assertThat(ex.localHost()).isEqualTo("test");

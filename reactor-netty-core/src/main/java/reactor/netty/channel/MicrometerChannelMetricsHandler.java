@@ -19,12 +19,12 @@ import io.micrometer.common.KeyValues;
 import io.micrometer.contextpropagation.ContextContainer;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.ssl.SslHandler;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInboundHandler;
+import io.netty5.channel.ChannelOutboundHandler;
+import io.netty5.channel.ChannelPromise;
+import io.netty5.handler.ssl.SslHandler;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 

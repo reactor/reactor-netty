@@ -16,11 +16,11 @@
 package reactor.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.DatagramPacket;
+import io.netty5.channel.ChannelDuplexHandler;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelPromise;
+import io.netty5.channel.socket.DatagramPacket;
 import reactor.netty.NettyPipeline;
 import reactor.util.annotation.Nullable;
 

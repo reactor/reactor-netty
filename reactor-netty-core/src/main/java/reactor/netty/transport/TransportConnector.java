@@ -16,21 +16,21 @@
 package reactor.netty.transport;
 
 import io.micrometer.contextpropagation.ContextContainer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
-import io.netty.channel.EventLoop;
-import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.resolver.AddressResolver;
-import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelFactory;
+import io.netty5.channel.ChannelFuture;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelPromise;
+import io.netty5.channel.DefaultChannelPromise;
+import io.netty5.channel.EventLoop;
+import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.resolver.AddressResolver;
+import io.netty5.resolver.AddressResolverGroup;
+import io.netty5.util.AttributeKey;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.FutureListener;
+import io.netty5.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
@@ -71,8 +71,8 @@ public final class TransportConnector {
 	 * @param config the transport configuration
 	 * @param channelInitializer the {@link ChannelInitializer} that will be used for initializing the channel pipeline
 	 * @param bindAddress the local address
-	 * @param isDomainSocket true if {@link io.netty.channel.unix.DomainSocketChannel} or
-	 * {@link io.netty.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
+	 * @param isDomainSocket true if {@link io.netty5.channel.unix.DomainSocketChannel} or
+	 * {@link io.netty5.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
 	 * @return a {@link Mono} of {@link Channel}
 	 */
 	@SuppressWarnings("FutureReturnValueIgnored")

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  */
 package reactor.netty;
 
-import io.netty.channel.AbstractChannel;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelMetadata;
-import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.EventLoop;
-import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty5.channel.AbstractChannel;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelConfig;
+import io.netty5.channel.ChannelMetadata;
+import io.netty5.channel.ChannelOutboundBuffer;
+import io.netty5.channel.EventLoop;
+import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 import reactor.util.annotation.Nullable;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,10 @@ import java.util.function.ToIntFunction;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.FileRegion;
-import io.netty.util.ReferenceCountUtil;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.FileRegion;
+import io.netty5.util.ReferenceCountUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.ReactorNetty;
 

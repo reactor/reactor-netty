@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.util.concurrent.FastThreadLocalThread;
-import io.netty.util.concurrent.Future;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.nio.NioEventLoopGroup;
+import io.netty5.util.concurrent.FastThreadLocalThread;
+import io.netty5.util.concurrent.Future;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.NonBlocking;
 import reactor.netty.FutureMono;

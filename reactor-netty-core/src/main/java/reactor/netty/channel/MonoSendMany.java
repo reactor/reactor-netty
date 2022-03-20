@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,17 +31,17 @@ import java.util.stream.Stream;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
-import io.netty.channel.EventLoop;
-import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelFuture;
+import io.netty5.channel.ChannelFutureListener;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelPromise;
+import io.netty5.channel.DefaultChannelPromise;
+import io.netty5.channel.EventLoop;
+import io.netty5.util.IllegalReferenceCountException;
+import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;

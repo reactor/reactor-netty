@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@ import java.nio.charset.Charset;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.handler.logging.LoggingHandler;
 
 /**
  * Used to control the format and verbosity of logging for {@link ByteBuf}s and {@link ByteBufHolder}s.
  * <p>
- * Adds {@link AdvancedByteBufFormat#TEXTUAL} format to io.netty.handler.logging.ByteBufFormat.
+ * Adds {@link AdvancedByteBufFormat#TEXTUAL} format to io.netty5.handler.logging.ByteBufFormat.
  *
  * @author Maximilian Goeke
  * @since 1.0.0

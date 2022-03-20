@@ -25,15 +25,15 @@ import java.util.function.Supplier;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.AttributeKey;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelFactory;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.group.ChannelGroup;
+import io.netty5.handler.logging.LoggingHandler;
+import io.netty5.util.AttributeKey;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
@@ -241,15 +241,15 @@ public abstract class TransportConfig {
 	/**
 	 * Return the channel type this configuration is associated with, it can be one of the following:
 	 * <ul>
-	 *   <li>{@link io.netty.channel.socket.SocketChannel}</li>
-	 *   <li>{@link io.netty.channel.socket.ServerSocketChannel}</li>
-	 *   <li>{@link io.netty.channel.unix.DomainSocketChannel}</li>
-	 *   <li>{@link io.netty.channel.unix.ServerDomainSocketChannel}</li>
-	 *   <li>{@link io.netty.channel.socket.DatagramChannel}</li>
+	 *   <li>{@link io.netty5.channel.socket.SocketChannel}</li>
+	 *   <li>{@link io.netty5.channel.socket.ServerSocketChannel}</li>
+	 *   <li>{@link io.netty5.channel.unix.DomainSocketChannel}</li>
+	 *   <li>{@link io.netty5.channel.unix.ServerDomainSocketChannel}</li>
+	 *   <li>{@link io.netty5.channel.socket.DatagramChannel}</li>
 	 * </ul>
 	 *
-	 * @param isDomainSocket true if {@link io.netty.channel.unix.DomainSocketChannel} or
-	 * {@link io.netty.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
+	 * @param isDomainSocket true if {@link io.netty5.channel.unix.DomainSocketChannel} or
+	 * {@link io.netty5.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
 	 * @return the channel type this configuration is associated with
 	 */
 	protected abstract Class<? extends Channel> channelType(boolean isDomainSocket);
@@ -258,8 +258,8 @@ public abstract class TransportConfig {
 	 * Return the {@link ChannelFactory} which is used to create {@link Channel} instances.
 	 *
 	 * @param elg the {@link EventLoopGroup}
-	 * @param isDomainSocket true if {@link io.netty.channel.unix.DomainSocketChannel} or
-	 * {@link io.netty.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
+	 * @param isDomainSocket true if {@link io.netty5.channel.unix.DomainSocketChannel} or
+	 * {@link io.netty5.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
 	 * @return the {@link ChannelFactory} which is used to create {@link Channel} instances.
 	 */
 	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg, boolean isDomainSocket) {

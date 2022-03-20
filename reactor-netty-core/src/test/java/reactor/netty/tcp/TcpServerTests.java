@@ -44,23 +44,23 @@ import javax.net.ssl.SNIHostName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.AdaptiveRecvByteBufAllocator;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.json.JsonObjectDecoder;
-import io.netty.handler.ssl.SniCompletionEvent;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.NetUtil;
-import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty5.channel.AdaptiveRecvByteBufAllocator;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInboundHandlerAdapter;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.group.ChannelGroup;
+import io.netty5.channel.group.DefaultChannelGroup;
+import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.handler.codec.LineBasedFrameDecoder;
+import io.netty.contrib.handler.codec.json.JsonObjectDecoder;
+import io.netty5.handler.ssl.SniCompletionEvent;
+import io.netty5.handler.ssl.SslContext;
+import io.netty5.handler.ssl.SslContextBuilder;
+import io.netty5.handler.ssl.SslProvider;
+import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.util.NetUtil;
+import io.netty5.util.concurrent.DefaultEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -892,7 +892,7 @@ class TcpServerTests {
 		conn.outbound()
 		    .sendString(Flux.range(1, 257).map(count -> count + "\n"))
 		    .then()
-		    .subscribe(null, null, () -> ((io.netty.channel.socket.SocketChannel) conn.channel()).shutdownOutput()); // FutureReturnValueIgnored
+		    .subscribe(null, null, () -> ((io.netty5.channel.socket.SocketChannel) conn.channel()).shutdownOutput()); // FutureReturnValueIgnored
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 

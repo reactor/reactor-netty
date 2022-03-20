@@ -15,12 +15,12 @@
  */
 package reactor.netty.channel;
 
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.ssl.SslHandler;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInboundHandlerAdapter;
+import io.netty5.channel.ChannelOutboundHandlerAdapter;
+import io.netty5.channel.ChannelPromise;
+import io.netty5.handler.ssl.SslHandler;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;

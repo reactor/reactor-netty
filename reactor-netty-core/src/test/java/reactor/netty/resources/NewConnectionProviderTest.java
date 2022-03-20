@@ -43,9 +43,9 @@ class NewConnectionProviderTest {
 		Mockito.verify(sink).error(Mockito.argThat(a -> a instanceof UnsupportedOperationException));
 
 		connect = new NewConnectionProvider.DisposableConnect(sink, () -> new InetSocketAddress("test2", 4956));
-		// Not possible to mock io.netty.channel.unix.Errors.NativeIoException or create a new instance because of Jni
+		// Not possible to mock io.netty5.channel.unix.Errors.NativeIoException or create a new instance because of Jni
 		// error:
-		// java.lang.UnsatisfiedLinkError: 'int io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOENT()'
+		// java.lang.UnsatisfiedLinkError: 'int io.netty5.channel.unix.ErrorsStaticallyReferencedJniMethods.errnoENOENT()'
 		connect.onError(new IOException("bind(..) failed: Address already in use"));
 		Mockito.verify(sink).error(
 				Mockito.argThat(

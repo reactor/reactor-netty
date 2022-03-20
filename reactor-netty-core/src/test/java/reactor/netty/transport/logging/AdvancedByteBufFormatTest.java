@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import java.nio.charset.Charset;
 
 import org.junit.jupiter.api.Test;
 
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.handler.logging.LoggingHandler;
 
 class AdvancedByteBufFormatTest {
 
@@ -39,7 +39,7 @@ class AdvancedByteBufFormatTest {
 				Charset.defaultCharset());
 
 		assertThat(loggingHandler).isInstanceOf(LoggingHandler.class);
-		assertThat(loggingHandler.byteBufFormat()).isSameAs(io.netty.handler.logging.ByteBufFormat.SIMPLE);
+		assertThat(loggingHandler.byteBufFormat()).isSameAs(io.netty5.handler.logging.ByteBufFormat.SIMPLE);
 	}
 
 	@Test
@@ -51,7 +51,7 @@ class AdvancedByteBufFormatTest {
 				Charset.defaultCharset());
 
 		assertThat(loggingHandler).isInstanceOf(LoggingHandler.class);
-		assertThat(loggingHandler.byteBufFormat()).isSameAs(io.netty.handler.logging.ByteBufFormat.HEX_DUMP);
+		assertThat(loggingHandler.byteBufFormat()).isSameAs(io.netty5.handler.logging.ByteBufFormat.HEX_DUMP);
 	}
 
 	@Test

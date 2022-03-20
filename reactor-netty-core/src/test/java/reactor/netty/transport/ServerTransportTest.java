@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package reactor.netty.transport;
 
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.logging.LoggingHandler;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;

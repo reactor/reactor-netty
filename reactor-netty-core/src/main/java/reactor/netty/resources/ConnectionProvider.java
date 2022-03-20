@@ -15,7 +15,7 @@
  */
 package reactor.netty.resources;
 
-import io.netty.resolver.AddressResolverGroup;
+import io.netty5.resolver.AddressResolverGroup;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;

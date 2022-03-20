@@ -19,10 +19,10 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.kqueue.KQueue;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.epoll.Epoll;
+import io.netty5.channel.kqueue.KQueue;
+import io.netty5.channel.nio.NioEventLoopGroup;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;

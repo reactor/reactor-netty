@@ -17,8 +17,8 @@ package reactor.netty.observability.contextpropagation.propagator;
 
 import io.micrometer.contextpropagation.ContextContainer;
 import io.micrometer.contextpropagation.ContextContainerPropagator;
-import io.netty.channel.Channel;
-import io.netty.util.AttributeKey;
+import io.netty5.channel.Channel;
+import io.netty5.util.AttributeKey;
 
 /**
  * Abstraction to tell context propagation how to read from and write to {@link Channel} attributes.

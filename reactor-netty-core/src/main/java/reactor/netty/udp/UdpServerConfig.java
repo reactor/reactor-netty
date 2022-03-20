@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,17 @@
  */
 package reactor.netty.udp;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.unix.DomainDatagramChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelFactory;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.group.ChannelGroup;
+import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.InternetProtocolFamily;
+import io.netty5.channel.socket.nio.NioDatagramChannel;
+import io.netty5.channel.unix.DomainDatagramChannel;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.handler.logging.LoggingHandler;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;

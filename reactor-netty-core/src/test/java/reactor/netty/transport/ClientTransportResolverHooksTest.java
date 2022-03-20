@@ -15,7 +15,7 @@
  */
 package reactor.netty.transport;
 
-import io.netty.util.AttributeKey;
+import io.netty5.util.AttributeKey;
 import org.junit.jupiter.api.Test;
 import reactor.netty.DisposableServer;
 import reactor.netty.tcp.TcpClient;
