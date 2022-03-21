@@ -72,7 +72,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 			if (remote != null && resolverGroup != null) {
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
 				ContextContainer container = ContextContainer.create().captureThreadLocalValues();
-				container.captureContext(sink.currentContext());
+				container.captureContext(Context.of(sink.contextView()));
 				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, container)
 				                  .subscribe(disposableConnect);
 			}
@@ -105,18 +105,20 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 	static final class DisposableConnect implements CoreSubscriber<Channel>, Disposable {
 		final MonoSink<Connection> sink;
+		final Context currentContext;
 		final Supplier<? extends SocketAddress> bindAddress;
 
 		Subscription subscription;
 
 		DisposableConnect(MonoSink<Connection> sink, @Nullable Supplier<? extends SocketAddress> bindAddress) {
 			this.sink = sink;
+			this.currentContext = Context.of(sink.contextView());
 			this.bindAddress = bindAddress;
 		}
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override
@@ -162,16 +164,18 @@ final class NewConnectionProvider implements ConnectionProvider {
 	static final class NewConnectionObserver implements ConnectionObserver {
 
 		final MonoSink<Connection> sink;
+		final Context              currentContext;
 		final ConnectionObserver   obs;
 
 		NewConnectionObserver(MonoSink<Connection> sink, ConnectionObserver obs) {
 			this.sink = sink;
+			this.currentContext = Context.of(sink.contextView());
 			this.obs = obs;
 		}
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override

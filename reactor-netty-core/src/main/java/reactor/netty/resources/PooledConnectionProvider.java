@@ -149,7 +149,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			});
 
 			ContextContainer container = ContextContainer.create().captureThreadLocalValues();
-			container.captureContext(sink.currentContext());
+			container.captureContext(Context.of(sink.contextView()));
 			Context currentPropagationContext = container.save(Context.empty());
 			EventLoop eventLoop = config.loopResources().onClient(config.isPreferNative()).next();
 			pool.acquire(Duration.ofMillis(poolFactory.pendingAcquireTimeout))

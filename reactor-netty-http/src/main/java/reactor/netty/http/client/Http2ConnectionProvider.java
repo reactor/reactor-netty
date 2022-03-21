@@ -200,6 +200,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 	static final class DisposableAcquire
 			implements CoreSubscriber<PooledRef<Connection>>, ConnectionObserver, Disposable, GenericFutureListener<Future<Http2StreamChannel>> {
 		final Disposable.Composite cancellations;
+		final Context currentContext;
 		final ConnectionObserver obs;
 		final ChannelOperations.OnSetup opsFactory;
 		final boolean acceptGzip;
@@ -225,6 +226,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				MonoSink<Connection> sink,
 				@Nullable Function<String, String> uriTagValue) {
 			this.cancellations = Disposables.composite();
+			this.currentContext = Context.of(sink.contextView());
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.acceptGzip = acceptGzip;
@@ -239,6 +241,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		DisposableAcquire(DisposableAcquire parent) {
 			this.cancellations = parent.cancellations;
+			this.currentContext = parent.currentContext;
 			this.obs = parent.obs;
 			this.opsFactory = parent.opsFactory;
 			this.acceptGzip = parent.acceptGzip;
@@ -253,7 +256,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override

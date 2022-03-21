@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -107,18 +107,20 @@ final class QuicServerBind extends QuicServer {
 	static final class DisposableBind implements CoreSubscriber<Channel>, Disposable {
 
 		final SocketAddress        bindAddress;
+		final Context              currentContext;
 		final MonoSink<Connection> sink;
 
 		Subscription subscription;
 
 		DisposableBind(SocketAddress bindAddress, MonoSink<Connection> sink) {
 			this.bindAddress = bindAddress;
+			this.currentContext = Context.of(sink.contextView());
 			this.sink = sink;
 		}
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -284,9 +284,11 @@ class HttpClientConnect extends HttpClient {
 		static final class ClientTransportSubscriber implements CoreSubscriber<Connection> {
 
 			final MonoSink<Connection> sink;
+			final Context currentContext;
 
 			ClientTransportSubscriber(MonoSink<Connection> sink) {
 				this.sink = sink;
+				this.currentContext = Context.of(sink.contextView());
 			}
 
 			@Override
@@ -310,7 +312,7 @@ class HttpClientConnect extends HttpClient {
 
 			@Override
 			public Context currentContext() {
-				return sink.currentContext();
+				return currentContext;
 			}
 		}
 	}
@@ -318,16 +320,18 @@ class HttpClientConnect extends HttpClient {
 	static final class HttpObserver implements ConnectionObserver {
 
 		final MonoSink<Connection> sink;
+		final Context currentContext;
 		final HttpClientHandler handler;
 
 		HttpObserver(MonoSink<Connection> sink, HttpClientHandler handler) {
 			this.sink = sink;
+			this.currentContext = Context.of(sink.contextView());
 			this.handler = handler;
 		}
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override
@@ -396,16 +400,18 @@ class HttpClientConnect extends HttpClient {
 	static final class HttpIOHandlerObserver implements ConnectionObserver {
 
 		final MonoSink<Connection> sink;
+		final Context currentContext;
 		final HttpClientHandler handler;
 
 		HttpIOHandlerObserver(MonoSink<Connection> sink, HttpClientHandler handler) {
 			this.sink = sink;
+			this.currentContext = Context.of(sink.contextView());
 			this.handler = handler;
 		}
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override

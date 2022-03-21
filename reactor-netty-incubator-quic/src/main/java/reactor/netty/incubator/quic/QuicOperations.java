@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,19 +141,21 @@ final class QuicOperations implements ChannelOperationsId, QuicConnection {
 
 	static final class QuicStreamChannelObserver implements ConnectionObserver {
 
+		final Context currentContext;
 		final MonoSink<Void> sink;
 		final BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>> streamHandler;
 
 		QuicStreamChannelObserver(
 				MonoSink<Void> sink,
 				BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>> streamHandler) {
+			this.currentContext = Context.of(sink.contextView());
 			this.sink = sink;
 			this.streamHandler = streamHandler;
 		}
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override
