@@ -100,6 +100,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 	static final class DisposableAcquire
 			implements ConnectionObserver, Runnable, CoreSubscriber<PooledRef<PooledConnection>>, Disposable {
 		final Disposable.Composite cancellations;
+		final Context currentContext;
 		final ConnectionObserver obs;
 		final ChannelOperations.OnSetup opsFactory;
 		final long pendingAcquireTimeout;
@@ -117,6 +118,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				InstrumentedPool<PooledConnection> pool,
 				MonoSink<Connection> sink) {
 			this.cancellations = Disposables.composite();
+			this.currentContext = Context.of(sink.contextView());
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
@@ -127,6 +129,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		DisposableAcquire(DisposableAcquire parent) {
 			this.cancellations = parent.cancellations;
+			this.currentContext = parent.currentContext;
 			this.obs = parent.obs;
 			this.opsFactory = parent.opsFactory;
 			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
@@ -137,7 +140,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override
@@ -495,7 +498,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		Publisher<PooledConnection> connectChannel() {
 			return Mono.create(sink -> {
 				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink);
-				EventLoop callerEventLoop = sink.currentContext().get(CONTEXT_CALLER_EVENTLOOP);
+				EventLoop callerEventLoop = sink.contextView().get(CONTEXT_CALLER_EVENTLOOP);
 				TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop)
 				                  .subscribe(initializer);
 			});
@@ -520,7 +523,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 				this.pooledConnection = pooledConnection;
 
-				ch.attr(OWNER).compareAndSet(null, new PendingConnectionObserver(sink.currentContext()));
+				ch.attr(OWNER).compareAndSet(null, new PendingConnectionObserver(Context.of(sink.contextView())));
 				ch.pipeline().remove(this);
 				ch.pipeline()
 				  .addFirst(config.channelInitializer(pooledConnection, remoteAddress, false));

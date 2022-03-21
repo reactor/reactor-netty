@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,18 +102,20 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 	static final class DisposableConnect implements CoreSubscriber<Channel>, Disposable {
 		final MonoSink<Connection> sink;
+		final Context currentContext;
 		final Supplier<? extends SocketAddress> bindAddress;
 
 		Subscription subscription;
 
 		DisposableConnect(MonoSink<Connection> sink, @Nullable Supplier<? extends SocketAddress> bindAddress) {
 			this.sink = sink;
+			this.currentContext = Context.of(sink.contextView());
 			this.bindAddress = bindAddress;
 		}
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override
@@ -159,16 +161,18 @@ final class NewConnectionProvider implements ConnectionProvider {
 	static final class NewConnectionObserver implements ConnectionObserver {
 
 		final MonoSink<Connection> sink;
+		final Context              currentContext;
 		final ConnectionObserver   obs;
 
 		NewConnectionObserver(MonoSink<Connection> sink, ConnectionObserver obs) {
 			this.sink = sink;
+			this.currentContext = Context.of(sink.contextView());
 			this.obs = obs;
 		}
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override
