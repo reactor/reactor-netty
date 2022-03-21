@@ -16,6 +16,7 @@
 package reactor.netty.transport;
 
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
@@ -87,7 +88,7 @@ class ClientTransportTest {
 	@Test
 	void testDefaultResolverWithCustomEventLoop() throws Exception {
 		final LoopResources loop1 = LoopResources.create("test", 1, true);
-		final NioEventLoopGroup loop2 = new NioEventLoopGroup(1);
+		final EventLoopGroup loop2 = new NioEventLoopGroup(1);
 		final ConnectionProvider provider = ConnectionProvider.create("test");
 		final TestClientTransportConfig config =
 				new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
@@ -257,7 +258,7 @@ class ClientTransportTest {
 	@SuppressWarnings("unchecked")
 	private void doTestHostsFileEntriesResolver(boolean customResolver) throws Exception {
 		LoopResources loop1 = LoopResources.create("test", 1, true);
-		NioEventLoopGroup loop2 = new NioEventLoopGroup(1);
+		EventLoopGroup loop2 = new NioEventLoopGroup(1);
 		ConnectionProvider provider = ConnectionProvider.create("test");
 		TestClientTransportConfig config =
 				new TestClientTransportConfig(provider, Collections.emptyMap(), () -> null);
