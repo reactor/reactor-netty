@@ -23,7 +23,9 @@ import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import io.netty5.channel.Channel;
+import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ServerChannel;
 import io.netty5.resolver.AddressResolverGroup;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -245,17 +247,10 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	@Override
-	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoopGroup group) {
+	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoop eventLoop) {
 		requireNonNull(channelType, "channelType");
-		requireNonNull(group, "group");
-		return defaultLoops.onChannel(channelType, group);
-	}
-
-	@Override
-	public <CHANNEL extends Channel> Class<? extends CHANNEL> onChannelClass(Class<CHANNEL> channelType, EventLoopGroup group) {
-		requireNonNull(channelType, "channelType");
-		requireNonNull(group, "group");
-		return defaultLoops.onChannelClass(channelType, group);
+		requireNonNull(eventLoop, "eventLoop");
+		return defaultLoops.onChannel(channelType, eventLoop);
 	}
 
 	@Override
@@ -266,6 +261,15 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	@Override
 	public EventLoopGroup onServer(boolean useNative) {
 		return defaultLoops.onServer(useNative);
+	}
+
+	@Override
+	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL onServerChannel(Class<SERVERCHANNEL> channelType,
+			EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+		requireNonNull(channelType, "channelType");
+		requireNonNull(eventLoop, "eventLoop");
+		requireNonNull(childEventLoopGroup, "childEventLoopGroup");
+		return defaultLoops.onServerChannel(channelType, eventLoop, childEventLoopGroup);
 	}
 
 	@Override

@@ -18,7 +18,9 @@ package reactor.netty.resources;
 import java.util.concurrent.ThreadFactory;
 
 import io.netty5.channel.Channel;
+import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ServerChannel;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
@@ -37,30 +39,12 @@ final class DefaultLoopNIO implements DefaultLoop {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass) {
+	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop) {
 		if (channelClass.equals(SocketChannel.class)) {
-			return (CHANNEL) new NioSocketChannel();
-		}
-		if (channelClass.equals(ServerSocketChannel.class)) {
-			return (CHANNEL) new NioServerSocketChannel();
+			return (CHANNEL) new NioSocketChannel(eventLoop);
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
-			return (CHANNEL) new NioDatagramChannel();
-		}
-		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public <CHANNEL extends Channel> Class<? extends CHANNEL> getChannelClass(Class<CHANNEL> channelClass) {
-		if (channelClass.equals(SocketChannel.class)) {
-			return (Class<? extends CHANNEL>) NioSocketChannel.class;
-		}
-		if (channelClass.equals(ServerSocketChannel.class)) {
-			return (Class<? extends CHANNEL>) NioServerSocketChannel.class;
-		}
-		if (channelClass.equals(DatagramChannel.class)) {
-			return (Class<? extends CHANNEL>) NioDatagramChannel.class;
+			return (CHANNEL) new NioDatagramChannel(eventLoop);
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
@@ -68,6 +52,16 @@ final class DefaultLoopNIO implements DefaultLoop {
 	@Override
 	public String getName() {
 		return "nio";
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
+			EventLoopGroup childEventLoopGroup) {
+		if (channelClass.equals(ServerSocketChannel.class)) {
+			return (SERVERCHANNEL) new NioServerSocketChannel(eventLoop, childEventLoopGroup);
+		}
+		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
 
 	@Override
