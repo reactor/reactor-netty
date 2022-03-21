@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -122,7 +123,7 @@ class DefaultLoopResourcesTest {
 	private void testClientTransportWarmup(boolean preferNative) throws Exception {
 		final DefaultLoopResources loop1 =
 				(DefaultLoopResources) LoopResources.create("testClientTransportWarmup", 1, true);
-		final NioEventLoopGroup loop2 = new NioEventLoopGroup(1);
+		final EventLoopGroup loop2 = new NioEventLoopGroup(1);
 		try {
 			TcpClient tcpClient = TcpClient.create()
 			                               .resolver(spec -> spec.runOn(loop2))

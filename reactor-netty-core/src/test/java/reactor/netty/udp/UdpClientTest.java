@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.DomainDatagramPacket;
@@ -113,7 +114,7 @@ class UdpClientTest {
 	@Test
 	void testIssue192() throws Exception {
 		LoopResources resources = LoopResources.create("testIssue192");
-		NioEventLoopGroup loop = new NioEventLoopGroup(1);
+		EventLoopGroup loop = new NioEventLoopGroup(1);
 		UdpServer server = UdpServer.create()
 		                            .runOn(resources);
 		UdpClient client = UdpClient.create()
