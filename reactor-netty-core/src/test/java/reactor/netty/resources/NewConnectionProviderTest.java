@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import org.mockito.Mockito;
 import reactor.core.publisher.MonoSink;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
+import reactor.util.context.Context;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -31,6 +32,7 @@ class NewConnectionProviderTest {
 	@SuppressWarnings("unchecked")
 	void testDisposableConnectBindException() {
 		MonoSink<Connection> sink = Mockito.mock(MonoSink.class);
+		Mockito.when(sink.contextView()).thenReturn(Context.empty());
 
 		NewConnectionProvider.DisposableConnect connect = new NewConnectionProvider.DisposableConnect(
 				sink,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -482,6 +482,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	static class DisposableBind implements CoreSubscriber<Channel>, DisposableServer, Connection {
 
 		final MonoSink<DisposableServer> sink;
+		final Context                    currentContext;
 		final TransportConfig            config;
 		final SocketAddress              bindAddress;
 
@@ -490,6 +491,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 		DisposableBind(MonoSink<DisposableServer> sink, TransportConfig config, SocketAddress bindAddress) {
 			this.sink = sink;
+			this.currentContext = Context.of(sink.contextView());
 			this.config = config;
 			this.bindAddress = bindAddress;
 		}
@@ -501,7 +503,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override

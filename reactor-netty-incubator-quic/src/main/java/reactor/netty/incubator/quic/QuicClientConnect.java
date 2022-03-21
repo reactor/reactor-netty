@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,6 +125,7 @@ final class QuicClientConnect extends QuicClient {
 
 		final Map<AttributeKey<?>, ?>           attributes;
 		final SocketAddress                     bindAddress;
+		final Context                           currentContext;
 		final ChannelHandler                    loggingHandler;
 		final Map<ChannelOption<?>, ?>          options;
 		final ChannelInitializer<Channel>       quicChannelInitializer;
@@ -139,6 +140,7 @@ final class QuicClientConnect extends QuicClient {
 		DisposableConnect(QuicClientConfig config, SocketAddress bindAddress, MonoSink<QuicConnection> sink) {
 			this.attributes = config.attributes();
 			this.bindAddress = bindAddress;
+			this.currentContext = Context.of(sink.contextView());
 			this.loggingHandler = config.loggingHandler();
 			this.options = config.options();
 			ConnectionObserver observer = new QuicChannelObserver(
@@ -155,7 +157,7 @@ final class QuicClientConnect extends QuicClient {
 
 		@Override
 		public Context currentContext() {
-			return sink.currentContext();
+			return currentContext;
 		}
 
 		@Override
