@@ -23,9 +23,9 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
 
     dependencies {
       //compile "io.projectreactor.netty:reactor-netty-core:1.0.18-SNAPSHOT"
-      compile "io.projectreactor.netty:reactor-netty-core:1.0.17"
+      compile "io.projectreactor.netty:reactor-netty-core:1.1.0-M1"
       //compile "io.projectreactor.netty:reactor-netty-http:1.0.18-SNAPSHOT"
-      compile "io.projectreactor.netty:reactor-netty-http:1.0.17"
+      compile "io.projectreactor.netty:reactor-netty-http:1.1.0-M1"
     }
 ```
 
