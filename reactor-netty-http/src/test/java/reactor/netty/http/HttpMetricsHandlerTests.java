@@ -241,8 +241,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		// For HTTP11, we expect to observe 2 DISCONNECTS for client, and 2 DISCONNECT for server.
 		// Else, we expect to observe 2 DISCONNECTS for client, and 1 DISCONNECT for server.
-		boolean HTTP11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
-		int expectedDisconnects = HTTP11 ? 4 : 3;
+		boolean isHTTP11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+		int expectedDisconnects = isHTTP11 ? 4 : 3;
 
 		CountDownLatch latch = new CountDownLatch(expectedDisconnects);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
