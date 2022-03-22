@@ -15,7 +15,6 @@
  */
 package reactor.netty;
 
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 import io.netty5.channel.embedded.EmbeddedChannel;
@@ -42,9 +41,7 @@ class ConnectionIdleTest {
 				(ReactorNetty.InboundIdleStateHandler) channel.pipeline().get(NettyPipeline.OnChannelReadIdle);
 		idleStateHandler.onReadIdle.run();
 
-		assertThat(channel.pipeline().names()).isEqualTo(Arrays.asList(
-				NettyPipeline.OnChannelReadIdle,
-				"DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().names()).containsExactly(NettyPipeline.OnChannelReadIdle);
 
 		assertThat(idle1.intValue()).isEqualTo(0);
 		assertThat(idle2.intValue()).isEqualTo(1);
@@ -66,9 +63,7 @@ class ConnectionIdleTest {
 				(ReactorNetty.OutboundIdleStateHandler) channel.pipeline().get(NettyPipeline.OnChannelWriteIdle);
 		idleStateHandler.onWriteIdle.run();
 
-		assertThat(channel.pipeline().names()).containsExactly(
-				NettyPipeline.OnChannelWriteIdle,
-				"DefaultChannelPipeline$TailContext#0");
+		assertThat(channel.pipeline().names()).containsExactly(NettyPipeline.OnChannelWriteIdle);
 
 		assertThat(idle1.intValue()).isZero();
 		assertThat(idle2.intValue()).isEqualTo(1);
