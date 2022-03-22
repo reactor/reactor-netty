@@ -40,7 +40,6 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.nio.NioEventLoop;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.stream.ChunkedWriteHandler;
 import io.netty5.handler.timeout.IdleState;
@@ -412,9 +411,10 @@ public final class ReactorNetty {
 		}
 		ChannelPipeline p = c.channel().pipeline();
 		return p.get(SslHandler.class) != null  ||
-				p.get(NettyPipeline.CompressionHandler) != null ||
-				(!(c.channel().executor() instanceof NioEventLoop) &&
-						!"file".equals(file.toUri().getScheme()));
+				p.get(NettyPipeline.CompressionHandler) != null; // ||
+				// TODO
+				//(!(c.channel().executor() instanceof NioEventLoop) &&
+				//		!"file".equals(file.toUri().getScheme()));
 	}
 
 	static void registerForClose(boolean shouldCleanupOnClose,
