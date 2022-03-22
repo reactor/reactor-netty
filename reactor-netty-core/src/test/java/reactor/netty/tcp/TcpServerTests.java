@@ -72,7 +72,6 @@ import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
-import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
@@ -802,8 +801,8 @@ class TcpServerTests {
 
 		boundServer.disposeNow();
 
-		FutureMono.from(group.close())
-		          .block(Duration.ofSeconds(30));
+		Mono.fromCompletionStage(group.close().asStage())
+		    .block(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 	}
@@ -844,8 +843,8 @@ class TcpServerTests {
 
 		assertThat(configured.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		FutureMono.from(group.close())
-		          .block(Duration.ofSeconds(30));
+		Mono.fromCompletionStage(group.close().asStage())
+		    .block(Duration.ofSeconds(30));
 
 		assertThat(disconnected.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 

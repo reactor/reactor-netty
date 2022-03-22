@@ -19,13 +19,12 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 
-import io.netty5.channel.ChannelFuture;
 import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.FutureMono;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -60,7 +59,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 			iface = datagramChannel.config().getNetworkInterface();
 		}
 
-		final ChannelFuture future;
+		final Future<Void> future;
 		if (null != iface) {
 			future = datagramChannel.joinGroup(new InetSocketAddress(multicastAddress,
 					datagramChannel.localAddress()
@@ -70,12 +69,12 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 			future = datagramChannel.joinGroup(multicastAddress);
 		}
 
-		return FutureMono.from(future)
-		                 .doOnSuccess(v -> {
-		                     if (log.isInfoEnabled()) {
-		                         log.info(format(future.channel(), "JOIN {}"), multicastAddress);
-		                     }
-		                 });
+		return Mono.fromCompletionStage(future.asStage())
+		           .doOnSuccess(v -> {
+		               if (log.isInfoEnabled()) {
+		                   log.info(format(datagramChannel, "JOIN {}"), multicastAddress);
+		               }
+		           });
 	}
 
 	/**
@@ -95,7 +94,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 			iface = datagramChannel.config().getNetworkInterface();
 		}
 
-		final ChannelFuture future;
+		final Future<Void> future;
 		if (null != iface) {
 			future = datagramChannel.leaveGroup(new InetSocketAddress(multicastAddress,
 					datagramChannel.localAddress()
@@ -105,12 +104,12 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 			future = datagramChannel.leaveGroup(multicastAddress);
 		}
 
-		return FutureMono.from(future)
-		                 .doOnSuccess(v -> {
-		                     if (log.isInfoEnabled()) {
-		                         log.info(format(future.channel(), "JOIN {}"), multicastAddress);
-		                     }
-		                 });
+		return Mono.fromCompletionStage(future.asStage())
+		           .doOnSuccess(v -> {
+		               if (log.isInfoEnabled()) {
+		                   log.info(format(datagramChannel, "JOIN {}"), multicastAddress);
+		               }
+		           });
 	}
 
 	static final Logger log = Loggers.getLogger(UdpOperations.class);

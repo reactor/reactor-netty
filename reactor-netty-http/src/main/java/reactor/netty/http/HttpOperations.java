@@ -45,7 +45,6 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
@@ -123,11 +122,12 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 								log.debug(format(channel(), "Dropped HTTP content, " +
 										"since response has Content-Length: 0 {}"), toPrettyHexDump(msg));
 								msg.release();
-								return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
+								return Mono.fromCompletionStage(
+										channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)).asStage());
 							}
-							return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(msg)));
+							return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(msg)).asStage());
 						}
-						return FutureMono.from(channel().writeAndFlush(msg));
+						return Mono.fromCompletionStage(channel().writeAndFlush(msg).asStage());
 					})
 					.doOnDiscard(ByteBuf.class, ByteBuf::release), this, null);
 		}
@@ -144,7 +144,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			return super.sendObject(message);
 		}
 		ByteBuf b = (ByteBuf) message;
-		return new PostHeadersNettyOutbound(FutureMono.deferFuture(() -> {
+		return new PostHeadersNettyOutbound(Mono.fromCompletionStage(() -> {
 			if (markSentHeaderAndBody(b)) {
 				try {
 					afterMarkSentHeaders();
@@ -157,11 +157,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					log.debug(format(channel(), "Dropped HTTP content, " +
 							"since response has Content-Length: 0 {}"), toPrettyHexDump(b));
 					b.release();
-					return channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER));
+					return channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)).asStage();
 				}
-				return channel().writeAndFlush(newFullBodyMessage(b));
+				return channel().writeAndFlush(newFullBodyMessage(b)).asStage();
 			}
-			return channel().writeAndFlush(b);
+			return channel().writeAndFlush(b).asStage();
 		}), this, b);
 	}
 
@@ -175,7 +175,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			return Mono.empty();
 		}
 
-		return FutureMono.deferFuture(() -> {
+		return Mono.fromCompletionStage(() -> {
 			if (markSentHeaders(outboundHttpMessage())) {
 				HttpMessage msg;
 
@@ -203,10 +203,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				}
 
 				return channel().writeAndFlush(msg)
-				                .addListener(f -> onHeadersSent());
+				                .addListener(f -> onHeadersSent())
+				                .asStage();
 			}
 			else {
-				return channel().newSucceededFuture();
+				return channel().newSucceededFuture().asStage();
 			}
 		});
 	}
