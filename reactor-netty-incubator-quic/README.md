@@ -9,12 +9,13 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
 ```groovy
     repositories {
       //maven { url 'https://repo.spring.io/snapshot' }
+      maven { url 'https://repo.spring.io/milestone' }
       mavenCentral()
     }
 
     dependencies {
-      //compile "io.projectreactor.netty.incubator:reactor-netty-incubator-quic:0.0.6-SNAPSHOT"
-      compile "io.projectreactor.netty.incubator:reactor-netty-incubator-quic:0.0.5"
+      //compile "io.projectreactor.netty.incubator:reactor-netty-incubator-quic:0.1.0-SNAPSHOT"
+      compile "io.projectreactor.netty.incubator:reactor-netty-incubator-quic:0.1.0-M1"
     }
 ```
 
