@@ -39,6 +39,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,6 +53,7 @@ import static reactor.netty.Metrics.MAX_PENDING_CONNECTIONS;
 import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.PENDING_STREAMS;
 import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
+import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 
 /**
  * @author Violeta Georgieva
@@ -245,11 +247,31 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 				.build();
 
 		try {
+			CountDownLatch latch = new CountDownLatch(1);
+			AtomicInteger counter = new AtomicInteger();
 			HttpClient client =
 					HttpClient.create(provider)
 							.port(disposableServer.port())
 							.protocol(HttpProtocol.H2)
-							.secure(spec -> spec.sslContext(clientCtx));
+							.secure(spec -> spec.sslContext(clientCtx))
+							.observe((conn, state) -> {
+								if (state == STREAM_CONFIGURED) {
+									counter.incrementAndGet();
+									conn.onTerminate()
+									    .subscribe(null,
+									        t -> {
+									            if (counter.decrementAndGet() == 0) {
+									                latch.countDown();
+									            }
+									        },
+									        () -> {
+									            if (counter.decrementAndGet() == 0) {
+									                latch.countDown();
+									            }
+									        });
+								}
+							});
+
 
 			Flux.range(0, 1000)
 					.flatMap(i ->
@@ -261,7 +283,8 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 									.timeout(Duration.ofMillis(ThreadLocalRandom.current().nextInt(1, 35)), Mono.just("timeout")))
 					.blockLast(Duration.ofSeconds(30));
 
-			Thread.sleep(1000);
+			assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
 			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, "http2.testConnectionPoolPendingAcquireSize")).isEqualTo(0);
 		}
 		finally {
