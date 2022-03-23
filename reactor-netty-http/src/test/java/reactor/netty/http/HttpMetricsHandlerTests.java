@@ -706,12 +706,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, 1, 12);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, numWrites, expectedSentAmount);
+		// the following is commented because the number of reads may vary depending on the OS used
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 3*index, 84*index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
 
 	private void checkExpectationsNonExisting(String serverAddress, int connIndex, int index, boolean checkTls,
-			int numWrites, int numReads, double expectedSentAmount, double expectedReceivedAmount) {
+			int numWrites, @SuppressWarnings("unused")int numReads, double expectedSentAmount,
+            @SuppressWarnings("unused") double expectedReceivedAmount) {
 		String uri = "/3";
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "GET", STATUS, "404"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "GET"};
@@ -739,6 +741,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, index, 0);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, numWrites, expectedSentAmount);
+		// the following is commented because the number of reads may vary depending on the OS used
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, numReads, expectedReceivedAmount);
 		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
@@ -752,7 +755,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		return ctx == null ? httpClient.protocol(protocols) : httpClient.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
 
-	void checkTlsTimer(String name, String[] tags, long expectedCount) {
+	void checkTlsTimer(@SuppressWarnings("SameParameterValue")  String name, String[] tags, long expectedCount) {
 		checkTimer(name, tags, expectedCount);
 	}
 
