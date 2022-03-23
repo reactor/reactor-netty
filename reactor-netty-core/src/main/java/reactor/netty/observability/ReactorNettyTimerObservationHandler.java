@@ -17,8 +17,8 @@ package reactor.netty.observability;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.observation.Observation;
 import io.micrometer.core.instrument.observation.TimerObservationHandler;
+import io.micrometer.observation.Observation;
 
 /**
  * Reactor Netty timer observation handler.

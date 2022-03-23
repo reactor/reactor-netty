@@ -15,10 +15,10 @@
  */
 package reactor.netty.http.observability;
 
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.observation.Observation;
-import io.micrometer.core.instrument.transport.http.HttpClientRequest;
-import io.micrometer.core.instrument.transport.http.context.HttpClientContext;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.Tag;
+import io.micrometer.observation.transport.http.HttpClientRequest;
+import io.micrometer.observation.transport.http.context.HttpClientContext;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.HttpClientTracingObservationHandler;
