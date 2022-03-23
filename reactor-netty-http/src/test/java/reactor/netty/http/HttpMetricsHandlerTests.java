@@ -266,7 +266,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 						.aggregate()
 						.asString())
 				.expectComplete()
-				.verify(Duration.ofSeconds(300000));
+				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
