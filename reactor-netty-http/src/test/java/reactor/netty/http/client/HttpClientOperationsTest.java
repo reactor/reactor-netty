@@ -58,7 +58,7 @@ class HttpClientOperationsTest {
 
 		content = channel.readInbound();
 		assertThat(content).isInstanceOf(LastHttpContent.class);
-		((LastHttpContent) content).release();
+		((LastHttpContent) content).close();
 
 		content = channel.readInbound();
 		assertThat(content).isNull();
@@ -81,7 +81,7 @@ class HttpClientOperationsTest {
 
 		content = channel.readInbound();
 		assertThat(content).isInstanceOf(LastHttpContent.class);
-		((LastHttpContent) content).release();
+		((LastHttpContent) content).close();
 
 		content = channel.readInbound();
 		assertThat(content).isNull();
@@ -104,7 +104,7 @@ class HttpClientOperationsTest {
 
 		content = channel.readInbound();
 		assertThat(content).isInstanceOf(LastHttpContent.class);
-		((LastHttpContent) content).release();
+		((LastHttpContent) content).close();
 
 		content = channel.readInbound();
 		assertThat(content).isNull();
@@ -127,7 +127,7 @@ class HttpClientOperationsTest {
 
 		content = channel.readInbound();
 		assertThat(content).isInstanceOf(LastHttpContent.class);
-		((LastHttpContent) content).release();
+		((LastHttpContent) content).close();
 
 		content = channel.readInbound();
 		assertThat(content).isNull();

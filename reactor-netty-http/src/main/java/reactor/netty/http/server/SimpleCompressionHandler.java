@@ -43,7 +43,7 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 	protected void decode(ChannelHandlerContext ctx, HttpRequest msg) {
 		HttpRequest request = msg;
 		try {
-			if (msg instanceof FullHttpRequest && ((FullHttpRequest) msg).content().refCnt() == 0) {
+			if (msg instanceof FullHttpRequest && !((FullHttpRequest) msg).payload().isAccessible()) {
 				// This can happen only in HTTP2 use case and delayed response
 				// When the incoming FullHttpRequest content is with 0 readableBytes it is released immediately
 				// decode(...) will observe a freed content

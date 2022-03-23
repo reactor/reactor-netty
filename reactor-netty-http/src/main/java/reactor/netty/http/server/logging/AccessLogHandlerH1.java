@@ -81,7 +81,7 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 			}
 		}
 		if (msg instanceof LastHttpContent) {
-			accessLogArgProvider.increaseContentLength(((LastHttpContent) msg).content().readableBytes());
+			accessLogArgProvider.increaseContentLength(((LastHttpContent) msg).payload().readableBytes());
 			return ctx.write(msg)
 			          .addListener(future -> {
 			              if (future.isSuccess()) {
