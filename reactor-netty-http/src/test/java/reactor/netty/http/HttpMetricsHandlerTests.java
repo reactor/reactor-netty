@@ -179,10 +179,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 			serverAddress.set(conn.channel().remoteAddress())
-		);
+		).observe(observerDisconnect);
 
-		StepVerifier.create(httpClient.observe(observerDisconnect)
-		                              .post()
+		StepVerifier.create(httpClient.post()
 		                              .uri("/1")
 		                              .send(body)
 		                              .responseContent()
@@ -216,8 +215,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		CountDownLatch latch2 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
 		latchRef.set(latch2);
 
-		StepVerifier.create(httpClient.observe(observerDisconnect)
-		                              .post()
+		StepVerifier.create(httpClient.post()
 		                              .uri("/2?i=1&j=2")
 		                              .send(body)
 		                              .responseContent()
@@ -255,10 +253,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 			serverAddress.set(conn.channel().remoteAddress())
-		);
+		).observe(observerDisconnect);
 
 		StepVerifier.create(httpClient
-						.observe(observerDisconnect)
 						.headers(h -> h.add("Connection", "close"))
 						.get()
 						.uri("/3")
@@ -301,7 +298,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		CountDownLatch latch2 = new CountDownLatch(expectedDisconnects);
 		latchRef.set(latch2);
 
-		StepVerifier.create(httpClient.observe(observerDisconnect)
+		StepVerifier.create(httpClient
 						.headers(h -> h.add("Connection", "close"))
 						.get()
 						.uri("/3")
@@ -334,10 +331,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 			serverAddress.set(conn.channel().remoteAddress())
-		);
+		).observe(observerDisconnect);
 
-		StepVerifier.create(httpClient.observe(observerDisconnect)
-		                              .metrics(true, s -> "testUriTagValueResolver")
+		StepVerifier.create(httpClient.metrics(true, s -> "testUriTagValueResolver")
 		                              .post()
 		                              .uri("/1")
 		                              .send(body)
@@ -394,10 +390,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
 				serverAddress.set(conn.channel().remoteAddress())
-		);
+		).observe(observerDisconnect);
 
-		httpClient.observe(observerDisconnect)
-		          .metrics(true, s -> "testUriTagValueFunctionNotShared_1")
+		httpClient.metrics(true, s -> "testUriTagValueFunctionNotShared_1")
 		          .post()
 		          .uri("/1")
 		          .send(body)
@@ -430,8 +425,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		CountDownLatch latch2 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
 		latchRef.set(latch2);
 
-		httpClient.observe(observerDisconnect)
-		          .metrics(true, s -> "testUriTagValueFunctionNotShared_2")
+		httpClient.metrics(true, s -> "testUriTagValueFunctionNotShared_2")
 		          .post()
 		          .uri("/2")
 		          .send(body)
@@ -531,13 +525,13 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
 		httpClient = httpClient.doAfterRequest((req, conn) ->
 				clientAddress.set(conn.channel().localAddress())
-		);
+		).observe(observerDisconnect);
 
 		String uri = "/4";
 		String address = formatSocketAddress(disposableServer.address());
 
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
-		httpClient.observe(observerDisconnect)
+		httpClient
 				.metrics(true, Function.identity())
 				.post()
 				.uri(uri)
@@ -630,8 +624,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		// one when DecoderException is caught, and one when the connection becomes inactive
 		CountDownLatch latch = new CountDownLatch(3);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
-		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
-		httpClient.observe(observerDisconnect)
+		httpClient
+				.observe(observeDisconnect(latchRef))
 				.secure(spec -> spec.sslContext(clientCtx11))
 				.post()
 				.uri("/1")
