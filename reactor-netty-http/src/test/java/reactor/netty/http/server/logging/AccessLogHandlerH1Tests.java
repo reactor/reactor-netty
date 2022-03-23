@@ -15,8 +15,7 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.DefaultHttpHeaders;
@@ -60,7 +59,7 @@ class AccessLogHandlerH1Tests {
 
 		channel.writeOutbound(newHttpResponse(false));
 
-		channel.writeOutbound(new DefaultLastHttpContent());
+		channel.writeOutbound(new DefaultLastHttpContent(channel.bufferAllocator().allocate(0)));
 	}
 
 	@Test
@@ -77,13 +76,13 @@ class AccessLogHandlerH1Tests {
 
 		channel.writeOutbound(newHttpResponse(true));
 
-		ByteBuf byteBuf = Unpooled.buffer(RESPONSE_CONTENT.length);
+		Buffer byteBuf = channel.bufferAllocator().allocate(RESPONSE_CONTENT.length);
 		byteBuf.writeBytes(RESPONSE_CONTENT);
 		channel.writeOutbound(byteBuf);
 
 		channel.writeOutbound(new DefaultHttpContent(byteBuf));
 
-		channel.writeOutbound(new DefaultLastHttpContent());
+		channel.writeOutbound(new DefaultLastHttpContent(channel.bufferAllocator().allocate(0)));
 	}
 
 	private HttpRequest newHttpRequest() {

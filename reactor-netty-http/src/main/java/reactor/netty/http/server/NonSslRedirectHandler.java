@@ -56,7 +56,8 @@ final class NonSslRedirectHandler extends ChannelHandlerAdapter {
 				ctx.close();
 			}
 			else {
-				HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), HttpResponseStatus.PERMANENT_REDIRECT);
+				HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(),
+						HttpResponseStatus.PERMANENT_REDIRECT, ctx.bufferAllocator().allocate(0));
 				response.headers().set(LOCATION, url);
 				ctx.channel().writeAndFlush(response)
 						.addListener(ctx, ChannelFutureListeners.CLOSE);

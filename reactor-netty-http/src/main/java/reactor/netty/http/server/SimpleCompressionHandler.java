@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.server;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.http.DefaultHttpContent;
@@ -33,8 +33,8 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof ByteBuf) {
-			return ctx.write(new DefaultHttpContent((ByteBuf) msg));
+		if (msg instanceof Buffer) {
+			super.write(ctx, new DefaultHttpContent((Buffer) msg));
 		}
 		return ctx.write(msg);
 	}

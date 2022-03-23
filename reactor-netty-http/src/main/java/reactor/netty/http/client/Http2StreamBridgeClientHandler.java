@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultHttpContent;
@@ -64,8 +64,8 @@ final class Http2StreamBridgeClientHandler extends ChannelHandlerAdapter {
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof ByteBuf) {
-			return ctx.write(new DefaultHttpContent((ByteBuf) msg));
+		if (msg instanceof Buffer) {
+			return ctx.write(new DefaultHttpContent((Buffer) msg));
 		}
 		else {
 			return ctx.write(msg);

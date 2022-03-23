@@ -35,7 +35,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
@@ -396,7 +396,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				                if (markSentHeaderAndBody(list.toArray())) {
 					                if (list.isEmpty()) {
 						                return Mono.fromCompletionStage(
-							                    channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)).asStage());
+							                    channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage());
 					                }
 
 					                ByteBuf output;
@@ -418,7 +418,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						                return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(output)).asStage());
 					                }
 					                output.release();
-					                return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)).asStage());
+					                return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage());
 				                }
 				                for (ByteBuf bb : list) {
 				                	if (log.isDebugEnabled()) {
@@ -531,7 +531,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						"zero-length header"));
 			}
 			//"FutureReturnValueIgnored" this is deliberate
-			channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER));
+			channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0)));
 		}
 		else if (markSentBody()) {
 			//"FutureReturnValueIgnored" this is deliberate
@@ -721,7 +721,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	protected HttpMessage newFullBodyMessage(ByteBuf body) {
+	protected HttpMessage newFullBodyMessage(Buffer body) {
 		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri(), body);
 
 		requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
@@ -749,7 +749,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			return Mono.error(AbortedException.beforeSend());
 		}
 		if (markSentHeaderAndBody()) {
-			HttpMessage request = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
+			HttpMessage request = newFullBodyMessage(channel().bufferAllocator().allocate(0));
 			return Mono.fromCompletionStage(() -> channel().writeAndFlush(request).asStage());
 		}
 		else {

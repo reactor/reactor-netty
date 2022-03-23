@@ -15,8 +15,7 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
@@ -43,8 +42,8 @@ class HttpClientOperationsTest {
 
 	@Test
 	void addDecoderReplaysLastHttp() {
-		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
+		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(CharsetUtil.UTF_8));
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
 				.addHandlerLast(new JsonObjectDecoder());
@@ -53,8 +52,8 @@ class HttpClientOperationsTest {
 		assertThat(channel.pipeline().names()).first().isEqualTo("JsonObjectDecoder$extractor");
 
 		Object content = channel.readInbound();
-		assertThat(content).isInstanceOf(ByteBuf.class);
-		((ByteBuf) content).release();
+		assertThat(content).isInstanceOf(Buffer.class);
+		((Buffer) content).close();
 
 		content = channel.readInbound();
 		assertThat(content).isInstanceOf(LastHttpContent.class);
@@ -66,8 +65,8 @@ class HttpClientOperationsTest {
 
 	@Test
 	void addNamedDecoderReplaysLastHttp() {
-		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
+		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(CharsetUtil.UTF_8));
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
 				.addHandlerLast("json", new JsonObjectDecoder());
@@ -76,8 +75,8 @@ class HttpClientOperationsTest {
 		assertThat(channel.pipeline().names()).first().isEqualTo("json$extractor");
 
 		Object content = channel.readInbound();
-		assertThat(content).isInstanceOf(ByteBuf.class);
-		((ByteBuf) content).release();
+		assertThat(content).isInstanceOf(Buffer.class);
+		((Buffer) content).close();
 
 		content = channel.readInbound();
 		assertThat(content).isInstanceOf(LastHttpContent.class);
@@ -89,8 +88,8 @@ class HttpClientOperationsTest {
 
 	@Test
 	void addEncoderReplaysLastHttp() {
-		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
+		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(CharsetUtil.UTF_8));
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
 				.addHandlerLast(new JsonObjectDecoder());
@@ -99,8 +98,8 @@ class HttpClientOperationsTest {
 		assertThat(channel.pipeline().names()).first().isEqualTo("JsonObjectDecoder$extractor");
 
 		Object content = channel.readInbound();
-		assertThat(content).isInstanceOf(ByteBuf.class);
-		((ByteBuf) content).release();
+		assertThat(content).isInstanceOf(Buffer.class);
+		((Buffer) content).close();
 
 		content = channel.readInbound();
 		assertThat(content).isInstanceOf(LastHttpContent.class);
@@ -112,8 +111,8 @@ class HttpClientOperationsTest {
 
 	@Test
 	void addNamedEncoderReplaysLastHttp() {
-		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
+		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(CharsetUtil.UTF_8));
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
 				.addHandlerLast("json", new JsonObjectDecoder());
@@ -122,8 +121,8 @@ class HttpClientOperationsTest {
 		assertThat(channel.pipeline().names()).first().isEqualTo("json$extractor");
 
 		Object content = channel.readInbound();
-		assertThat(content).isInstanceOf(ByteBuf.class);
-		((ByteBuf) content).release();
+		assertThat(content).isInstanceOf(Buffer.class);
+		((Buffer) content).close();
 
 		content = channel.readInbound();
 		assertThat(content).isInstanceOf(LastHttpContent.class);
@@ -173,7 +172,7 @@ class HttpClientOperationsTest {
 		HttpClientOperations ops = new HttpClientOperations(() -> channel,
 				ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
-		ops.setNettyResponse(new DefaultFullHttpResponse(HTTP_1_1, status, Unpooled.EMPTY_BUFFER));
+		ops.setNettyResponse(new DefaultFullHttpResponse(HTTP_1_1, status, channel.bufferAllocator().allocate(0)));
 		assertThat(ops.status().reasonPhrase()).isEqualTo(status.reasonPhrase());
 	}
 }

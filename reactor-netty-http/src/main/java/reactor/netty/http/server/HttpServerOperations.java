@@ -31,7 +31,7 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
@@ -85,7 +85,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpUtil.isTransferEncodingChunked;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
@@ -196,7 +196,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected HttpMessage newFullBodyMessage(ByteBuf body) {
+	protected HttpMessage newFullBodyMessage(Buffer body) {
 		HttpResponse res =
 				new DefaultFullHttpResponse(version(), status(), body);
 
@@ -430,7 +430,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public Mono<Void> send() {
 		if (markSentHeaderAndBody()) {
-			HttpMessage response = newFullBodyMessage(EMPTY_BUFFER);
+			HttpMessage response = newFullBodyMessage(channel().bufferAllocator().allocate(0));
 			return Mono.fromCompletionStage(() -> channel().writeAndFlush(response).asStage());
 		}
 		else {
@@ -636,7 +636,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 						"zero-length header"));
 			}
 
-			f = channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER));
+			f = channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0)));
 		}
 		else if (markSentBody()) {
 			LastHttpContent<?> lastHttpContent = new EmptyLastHttpContent(channel().bufferAllocator());
@@ -665,7 +665,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 						log.error(format(channel(), "Cannot apply trailer headers [{0}]"), declaredHeaderNames, e);
 					}
 					if (!trailerHeaders.isEmpty()) {
-						lastHttpContent = new DefaultLastHttpContent();
+						lastHttpContent = new DefaultLastHttpContent(channel().bufferAllocator().allocate(0));
 						lastHttpContent.trailingHeaders().set(trailerHeaders);
 					}
 				}
@@ -733,7 +733,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 				cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE :
-				                                         HttpResponseStatus.BAD_REQUEST);
+				                                         HttpResponseStatus.BAD_REQUEST,
+				ctx.bufferAllocator().allocate(0));
 		response.headers()
 		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
 		        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
@@ -775,14 +776,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			nettyResponse.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
 			responseHeaders.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-			channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER))
+			channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0)))
 			         .addListener(channel(), ChannelFutureListeners.CLOSE);
 			return;
 		}
 
 		markSentBody();
 		log.error(format(channel(), "Error finishing response. Closing connection"), err);
-		channel().writeAndFlush(EMPTY_BUFFER)
+		channel().writeAndFlush(channel().bufferAllocator().allocate(0))
 		         .addListener(channel(), ChannelFutureListeners.CLOSE);
 	}
 
@@ -863,7 +864,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final static FullHttpResponse CONTINUE     =
 			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.CONTINUE,
-					EMPTY_BUFFER);
+					preferredAllocator().allocate(0));
 
 	static final class FailedHttpServerRequest extends HttpServerOperations {
 

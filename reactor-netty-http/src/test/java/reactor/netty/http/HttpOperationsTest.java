@@ -15,8 +15,7 @@
  */
 package reactor.netty.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultHttpContent;
@@ -62,10 +61,8 @@ class HttpOperationsTest {
 
 		Object[] content = new Object[3];
 		content[0] = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-		content[1] =
-				new DefaultHttpContent(Unpooled.copiedBuffer(json1, CharsetUtil.UTF_8));
-		content[2] = new DefaultLastHttpContent(Unpooled.copiedBuffer(json2,
-				CharsetUtil.UTF_8));
+		content[1] = new DefaultHttpContent(channel.bufferAllocator().copyOf(json1.getBytes(CharsetUtil.UTF_8)));
+		content[2] = new DefaultLastHttpContent(channel.bufferAllocator().copyOf(json2.getBytes(CharsetUtil.UTF_8)));
 
 		channel.writeInbound(content);
 
@@ -74,16 +71,16 @@ class HttpOperationsTest {
 		assertThat(t).isNotInstanceOf(HttpContent.class);
 
 		t = channel.readInbound();
-		assertThat(t).isInstanceOf(ByteBuf.class);
-		ByteBuf b = (ByteBuf) t;
-		assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8)).isEqualTo("{\"some\": 1}");
-		b.release();
+		assertThat(t).isInstanceOf(Buffer.class);
+		try (Buffer b = (Buffer) t) {
+			assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8)).isEqualTo("{\"some\": 1}");
+		}
 
 		t = channel.readInbound();
-		assertThat(t).isInstanceOf(ByteBuf.class);
-		b = (ByteBuf) t;
-		assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8)).isEqualTo("{\"value\": true, \"test\": 1}");
-		b.release();
+		assertThat(t).isInstanceOf(Buffer.class);
+		try (Buffer b = (Buffer) t) {
+			assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8)).isEqualTo("{\"value\": true, \"test\": 1}");
+		}
 
 		t = channel.readInbound();
 		assertThat(t).isInstanceOf(EmptyLastHttpContent.class);

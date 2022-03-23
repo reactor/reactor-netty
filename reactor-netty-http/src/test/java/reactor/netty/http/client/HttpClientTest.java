@@ -58,7 +58,7 @@ import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -122,6 +122,7 @@ import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -152,7 +153,8 @@ class HttpClientTest extends BaseHttpTest {
 				                           out.withConnection(c ->
 				                                   c.addHandlerFirst(new HttpResponseEncoder()))
 				                              .sendObject(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-				                                                                      HttpResponseStatus.ACCEPTED))
+				                                                                      HttpResponseStatus.ACCEPTED,
+				                                                                      out.bufferAlloc().allocate(0)))
 				                              .then(Mono.delay(Duration.ofSeconds(2)).then()))))
 				         .wiretap(true)
 				         .bindNow();
@@ -339,7 +341,7 @@ class HttpClientTest extends BaseHttpTest {
 				          	req.withConnection(cn -> cn.onDispose(latch::countDown));
 
 				                  return Flux.interval(Duration.ofSeconds(1))
-				                             .flatMap(d -> resp.sendObject(Unpooled.EMPTY_BUFFER));
+				                             .flatMap(d -> resp.sendObject(preferredAllocator().allocate(0)));
 				          })
 				          .bindNow();
 
@@ -385,7 +387,8 @@ class HttpClientTest extends BaseHttpTest {
 				             return out.withConnection(c -> c.addHandlerFirst(new HttpResponseEncoder()))
 				                       .sendObject(Mono.delay(Duration.ofSeconds(2))
 				                                       .map(t -> new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-				                                                                             HttpResponseStatus.PROCESSING)))
+				                                                                             HttpResponseStatus.PROCESSING,
+				                                                                             out.bufferAlloc().allocate(0))))
 				                       .neverComplete();
 				         })
 				         .wiretap(true)
@@ -1200,7 +1203,8 @@ class HttpClientTest extends BaseHttpTest {
 				        .headers(h -> h.add(HttpHeaderNames.CONTENT_LENGTH, 5))
 				        .post()
 				        .uri("/")
-				        .send(Mono.just(Unpooled.wrappedBuffer("hello".getBytes(Charset.defaultCharset()))))
+				        .send(Mono.just(preferredAllocator().copyOf("hello".getBytes(Charset.defaultCharset())))
+				                  .map(ByteBufAdaptor::intoByteBuf))
 				        .responseContent()
 				        .aggregate()
 				        .asString())
