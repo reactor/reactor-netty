@@ -34,6 +34,7 @@ import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty5.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
+import io.netty5.util.concurrent.FutureListener;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -241,12 +242,12 @@ final class WebsocketServerOperations extends HttpServerOperations
 		frame.release();
 		return Mono.empty();
 	}
-	void sendCloseNow(CloseWebSocketFrame frame, ChannelFutureListener listener) {
+	void sendCloseNow(CloseWebSocketFrame frame, FutureListener<Void> listener) {
 		sendCloseNow(frame, new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()), listener);
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	void sendCloseNow(CloseWebSocketFrame frame, WebSocketCloseStatus closeStatus, ChannelFutureListener listener) {
+	void sendCloseNow(CloseWebSocketFrame frame, WebSocketCloseStatus closeStatus, FutureListener<Void> listener) {
 		if (!frame.isFinalFragment()) {
 			//"FutureReturnValueIgnored" this is deliberate
 			channel().writeAndFlush(frame);
