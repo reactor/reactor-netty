@@ -15,13 +15,13 @@
  */
 package reactor.netty.http.client;
 
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.observation.Observation;
-import io.micrometer.core.instrument.transport.http.HttpClientRequest;
-import io.micrometer.core.instrument.transport.http.HttpClientResponse;
-import io.micrometer.core.instrument.transport.http.context.HttpClientContext;
 import io.micrometer.contextpropagation.ContextContainer;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.Tags;
+import io.micrometer.observation.transport.http.HttpClientRequest;
+import io.micrometer.observation.transport.http.HttpClientResponse;
+import io.micrometer.observation.transport.http.context.HttpClientContext;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -33,7 +33,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.function.Function;
 
-import static reactor.netty.Metrics.REGISTRY;
+import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.formatSocketAddress;
 import static reactor.netty.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
@@ -116,7 +116,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, httpClientRequest, channel.remoteAddress());
 		ContextContainer container = ContextContainer.restore(channel);
 		try (ContextContainer.Scope scope = container.restoreThreadLocalValues()) {
-			responseTimeObservation = Observation.start(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, REGISTRY);
+			responseTimeObservation = Observation.start(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		}
 	}
 

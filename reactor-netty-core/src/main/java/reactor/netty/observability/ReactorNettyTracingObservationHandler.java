@@ -15,8 +15,8 @@
  */
 package reactor.netty.observability;
 
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.observation.Observation;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.Tag;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.DefaultTracingObservationHandler;

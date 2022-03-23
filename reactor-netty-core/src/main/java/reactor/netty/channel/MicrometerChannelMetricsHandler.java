@@ -15,10 +15,10 @@
  */
 package reactor.netty.channel;
 
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.observation.Observation;
 import io.micrometer.contextpropagation.ContextContainer;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.Tags;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -32,7 +32,7 @@ import java.net.SocketAddress;
 
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.ERROR;
-import static reactor.netty.Metrics.REGISTRY;
+import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.formatSocketAddress;
@@ -122,7 +122,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			ContextContainer container = ContextContainer.restore(ctx.channel());
 			Observation observation;
 			try (ContextContainer.Scope scope = container.restoreThreadLocalValues()) {
-				observation = Observation.start(recorder.name() + CONNECT_TIME, this, REGISTRY);
+				observation = Observation.start(recorder.name() + CONNECT_TIME, this, OBSERVATION_REGISTRY);
 			}
 			ctx.connect(remoteAddress, localAddress, promise)
 			   .addListener(future -> {
@@ -221,7 +221,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			this.remoteAddress = formatSocketAddress(ctx.channel().remoteAddress());
 			ContextContainer container = ContextContainer.restore(ctx.channel());
 			try (ContextContainer.Scope scope = container.restoreThreadLocalValues()) {
-				observation = Observation.start(recorder.name() + TLS_HANDSHAKE_TIME, this, REGISTRY);
+				observation = Observation.start(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
 			}
 			ctx.pipeline().get(SslHandler.class)
 					.handshakeFuture()

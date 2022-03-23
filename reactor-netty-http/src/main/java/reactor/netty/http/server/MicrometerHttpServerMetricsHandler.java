@@ -15,12 +15,12 @@
  */
 package reactor.netty.http.server;
 
-import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.observation.Observation;
-import io.micrometer.core.instrument.transport.http.HttpServerRequest;
-import io.micrometer.core.instrument.transport.http.HttpServerResponse;
-import io.micrometer.core.instrument.transport.http.context.HttpServerContext;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.Tags;
+import io.micrometer.observation.transport.http.HttpServerRequest;
+import io.micrometer.observation.transport.http.HttpServerResponse;
+import io.micrometer.observation.transport.http.context.HttpServerContext;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import reactor.netty.observability.ReactorNettyHandlerContext;
@@ -30,7 +30,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.function.Function;
 
-import static reactor.netty.Metrics.REGISTRY;
+import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
 import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.REACTOR_NETTY_STATUS;
@@ -98,7 +98,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(
 				recorder,
 				new ObservationHttpServerRequest(ops.nettyRequest, method, path));
-		responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, REGISTRY);
+		responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 	}
 
 	// response
@@ -110,7 +110,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 			responseTimeHandlerContext = new ResponseTimeHandlerContext(
 					recorder,
 					new ObservationHttpServerRequest(ops.nettyRequest, method, path));
-			responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, REGISTRY);
+			responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		}
 		responseTimeHandlerContext.setResponse(new ObservationHttpServerResponse(ops.nettyResponse));
 		responseTimeHandlerContext.status = status;

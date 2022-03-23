@@ -15,9 +15,9 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.observation.Observation;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.Tags;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
@@ -35,7 +35,7 @@ import java.util.function.Supplier;
 
 import static reactor.netty.Metrics.ADDRESS_RESOLVER;
 import static reactor.netty.Metrics.ERROR;
-import static reactor.netty.Metrics.REGISTRY;
+import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.Metrics.formatSocketAddress;
 import static reactor.netty.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
@@ -123,7 +123,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Move the implementation from the recorder here
 			String remoteAddress = formatSocketAddress(address);
 			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, remoteAddress);
-			Observation sample = Observation.start(name + ADDRESS_RESOLVER, handlerContext, REGISTRY);
+			Observation sample = Observation.start(name + ADDRESS_RESOLVER, handlerContext, OBSERVATION_REGISTRY);
 			return resolver.get()
 			               .addListener(future -> {
 			                   handlerContext.status = future.isSuccess() ? SUCCESS : ERROR;
@@ -141,7 +141,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Move the implementation from the recorder here
 			String remoteAddress = formatSocketAddress(address);
 			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, remoteAddress);
-			Observation observation = Observation.start(name + ADDRESS_RESOLVER, handlerContext, REGISTRY);
+			Observation observation = Observation.start(name + ADDRESS_RESOLVER, handlerContext, OBSERVATION_REGISTRY);
 			return resolver.get()
 			               .addListener(future -> {
 			                   handlerContext.status = future.isSuccess() ? SUCCESS : ERROR;
