@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,5 +26,6 @@ public class CustomBlockHoundIntegration implements BlockHoundIntegration {
 		builder.allowBlockingCallsInside("java.nio.file.TempFileHelper", "createTempFile");
 
 		builder.allowBlockingCallsInside("reactor.core.scheduler.BoundedElasticScheduler$BoundedServices", "pick");
+		builder.allowBlockingCallsInside("io.netty.handler.ssl.BouncyCastle", "isInUse");
 	}
 }
