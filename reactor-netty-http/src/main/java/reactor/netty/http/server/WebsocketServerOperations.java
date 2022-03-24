@@ -47,6 +47,7 @@ import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.annotation.Nullable;
 
+import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -130,7 +131,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
-		return sendObject(Flux.from(dataStream).map(bytebufToWebsocketFrame));
+		return sendObject(Flux.from(dataStream).map(byteBuf -> bytebufToWebsocketFrame.apply(extractOrCopy(bufferAlloc(), byteBuf))));
 	}
 
 	@Override

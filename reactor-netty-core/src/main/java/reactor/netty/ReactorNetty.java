@@ -35,6 +35,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -736,6 +737,11 @@ public final class ReactorNetty {
 		}
 
 		@Override
+		public BufferAllocator bufferAlloc() {
+			return source.bufferAlloc();
+		}
+
+		@Override
 		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
 			return source.withConnection(withConnection);
 		}
@@ -923,6 +929,11 @@ public final class ReactorNetty {
 			@Override
 			public ByteBufAllocator alloc() {
 				return c.channel().alloc();
+			}
+
+			@Override
+			public BufferAllocator bufferAlloc() {
+				return c.channel().bufferAllocator();
 			}
 
 			@Override

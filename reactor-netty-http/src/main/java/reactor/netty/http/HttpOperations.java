@@ -30,6 +30,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.CombinedChannelDuplexHandler;
 import io.netty5.handler.codec.ByteToMessageCodec;
@@ -485,6 +486,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		@Override
 		public ByteBufAllocator alloc() {
 			return parent.alloc();
+		}
+
+		@Override
+		public BufferAllocator bufferAlloc() {
+			return parent.bufferAlloc();
 		}
 
 		@Override

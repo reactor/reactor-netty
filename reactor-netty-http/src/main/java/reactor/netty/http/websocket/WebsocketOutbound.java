@@ -112,7 +112,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	@Override
 	default NettyOutbound sendString(Publisher<? extends String> dataStream, Charset charset) {
 		return sendObject(Flux.from(dataStream)
-		                      .map(str -> stringToWebsocketFrame.apply(alloc(), str)));
+		                      .map(str -> stringToWebsocketFrame.apply(bufferAlloc(), str)));
 	}
 
 	BiFunction<? super BufferAllocator, ? super String, ? extends WebSocketFrame> stringToWebsocketFrame  =

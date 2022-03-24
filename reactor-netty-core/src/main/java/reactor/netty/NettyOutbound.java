@@ -32,6 +32,7 @@ import java.util.function.Predicate;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.handler.stream.ChunkedNioFile;
@@ -59,6 +60,13 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return the {@link ByteBufAllocator}
 	 */
 	ByteBufAllocator alloc();
+
+	/**
+	 * Returns the assigned {@link BufferAllocator}.
+	 *
+	 * @return the {@link BufferAllocator}
+	 */
+	BufferAllocator bufferAlloc();
 
 	/**
 	 * Returns a never completing {@link Mono} after this {@link NettyOutbound#then()} has

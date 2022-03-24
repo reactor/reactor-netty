@@ -25,6 +25,7 @@ import java.util.function.Predicate;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -172,6 +173,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public ByteBufAllocator alloc() {
 		return connection.channel()
 		                 .alloc();
+	}
+
+	@Override
+	public BufferAllocator bufferAlloc() {
+		return connection.channel().bufferAllocator();
 	}
 
 	@Override
