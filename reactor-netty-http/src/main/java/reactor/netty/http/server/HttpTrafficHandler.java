@@ -124,10 +124,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		super.handlerAdded(ctx);
 		this.ctx = ctx;
-		if (HttpServerOperations.log.isDebugEnabled()) {
-			HttpServerOperations.log.debug(format(ctx.channel(), "New http connection, requesting read"));
-		}
-		ctx.read();
 	}
 
 	@Override
@@ -264,6 +260,16 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		}
 
 		ctx.fireChannelRead(msg);
+	}
+
+	@Override
+	public void channelRegistered(ChannelHandlerContext ctx) {
+		ctx.fireChannelRegistered();
+		// Need to move read operation from handlerAdded to channelRegistered
+		if (HttpServerOperations.log.isDebugEnabled()) {
+			HttpServerOperations.log.debug(format(ctx.channel(), "New http connection, requesting read"));
+		}
+		ctx.read();
 	}
 
 	void sendDecodingFailures(Throwable t, Object msg) {
