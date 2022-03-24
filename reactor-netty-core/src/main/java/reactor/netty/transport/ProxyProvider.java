@@ -182,7 +182,8 @@ public final class ProxyProvider {
 		if (this.type == Proxy.SOCKS4 || type == Proxy.SOCKS5) {
 			pipeline.addAfter(NettyPipeline.ProxyHandler, NettyPipeline.UnvoidHandler, new ChannelOutboundHandlerAdapter() {
 				@Override
-				public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+				@SuppressWarnings("FutureReturnValueIgnored")
+				public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 					ctx.write(msg, promise.unvoid());
 				}
 			});
