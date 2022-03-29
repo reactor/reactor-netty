@@ -107,7 +107,7 @@ ext {
 	nettyQuicVersion = '0.0.26.Final'
 
 	// Testing
-	jacksonDatabindVersion = '2.13.2'
+	jacksonDatabindVersion = '2.13.2.2'
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.22.0'
 	awaitilityVersion = '4.2.0'
