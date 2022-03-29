@@ -15,8 +15,7 @@
  */
 package reactor.netty.tcp;
 
-import io.micrometer.observation.docs.DocumentedObservation;
-import io.micrometer.observation.docs.TagKey;
+import io.micrometer.common.docs.TagKey;
 import io.micrometer.tracing.docs.DocumentedSpan;
 
 /**
@@ -42,7 +41,7 @@ enum TlsHandshakeSpans implements DocumentedSpan {
 		}
 
 		@Override
-		public DocumentedObservation overridesDefaultSpanFrom() {
+		public Enum<?> overridesDefaultSpanFrom() {
 			return TlsHandshakeObservations.TLS_HANDSHAKE_TIME;
 		}
 	};

@@ -15,8 +15,7 @@
  */
 package reactor.netty.channel;
 
-import io.micrometer.observation.docs.DocumentedObservation;
-import io.micrometer.observation.docs.TagKey;
+import io.micrometer.common.docs.TagKey;
 import io.micrometer.tracing.docs.DocumentedSpan;
 
 /**
@@ -43,7 +42,7 @@ enum ConnectSpans implements DocumentedSpan {
 		}
 
 		@Override
-		public DocumentedObservation overridesDefaultSpanFrom() {
+		public Enum<?> overridesDefaultSpanFrom() {
 			return ConnectObservations.CONNECT_TIME;
 		}
 	};

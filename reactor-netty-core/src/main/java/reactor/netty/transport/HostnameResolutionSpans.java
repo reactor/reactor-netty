@@ -15,8 +15,7 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.observation.docs.DocumentedObservation;
-import io.micrometer.observation.docs.TagKey;
+import io.micrometer.common.docs.TagKey;
 import io.micrometer.tracing.docs.DocumentedSpan;
 
 /**
@@ -42,7 +41,7 @@ enum HostnameResolutionSpans implements DocumentedSpan {
 		}
 
 		@Override
-		public DocumentedObservation overridesDefaultSpanFrom() {
+		public Enum<?> overridesDefaultSpanFrom() {
 			return HostnameResolutionObservations.HOSTNAME_RESOLUTION_TIME;
 		}
 	};
