@@ -280,7 +280,6 @@ subprojects {
 		testLogging {
 			showExceptions true
 			exceptionFormat "full"
-			maxGranularity 3
 		}
 
 		onOutput { descriptor, event ->
