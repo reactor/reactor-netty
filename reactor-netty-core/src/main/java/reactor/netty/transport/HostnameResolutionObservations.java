@@ -16,7 +16,7 @@
 package reactor.netty.transport;
 
 import io.micrometer.observation.docs.DocumentedObservation;
-import io.micrometer.observation.docs.TagKey;
+import io.micrometer.common.docs.TagKey;
 
 /**
  * Hostname resolution observations.

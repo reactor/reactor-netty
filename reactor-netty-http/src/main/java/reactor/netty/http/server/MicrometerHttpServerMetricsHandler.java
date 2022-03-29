@@ -17,7 +17,7 @@ package reactor.netty.http.server;
 
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.Tags;
+import io.micrometer.common.Tags;
 import io.micrometer.observation.transport.http.HttpServerRequest;
 import io.micrometer.observation.transport.http.HttpServerResponse;
 import io.micrometer.observation.transport.http.context.HttpServerContext;

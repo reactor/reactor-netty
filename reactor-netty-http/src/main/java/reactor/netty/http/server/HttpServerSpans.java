@@ -15,8 +15,7 @@
  */
 package reactor.netty.http.server;
 
-import io.micrometer.observation.docs.DocumentedObservation;
-import io.micrometer.observation.docs.TagKey;
+import io.micrometer.common.docs.TagKey;
 import io.micrometer.tracing.docs.DocumentedSpan;
 
 /**
@@ -42,7 +41,7 @@ enum HttpServerSpans implements DocumentedSpan {
 		}
 
 		@Override
-		public DocumentedObservation overridesDefaultSpanFrom() {
+		public Enum<?> overridesDefaultSpanFrom() {
 			return HttpServerObservations.HTTP_SERVER_RESPONSE_TIME;
 		}
 	};

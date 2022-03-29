@@ -16,7 +16,7 @@
 package reactor.netty.http.observability;
 
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.Tag;
+import io.micrometer.common.Tag;
 import io.micrometer.observation.transport.http.HttpServerRequest;
 import io.micrometer.observation.transport.http.context.HttpServerContext;
 import io.micrometer.tracing.Span;

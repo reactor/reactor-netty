@@ -17,7 +17,7 @@ package reactor.netty.http.server;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.docs.DocumentedMeter;
-import io.micrometer.observation.docs.TagKey;
+import io.micrometer.common.docs.TagKey;
 
 /**
  * {@link HttpServer} meters.
