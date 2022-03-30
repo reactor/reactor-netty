@@ -16,6 +16,7 @@
 package reactor.netty.resources;
 
 import io.micrometer.contextpropagation.ContextContainer;
+import io.micrometer.contextpropagation.Namespace;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.resolver.AddressResolverGroup;
@@ -60,6 +61,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -148,7 +150,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				return newPool;
 			});
 
-			ContextContainer container = ContextContainer.create().captureThreadLocalValues();
+			ContextContainer container = ContextContainer.create().captureThreadLocalValues(THREAD_LOCAL_VALUES_PREDICATE);
 			container.captureContext(Context.of(sink.contextView()));
 			Context currentPropagationContext = container.save(Context.empty());
 			EventLoop eventLoop = config.loopResources().onClient(config.isPreferNative()).next();
@@ -314,6 +316,9 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	}
 
 	static final Logger log = Loggers.getLogger(PooledConnectionProvider.class);
+
+	static final String NAMESPACE_MICROMETER_OBSERVATION = "micrometer.observation";
+	static final Predicate<Namespace> THREAD_LOCAL_VALUES_PREDICATE = n -> n.getKey().equals(NAMESPACE_MICROMETER_OBSERVATION);
 
 	protected static final class PoolFactory<T extends Connection> {
 		static final double DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE;

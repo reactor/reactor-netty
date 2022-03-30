@@ -45,6 +45,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.resources.PooledConnectionProvider.THREAD_LOCAL_VALUES_PREDICATE;
 
 /**
  * @author Stephane Maldini
@@ -71,7 +72,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 			DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
 			if (remote != null && resolverGroup != null) {
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
-				ContextContainer container = ContextContainer.create().captureThreadLocalValues();
+				ContextContainer container = ContextContainer.create().captureThreadLocalValues(THREAD_LOCAL_VALUES_PREDICATE);
 				container.captureContext(Context.of(sink.contextView()));
 				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, container)
 				                  .subscribe(disposableConnect);
