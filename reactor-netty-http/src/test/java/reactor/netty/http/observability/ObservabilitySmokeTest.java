@@ -26,6 +26,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.test.SampleTestRunner;
@@ -33,6 +36,7 @@ import io.micrometer.tracing.test.reporter.BuildingBlocks;
 import io.micrometer.tracing.test.simple.SpansAssert;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import reactor.core.publisher.Flux;
@@ -49,7 +53,6 @@ import reactor.netty.resources.ConnectionProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
-import static reactor.netty.Metrics.REGISTRY;
 
 @SuppressWarnings("rawtypes")
 class ObservabilitySmokeTest extends SampleTestRunner {
@@ -57,18 +60,30 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	static DisposableServer disposableServer;
 	static SelfSignedCertificate ssc;
 
+	static MeterRegistry registry;
+
 	ObservabilitySmokeTest() {
-		super(SampleTestRunner.SampleRunnerConfig.builder().build(), OBSERVATION_REGISTRY, REGISTRY);
+		super(SampleTestRunner.SampleRunnerConfig.builder().build(), OBSERVATION_REGISTRY, registry);
 	}
 
 	@BeforeAll
 	static void setUp() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 
+		registry = new SimpleMeterRegistry();
+		Metrics.addRegistry(registry);
+
 		byte[] bytes = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(bytes);
 		content = new String(bytes, Charset.defaultCharset());
+	}
+
+	@AfterAll
+	static void tearDown() {
+		Metrics.removeRegistry(registry);
+		registry.clear();
+		registry.close();
 	}
 
 	@AfterEach
