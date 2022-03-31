@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,8 +73,8 @@ class JarFileShadingTest extends AbstractJarFileTest {
 				.replace("-original.jar", "")
 				.replace(".jar", "");
 
-		String osgiVersion = version.replace("-SNAPSHOT", ".BUILD-")
-				.replace("-M1", ".M1"); //FIXME accommodate all milestones and release candidates
+		String osgiVersion = version.replace('-', '.')
+				.replace(".SNAPSHOT", ".BUILD-");
 
 		try (InputStream inputStream = jar.getInputStream(manifest);
 		     BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, UTF_8))) {
