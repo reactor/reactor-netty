@@ -73,8 +73,8 @@ class JarFileShadingTest extends AbstractJarFileTest {
 				.replace("-original.jar", "")
 				.replace(".jar", "");
 
-		String osgiVersion = version.replace("-SNAPSHOT", ".BUILD-")
-				.replace("-M1", ".M1"); //FIXME accommodate all milestones and release candidates
+		String osgiVersion = version.replace('-', '.')
+				.replace(".SNAPSHOT", ".BUILD-");
 
 		try (InputStream inputStream = jar.getInputStream(manifest);
 		     BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, UTF_8))) {
