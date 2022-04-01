@@ -75,7 +75,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	/**
 	 * Context key used to propagate the caller event loop in the connection pool subscription.
 	 */
-	final static String CONTEXT_CALLER_EVENTLOOP = "callereventloop";
+	protected final static String CONTEXT_CALLER_EVENTLOOP = "callereventloop";
 
 	final PoolFactory<T> defaultPoolFactory;
 	final Map<SocketAddress, PoolFactory<T>> poolFactoryPerRemoteHost = new HashMap<>();
@@ -146,7 +146,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				return newPool;
 			});
 
-			EventLoop eventLoop = config.loopResources().onClient(config.isPreferNative()).next();
+			EventLoop eventLoop = sink.contextView().getOrDefault(CONTEXT_CALLER_EVENTLOOP,
+					config.loopResources().onClient(config.isPreferNative()).next());
 			pool.acquire(Duration.ofMillis(poolFactory.pendingAcquireTimeout))
 			    .contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop))
 			    .subscribe(createDisposableAcquire(config, connectionObserver,
