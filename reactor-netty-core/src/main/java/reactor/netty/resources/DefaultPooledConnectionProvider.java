@@ -231,7 +231,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 						log.debug(format(c, "Immediately aborted pooled channel, re-acquiring new channel"));
 					}
 					pool.acquire(Duration.ofMillis(pendingAcquireTimeout))
-					    .subscribe(new DisposableAcquire(this));
+							.contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, c.eventLoop()))
+							.subscribe(new DisposableAcquire(this));
 				}
 				else {
 					sink.error(new IOException("Error while acquiring from " + pool));

@@ -349,6 +349,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 								"re-acquiring a new channel"));
 						}
 						pool.acquire(Duration.ofMillis(pendingAcquireTimeout))
+						    .contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, channel.eventLoop()))
 						    .subscribe(new DisposableAcquire(this));
 					}
 					else {
