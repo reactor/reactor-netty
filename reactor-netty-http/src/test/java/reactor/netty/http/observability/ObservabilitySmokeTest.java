@@ -15,10 +15,8 @@
  */
 package reactor.netty.http.observability;
 
-import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 import java.util.Random;
@@ -34,6 +32,7 @@ import io.micrometer.tracing.Span;
 import io.micrometer.tracing.test.SampleTestRunner;
 import io.micrometer.tracing.test.reporter.BuildingBlocks;
 import io.micrometer.tracing.test.simple.SpansAssert;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterAll;
@@ -41,7 +40,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.ByteBufMono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
@@ -56,7 +54,7 @@ import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 
 @SuppressWarnings("rawtypes")
 class ObservabilitySmokeTest extends SampleTestRunner {
-	static String content;
+	static byte[] content;
 	static DisposableServer disposableServer;
 	static SelfSignedCertificate ssc;
 
@@ -73,10 +71,9 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
 
-		byte[] bytes = new byte[1024 * 8];
+		content = new byte[1024 * 8];
 		Random rndm = new Random();
-		rndm.nextBytes(bytes);
-		content = new String(bytes, Charset.defaultCharset());
+		rndm.nextBytes(content);
 	}
 
 	@AfterAll
@@ -174,16 +171,18 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 				      .host("localhost")
 				      .metrics(true, Function.identity());
 
-		List<String> responses =
+		List<byte[]> responses =
 				Flux.range(0, 2)
 				    .flatMap(i ->
 				        localClient.post()
 				                   .uri("/post")
-				                   .send(ByteBufMono.fromString(Mono.just(content)))
-				                   .responseSingle((res, byteBuf) -> byteBuf.asString()))
+				                   .send(Mono.just(Unpooled.wrappedBuffer(content)))
+				                   .responseSingle((res, byteBuf) -> byteBuf.asByteArray()))
 				    .collectList()
 				    .block(Duration.ofSeconds(10));
 
-		assertThat(responses).isEqualTo(Arrays.asList(content, content));
+		assertThat(responses).isNotNull().hasSize(2);
+		assertThat(responses.get(0)).isEqualTo(content);
+		assertThat(responses.get(1)).isEqualTo(content);
 	}
 }
