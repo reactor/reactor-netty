@@ -18,7 +18,7 @@ package reactor.netty.http.client;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
@@ -44,7 +44,6 @@ import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.annotation.Nullable;
 
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -191,8 +190,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 	}
 
 	@Override
-	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
-		return sendObject(Flux.from(dataStream).map(byteBuf -> bytebufToWebsocketFrame.apply(extractOrCopy(bufferAlloc(), byteBuf))));
+	public NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream) {
+		return sendObject(Flux.from(dataStream).map(bytebufToWebsocketFrame));
 	}
 
 	@Override

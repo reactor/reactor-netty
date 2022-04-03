@@ -26,22 +26,20 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.CombinedChannelDuplexHandler;
 import io.netty5.handler.codec.ByteToMessageCodec;
-import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpMessage;
+import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -56,7 +54,6 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
-import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.toPrettyHexDump;
 
@@ -105,25 +102,25 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
+	public NettyOutbound sendBuffer(Publisher<? extends Buffer> source) {
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (source instanceof Mono) {
-			return new PostHeadersNettyOutbound(((Mono<ByteBuf>) source)
+			return new PostHeadersNettyOutbound(((Mono<Buffer>) source)
 					.flatMap(msg -> {
 						if (markSentHeaderAndBody(msg)) {
 							try {
 								afterMarkSentHeaders();
 							}
 							catch (RuntimeException e) {
-								ReferenceCountUtil.release(msg);
+								Resource.dispose(msg);
 								return Mono.error(e);
 							}
 							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
 								log.debug(format(channel(), "Dropped HTTP content, " +
 										"since response has Content-Length: 0 {}"), toPrettyHexDump(msg));
-								msg.release();
+								msg.close();
 								return Mono.fromCompletionStage(
 										channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage());
 							}
@@ -131,9 +128,9 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 						}
 						return Mono.fromCompletionStage(channel().writeAndFlush(msg).asStage());
 					})
-					.doOnDiscard(ByteBuf.class, ByteBuf::release), this, null);
+					.doOnDiscard(Buffer.class, Buffer::close), this, null);
 		}
-		return super.send(source);
+		return super.sendBuffer(source);
 	}
 
 	@Override
@@ -142,23 +139,23 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			ReactorNetty.safeRelease(message);
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
-		if (!(message instanceof ByteBuf)) {
+		if (!(message instanceof Buffer)) {
 			return super.sendObject(message);
 		}
-		ByteBuf b = (ByteBuf) message;
+		Buffer b = (Buffer) message;
 		return new PostHeadersNettyOutbound(Mono.fromCompletionStage(() -> {
 			if (markSentHeaderAndBody(b)) {
 				try {
 					afterMarkSentHeaders();
 				}
 				catch (RuntimeException e) {
-					b.release();
+					b.close();
 					throw e;
 				}
 				if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
 					log.debug(format(channel(), "Dropped HTTP content, " +
 							"since response has Content-Length: 0 {}"), toPrettyHexDump(b));
-					b.release();
+					b.close();
 					return channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage();
 				}
 				return channel().writeAndFlush(newFullBodyMessage(b)).asStage();
@@ -200,7 +197,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					afterMarkSentHeaders();
 				}
 				catch (RuntimeException e) {
-					ReferenceCountUtil.release(msg);
+					Resource.dispose(msg);
 					throw e;
 				}
 
@@ -219,11 +216,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	protected abstract void afterMarkSentHeaders();
 
 	protected abstract void onHeadersSent();
-
-	// TODO this is temporary and has to be removed
-	protected HttpMessage newFullBodyMessage(ByteBuf body) {
-		return newFullBodyMessage(extractOrCopy(channel().bufferAllocator(), body));
-	}
 
 	protected abstract HttpMessage newFullBodyMessage(Buffer body);
 
@@ -285,7 +277,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	static void autoAddHttpExtractor(Connection c, String name, ChannelHandler handler) {
 
-		if (handler instanceof ByteToMessageDecoder
+		if (handler instanceof ByteToMessageDecoderForBuffer
 				|| handler instanceof ByteToMessageCodec
 				|| handler instanceof CombinedChannelDuplexHandler) {
 			String extractorName = name + "$extractor";
@@ -317,7 +309,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		catch (RuntimeException e) {
 			for (Object o : objectsToRelease) {
 				try {
-					ReferenceCountUtil.release(o);
+					Resource.dispose(o);
 				}
 				catch (Throwable e2) {
 					// keep going
@@ -351,7 +343,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		catch (RuntimeException e) {
 			for (Object o : objectsToRelease) {
 				try {
-					ReferenceCountUtil.release(o);
+					Resource.dispose(o);
 				}
 				catch (Throwable e2) {
 					// keep going
@@ -423,13 +415,13 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	final static ChannelHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
 			(ctx, msg) -> {
-				if (msg instanceof ByteBufHolder) {
+				if (msg instanceof HttpContent) {
 					if (msg instanceof FullHttpMessage) {
 						// TODO convert into 2 messages if FullHttpMessage
 						ctx.fireChannelRead(msg);
 					}
 					else {
-						ByteBuf bb = ((ByteBufHolder) msg).content();
+						Buffer bb = ((HttpContent<?>) msg).payload();
 						ctx.fireChannelRead(bb);
 						if (msg instanceof LastHttpContent) {
 							ctx.fireChannelRead(new EmptyLastHttpContent(ctx.bufferAllocator()));
@@ -450,9 +442,9 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 		final Mono<Void> source;
 		final HttpOperations<?, ?> parent;
-		final ByteBuf msg;
+		final Buffer msg;
 
-		public PostHeadersNettyOutbound(Mono<Void> source, HttpOperations<?, ?> parent, @Nullable ByteBuf msg) {
+		public PostHeadersNettyOutbound(Mono<Void> source, HttpOperations<?, ?> parent, @Nullable Buffer msg) {
 			this.msg = msg;
 			if (msg != null) {
 				this.source = source.doOnError(this)
@@ -466,15 +458,15 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 		@Override
 		public void run() {
-			if (msg != null && msg.refCnt() > 0) {
-				msg.release();
+			if (msg != null && msg.isAccessible()) {
+				msg.close();
 			}
 		}
 
 		@Override
 		public void accept(Throwable throwable) {
-			if (msg != null && msg.refCnt() > 0) {
-				msg.release();
+			if (msg != null && msg.isAccessible()) {
+				msg.close();
 			}
 		}
 
@@ -484,18 +476,13 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		}
 
 		@Override
-		public ByteBufAllocator alloc() {
+		public BufferAllocator alloc() {
 			return parent.alloc();
 		}
 
 		@Override
-		public BufferAllocator bufferAlloc() {
-			return parent.bufferAlloc();
-		}
-
-		@Override
-		public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
-			return parent.send(dataStream, predicate);
+		public NettyOutbound sendBuffer(Publisher<? extends Buffer> publisher, Predicate<Buffer> predicate) {
+			return parent.sendBuffer(publisher, predicate);
 		}
 
 		@Override

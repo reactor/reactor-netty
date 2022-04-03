@@ -16,8 +16,8 @@
 package reactor.netty.examples.documentation.http.server.sse;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.netty.DisposableServer;
@@ -51,25 +51,23 @@ public class Application {
 		Flux<Long> flux = Flux.interval(Duration.ofSeconds(10));
 		return (request, response) ->
 		        response.sse()
-		                .send(flux.map(Application::toByteBuf), b -> true);
+		                .sendBuffer(flux.map(obj -> toBuffer(obj, response.alloc())), b -> true);
 	}
 
 	/**
 	 * Transforms the Object to ByteBuf following the expected SSE format.
 	 */
-	private static ByteBuf toByteBuf(Object any) {
+	private static Buffer toBuffer(Object obj, BufferAllocator allocator) {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		try {
 			out.write("data: ".getBytes(Charset.defaultCharset()));
-			MAPPER.writeValue(out, any);
+			MAPPER.writeValue(out, obj);
 			out.write("\n\n".getBytes(Charset.defaultCharset()));
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		return ByteBufAllocator.DEFAULT
-		                       .buffer()
-		                       .writeBytes(out.toByteArray());
+		return allocator.copyOf(out.toByteArray());
 	}
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();

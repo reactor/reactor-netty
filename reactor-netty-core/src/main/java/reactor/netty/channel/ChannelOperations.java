@@ -23,13 +23,12 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.util.ReferenceCounted;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -38,7 +37,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.publisher.Sinks;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.ChannelOperationsId;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -170,13 +169,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public ByteBufAllocator alloc() {
-		return connection.channel()
-		                 .alloc();
-	}
-
-	@Override
-	public BufferAllocator bufferAlloc() {
+	public BufferAllocator alloc() {
 		return connection.channel().bufferAllocator();
 	}
 
@@ -283,22 +276,21 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public ByteBufFlux receive() {
-		return ByteBufFlux.fromInbound(receiveObject(), connection.channel()
-		                                                          .alloc());
+	public BufferFlux receive() {
+		return BufferFlux.fromInbound(receiveObject(), alloc());
 	}
 
 	@Override
-	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
+	public NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
 		requireNonNull(predicate, "predicate");
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono) {
 			return then(((Mono<?>) dataStream).flatMap(m -> Mono.fromCompletionStage(channel().writeAndFlush(m).asStage()))
-			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
+			                                 .doOnDiscard(Buffer.class, Buffer::close));
 		}
-		return then(MonoSendMany.byteBufSource(dataStream, channel(), predicate));
+		return then(MonoSendMany.bufferSource(dataStream, channel(), predicate));
 	}
 
 	@Override
@@ -309,7 +301,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 		if (dataStream instanceof Mono) {
 			return then(((Mono<?>) dataStream).flatMap(m -> Mono.fromCompletionStage(channel().writeAndFlush(m).asStage()))
-			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
+			                                  .doOnDiscard(Resource.class, Resource::dispose));
 		}
 		return then(MonoSendMany.objectSource(dataStream, channel(), predicate));
 	}

@@ -24,7 +24,7 @@ import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.core.tck.MeterRegistryAssert;
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http2.HttpConversionUtil;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
@@ -32,6 +32,7 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,7 +41,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
@@ -98,7 +99,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	HttpClient httpClient;
 	private MeterRegistry registry;
 
-	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
+	final Flux<Buffer> body = BufferFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
 	static SelfSignedCertificate ssc;
 	static Http11SslContextSpec serverCtx11;
@@ -138,14 +139,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.metrics(true, Function.identity())
 				.httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
 				.route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().retain().delayElements(Duration.ofMillis(10))))
+								.send(req.receive().send().delayElements(Duration.ofMillis(10))))
 						.post("/2", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().retain().delayElements(Duration.ofMillis(10))))
+								.send(req.receive().send().delayElements(Duration.ofMillis(10))))
 						.post("/4", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().retain().doOnNext(b ->
+								.send(req.receive().send().doOnNext(b ->
 										checkServerConnectionsMicrometer(req))))
 						.post("/5", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().retain().doOnNext(b ->
+								.send(req.receive().send().doOnNext(b ->
 										checkServerConnectionsRecorder(req)))));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
@@ -631,7 +632,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.secure(spec -> spec.sslContext(clientCtx11))
 				.post()
 				.uri("/1")
-				.send(ByteBufFlux.fromString(Mono.just("hello")))
+				.send(BufferFlux.fromString(Mono.just("hello")))
 				.responseContent()
 				.subscribe();
 

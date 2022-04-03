@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.http.client.HttpClient;
 import reactor.test.StepVerifier;
 
@@ -34,6 +34,7 @@ class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .route(r -> r.post("/test", (req, res) -> res.send(req.receive()
+				                                                                .send()
 				                                                                .log("server-received"))))
 				          .bindNow();
 
@@ -42,7 +43,7 @@ class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {
 		Mono<Integer> content = client.headers(h -> h.add("Content-Type", "text/plain"))
 				                      .request(HttpMethod.GET)
 				                      .uri("/status/404")
-				                      .send(ByteBufFlux.fromString(Flux.just("Hello")
+				                      .send(BufferFlux.fromString(Flux.just("Hello")
 				                                                       .log("client-send")))
 				                      .responseSingle((res, buf) -> Mono.just(res.status().code()))
 				                      .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));

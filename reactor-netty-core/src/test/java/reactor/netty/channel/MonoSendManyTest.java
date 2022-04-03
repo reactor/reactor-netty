@@ -25,13 +25,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.timeout.WriteTimeoutHandler;
-import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscription;
@@ -183,28 +181,28 @@ class MonoSendManyTest {
 			//use an extra handler
 			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
 
-			TestPublisher<ByteBuf> source = TestPublisher.createNoncompliant(TestPublisher.Violation.DEFER_CANCELLATION);
+			TestPublisher<Buffer> source = TestPublisher.createNoncompliant(TestPublisher.Violation.DEFER_CANCELLATION);
 
-			IdentityHashMap<ReferenceCounted, Object> discarded = new IdentityHashMap<>();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> flushOnEach);
+			IdentityHashMap<Buffer, Object> discarded = new IdentityHashMap<>();
+			MonoSendMany<Buffer, Buffer> m = MonoSendMany.bufferSource(source, channel, b -> flushOnEach);
 			BaseSubscriber<Void> testSubscriber = m
-				.doOnDiscard(ReferenceCounted.class, v -> discarded.put(v, null))
+				.doOnDiscard(Buffer.class, v -> discarded.put(v, null))
 				.subscribeWith(new BaseSubscriber<Void>() {});
 			Queue<Object> messages = channel.outboundMessages();
-			Queue<ByteBuf> buffersToSend = new ArrayDeque<>(messagesToSend);
+			Queue<Buffer> buffersToSend = new ArrayDeque<>(messagesToSend);
 			for (int j = 0; j < messagesToSend; j++) {
-				buffersToSend.offer(ByteBufAllocator.DEFAULT.buffer().writeInt(j));
+				buffersToSend.offer(channel.bufferAllocator().allocate(16).writeInt(j));
 			}
 
 			RaceTestUtils.race(testSubscriber::cancel, () -> {
-				for (ByteBuf buf : buffersToSend) {
+				for (Buffer buf : buffersToSend) {
 					source.next(buf);
 				}
 			});
 
 			channel.flush();
 
-			messages.forEach(ReferenceCountUtil::safeRelease);
+			messages.forEach(Resource::dispose);
 
 			assertThat(discarded.size() + messages.size())
 					.as("Expect all element are flushed or discarded but was discarded " +
@@ -218,38 +216,38 @@ class MonoSendManyTest {
 	void shouldNotLeakIfFusedOnRacingCancelAndOnNext(boolean flushOnEach) {
 		int messagesToSend = 128;
 
-		ArrayBlockingQueue<ReferenceCounted> discarded = new ArrayBlockingQueue<>(messagesToSend * 2);
+		ArrayBlockingQueue<Buffer> discarded = new ArrayBlockingQueue<>(messagesToSend * 2);
 		Hooks.onNextDropped(v -> {
-			ReferenceCountUtil.safeRelease(v);
-			discarded.add((ReferenceCounted) v);
+			Resource.dispose(v);
+			discarded.add((Buffer) v);
 		});
 		for (int i = 0; i < 10000; i++) {
 			//use an extra handler
 			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
 
-			Sinks.Many<ByteBuf> source = Sinks.many().unicast().onBackpressureBuffer();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source.asFlux(), channel, b -> flushOnEach);
+			Sinks.Many<Buffer> source = Sinks.many().unicast().onBackpressureBuffer();
+			MonoSendMany<Buffer, Buffer> m = MonoSendMany.bufferSource(source.asFlux(), channel, b -> flushOnEach);
 			BaseSubscriber<Void> testSubscriber = m
-					.doOnDiscard(ReferenceCounted.class, discarded::add)
+					.doOnDiscard(Buffer.class, discarded::add)
 					.subscribeWith(new BaseSubscriber<Void>() {});
 			Queue<Object> messages = channel.outboundMessages();
-			Queue<ByteBuf> buffersToSend = new ArrayDeque<>(messagesToSend);
+			Queue<Buffer> buffersToSend = new ArrayDeque<>(messagesToSend);
 			for (int j = 0; j < messagesToSend; j++) {
-				buffersToSend.offer(ByteBufAllocator.DEFAULT.buffer().writeInt(j));
+				buffersToSend.offer(channel.bufferAllocator().allocate(16).writeInt(j));
 			}
 
 			RaceTestUtils.race(testSubscriber::cancel, () -> {
-				for (ByteBuf buf : buffersToSend) {
+				for (Buffer buf : buffersToSend) {
 					source.emitNext(buf, Sinks.EmitFailureHandler.FAIL_FAST);
 				}
 			});
 
-			IdentityHashMap<ReferenceCounted, ?> distinctDiscarded =
+			IdentityHashMap<Buffer, ?> distinctDiscarded =
 					discarded.stream().collect(Collectors.toMap(Function.identity(),
 							Function.identity(), (r1, r2) -> r1, IdentityHashMap::new));
 
 			channel.flush();
-			messages.forEach(ReferenceCountUtil::release);
+			messages.forEach(Resource::dispose);
 
 			assertThat(distinctDiscarded.size() + messages.size())
 					.as("Expect all element are flushed or discarded but was discarded " +

@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty5.handler.ssl.JdkSslContext;
 import io.netty5.handler.ssl.OpenSsl;
 import io.netty5.handler.ssl.OpenSslContext;

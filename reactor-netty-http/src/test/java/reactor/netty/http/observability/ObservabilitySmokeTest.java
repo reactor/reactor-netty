@@ -32,7 +32,6 @@ import io.micrometer.tracing.Span;
 import io.micrometer.tracing.test.SampleTestRunner;
 import io.micrometer.tracing.test.reporter.BuildingBlocks;
 import io.micrometer.tracing.test.simple.SpansAssert;
-import io.netty.buffer.Unpooled;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterAll;
@@ -110,7 +109,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 					          .metrics(true, Function.identity())
 					          .secure(spec -> spec.sslContext(serverCtxHttp))
 					          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2)
-					          .route(r -> r.post("/post", (req, res) -> res.send(req.receive().retain())))
+					          .route(r -> r.post("/post", (req, res) -> res.send(req.receive().send())))
 					          .bindNow();
 
 			HttpClient client;
@@ -176,7 +175,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 				    .flatMap(i ->
 				        localClient.post()
 				                   .uri("/post")
-				                   .send(Mono.just(Unpooled.wrappedBuffer(content)))
+				                   .send((req, out) -> out.sendBuffer(Mono.just(out.alloc().copyOf(content))))
 				                   .responseSingle((res, byteBuf) -> byteBuf.asByteArray()))
 				    .collectList()
 				    .block(Duration.ofSeconds(10));

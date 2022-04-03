@@ -19,7 +19,6 @@ import java.nio.charset.Charset;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import io.netty.buffer.ByteBuf;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -50,7 +49,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	String selectedSubprotocol();
 
 	@Override
-	NettyOutbound send(Publisher<? extends ByteBuf> dataStream);
+	NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream);
 
 	/**
 	 * Prepare to send a close frame on subscribe then close the underlying channel
@@ -112,7 +111,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	@Override
 	default NettyOutbound sendString(Publisher<? extends String> dataStream, Charset charset) {
 		return sendObject(Flux.from(dataStream)
-		                      .map(str -> stringToWebsocketFrame.apply(bufferAlloc(), str)));
+		                      .map(str -> stringToWebsocketFrame.apply(alloc(), str)));
 	}
 
 	BiFunction<? super BufferAllocator, ? super String, ? extends WebSocketFrame> stringToWebsocketFrame  =

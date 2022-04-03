@@ -21,11 +21,11 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
-import io.netty5.util.ReferenceCountUtil;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
@@ -205,7 +205,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				if (log.isDebugEnabled()) {
 					log.debug(format(channel, "{}: dropping frame {}"), this, o);
 				}
-				ReferenceCountUtil.release(o);
+				Resource.dispose(o);
 			}
 		}
 	}
@@ -267,8 +267,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 				try {
 					if (logLeakDetection.isDebugEnabled()) {
-						if (v instanceof ByteBuf) {
-							((ByteBuf) v).touch(format(channel, "Receiver " + a.getClass().getName() +
+						if (v instanceof Buffer buffer) {
+							buffer.touch(format(channel, "Receiver " + a.getClass().getName() +
 									" will handle the message from this point"));
 						}
 						else if (v instanceof ByteBufHolder) {
@@ -280,7 +280,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				}
 				finally {
 					try {
-						ReferenceCountUtil.release(v);
+						Resource.dispose(v);
 					}
 					catch (Throwable t) {
 						inboundError = t;
@@ -345,15 +345,15 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel, "{}: dropping frame {}"), this, msg);
 			}
-			ReferenceCountUtil.release(msg);
+			Resource.dispose(msg);
 			return;
 		}
 
 		if (receiverFastpath && receiver != null) {
 			try {
 				if (logLeakDetection.isDebugEnabled()) {
-					if (msg instanceof ByteBuf) {
-						((ByteBuf) msg).touch(format(channel, "Receiver " + receiver.getClass().getName() +
+					if (msg instanceof Buffer buffer) {
+						buffer.touch(format(channel, "Receiver " + receiver.getClass().getName() +
 								" will handle the message from this point"));
 					}
 					else if (msg instanceof ByteBufHolder) {
@@ -364,7 +364,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				receiver.onNext(msg);
 			}
 			finally {
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 			}
 		}
 		else {
@@ -377,8 +377,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				receiverQueue = q;
 			}
 			if (logLeakDetection.isDebugEnabled()) {
-				if (msg instanceof ByteBuf) {
-					((ByteBuf) msg).touch(format(channel, "Buffered ByteBuf in the inbound buffer queue"));
+				if (msg instanceof Buffer buffer) {
+					buffer.touch(format(channel, "Buffered Buffer in the inbound buffer queue"));
 				}
 				else if (msg instanceof ByteBufHolder) {
 					((ByteBufHolder) msg).touch(format(channel, "Buffered ByteBufHolder in the inbound buffer queue"));

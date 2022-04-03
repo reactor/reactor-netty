@@ -56,9 +56,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -98,8 +97,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.ByteBufFlux;
-import reactor.netty.ByteBufMono;
+import reactor.netty.BufferFlux;
+import reactor.netty.BufferMono;
 import reactor.netty.Connection;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
@@ -154,7 +153,7 @@ class HttpClientTest extends BaseHttpTest {
 				                                   c.addHandlerFirst(new HttpResponseEncoder()))
 				                              .sendObject(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 				                                                                      HttpResponseStatus.ACCEPTED,
-				                                                                      out.bufferAlloc().allocate(0)))
+				                                                                      out.alloc().allocate(0)))
 				                              .then(Mono.delay(Duration.ofSeconds(2)).then()))))
 				         .wiretap(true)
 				         .bindNow();
@@ -203,7 +202,7 @@ class HttpClientTest extends BaseHttpTest {
 				        })
 				        .post()
 				        .uri("/foo")
-				        .send(ByteBufFlux.fromString(Mono.just("bar")))
+				        .send(BufferFlux.fromString(Mono.just("bar")))
 				        .response()
 				        .block(Duration.ofSeconds(30));
 
@@ -241,7 +240,7 @@ class HttpClientTest extends BaseHttpTest {
 		                                           .toString()))
 		                  .post()
 		                  .uri("/")
-		                  .send(ByteBufFlux.fromString(Flux.just(data)))
+		                  .send(BufferFlux.fromString(Flux.just(data)))
 		                  .responseContent())
 		    .subscribe();
 
@@ -312,7 +311,7 @@ class HttpClientTest extends BaseHttpTest {
 		                             .route(routes -> routes.directory("/test", resource))
 		                             .bindNow();
 
-		ByteBufFlux remote =
+		BufferFlux remote =
 				createHttpClientForContextWithPort()
 				        .get()
 				        .uri("/test/test.css")
@@ -388,7 +387,7 @@ class HttpClientTest extends BaseHttpTest {
 				                       .sendObject(Mono.delay(Duration.ofSeconds(2))
 				                                       .map(t -> new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 				                                                                             HttpResponseStatus.PROCESSING,
-				                                                                             out.bufferAlloc().allocate(0))))
+				                                                                             out.alloc().allocate(0))))
 				                       .neverComplete();
 				         })
 				         .wiretap(true)
@@ -831,7 +830,7 @@ class HttpClientTest extends BaseHttpTest {
 				createHttpClientForContextWithPort()
 				        .request(HttpMethod.GET)
 				        .uri("/")
-				        .send(ByteBufFlux.fromInbound(Mono.defer(() -> Mono.just("Hello".getBytes(Charset.defaultCharset())))))
+				        .send(BufferFlux.fromInbound(Mono.defer(() -> Mono.just("Hello".getBytes(Charset.defaultCharset())))))
 				        .responseContent()
 				        .aggregate()
 				        .asString();
@@ -876,7 +875,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		String response = client.post()
 		                        .uri("/")
-		                        .send(ByteBufFlux.fromString(Mono.just("test")
+		                        .send(BufferFlux.fromString(Mono.just("test")
 		                                         .then(Mono.error(new Exception("error")))))
 		                        .responseContent()
 		                        .aggregate()
@@ -888,7 +887,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		response = client.post()
 		                 .uri("/")
-		                 .send(ByteBufFlux.fromString(Mono.just("test")))
+		                 .send(BufferFlux.fromString(Mono.just("test")))
 		                 .responseContent()
 		                 .aggregate()
 		                 .asString()
@@ -949,7 +948,7 @@ class HttpClientTest extends BaseHttpTest {
 		StepVerifier.create(client.doOnConnected(c -> ch2.set(c.channel()))
 				                  .post()
 				                  .uri("/2")
-				                  .send(ByteBufFlux.fromString(Mono.just("test")))
+				                  .send(BufferFlux.fromString(Mono.just("test")))
 				                  .responseContent()
 				                  .aggregate()
 				                  .asString())
@@ -1014,7 +1013,7 @@ class HttpClientTest extends BaseHttpTest {
 		StepVerifier.create(client.doOnConnected(c -> ch2.set(c.channel()))
 				                  .post()
 				                  .uri("/2")
-				                  .send(ByteBufFlux.fromString(Mono.just("test")))
+				                  .send(BufferFlux.fromString(Mono.just("test")))
 				                  .responseContent()
 				                  .aggregate()
 				                  .asString())
@@ -1058,7 +1057,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		disposableServer =
 				createServer()
-				          .handle((req, res) -> res.send(req.receive().retain()))
+				          .handle((req, res) -> res.send(req.receive().send()))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1195,7 +1194,7 @@ class HttpClientTest extends BaseHttpTest {
 				                                .get(HttpHeaderNames.CONTENT_LENGTH))
 				                     .send(req.receive()
 				                              .aggregate()
-				                              .retain()))
+				                              .send()))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1203,8 +1202,7 @@ class HttpClientTest extends BaseHttpTest {
 				        .headers(h -> h.add(HttpHeaderNames.CONTENT_LENGTH, 5))
 				        .post()
 				        .uri("/")
-				        .send(Mono.just(preferredAllocator().copyOf("hello".getBytes(Charset.defaultCharset())))
-				                  .map(ByteBufAdaptor::intoByteBuf))
+				        .send(Mono.just(preferredAllocator().copyOf("hello".getBytes(Charset.defaultCharset()))))
 				        .responseContent()
 				        .aggregate()
 				        .asString())
@@ -1225,7 +1223,7 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .secure(ssl -> ssl.sslContext(sslServer))
-				          .handle((req, res) -> res.send(req.receive().retain()))
+				          .handle((req, res) -> res.send(req.receive().send()))
 				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.create("testExplicitEmptyBodyOnGetWorks", 1);
@@ -1248,7 +1246,7 @@ class HttpClientTest extends BaseHttpTest {
 	void testExplicitSendMonoErrorOnGet() {
 		disposableServer =
 				createServer()
-				          .handle((req, res) -> res.send(req.receive().retain()))
+				          .handle((req, res) -> res.send(req.receive().send()))
 				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.create("test", 1);
@@ -1409,7 +1407,7 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .handle((req, res) -> res.send(req.receive()
-				                                            .retain()
+				                                            .send()
 				                                            .delaySubscription(Duration.ofSeconds(1))))
 				          .bindNow();
 
@@ -1525,29 +1523,23 @@ class HttpClientTest extends BaseHttpTest {
 
 		HttpClient client = createHttpClientForContextWithPort();
 
-		ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
+		BufferAllocator alloc = preferredAllocator();
 
-		ByteBuf buffer1 = alloc.buffer()
-		                       .writeInt(1)
-		                       .retain(9);
-		client.request(HttpMethod.GET)
-		      .send((req, out) -> out.send(Flux.range(0, 10)
-		                                       .map(i -> buffer1)))
-		      .response()
-		      .block(Duration.ofSeconds(30));
+		try (Buffer buffer1 = alloc.allocate(16).writeInt(1).makeReadOnly()) {
+			client.request(HttpMethod.GET)
+			      .send((req, out) -> out.sendBuffer(Flux.range(0, 10)
+			                                             .map(i -> buffer1.copy(0, buffer1.readableBytes(), true))))
+			      .response()
+			      .block(Duration.ofSeconds(30));
+		}
 
-		assertThat(buffer1.refCnt()).isEqualTo(0);
-
-		ByteBuf buffer2 = alloc.buffer()
-		                       .writeInt(1)
-		                       .retain(9);
-		client.request(HttpMethod.GET)
-		      .send(Flux.range(0, 10)
-		                .map(i -> buffer2))
-		      .response()
-		      .block(Duration.ofSeconds(30));
-
-		assertThat(buffer2.refCnt()).isEqualTo(0);
+		try (Buffer buffer2 = alloc.allocate(16).writeInt(1).makeReadOnly()) {
+			client.request(HttpMethod.GET)
+			      .send(Flux.range(0, 10)
+			                .map(i -> buffer2.copy(0, buffer2.readableBytes(), true)))
+			      .response()
+			      .block(Duration.ofSeconds(30));
+		}
 	}
 
 	@Test
@@ -1615,7 +1607,7 @@ class HttpClientTest extends BaseHttpTest {
 		                })
 		        .post()
 		        .uri("/")
-		        .send(ByteBufFlux.fromString(Mono.just("bodysample")))
+		        .send(BufferFlux.fromString(Mono.just("bodysample")))
 		        .responseContent()
 		        .aggregate()
 		        .asString()
@@ -1652,8 +1644,7 @@ class HttpClientTest extends BaseHttpTest {
 	void testDoOnRequestInvokedBeforeSendingRequest() {
 		disposableServer =
 				createServer()
-				          .handle((req, res) -> res.send(req.receive()
-				                                            .retain()))
+				          .handle((req, res) -> res.send(req.receive().send()))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1678,53 +1669,53 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	void testIssue719_TEWithTextNoSSL() {
-		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
+		doTestIssue719(BufferFlux.fromString(Mono.just("test")),
 				h -> h.set("Transfer-Encoding", "chunked"), false);
 	}
 
 	@Test
 	void testIssue719_CLWithTextNoSSL() {
-		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
+		doTestIssue719(BufferFlux.fromString(Mono.just("test")),
 				h -> h.set("Content-Length", "4"), false);
 	}
 
 	@Test
 	void testIssue719_TENoTextNoSSL() {
-		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
+		doTestIssue719(BufferFlux.fromString(Mono.just("")),
 				h -> h.set("Transfer-Encoding", "chunked"), false);
 	}
 
 	@Test
 	void testIssue719_CLNoTextNoSSL() {
-		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
+		doTestIssue719(BufferFlux.fromString(Mono.just("")),
 				h -> h.set("Content-Length", "0"), false);
 	}
 
 	@Test
 	void testIssue719_TEWithTextWithSSL() {
-		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
+		doTestIssue719(BufferFlux.fromString(Mono.just("test")),
 				h -> h.set("Transfer-Encoding", "chunked"), true);
 	}
 
 	@Test
 	void testIssue719_CLWithTextWithSSL() {
-		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
+		doTestIssue719(BufferFlux.fromString(Mono.just("test")),
 				h -> h.set("Content-Length", "4"), true);
 	}
 
 	@Test
 	void testIssue719_TENoTextWithSSL() {
-		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
+		doTestIssue719(BufferFlux.fromString(Mono.just("")),
 				h -> h.set("Transfer-Encoding", "chunked"), true);
 	}
 
 	@Test
 	void testIssue719_CLNoTextWithSSL() {
-		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
+		doTestIssue719(BufferFlux.fromString(Mono.just("")),
 				h -> h.set("Content-Length", "0"), true);
 	}
 
-	private void doTestIssue719(Publisher<ByteBuf> clientSend,
+	private void doTestIssue719(Publisher<Buffer> clientSend,
 			Consumer<HttpHeaders> clientSendHeaders, boolean ssl) {
 		HttpServer server =
 				createServer()
@@ -1794,7 +1785,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		HttpClient client = createHttpClientForContextWithAddress();
 
-		BiFunction<HttpClientResponse, ByteBufMono, Mono<String>> receiver =
+		BiFunction<HttpClientResponse, BufferMono, Mono<String>> receiver =
 				(resp, bytes) -> {
 					if (!Objects.equals(HttpResponseStatus.OK, resp.status())) {
 						return bytes.asString()
@@ -1815,7 +1806,7 @@ class HttpClientTest extends BaseHttpTest {
 		doTestIssue777_1(client, "/empty", "error", receiver);
 		doTestIssue777_1(client, "/test", "error", receiver);
 
-		BiFunction<HttpClientResponse, ByteBufMono, Mono<Tuple2<String, HttpClientResponse>>> receiver1 =
+		BiFunction<HttpClientResponse, BufferMono, Mono<Tuple2<String, HttpClientResponse>>> receiver1 =
 				(resp, byteBuf) ->
 						Mono.zip(byteBuf.asString(StandardCharsets.UTF_8)
 						                .switchIfEmpty(Mono.just(resp.status().reasonPhrase())),
@@ -1837,7 +1828,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	private void doTestIssue777_1(HttpClient client, String uri, String expectation,
-			BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<String>> receiver) {
+			BiFunction<? super HttpClientResponse, ? super BufferMono, ? extends Mono<String>> receiver) {
 		StepVerifier.create(
 		        client.post()
 		              .uri(uri)
@@ -1848,7 +1839,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	private void doTestIssue777_2(HttpClient client, String uri, String expectation,
-			BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<Tuple2<String, HttpClientResponse>>> receiver) {
+			BiFunction<? super HttpClientResponse, ? super BufferMono, ? extends Mono<Tuple2<String, HttpClientResponse>>> receiver) {
 		StepVerifier.create(
 		        client.post()
 		              .uri(uri)
@@ -2092,7 +2083,7 @@ class HttpClientTest extends BaseHttpTest {
 	private ChannelId[] doTestConnectionLifeTime(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.handle((req, resp) ->
-				          resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30))
+				          resp.sendObject(BufferFlux.fromString(Mono.delay(Duration.ofMillis(30))
 				                                                     .map(Objects::toString))))
 				      .bindNow();
 
@@ -2128,7 +2119,7 @@ class HttpClientTest extends BaseHttpTest {
 				        .secure(spec -> spec.sslContext(serverCtx))
 				        .http2Settings(setting -> setting.maxConcurrentStreams(2))
 				        .handle((req, resp) ->
-				            resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30))
+				            resp.sendObject(BufferFlux.fromString(Mono.delay(Duration.ofMillis(30))
 				                                                       .map(Objects::toString))))
 				        .bindNow();
 
@@ -2247,7 +2238,7 @@ class HttpClientTest extends BaseHttpTest {
 		StepVerifier.create(client.doOnConnected(c -> ch2.set(c.channel()))
 				                  .post()
 				                  .uri("/2")
-				                  .send(ByteBufFlux.fromString(Mono.just("test")))
+				                  .send(BufferFlux.fromString(Mono.just("test")))
 				                  .responseContent()
 				                  .aggregate()
 				                  .asString())
@@ -2687,7 +2678,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .handle((req, res) -> res.addHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
 				                                   .status(HttpResponseStatus.BAD_REQUEST)
 				                                   .send(req.receive()
-				                                            .retain()
+				                                            .send()
 				                                            .next()))
 				          .bindNow();
 

@@ -20,6 +20,8 @@ import java.util.Objects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.logging.BufferFormat;
@@ -130,8 +132,8 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 
 	@Override
 	protected String format(ChannelHandlerContext ctx, String eventName, Object arg) {
-		if (arg instanceof ByteBuf) {
-			return formatByteBuf(ctx, eventName, (ByteBuf) arg);
+		if (arg instanceof Buffer) {
+			return formatBuffer(ctx, eventName, (Buffer) arg);
 		}
 		else if (arg instanceof ByteBufHolder) {
 			return formatByteBufHolder(ctx, eventName, (ByteBufHolder) arg);
@@ -196,7 +198,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		return result.toString();
 	}
 
-	private String formatByteBuf(ChannelHandlerContext ctx, String eventName, ByteBuf msg) {
+	private String formatBuffer(ChannelHandlerContext ctx, String eventName, Buffer msg) {
 		String chStr = channelString(ctx.channel());
 		int length = msg.readableBytes();
 		if (length == 0) {
@@ -228,7 +230,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 					.append('B');
 			if (byteBufFormat == HEX_DUMP) {
 				buf.append(NEWLINE);
-				appendPrettyHexDump(buf, msg);
+				BufferUtil.appendPrettyHexDump(buf, msg);
 			}
 			else if (byteBufFormat == TEXTUAL) {
 				buf.append(' ').append(message);

@@ -99,7 +99,7 @@ class WebsocketClientOperationsTest extends BaseHttpTest {
 				.bindNow();
 
 		List<String> response = createClient(disposableServer.port())
-				.websocket(WebsocketClientSpec.builder().version(WebSocketVersion.V08).build())
+				.websocket(WebsocketClientSpec.builder().version(WebSocketVersion.V13).build())
 				.uri("/test")
 				.handle((in, out) -> in.receive().aggregate().asString())
 				.collectList()

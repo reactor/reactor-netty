@@ -16,7 +16,7 @@
 package reactor.netty.examples.documentation.http.client.send;
 
 import reactor.core.publisher.Mono;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.http.client.HttpClient;
 
 public class Application {
@@ -26,7 +26,7 @@ public class Application {
 
 		client.post()
 		      .uri("https://example.com/")
-		      .send(ByteBufFlux.fromString(Mono.just("hello"))) //<1>
+		      .send(BufferFlux.fromString(Mono.just("hello"))) //<1>
 		      .response()
 		      .block();
 	}

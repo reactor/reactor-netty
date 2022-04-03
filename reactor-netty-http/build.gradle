@@ -207,9 +207,22 @@ task japicmp(type: JapicmpTask) {
 	ignoreMissingClasses = true
 	includeSynthetic = true
 	onlyIf { "$compatibleVersion" != "SKIP" }
+	fieldExcludes = [
+			'reactor.netty.http.websocket.WebsocketOutbound#stringToWebsocketFrame',
+
+			// Deprecated field is removed
+			'reactor.netty.http.HttpDecoderSpec#DEFAULT_MAX_CHUNK_SIZE'
+	]
 	methodExcludes = [
+			'reactor.netty.http.HttpOperations#send(org.reactivestreams.Publisher)',
+
+			'reactor.netty.http.client.HttpClient$ResponseReceiver#responseContent()',
+			'reactor.netty.http.client.HttpClient$WebsocketReceiver#receive()',
+
 			// Deprecated methods are removed
 			'reactor.netty.http.Cookies#newServerRequestHolder(io.netty.handler.codec.http.HttpHeaders, io.netty.handler.codec.http.cookie.ServerCookieDecoder)',
+			'reactor.netty.http.HttpDecoderSpec#maxChunkSize()',
+			'reactor.netty.http.HttpDecoderSpec#maxChunkSize(int)',
 			'reactor.netty.http.HttpOperations#addHandler(java.lang.String, io.netty.channel.ChannelHandler)',
 
 			'reactor.netty.http.client.HttpClient#from(reactor.netty.tcp.TcpClient)',
@@ -227,7 +240,48 @@ task japicmp(type: JapicmpTask) {
 
 			// TODO temporary disable multipart on the server
 			'reactor.netty.http.server.HttpServerRequest#receiveForm()',
-			'reactor.netty.http.server.HttpServerRequest#receiveForm(java.util.function.Consumer)'
+			'reactor.netty.http.server.HttpServerRequest#receiveForm(java.util.function.Consumer)',
+
+			// Changes related to Netty 5 package change
+			'reactor.netty.http.Cookies#newClientResponseHolder(io.netty.handler.codec.http.HttpHeaders, io.netty.handler.codec.http.cookie.ClientCookieDecoder)',
+			'reactor.netty.http.HttpInfos#method()',
+			'reactor.netty.http.HttpInfos#version()',
+			'reactor.netty.http.HttpResources#getOrCreateDefaultResolver()',
+
+			'reactor.netty.http.client.HttpClient#cookie(io.netty.handler.codec.http.cookie.Cookie)',
+			'reactor.netty.http.client.HttpClient#cookieCodec(io.netty.handler.codec.http.cookie.ClientCookieEncoder)',
+			'reactor.netty.http.client.HttpClient#cookieCodec(io.netty.handler.codec.http.cookie.ClientCookieEncoder, io.netty.handler.codec.http.cookie.ClientCookieDecoder)',
+			'reactor.netty.http.client.HttpClient#request(io.netty.handler.codec.http.HttpMethod)',
+			'reactor.netty.http.client.HttpClientConfig#cookieDecoder()',
+			'reactor.netty.http.client.HttpClientConfig#cookieEncoder()',
+			'reactor.netty.http.client.HttpClientConfig#defaultAddressResolverGroup()',
+			'reactor.netty.http.client.HttpClientConfig#headers()',
+			'reactor.netty.http.client.HttpClientConfig#method()',
+			'reactor.netty.http.client.HttpClientInfos#requestHeaders()',
+			'reactor.netty.http.client.HttpClientRequest#addCookie(io.netty.handler.codec.http.cookie.Cookie)',
+			'reactor.netty.http.client.HttpClientRequest#headers(io.netty.handler.codec.http.HttpHeaders)',
+			'reactor.netty.http.client.HttpClientResponse#responseHeaders()',
+			'reactor.netty.http.client.HttpClientResponse#status()',
+			'reactor.netty.http.client.WebsocketClientSpec#version()',
+			'reactor.netty.http.client.WebsocketClientSpec$Builder#version(io.netty.handler.codec.http.websocketx.WebSocketVersion)',
+
+			'reactor.netty.http.server.HttpRouteHandlerMetadata#getMethod()',
+			'reactor.netty.http.server.HttpServer#channelGroup(io.netty.channel.group.ChannelGroup)',
+			'reactor.netty.http.server.HttpServer#cookieCodec(io.netty.handler.codec.http.cookie.ServerCookieEncoder)',
+			'reactor.netty.http.server.HttpServer#cookieCodec(io.netty.handler.codec.http.cookie.ServerCookieEncoder, io.netty.handler.codec.http.cookie.ServerCookieDecoder)',
+			'reactor.netty.http.server.HttpServerConfig#cookieDecoder()',
+			'reactor.netty.http.server.HttpServerConfig#cookieEncoder()',
+			'reactor.netty.http.server.HttpServerRequest#requestHeaders()',
+			'reactor.netty.http.server.HttpServerResponse#addCookie(io.netty.handler.codec.http.cookie.Cookie)',
+			'reactor.netty.http.server.HttpServerResponse#headers(io.netty.handler.codec.http.HttpHeaders)',
+			'reactor.netty.http.server.HttpServerResponse#responseHeaders()',
+			'reactor.netty.http.server.HttpServerResponse#status()',
+			'reactor.netty.http.server.HttpServerResponse#status(io.netty.handler.codec.http.HttpResponseStatus)',
+			'reactor.netty.http.server.ServerCookies#newServerRequestHolder(io.netty.handler.codec.http.HttpHeaders, io.netty.handler.codec.http.cookie.ServerCookieDecoder)',
+
+			'reactor.netty.http.server.logging.AccessLogHandlerFactory#create(java.util.function.Function)',
+
+			'reactor.netty.http.websocket.WebsocketInbound#headers()'
 	]
 	classExcludes = [
 			// TODO temporary disable multipart on the client

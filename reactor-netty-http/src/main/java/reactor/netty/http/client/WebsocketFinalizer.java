@@ -20,17 +20,18 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelOption;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.Connection;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static reactor.netty.http.client.HttpClientFinalizer.contentReceiver;
 
 /**
@@ -107,16 +108,16 @@ final class WebsocketFinalizer extends HttpClientConnect implements HttpClient.W
 	}
 
 	@Override
-	public ByteBufFlux receive() {
-		ByteBufAllocator alloc = (ByteBufAllocator) configuration().options()
-		                                                           .get(ChannelOption.ALLOCATOR);
+	public BufferFlux receive() {
+		BufferAllocator alloc = (BufferAllocator) configuration().options()
+		                                                         .get(ChannelOption.BUFFER_ALLOCATOR);
 		if (alloc == null) {
-			alloc = ByteBufAllocator.DEFAULT;
+			alloc = preferredAllocator();
 		}
 
 		@SuppressWarnings("unchecked")
 		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) connect();
-		return ByteBufFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
+		return BufferFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
 	}
 
 	@Override

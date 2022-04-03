@@ -32,9 +32,9 @@ public interface NettyInbound {
 	/**
 	 * A {@link Flux} extension that allows for extra decoding operators
 	 *
-	 * @return a new {@link ByteBufFlux}
+	 * @return a new {@link BufferFlux}
 	 */
-	ByteBufFlux receive();
+	BufferFlux receive();
 
 
 	/**

@@ -17,7 +17,7 @@ package reactor.netty.examples.http.echo;
 
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.core.publisher.Mono;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.client.HttpClient;
 
@@ -51,7 +51,7 @@ public final class EchoClient {
 		String response =
 				client.post()
 				      .uri("/echo")
-				      .send(ByteBufFlux.fromString(Mono.just("echo")))
+				      .send(BufferFlux.fromString(Mono.just("echo")))
 				      .responseContent()
 				      .aggregate()
 				      .asString()

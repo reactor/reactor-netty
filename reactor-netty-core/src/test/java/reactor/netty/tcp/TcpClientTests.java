@@ -40,8 +40,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
@@ -71,6 +70,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.retry.Retry;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -758,7 +758,7 @@ public class TcpClientTests {
 				TcpServer.create()
 				         .port(0)
 				         .handle((req, res) -> res.send(req.receive()
-				                                           .retain()
+				                                           .send()
 				                                           .delaySubscription(Duration.ofSeconds(1))))
 				         .wiretap(true)
 				         .bindNow();
@@ -809,7 +809,7 @@ public class TcpClientTests {
 
 		final CountDownLatch latch = new CountDownLatch(1);
 
-		Supplier<SocketAddress> addressSupplier = new Supplier<SocketAddress>() {
+		Supplier<SocketAddress> addressSupplier = new Supplier<>() {
 			int i = 2;
 
 			@Override
@@ -879,21 +879,20 @@ public class TcpClientTests {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
-				         .handle((req, res) -> res.send(req.receive()
-				                                           .retain()))
+				         .handle((req, res) -> res.send(req.receive().send()))
 				         .wiretap(true)
 				         .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(1);
 
 		byte[] bytes = "test".getBytes(Charset.defaultCharset());
-		ByteBuf b1 = Unpooled.wrappedBuffer(bytes);
-		ByteBuf b2 = Unpooled.wrappedBuffer(bytes);
-		ByteBuf b3 = Unpooled.wrappedBuffer(bytes);
+		Buffer b1 = preferredAllocator().copyOf(bytes);
+		Buffer b2 = preferredAllocator().copyOf(bytes);
+		Buffer b3 = preferredAllocator().copyOf(bytes);
 
-		WeakReference<ByteBuf> refCheck1 = new WeakReference<>(b1);
-		WeakReference<ByteBuf> refCheck2 = new WeakReference<>(b2);
-		WeakReference<ByteBuf> refCheck3 = new WeakReference<>(b3);
+		WeakReference<Buffer> refCheck1 = new WeakReference<>(b1);
+		WeakReference<Buffer> refCheck2 = new WeakReference<>(b2);
+		WeakReference<Buffer> refCheck3 = new WeakReference<>(b3);
 
 		Connection conn =
 				TcpClient.create()
@@ -918,15 +917,15 @@ public class TcpClientTests {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		assertThat(b1.refCnt()).isEqualTo(0);
+		assertThat(b1.isAccessible()).isFalse();
 		b1 = null;
 		checkReference(refCheck1);
 
-		assertThat(b2.refCnt()).isEqualTo(0);
+		assertThat(b2.isAccessible()).isFalse();
 		b2 = null;
 		checkReference(refCheck2);
 
-		assertThat(b3.refCnt()).isEqualTo(0);
+		assertThat(b3.isAccessible()).isFalse();
 		b3 = null;
 		checkReference(refCheck3);
 
@@ -939,19 +938,18 @@ public class TcpClientTests {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
-				         .handle((req, res) -> res.send(req.receive()
-				                                           .retain()))
+				         .handle((req, res) -> res.send(req.receive().send()))
 				         .wiretap(true)
 				         .bindNow();
 
 		byte[] bytes = "test".getBytes(Charset.defaultCharset());
-		ByteBuf b1 = Unpooled.wrappedBuffer(bytes);
-		ByteBuf b2 = Unpooled.wrappedBuffer(bytes);
-		ByteBuf b3 = Unpooled.wrappedBuffer(bytes);
+		Buffer b1 = preferredAllocator().copyOf(bytes);
+		Buffer b2 = preferredAllocator().copyOf(bytes);
+		Buffer b3 = preferredAllocator().copyOf(bytes);
 
-		WeakReference<ByteBuf> refCheck1 = new WeakReference<>(b1);
-		WeakReference<ByteBuf> refCheck2 = new WeakReference<>(b2);
-		WeakReference<ByteBuf> refCheck3 = new WeakReference<>(b3);
+		WeakReference<Buffer> refCheck1 = new WeakReference<>(b1);
+		WeakReference<Buffer> refCheck2 = new WeakReference<>(b2);
+		WeakReference<Buffer> refCheck3 = new WeakReference<>(b3);
 
 		Connection conn =
 				TcpClient.create()
@@ -965,7 +963,7 @@ public class TcpClientTests {
 		   .then()
 		   .block(Duration.ofSeconds(30));
 
-		assertThat(b1.refCnt()).isEqualTo(0);
+		assertThat(b1.isAccessible()).isFalse();
 		b1 = null;
 		checkReference(refCheck1);
 
@@ -973,7 +971,7 @@ public class TcpClientTests {
 		   .then()
 		   .block(Duration.ofSeconds(30));
 
-		assertThat(b2.refCnt()).isEqualTo(0);
+		assertThat(b2.isAccessible()).isFalse();
 		b2 = null;
 		checkReference(refCheck2);
 
@@ -981,7 +979,7 @@ public class TcpClientTests {
 		   .then()
 		   .block(Duration.ofSeconds(30));
 
-		assertThat(b3.refCnt()).isEqualTo(0);
+		assertThat(b3.isAccessible()).isFalse();
 		b3 = null;
 		checkReference(refCheck3);
 
@@ -989,7 +987,7 @@ public class TcpClientTests {
 		conn.disposeNow();
 	}
 
-	private void checkReference(WeakReference<ByteBuf> ref) throws Exception {
+	private void checkReference(WeakReference<Buffer> ref) throws Exception {
 		for (int i = 0; i < 10; i++) {
 			if (ref.get() == null) {
 				return;

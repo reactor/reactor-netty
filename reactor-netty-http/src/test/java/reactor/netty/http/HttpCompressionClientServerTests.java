@@ -28,6 +28,7 @@ import java.util.zip.GZIPInputStream;
 import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -458,15 +459,15 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 			server1 =
 					createServer(port1)
 					          .compress(true)
-					          .handle((in, out) -> out.send(
+					          .handle((in, out) -> out.sendBuffer(
 					              createClient(port2)
 					                        .get()
 					                        .uri("/")
 					                        .responseContent()
 					                        .doOnError(error::set)))
-					          // .retain() deliberately not invoked
-					          // so that .release() in FluxReceive.drainReceiver will fail
-					          //.retain()))
+					          // .send() deliberately not invoked
+					          // so that .close() in FluxReceive.drainReceiver will fail
+					          //.send()))
 					          .bindNow();
 
 			server2 =
@@ -517,7 +518,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 					                        .get()
 					                        .uri("/")
 					                        .responseContent()
-					                        .retain()
+					                        .send()
 					                        .flatMap(b -> out.send(Mono.just(b)))
 					                        .doOnError(error::set))
 					          .bindNow();

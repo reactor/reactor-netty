@@ -45,7 +45,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.ByteBufMono;
+import reactor.netty.BufferMono;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
@@ -334,7 +334,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				        .wiretap(false)
 				        .protocol(HttpProtocol.H2)
 				        .secure(spec -> spec.sslContext(serverCtx))
-				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().retain())))
+				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().send())))
 				        .bindNow();
 
 		int requestsNum = 10;
@@ -373,7 +373,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			    .flatMap(i ->
 			        client.post()
 			              .uri("/")
-			              .send(ByteBufMono.fromString(Mono.just("testConnectionIdleWhenNoActiveStreams")))
+			              .send(BufferMono.fromString(Mono.just("testConnectionIdleWhenNoActiveStreams")))
 			              .responseContent()
 			              .aggregate()
 			              .asString())
@@ -560,7 +560,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				        .wiretap(false)
 				        .protocol(HttpProtocol.H2)
 				        .secure(spec -> spec.sslContext(serverCtx))
-				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().retain())))
+				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().send())))
 				        .bindNow();
 
 		int requestsNum = 100;
@@ -601,7 +601,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			    .flatMap(i ->
 			        client.post()
 			              .uri("/")
-			              .send(ByteBufMono.fromString(Mono.just("testMinConnections")))
+			              .send(BufferMono.fromString(Mono.just("testMinConnections")))
 			              .responseContent()
 			              .aggregate()
 			              .asString())

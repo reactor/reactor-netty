@@ -21,7 +21,7 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import org.junit.jupiter.api.Test;
@@ -140,8 +140,7 @@ class FluxReceiveTest extends BaseHttpTest {
 		ChannelOperations<?, ?> ops = new ChannelOperations<>(connection, observer);
 		ops.bind();
 
-		ByteBuf buffer = channel.alloc().buffer();
-		buffer.writeCharSequence("testIssue1016", Charset.defaultCharset());
+		Buffer buffer = channel.bufferAllocator().copyOf("testIssue1016".getBytes(Charset.defaultCharset()));
 		ops.inbound.onInboundNext(buffer);
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -152,7 +151,7 @@ class FluxReceiveTest extends BaseHttpTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		assertThat(buffer.refCnt()).isEqualTo(0);
+		assertThat(buffer.isAccessible()).isFalse();
 	}
 
 	static final class TestSubscriber implements CoreSubscriber<Object> {

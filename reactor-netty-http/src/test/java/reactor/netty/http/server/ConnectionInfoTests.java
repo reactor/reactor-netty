@@ -27,7 +27,7 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLException;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.ssl.SslContext;
@@ -290,9 +290,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				         .port(this.disposableServer.port())
 				         .connectNow();
 
-		ByteBuf proxyProtocolMsg = clientConn.channel()
-		                                     .alloc()
-		                                     .buffer();
+		Buffer proxyProtocolMsg = clientConn.channel().bufferAllocator().allocate(128);
 		proxyProtocolMsg.writeCharSequence("PROXY TCP4 " + remoteAddress + " 10.210.12.10 5678 80\r\n",
 				Charset.defaultCharset());
 		proxyProtocolMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
@@ -308,9 +306,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 		assertThat(resultQueue.poll(5, TimeUnit.SECONDS)).isEqualTo(remoteAddress);
 
 		//send a http request again to confirm that removeAddress is not changed.
-		ByteBuf httpMsg = clientConn.channel()
-		                            .alloc()
-		                            .buffer();
+		Buffer httpMsg = clientConn.channel().bufferAllocator().allocate(128);
 		httpMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
 				Charset.defaultCharset());
 		clientConn.channel()
@@ -355,9 +351,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				         .port(this.disposableServer.port())
 				         .connectNow();
 
-		ByteBuf proxyProtocolMsg = clientConn.channel()
-		                                     .alloc()
-		                                     .buffer();
+		Buffer proxyProtocolMsg = clientConn.channel().bufferAllocator().allocate(128);
 		proxyProtocolMsg.writeCharSequence("PROXY TCP4 " + remoteAddress + " 10.210.12.10 5678 80\r\n",
 				Charset.defaultCharset());
 		proxyProtocolMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
@@ -381,9 +375,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 
 		// Send a http request without proxy protocol in a new connection,
 		// server should support this when proxyProtocol is set to ProxyProtocolSupportType.AUTO
-		ByteBuf httpMsg = clientConn.channel()
-		                            .alloc()
-		                            .buffer();
+		Buffer httpMsg = clientConn.channel().bufferAllocator().allocate(128);
 		httpMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
 				Charset.defaultCharset());
 		clientConn.channel()

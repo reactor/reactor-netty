@@ -26,7 +26,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.TomcatServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.util.function.Tuple2;
@@ -125,7 +125,7 @@ class HttpClientWithTomcatTest {
 				          .doAfterRequest((req, connection) -> headers.set(req.requestHeaders()))
 				          .request(HttpMethod.GET)
 				          .uri("/status/400")
-				          .send(ByteBufFlux.fromString(Flux.just("hello")))
+				          .send(BufferFlux.fromString(Flux.just("hello")))
 				          .responseSingle((res, conn) -> Mono.just(res.status())
 				                                             .zipWith(conn.asString()))
 				          .block(Duration.ofSeconds(30));
@@ -238,13 +238,13 @@ class HttpClientWithTomcatTest {
 		HttpResponseStatus r =
 				client.request(HttpMethod.GET)
 				      .uri(getURL())
-				      .send(ByteBufFlux.fromString(Mono.just(" ")))
+				      .send(BufferFlux.fromString(Mono.just(" ")))
 				      .responseSingle((res, buf) -> Mono.just(res.status()))
 				      .block(Duration.ofSeconds(30));
 
 		client.request(HttpMethod.GET)
 		      .uri(getURL())
-		      .send(ByteBufFlux.fromString(Mono.just(" ")))
+		      .send(BufferFlux.fromString(Mono.just(" ")))
 		      .responseSingle((res, buf) -> Mono.just(res.status()))
 		      .block(Duration.ofSeconds(30));
 

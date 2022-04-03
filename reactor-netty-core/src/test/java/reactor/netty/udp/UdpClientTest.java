@@ -20,11 +20,12 @@ import java.io.FileNotFoundException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
@@ -54,20 +55,18 @@ class UdpClientTest {
 				         .runOn(resources)
 				         .handle((in, out) -> in.receiveObject()
 				                                    .map(o -> {
-				                                            if (o instanceof DatagramPacket) {
-				                                                DatagramPacket received = (DatagramPacket) o;
-				                                                ByteBuf buffer = received.content();
-				                                                System.out.println("Server received " + buffer.readCharSequence(buffer.readableBytes(), CharsetUtil.UTF_8));
-				                                                ByteBuf buf1 = Unpooled.copiedBuffer("echo ", CharsetUtil.UTF_8);
-				                                                ByteBuf buf2 = Unpooled.copiedBuffer(buf1, buffer);
-				                                                buf1.release();
+				                                            if (o instanceof DatagramPacket received) {
+				                                                Buffer buffer = received.content();
+				                                                System.out.println("Server received " + buffer.toString(CharsetUtil.UTF_8));
+				                                                Buffer buf1 = out.alloc().copyOf("echo ".getBytes(CharsetUtil.UTF_8));
+				                                                CompositeBuffer buf2 = out.alloc().compose(List.of(buf1.send(), buffer.send()));
 				                                                return new DatagramPacket(buf2, received.sender());
 				                                            }
 				                                            else {
 				                                                return Mono.error(new Exception());
 				                                            }
 				                                    })
-				                                    .flatMap(out::sendObject))
+				                                    .flatMap(o -> out.sendObject(o)))
 				         .wiretap(true)
 				         .bind()
 				         .block(Duration.ofSeconds(30));
@@ -209,14 +208,11 @@ class UdpClientTest {
 					         .runOn(resources)
 					         .handle((in, out) -> in.receiveObject()
 					                                .map(o -> {
-					                                    if (o instanceof DomainDatagramPacket) {
-					                                        DomainDatagramPacket received = (DomainDatagramPacket) o;
-					                                        ByteBuf buffer = received.content();
-					                                        System.out.println("Server received " +
-					                                                buffer.readCharSequence(buffer.readableBytes(), CharsetUtil.UTF_8));
-					                                        ByteBuf buf1 = Unpooled.copiedBuffer("echo ", CharsetUtil.UTF_8);
-					                                        ByteBuf buf2 = Unpooled.copiedBuffer(buf1, buffer);
-					                                        buf1.release();
+					                                    if (o instanceof DomainDatagramPacket received) {
+					                                        Buffer buffer = received.content();
+					                                        System.out.println("Server received " + buffer.toString(CharsetUtil.UTF_8));
+					                                        Buffer buf1 = out.alloc().copyOf("echo ".getBytes(CharsetUtil.UTF_8));
+					                                        CompositeBuffer buf2 = out.alloc().compose(List.of(buf1.send(), buffer.send()));
 					                                        return new DomainDatagramPacket(buf2, received.sender());
 					                                    }
 					                                    else {

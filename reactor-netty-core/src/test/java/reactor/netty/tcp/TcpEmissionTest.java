@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package reactor.netty.tcp;
 
-import io.netty.buffer.Unpooled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
@@ -43,11 +42,11 @@ class TcpEmissionTest {
 		DisposableServer server =
 				TcpServer.create()
 				         .handle((inbound, outbound) ->
-				                 outbound.send(
+				                 outbound.sendBuffer(
 				                         Flux.fromStream(IntStream.range(0, emissionCount)
 				                                                  .mapToObj(i -> {
 				                                                      random.nextBytes(array);
-				                                                      return Unpooled.copiedBuffer(array);
+				                                                      return outbound.alloc().copyOf(array);
 				                                                  })),
 				                         b -> flushOnEach))
 				         .host("localhost")

@@ -28,11 +28,11 @@ public class Application {
 				              routes.get("/hello",        //<1>
 				                        (request, response) -> response.sendString(Mono.just("Hello World!")))
 				                    .post("/echo",        //<2>
-				                        (request, response) -> response.send(request.receive().retain()))
+				                        (request, response) -> response.send(request.receive().send()))
 				                    .get("/path/{param}", //<3>
 				                        (request, response) -> response.sendString(Mono.just(request.param("param"))))
 				                    .ws("/ws",            //<4>
-				                        (wsInbound, wsOutbound) -> wsOutbound.send(wsInbound.receive().retain())))
+				                        (wsInbound, wsOutbound) -> wsOutbound.send(wsInbound.receive().send())))
 				          .bindNow();
 
 		server.onDispose()
