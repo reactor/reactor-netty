@@ -39,6 +39,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.ssl.SslClosedEngineException;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -380,6 +381,16 @@ class HttpClientConnect extends HttpClient {
 						log.debug(format(connection.channel(),
 								"The connection observed an error, the request will be retried"), error);
 					}
+				}
+			}
+			else if (error instanceof SslClosedEngineException) {
+				if (log.isWarnEnabled()) {
+					log.warn(format(connection.channel(), "The connection observed an error"), error);
+				}
+				HttpClientOperations ops = connection.as(HttpClientOperations.class);
+				if (ops != null) {
+					// javax.net.ssl.SSLEngine has been closed, do not return the connection to the pool
+					ops.markPersistent(false);
 				}
 			}
 			else if (log.isWarnEnabled()) {
