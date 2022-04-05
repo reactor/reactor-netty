@@ -15,7 +15,7 @@
  */
 
 /**
- * Netty <-> Reactive Streams bridge via channel handler.
+ * Netty &lt;-&gt; Reactive Streams bridge via channel handler.
  * <p>
  * {@link reactor.netty.channel.ChannelOperations} will be exposed as the user edge API
  * and extended by various protocols such as HTTP. It will convert incoming read into
