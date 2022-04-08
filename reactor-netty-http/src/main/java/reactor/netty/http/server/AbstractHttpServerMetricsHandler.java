@@ -112,8 +112,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
 					recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
 							ops.method().name(), ops.status().codeAsText().toString());
-					if (!ops.isHttp2()) {
+					if (!ops.isHttp2() && ops.hostAddress() != null) {
 						// This metric is not applicable for HTTP/2
+						// ops.hostAddress() == null when request decoding failed, in this case
+						// we do not report active connection, so we do not report inactive connection
 						recordInactiveConnection(ops);
 					}
 				}
