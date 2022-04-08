@@ -1,3 +1,5 @@
+<img align="left" width="150" height="150" src="/docs/reactor-netty.png">
+
 # Reactor Netty
 
 [![Join the chat at https://gitter.im/reactor/reactor-netty](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/reactor/reactor-netty)
