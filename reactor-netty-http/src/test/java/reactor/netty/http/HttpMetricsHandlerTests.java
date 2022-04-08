@@ -641,6 +641,40 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkCounter(CLIENT_ERRORS, summaryTags, true, 2);
 	}
 
+	// https://github.com/reactor/reactor-netty/issues/2145
+	@ParameterizedTest
+	@MethodSource("http11CompatibleProtocols")
+	void testBadRequest(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		CountDownLatch latch1 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
+		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
+		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
+
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.httpRequestDecoder(spec -> spec.maxHeaderSize(32))
+				.childObserve(observerDisconnect)
+				.bindNow();
+
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
+				serverAddress.set(conn.channel().remoteAddress())
+		).observe(observerDisconnect);
+
+		httpClient.get()
+		          .uri("/max_header_size")
+		          .responseSingle((res, byteBufMono) -> Mono.just(res.status().code()))
+		          .as(StepVerifier::create)
+		          .expectNext(413)
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+
+		checkExpectationsBadRequest(sa.getHostString() + ":" + sa.getPort(), serverCtx != null);
+	}
+
 	private ConnectionObserver observeDisconnect(AtomicReference<CountDownLatch> latchRef) {
 		return (connection, state) -> {
 			if (state == ConnectionObserver.State.DISCONNECTING) {
@@ -741,6 +775,35 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 
+	private void checkExpectationsBadRequest(String serverAddress, boolean checkTls) {
+		String uri = "/max_header_size";
+		String[] timerTags1 = new String[] {URI, uri, METHOD, "GET", STATUS, "413"};
+		String[] summaryTags1 = new String[] {URI, uri};
+
+		checkTimer(SERVER_RESPONSE_TIME, timerTags1, 1);
+		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, 1);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, 1, 0);
+		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
+
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "413"};
+		String[] timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
+		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
+
+		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, 1);
+		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, 1);
+		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, 1);
+		checkTimer(CLIENT_CONNECT_TIME, timerTags3, 1);
+		if (checkTls) {
+			checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, 1);
+		}
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, 1, 0);
+		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 1, 118);
+		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
+	}
+
 	HttpServer customizeServerOptions(HttpServer httpServer, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
 		return ctx == null ? httpServer.protocol(protocols) : httpServer.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
@@ -787,6 +850,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		else {
 			assertThat(gauge).isNull();
 		}
+	}
+
+	static Stream<Arguments> http11CompatibleProtocols() {
+		return Stream.of(
+				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
+						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11)),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http11SslContextSpec", clientCtx11)),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null)
+		);
 	}
 
 	static Stream<Arguments> httpCompatibleProtocols() {
