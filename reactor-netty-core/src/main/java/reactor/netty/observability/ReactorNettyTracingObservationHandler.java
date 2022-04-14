@@ -15,8 +15,8 @@
  */
 package reactor.netty.observability;
 
+import io.micrometer.common.KeyValue;
 import io.micrometer.observation.Observation;
-import io.micrometer.common.Tag;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.DefaultTracingObservationHandler;
@@ -38,10 +38,10 @@ public final class ReactorNettyTracingObservationHandler extends DefaultTracingO
 
 	@Override
 	public void tagSpan(Observation.Context context, Span span) {
-		for (Tag tag : context.getHighCardinalityTags()) {
+		for (KeyValue tag : context.getHighCardinalityKeyValues()) {
 			span.tag(tag.getKey(), tag.getValue());
 		}
-		for (Tag tag : context.getLowCardinalityTags()) {
+		for (KeyValue tag : context.getLowCardinalityKeyValues()) {
 			if (tag.getKey().equals(REMOTE_ADDRESS)) {
 				span.tag(tag.getKey(), tag.getValue());
 				break;

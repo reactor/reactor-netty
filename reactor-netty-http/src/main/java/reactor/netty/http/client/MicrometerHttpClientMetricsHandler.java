@@ -15,10 +15,10 @@
  */
 package reactor.netty.http.client;
 
+import io.micrometer.common.KeyValues;
 import io.micrometer.contextpropagation.ContextContainer;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
-import io.micrometer.common.Tags;
 import io.micrometer.observation.transport.http.HttpClientRequest;
 import io.micrometer.observation.transport.http.HttpClientResponse;
 import io.micrometer.observation.transport.http.context.HttpClientContext;
@@ -218,13 +218,15 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		}
 
 		@Override
-		public Tags getHighCardinalityTags() {
-			return Tags.of(REACTOR_NETTY_PROTOCOL.of(recorder.protocol()), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(TYPE));
+		public KeyValues getHighCardinalityKeyValues() {
+			return KeyValues.of(REACTOR_NETTY_PROTOCOL.getKeyName(), recorder.protocol(),
+					REACTOR_NETTY_STATUS.getKeyName(), status, REACTOR_NETTY_TYPE.getKeyName(), TYPE);
 		}
 
 		@Override
-		public Tags getLowCardinalityTags() {
-			return Tags.of(METHOD.of(method), REMOTE_ADDRESS.of(remoteAddress), STATUS.of(status), URI.of(path));
+		public KeyValues getLowCardinalityKeyValues() {
+			return KeyValues.of(METHOD.getKeyName(), method, REMOTE_ADDRESS.getKeyName(), remoteAddress,
+					STATUS.getKeyName(), status, URI.getKeyName(), path);
 		}
 
 		@Override

@@ -15,9 +15,9 @@
  */
 package reactor.netty.transport;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.docs.DocumentedMeter;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * {@link io.netty.buffer.ByteBufAllocator} meters.
@@ -37,7 +37,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ByteBufAllocatorMetersTags.values();
 		}
 
@@ -57,7 +57,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ByteBufAllocatorMetersTags.values();
 		}
 
@@ -77,7 +77,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ByteBufAllocatorMetersTags.values();
 		}
 
@@ -97,7 +97,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ByteBufAllocatorMetersTags.values();
 		}
 
@@ -117,7 +117,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ByteBufAllocatorMetersTags.values();
 		}
 
@@ -137,7 +137,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ByteBufAllocatorMetersTags.values();
 		}
 
@@ -157,7 +157,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ByteBufAllocatorMetersTags.values();
 		}
 
@@ -177,7 +177,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ByteBufAllocatorMetersTags.values();
 		}
 
@@ -197,7 +197,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ByteBufAllocatorMetersTags.values();
 		}
 
@@ -217,7 +217,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ByteBufAllocatorMetersTags.values();
 		}
 
@@ -227,14 +227,14 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 	};
 
-	enum ByteBufAllocatorMetersTags implements TagKey {
+	enum ByteBufAllocatorMetersTags implements KeyName {
 
 		/**
 		 * ID.
 		 */
 		ID {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "id";
 			}
 		},
@@ -244,7 +244,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		 */
 		TYPE {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "type";
 			}
 		}

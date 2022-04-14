@@ -15,8 +15,8 @@
  */
 package reactor.netty.http.observability;
 
+import io.micrometer.common.KeyValue;
 import io.micrometer.observation.Observation;
-import io.micrometer.common.Tag;
 import io.micrometer.observation.transport.http.HttpClientRequest;
 import io.micrometer.observation.transport.http.context.HttpClientContext;
 import io.micrometer.tracing.Span;
@@ -48,10 +48,10 @@ public final class ReactorNettyHttpClientTracingObservationHandler extends HttpC
 
 	@Override
 	public void tagSpan(HttpClientContext context, Span span) {
-		for (Tag tag : context.getHighCardinalityTags()) {
+		for (KeyValue tag : context.getHighCardinalityKeyValues()) {
 			span.tag(tag.getKey(), tag.getValue());
 		}
-		for (Tag tag : context.getLowCardinalityTags()) {
+		for (KeyValue tag : context.getLowCardinalityKeyValues()) {
 			if (tag.getKey().equals(REMOTE_ADDRESS)) {
 				span.tag(tag.getKey(), tag.getValue());
 				break;

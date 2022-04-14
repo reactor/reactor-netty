@@ -15,9 +15,9 @@
  */
 package reactor.netty.http.client;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.docs.DocumentedMeter;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * HTTP/2 {@link reactor.netty.resources.ConnectionProvider} meters.
@@ -37,7 +37,7 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return Http2ConnectionProviderMetersTags.values();
 		}
 
@@ -57,7 +57,7 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return Http2ConnectionProviderMetersTags.values();
 		}
 
@@ -67,14 +67,14 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 		}
 	};
 
-	enum Http2ConnectionProviderMetersTags implements TagKey {
+	enum Http2ConnectionProviderMetersTags implements KeyName {
 
 		/**
 		 * ID.
 		 */
 		ID {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "id";
 			}
 		},
@@ -84,7 +84,7 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 		 */
 		NAME {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "name";
 			}
 		},
@@ -94,7 +94,7 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "remote.address";
 			}
 		}

@@ -15,9 +15,9 @@
  */
 package reactor.netty.transport;
 
+import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
-import io.micrometer.common.Tags;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
@@ -94,13 +94,14 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		}
 
 		@Override
-		public Tags getHighCardinalityTags() {
-			return Tags.of(REACTOR_NETTY_PROTOCOL.of(recorder.protocol()), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(TYPE));
+		public KeyValues getHighCardinalityKeyValues() {
+			return KeyValues.of(REACTOR_NETTY_PROTOCOL.getKeyName(), recorder.protocol(),
+					REACTOR_NETTY_STATUS.getKeyName(), status, REACTOR_NETTY_TYPE.getKeyName(), TYPE);
 		}
 
 		@Override
-		public Tags getLowCardinalityTags() {
-			return Tags.of(REMOTE_ADDRESS.of(remoteAddress), STATUS.of(status));
+		public KeyValues getLowCardinalityKeyValues() {
+			return KeyValues.of(REMOTE_ADDRESS.getKeyName(), remoteAddress, STATUS.getKeyName(), status);
 		}
 	}
 

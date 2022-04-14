@@ -15,8 +15,8 @@
  */
 package reactor.netty.tcp;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.observation.docs.DocumentedObservation;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * TLS handshake observations.
@@ -31,12 +31,12 @@ enum TlsHandshakeObservations implements DocumentedObservation {
 	 */
 	TLS_HANDSHAKE_TIME {
 		@Override
-		public TagKey[] getHighCardinalityTagKeys() {
+		public KeyName[] getHighCardinalityKeyNames() {
 			return TlsHandshakeTimeHighCardinalityTags.values();
 		}
 
 		@Override
-		public TagKey[] getLowCardinalityTagKeys() {
+		public KeyName[] getLowCardinalityKeyNames() {
 			return TlsHandshakeTimeLowCardinalityTags.values();
 		}
 
@@ -49,14 +49,14 @@ enum TlsHandshakeObservations implements DocumentedObservation {
 	/**
 	 * TLS Handshake High Cardinality Tags.
 	 */
-	enum TlsHandshakeTimeHighCardinalityTags implements TagKey {
+	enum TlsHandshakeTimeHighCardinalityTags implements KeyName {
 
 		/**
 		 * Reactor Netty protocol (tcp/http etc.).
 		 */
 		REACTOR_NETTY_PROTOCOL {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.protocol";
 			}
 		},
@@ -66,7 +66,7 @@ enum TlsHandshakeObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.status";
 			}
 		},
@@ -76,7 +76,7 @@ enum TlsHandshakeObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_TYPE {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.type";
 			}
 		}
@@ -85,14 +85,14 @@ enum TlsHandshakeObservations implements DocumentedObservation {
 	/**
 	 * TLS Handshake Low Cardinality Tags.
 	 */
-	enum TlsHandshakeTimeLowCardinalityTags implements TagKey {
+	enum TlsHandshakeTimeLowCardinalityTags implements KeyName {
 
 		/**
 		 * Remote address.
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "remote.address";
 			}
 		},
@@ -102,7 +102,7 @@ enum TlsHandshakeObservations implements DocumentedObservation {
 		 */
 		STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "status";
 			}
 		}

@@ -15,8 +15,8 @@
  */
 package reactor.netty.http.server;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.observation.docs.DocumentedObservation;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * {@link HttpServer} observations.
@@ -31,12 +31,12 @@ enum HttpServerObservations implements DocumentedObservation {
 	 */
 	HTTP_SERVER_RESPONSE_TIME {
 		@Override
-		public TagKey[] getHighCardinalityTagKeys() {
+		public KeyName[] getHighCardinalityKeyNames() {
 			return ResponseTimeHighCardinalityTags.values();
 		}
 
 		@Override
-		public TagKey[] getLowCardinalityTagKeys() {
+		public KeyName[] getLowCardinalityKeyNames() {
 			return ResponseTimeLowCardinalityTags.values();
 		}
 
@@ -49,14 +49,14 @@ enum HttpServerObservations implements DocumentedObservation {
 	/**
 	 * Response High Cardinality Tags.
 	 */
-	enum ResponseTimeHighCardinalityTags implements TagKey {
+	enum ResponseTimeHighCardinalityTags implements KeyName {
 
 		/**
 		 * Reactor Netty protocol (always http).
 		 */
 		REACTOR_NETTY_PROTOCOL {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.protocol";
 			}
 		},
@@ -66,7 +66,7 @@ enum HttpServerObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.status";
 			}
 		},
@@ -76,7 +76,7 @@ enum HttpServerObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_TYPE {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.type";
 			}
 		}
@@ -85,14 +85,14 @@ enum HttpServerObservations implements DocumentedObservation {
 	/**
 	 * Response Low Cardinality Tags.
 	 */
-	enum ResponseTimeLowCardinalityTags implements TagKey {
+	enum ResponseTimeLowCardinalityTags implements KeyName {
 
 		/**
 		 * METHOD.
 		 */
 		METHOD {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "method";
 			}
 		},
@@ -102,7 +102,7 @@ enum HttpServerObservations implements DocumentedObservation {
 		 */
 		STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "status";
 			}
 		},
@@ -112,7 +112,7 @@ enum HttpServerObservations implements DocumentedObservation {
 		 */
 		URI {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "uri";
 			}
 		}
