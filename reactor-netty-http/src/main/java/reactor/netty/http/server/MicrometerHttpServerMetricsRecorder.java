@@ -66,8 +66,8 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, null, method, null);
 		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
-				                   .tags(HttpServerMeters.DataReceivedTimeTags.URI.getKey(), uri,
-				                         HttpServerMeters.DataReceivedTimeTags.METHOD.getKey(), method)
+				                   .tags(HttpServerMeters.DataReceivedTimeTags.URI.getKeyName(), uri,
+				                         HttpServerMeters.DataReceivedTimeTags.METHOD.getKeyName(), method)
 				                   .register(REGISTRY)));
 		if (dataReceivedTime != null) {
 			dataReceivedTime.record(time);
@@ -79,9 +79,9 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, null, method, status);
 		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
-				                   .tags(HttpServerMeters.DataSentTimeTags.URI.getKey(), uri,
-				                         HttpServerMeters.DataSentTimeTags.METHOD.getKey(), method,
-				                         HttpServerMeters.DataSentTimeTags.STATUS.getKey(), status)
+				                   .tags(HttpServerMeters.DataSentTimeTags.URI.getKeyName(), uri,
+				                         HttpServerMeters.DataSentTimeTags.METHOD.getKeyName(), method,
+				                         HttpServerMeters.DataSentTimeTags.STATUS.getKeyName(), status)
 				                   .register(REGISTRY)));
 		if (dataSentTime != null) {
 			dataSentTime.record(time);
@@ -110,7 +110,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, uri,
 				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
 				                                 .baseUnit(HttpServerMeters.HTTP_SERVER_DATA_RECEIVED.getBaseUnit())
-				                                 .tags(HttpServerMeters.HttpServerMetersTags.URI.getKey(), uri)
+				                                 .tags(HttpServerMeters.HttpServerMetersTags.URI.getKeyName(), uri)
 				                                 .register(REGISTRY)));
 		if (dataReceived != null) {
 			dataReceived.record(bytes);
@@ -122,7 +122,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, uri,
 				key -> filter(DistributionSummary.builder(name() + DATA_SENT)
 				                                 .baseUnit(HttpServerMeters.HTTP_SERVER_DATA_SENT.getBaseUnit())
-				                                 .tags(HttpServerMeters.HttpServerMetersTags.URI.getKey(), uri)
+				                                 .tags(HttpServerMeters.HttpServerMetersTags.URI.getKeyName(), uri)
 				                                 .register(REGISTRY)));
 		if (dataSent != null) {
 			dataSent.record(bytes);
@@ -133,7 +133,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
 		Counter errors = MapUtils.computeIfAbsent(errorsCache, uri,
 				key -> filter(Counter.builder(name() + ERRORS)
-				                     .tags(HttpServerMeters.HttpServerMetersTags.URI.getKey(), uri)
+				                     .tags(HttpServerMeters.HttpServerMetersTags.URI.getKeyName(), uri)
 				                     .register(REGISTRY)));
 		if (errors != null) {
 			errors.increment();
@@ -192,8 +192,8 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 				key -> {
 					Gauge gauge = filter(
 							Gauge.builder(CONNECTIONS_ACTIVE.getName(), activeConnectionsAdder, LongAdder::longValue)
-							     .tags(HttpServerMeters.ConnectionsActiveTags.URI.getKey(), PROTOCOL_VALUE_HTTP,
-							           HttpServerMeters.ConnectionsActiveTags.LOCAL_ADDRESS.getKey(), address)
+							     .tags(HttpServerMeters.ConnectionsActiveTags.URI.getKeyName(), PROTOCOL_VALUE_HTTP,
+							           HttpServerMeters.ConnectionsActiveTags.LOCAL_ADDRESS.getKeyName(), address)
 							     .register(REGISTRY));
 					return gauge != null ? activeConnectionsAdder : null;
 				});

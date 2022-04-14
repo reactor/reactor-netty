@@ -15,8 +15,8 @@
  */
 package reactor.netty.channel;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.observation.docs.DocumentedObservation;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * Connect observations.
@@ -32,12 +32,12 @@ enum ConnectObservations implements DocumentedObservation {
 	 */
 	CONNECT_TIME {
 		@Override
-		public TagKey[] getHighCardinalityTagKeys() {
+		public KeyName[] getHighCardinalityKeyNames() {
 			return ConnectTimeHighCardinalityTags.values();
 		}
 
 		@Override
-		public TagKey[] getLowCardinalityTagKeys() {
+		public KeyName[] getLowCardinalityKeyNames() {
 			return ConnectTimeLowCardinalityTags.values();
 		}
 
@@ -50,14 +50,14 @@ enum ConnectObservations implements DocumentedObservation {
 	/**
 	 * Connect High Cardinality Tags.
 	 */
-	enum ConnectTimeHighCardinalityTags implements TagKey {
+	enum ConnectTimeHighCardinalityTags implements KeyName {
 
 		/**
 		 * Reactor Netty protocol (tcp/http etc.).
 		 */
 		REACTOR_NETTY_PROTOCOL {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.protocol";
 			}
 		},
@@ -67,7 +67,7 @@ enum ConnectObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.status";
 			}
 		},
@@ -77,7 +77,7 @@ enum ConnectObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_TYPE {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.type";
 			}
 		}
@@ -86,14 +86,14 @@ enum ConnectObservations implements DocumentedObservation {
 	/**
 	 * Connect Low Cardinality Tags.
 	 */
-	enum ConnectTimeLowCardinalityTags implements TagKey {
+	enum ConnectTimeLowCardinalityTags implements KeyName {
 
 		/**
 		 * Remote address.
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "remote.address";
 			}
 		},
@@ -103,7 +103,7 @@ enum ConnectObservations implements DocumentedObservation {
 		 */
 		STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "status";
 			}
 		}

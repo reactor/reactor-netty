@@ -15,9 +15,9 @@
  */
 package reactor.netty.http.client;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.docs.DocumentedMeter;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * {@link HttpClient} meters.
@@ -37,7 +37,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return DataReceivedTimeTags.values();
 		}
 
@@ -57,7 +57,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return DataSentTimeTags.values();
 		}
 
@@ -67,14 +67,14 @@ enum HttpClientMeters implements DocumentedMeter {
 		}
 	};
 
-	enum DataReceivedTimeTags implements TagKey {
+	enum DataReceivedTimeTags implements KeyName {
 
 		/**
 		 * METHOD.
 		 */
 		METHOD {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "method";
 			}
 		},
@@ -84,7 +84,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "remote.address";
 			}
 		},
@@ -94,7 +94,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "status";
 			}
 		},
@@ -104,20 +104,20 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "uri";
 			}
 		}
 	}
 
-	enum DataSentTimeTags implements TagKey {
+	enum DataSentTimeTags implements KeyName {
 
 		/**
 		 * METHOD.
 		 */
 		METHOD {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "method";
 			}
 		},
@@ -127,7 +127,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "remote.address";
 			}
 		},
@@ -137,7 +137,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "uri";
 			}
 		}

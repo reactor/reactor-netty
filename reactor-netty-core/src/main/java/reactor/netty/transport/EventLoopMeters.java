@@ -15,9 +15,9 @@
  */
 package reactor.netty.transport;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.docs.DocumentedMeter;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * {@link io.netty.channel.EventLoop} meters.
@@ -37,7 +37,7 @@ enum EventLoopMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return EventLoopMetersTags.values();
 		}
 
@@ -47,13 +47,13 @@ enum EventLoopMeters implements DocumentedMeter {
 		}
 	};
 
-	enum EventLoopMetersTags implements TagKey {
+	enum EventLoopMetersTags implements KeyName {
 		/**
 		 * NAME.
 		 */
 		NAME {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "name";
 			}
 		}

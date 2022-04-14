@@ -15,8 +15,8 @@
  */
 package reactor.netty.transport;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.observation.docs.DocumentedObservation;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * Hostname resolution observations.
@@ -31,12 +31,12 @@ enum HostnameResolutionObservations implements DocumentedObservation {
 	 */
 	HOSTNAME_RESOLUTION_TIME {
 		@Override
-		public TagKey[] getHighCardinalityTagKeys() {
+		public KeyName[] getHighCardinalityKeyNames() {
 			return HostnameResolutionTimeHighCardinalityTags.values();
 		}
 
 		@Override
-		public TagKey[] getLowCardinalityTagKeys() {
+		public KeyName[] getLowCardinalityKeyNames() {
 			return HostnameResolutionTimeLowCardinalityTags.values();
 		}
 
@@ -49,14 +49,14 @@ enum HostnameResolutionObservations implements DocumentedObservation {
 	/**
 	 * Hostname Resolution High Cardinality Tags.
 	 */
-	enum HostnameResolutionTimeHighCardinalityTags implements TagKey {
+	enum HostnameResolutionTimeHighCardinalityTags implements KeyName {
 
 		/**
 		 * Reactor Netty protocol (tcp/http etc.).
 		 */
 		REACTOR_NETTY_PROTOCOL {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.protocol";
 			}
 		},
@@ -66,7 +66,7 @@ enum HostnameResolutionObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.status";
 			}
 		},
@@ -76,7 +76,7 @@ enum HostnameResolutionObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_TYPE {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.type";
 			}
 		}
@@ -85,14 +85,14 @@ enum HostnameResolutionObservations implements DocumentedObservation {
 	/**
 	 * Hostname Resolution Low Cardinality Tags.
 	 */
-	enum HostnameResolutionTimeLowCardinalityTags implements TagKey {
+	enum HostnameResolutionTimeLowCardinalityTags implements KeyName {
 
 		/**
 		 * Remote address.
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "remote.address";
 			}
 		},
@@ -102,7 +102,7 @@ enum HostnameResolutionObservations implements DocumentedObservation {
 		 */
 		STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "status";
 			}
 		}

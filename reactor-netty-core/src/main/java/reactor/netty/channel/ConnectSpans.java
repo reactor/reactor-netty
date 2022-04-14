@@ -15,7 +15,7 @@
  */
 package reactor.netty.channel;
 
-import io.micrometer.common.docs.TagKey;
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.tracing.docs.DocumentedSpan;
 
 /**
@@ -37,7 +37,7 @@ enum ConnectSpans implements DocumentedSpan {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ConnectTimeHighCardinalityTags.values();
 		}
 
@@ -47,14 +47,14 @@ enum ConnectSpans implements DocumentedSpan {
 		}
 	};
 
-	enum ConnectTimeHighCardinalityTags implements TagKey {
+	enum ConnectTimeHighCardinalityTags implements KeyName {
 
 		/**
 		 * Reactor Netty protocol (tcp/http etc.).
 		 */
 		REACTOR_NETTY_PROTOCOL {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.protocol";
 			}
 		},
@@ -64,7 +64,7 @@ enum ConnectSpans implements DocumentedSpan {
 		 */
 		REACTOR_NETTY_STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.status";
 			}
 		},
@@ -74,7 +74,7 @@ enum ConnectSpans implements DocumentedSpan {
 		 */
 		REACTOR_NETTY_TYPE {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "reactor.netty.type";
 			}
 		},
@@ -84,7 +84,7 @@ enum ConnectSpans implements DocumentedSpan {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "remote.address";
 			}
 		}

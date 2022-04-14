@@ -39,7 +39,7 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 
 	void registerMetrics(String poolName, String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
 		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
-		Tags tags = Tags.of(ID.getKey(), id, REMOTE_ADDRESS.getKey(), addressAsString, NAME.getKey(), poolName);
+		Tags tags = Tags.of(ID.getKeyName(), id, REMOTE_ADDRESS.getKeyName(), addressAsString, NAME.getKeyName(), poolName);
 
 		Gauge.builder(ACTIVE_STREAMS.getName(), metrics, InstrumentedPool.PoolMetrics::acquiredSize)
 		     .tags(tags)

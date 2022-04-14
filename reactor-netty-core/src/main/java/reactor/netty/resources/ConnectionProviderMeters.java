@@ -15,9 +15,9 @@
  */
 package reactor.netty.resources;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.docs.DocumentedMeter;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * {@link ConnectionProvider} meters.
@@ -37,7 +37,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ConnectionProviderMetersTags.values();
 		}
 
@@ -57,7 +57,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ConnectionProviderMetersTags.values();
 		}
 
@@ -77,7 +77,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ConnectionProviderMetersTags.values();
 		}
 
@@ -97,7 +97,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ConnectionProviderMetersTags.values();
 		}
 
@@ -117,7 +117,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ConnectionProviderMetersTags.values();
 		}
 
@@ -137,7 +137,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ConnectionProviderMetersTags.values();
 		}
 
@@ -147,14 +147,14 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		}
 	};
 
-	enum ConnectionProviderMetersTags implements TagKey {
+	enum ConnectionProviderMetersTags implements KeyName {
 
 		/**
 		 * ID.
 		 */
 		ID {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "id";
 			}
 		},
@@ -164,7 +164,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		 */
 		NAME {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "name";
 			}
 		},
@@ -174,7 +174,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "remote.address";
 			}
 		}

@@ -51,7 +51,7 @@ final class MicrometerEventLoopMeterRegistrar {
 			String executorName = singleThreadEventExecutor.threadProperties().name();
 			MapUtils.computeIfAbsent(cache, executorName, key -> {
 				Gauge.builder(PENDING_TASKS.getName(), singleThreadEventExecutor::pendingTasks)
-				     .tag(NAME.getKey(), executorName)
+				     .tag(NAME.getKeyName(), executorName)
 				     .register(REGISTRY);
 				return eventLoop;
 			});

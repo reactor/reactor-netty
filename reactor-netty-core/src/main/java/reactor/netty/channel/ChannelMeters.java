@@ -15,9 +15,9 @@
  */
 package reactor.netty.channel;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.docs.DocumentedMeter;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * Channel meters.
@@ -38,7 +38,7 @@ public enum ChannelMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ConnectionsTotalMeterTags.values();
 		}
 
@@ -63,7 +63,7 @@ public enum ChannelMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ChannelMetersTags.values();
 		}
 
@@ -88,7 +88,7 @@ public enum ChannelMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ChannelMetersTags.values();
 		}
 
@@ -108,7 +108,7 @@ public enum ChannelMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ChannelMetersTags.values();
 		}
 
@@ -118,14 +118,14 @@ public enum ChannelMeters implements DocumentedMeter {
 		}
 	};
 
-	public enum ChannelMetersTags implements TagKey {
+	public enum ChannelMetersTags implements KeyName {
 
 		/**
 		 * Remote address.
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "remote.address";
 			}
 		},
@@ -135,20 +135,20 @@ public enum ChannelMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "uri";
 			}
 		}
 	}
 
-	public enum ConnectionsTotalMeterTags implements TagKey {
+	public enum ConnectionsTotalMeterTags implements KeyName {
 
 		/**
 		 * Local address.
 		 */
 		LOCAL_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "local.address";
 			}
 		},
@@ -158,7 +158,7 @@ public enum ChannelMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "uri";
 			}
 		}

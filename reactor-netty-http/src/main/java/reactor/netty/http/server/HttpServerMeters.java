@@ -15,9 +15,9 @@
  */
 package reactor.netty.http.server;
 
+import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.docs.DocumentedMeter;
-import io.micrometer.common.docs.TagKey;
 
 /**
  * {@link HttpServer} meters.
@@ -37,7 +37,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return ConnectionsActiveTags.values();
 		}
 
@@ -62,7 +62,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return HttpServerMetersTags.values();
 		}
 
@@ -82,7 +82,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return DataReceivedTimeTags.values();
 		}
 
@@ -107,7 +107,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return HttpServerMetersTags.values();
 		}
 
@@ -127,7 +127,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return DataSentTimeTags.values();
 		}
 
@@ -147,7 +147,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		}
 
 		@Override
-		public TagKey[] getTagKeys() {
+		public KeyName[] getKeyNames() {
 			return HttpServerMetersTags.values();
 		}
 
@@ -157,14 +157,14 @@ enum HttpServerMeters implements DocumentedMeter {
 		}
 	};
 
-	enum ConnectionsActiveTags implements TagKey {
+	enum ConnectionsActiveTags implements KeyName {
 
 		/**
 		 * Local address.
 		 */
 		LOCAL_ADDRESS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "local.address";
 			}
 		},
@@ -174,20 +174,20 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "uri";
 			}
 		}
 	}
 
-	enum DataReceivedTimeTags implements TagKey {
+	enum DataReceivedTimeTags implements KeyName {
 
 		/**
 		 * METHOD.
 		 */
 		METHOD {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "method";
 			}
 		},
@@ -197,20 +197,20 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "uri";
 			}
 		}
 	}
 
-	enum DataSentTimeTags implements TagKey {
+	enum DataSentTimeTags implements KeyName {
 
 		/**
 		 * METHOD.
 		 */
 		METHOD {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "method";
 			}
 		},
@@ -220,7 +220,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		STATUS {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "status";
 			}
 		},
@@ -230,20 +230,20 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "uri";
 			}
 		}
 	}
 
-	public enum HttpServerMetersTags implements TagKey {
+	public enum HttpServerMetersTags implements KeyName {
 
 		/**
 		 * URI.
 		 */
 		URI {
 			@Override
-			public String getKey() {
+			public String getKeyName() {
 				return "uri";
 			}
 		}

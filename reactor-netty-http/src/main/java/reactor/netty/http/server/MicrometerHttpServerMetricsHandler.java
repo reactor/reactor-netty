@@ -15,9 +15,9 @@
  */
 package reactor.netty.http.server;
 
+import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
-import io.micrometer.common.Tags;
 import io.micrometer.observation.transport.http.HttpServerRequest;
 import io.micrometer.observation.transport.http.HttpServerResponse;
 import io.micrometer.observation.transport.http.context.HttpServerContext;
@@ -207,13 +207,14 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		}
 
 		@Override
-		public Tags getHighCardinalityTags() {
-			return Tags.of(REACTOR_NETTY_PROTOCOL.of(recorder.protocol()), REACTOR_NETTY_STATUS.of(status), REACTOR_NETTY_TYPE.of(TYPE));
+		public KeyValues getHighCardinalityKeyValues() {
+			return KeyValues.of(REACTOR_NETTY_PROTOCOL.getKeyName(), recorder.protocol(),
+					REACTOR_NETTY_STATUS.getKeyName(), status, REACTOR_NETTY_TYPE.getKeyName(), TYPE);
 		}
 
 		@Override
-		public Tags getLowCardinalityTags() {
-			return Tags.of(METHOD.of(method), STATUS.of(status), URI.of(path));
+		public KeyValues getLowCardinalityKeyValues() {
+			return KeyValues.of(METHOD.getKeyName(), method, STATUS.getKeyName(), status, URI.getKeyName(), path);
 		}
 
 		@Override
