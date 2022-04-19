@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import io.netty.handler.codec.http2.Http2Settings;
 import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
+
+import static io.netty.handler.codec.http2.Http2CodecUtil.NUM_STANDARD_SETTINGS;
 
 /**
  * A configuration builder to fine tune the {@link Http2Settings}.
@@ -77,6 +79,15 @@ public final class Http2SettingsSpec {
 		 * @return {@code this}
 		 */
 		Builder maxHeaderListSize(long maxHeaderListSize);
+
+		/**
+		 * Sets the {@code SETTINGS_MIN_CONNECTIONS} value.
+		 *
+		 * @param minConnections the {@code SETTINGS_MAX_HEADER_LIST_SIZE} value
+		 * @return {@code this}
+		 * @since 1.0.19
+		 */
+		Builder minConnections(int minConnections);
 
 		/**
 		 * Sets the {@code SETTINGS_ENABLE_PUSH} value.
@@ -148,6 +159,18 @@ public final class Http2SettingsSpec {
 	}
 
 	/**
+	 * Returns the configured {@code SETTINGS_MIN_CONNECTIONS} value or
+	 * the default {@code 0}.
+	 *
+	 * @return the configured {@code SETTINGS_MIN_CONNECTIONS} value or
+	 * the default {@code 0}.
+	 * @since 1.0.19
+	 */
+	public Integer minConnections() {
+		return minConnections;
+	}
+
+	/**
 	 * Returns the configured {@code SETTINGS_ENABLE_PUSH} value or null.
 	 *
 	 * @return the configured {@code SETTINGS_ENABLE_PUSH} value or null
@@ -171,19 +194,24 @@ public final class Http2SettingsSpec {
 				Objects.equals(maxConcurrentStreams, that.maxConcurrentStreams) &&
 				Objects.equals(maxFrameSize, that.maxFrameSize) &&
 				maxHeaderListSize.equals(that.maxHeaderListSize) &&
+				minConnections.equals(that.minConnections) &&
 				Objects.equals(pushEnabled, that.pushEnabled);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(headerTableSize, initialWindowSize, maxConcurrentStreams, maxFrameSize, maxHeaderListSize, pushEnabled);
+		return Objects.hash(headerTableSize, initialWindowSize, maxConcurrentStreams, maxFrameSize, maxHeaderListSize,
+				minConnections, pushEnabled);
 	}
+
+	static final char SETTINGS_MIN_CONNECTIONS = NUM_STANDARD_SETTINGS + 1;
 
 	final Long headerTableSize;
 	final Integer initialWindowSize;
 	final Long maxConcurrentStreams;
 	final Integer maxFrameSize;
 	final Long maxHeaderListSize;
+	final Integer minConnections;
 	final Boolean pushEnabled;
 
 	Http2SettingsSpec(Build build) {
@@ -193,11 +221,19 @@ public final class Http2SettingsSpec {
 		maxConcurrentStreams = settings.maxConcurrentStreams();
 		maxFrameSize = settings.maxFrameSize();
 		maxHeaderListSize = settings.maxHeaderListSize();
+		minConnections = settings.getIntValue(SETTINGS_MIN_CONNECTIONS);
 		pushEnabled = settings.pushEnabled();
 	}
 
 	static final class Build implements Builder {
-		final Http2Settings http2Settings = Http2Settings.defaultSettings();
+		static final Long DEFAULT_MIN_CONNECTIONS = 0L;
+
+		final Http2Settings http2Settings;
+
+		Build() {
+			http2Settings = Http2Settings.defaultSettings();
+			http2Settings.put(SETTINGS_MIN_CONNECTIONS, DEFAULT_MIN_CONNECTIONS);
+		}
 
 		@Override
 		public Http2SettingsSpec build() {
@@ -231,6 +267,15 @@ public final class Http2SettingsSpec {
 		@Override
 		public Builder maxHeaderListSize(long maxHeaderListSize) {
 			http2Settings.maxHeaderListSize(maxHeaderListSize);
+			return this;
+		}
+
+		@Override
+		public Builder minConnections(int minConnections) {
+			if (minConnections < 0) {
+				throw new IllegalArgumentException("Setting MIN_CONNECTIONS is invalid: " + minConnections);
+			}
+			http2Settings.put(SETTINGS_MIN_CONNECTIONS, Long.valueOf(minConnections));
 			return this;
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static reactor.netty.http.Http2SettingsSpec.Build.DEFAULT_MIN_CONNECTIONS;
 
 class Http2SettingsSpecTests {
 
@@ -40,6 +41,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxConcurrentStreams()).isNull();
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
+		assertThat(spec.minConnections()).isEqualTo(DEFAULT_MIN_CONNECTIONS.intValue());
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -59,6 +61,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxConcurrentStreams()).isNull();
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
+		assertThat(spec.minConnections()).isEqualTo(DEFAULT_MIN_CONNECTIONS.intValue());
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -78,6 +81,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxConcurrentStreams()).isEqualTo(123);
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
+		assertThat(spec.minConnections()).isEqualTo(DEFAULT_MIN_CONNECTIONS.intValue());
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -97,6 +101,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxConcurrentStreams()).isNull();
 		assertThat(spec.maxFrameSize()).isEqualTo(16384);
 		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
+		assertThat(spec.minConnections()).isEqualTo(DEFAULT_MIN_CONNECTIONS.intValue());
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -116,6 +121,7 @@ class Http2SettingsSpecTests {
 		assertThat(spec.maxConcurrentStreams()).isNull();
 		assertThat(spec.maxFrameSize()).isNull();
 		assertThat(spec.maxHeaderListSize()).isEqualTo(123);
+		assertThat(spec.minConnections()).isEqualTo(DEFAULT_MIN_CONNECTIONS.intValue());
 		assertThat(spec.pushEnabled()).isNull();
 	}
 
@@ -124,6 +130,26 @@ class Http2SettingsSpecTests {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxHeaderListSize(-1))
 				.withMessage("Setting MAX_HEADER_LIST_SIZE is invalid: -1");
+	}
+
+	@Test
+	void minConnections() {
+		builder.minConnections(4);
+		Http2SettingsSpec spec = builder.build();
+		assertThat(spec.headerTableSize()).isNull();
+		assertThat(spec.initialWindowSize()).isNull();
+		assertThat(spec.maxConcurrentStreams()).isNull();
+		assertThat(spec.maxFrameSize()).isNull();
+		assertThat(spec.maxHeaderListSize()).isEqualTo(Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE);
+		assertThat(spec.minConnections()).isEqualTo(4);
+		assertThat(spec.pushEnabled()).isNull();
+	}
+
+	@Test
+	void minConnectionsBadValues() {
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> builder.minConnections(-1))
+				.withMessage("Setting MIN_CONNECTIONS is invalid: -1");
 	}
 
 	/*

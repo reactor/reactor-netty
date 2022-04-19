@@ -484,6 +484,75 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		}
 	}
 
+	//https://github.com/reactor/reactor-netty/issues/1808
+	@Test
+	void testMinConnections() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		disposableServer =
+				createServer()
+				        .wiretap(false)
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(serverCtx))
+				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().retain())))
+				        .bindNow();
+
+		int requestsNum = 100;
+		CountDownLatch latch = new CountDownLatch(1);
+		DefaultPooledConnectionProvider provider =
+				(DefaultPooledConnectionProvider) ConnectionProvider.create("testMinConnections", 20);
+		AtomicInteger counter = new AtomicInteger();
+		HttpClient client =
+				createClient(provider, disposableServer.port())
+				        .wiretap(false)
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(clientCtx))
+				        .http2Settings(builder -> builder.minConnections(5))
+				        .observe((conn, state) -> {
+				            if (state == ConnectionObserver.State.CONNECTED) {
+				                counter.incrementAndGet();
+				            }
+				            if (state == ConnectionObserver.State.RELEASED) {
+				                conn.channel().eventLoop().execute(() -> {
+				                    if (counter.decrementAndGet() == 0) {
+				                        latch.countDown();
+				                    }
+				                });
+				            }
+				        });
+
+		try {
+			Flux.range(0, requestsNum)
+			    .flatMap(i ->
+			        client.post()
+			              .uri("/")
+			              .send(ByteBufMono.fromString(Mono.just("testMinConnections")))
+			              .responseContent()
+			              .aggregate()
+			              .asString())
+			    .blockLast(Duration.ofSeconds(5));
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(provider.channelPools).hasSize(1);
+
+			@SuppressWarnings({"unchecked", "rawtypes"})
+			InstrumentedPool<DefaultPooledConnectionProvider.PooledConnection> channelPool =
+					provider.channelPools.values().toArray(new InstrumentedPool[0])[0];
+			InstrumentedPool.PoolMetrics metrics = channelPool.metrics();
+			assertThat(metrics.acquiredSize()).isEqualTo(0);
+			assertThat(metrics.allocatedSize()).isEqualTo(metrics.idleSize());
+			assertThat(metrics.allocatedSize()).isLessThan(10);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
 	static final class TestPromise extends DefaultChannelPromise {
 
 		final ChannelPromise parent;

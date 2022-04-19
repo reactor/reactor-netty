@@ -466,7 +466,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.remoteAddress = remoteAddress;
 			this.resolver = resolver;
 			this.pool = poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
-					poolConFig -> new Http2Pool(poolConFig, poolFactory.maxLifeTime()));
+					poolConFig -> new Http2Pool(poolConFig, poolFactory.maxLifeTime(),
+							this.config.http2Settings != null ? this.config.http2Settings.minConnections() : 0));
 		}
 
 		Publisher<Connection> connectChannel() {
