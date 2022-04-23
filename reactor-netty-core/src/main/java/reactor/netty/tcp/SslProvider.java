@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -183,6 +184,13 @@ public final class SslProvider {
 		 * @return {@literal this}
 		 */
 		Builder addSniMapping(String domainName, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder);
+
+		/**
+		 * add a fallback method to provide {@link SslProvider} by domainName as a param
+		 * @param sniFallback
+		 * @return
+		 */
+		Builder setSniFallback(Function<String, SslProvider> sniFallback);
 
 		/**
 		 * Adds the provided mappings of domain names to {@link SslProvider} builders to the existing mappings.
@@ -388,10 +396,11 @@ public final class SslProvider {
 		this.builderHashCode = builder.hashCode();
 		if (!builder.confPerDomainName.isEmpty()) {
 			if (this.type != null) {
-				this.sniProvider = updateAllSslProviderConfiguration(builder.confPerDomainName, this, type);
+				this.sniProvider = updateAllSslProviderConfiguration(builder.confPerDomainName, this, type,
+						builder.sniFallback);
 			}
 			else {
-				this.sniProvider = new SniProvider(builder.confPerDomainName, this);
+				this.sniProvider = new SniProvider(builder.confPerDomainName, this, builder.sniFallback);
 			}
 		}
 		else {
@@ -440,7 +449,8 @@ public final class SslProvider {
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
 		this.builderHashCode = from.builderHashCode;
 		if (from.sniProvider != null) {
-			this.sniProvider = updateAllSslProviderConfiguration(from.sniProvider.confPerDomainName, this, type);
+			this.sniProvider = updateAllSslProviderConfiguration(from.sniProvider.confPerDomainName, this, type,
+					from.sniProvider.sniFallback);
 		}
 		else {
 			this.sniProvider = null;
@@ -448,11 +458,13 @@ public final class SslProvider {
 	}
 
 	SniProvider updateAllSslProviderConfiguration(Map<String, SslProvider> confPerDomainName,
-			SslProvider defaultSslProvider, SslProvider.DefaultConfigurationType type) {
+	                                              SslProvider defaultSslProvider,
+	                                              SslProvider.DefaultConfigurationType type,
+	                                              Function<String, SslProvider> sniFallback) {
 		Map<String, SslProvider> config = new HashMap<>();
 		confPerDomainName.forEach((s, sslProvider) ->
 				config.put(s, SslProvider.updateDefaultConfiguration(sslProvider, type)));
-		return new SniProvider(config, defaultSslProvider);
+		return new SniProvider(config, defaultSslProvider, sniFallback);
 	}
 
 	void updateDefaultConfiguration() {
@@ -613,7 +625,7 @@ public final class SslProvider {
 		long closeNotifyReadTimeoutMillis;
 		List<SNIServerName> serverNames;
 		final Map<String, SslProvider> confPerDomainName = new HashMap<>();
-
+		Function<String, SslProvider> sniFallback;
 		// SslContextSpec
 
 		@Override
@@ -704,6 +716,12 @@ public final class SslProvider {
 		@Override
 		public Builder addSniMapping(String domainName, Consumer<? super SslContextSpec> sslProviderBuilder) {
 			addInternal(domainName, sslProviderBuilder);
+			return this;
+		}
+
+		@Override
+		public Builder setSniFallback(Function<String, SslProvider> sniFallback) {
+			this.sniFallback = sniFallback;
 			return this;
 		}
 
