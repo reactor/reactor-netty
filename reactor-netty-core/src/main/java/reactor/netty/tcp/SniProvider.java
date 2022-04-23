@@ -26,6 +26,7 @@ import io.netty.util.Mapping;
 import reactor.netty.NettyPipeline;
 
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * An {@link SniProvider} to configure the channel pipeline in order to support server SNI
@@ -54,46 +55,68 @@ final class SniProvider {
 
 	final Map<String, SslProvider> confPerDomainName;
 	final SslProvider defaultSslProvider;
+	final Function<String, SslProvider> sniFallback;
 
-	SniProvider(Map<String, SslProvider> confPerDomainName, SslProvider defaultSslProvider) {
+	SniProvider(Map<String, SslProvider> confPerDomainName, SslProvider defaultSslProvider, Function<String,
+			SslProvider> sniFallback) {
 		this.confPerDomainName = confPerDomainName;
 		this.defaultSslProvider = defaultSslProvider;
+		this.sniFallback = sniFallback;
 	}
 
 	SniHandler newSniHandler() {
-		DomainWildcardMappingBuilder<SslContext> mappingsContextBuilder =
-				new DomainWildcardMappingBuilder<>(defaultSslProvider.getSslContext());
-		confPerDomainName.forEach((s, sslProvider) -> mappingsContextBuilder.add(s, sslProvider.getSslContext()));
 		DomainWildcardMappingBuilder<SslProvider> mappingsSslProviderBuilder =
 				new DomainWildcardMappingBuilder<>(defaultSslProvider);
 		confPerDomainName.forEach(mappingsSslProviderBuilder::add);
-		return new AdvancedSniHandler(mappingsSslProviderBuilder.build(), defaultSslProvider, mappingsContextBuilder.build());
+		return new SniFallbackHandler(mappingsSslProviderBuilder.build(), defaultSslProvider, this.sniFallback);
 	}
 
-	static final class AdvancedSniHandler extends SniHandler {
+	static final class SniFallbackHandler extends SniHandler {
+		private final Mapping<String, SslProvider> mapping;
+		private final SslProvider defaultSslProvider;
+		private final Function<String, SslProvider> sniFallback;
 
-		final Mapping<? super String, ? extends SslProvider> confPerDomainName;
-		final SslProvider defaultSslProvider;
-
-		AdvancedSniHandler(
-				Mapping<? super String, ? extends SslProvider> confPerDomainName,
-				SslProvider defaultSslProvider,
-				Mapping<? super String, ? extends SslContext> mappings) {
-			super(mappings);
-			this.confPerDomainName = confPerDomainName;
+		public SniFallbackHandler(Mapping<String, SslProvider> mapping, SslProvider defaultSslProvider,
+		                          Function<String, SslProvider> sniFallback) {
+			super((host, promise) -> {
+				try {
+					SslProvider provider = getProvider(host, mapping, defaultSslProvider, sniFallback);
+					return promise.setSuccess(provider.getSslContext());
+				}
+				catch (Throwable cause) {
+					return promise.setFailure(cause);
+				}
+			});
+			this.mapping = mapping;
 			this.defaultSslProvider = defaultSslProvider;
+			this.sniFallback = sniFallback;
+		}
+
+		private static SslProvider getProvider(String host, Mapping<String, SslProvider> mapping,
+		                                       SslProvider defaultSslProvider,
+		                                       Function<String, SslProvider> sniFallback) {
+			if (host == null) {
+				return defaultSslProvider;
+			}
+			else if (mapping.map(host) != null) {
+				return mapping.map(host);
+			}
+			else {
+				SslProvider apply = sniFallback.apply(host);
+				if (apply != null) {
+					return apply;
+				}
+				else {
+					return defaultSslProvider;
+				}
+			}
 		}
 
 		@Override
 		protected SslHandler newSslHandler(SslContext context, ByteBufAllocator allocator) {
 			SslHandler sslHandler = super.newSslHandler(context, allocator);
-			String hostName = hostname();
-			if (hostName == null) {
-				defaultSslProvider.configure(sslHandler);
-			}
-			else {
-				confPerDomainName.map(hostname()).configure(sslHandler);
-			}
+			String hostname = hostname();
+			getProvider(hostname, this.mapping, this.defaultSslProvider, this.sniFallback).configure(sslHandler);
 			return sslHandler;
 		}
 	}
