@@ -187,8 +187,8 @@ public final class SslProvider {
 
 		/**
 		 * add a fallback method to provide {@link SslProvider} by domainName as a param
-		 * @param sniFallback
-		 * @return
+		 * @param sniFallback the sni fallback provider
+		 * @return {@literal this}
 		 */
 		Builder setSniFallback(Function<String, SslProvider> sniFallback);
 

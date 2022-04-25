@@ -72,9 +72,9 @@ final class SniProvider {
 	}
 
 	static final class SniFallbackHandler extends SniHandler {
-		private final Mapping<String, SslProvider> mapping;
-		private final SslProvider defaultSslProvider;
-		private final Function<String, SslProvider> sniFallback;
+		final Mapping<String, SslProvider> mapping;
+		final SslProvider defaultSslProvider;
+		final Function<String, SslProvider> sniFallback;
 
 		public SniFallbackHandler(Mapping<String, SslProvider> mapping, SslProvider defaultSslProvider,
 		                          Function<String, SslProvider> sniFallback) {
