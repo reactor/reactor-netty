@@ -33,6 +33,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.ScheduledFuture;
+import reactor.util.annotation.Nullable;
 
 /**
  * Reuse local event loop if already working inside one.
@@ -124,10 +125,8 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 
 	@Override
 	public EventLoop next() {
-		if (localLoop.isSet()) {
-			return localLoop.get();
-		}
-		return eventLoopGroup.next();
+		EventLoop loop = nextInternal();
+		return loop != null ? loop : eventLoopGroup.next();
 	}
 
 	@Override
@@ -217,5 +216,10 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 		for (EventExecutor ex : eventLoopGroup) {
 			ex.execute(() -> localLoop.set(null));
 		}
+	}
+
+	@Nullable
+	EventLoop nextInternal() {
+		return localLoop.isSet() ? localLoop.get() : null;
 	}
 }
