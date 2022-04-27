@@ -499,9 +499,15 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		Publisher<PooledConnection> connectChannel() {
 			return Mono.create(sink -> {
 				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink);
-				EventLoop callerEventLoop = sink.contextView().get(CONTEXT_CALLER_EVENTLOOP);
-				TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop)
-				                  .subscribe(initializer);
+				EventLoop callerEventLoop = sink.contextView().hasKey(CONTEXT_CALLER_EVENTLOOP) ?
+						sink.contextView().get(CONTEXT_CALLER_EVENTLOOP) : null;
+				if (callerEventLoop != null) {
+					TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop)
+							.subscribe(initializer);
+				}
+				else {
+					TransportConnector.connect(config, remoteAddress, resolver, initializer).subscribe(initializer);
+				}
 			});
 		}
 
