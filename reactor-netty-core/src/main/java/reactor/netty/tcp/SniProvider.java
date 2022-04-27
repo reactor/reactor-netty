@@ -39,7 +39,7 @@ final class SniProvider {
 	/**
 	 * Adds configured {@link SniHandler} to the channel pipeline.
 	 *
-	 * @param channel the channel
+	 * @param channel  the channel
 	 * @param sslDebug if true SSL debugging on the server side will be enabled
 	 */
 	void addSniHandler(Channel channel, boolean sslDebug) {
@@ -98,17 +98,17 @@ final class SniProvider {
 			if (host == null) {
 				return defaultSslProvider;
 			}
-			else if (mapping.map(host) != null) {
-				return mapping.map(host);
-			}
-			else {
+			else if (sniFallback != null) {
 				SslProvider apply = sniFallback.apply(host);
 				if (apply != null) {
 					return apply;
 				}
 				else {
-					return defaultSslProvider;
+					return mapping.map(host);
 				}
+			}
+			else {
+				return mapping.map(host);
 			}
 		}
 
