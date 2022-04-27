@@ -18,6 +18,7 @@ package reactor.netty.resources;
 import io.micrometer.contextpropagation.ContextContainer;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolverGroup;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
@@ -151,11 +152,26 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			ContextContainer container = ContextContainer.create().captureThreadLocalValues();
 			container.captureContext(Context.of(sink.contextView()));
 			Context currentPropagationContext = container.save(Context.empty());
-			EventLoop eventLoop = sink.contextView().getOrDefault(CONTEXT_CALLER_EVENTLOOP,
-					config.loopResources().onClient(config.isPreferNative()).next());
-			pool.acquire(Duration.ofMillis(poolFactory.pendingAcquireTimeout))
-			    .contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop)
-			                            .putAll(currentPropagationContext.readOnly()))
+
+			EventLoop eventLoop;
+			if (sink.contextView().hasKey(CONTEXT_CALLER_EVENTLOOP)) {
+				eventLoop = sink.contextView().get(CONTEXT_CALLER_EVENTLOOP);
+			}
+			else {
+				EventLoopGroup group = config.loopResources().onClient(config.isPreferNative());
+				if (group instanceof ColocatedEventLoopGroup) {
+					eventLoop = ((ColocatedEventLoopGroup) group).nextInternal();
+				}
+				else {
+					eventLoop = null;
+				}
+			}
+
+			Mono<PooledRef<T>> mono = pool.acquire(Duration.ofMillis(poolFactory.pendingAcquireTimeout));
+			if (eventLoop != null) {
+				mono = mono.contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop));
+			}
+			mono.contextWrite(ctx -> ctx.putAll(currentPropagationContext.readOnly()))
 			    .subscribe(createDisposableAcquire(config, connectionObserver,
 			            poolFactory.pendingAcquireTimeout, pool, currentPropagationContext, sink));
 		});
