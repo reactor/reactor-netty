@@ -21,8 +21,8 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
+import reactor.netty.internal.util.Metrics;
 import reactor.netty.transport.TransportConfig;
-import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;

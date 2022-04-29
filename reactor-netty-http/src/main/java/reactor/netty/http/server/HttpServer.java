@@ -43,12 +43,12 @@ import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.logging.AccessLog;
 import reactor.netty.http.server.logging.AccessLogArgProvider;
 import reactor.netty.http.server.logging.AccessLogFactory;
+import reactor.netty.internal.util.Metrics;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ServerTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.Metrics;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;

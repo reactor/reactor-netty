@@ -54,11 +54,11 @@ import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
+import reactor.netty.internal.util.Metrics;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.ClientTransport;
-import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
 /**
