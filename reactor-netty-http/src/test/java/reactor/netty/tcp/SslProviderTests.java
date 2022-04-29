@@ -30,8 +30,8 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.DomainWildcardMappingBuilder;
-import io.netty.util.Mapping;
+import io.netty.util.AsyncMapping;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -245,12 +245,14 @@ class SslProviderTests extends BaseHttpTest {
 				           .addSniMapping("localhost", spec -> spec.sslContext(localhostSslContext));
 
 		SniProvider provider = builder.build().sniProvider;
-		assertThat(mappings(provider).map("localhost")).isSameAs(localhostSslContext);
+		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
+				.isSameAs(localhostSslContext);
 
 		provider = builder.addSniMapping("localhost", spec -> spec.sslContext(anotherSslContext))
 		                  .build()
 		                  .sniProvider;
-		assertThat(mappings(provider).map("localhost")).isSameAs(anotherSslContext);
+		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
+				.isSameAs(anotherSslContext);
 	}
 
 	@Test
@@ -277,13 +279,16 @@ class SslProviderTests extends BaseHttpTest {
 				           .addSniMappings(map);
 
 		SniProvider provider = builder.build().sniProvider;
-		assertThat(mappings(provider).map("localhost")).isSameAs(localhostSslContext);
+		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
+				.isSameAs(localhostSslContext);
 
 		map.put("another", spec -> spec.sslContext(anotherSslContext));
 
 		provider = builder.addSniMappings(map).build().sniProvider;
-		assertThat(mappings(provider).map("localhost")).isSameAs(localhostSslContext);
-		assertThat(mappings(provider).map("another")).isSameAs(anotherSslContext);
+		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
+				.isSameAs(localhostSslContext);
+		assertThat(provider.mappings.map("another", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
+				.isSameAs(anotherSslContext);
 	}
 
 	@Test
@@ -306,14 +311,17 @@ class SslProviderTests extends BaseHttpTest {
 				           .setSniMappings(map);
 
 		SniProvider provider = builder.build().sniProvider;
-		assertThat(mappings(provider).map("localhost")).isSameAs(localhostSslContext);
+		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
+				.isSameAs(localhostSslContext);
 
 		map.clear();
 		map.put("another", spec -> spec.sslContext(anotherSslContext));
 
 		provider = builder.setSniMappings(map).build().sniProvider;
-		assertThat(mappings(provider).map("localhost")).isSameAs(defaultSslContext);
-		assertThat(mappings(provider).map("another")).isSameAs(anotherSslContext);
+		assertThat(provider.mappings.map("localhost", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
+				.isSameAs(defaultSslContext);
+		assertThat(provider.mappings.map("another", GlobalEventExecutor.INSTANCE.newPromise()).getNow().sslContext)
+				.isSameAs(anotherSslContext);
 	}
 
 	@Test
@@ -321,7 +329,12 @@ class SslProviderTests extends BaseHttpTest {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder)
-						.setSniMappings(null));
+						.setSniMappings((Map<String, Consumer<? super SslProvider.SslContextSpec>>) null));
+
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> SslProvider.builder()
+						.sslContext(serverSslContextBuilder)
+						.setSniMappings((AsyncMapping<String, SslProvider>) null));
 	}
 
 	@Test
@@ -350,12 +363,5 @@ class SslProviderTests extends BaseHttpTest {
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(defaultSslContext)
 						.serverNames((SNIServerName[]) null));
-	}
-
-	static Mapping<String, SslContext> mappings(SniProvider provider) {
-		DomainWildcardMappingBuilder<SslContext> mappingsBuilder =
-				new DomainWildcardMappingBuilder<>(provider.defaultSslProvider.getSslContext());
-		provider.confPerDomainName.forEach((s, sslProvider) -> mappingsBuilder.add(s, sslProvider.getSslContext()));
-		return mappingsBuilder.build();
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,19 @@
  */
 package reactor.netty.tcp;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.ssl.SniHandler;
-import io.netty.handler.ssl.SslContext;
+import io.netty.handler.codec.DecoderException;
+import io.netty.handler.ssl.AbstractSniHandler;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.AsyncMapping;
 import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.Mapping;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import reactor.netty.NettyPipeline;
 
 import java.util.Map;
@@ -52,49 +57,81 @@ final class SniProvider {
 		SslProvider.addSslReadHandler(pipeline, sslDebug);
 	}
 
-	final Map<String, SslProvider> confPerDomainName;
-	final SslProvider defaultSslProvider;
+	final AsyncMapping<String, SslProvider> mappings;
 
-	SniProvider(Map<String, SslProvider> confPerDomainName, SslProvider defaultSslProvider) {
-		this.confPerDomainName = confPerDomainName;
-		this.defaultSslProvider = defaultSslProvider;
+	SniProvider(AsyncMapping<String, SslProvider> mappings) {
+		this.mappings = mappings;
 	}
 
-	SniHandler newSniHandler() {
-		DomainWildcardMappingBuilder<SslContext> mappingsContextBuilder =
-				new DomainWildcardMappingBuilder<>(defaultSslProvider.getSslContext());
-		confPerDomainName.forEach((s, sslProvider) -> mappingsContextBuilder.add(s, sslProvider.getSslContext()));
+	SniProvider(Map<String, SslProvider> confPerDomainName, SslProvider defaultSslProvider) {
 		DomainWildcardMappingBuilder<SslProvider> mappingsSslProviderBuilder =
 				new DomainWildcardMappingBuilder<>(defaultSslProvider);
 		confPerDomainName.forEach(mappingsSslProviderBuilder::add);
-		return new AdvancedSniHandler(mappingsSslProviderBuilder.build(), defaultSslProvider, mappingsContextBuilder.build());
+		this.mappings = new AsyncMappingAdapter(mappingsSslProviderBuilder.build());
 	}
 
-	static final class AdvancedSniHandler extends SniHandler {
+	SniHandler newSniHandler() {
+		return new SniHandler(mappings);
+	}
 
-		final Mapping<? super String, ? extends SslProvider> confPerDomainName;
-		final SslProvider defaultSslProvider;
+	static final class AsyncMappingAdapter implements AsyncMapping<String, SslProvider> {
 
-		AdvancedSniHandler(
-				Mapping<? super String, ? extends SslProvider> confPerDomainName,
-				SslProvider defaultSslProvider,
-				Mapping<? super String, ? extends SslContext> mappings) {
-			super(mappings);
-			this.confPerDomainName = confPerDomainName;
-			this.defaultSslProvider = defaultSslProvider;
+		final Mapping<String, SslProvider> mapping;
+
+		AsyncMappingAdapter(Mapping<String, SslProvider> mapping) {
+			this.mapping = mapping;
 		}
 
 		@Override
-		protected SslHandler newSslHandler(SslContext context, ByteBufAllocator allocator) {
-			SslHandler sslHandler = super.newSslHandler(context, allocator);
-			String hostName = hostname();
-			if (hostName == null) {
-				defaultSslProvider.configure(sslHandler);
+		public Future<SslProvider> map(String input, Promise<SslProvider> promise) {
+			try {
+				return promise.setSuccess(mapping.map(input));
 			}
-			else {
-				confPerDomainName.map(hostname()).configure(sslHandler);
+			catch (Throwable cause) {
+				return promise.setFailure(cause);
 			}
-			return sslHandler;
+		}
+	}
+
+	static final class SniHandler extends AbstractSniHandler<SslProvider> {
+
+		final AsyncMapping<String, SslProvider> mappings;
+
+		SniHandler(AsyncMapping<String, SslProvider> mappings) {
+			this.mappings = mappings;
+		}
+
+		@Override
+		protected Future<SslProvider> lookup(ChannelHandlerContext ctx, String hostname) {
+			return mappings.map(hostname, ctx.executor().newPromise());
+		}
+
+		@Override
+		protected void onLookupComplete(ChannelHandlerContext ctx, String hostname, Future<SslProvider> future) {
+			if (!future.isSuccess()) {
+				final Throwable cause = future.cause();
+				if (cause instanceof Error) {
+					throw (Error) cause;
+				}
+				throw new DecoderException("failed to get the SslContext for " + hostname, cause);
+			}
+
+			SslProvider sslProvider = future.getNow();
+			SslHandler sslHandler = null;
+			try {
+				sslHandler = sslProvider.getSslContext().newHandler(ctx.alloc());
+				sslProvider.configure(sslHandler);
+				ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
+				sslHandler = null;
+			}
+			catch (Throwable cause) {
+				PlatformDependent.throwException(cause);
+			}
+			finally {
+				if (sslHandler != null) {
+					ReferenceCountUtil.safeRelease(sslHandler.engine());
+				}
+			}
 		}
 	}
 }
