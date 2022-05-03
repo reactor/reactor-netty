@@ -46,6 +46,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import io.netty.util.AsyncMapping;
 import reactor.core.Exceptions;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
@@ -176,7 +177,9 @@ public final class SslProvider {
 		/**
 		 * Adds a mapping for the given domain name to an {@link SslProvider} builder.
 		 * If a mapping already exists, it will be overridden.
-		 * Note: This configuration is applicable only when configuring the server.
+		 * <p><strong>Note:</strong> This method is a sync alternative of {@link #setSniAsyncMappings(AsyncMapping)},
+		 * which removes the async mappings.
+		 * <p><strong>Note:</strong> This configuration is applicable only when configuring the server.
 		 *
 		 * @param domainName the domain name, it may contain wildcard
 		 * @param sslProviderBuilder an {@link SslProvider} builder for building the {@link SslProvider}
@@ -187,7 +190,9 @@ public final class SslProvider {
 		/**
 		 * Adds the provided mappings of domain names to {@link SslProvider} builders to the existing mappings.
 		 * If a mapping already exists, it will be overridden.
-		 * Note: This configuration is applicable only when configuring the server.
+		 * <p><strong>Note:</strong> This method is a sync alternative of {@link #setSniAsyncMappings(AsyncMapping)},
+		 * which removes the async mappings.
+		 * <p><strong>Note:</strong> This configuration is applicable only when configuring the server.
 		 *
 		 * @param confPerDomainName mappings of domain names to {@link SslProvider} builders
 		 * @return {@literal this}
@@ -197,12 +202,26 @@ public final class SslProvider {
 		/**
 		 * Sets the provided mappings of domain names to {@link SslProvider} builders.
 		 * The existing mappings will be removed.
-		 * Note: This configuration is applicable only when configuring the server.
+		 * <p><strong>Note:</strong> This method is a sync alternative of {@link #setSniAsyncMappings(AsyncMapping)},
+		 * which removes the async mappings.
+		 * <p><strong>Note:</strong> This configuration is applicable only when configuring the server.
 		 *
 		 * @param confPerDomainName mappings of domain names to {@link SslProvider} builders
 		 * @return {@literal this}
 		 */
 		Builder setSniMappings(Map<String, Consumer<? super SslProvider.SslContextSpec>> confPerDomainName);
+
+		/**
+		 * Sets the provided mappings of domain names to {@link SslProvider}.
+		 * <p><strong>Note:</strong> This method is an alternative of {@link #addSniMapping(String, Consumer)},
+		 * {@link #addSniMappings(Map)} and {@link #setSniMappings(Map)}.
+		 * <p><strong>Note:</strong> This configuration is applicable only when configuring the server.
+		 *
+		 * @param mappings mappings of domain names to {@link SslProvider}
+		 * @return {@literal this}
+		 * @since 1.0.19
+		 */
+		Builder setSniAsyncMappings(AsyncMapping<String, SslProvider> mappings);
 
 		/**
 		 * Sets the desired {@link SNIServerName}s.
@@ -337,6 +356,8 @@ public final class SslProvider {
 	final Consumer<? super SslHandler> handlerConfigurator;
 	final int                          builderHashCode;
 	final SniProvider                  sniProvider;
+	final Map<String, SslProvider>     confPerDomainName;
+	final AsyncMapping<String, SslProvider> sniMappings;
 
 	SslProvider(SslProvider.Build builder) {
 		this.sslContextBuilder = builder.sslCtxBuilder;
@@ -386,13 +407,18 @@ public final class SslProvider {
 		this.closeNotifyFlushTimeoutMillis = builder.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = builder.closeNotifyReadTimeoutMillis;
 		this.builderHashCode = builder.hashCode();
-		if (!builder.confPerDomainName.isEmpty()) {
+		this.confPerDomainName = builder.confPerDomainName;
+		this.sniMappings = builder.sniMappings;
+		if (!confPerDomainName.isEmpty()) {
 			if (this.type != null) {
-				this.sniProvider = updateAllSslProviderConfiguration(builder.confPerDomainName, this, type);
+				this.sniProvider = updateAllSslProviderConfiguration(confPerDomainName, this, type);
 			}
 			else {
-				this.sniProvider = new SniProvider(builder.confPerDomainName, this);
+				this.sniProvider = new SniProvider(confPerDomainName, this);
 			}
+		}
+		else if (sniMappings != null) {
+			this.sniProvider = new SniProvider(sniMappings);
 		}
 		else {
 			this.sniProvider = null;
@@ -416,6 +442,8 @@ public final class SslProvider {
 		this.closeNotifyFlushTimeoutMillis = from.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
 		this.builderHashCode = from.builderHashCode;
+		this.confPerDomainName = from.confPerDomainName;
+		this.sniMappings = from.sniMappings;
 		this.sniProvider = from.sniProvider;
 	}
 
@@ -439,8 +467,15 @@ public final class SslProvider {
 		this.closeNotifyFlushTimeoutMillis = from.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
 		this.builderHashCode = from.builderHashCode;
+		this.confPerDomainName = from.confPerDomainName;
+		this.sniMappings = from.sniMappings;
 		if (from.sniProvider != null) {
-			this.sniProvider = updateAllSslProviderConfiguration(from.sniProvider.confPerDomainName, this, type);
+			if (!confPerDomainName.isEmpty()) {
+				this.sniProvider = updateAllSslProviderConfiguration(confPerDomainName, this, type);
+			}
+			else {
+				this.sniProvider = new SniProvider(sniMappings);
+			}
 		}
 		else {
 			this.sniProvider = null;
@@ -613,6 +648,7 @@ public final class SslProvider {
 		long closeNotifyReadTimeoutMillis;
 		List<SNIServerName> serverNames;
 		final Map<String, SslProvider> confPerDomainName = new HashMap<>();
+		AsyncMapping<String, SslProvider> sniMappings;
 
 		// SslContextSpec
 
@@ -704,6 +740,7 @@ public final class SslProvider {
 		@Override
 		public Builder addSniMapping(String domainName, Consumer<? super SslContextSpec> sslProviderBuilder) {
 			addInternal(domainName, sslProviderBuilder);
+			this.sniMappings = null;
 			return this;
 		}
 
@@ -711,6 +748,7 @@ public final class SslProvider {
 		public Builder addSniMappings(Map<String, Consumer<? super SslContextSpec>> confPerDomainName) {
 			Objects.requireNonNull(confPerDomainName);
 			confPerDomainName.forEach(this::addInternal);
+			this.sniMappings = null;
 			return this;
 		}
 
@@ -719,6 +757,14 @@ public final class SslProvider {
 			Objects.requireNonNull(confPerDomainName);
 			this.confPerDomainName.clear();
 			confPerDomainName.forEach(this::addInternal);
+			this.sniMappings = null;
+			return this;
+		}
+
+		@Override
+		public Builder setSniAsyncMappings(AsyncMapping<String, SslProvider> mappings) {
+			this.sniMappings = Objects.requireNonNull(mappings);
+			this.confPerDomainName.clear();
 			return this;
 		}
 

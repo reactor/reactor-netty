@@ -117,6 +117,7 @@ import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.PrematureCloseException;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.TransportConfig;
@@ -1960,6 +1961,53 @@ class HttpServerTests extends BaseHttpTest {
 				                             ctx.fireUserEventTriggered(evt);
 				                         }
 				                     }))
+				          .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
+				          .bindNow();
+
+		createClient(disposableServer::address)
+		          .secure(spec -> spec.sslContext(clientSslContextBuilder)
+		                              .serverNames(new SNIHostName("test.com")))
+		          .get()
+		          .uri("/")
+		          .responseContent()
+		          .aggregate()
+		          .block(Duration.ofSeconds(30));
+
+		assertThat(hostname.get()).isNotNull();
+		assertThat(hostname.get()).isEqualTo("test.com");
+	}
+
+	@Test
+	void testSniSupportAsyncMappings() throws Exception {
+		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
+		Http11SslContextSpec defaultSslContextBuilder =
+				Http11SslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey());
+
+		SelfSignedCertificate testCert = new SelfSignedCertificate("test.com");
+		Http11SslContextSpec testSslContextBuilder =
+				Http11SslContextSpec.forServer(testCert.certificate(), testCert.privateKey());
+		SslProvider testSslProvider = SslProvider.builder().sslContext(testSslContextBuilder).build();
+
+		Http11SslContextSpec clientSslContextBuilder =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		AtomicReference<String> hostname = new AtomicReference<>();
+		disposableServer =
+				createServer()
+				          .secure(spec -> spec.sslContext(defaultSslContextBuilder)
+				                              .setSniAsyncMappings((input, promise) -> promise.setSuccess(testSslProvider)))
+				          .doOnChannelInit((obs, channel, remoteAddress) ->
+				              channel.pipeline()
+				                     .addAfter(NettyPipeline.SslHandler, "test", new ChannelInboundHandlerAdapter() {
+				                         @Override
+				                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				                             if (evt instanceof SniCompletionEvent) {
+				                                 hostname.set(((SniCompletionEvent) evt).hostname());
+				                             }
+				                                 ctx.fireUserEventTriggered(evt);
+				                             }
+				                         }))
 				          .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
 				          .bindNow();
 
