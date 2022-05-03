@@ -213,6 +213,7 @@ public final class SslProvider {
 		 *
 		 * @param mappings mappings of domain names to {@link SslProvider}
 		 * @return {@literal this}
+		 * @since 1.0.19
 		 */
 		Builder setSniMappings(AsyncMapping<String, SslProvider> mappings);
 
