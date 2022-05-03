@@ -1996,7 +1996,7 @@ class HttpServerTests extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .secure(spec -> spec.sslContext(defaultSslContextBuilder)
-				                              .setSniMappings((input, promise) -> promise.setSuccess(testSslProvider)))
+				                              .setSniAsyncMappings((input, promise) -> promise.setSuccess(testSslProvider)))
 				          .doOnChannelInit((obs, channel, remoteAddress) ->
 				              channel.pipeline()
 				                     .addAfter(NettyPipeline.SslHandler, "test", new ChannelInboundHandlerAdapter() {

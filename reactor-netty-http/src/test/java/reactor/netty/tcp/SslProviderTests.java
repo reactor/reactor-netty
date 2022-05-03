@@ -329,12 +329,15 @@ class SslProviderTests extends BaseHttpTest {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder)
-						.setSniMappings((Map<String, Consumer<? super SslProvider.SslContextSpec>>) null));
+						.setSniMappings(null));
+	}
 
+	@Test
+	void testSetSniAsyncMappingsBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> SslProvider.builder()
 						.sslContext(serverSslContextBuilder)
-						.setSniMappings((AsyncMapping<String, SslProvider>) null));
+						.setSniAsyncMappings(null));
 	}
 
 	@Test
