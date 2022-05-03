@@ -18,6 +18,7 @@ package reactor.netty.resources;
 import io.netty.resolver.AddressResolverGroup;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
@@ -31,7 +32,9 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -289,6 +292,7 @@ public interface ConnectionProvider extends Disposable {
 			this.poolInactivity = copy.poolInactivity;
 			this.disposeTimeout = copy.disposeTimeout;
 			copy.confPerRemoteHost.forEach((address, spec) -> this.confPerRemoteHost.put(address, new ConnectionPoolSpec<>(spec)));
+			this.acquireTimer = copy.acquireTimer;
 		}
 
 		/**
@@ -378,6 +382,12 @@ public interface ConnectionProvider extends Disposable {
 		static final Duration EVICT_IN_BACKGROUND_DISABLED       = Duration.ZERO;
 		static final int PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED = -2;
 
+		/**
+		 * Default timer service used for scheduling connection acquisition timers.
+		 */
+		static final BiFunction<Runnable, Duration, Disposable> DEFAULT_ACQUIRE_TIMER = (task, duration) ->
+				Schedulers.parallel().schedule(task, duration.toNanos(), TimeUnit.NANOSECONDS);
+
 		Duration evictionInterval       = EVICT_IN_BACKGROUND_DISABLED;
 		int      maxConnections         = DEFAULT_POOL_MAX_CONNECTIONS;
 		int      pendingAcquireMaxCount = PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED;
@@ -387,6 +397,7 @@ public interface ConnectionProvider extends Disposable {
 		boolean  metricsEnabled;
 		String   leasingStrategy        = DEFAULT_POOL_LEASING_STRATEGY;
 		Supplier<? extends ConnectionProvider.MeterRegistrar> registrar;
+		BiFunction<Runnable, Duration, Disposable> acquireTimer = DEFAULT_ACQUIRE_TIMER;
 
 		/**
 		 * Returns {@link ConnectionPoolSpec} new instance with default properties.
@@ -410,6 +421,7 @@ public interface ConnectionProvider extends Disposable {
 			this.metricsEnabled = copy.metricsEnabled;
 			this.leasingStrategy = copy.leasingStrategy;
 			this.registrar = copy.registrar;
+			this.acquireTimer = copy.acquireTimer;
 		}
 
 		/**
@@ -577,6 +589,19 @@ public interface ConnectionProvider extends Disposable {
 		 */
 		public final SPEC evictInBackground(Duration evictionInterval) {
 			this.evictionInterval = Objects.requireNonNull(evictionInterval, "evictionInterval");
+			return get();
+		}
+
+		/**
+		 * Set the function to applly when scheduling timers for connection acquisitions.
+		 * By default, the {@link Schedulers#parallel()} will be used.
+		 *
+		 * @param acquireTimer the function to applly when scheduling timers for connection acquisitions
+		 * @return {@literal this}
+		 * @since 1.0.19
+		 */
+		public final SPEC acquireTimer(BiFunction<Runnable, Duration, Disposable> acquireTimer) {
+			this.acquireTimer = Objects.requireNonNull(acquireTimer, "acquireTimer");
 			return get();
 		}
 

@@ -57,6 +57,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -364,6 +365,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final Supplier<? extends MeterRegistrar> registrar;
 		final Clock clock;
 		final Duration disposeTimeout;
+		final BiFunction<Runnable, Duration, Disposable> acquireTimer;
 
 		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout) {
 			this(conf, disposeTimeout, null);
@@ -383,6 +385,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			this.registrar = conf.registrar;
 			this.clock = clock;
 			this.disposeTimeout = disposeTimeout;
+			this.acquireTimer = conf.acquireTimer;
 		}
 
 		public InstrumentedPool<T> newPool(
@@ -421,7 +424,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
 					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
 					           .maxPendingAcquire(pendingAcquireMaxCount)
-					           .evictInBackground(evictionInterval);
+					           .evictInBackground(evictionInterval)
+							   .acquireTimer(acquireTimer);
 
 			if (DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE <= 1d
 					&& DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE <= 1d) {

@@ -20,7 +20,6 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -34,7 +33,6 @@ import reactor.core.Disposables;
 import reactor.core.Scannable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
-import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelOperations;
@@ -590,7 +588,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		public void request(long n) {
 			if (Operators.validate(n)) {
 				if (!acquireTimeout.isZero()) {
-					timeoutTask = Schedulers.parallel().schedule(this, acquireTimeout.toMillis(), TimeUnit.MILLISECONDS);
+					timeoutTask = pool.poolConfig.acquireTimer().apply(this, acquireTimeout);
 				}
 				pool.doAcquire(this);
 			}
