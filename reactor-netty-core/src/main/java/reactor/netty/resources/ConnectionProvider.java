@@ -593,10 +593,10 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
-		 * Set the function to applly when scheduling timers for connection acquisitions.
+		 * Set the function to apply when scheduling pending acquisition timers.
 		 * By default, the {@link Schedulers#parallel()} will be used.
 		 *
-		 * @param acquireTimer the function to applly when scheduling timers for connection acquisitions
+		 * @param acquireTimer the function to apply when scheduling pending acquisition timers
 		 * @return {@literal this}
 		 * @since 1.0.19
 		 */
