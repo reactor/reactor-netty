@@ -177,7 +177,8 @@ public final class SslProvider {
 		/**
 		 * Adds a mapping for the given domain name to an {@link SslProvider} builder.
 		 * If a mapping already exists, it will be overridden.
-		 * <p><strong>Note:</strong> This method is an alternative of {@link #setSniAsyncMappings(AsyncMapping)}.
+		 * <p><strong>Note:</strong> This method is a sync alternative of {@link #setSniAsyncMappings(AsyncMapping)},
+		 * which removes the async mappings.
 		 * <p><strong>Note:</strong> This configuration is applicable only when configuring the server.
 		 *
 		 * @param domainName the domain name, it may contain wildcard
@@ -189,7 +190,8 @@ public final class SslProvider {
 		/**
 		 * Adds the provided mappings of domain names to {@link SslProvider} builders to the existing mappings.
 		 * If a mapping already exists, it will be overridden.
-		 * <p><strong>Note:</strong> This method is an alternative of {@link #setSniAsyncMappings(AsyncMapping)}.
+		 * <p><strong>Note:</strong> This method is a sync alternative of {@link #setSniAsyncMappings(AsyncMapping)},
+		 * which removes the async mappings.
 		 * <p><strong>Note:</strong> This configuration is applicable only when configuring the server.
 		 *
 		 * @param confPerDomainName mappings of domain names to {@link SslProvider} builders
@@ -200,7 +202,8 @@ public final class SslProvider {
 		/**
 		 * Sets the provided mappings of domain names to {@link SslProvider} builders.
 		 * The existing mappings will be removed.
-		 * <p><strong>Note:</strong> This method is an alternative of {@link #setSniAsyncMappings(AsyncMapping)}.
+		 * <p><strong>Note:</strong> This method is a sync alternative of {@link #setSniAsyncMappings(AsyncMapping)},
+		 * which removes the async mappings.
 		 * <p><strong>Note:</strong> This configuration is applicable only when configuring the server.
 		 *
 		 * @param confPerDomainName mappings of domain names to {@link SslProvider} builders
