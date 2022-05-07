@@ -547,6 +547,28 @@ public final class SslProvider {
 		}
 	}
 
+	/**
+	 * Adds an HttpClient Proxy ssl handler to a channel pipeline. It is assumed that the ProxyHandler is already
+	 * registered prior to calling this method.
+	 *
+	 * <p><b> This method is not part of the Reactor-Netty API and may be changed or removed at any time.</b>
+	 */
+	public void addProxySslHandler(Channel channel, SocketAddress remoteAddress, boolean sslDebug) {
+		Objects.requireNonNull(channel, "channel");
+		ChannelPipeline pipeline = channel.pipeline();
+
+		if (pipeline.get(NettyPipeline.ProxyHandler) == null) {
+			throw new IllegalStateException("Can't add proxy ssl handler, the proxy handler is not found from the pipeline");
+		}
+		SslHandler sslHandler = buildSslHandler(channel, remoteAddress);
+
+		pipeline.addFirst(NettyPipeline.ProxySslReader, new SslReadHandler());
+		pipeline.addFirst(NettyPipeline.ProxySslHandler, sslHandler);
+		if (sslDebug && pipeline.get(NettyPipeline.ProxyLoggingHandler) != null) {
+			pipeline.addFirst(NettyPipeline.ProxySslLoggingHandler, LOGGING_HANDLER);
+		}
+	}
+
 	public void addSslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug) {
 		Objects.requireNonNull(channel, "channel");
 		if (sniProvider != null) {
@@ -554,6 +576,23 @@ public final class SslProvider {
 			return;
 		}
 
+		SslHandler sslHandler = buildSslHandler(channel, remoteAddress);
+
+		ChannelPipeline pipeline = channel.pipeline();
+		if (pipeline.get(NettyPipeline.ProxyHandler) != null) {
+			pipeline.addAfter(NettyPipeline.ProxyHandler, NettyPipeline.SslHandler, sslHandler);
+		}
+		else if (pipeline.get(NettyPipeline.NonSslRedirectDetector) != null) {
+			pipeline.addAfter(NettyPipeline.NonSslRedirectDetector, NettyPipeline.SslHandler, sslHandler);
+		}
+		else {
+			pipeline.addFirst(NettyPipeline.SslHandler, sslHandler);
+		}
+
+		addSslReadHandler(pipeline, sslDebug);
+	}
+
+	private SslHandler buildSslHandler(Channel channel, SocketAddress remoteAddress) {
 		SslHandler sslHandler;
 
 		if (remoteAddress instanceof InetSocketAddress) {
@@ -574,19 +613,7 @@ public final class SslProvider {
 		}
 
 		configure(sslHandler);
-
-		ChannelPipeline pipeline = channel.pipeline();
-		if (pipeline.get(NettyPipeline.ProxyHandler) != null) {
-			pipeline.addAfter(NettyPipeline.ProxyHandler, NettyPipeline.SslHandler, sslHandler);
-		}
-		else if (pipeline.get(NettyPipeline.NonSslRedirectDetector) != null) {
-			pipeline.addAfter(NettyPipeline.NonSslRedirectDetector, NettyPipeline.SslHandler, sslHandler);
-		}
-		else {
-			pipeline.addFirst(NettyPipeline.SslHandler, sslHandler);
-		}
-
-		addSslReadHandler(pipeline, sslDebug);
+		return sslHandler;
 	}
 
 	@Override

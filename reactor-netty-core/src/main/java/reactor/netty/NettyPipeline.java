@@ -108,6 +108,7 @@ public interface NettyPipeline {
 	String OnChannelReadIdle     = LEFT + "onChannelReadIdle";
 	String OnChannelWriteIdle    = LEFT + "onChannelWriteIdle";
 	String ProxyHandler          = LEFT + "proxyHandler";
+	String ProxySslHandler       = LEFT + "proxySslHandler";
 	String UnvoidHandler         = LEFT + "unvoidHandler";
 	String ProxyLoggingHandler   = LEFT + "proxyLoggingHandler";
 	String ProxyProtocolDecoder  = LEFT + "proxyProtocolDecoder";
@@ -115,7 +116,9 @@ public interface NettyPipeline {
 	String ResponseTimeoutHandler = LEFT + "responseTimeoutHandler";
 	String SslHandler            = LEFT + "sslHandler";
 	String SslLoggingHandler     = LEFT + "sslLoggingHandler";
+	String ProxySslLoggingHandler = LEFT + "proxySslLoggingHandler";
 	String SslReader             = LEFT + "sslReader";
+	String ProxySslReader        = LEFT + "proxySslReader";
 	String TlsMetricsHandler     = LEFT + "tlsMetricsHandler";
 	String WsCompressionHandler  = LEFT + "wsCompressionHandler";
 	String WsFrameAggregator     = LEFT + "wsFrameAggregator";
