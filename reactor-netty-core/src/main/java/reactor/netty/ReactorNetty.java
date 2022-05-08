@@ -178,7 +178,7 @@ public final class ReactorNetty {
 	 * Default value whether the SSL proxy debugging on the client side will be enabled/disabled,
 	 * fallback to SSL debugging disabled
 	 */
-	public static final String SSL_PROXY_CLIENT_DEBUG = "reactor.netty.tcp.ssl.proxy.client.debug";
+	public static final String SSL_PROXY_DEBUG = "reactor.netty.tcp.ssl.proxy.debug";
 	/**
 	 * Default value whether the SSL debugging on the server side will be enabled/disabled,
 	 * fallback to SSL debugging disabled

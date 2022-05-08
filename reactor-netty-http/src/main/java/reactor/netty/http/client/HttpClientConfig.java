@@ -659,7 +659,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 * Default value whether the SSL debugging on the proxy client side will be enabled/disabled,
 	 * fallback to proxy SSL debugging disabled
 	 */
-	static final boolean SSL_PROXY_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_PROXY_CLIENT_DEBUG, "false"));
+	static final boolean SSL_PROXY_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_PROXY_DEBUG, "false"));
 
 	static final class H2CleartextCodec extends ChannelHandlerAdapter {
 
