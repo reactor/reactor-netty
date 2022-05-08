@@ -917,9 +917,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			}
 
 			if (proxyProvider != null && proxyProvider.shouldProxy(remoteAddress) && proxyProvider.getProxySslProvider() != null) {
-				if ((protocols & h11) != h11) {
-					throw new IllegalStateException("secured proxy only supported for HTTP/1.1");
-				}
 				configureHttp11ProxySecure(channel, remoteAddress, proxyProvider.getProxySslProvider());
 			}
 		}
