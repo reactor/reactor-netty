@@ -339,6 +339,9 @@ class HttpRedirectTest extends BaseHttpTest {
 				                       .get("/302", (req, res) ->
 				                          res.status(302)
 				                             .header(HttpHeaderNames.LOCATION, "http://localhost:" + serverPort + "/redirect"))
+				                       .post("/303", (req, res) ->
+				                          res.status(303)
+				                             .header(HttpHeaderNames.LOCATION, "http://localhost:" + serverPort + "/redirect"))
 				                       .get("/304", (req, res) -> res.status(304))
 				                       .get("/307", (req, res) ->
 				                          res.status(307)
@@ -368,6 +371,16 @@ class HttpRedirectTest extends BaseHttpTest {
 		StepVerifier.create(client.followRedirect(true)
 		                          .get()
 		                          .uri("/302")
+		                          .responseContent()
+		                          .aggregate()
+		                          .asString())
+		            .expectNextMatches("OK"::equals)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(client.followRedirect(true)
+		                          .post()
+		                          .uri("/303")
 		                          .responseContent()
 		                          .aggregate()
 		                          .asString())
