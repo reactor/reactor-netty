@@ -905,7 +905,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Specifies whether HTTP status 301|302|307|308 auto-redirect support is enabled.
+	 * Specifies whether HTTP status 301|302|303|307|308 auto-redirect support is enabled.
 	 *
 	 * <p><strong>Note:</strong> The sensitive headers {@link #followRedirect(boolean, Consumer) followRedirect}
 	 * are removed from the initialized request when redirecting to a different domain, they can be re-added
