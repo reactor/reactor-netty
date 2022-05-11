@@ -145,7 +145,8 @@ class HttpClientOperationsTest {
 		ops1.followRedirectPredicate((req, res) -> true);
 		ops1.started = true;
 		ops1.retrying = true;
-		ops1.redirecting = new RedirectClientException(new DefaultHttpHeaders().add(HttpHeaderNames.LOCATION, "/"));
+		ops1.redirecting = new RedirectClientException(new DefaultHttpHeaders().add(HttpHeaderNames.LOCATION, "/"),
+				HttpResponseStatus.MOVED_PERMANENTLY);
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);
 

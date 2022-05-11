@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.util.Objects;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpResponseStatus;
 
 /**
  * An error for signalling that an error occurred during a communication over HTTP version
@@ -27,9 +28,11 @@ import io.netty.handler.codec.http.HttpHeaders;
 final class RedirectClientException extends RuntimeException {
 
 	final String location;
+	final HttpResponseStatus status;
 
-	RedirectClientException(HttpHeaders headers) {
+	RedirectClientException(HttpHeaders headers, HttpResponseStatus status) {
 		location = Objects.requireNonNull(headers.get(HttpHeaderNames.LOCATION));
+		this.status = Objects.requireNonNull(status);
 	}
 
 	@Override

@@ -738,7 +738,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						        .entries()
 						        .toString());
 			}
-			redirecting = new RedirectClientException(response.headers());
+			redirecting = new RedirectClientException(response.headers(), response.status());
 			return false;
 		}
 		return true;
