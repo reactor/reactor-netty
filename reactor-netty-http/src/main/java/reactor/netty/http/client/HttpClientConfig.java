@@ -622,7 +622,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		return bootstrap.open();
 	}
 
-	static final Pattern FOLLOW_REDIRECT_CODES = Pattern.compile("30[1278]");
+	static final Pattern FOLLOW_REDIRECT_CODES = Pattern.compile("30[12378]");
 
 	static final BiPredicate<HttpClientRequest, HttpClientResponse> FOLLOW_REDIRECT_PREDICATE =
 			(req, res) -> FOLLOW_REDIRECT_CODES.matcher(res.status()
