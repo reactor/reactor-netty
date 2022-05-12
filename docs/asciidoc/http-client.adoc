@@ -131,7 +131,8 @@ You can configure the `HTTP` client to enable auto-redirect support.
 
 Reactor Netty provides two different strategies for auto-redirect support:
 
-* `followRedirect(boolean)`: Specifies whether HTTP auto-redirect support is enabled for statuses `301|302|307|308`.
+* `followRedirect(boolean)`: Specifies whether HTTP auto-redirect support is enabled for statuses `301|302|303|307|308`.
+When it is `303` status code, `GET` method is used for the redirect.
 * `followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse>)`: Enables auto-redirect support if the supplied
 predicate matches.
 
