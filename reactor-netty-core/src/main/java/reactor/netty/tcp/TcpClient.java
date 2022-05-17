@@ -102,20 +102,6 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 		return create(ConnectionProvider.newConnection());
 	}
 
-	/**
-	 * The address to which this client should connect for each subscribe.
-	 *
-	 * @param connectAddressSupplier A supplier of the address to connect to.
-	 *
-	 * @return a new {@link TcpClient}
-	 * @deprecated Use {@link #remoteAddress(Supplier)}. This method will be removed in version 1.1.0.
-	 */
-	@Deprecated
-	@SuppressWarnings("InlineMeSuggester")
-	public final TcpClient addressSupplier(Supplier<? extends SocketAddress> connectAddressSupplier) {
-		return remoteAddress(connectAddressSupplier);
-	}
-
 	@Override
 	public <A> TcpClient attr(AttributeKey<A> key, @Nullable A value) {
 		return super.attr(key, value);

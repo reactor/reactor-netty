@@ -1036,40 +1036,6 @@ public class TcpClientTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	void testAddressSupplier() {
-		DisposableServer server =
-				TcpServer.create()
-				         .port(0)
-				         .handle((req, res) -> res.send(req.receive()
-				                                           .retain()))
-				         .wiretap(true)
-				         .bindNow();
-
-		Connection conn =
-				TcpClient.create()
-				         .addressSupplier(server::address)
-				         .connectNow();
-
-		conn.outbound()
-		    .sendString(Mono.just("testAddressSupplier"))
-		    .then()
-		    .subscribe();
-
-		String result =
-				conn.inbound()
-				    .receive()
-				    .asString()
-				    .blockFirst();
-
-		assertThat(result).isEqualTo("testAddressSupplier");
-
-		conn.disposeNow();
-		server.disposeNow();
-	}
-
-
-	@Test
 	void testDefaultResolverWithCustomEventLoop() throws Exception {
 		LoopResources loop1 = LoopResources.create("test", 1, true);
 		EventLoopGroup loop2 = new NioEventLoopGroup(1);
