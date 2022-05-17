@@ -57,7 +57,6 @@ import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.internal.util.Metrics;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
-import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.ClientTransport;
 import reactor.util.annotation.Nullable;
 
@@ -403,75 +402,6 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	public static HttpClient create(ConnectionProvider connectionProvider) {
 		Objects.requireNonNull(connectionProvider, "connectionProvider");
 		return new HttpClientConnect(new HttpConnectionProvider(connectionProvider));
-	}
-
-	/**
-	 * Prepare an {@link HttpClient}
-	 * <p>
-	 * <strong>Note:</strong>
-	 * There isn't only one method that replaces this deprecated method.
-	 * The configuration that can be done with this deprecated method,
-	 * can also be done with the other methods exposed by {@link HttpClient}.
-	 * </p>
-	 * <p>Examples:</p>
-	 * <p>Configuration via the deprecated '.from(...)' method</p>
-	 * <pre>
-	 * {@code
-	 * HttpClient.from(
-	 *     TcpClient.attr(...) // configures the channel attributes
-	 *              .bindAddress(...) // configures the bind (local) address
-	 *              .channelGroup(...) // configures the channel group
-	 *              .doOnChannelInit(...) // configures the channel handler
-	 *              .doOnConnected(...) // configures the doOnConnected callback
-	 *              .doOnDisconnected(...) // configures the doOnDisconnected callback
-	 *              .metrics(...) // configures the metrics
-	 *              .observe() // configures the connection observer
-	 *              .option(...) // configures the channel options
-	 *              .proxy(...) // configures the proxy
-	 *              .remoteAddress(...) // configures the remote address
-	 *              .resolver(...) // configures the host names resolver
-	 *              .runOn(...) // configures the event loop group
-	 *              .secure() // configures the SSL
-	 *              .wiretap()) // configures the wire logging
-	 * }
-	 * </pre>
-	 *
-	 * <p>Configuration via the other methods exposed by {@link HttpClient}</p>
-	 * <pre>
-	 * {@code
-	 * HttpClient.attr(...) // configures the channel attributes
-	 *           .bindAddress(...) // configures the bind (local) address
-	 *           .channelGroup(...) // configures the channel group
-	 *           .doOnChannelInit(...) // configures the channel handler
-	 *           .doOnConnected(...) // configures the doOnConnected callback
-	 *           .doOnDisconnected(...) // configures the doOnDisconnected callback
-	 *           .metrics(...) // configures the metrics
-	 *           .observe() // configures the connection observer
-	 *           .option(...) // configures the channel options
-	 *           .proxy(...) // configures the proxy
-	 *           .remoteAddress(...) // configures the remote address
-	 *           .resolver(...) // configures the host names resolver
-	 *           .runOn(...) // configures the event loop group
-	 *           .secure() // configures the SSL
-	 *           .wiretap() // configures the wire logging
-	 * }
-	 * </pre>
-	 *
-	 * <p>Wire logging in plain text</p>
-	 * <pre>
-	 * {@code
-	 * HttpClient.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
-	 * }
-	 * </pre>
-	 *
-	 * @return a new {@link HttpClient}
-	 * @deprecated Use the other methods exposed by {@link HttpClient} to achieve the same configurations.
-	 * This method will be removed in version 1.1.0.
-	 */
-	@Deprecated
-	public static HttpClient from(TcpClient tcpClient) {
-		Objects.requireNonNull(tcpClient, "tcpClient");
-		return HttpClientConnect.applyTcpClientConfig(tcpClient.configuration());
 	}
 
 	/**

@@ -53,8 +53,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.unix.DomainSocketAddress;
@@ -84,11 +82,9 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -119,7 +115,6 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
-import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
@@ -1773,74 +1768,6 @@ class HttpServerTests extends BaseHttpTest {
 				      .block(Duration.ofSeconds(30));
 
 		assertThat(response).isEqualTo("123");
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
-	void testTcpConfiguration_2() throws Exception {
-		CountDownLatch latch = new CountDownLatch(10);
-		LoopResources loop = LoopResources.create("testTcpConfiguration");
-		ChannelGroup group = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-		doTestTcpConfiguration(
-				HttpServer.from(configureTcpServer(TcpServer.create(), loop, group, latch)),
-				HttpClient.from(configureTcpClient(TcpClient.create(), loop, group, latch))
-		);
-
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
-
-		FutureMono.from(group.close())
-		          .then(loop.disposeLater())
-		          .block(Duration.ofSeconds(30));
-	}
-
-	private void doTestTcpConfiguration(HttpServer server, HttpClient client) {
-		disposableServer = server.bindNow();
-
-		String response =
-				client.post()
-				      .uri("/")
-				      .send(ByteBufFlux.fromString(Mono.just("testTcpConfiguration")))
-				      .responseContent()
-				      .aggregate()
-				      .asString()
-				      .block(Duration.ofSeconds(30));
-
-		assertThat(response).isEqualTo("testTcpConfiguration");
-	}
-
-	private TcpServer configureTcpServer(TcpServer tcp, LoopResources loop, ChannelGroup group, CountDownLatch latch) {
-		return tcp.wiretap(true)
-		          .host("localhost")
-		          .runOn(loop)
-		          .channelGroup(group)
-		          .doOnBound(s -> latch.countDown())
-		          .doOnConnection(c -> latch.countDown())
-		          .doOnUnbound(s -> latch.countDown())
-		          .handle((req, res) -> res.send(req.receive().retain()))
-		          .noSSL()
-		          .port(0)
-		          .attr(AttributeKey.valueOf("testTcpConfiguration"), "testTcpConfiguration")
-		          .option(ChannelOption.valueOf("testTcpConfiguration"), "testTcpConfiguration")
-		          .childAttr(AttributeKey.valueOf("testTcpConfiguration"), "testTcpConfiguration")
-		          .childOption(ChannelOption.valueOf("testTcpConfiguration"), "testTcpConfiguration")
-		          .observe((conn, state) -> latch.countDown())
-		          .childObserve((conn, state) -> latch.countDown())
-		          .doOnChannelInit((observer, channel, address) -> latch.countDown());
-	}
-
-	private TcpClient configureTcpClient(TcpClient tcp, LoopResources loop, ChannelGroup group, CountDownLatch latch) {
-		return tcp.wiretap(true)
-		          .runOn(loop)
-		          .channelGroup(group)
-		          .doOnConnected(c -> latch.countDown())
-		          .doOnDisconnected(c -> latch.countDown())
-		          .noSSL()
-		          .noProxy()
-		          .remoteAddress(() -> disposableServer.address())
-		          .attr(AttributeKey.valueOf("testTcpConfiguration"), "testTcpConfiguration")
-		          .option(ChannelOption.valueOf("testTcpConfiguration"), "testTcpConfiguration")
-		          .observe((conn, state) -> latch.countDown())
-		          .doOnChannelInit((observer, channel, address) -> latch.countDown());
 	}
 
 	@Test
