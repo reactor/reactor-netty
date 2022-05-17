@@ -1316,7 +1316,8 @@ class HttpClientTest extends BaseHttpTest {
 		                error.set(t);
 		                return t.getMessage() != null &&
 		                               (t.getMessage().contains("Connection reset by peer") ||
-				                                t.getMessage().contains("readAddress(..)") || // https://github.com/reactor/reactor-netty/issues/1673
+		                                        t.getMessage().contains("Connection reset") ||
+		                                        t.getMessage().contains("readAddress(..)") || // https://github.com/reactor/reactor-netty/issues/1673
 		                                        t.getMessage().contains("Connection prematurely closed BEFORE response"));
 		            })
 		            .verify(Duration.ofSeconds(30));
