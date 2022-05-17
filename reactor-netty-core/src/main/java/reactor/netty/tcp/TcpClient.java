@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,8 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.logging.LogLevel;
@@ -126,66 +124,6 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	@Override
 	public TcpClient bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
 		return super.bindAddress(bindAddressSupplier);
-	}
-
-	/**
-	 * Apply a {@link Bootstrap} mapping function to update {@link TcpClient} configuration and
-	 * return an enriched {@link TcpClient} to use.
-	 * <p>
-	 * <strong>Note:</strong>
-	 * There isn't only one method that replaces this deprecated method.
-	 * The configuration that can be done with this deprecated method,
-	 * can also be done with the other methods exposed by {@link TcpClient}.
-	 * </p>
-	 * <p>Examples:</p>
-	 * <p>Configuration via the deprecated '.bootstrap(...)' method</p>
-	 * <pre>
-	 * {@code
-	 * TcpClient.bootstrap(b ->
-	 *     b.attr(...) // configures the channel attributes
-	 *      .group(...) // configures the event loop group
-	 *      .handler(...) // configures the channel handler
-	 *      .localAddress(...) // configures the bind (local) address
-	 *      .option(...) // configures the channel options
-	 *      .remoteAddress(...) // configures the remote address
-	 *      .resolver(...)) // configures the host names resolver
-	 * }
-	 * </pre>
-	 *
-	 * <p>Configuration via the other methods exposed by {@link TcpClient}</p>
-	 * <pre>
-	 * {@code
-	 * TcpClient.attr(...) // configures the channel attributes
-	 *          .runOn(...) // configures the event loop group
-	 *          .doOnChannelInit(...) // configures the channel handler
-	 *          .bindAddress(...) // configures the bind (local) address
-	 *          .option(...) // configures the channel options
-	 *          .remoteAddress(...) // configures the remote address
-	 *          .resolver(...) // configures the host names resolver
-	 * }
-	 * </pre>
-	 *
-	 * <p>Wire logging in plain text</p>
-	 * <pre>
-	 * {@code
-	 * TcpClient.wiretap("logger", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
-	 * }
-	 * </pre>
-	 *
-	 * @param bootstrapMapper A {@link Bootstrap} mapping function to update {@link TcpClient} configuration and
-	 * return an enriched {@link TcpClient} to use.
-	 * @return a new {@link TcpClient}
-	 * @deprecated as of 0.9.10. Use the other methods exposed by {@link TcpClient} to achieve the same configurations.
-	 * The method will be removed in version 1.1.0.
-	 */
-	@Deprecated
-	@SuppressWarnings("ReturnValueIgnored")
-	public final TcpClient bootstrap(Function<? super Bootstrap, ? extends Bootstrap> bootstrapMapper) {
-		requireNonNull(bootstrapMapper, "bootstrapMapper");
-		TcpClientBootstrap tcpClientBootstrap = new TcpClientBootstrap(this);
-		// ReturnValueIgnored is deliberate
-		bootstrapMapper.apply(tcpClientBootstrap);
-		return tcpClientBootstrap.tcpClient;
 	}
 
 	@Override

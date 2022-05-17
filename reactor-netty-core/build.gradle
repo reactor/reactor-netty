@@ -198,6 +198,10 @@ task japicmp(type: JapicmpTask) {
 	ignoreMissingClasses = true
 	includeSynthetic = true
 	onlyIf { "$compatibleVersion" != "SKIP" }
+	methodExcludes = [
+			// Deprecated method is removed
+			'reactor.netty.tcp.TcpClient#bootstrap(java.util.function.Function)'
+	]
 }
 
 tasks.japicmp.dependsOn(downloadBaseline)
