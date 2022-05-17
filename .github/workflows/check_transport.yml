@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
-          java-version: 8
+          java-version: 17
       - name: spotless (license header)
         if: always()
         run: ./gradlew clean spotlessCheck -PspotlessFrom=origin/${{ github.base_ref }}
@@ -53,6 +53,6 @@ jobs:
         uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
-          java-version: '8'
+          java-version: 17
       - name: Build with Gradle
         run: ./gradlew clean check --no-daemon -x spotlessCheck -PforceTransport=${{ matrix.transport }}
