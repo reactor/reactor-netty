@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -132,8 +132,13 @@ public class TomcatServer {
 
 			StringBuilder builder = new StringBuilder();
 
-			Collection<Part> parts = req.getParts();
-			parts.forEach(p -> builder.append(p.getName()).append(' '));
+			if ("application/x-www-form-urlencoded".equals(req.getHeader("content-type"))) {
+				builder.append(req.getReader().readLine());
+			}
+			else {
+				Collection<Part> parts = req.getParts();
+				parts.forEach(p -> builder.append(p.getName()).append(' '));
+			}
 
 			writer.print(builder);
 			writer.flush();
