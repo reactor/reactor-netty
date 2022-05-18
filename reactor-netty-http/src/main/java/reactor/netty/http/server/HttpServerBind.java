@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,9 @@
 package reactor.netty.http.server;
 
 import io.netty.channel.ChannelOption;
-import io.netty.util.AttributeKey;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.tcp.SslProvider;
-import reactor.netty.tcp.TcpServerConfig;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -105,65 +103,6 @@ final class HttpServerBind extends HttpServer {
 	@Override
 	protected HttpServer duplicate() {
 		return new HttpServerBind(new HttpServerConfig(config));
-	}
-
-	@SuppressWarnings("unchecked")
-	static HttpServer applyTcpServerConfig(TcpServerConfig config) {
-		HttpServer httpServer =
-				create().childObserve(config.childObserver())
-				        .doOnChannelInit(config.doOnChannelInit())
-				        .observe(config.connectionObserver())
-				        .runOn(config.loopResources(), config.isPreferNative());
-
-		for (Map.Entry<AttributeKey<?>, ?> entry : config.attributes().entrySet()) {
-			httpServer = httpServer.attr((AttributeKey<Object>) entry.getKey(), entry.getValue());
-		}
-
-		if (config.bindAddress() != null) {
-			httpServer = httpServer.bindAddress(config.bindAddress());
-		}
-
-		if (config.channelGroup() != null) {
-			httpServer = httpServer.channelGroup(config.channelGroup());
-		}
-
-		for (Map.Entry<AttributeKey<?>, ?> entry : config.childAttributes().entrySet()) {
-			httpServer = httpServer.childAttr((AttributeKey<Object>) entry.getKey(), entry.getValue());
-		}
-
-		for (Map.Entry<ChannelOption<?>, ?> entry : config.childOptions().entrySet()) {
-			httpServer = httpServer.childOption((ChannelOption<Object>) entry.getKey(), entry.getValue());
-		}
-
-		if (config.doOnBound() != null) {
-			httpServer = httpServer.doOnBound(config.doOnBound());
-		}
-
-		if (config.doOnConnection() != null) {
-			httpServer = httpServer.doOnConnection(config.doOnConnection());
-		}
-
-		if (config.doOnUnbound() != null) {
-			httpServer = httpServer.doOnUnbound(config.doOnUnbound());
-		}
-
-		if (config.loggingHandler() != null) {
-			httpServer.configuration().loggingHandler(config.loggingHandler());
-		}
-
-		if (config.metricsRecorder() != null) {
-			httpServer = httpServer.metrics(true, config.metricsRecorder());
-		}
-
-		for (Map.Entry<ChannelOption<?>, ?> entry : config.options().entrySet()) {
-			httpServer = httpServer.option((ChannelOption<Object>) entry.getKey(), entry.getValue());
-		}
-
-		if (config.sslProvider() != null) {
-			httpServer.secure(config.sslProvider());
-		}
-
-		return httpServer;
 	}
 
 	static final int DEFAULT_PORT = 0;
