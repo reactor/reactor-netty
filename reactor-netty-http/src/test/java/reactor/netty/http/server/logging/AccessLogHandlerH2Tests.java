@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,12 +64,10 @@ class AccessLogHandlerH2Tests {
 		channel.writeOutbound(new DefaultHttp2DataFrame(byteBuf, true));
 	}
 
-	@SuppressWarnings("deprecation")
 	private void assertAccessLogArgProvider(AccessLogArgProvider args, SocketAddress remoteAddress) {
 		assertThat(args.remoteAddress()).isEqualTo(remoteAddress);
 		assertThat(args.user()).isEqualTo(AbstractAccessLogArgProvider.MISSING);
 		assertThat(args.accessDateTime()).isNotNull();
-		assertThat(args.zonedDateTime()).isNotNull();
 		assertThat(args.method()).isEqualTo(HttpMethod.GET.name());
 		assertThat(args.uri()).isEqualTo(URI);
 		assertThat(args.protocol()).isEqualTo(AccessLogArgProviderH2.H2_PROTOCOL_NAME);

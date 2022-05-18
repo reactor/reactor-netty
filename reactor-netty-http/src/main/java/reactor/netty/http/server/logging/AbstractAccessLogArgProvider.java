@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,6 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	final SocketAddress remoteAddress;
 	final String user = MISSING;
-	String zonedDateTime;
 	ZonedDateTime accessDateTime;
 	CharSequence method;
 	CharSequence uri;
@@ -51,13 +50,6 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	AbstractAccessLogArgProvider(@Nullable SocketAddress remoteAddress) {
 		this.remoteAddress = remoteAddress;
-	}
-
-	@Override
-	@Nullable
-	@Deprecated
-	public String zonedDateTime() {
-		return zonedDateTime;
 	}
 
 	@Override
@@ -118,7 +110,6 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	 */
 	void onRequest() {
 		this.accessDateTime = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
-		this.zonedDateTime = accessDateTime.format(DATE_TIME_FORMATTER);
 		this.startTime = System.currentTimeMillis();
 	}
 
@@ -127,7 +118,6 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	 */
 	void clear() {
 		this.accessDateTime = null;
-		this.zonedDateTime = null;
 		this.method = null;
 		this.uri = null;
 		this.protocol = null;

@@ -152,41 +152,6 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		return dup;
 	}
 
-	/**
-	 * Customize the access log, provided access logging has been enabled through the
-	 * {@value reactor.netty.ReactorNetty#ACCESS_LOG_ENABLED} system property.
-	 * <p>
-	 * Example:
-	 * <pre>
-	 * {@code
-	 * HttpServer.create()
-	 *           .port(8080)
-	 *           .route(r -> r.get("/hello",
-	 *                   (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
-	 *                                    .sendString(Mono.just("Hello World!"))))
-	 *           .accessLog(argProvider ->
-	 *                   AccessLog.create("user-agent={}", argProvider.requestHeader("user-agent")))
-	 *           .bindNow()
-	 *           .onDispose()
-	 *           .block();
-	 * }
-	 * </pre>
-	 * <p>
-	 *
-	 * @param accessLogFactory the {@link Function} that creates an {@link AccessLog} given an {@link AccessLogArgProvider}
-	 * @return a new {@link HttpServer}
-	 * @since 1.0.1
-	 * @deprecated as of 1.0.3. Prefer the {@link #accessLog(boolean, AccessLogFactory) variant}
-	 * with the {@link AccessLogFactory} interface instead. This method will be removed in version 1.2.0.
-	 */
-	@Deprecated
-	public final HttpServer accessLog(Function<AccessLogArgProvider, AccessLog> accessLogFactory) {
-		Objects.requireNonNull(accessLogFactory, "accessLogFactory");
-		HttpServer dup = duplicate();
-		dup.configuration().accessLog = accessLogFactory;
-		return dup;
-	}
-
 	@Override
 	public final HttpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
 		return super.bindAddress(bindAddressSupplier);
