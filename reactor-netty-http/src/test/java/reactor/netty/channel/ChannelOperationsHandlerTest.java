@@ -70,12 +70,11 @@ class ChannelOperationsHandlerTest extends BaseHttpTest {
 		doTestPublisherSenderOnCompleteFlushInProgress(true, new WriteTimeoutHandler(1));
 	}
 
-	@SuppressWarnings("deprecation")
 	private void doTestPublisherSenderOnCompleteFlushInProgress(boolean useScheduler, @Nullable ChannelHandler handler) {
 		AtomicInteger counter = new AtomicInteger();
 		disposableServer =
 				createServer()
-				          .doOnConnection(conn -> conn.addHandler(new LineBasedFrameDecoder(10)))
+				          .doOnConnection(conn -> conn.addHandlerLast(new LineBasedFrameDecoder(10)))
 				          .handle((req, res) ->
 				                  req.receive()
 				                     .asString()

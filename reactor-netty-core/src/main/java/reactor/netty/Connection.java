@@ -17,7 +17,6 @@ package reactor.netty;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelOutboundHandler;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
@@ -66,61 +65,6 @@ public interface Connection extends DisposableChannel {
 			return thiz;
 		}
 		return null;
-	}
-
-	/**
-	 * Add a {@link ChannelHandler} with {@link #addHandlerFirst} if of type of
-	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with
-	 * {@link #addHandlerLast}. Implementation may add more auto handling in particular
-	 * HTTP based context will prepend an HttpContent body extractor.
-	 * <p>
-	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
-	 * <p>
-	 * If effectively added, the handler will be safely removed when the channel is made
-	 * inactive (pool release).
-	 * As the Connection object is available once the channel is in active state, events prior this state
-	 * will not be available (i.e. {@code channelRegistered}, {@code initChannel}, {@code channelActive}, etc.)
-	 *
-	 * @param handler handler instance
-	 *
-	 * @return this Connection
-	 * @deprecated as of 1.0.17. Use {@link #addHandlerFirst(ChannelHandler)} or {@link #addHandlerLast(ChannelHandler)}.
-	 * This method will be removed in version 1.2.0.
-	 */
-	@Deprecated
-	default Connection addHandler(ChannelHandler handler) {
-		return addHandler(handler.getClass().getSimpleName(), handler);
-	}
-
-	/**
-	 * Add a {@link ChannelHandler} with {@link #addHandlerFirst} if of type of
-	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with
-	 * {@link #addHandlerLast}. Implementation may add more auto handling in particular
-	 * HTTP based context will prepend an HttpContent body extractor.
-	 * <p>
-	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
-	 * <p>
-	 * If effectively added, the handler will be safely removed when the channel is made
-	 * inactive (pool release).
-	 * As the Connection object is available once the channel is in active state, events prior this state
-	 * will not be available (i.e. {@code channelRegistered}, {@code initChannel}, {@code channelActive}, etc.)
-	 *
-	 * @param name handler name
-	 * @param handler handler instance
-	 *
-	 * @return this Connection
-	 * @deprecated as of 1.0.17. Use {@link #addHandlerFirst(String, ChannelHandler)} or
-	 * {@link #addHandlerLast(String, ChannelHandler)}. This method will be removed in version 1.2.0.
-	 */
-	@Deprecated
-	default Connection addHandler(String name, ChannelHandler handler) {
-		if (handler instanceof ChannelOutboundHandler) {
-			addHandlerFirst(name, handler);
-		}
-		else {
-			addHandlerLast(name, handler);
-		}
-		return this;
 	}
 
 	/**
@@ -359,10 +303,6 @@ public interface Connection extends DisposableChannel {
 	/**
 	 * Replace a named handler if present and return this context.
 	 * If handler wasn't present, an {@link RuntimeException} will be thrown.
-	 * <p>
-	 *     Note: if the new handler is of different type, dependent handling like
-	 *     the "extractor" introduced via HTTP-based {@link #addHandler} might not
-	 *     expect/support the new messages type.
 	 *
 	 * @param name handler name
 	 *

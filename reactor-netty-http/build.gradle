@@ -207,8 +207,11 @@ task japicmp(type: JapicmpTask) {
 	onlyIf { "$compatibleVersion" != "SKIP" }
 	methodExcludes = [
 			// Deprecated method is removed
+			'reactor.netty.http.HttpOperations#addHandler(java.lang.String, io.netty.channel.ChannelHandler)',
+
 			'reactor.netty.http.client.HttpClient#from(reactor.netty.tcp.TcpClient)',
 			'reactor.netty.http.client.HttpClient#tcpConfiguration(java.util.function.Function)',
+
 			'reactor.netty.http.server.HttpServer#from(reactor.netty.tcp.TcpServer)',
 			'reactor.netty.http.server.HttpServer#tcpConfiguration(java.util.function.Function)'
 	]
