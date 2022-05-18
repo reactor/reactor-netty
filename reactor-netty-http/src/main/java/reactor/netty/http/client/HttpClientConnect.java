@@ -58,7 +58,6 @@ import reactor.netty.http.HttpProtocol;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.transport.AddressUtils;
 import reactor.netty.transport.ProxyProvider;
-import reactor.netty.tcp.SslProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -146,7 +145,6 @@ class HttpClientConnect extends HttpClient {
 		}
 
 		@Override
-		@SuppressWarnings("deprecation")
 		public void subscribe(CoreSubscriber<? super Connection> actual) {
 			HttpClientHandler handler = new HttpClientHandler(config);
 
@@ -169,17 +167,6 @@ class HttpClientConnect extends HttpClient {
 										"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
 										"via HttpClient#noSSL()"));
 						return;
-					}
-
-					if (_config.sslProvider.getDefaultConfigurationType() == null) {
-						if (_config.checkProtocol(HttpClientConfig.h2)) {
-							_config.sslProvider = SslProvider.updateDefaultConfiguration(_config.sslProvider,
-									SslProvider.DefaultConfigurationType.H2);
-						}
-						else {
-							_config.sslProvider = SslProvider.updateDefaultConfiguration(_config.sslProvider,
-									SslProvider.DefaultConfigurationType.TCP);
-						}
 					}
 				}
 				else {
