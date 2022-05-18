@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package reactor.netty.http.client;
 import io.netty.handler.codec.http.HttpHeaders;
 import reactor.netty.http.HttpInfos;
 import reactor.util.annotation.Nullable;
-import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
 /**
@@ -28,17 +27,6 @@ import reactor.util.context.ContextView;
  * @since 0.9.3
  */
 public interface HttpClientInfos extends HttpInfos {
-
-    /**
-     * Return the current {@link Context} associated with the Mono/Flux exposed
-     * via {@link HttpClient.ResponseReceiver#response()} or related terminating API.
-     *
-     * @return the current user {@link Context}
-     * @deprecated Use {@link #currentContextView()}. This method
-     * will be removed in version 1.1.0.
-     */
-    @Deprecated
-    Context currentContext();
 
     /**
      * Return the current {@link ContextView} associated with the Mono/Flux exposed

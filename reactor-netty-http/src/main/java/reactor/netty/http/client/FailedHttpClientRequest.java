@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
-import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
 import java.time.Duration;
@@ -74,12 +73,6 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	public Map<CharSequence, Set<Cookie>> cookies() {
 		return Cookies.newClientResponseHolder(headers, cookieDecoder)
 		              .getCachedCookies();
-	}
-
-	@Override
-	@SuppressWarnings("deprecation")
-	public Context currentContext() {
-		return Context.of(contextView);
 	}
 
 	@Override

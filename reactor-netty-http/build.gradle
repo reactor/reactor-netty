@@ -211,6 +211,7 @@ task japicmp(type: JapicmpTask) {
 
 			'reactor.netty.http.client.HttpClient#from(reactor.netty.tcp.TcpClient)',
 			'reactor.netty.http.client.HttpClient#tcpConfiguration(java.util.function.Function)',
+			'reactor.netty.http.client.HttpClientInfos#currentContext()',
 
 			'reactor.netty.http.server.HttpServer#accessLog(java.util.function.Function)',
 			'reactor.netty.http.server.HttpServer#from(reactor.netty.tcp.TcpServer)',
