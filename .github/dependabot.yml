@@ -18,3 +18,14 @@ updates:
     versions:
     - ">= 10.0.a"
   rebase-strategy: disabled
+- package-ecosystem: github-actions
+  directory: "/"
+  schedule:
+      interval: daily
+  open-pull-requests-limit: 10
+  assignees:
+      - violetagg
+  target-branch: "1.0.x"
+  labels:
+      - type/dependency-upgrade
+  rebase-strategy: disabled
