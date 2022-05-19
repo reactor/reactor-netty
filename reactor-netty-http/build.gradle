@@ -221,7 +221,11 @@ task japicmp(type: JapicmpTask) {
 
 			// TODO temporary disable multipart on the client
 			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer)',
-			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer, java.util.function.Consumer)'
+			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer, java.util.function.Consumer)',
+
+			// TODO temporary disable multipart on the server
+			'reactor.netty.http.server.HttpServerRequest#receiveForm()',
+			'reactor.netty.http.server.HttpServerRequest#receiveForm(java.util.function.Consumer)'
 	]
 	classExcludes = [
 			// TODO temporary disable multipart on the client
