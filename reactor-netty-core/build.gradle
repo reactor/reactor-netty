@@ -73,10 +73,10 @@ dependencies {
 		//so that the main code compiles
 		compileOnly "io.netty:netty-transport-native-epoll:$nettyVersion"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		//compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		testImplementation "io.netty:netty-transport-native-epoll:$nettyVersion"
 		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		//testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
@@ -86,9 +86,9 @@ dependencies {
 				testImplementation "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
 			}
 		}
-		else if (forceTransport == "io_uring" && osdetector.os == "linux") {
-			testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
-		}
+		//else if (forceTransport == "io_uring" && osdetector.os == "linux") {
+		//	testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
+		//}
 		else if (forceTransport != "nio") {
 			throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
 		}
@@ -97,9 +97,9 @@ dependencies {
 		//classic build to be distributed
 		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		//compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 		testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		//testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	}
 
 	//Metrics

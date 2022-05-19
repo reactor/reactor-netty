@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +29,7 @@ final class DefaultLoopNativeDetector {
 	static {
 		NIO = new DefaultLoopNIO();
 
-		if (DefaultLoopIOUring.ioUring) {
-			INSTANCE = new DefaultLoopIOUring();
-		}
-		else if (DefaultLoopEpoll.epoll) {
+		if (DefaultLoopEpoll.epoll) {
 			INSTANCE = new DefaultLoopEpoll();
 		}
 		else if (DefaultLoopKQueue.kqueue) {
