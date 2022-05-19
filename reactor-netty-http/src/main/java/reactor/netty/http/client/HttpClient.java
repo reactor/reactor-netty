@@ -181,50 +181,6 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 * @return a new {@link ResponseReceiver}
 		 */
 		ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> sender);
-
-		/**
-		 * Prepare to send an HTTP Form including Multipart encoded Form which support
-		 * chunked file upload. It will by default be encoded as Multipart but can be
-		 * adapted via {@link HttpClientForm#multipart(boolean)}.
-		 *
-		 * <p><strong>Note:</strong> The HTTP Form passed in will be invoked also for redirect requests
-		 * when {@code followRedirect} is enabled. If you need to control what will be sent when
-		 * {@code followRedirect} is enabled use {@link HttpClientRequest#redirectedFrom()} to check the original
-		 * and any number of subsequent redirect(s), including the one that is in progress.
-		 * <p><strong>Note:</strong> For redirect requests, sensitive headers
-		 * {@link #followRedirect(boolean, Consumer) followRedirect} are removed
-		 * from the initialized request when redirecting to a different domain, they can be re-added globally via
-		 * {@link #followRedirect(boolean, Consumer)}/{@link #followRedirect(BiPredicate, Consumer)}.
-		 *
-		 * @param formCallback called when form generator is created
-		 *
-		 * @return a new {@link ResponseReceiver}
-		 */
-		default ResponseReceiver<?> sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback) {
-			return sendForm(formCallback, null);
-		}
-
-		/**
-		 * Prepare to send an HTTP Form including Multipart encoded Form which support
-		 * chunked file upload. It will by default be encoded as Multipart but can be
-		 * adapted via {@link HttpClientForm#multipart(boolean)}.
-		 *
-		 * <p><strong>Note:</strong> The HTTP Form passed in will be invoked also for redirect requests
-		 * when {@code followRedirect} is enabled. If you need to control what will be sent when
-		 * {@code followRedirect} is enabled use {@link HttpClientRequest#redirectedFrom()} to check the original
-		 * and any number of subsequent redirect(s), including the one that is in progress.
-		 * <p><strong>Note:</strong> For redirect requests, sensitive headers
-		 * {@link #followRedirect(boolean, Consumer) followRedirect} are removed
-		 * from the initialized request when redirecting to a different domain, they can be re-added globally via
-		 * {@link #followRedirect(boolean, Consumer)}/{@link #followRedirect(BiPredicate, Consumer)}.
-		 *
-		 * @param formCallback called when form generator is created
-		 * @param progress called after form is being sent and passed with a {@link Flux} of the latest in-flight or uploaded bytes
-		 *
-		 * @return a new {@link ResponseReceiver}
-		 */
-		ResponseReceiver<?> sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback,
-				@Nullable Consumer<Flux<Long>> progress);
 	}
 
 	/**

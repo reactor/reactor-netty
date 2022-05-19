@@ -217,7 +217,19 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.server.HttpServer#accessLog(java.util.function.Function)',
 			'reactor.netty.http.server.HttpServer#from(reactor.netty.tcp.TcpServer)',
 			'reactor.netty.http.server.HttpServer#tcpConfiguration(java.util.function.Function)',
-			'reactor.netty.http.server.logging.AccessLogArgProvider#zonedDateTime()'
+			'reactor.netty.http.server.logging.AccessLogArgProvider#zonedDateTime()',
+
+			// TODO temporary disable multipart on the client
+			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer)',
+			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer, java.util.function.Consumer)',
+
+			// TODO temporary disable multipart on the server
+			'reactor.netty.http.server.HttpServerRequest#receiveForm()',
+			'reactor.netty.http.server.HttpServerRequest#receiveForm(java.util.function.Consumer)'
+	]
+	classExcludes = [
+			// TODO temporary disable multipart on the client
+			'reactor.netty.http.client.HttpClientForm'
 	]
 }
 

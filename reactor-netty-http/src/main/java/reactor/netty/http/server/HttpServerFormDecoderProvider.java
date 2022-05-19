@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,6 @@ import io.netty.handler.codec.http.multipart.Attribute;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.FileUpload;
 import io.netty.handler.codec.http.multipart.HttpData;
-import io.netty.handler.codec.http.multipart.HttpDataFactory;
-import io.netty.handler.codec.http.multipart.HttpPostMultipartRequestDecoder;
-import io.netty.handler.codec.http.multipart.HttpPostStandardRequestDecoder;
-import io.netty.handler.codec.http.multipart.InterfaceHttpData;
-import io.netty.handler.codec.http.multipart.InterfaceHttpPostRequestDecoder;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -34,8 +29,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -235,51 +228,23 @@ public final class HttpServerFormDecoderProvider {
 	}
 
 	Mono<ReactorNettyHttpPostRequestDecoder> newHttpPostRequestDecoder(HttpRequest request, boolean isMultipart) {
-		if (maxInMemorySize > -1) {
-			Mono<Path> directoryMono;
-			if (baseDirectory == null) {
-				directoryMono = defaultTempDirectory();
-			}
-			else {
-				directoryMono = Mono.just(baseDirectory);
-			}
-			return directoryMono.map(directory -> createNewHttpPostRequestDecoder(request, isMultipart, directory));
-		}
-		else {
-			return Mono.just(createNewHttpPostRequestDecoder(request, isMultipart, null));
-		}
-	}
-
-	ReactorNettyHttpPostRequestDecoder createNewHttpPostRequestDecoder(HttpRequest request, boolean isMultipart,
-			@Nullable Path baseDirectory) {
-		DefaultHttpDataFactory factory = maxInMemorySize > 0 ?
-				new DefaultHttpDataFactory(maxInMemorySize, charset) :
-				new DefaultHttpDataFactory(maxInMemorySize == 0, charset);
-		factory.setMaxLimit(maxSize);
-		if (baseDirectory != null) {
-			factory.setBaseDir(baseDirectory.toFile().getAbsolutePath());
-		}
-		return isMultipart ?
-				new ReactorNettyHttpPostMultipartRequestDecoder(factory, request) :
-				new ReactorNettyHttpPostStandardRequestDecoder(factory, request);
+		return null;
 	}
 
 	static final HttpServerFormDecoderProvider DEFAULT_FORM_DECODER_SPEC = new HttpServerFormDecoderProvider.Build().build();
 
 	static final String DEFAULT_TEMP_DIRECTORY_PREFIX = "RN_form_";
 
-	interface ReactorNettyHttpPostRequestDecoder extends InterfaceHttpPostRequestDecoder {
+	interface ReactorNettyHttpPostRequestDecoder {
 
 		void cleanCurrentHttpData(boolean onlyCompleted);
-
-		List<HttpData> currentHttpData(boolean onlyCompleted);
 	}
 
 	static final class Build implements Builder {
 
 		static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
-		static final long DEFAULT_MAX_IN_MEMORY_SIZE = DefaultHttpDataFactory.MINSIZE;
-		static final long DEFAULT_MAX_SIZE = DefaultHttpDataFactory.MAXSIZE;
+		static final long DEFAULT_MAX_IN_MEMORY_SIZE = 0; // DefaultHttpDataFactory.MINSIZE;
+		static final long DEFAULT_MAX_SIZE = 0; // DefaultHttpDataFactory.MAXSIZE;
 		static final Scheduler DEFAULT_SCHEDULER = Schedulers.boundedElastic();
 		static final boolean DEFAULT_STREAMING = false;
 
@@ -334,120 +299,6 @@ public final class HttpServerFormDecoderProvider {
 
 		HttpServerFormDecoderProvider build() {
 			return new HttpServerFormDecoderProvider(this);
-		}
-	}
-
-	static final class ReactorNettyHttpPostMultipartRequestDecoder extends HttpPostMultipartRequestDecoder
-			implements ReactorNettyHttpPostRequestDecoder {
-
-		/**
-		 * Current {@link HttpData} from the body (only the completed {@link HttpData}).
-		 */
-		final List<HttpData> currentCompletedHttpData = new ArrayList<>();
-
-		ReactorNettyHttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request) {
-			super(factory, request);
-		}
-
-		@Override
-		protected void addHttpData(InterfaceHttpData data) {
-			if (data instanceof HttpData) {
-				currentCompletedHttpData.add((HttpData) data);
-			}
-		}
-
-		@Override
-		public void cleanCurrentHttpData(boolean onlyCompleted) {
-			for (HttpData data : currentCompletedHttpData) {
-				removeHttpDataFromClean(data);
-				data.release();
-			}
-			currentCompletedHttpData.clear();
-
-			if (!onlyCompleted) {
-				InterfaceHttpData partial = currentPartialHttpData();
-				if (partial instanceof HttpData) {
-					((HttpData) partial).delete();
-				}
-			}
-		}
-
-		@Override
-		public List<HttpData> currentHttpData(boolean onlyCompleted) {
-			if (!onlyCompleted) {
-				InterfaceHttpData partial = currentPartialHttpData();
-				if (partial instanceof HttpData) {
-					currentCompletedHttpData.add(((HttpData) partial).retainedDuplicate());
-				}
-			}
-
-			return currentCompletedHttpData;
-		}
-
-		@Override
-		public void destroy() {
-			super.destroy();
-			InterfaceHttpData partial = currentPartialHttpData();
-			if (partial != null) {
-				partial.release();
-			}
-		}
-	}
-
-	static final class ReactorNettyHttpPostStandardRequestDecoder extends HttpPostStandardRequestDecoder
-			implements ReactorNettyHttpPostRequestDecoder {
-
-		/**
-		 * Current {@link HttpData} from the body (only the completed {@link HttpData}).
-		 */
-		final List<HttpData> currentCompletedHttpData = new ArrayList<>();
-
-		ReactorNettyHttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request) {
-			super(factory, request);
-		}
-
-		@Override
-		protected void addHttpData(InterfaceHttpData data) {
-			if (data instanceof HttpData) {
-				currentCompletedHttpData.add((HttpData) data);
-			}
-		}
-
-		@Override
-		public void cleanCurrentHttpData(boolean onlyCompleted) {
-			for (HttpData data : currentCompletedHttpData) {
-				removeHttpDataFromClean(data);
-				data.release();
-			}
-			currentCompletedHttpData.clear();
-
-			if (!onlyCompleted) {
-				InterfaceHttpData partial = currentPartialHttpData();
-				if (partial instanceof HttpData) {
-					((HttpData) partial).delete();
-				}
-			}
-		}
-
-		@Override
-		public List<HttpData> currentHttpData(boolean onlyCompleted) {
-			if (!onlyCompleted) {
-				InterfaceHttpData partial = currentPartialHttpData();
-				if (partial instanceof HttpData) {
-					currentCompletedHttpData.add(((HttpData) partial).retainedDuplicate());
-				}
-			}
-
-			return currentCompletedHttpData;
-		}
-
-		@Override
-		public void destroy() {
-			super.destroy();
-			InterfaceHttpData partial = currentPartialHttpData();
-			if (partial != null) {
-				partial.release();
-			}
 		}
 	}
 }
