@@ -90,8 +90,6 @@ ext {
 
 	contextPropagationVersion = '1.0.0-M2'
 
-	braveVersion = '5.13.9'
-
 	jsr305Version = '3.0.2'
 
 	// Logging
