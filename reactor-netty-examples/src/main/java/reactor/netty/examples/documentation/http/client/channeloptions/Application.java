@@ -15,9 +15,9 @@
  */
 package reactor.netty.examples.documentation.http.client.channeloptions;
 
-import io.netty.channel.ChannelOption;
-import io.netty.channel.epoll.EpollChannelOption;
-//import io.netty.channel.socket.nio.NioChannelOption;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.epoll.EpollChannelOption;
+//import io.netty5.channel.socket.nio.NioChannelOption;
 //import jdk.net.ExtendedSocketOptions;
 import reactor.netty.http.client.HttpClient;
 import java.net.InetSocketAddress;

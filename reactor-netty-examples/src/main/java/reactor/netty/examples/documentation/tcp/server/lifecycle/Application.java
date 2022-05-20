@@ -15,8 +15,8 @@
  */
 package reactor.netty.examples.documentation.tcp.server.lifecycle;
 
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty5.handler.logging.LoggingHandler;
+import io.netty5.handler.timeout.ReadTimeoutHandler;
 import reactor.netty.DisposableServer;
 import reactor.netty.tcp.TcpServer;
 import java.util.concurrent.TimeUnit;
