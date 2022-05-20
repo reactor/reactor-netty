@@ -18,9 +18,8 @@ package reactor.netty.channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelOutboundHandlerAdapter;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.handler.ssl.SslHandler;
+import io.netty5.util.concurrent.Future;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -58,7 +57,7 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 		return recorder;
 	}
 
-	static final class ConnectMetricsHandler extends ChannelOutboundHandlerAdapter {
+	static final class ConnectMetricsHandler extends ChannelHandlerAdapter {
 
 		final ChannelMetricsRecorder recorder;
 
@@ -67,18 +66,17 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 		}
 
 		@Override
-		public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-				SocketAddress localAddress, ChannelPromise promise) throws Exception {
+		public Future<Void> connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress) {
 			long connectTimeStart = System.nanoTime();
-			super.connect(ctx, remoteAddress, localAddress, promise);
-			promise.addListener(future -> {
-				ctx.pipeline().remove(this);
+			return ctx.connect(remoteAddress, localAddress)
+			          .addListener(future -> {
+			              ctx.pipeline().remove(this);
 
-				recorder.recordConnectTime(
-						remoteAddress,
-						Duration.ofNanos(System.nanoTime() - connectTimeStart),
-						future.isSuccess() ? SUCCESS : ERROR);
-			});
+			              recorder.recordConnectTime(
+			                  remoteAddress,
+			                  Duration.ofNanos(System.nanoTime() - connectTimeStart),
+			                  future.isSuccess() ? SUCCESS : ERROR);
+			          });
 		}
 	}
 

@@ -27,10 +27,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelOutboundHandlerAdapter;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.logging.LogLevel;
@@ -176,18 +173,6 @@ public final class ProxyProvider {
 		Objects.requireNonNull(channel, "channel");
 		ChannelPipeline pipeline = channel.pipeline();
 		pipeline.addFirst(NettyPipeline.ProxyHandler, newProxyHandler());
-		// For SOCKS proxy, the netty SOCKS handlers may register listeners in channel promises, so we need to register a
-		// special handler which ensures that any VoidPromise will be converted to "unvoided" promises (for support of listeners).
-		// Note: an example of a VoidPromise which does not support listeners is the MonoSendMany.SendManyInner promise.
-		if (this.type == Proxy.SOCKS4 || type == Proxy.SOCKS5) {
-			pipeline.addAfter(NettyPipeline.ProxyHandler, NettyPipeline.UnvoidHandler, new ChannelOutboundHandlerAdapter() {
-				@Override
-				@SuppressWarnings("FutureReturnValueIgnored")
-				public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-					ctx.write(msg, promise.unvoid());
-				}
-			});
-		}
 
 		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
 			pipeline.addBefore(NettyPipeline.ProxyHandler,

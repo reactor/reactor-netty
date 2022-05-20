@@ -108,7 +108,6 @@ public interface NettyPipeline {
 	String OnChannelReadIdle     = LEFT + "onChannelReadIdle";
 	String OnChannelWriteIdle    = LEFT + "onChannelWriteIdle";
 	String ProxyHandler          = LEFT + "proxyHandler";
-	String UnvoidHandler         = LEFT + "unvoidHandler";
 	String ProxyLoggingHandler   = LEFT + "proxyLoggingHandler";
 	String ProxyProtocolDecoder  = LEFT + "proxyProtocolDecoder";
 	String ProxyProtocolReader   = LEFT + "proxyProtocolReader";
