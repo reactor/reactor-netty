@@ -17,8 +17,8 @@ package reactor.netty;
 
 import java.util.function.BiConsumer;
 
+import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelInboundHandler;
 
 /**
  * Constant for names used when adding/removing {@link io.netty5.channel.ChannelHandler}.
@@ -122,14 +122,14 @@ public interface NettyPipeline {
 	String ReactiveBridge        = RIGHT + "reactiveBridge";
 
 	/**
-	 * Create a new {@link ChannelInboundHandler} that will invoke
+	 * Create a new {@link ChannelHandler} that will invoke
 	 * {@link BiConsumer#accept} on
-	 * {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}.
+	 * {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}.
 	 *
 	 * @param handler the channel-read callback
 	 * @return a marking event used when a netty connector handler terminates
 	 */
-	static ChannelInboundHandler inboundHandler(BiConsumer<? super ChannelHandlerContext, Object> handler) {
+	static ChannelHandler inboundHandler(BiConsumer<? super ChannelHandlerContext, Object> handler) {
 		return new ReactorNetty.ExtractorHandler(handler);
 	}
 }

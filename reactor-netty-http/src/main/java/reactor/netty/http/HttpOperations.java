@@ -31,7 +31,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.channel.ChannelInboundHandler;
 import io.netty5.channel.CombinedChannelDuplexHandler;
 import io.netty5.handler.codec.ByteToMessageCodec;
 import io.netty5.handler.codec.ByteToMessageDecoder;
@@ -413,7 +412,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");
 
-	final static ChannelInboundHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
+	final static ChannelHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
 			(ctx, msg) -> {
 				if (msg instanceof ByteBufHolder) {
 					if (msg instanceof FullHttpMessage) {
