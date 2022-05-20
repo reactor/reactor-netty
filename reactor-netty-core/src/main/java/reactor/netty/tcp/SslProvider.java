@@ -31,8 +31,8 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelInboundHandlerAdapter;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
@@ -629,7 +629,7 @@ public final class SslProvider {
 		}
 	}
 
-	static final class SslReadHandler extends ChannelInboundHandlerAdapter {
+	static final class SslReadHandler extends ChannelHandlerAdapter {
 		boolean handshakeDone;
 
 		@Override

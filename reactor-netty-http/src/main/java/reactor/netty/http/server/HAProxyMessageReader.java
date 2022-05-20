@@ -19,8 +19,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelInboundHandlerAdapter;
 import io.netty.contrib.handler.codec.haproxy.HAProxyMessage;
 import io.netty5.util.AttributeKey;
 import reactor.netty.transport.AddressUtils;
@@ -32,7 +32,7 @@ import reactor.util.annotation.Nullable;
  *
  * @author aftersss
  */
-final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
+final class HAProxyMessageReader extends ChannelHandlerAdapter {
 
 	private static final AttributeKey<InetSocketAddress> REMOTE_ADDRESS_FROM_PROXY_PROTOCOL =
 			AttributeKey.valueOf("remoteAddressFromProxyProtocol");

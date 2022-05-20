@@ -45,8 +45,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty5.channel.AdaptiveRecvByteBufAllocator;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelInboundHandlerAdapter;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
@@ -1125,7 +1125,7 @@ class TcpServerTests {
 				                             .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(testTcpSslContextSpec)))
 				         .doOnChannelInit((obs, channel, remoteAddress) ->
 				             channel.pipeline()
-				                    .addAfter(NettyPipeline.SslHandler, "test", new ChannelInboundHandlerAdapter() {
+				                    .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
 				                        @Override
 				                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 				                            if (evt instanceof SniCompletionEvent) {
