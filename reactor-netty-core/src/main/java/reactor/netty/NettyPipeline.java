@@ -17,11 +17,11 @@ package reactor.netty;
 
 import java.util.function.BiConsumer;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInboundHandler;
 
 /**
- * Constant for names used when adding/removing {@link io.netty.channel.ChannelHandler}.
+ * Constant for names used when adding/removing {@link io.netty5.channel.ChannelHandler}.
  *
  * Order of placement :
  * <p>

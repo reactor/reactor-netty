@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.function.Supplier;
 
-import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.util.NetUtil;
+import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.util.NetUtil;
 import reactor.util.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;

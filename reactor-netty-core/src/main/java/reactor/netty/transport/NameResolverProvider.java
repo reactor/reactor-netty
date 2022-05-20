@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,21 @@
  */
 package reactor.netty.transport;
 
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.DefaultHostsFileEntriesResolver;
-import io.netty.resolver.HostsFileEntriesResolver;
-import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.resolver.dns.DnsAddressResolverGroup;
-import io.netty.resolver.dns.DnsNameResolver;
-import io.netty.resolver.dns.DnsNameResolverBuilder;
-import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
-import io.netty.resolver.dns.LoggingDnsQueryLifeCycleObserverFactory;
-import io.netty.resolver.dns.RoundRobinDnsAddressResolverGroup;
-import io.netty.util.concurrent.Future;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.SocketChannel;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.resolver.AddressResolverGroup;
+import io.netty5.resolver.DefaultHostsFileEntriesResolver;
+import io.netty5.resolver.HostsFileEntriesResolver;
+import io.netty5.resolver.ResolvedAddressTypes;
+import io.netty5.resolver.dns.DnsAddressResolverGroup;
+import io.netty5.resolver.dns.DnsNameResolver;
+import io.netty5.resolver.dns.DnsNameResolverBuilder;
+import io.netty5.resolver.dns.DnsQueryLifecycleObserverFactory;
+import io.netty5.resolver.dns.LoggingDnsQueryLifeCycleObserverFactory;
+import io.netty5.resolver.dns.RoundRobinDnsAddressResolverGroup;
+import io.netty5.util.concurrent.Future;
 import reactor.netty.resources.LoopResources;
 import reactor.util.annotation.Nullable;
 

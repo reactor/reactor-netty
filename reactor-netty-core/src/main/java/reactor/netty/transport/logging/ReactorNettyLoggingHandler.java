@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,16 @@ import java.util.Objects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.logging.ByteBufFormat;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.logging.ByteBufFormat;
+import io.netty5.handler.logging.LogLevel;
+import io.netty5.handler.logging.LoggingHandler;
 import reactor.netty.ChannelOperationsId;
 import reactor.netty.Connection;
 
 import static io.netty.buffer.ByteBufUtil.appendPrettyHexDump;
-import static io.netty.util.internal.StringUtil.NEWLINE;
+import static io.netty5.util.internal.StringUtil.NEWLINE;
 import static java.util.Objects.requireNonNull;
 import static reactor.netty.transport.logging.AdvancedByteBufFormat.HEX_DUMP;
 import static reactor.netty.transport.logging.AdvancedByteBufFormat.SIMPLE;

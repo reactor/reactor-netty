@@ -15,14 +15,14 @@
  */
 package reactor.netty.transport;
 
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.HostsFileEntriesProvider;
-import io.netty.resolver.NoopAddressResolverGroup;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.channel.nio.NioEventLoopGroup;
+import io.netty5.handler.logging.LoggingHandler;
+import io.netty5.resolver.AddressResolverGroup;
+import io.netty5.resolver.HostsFileEntriesProvider;
+import io.netty5.resolver.NoopAddressResolverGroup;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import reactor.core.publisher.Mono;

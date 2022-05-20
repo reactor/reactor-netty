@@ -15,11 +15,11 @@
  */
 package reactor.netty.transport;
 
-import io.netty.resolver.AddressResolver;
-import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
+import io.netty5.resolver.AddressResolver;
+import io.netty5.resolver.AddressResolverGroup;
+import io.netty5.util.concurrent.EventExecutor;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Promise;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.internal.util.MapUtils;
 

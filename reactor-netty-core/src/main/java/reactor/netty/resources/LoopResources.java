@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@ package reactor.netty.resources;
 import java.time.Duration;
 import java.util.Objects;
 
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
+import io.netty5.channel.Channel;
+import io.netty5.channel.EventLoopGroup;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.ReactorNetty;
 
 /**
  * An {@link EventLoopGroup} selector with associated
- * {@link io.netty.channel.Channel} factories.
+ * {@link io.netty5.channel.Channel} factories.
  *
  * @author Stephane Maldini
  * @since 0.6

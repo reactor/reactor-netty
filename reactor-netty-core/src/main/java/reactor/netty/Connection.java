@@ -15,8 +15,8 @@
  */
 package reactor.netty;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandler;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
@@ -68,7 +68,7 @@ public interface Connection extends DisposableChannel {
 	}
 
 	/**
-	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty5.channel.ChannelPipeline},
 	 * that is just before the reactor-added handlers like {@link NettyPipeline#ReactiveBridge}.
 	 * If a handler with a similar name already exists, this operation is skipped.
 	 * <p>
@@ -89,7 +89,7 @@ public interface Connection extends DisposableChannel {
 	}
 
 	/**
-	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty5.channel.ChannelPipeline},
 	 * that is just before the reactor-added handlers like {@link NettyPipeline#ReactiveBridge}.
 	 * If a handler with a similar name already exists, this operation is skipped.
 	 * <p>
@@ -111,7 +111,7 @@ public interface Connection extends DisposableChannel {
 	}
 
 	/**
-	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty5.channel.ChannelPipeline},
 	 * that is just after the reactor-added codecs. If a handler with a similar name already
 	 * exists, this operation is skipped.
 	 * <p>
@@ -131,7 +131,7 @@ public interface Connection extends DisposableChannel {
 	}
 
 	/**
-	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty5.channel.ChannelPipeline},
 	 * that is just after the reactor-added codecs. If a handler with a similar name already
 	 * exists, this operation is skipped.
 	 * <p>

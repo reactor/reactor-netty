@@ -15,19 +15,19 @@
  */
 package reactor.netty.tcp;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.DecoderException;
-import io.netty.handler.ssl.AbstractSniHandler;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.util.AsyncMapping;
-import io.netty.util.DomainWildcardMappingBuilder;
-import io.netty.util.Mapping;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.handler.codec.DecoderException;
+import io.netty5.handler.ssl.AbstractSniHandler;
+import io.netty5.handler.ssl.SslHandler;
+import io.netty5.util.AsyncMapping;
+import io.netty5.util.DomainWildcardMappingBuilder;
+import io.netty5.util.Mapping;
+import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Promise;
+import io.netty5.util.internal.PlatformDependent;
 import reactor.netty.NettyPipeline;
 
 import java.util.Map;

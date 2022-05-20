@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,22 +17,22 @@ package reactor.netty.resources;
 
 import java.util.concurrent.ThreadFactory;
 
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.kqueue.KQueue;
-import io.netty.channel.kqueue.KQueueDatagramChannel;
-import io.netty.channel.kqueue.KQueueDomainDatagramChannel;
-import io.netty.channel.kqueue.KQueueDomainSocketChannel;
-import io.netty.channel.kqueue.KQueueEventLoopGroup;
-import io.netty.channel.kqueue.KQueueServerDomainSocketChannel;
-import io.netty.channel.kqueue.KQueueServerSocketChannel;
-import io.netty.channel.kqueue.KQueueSocketChannel;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.unix.DomainDatagramChannel;
-import io.netty.channel.unix.DomainSocketChannel;
-import io.netty.channel.unix.ServerDomainSocketChannel;
+import io.netty5.channel.Channel;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.kqueue.KQueue;
+import io.netty5.channel.kqueue.KQueueDatagramChannel;
+import io.netty5.channel.kqueue.KQueueDomainDatagramChannel;
+import io.netty5.channel.kqueue.KQueueDomainSocketChannel;
+import io.netty5.channel.kqueue.KQueueEventLoopGroup;
+import io.netty5.channel.kqueue.KQueueServerDomainSocketChannel;
+import io.netty5.channel.kqueue.KQueueServerSocketChannel;
+import io.netty5.channel.kqueue.KQueueSocketChannel;
+import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.ServerSocketChannel;
+import io.netty5.channel.socket.SocketChannel;
+import io.netty5.channel.unix.DomainDatagramChannel;
+import io.netty5.channel.unix.DomainSocketChannel;
+import io.netty5.channel.unix.ServerDomainSocketChannel;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -107,7 +107,7 @@ final class DefaultLoopKQueue implements DefaultLoop {
 	static {
 		boolean kqueueCheck = false;
 		try {
-			Class.forName("io.netty.channel.kqueue.KQueue");
+			Class.forName("io.netty5.channel.kqueue.KQueue");
 			kqueueCheck = KQueue.isAvailable();
 		}
 		catch (ClassNotFoundException cnfe) {

@@ -35,14 +35,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.resolver.AddressResolver;
-import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.DefaultAddressResolverGroup;
-import io.netty.util.NetUtil;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.nio.NioEventLoopGroup;
+import io.netty5.handler.logging.LoggingHandler;
+import io.netty5.resolver.AddressResolver;
+import io.netty5.resolver.AddressResolverGroup;
+import io.netty5.resolver.DefaultAddressResolverGroup;
+import io.netty5.util.NetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -384,8 +384,8 @@ class DefaultPooledConnectionProviderTest {
 
 		AddressResolverGroup<SocketAddress> resolverGroup = Mockito.mock(AddressResolverGroup.class);
 		AddressResolver<SocketAddress> resolver = Mockito.mock(AddressResolver.class);
-		io.netty.util.concurrent.Future<List<SocketAddress>> resolveFuture =
-				Mockito.mock(io.netty.util.concurrent.Future.class);
+		io.netty5.util.concurrent.Future<List<SocketAddress>> resolveFuture =
+				Mockito.mock(io.netty5.util.concurrent.Future.class);
 		List<SocketAddress> resolveAllResult = Arrays.asList(
 				new InetSocketAddress(NetUtil.LOCALHOST4, 12122), // connection refused
 				new InetSocketAddress(NetUtil.LOCALHOST6, 12122), // connection refused

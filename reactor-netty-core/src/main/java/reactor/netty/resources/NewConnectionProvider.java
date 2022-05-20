@@ -23,10 +23,10 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import io.micrometer.contextpropagation.ContextContainer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.resolver.AddressResolverGroup;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.resolver.AddressResolverGroup;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
@@ -134,7 +134,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 		public void onError(Throwable t) {
 			if (bindAddress != null && (t instanceof BindException ||
 					// With epoll/kqueue transport it is
-					// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
+					// io.netty5.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
 					(t instanceof IOException && t.getMessage() != null &&
 							t.getMessage().contains("bind(..)")))) {
 				sink.error(ChannelBindException.fail(bindAddress.get(), null));

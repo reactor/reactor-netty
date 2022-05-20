@@ -25,11 +25,11 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import io.micrometer.contextpropagation.ContextContainer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoop;
-import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.AttributeKey;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelInitializer;
+import io.netty5.channel.EventLoop;
+import io.netty5.resolver.AddressResolverGroup;
+import io.netty5.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;

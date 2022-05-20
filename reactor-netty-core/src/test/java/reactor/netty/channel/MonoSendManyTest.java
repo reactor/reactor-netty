@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,11 +27,11 @@ import java.util.stream.Collectors;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.timeout.WriteTimeoutHandler;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.timeout.WriteTimeoutHandler;
+import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.ReferenceCounted;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscription;

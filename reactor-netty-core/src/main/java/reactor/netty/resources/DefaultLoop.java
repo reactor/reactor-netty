@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@ package reactor.netty.resources;
 
 import java.util.concurrent.ThreadFactory;
 
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
+import io.netty5.channel.Channel;
+import io.netty5.channel.EventLoopGroup;
 
 /**
- * An {@link EventLoopGroup} with associated {@link io.netty.channel.Channel} factory.
+ * An {@link EventLoopGroup} with associated {@link io.netty5.channel.Channel} factory.
  *
  * @author Violeta Georgieva
  */

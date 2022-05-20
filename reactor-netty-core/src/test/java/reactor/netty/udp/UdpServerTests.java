@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,10 +35,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.util.NetUtil;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.socket.InternetProtocolFamily;
+import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.util.NetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

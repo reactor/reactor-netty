@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@ package reactor.netty.channel;
 
 import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.DecoderResultProvider;
-import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInboundHandlerAdapter;
+import io.netty5.handler.codec.DecoderResult;
+import io.netty5.handler.codec.DecoderResultProvider;
+import io.netty5.util.IllegalReferenceCountException;
+import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.ReferenceCounted;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
@@ -34,7 +34,7 @@ import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.toPrettyHexDump;
 
 /**
- * Netty {@link io.netty.channel.ChannelDuplexHandler} implementation that bridge data
+ * Netty {@link io.netty5.channel.ChannelDuplexHandler} implementation that bridge data
  * via an IPC {@link NettyOutbound}
  *
  * @author Stephane Maldini

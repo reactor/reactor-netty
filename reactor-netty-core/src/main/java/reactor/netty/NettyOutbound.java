@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,9 +32,9 @@ import java.util.function.Predicate;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.DefaultFileRegion;
-import io.netty.handler.stream.ChunkedNioFile;
+import io.netty5.channel.Channel;
+import io.netty5.channel.DefaultFileRegion;
+import io.netty5.handler.stream.ChunkedNioFile;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.Exceptions;
@@ -127,8 +127,8 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * on terminal signal (complete|error). If more than one publisher is attached
 	 * (multiple calls to send()) completion occurs after all publishers complete.
 	 * <p>
-	 * Note: this will emit {@link io.netty.channel.FileRegion} in the outbound
-	 * {@link io.netty.channel.ChannelPipeline}
+	 * Note: this will emit {@link io.netty5.channel.FileRegion} in the outbound
+	 * {@link io.netty5.channel.ChannelPipeline}
 	 * Note: Nesting any send* method is not supported.
 	 *
 	 * @param file the file Path
