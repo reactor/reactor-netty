@@ -16,11 +16,11 @@
 package reactor.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty5.channel.ChannelDuplexHandler;
 import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.util.concurrent.Future;
 import reactor.netty.NettyPipeline;
 import reactor.util.annotation.Nullable;
 
@@ -32,7 +32,7 @@ import java.net.SocketAddress;
  * @author Violeta Georgieva
  * @since 1.0.8
  */
-public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler {
+public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapter {
 
 	final SocketAddress remoteAddress;
 
@@ -97,8 +97,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof ByteBuf) {
 			ByteBuf buffer = (ByteBuf) msg;
 			if (buffer.readableBytes() > 0) {
@@ -113,8 +112,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 			}
 		}
 
-		//"FutureReturnValueIgnored" this is deliberate
-		ctx.write(msg, promise);
+		return ctx.write(msg);
 	}
 
 	@Override

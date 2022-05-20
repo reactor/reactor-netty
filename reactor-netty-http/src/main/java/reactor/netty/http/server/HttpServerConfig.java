@@ -22,7 +22,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.ChannelPromise;
 import io.netty.contrib.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpRequest;
@@ -44,6 +43,7 @@ import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.ApplicationProtocolNames;
 import io.netty5.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty5.util.AsciiString;
+import io.netty5.util.concurrent.Future;
 import reactor.core.publisher.Mono;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
@@ -742,10 +742,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(msg, promise);
+		public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+			return ctx.write(msg);
 		}
 	}
 

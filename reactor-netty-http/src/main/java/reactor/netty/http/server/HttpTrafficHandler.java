@@ -23,13 +23,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
-import io.netty5.channel.ChannelDuplexHandler;
 import io.netty5.channel.ChannelFuture;
 import io.netty5.channel.ChannelFutureListener;
 import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.ChannelPromise;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.DecoderResultProvider;
 import io.netty5.handler.codec.http.HttpHeaderNames;
@@ -47,6 +46,7 @@ import io.netty5.handler.timeout.IdleState;
 import io.netty5.handler.timeout.IdleStateEvent;
 import io.netty5.handler.timeout.IdleStateHandler;
 import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.concurrent.Future;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -66,8 +66,7 @@ import static reactor.netty.ReactorNetty.toPrettyHexDump;
  * Replace {@link io.netty5.handler.codec.http.HttpServerKeepAliveHandler} with extra
  * handler management.
  */
-final class HttpTrafficHandler extends ChannelDuplexHandler
-		implements Runnable, ChannelFutureListener {
+final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable, ChannelFutureListener {
 
 	static final String MULTIPART_PREFIX = "multipart";
 
@@ -282,8 +281,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		// modify message on way out to add headers if needed
 		if (msg instanceof HttpResponse) {
 			final HttpResponse response = (HttpResponse) msg;
@@ -301,9 +299,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			}
 
 			if (response.status().equals(HttpResponseStatus.CONTINUE)) {
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(msg, promise);
-				return;
+				return ctx.write(msg);
 			}
 		}
 		if (msg instanceof LastHttpContent) {
@@ -313,17 +309,16 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 									"connection, preparing to close"),
 							pendingResponses);
 				}
-				ctx.write(msg, promise.unvoid())
-				   .addListener(this)
-				   .addListener(ChannelFutureListener.CLOSE);
-				return;
+				return ctx.write(msg)
+				          .addListener(this)
+				          .addListener(ChannelFutureListener.CLOSE);
 			}
 
-			ctx.write(msg, promise.unvoid())
-			   .addListener(this);
+			Future<Void> future = ctx.write(msg)
+			                         .addListener(this);
 
 			if (!persistentConnection) {
-				return;
+				return future;
 			}
 
 			if (nonInformationalResponse) {
@@ -347,7 +342,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			else {
 				ctx.read();
 			}
-			return;
+			return future;
 		}
 		if (persistentConnection && pendingResponses == 0) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
@@ -355,11 +350,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						"since response has been sent already: {}"), toPrettyHexDump(msg));
 			}
 			ReferenceCountUtil.release(msg);
-			promise.setSuccess();
-			return;
+			return ctx.newSucceededFuture();
 		}
-		//"FutureReturnValueIgnored" this is deliberate
-		ctx.write(msg, promise);
+		return ctx.write(msg);
 	}
 
 	@Override

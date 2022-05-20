@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty5.channel.ChannelDuplexHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;
@@ -28,7 +28,7 @@ import static reactor.netty.http.server.logging.AbstractAccessLogArgProvider.MIS
 /**
  * @author limaoning
  */
-class BaseAccessLogHandler extends ChannelDuplexHandler {
+class BaseAccessLogHandler extends ChannelHandlerAdapter {
 
 	static final String DEFAULT_LOG_FORMAT =
 			"{} - {} [{}] \"{} {} {}\" {} {} {}";
