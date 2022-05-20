@@ -16,8 +16,8 @@
 package reactor.netty.http.client;
 
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelInboundHandlerAdapter;
 import io.netty5.handler.codec.http2.Http2SettingsFrame;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -32,14 +32,14 @@ import static io.netty5.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent
 import static reactor.netty.ReactorNetty.format;
 
 /**
- * {@link ChannelInboundHandlerAdapter} prior {@link reactor.netty.channel.ChannelOperationsHandler}
+ * {@link ChannelHandlerAdapter} prior {@link reactor.netty.channel.ChannelOperationsHandler}
  * for handling H2/H2C use cases. HTTP/1.x use cases are delegated to
  * {@link reactor.netty.channel.ChannelOperationsHandler} without any interference.
  *
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-final class HttpTrafficHandler extends ChannelInboundHandlerAdapter {
+final class HttpTrafficHandler extends ChannelHandlerAdapter {
 	final ConnectionObserver listener;
 
 	HttpTrafficHandler(ConnectionObserver listener) {

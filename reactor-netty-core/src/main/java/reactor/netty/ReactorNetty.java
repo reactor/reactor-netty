@@ -37,8 +37,8 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelInboundHandlerAdapter;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.nio.NioEventLoop;
 import io.netty5.handler.ssl.SslHandler;
@@ -843,7 +843,7 @@ public final class ReactorNetty {
 	 * @author Simon Baslé
 	 */
 	@ChannelHandler.Sharable
-	static final class ExtractorHandler extends ChannelInboundHandlerAdapter {
+	static final class ExtractorHandler extends ChannelHandlerAdapter {
 
 
 		final BiConsumer<? super ChannelHandlerContext, Object> extractor;

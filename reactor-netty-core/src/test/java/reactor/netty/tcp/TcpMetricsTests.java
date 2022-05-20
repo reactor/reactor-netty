@@ -39,8 +39,8 @@ import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.core.tck.MeterRegistryAssert;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelInboundHandlerAdapter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -156,7 +156,7 @@ class TcpMetricsTests {
 			                      .port(port)
 			                      .doOnChannelInit((observer, channel, address) ->
 	                                  channel.pipeline()
-			                                 .addLast(new ChannelInboundHandlerAdapter() {
+			                                 .addLast(new ChannelHandlerAdapter() {
 
 			                                     @Override
 			                                     public void channelUnregistered(ChannelHandlerContext ctx) {

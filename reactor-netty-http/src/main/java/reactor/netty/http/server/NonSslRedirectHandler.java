@@ -16,8 +16,8 @@
 package reactor.netty.http.server;
 
 import io.netty5.channel.ChannelFutureListener;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelInboundHandlerAdapter;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
@@ -39,7 +39,7 @@ import static io.netty5.handler.codec.http.HttpHeaderNames.LOCATION;
  * @author James Chen
  * @since 1.0.5
  */
-final class NonSslRedirectHandler extends ChannelInboundHandlerAdapter {
+final class NonSslRedirectHandler extends ChannelHandlerAdapter {
 
 	private static final String HTTP_PROTOCOL = "http://";
 	private static final String HTTPS_PROTOCOL = "https://";

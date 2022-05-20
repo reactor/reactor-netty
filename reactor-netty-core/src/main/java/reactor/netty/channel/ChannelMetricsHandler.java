@@ -16,8 +16,8 @@
 package reactor.netty.channel;
 
 import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelInboundHandlerAdapter;
 import io.netty5.channel.ChannelOutboundHandlerAdapter;
 import io.netty5.channel.ChannelPromise;
 import io.netty5.handler.ssl.SslHandler;
@@ -82,7 +82,7 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 		}
 	}
 
-	static class TlsMetricsHandler extends ChannelInboundHandlerAdapter {
+	static class TlsMetricsHandler extends ChannelHandlerAdapter {
 		protected final ChannelMetricsRecorder recorder;
 		TlsMetricsHandler(ChannelMetricsRecorder recorder) {
 			this.recorder = recorder;
