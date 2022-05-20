@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.server;
 
-import io.netty.channel.ChannelOption;
+import io.netty5.channel.ChannelOption;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 

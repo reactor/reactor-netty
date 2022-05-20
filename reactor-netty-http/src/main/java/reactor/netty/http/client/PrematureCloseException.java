@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,14 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.channel.ChannelInboundHandler;
+import io.netty5.channel.ChannelInboundHandler;
 import reactor.netty.channel.ChannelOperations;
 
 import java.io.IOException;
 
 /**
  * An error for signalling that the connection was closed prematurely
- * {@link ChannelInboundHandler#channelInactive(io.netty.channel.ChannelHandlerContext)},
+ * {@link ChannelInboundHandler#channelInactive(io.netty5.channel.ChannelHandlerContext)},
  * {@link ChannelOperations#onInboundClose()},
  * {@link ChannelOperations#onInboundError()}
  *

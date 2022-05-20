@@ -23,30 +23,30 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.DecoderResultProvider;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.HttpStatusClass;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.ReferenceCountUtil;
+import io.netty5.channel.ChannelDuplexHandler;
+import io.netty5.channel.ChannelFuture;
+import io.netty5.channel.ChannelFutureListener;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelPromise;
+import io.netty5.handler.codec.DecoderResult;
+import io.netty5.handler.codec.DecoderResultProvider;
+import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpRequest;
+import io.netty5.handler.codec.http.HttpResponse;
+import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http.HttpServerCodec;
+import io.netty5.handler.codec.http.HttpStatusClass;
+import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty5.handler.ssl.SslHandler;
+import io.netty5.handler.timeout.IdleState;
+import io.netty5.handler.timeout.IdleStateEvent;
+import io.netty5.handler.timeout.IdleStateHandler;
+import io.netty5.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -55,15 +55,15 @@ import reactor.netty.NettyPipeline;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 
-import static io.netty.handler.codec.http.HttpUtil.isContentLengthSet;
-import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
-import static io.netty.handler.codec.http.HttpUtil.isTransferEncodingChunked;
-import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
+import static io.netty5.handler.codec.http.HttpUtil.isContentLengthSet;
+import static io.netty5.handler.codec.http.HttpUtil.isKeepAlive;
+import static io.netty5.handler.codec.http.HttpUtil.isTransferEncodingChunked;
+import static io.netty5.handler.codec.http.HttpUtil.setKeepAlive;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.toPrettyHexDump;
 
 /**
- * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra
+ * Replace {@link io.netty5.handler.codec.http.HttpServerKeepAliveHandler} with extra
  * handler management.
  */
 final class HttpTrafficHandler extends ChannelDuplexHandler

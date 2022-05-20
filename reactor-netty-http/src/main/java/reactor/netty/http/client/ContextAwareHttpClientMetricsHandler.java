@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelHandlerContext;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.cookie.Cookie;
 
 import java.time.Duration;
 
@@ -75,7 +75,7 @@ public interface HttpClientRequest extends HttpClientInfos {
 
 	/**
 	 * Specifies the maximum duration allowed between each network-level read operation while reading a given response
-	 * (resolution: ms). In other words, {@link io.netty.handler.timeout.ReadTimeoutHandler} is added to the channel
+	 * (resolution: ms). In other words, {@link io.netty5.handler.timeout.ReadTimeoutHandler} is added to the channel
 	 * pipeline after sending the request and is removed when the response is fully received.
 	 * If the {@code maxReadOperationInterval} is {@code null}, any previous setting will be removed and no
 	 * {@code maxReadOperationInterval} will be applied.
@@ -88,7 +88,7 @@ public interface HttpClientRequest extends HttpClientInfos {
 	 *                                 (resolution: ms).
 	 * @return this outbound
 	 * @since 0.9.11
-	 * @see io.netty.handler.timeout.ReadTimeoutHandler
+	 * @see io.netty5.handler.timeout.ReadTimeoutHandler
 	 */
 	HttpClientRequest responseTimeout(Duration maxReadOperationInterval);
 }

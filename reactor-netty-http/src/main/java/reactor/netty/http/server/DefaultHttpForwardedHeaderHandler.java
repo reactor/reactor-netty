@@ -19,7 +19,7 @@ import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty5.handler.codec.http.HttpRequest;
 import reactor.netty.transport.AddressUtils;
 
 /**

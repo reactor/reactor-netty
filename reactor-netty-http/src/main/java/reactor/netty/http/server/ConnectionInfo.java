@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.function.BiFunction;
 
-import io.netty.channel.Channel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty5.channel.Channel;
+import io.netty5.channel.socket.SocketChannel;
+import io.netty5.handler.codec.http.HttpRequest;
 import reactor.util.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;

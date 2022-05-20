@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty5.channel.ChannelDuplexHandler;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;

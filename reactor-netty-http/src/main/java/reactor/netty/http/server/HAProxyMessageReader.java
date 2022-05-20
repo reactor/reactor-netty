@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,16 @@ package reactor.netty.http.server;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.haproxy.HAProxyMessage;
-import io.netty.util.AttributeKey;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelInboundHandlerAdapter;
+import io.netty.contrib.handler.codec.haproxy.HAProxyMessage;
+import io.netty5.util.AttributeKey;
 import reactor.netty.transport.AddressUtils;
 import reactor.util.annotation.Nullable;
 
 /**
- * Consumes {@link io.netty.handler.codec.haproxy.HAProxyMessage}
+ * Consumes {@link io.netty.contrib.handler.codec.haproxy.HAProxyMessage}
  * and set it into channel attribute for later use.
  *
  * @author aftersss
@@ -42,7 +42,7 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 	static {
 		boolean proxyProtocolCheck = true;
 		try {
-			Class.forName("io.netty.handler.codec.haproxy.HAProxyMessageDecoder");
+			Class.forName("io.netty.contrib.handler.codec.haproxy.HAProxyMessageDecoder");
 		}
 		catch (ClassNotFoundException cnfe) {
 			proxyProtocolCheck = false;

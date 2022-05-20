@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
-import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty5.handler.codec.http.websocketx.WebSocketClientHandshakeException;
+import io.netty5.handler.codec.http.websocketx.WebSocketHandshakeException;
+import io.netty5.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

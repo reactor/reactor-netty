@@ -15,12 +15,12 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelId;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
-import io.netty.handler.codec.http2.Http2MultiplexHandler;
+import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelId;
+import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.codec.http2.Http2FrameCodecBuilder;
+import io.netty5.handler.codec.http2.Http2MultiplexHandler;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;

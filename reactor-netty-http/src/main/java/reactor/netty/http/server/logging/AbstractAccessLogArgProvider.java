@@ -15,8 +15,8 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.HttpMethod;
+import io.netty5.handler.codec.http.cookie.Cookie;
 import reactor.netty.ReactorNetty;
 import reactor.util.annotation.Nullable;
 

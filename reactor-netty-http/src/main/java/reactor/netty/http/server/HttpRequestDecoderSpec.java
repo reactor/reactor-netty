@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ package reactor.netty.http.server;
 import reactor.netty.http.HttpDecoderSpec;
 
 /**
- * A configuration builder to fine tune the {@link io.netty.handler.codec.http.HttpServerCodec}
- * (or more precisely the {@link io.netty.handler.codec.http.HttpServerCodec.HttpServerRequestDecoder}) for HTTP/1.1
- * or {@link io.netty.handler.codec.http.HttpServerUpgradeHandler} for H2C.
+ * A configuration builder to fine tune the {@link io.netty5.handler.codec.http.HttpServerCodec}
+ * (or more precisely the {@link io.netty5.handler.codec.http.HttpServerCodec.HttpServerRequestDecoder}) for HTTP/1.1
+ * or {@link io.netty5.handler.codec.http.HttpServerUpgradeHandler} for H2C.
  * <p>
  * Defaults are accessible as constants
  * <table>
