@@ -397,7 +397,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				// See https://github.com/netty/netty/issues/1328
 				config.setAutoRead(false);
 				ctx.channel()
-				   .eventLoop()
+				   .executor()
 				   .schedule(enableAutoReadTask, 1, TimeUnit.SECONDS)
 				   .addListener(future -> {
 				       if (!future.isSuccess()) {
@@ -436,7 +436,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 		@Override
 		public void initChannel(final Channel ch) {
-			ch.eventLoop().execute(() -> ch.pipeline().addLast(acceptor));
+			ch.executor().execute(() -> ch.pipeline().addLast(acceptor));
 		}
 	}
 

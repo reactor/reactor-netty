@@ -79,7 +79,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 		this.parent = parent;
 		this.channel = parent.channel();
-		this.eventLoop = channel.eventLoop();
+		this.eventLoop = channel.executor();
 		channel.config()
 		       .setAutoRead(false);
 		CANCEL.lazySet(this, () -> {

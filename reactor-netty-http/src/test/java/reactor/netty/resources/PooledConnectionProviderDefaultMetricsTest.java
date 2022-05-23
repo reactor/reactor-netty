@@ -259,12 +259,12 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 									counter.incrementAndGet();
 									conn.onTerminate()
 									    .subscribe(null,
-									        t -> conn.channel().eventLoop().execute(() -> {
+									        t -> conn.channel().executor().execute(() -> {
 									                if (counter.decrementAndGet() == 0) {
 									                    latch.countDown();
 									                }
 									        }),
-									        () -> conn.channel().eventLoop().execute(() -> {
+									        () -> conn.channel().executor().execute(() -> {
 									                if (counter.decrementAndGet() == 0) {
 									                    latch.countDown();
 									                }

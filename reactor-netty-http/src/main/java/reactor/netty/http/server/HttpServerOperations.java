@@ -695,7 +695,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		//Try to defer the disposing to leave a chance for any synchronous complete following this callback
 		if (!ops.isSubscriptionDisposed()) {
-			ch.eventLoop()
+			ch.executor()
 			  .execute(((HttpServerOperations) ops)::terminate);
 		}
 		else {
