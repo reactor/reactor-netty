@@ -25,7 +25,6 @@ import reactor.netty.tcp.SslProvider;
 
 import javax.annotation.Nullable;
 import java.net.SocketAddress;
-import java.util.List;
 
 /**
  * The handler detects if it's an SSL record header or an HTTP request from
@@ -51,7 +50,7 @@ final class NonSslRedirectDetector extends ByteToMessageDecoder {
 	}
 
 	@Override
-	protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+	protected void decode(ChannelHandlerContext ctx, ByteBuf in) {
 		if (in.readableBytes() < SSL_RECORD_HEADER_LENGTH) {
 			return;
 		}

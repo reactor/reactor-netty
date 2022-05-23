@@ -26,9 +26,6 @@ import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * @author Stephane Maldini
  */
@@ -42,8 +39,8 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		return ctx.write(msg);
 	}
 
-	void decode(ChannelHandlerContext ctx, HttpRequest msg) {
-		List<Object> out = new ArrayList<>();
+	@Override
+	protected void decode(ChannelHandlerContext ctx, HttpRequest msg) {
 		HttpRequest request = msg;
 		try {
 			if (msg instanceof FullHttpRequest && ((FullHttpRequest) msg).content().refCnt() == 0) {
@@ -52,7 +49,7 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 				// decode(...) will observe a freed content
 				request = new DefaultHttpRequest(msg.protocolVersion(), msg.method(), msg.uri(), msg.headers());
 			}
-			super.decode(ctx, request, out);
+			super.decode(ctx, request);
 		}
 		catch (DecoderException e) {
 			throw e;
@@ -63,7 +60,6 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		finally {
 			// ReferenceCountUtil.retain(...) is invoked in decode(...) so release(...) here
 			ReferenceCountUtil.release(request);
-			out.clear();
 		}
 	}
 }
