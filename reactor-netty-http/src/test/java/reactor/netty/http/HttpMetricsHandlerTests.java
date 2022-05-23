@@ -167,7 +167,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+	                          @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
@@ -178,18 +178,18 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
-			serverAddress.set(conn.channel().remoteAddress())
+				serverAddress.set(conn.channel().remoteAddress())
 		).observe(observerDisconnect);
 
 		StepVerifier.create(httpClient.post()
-		                              .uri("/1")
-		                              .send(body)
-		                              .responseContent()
-		                              .aggregate()
-		                              .asString())
-		            .expectNext("Hello World!")
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+						.uri("/1")
+						.send(body)
+						.responseContent()
+						.aggregate()
+						.asString())
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
@@ -216,14 +216,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		latchRef.set(latch2);
 
 		StepVerifier.create(httpClient.post()
-		                              .uri("/2?i=1&j=2")
-		                              .send(body)
-		                              .responseContent()
-		                              .aggregate()
-		                              .asString())
-		            .expectNext("Hello World!")
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+						.uri("/2?i=1&j=2")
+						.send(body)
+						.responseContent()
+						.aggregate()
+						.asString())
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
@@ -231,6 +231,59 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		checkExpectationsExisting("/2", sa.getHostString() + ":" + sa.getPort(), connIndex, serverCtx != null,
 				numWrites[1], bytesWrite[1]);
+	}
+
+	// https://github.com/reactor/reactor-netty/issues/2187
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.metrics(true, id -> {
+					throw new IllegalArgumentException("Testcase injected Exception");
+				})
+				.bindNow();
+
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
+				serverAddress.set(conn.channel().remoteAddress())
+		);
+
+		StepVerifier.create(httpClient.post()
+						.uri("/1")
+						.send(body)
+						.responseContent()
+						.aggregate()
+						.asString())
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(2));
+	}
+
+	// https://github.com/reactor/reactor-netty/issues/2187
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.bindNow();
+
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
+				serverAddress.set(conn.channel().remoteAddress())
+		).metrics(true, id -> {
+			throw new IllegalArgumentException("Testcase injected Exception");
+		});
+
+		StepVerifier.create(httpClient.post()
+						.uri("/1")
+						.send(body)
+						.responseContent()
+						.aggregate()
+						.asString())
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(2));
 	}
 
 	@ParameterizedTest
