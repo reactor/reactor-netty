@@ -44,7 +44,7 @@ import javax.net.ssl.SNIHostName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty5.channel.AdaptiveRecvByteBufAllocator;
+import io.netty5.channel.AdaptiveRecvBufferAllocator;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
@@ -464,7 +464,7 @@ class TcpServerTests {
 		Connection client2 =
 				TcpClient.create()
 				         .port(context.port())
-				         .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator(64, 1024, 65536))
+				         .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvBufferAllocator(64, 1024, 65536))
 				         .handle((in, out) -> {
 				             in.receive()
 				               .asString(StandardCharsets.UTF_8)
