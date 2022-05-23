@@ -26,9 +26,12 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import reactor.netty.channel.ChannelOperations;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -36,6 +39,8 @@ import java.util.function.Function;
  * @since 1.0.8
  */
 abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
+
+	private static final Logger log = Loggers.getLogger(AbstractHttpServerMetricsHandler.class);
 
 	long dataReceived;
 
@@ -83,75 +88,72 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-		if (msg instanceof HttpResponse) {
-			if (((HttpResponse) msg).status().equals(HttpResponseStatus.CONTINUE)) {
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(msg, promise);
-				return;
-			}
-
-			dataSentTime = System.nanoTime();
-		}
-
-		if (msg instanceof ByteBufHolder) {
-			dataSent += ((ByteBufHolder) msg).content().readableBytes();
-		}
-		else if (msg instanceof ByteBuf) {
-			dataSent += ((ByteBuf) msg).readableBytes();
-		}
-
-		if (msg instanceof LastHttpContent) {
-			promise.addListener(future -> {
-				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-				if (channelOps instanceof HttpServerOperations) {
-					HttpServerOperations ops = (HttpServerOperations) channelOps;
-					recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-							ops.method().name(), ops.status().codeAsText().toString());
-					if (!ops.isHttp2() && ops.hostAddress() != null) {
-						// This metric is not applicable for HTTP/2
-						// ops.hostAddress() == null when request decoding failed, in this case
-						// we do not report active connection, so we do not report inactive connection
-						recordInactiveConnection(ops);
-					}
+		try {
+			if (msg instanceof HttpResponse) {
+				if (((HttpResponse) msg).status().equals(HttpResponseStatus.CONTINUE)) {
+					return;
 				}
 
-				dataSent = 0;
-			});
-		}
+				dataSentTime = System.nanoTime();
+			}
 
-		//"FutureReturnValueIgnored" this is deliberate
-		ctx.write(msg, promise);
+			dataSent += extractProcessedDataFromBuffer(msg);
+
+			if (msg instanceof LastHttpContent) {
+				promise.addListener(future -> {
+					try {
+						withHttpServerOperations(ctx, ops -> {
+							recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
+									ops.method().name(), ops.status().codeAsText().toString());
+							if (!ops.isHttp2() && ops.hostAddress() != null) {
+								// This metric is not applicable for HTTP/2
+								// ops.hostAddress() == null when request decoding failed, in this case
+								// we do not report active connection, so we do not report inactive connection
+								recordInactiveConnection(ops);
+							}
+						});
+					} catch (RuntimeException e) {
+						log.warn("Exception caught while recording metrics.", e);
+						// Allow request-response exchange to continue, unaffected by metrics problem
+					}
+
+					dataSent = 0;
+				});
+			}
+		} catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
+		} finally {
+			//"FutureReturnValueIgnored" this is deliberate
+			ctx.write(msg, promise);
+		}
 	}
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest) {
-			dataReceivedTime = System.nanoTime();
-			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-			if (channelOps instanceof HttpServerOperations) {
-				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				if (!ops.isHttp2()) {
-					// This metric is not applicable for HTTP/2
-					recordActiveConnection(ops);
-				}
-			}
-		}
-
-		if (msg instanceof ByteBufHolder) {
-			dataReceived += ((ByteBufHolder) msg).content().readableBytes();
-		}
-		else if (msg instanceof ByteBuf) {
-			dataReceived += ((ByteBuf) msg).readableBytes();
-		}
-
-		if (msg instanceof LastHttpContent) {
-			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-			if (channelOps instanceof HttpServerOperations) {
-				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				recordRead(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), ops.method().name());
+		try {
+			if (msg instanceof HttpRequest) {
+				dataReceivedTime = System.nanoTime();
+				withHttpServerOperations(ctx, ops -> {
+					if (!ops.isHttp2()) {
+						// This metric is not applicable for HTTP/2
+						recordActiveConnection(ops);
+					}
+				});
 			}
 
-			dataReceived = 0;
+			dataReceived += extractProcessedDataFromBuffer(msg);
+
+			if (msg instanceof LastHttpContent) {
+				withHttpServerOperations(ctx, ops -> {
+					recordRead(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), ops.method().name());
+				});
+
+				dataReceived = 0;
+			}
+		} catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		ctx.fireChannelRead(msg);
@@ -159,17 +161,38 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-		if (channelOps instanceof HttpServerOperations) {
-			HttpServerOperations ops = (HttpServerOperations) channelOps;
-			// Always take the remote address from the operations in order to consider proxy information
-			recordException(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path));
+		try {
+			withHttpServerOperations(ctx, ops -> {
+				// Always take the remote address from the operations in order to consider proxy information
+				recordException(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path));
+			});
+		} catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		ctx.fireExceptionCaught(cause);
 	}
 
 	protected abstract HttpServerMetricsRecorder recorder();
+
+	private void withHttpServerOperations(ChannelHandlerContext ctx, Consumer<HttpServerOperations> block) {
+		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+		if (channelOps instanceof HttpServerOperations) {
+			HttpServerOperations ops = (HttpServerOperations) channelOps;
+			block.accept(ops);
+		}
+	}
+
+	private long extractProcessedDataFromBuffer(Object msg) {
+		if (msg instanceof ByteBufHolder) {
+			return ((ByteBufHolder) msg).content().readableBytes();
+		}
+		else if (msg instanceof ByteBuf) {
+			return ((ByteBuf) msg).readableBytes();
+		}
+		return 0;
+	}
 
 	protected void recordException(HttpServerOperations ops, String path) {
 		// Always take the remote address from the operations in order to consider proxy information

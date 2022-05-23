@@ -22,9 +22,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
 import reactor.netty.NettyPipeline;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Base {@link ChannelHandler} for collecting metrics on protocol level.
@@ -33,6 +38,8 @@ import java.net.SocketAddress;
  * @since 1.0.8
  */
 public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler {
+
+	private static final Logger log = Loggers.getLogger(AbstractChannelMetricsHandler.class);
 
 	final SocketAddress remoteAddress;
 
@@ -46,7 +53,12 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
 		if (onServer) {
-			recorder().recordServerConnectionOpened(ctx.channel().localAddress());
+			try {
+				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
+			} catch (RuntimeException e) {
+				log.warn("Exception caught while recording metrics.", e);
+				// Allow request-response exchange to continue, unaffected by metrics problem
+			}
 		}
 		ctx.fireChannelActive();
 	}
@@ -54,7 +66,12 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) {
 		if (onServer) {
-			recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+			try {
+				recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+			} catch (RuntimeException e) {
+				log.warn("Exception caught while recording metrics.", e);
+				// Allow request-response exchange to continue, unaffected by metrics problem
+			}
 		}
 		ctx.fireChannelInactive();
 	}
@@ -79,19 +96,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof ByteBuf) {
-			ByteBuf buffer = (ByteBuf) msg;
-			if (buffer.readableBytes() > 0) {
-				recordRead(ctx, remoteAddress, buffer.readableBytes());
-			}
-		}
-		else if (msg instanceof DatagramPacket) {
-			DatagramPacket p = (DatagramPacket) msg;
-			ByteBuf buffer = p.content();
-			if (buffer.readableBytes() > 0) {
-				recordRead(ctx, remoteAddress != null ? remoteAddress : p.sender(), buffer.readableBytes());
-			}
-		}
+		fromPayload(msg, DatagramPacket::sender, (address, bytes) -> recordRead(ctx, address, bytes));
 
 		ctx.fireChannelRead(msg);
 	}
@@ -99,19 +104,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-		if (msg instanceof ByteBuf) {
-			ByteBuf buffer = (ByteBuf) msg;
-			if (buffer.readableBytes() > 0) {
-				recordWrite(ctx, remoteAddress, buffer.readableBytes());
-			}
-		}
-		else if (msg instanceof DatagramPacket) {
-			DatagramPacket p = (DatagramPacket) msg;
-			ByteBuf buffer = p.content();
-			if (buffer.readableBytes() > 0) {
-				recordWrite(ctx, remoteAddress != null ? remoteAddress : p.recipient(), buffer.readableBytes());
-			}
-		}
+		fromPayload(msg, DatagramPacket::recipient, (address, bytes) -> recordWrite(ctx, address, bytes));
 
 		//"FutureReturnValueIgnored" this is deliberate
 		ctx.write(msg, promise);
@@ -119,7 +112,12 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		recordException(ctx, remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress());
+		try {
+			recordException(ctx, remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress());
+		} catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
+		}
 
 		ctx.fireExceptionCaught(cause);
 	}
@@ -128,6 +126,29 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	public abstract ChannelHandler tlsMetricsHandler();
 
 	public abstract ChannelMetricsRecorder recorder();
+
+	private void fromPayload(Object msg, Function<DatagramPacket, ? extends SocketAddress> addressSelector,
+	                         BiConsumer<SocketAddress, Integer> recordFn) {
+		try {
+			if (msg instanceof ByteBuf) {
+				ByteBuf buffer = (ByteBuf) msg;
+				if (buffer.readableBytes() > 0) {
+					recordFn.accept(remoteAddress, buffer.readableBytes());
+				}
+			}
+			else if (msg instanceof DatagramPacket) {
+				DatagramPacket p = (DatagramPacket) msg;
+				ByteBuf buffer = p.content();
+				if (buffer.readableBytes() > 0) {
+					SocketAddress address = remoteAddress != null ? remoteAddress : addressSelector.apply(p);
+					recordFn.accept(address, buffer.readableBytes());
+				}
+			}
+		} catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
+		}
+	}
 
 	protected void recordException(ChannelHandlerContext ctx, SocketAddress address) {
 		recorder().incrementErrorsCount(address);
