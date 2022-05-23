@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,6 @@ public class HttpDecoderSpecTest {
 		assertThat(conf.maxInitialLineLength()).as("initial line length").isEqualTo(123);
 
 		checkDefaultMaxHeaderSize(conf);
-		checkDefaultMaxChunkSize(conf);
 		checkDefaultValidateHeaders(conf);
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
@@ -67,7 +66,6 @@ public class HttpDecoderSpecTest {
 		assertThat(conf.maxHeaderSize()).as("header size").isEqualTo(123);
 
 		checkDefaultMaxInitialLineLength(conf);
-		checkDefaultMaxChunkSize(conf);
 		checkDefaultValidateHeaders(conf);
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
@@ -87,34 +85,6 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
-	void maxChunkSize() {
-		checkDefaultMaxChunkSize(conf);
-
-		conf.maxChunkSize(123);
-
-		assertThat(conf.maxChunkSize()).as("chunk size").isEqualTo(123);
-
-		checkDefaultMaxInitialLineLength(conf);
-		checkDefaultMaxHeaderSize(conf);
-		checkDefaultValidateHeaders(conf);
-		checkDefaultInitialBufferSize(conf);
-		checkDefaultAllowDuplicateContentLengths(conf);
-	}
-
-	@Test
-	void maxChunkSizeBadValues() {
-		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> conf.maxChunkSize(0))
-				.as("rejects 0")
-				.withMessage("maxChunkSize must be strictly positive");
-
-		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> conf.maxChunkSize(-1))
-				.as("rejects negative")
-				.withMessage("maxChunkSize must be strictly positive");
-	}
-
-	@Test
 	void validateHeaders() {
 		checkDefaultValidateHeaders(conf);
 
@@ -124,7 +94,6 @@ public class HttpDecoderSpecTest {
 
 		checkDefaultMaxInitialLineLength(conf);
 		checkDefaultMaxHeaderSize(conf);
-		checkDefaultMaxChunkSize(conf);
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
 	}
@@ -139,7 +108,6 @@ public class HttpDecoderSpecTest {
 
 		checkDefaultMaxInitialLineLength(conf);
 		checkDefaultMaxHeaderSize(conf);
-		checkDefaultMaxChunkSize(conf);
 		checkDefaultValidateHeaders(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
 	}
@@ -167,7 +135,6 @@ public class HttpDecoderSpecTest {
 
 		checkDefaultMaxInitialLineLength(conf);
 		checkDefaultMaxHeaderSize(conf);
-		checkDefaultMaxChunkSize(conf);
 		checkDefaultValidateHeaders(conf);
 		checkDefaultInitialBufferSize(conf);
 	}
@@ -181,12 +148,6 @@ public class HttpDecoderSpecTest {
 	public static void checkDefaultMaxHeaderSize(HttpDecoderSpec<?> conf) {
 		assertThat(conf.maxHeaderSize()).as("default header size")
 				.isEqualTo(HttpDecoderSpec.DEFAULT_MAX_HEADER_SIZE)
-				.isEqualTo(8192);
-	}
-
-	public static void checkDefaultMaxChunkSize(HttpDecoderSpec<?> conf) {
-		assertThat(conf.maxChunkSize()).as("default chunk size")
-				.isEqualTo(HttpDecoderSpec.DEFAULT_MAX_CHUNK_SIZE)
 				.isEqualTo(8192);
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,14 +28,12 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 
 	public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH             = 4096;
 	public static final int DEFAULT_MAX_HEADER_SIZE                     = 8192;
-	public static final int DEFAULT_MAX_CHUNK_SIZE                      = 8192;
 	public static final boolean DEFAULT_VALIDATE_HEADERS                = true;
 	public static final int DEFAULT_INITIAL_BUFFER_SIZE                 = 128;
 	public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
 
 	protected int maxInitialLineLength             = DEFAULT_MAX_INITIAL_LINE_LENGTH;
 	protected int maxHeaderSize                    = DEFAULT_MAX_HEADER_SIZE;
-	protected int maxChunkSize                     = DEFAULT_MAX_CHUNK_SIZE;
 	protected boolean validateHeaders              = DEFAULT_VALIDATE_HEADERS;
 	protected int initialBufferSize                = DEFAULT_INITIAL_BUFFER_SIZE;
 	protected boolean allowDuplicateContentLengths = DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS;
@@ -87,30 +85,6 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	 */
 	public int maxHeaderSize() {
 		return maxHeaderSize;
-	}
-
-	/**
-	 * Configure the maximum chunk size that can be decoded for the HTTP request.
-	 * Defaults to {@link #DEFAULT_MAX_CHUNK_SIZE}.
-	 *
-	 * @param value the value for the maximum chunk size (strictly positive)
-	 * @return this option builder for further configuration
-	 */
-	public T maxChunkSize(int value) {
-		if (value <= 0) {
-			throw new IllegalArgumentException("maxChunkSize must be strictly positive");
-		}
-		this.maxChunkSize = value;
-		return get();
-	}
-
-	/**
-	 * Return the configured maximum chunk size that can be decoded for the HTTP request.
-	 *
-	 * @return the configured maximum chunk size that can be decoded for the HTTP request
-	 */
-	public int maxChunkSize() {
-		return maxChunkSize;
 	}
 
 	/**
@@ -227,7 +201,6 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		HttpDecoderSpec<?> that = (HttpDecoderSpec<?>) o;
 		return maxInitialLineLength == that.maxInitialLineLength &&
 				maxHeaderSize == that.maxHeaderSize &&
-				maxChunkSize == that.maxChunkSize &&
 				validateHeaders == that.validateHeaders &&
 				initialBufferSize == that.initialBufferSize &&
 				allowDuplicateContentLengths == that.allowDuplicateContentLengths &&
@@ -236,7 +209,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize,
+		return Objects.hash(maxInitialLineLength, maxHeaderSize, validateHeaders, initialBufferSize,
 				allowDuplicateContentLengths, h2cMaxContentLength);
 	}
 }

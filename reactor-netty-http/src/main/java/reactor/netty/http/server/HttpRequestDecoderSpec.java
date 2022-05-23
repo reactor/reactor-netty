@@ -27,7 +27,6 @@ import reactor.netty.http.HttpDecoderSpec;
  *     <tr><td>{@link #DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS}</td><td>false</td></tr>
  *     <tr><td>{@link #DEFAULT_H2C_MAX_CONTENT_LENGTH}</td><td>0</td></tr>
  *     <tr><td>{@link #DEFAULT_INITIAL_BUFFER_SIZE}</td><td>128</td></tr>
- *     <tr><td>{@link #DEFAULT_MAX_CHUNK_SIZE}</td><td>8192</td></tr>
  *     <tr><td>{@link #DEFAULT_MAX_HEADER_SIZE}</td><td>8192</td></tr>
  *     <tr><td>{@link #DEFAULT_MAX_INITIAL_LINE_LENGTH}</td><td>4096</td></tr>
  *     <tr><td>{@link #DEFAULT_VALIDATE_HEADERS}</td><td>true</td></tr>
@@ -60,7 +59,6 @@ public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDec
 	HttpRequestDecoderSpec build() {
 		HttpRequestDecoderSpec decoder = new HttpRequestDecoderSpec();
 		decoder.initialBufferSize = initialBufferSize;
-		decoder.maxChunkSize = maxChunkSize;
 		decoder.maxHeaderSize = maxHeaderSize;
 		decoder.maxInitialLineLength = maxInitialLineLength;
 		decoder.validateHeaders = validateHeaders;

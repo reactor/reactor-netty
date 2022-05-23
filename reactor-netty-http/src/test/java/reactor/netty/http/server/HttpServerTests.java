@@ -840,13 +840,11 @@ class HttpServerTests extends BaseHttpTest {
 	void httpServerRequestConfigInjectAttributes() {
 		AtomicReference<Channel> channelRef = new AtomicReference<>();
 		AtomicBoolean validate = new AtomicBoolean();
-		AtomicInteger chunkSize = new AtomicInteger();
 		AtomicBoolean allowDuplicateContentLengths = new AtomicBoolean();
 		disposableServer =
 				createServer()
 				          .httpRequestDecoder(opt -> opt.maxInitialLineLength(123)
 				                                        .maxHeaderSize(456)
-				                                        .maxChunkSize(789)
 				                                        .validateHeaders(false)
 				                                        .initialBufferSize(10)
 				                                        .allowDuplicateContentLengths(true))
@@ -857,7 +855,6 @@ class HttpServerTests extends BaseHttpTest {
 				                                               .pipeline()
 				                                               .get(HttpServerCodec.class);
 				                      HttpObjectDecoder decoder = (HttpObjectDecoder) getValueReflection(codec, "inboundHandler", 1);
-				                      chunkSize.set((Integer) getValueReflection(decoder, "maxChunkSize", 2));
 				                      validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
 				                      allowDuplicateContentLengths.set((Boolean) getValueReflection(decoder, "allowDuplicateContentLengths", 2));
 				                  })
@@ -873,7 +870,6 @@ class HttpServerTests extends BaseHttpTest {
 		          .block();
 
 		assertThat(channelRef.get()).isNotNull();
-		assertThat(chunkSize).as("line length").hasValue(789);
 		assertThat(validate).as("validate headers").isFalse();
 		assertThat(allowDuplicateContentLengths).as("allow duplicate Content-Length").isTrue();
 	}
