@@ -46,6 +46,7 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLHandshakeException;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -354,7 +355,7 @@ class SslProviderTests extends BaseHttpTest {
 				          });
 
 		SslProvider provider = builder.build();
-		SslHandler handler = provider.getSslContext().newHandler(ByteBufAllocator.DEFAULT);
+		SslHandler handler = provider.getSslContext().newHandler(preferredAllocator());
 		provider.configure(handler);
 	}
 

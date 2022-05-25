@@ -54,6 +54,7 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class NettyOutboundTest {
@@ -149,7 +150,7 @@ class NettyOutboundTest {
 	@Test
 	void sendFileWithTlsUsesChunkedFile() throws URISyntaxException, SSLException {
 		SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
-		final SslHandler sslHandler = sslCtx.newHandler(ByteBufAllocator.DEFAULT);
+		final SslHandler sslHandler = sslCtx.newHandler(preferredAllocator());
 
 		List<Class<?>> messageWritten = new ArrayList<>(2);
 		List<Object> clearMessages = new ArrayList<>(2);

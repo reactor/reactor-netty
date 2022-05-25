@@ -85,10 +85,10 @@ final class SniProvider {
 		@Override
 		public Future<SslProvider> map(String input, Promise<SslProvider> promise) {
 			try {
-				return promise.setSuccess(mapping.map(input));
+				return promise.setSuccess(mapping.map(input)).asFuture();
 			}
 			catch (Throwable cause) {
-				return promise.setFailure(cause);
+				return promise.setFailure(cause).asFuture();
 			}
 		}
 	}
@@ -107,7 +107,7 @@ final class SniProvider {
 		}
 
 		@Override
-		protected void onLookupComplete(ChannelHandlerContext ctx, String hostname, Future<SslProvider> future) {
+		protected void onLookupComplete(ChannelHandlerContext ctx, String hostname, Future<? extends SslProvider> future) {
 			if (!future.isSuccess()) {
 				final Throwable cause = future.cause();
 				if (cause instanceof Error) {
@@ -119,7 +119,7 @@ final class SniProvider {
 			SslProvider sslProvider = future.getNow();
 			SslHandler sslHandler = null;
 			try {
-				sslHandler = sslProvider.getSslContext().newHandler(ctx.alloc());
+				sslHandler = sslProvider.getSslContext().newHandler(ctx.bufferAllocator());
 				sslProvider.configure(sslHandler);
 				ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
 				sslHandler = null;

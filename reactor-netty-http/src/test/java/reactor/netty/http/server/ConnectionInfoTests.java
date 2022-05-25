@@ -424,7 +424,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest -> Assertions.assertThat(serverRequest.scheme()).isEqualTo("https"),
 				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
 				httpServer -> httpServer.doOnChannelInit((observer, channel, address) -> {
-								SslHandler sslHandler = serverSslContext.newHandler(channel.alloc());
+								SslHandler sslHandler = serverSslContext.newHandler(channel.bufferAllocator());
 								if (channel.pipeline().get(NettyPipeline.SslHandler) == null) {
 									channel.pipeline().addFirst(NettyPipeline.SslHandler, sslHandler);
 								}

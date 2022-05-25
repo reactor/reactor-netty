@@ -390,14 +390,14 @@ public final class SslProvider {
 		if (remoteAddress instanceof InetSocketAddress) {
 			InetSocketAddress sniInfo = (InetSocketAddress) remoteAddress;
 			sslHandler = getSslContext()
-					.newHandler(channel.alloc(), sniInfo.getHostString(), sniInfo.getPort());
+					.newHandler(channel.bufferAllocator(), sniInfo.getHostString(), sniInfo.getPort());
 
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel, "SSL enabled using engine {} and SNI {}"), sslHandler.engine(), sniInfo);
 			}
 		}
 		else {
-			sslHandler = getSslContext().newHandler(channel.alloc());
+			sslHandler = getSslContext().newHandler(channel.bufferAllocator());
 
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel, "SSL enabled using engine {}"), sslHandler.engine());
