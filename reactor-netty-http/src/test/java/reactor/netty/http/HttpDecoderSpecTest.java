@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,6 +87,7 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void maxChunkSize() {
 		checkDefaultMaxChunkSize(conf);
 
@@ -102,6 +103,7 @@ public class HttpDecoderSpecTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void maxChunkSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> conf.maxChunkSize(0))
@@ -184,6 +186,7 @@ public class HttpDecoderSpecTest {
 				.isEqualTo(8192);
 	}
 
+	@SuppressWarnings("deprecation")
 	public static void checkDefaultMaxChunkSize(HttpDecoderSpec<?> conf) {
 		assertThat(conf.maxChunkSize()).as("default chunk size")
 				.isEqualTo(HttpDecoderSpec.DEFAULT_MAX_CHUNK_SIZE)
