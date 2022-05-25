@@ -22,7 +22,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.logging.ByteBufFormat;
+import io.netty5.handler.logging.BufferFormat;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import reactor.netty.ChannelOperationsId;
@@ -62,7 +62,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 	 * @param byteBufFormat the byte buffer format
 	 */
 	ReactorNettyLoggingHandler(String name, LogLevel level, AdvancedByteBufFormat byteBufFormat) {
-		super(name, level, byteBufFormat == SIMPLE ? ByteBufFormat.SIMPLE : ByteBufFormat.HEX_DUMP);
+		super(name, level, byteBufFormat == SIMPLE ? BufferFormat.SIMPLE : BufferFormat.HEX_DUMP);
 		this.byteBufFormat = byteBufFormat;
 		this.charset = null;
 		this.name = name;
@@ -88,12 +88,12 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 	 * the AdvancedByteBufFormat and not ByteBufFormat.
 	 */
 	@Override
-	public ByteBufFormat byteBufFormat() {
+	public BufferFormat bufferFormat() {
 		if (byteBufFormat == SIMPLE) {
-			return ByteBufFormat.SIMPLE;
+			return BufferFormat.SIMPLE;
 		}
 		else if (byteBufFormat == HEX_DUMP) {
-			return ByteBufFormat.HEX_DUMP;
+			return BufferFormat.HEX_DUMP;
 		}
 		throw new UnsupportedOperationException("ReactorNettyLoggingHandler isn't using the classic ByteBufFormat.");
 	}
