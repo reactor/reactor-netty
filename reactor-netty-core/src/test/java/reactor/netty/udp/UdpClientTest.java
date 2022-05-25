@@ -26,7 +26,8 @@ import java.util.concurrent.TimeUnit;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.nio.NioEventLoopGroup;
+import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.unix.DomainDatagramPacket;
 import io.netty5.channel.unix.DomainSocketAddress;
@@ -114,7 +115,7 @@ class UdpClientTest {
 	@Test
 	void testIssue192() throws Exception {
 		LoopResources resources = LoopResources.create("testIssue192");
-		EventLoopGroup loop = new NioEventLoopGroup(1);
+		EventLoopGroup loop = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
 		UdpServer server = UdpServer.create()
 		                            .runOn(resources);
 		UdpClient client = UdpClient.create()

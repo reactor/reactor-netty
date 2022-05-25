@@ -44,7 +44,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.nio.NioEventLoopGroup;
+import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
 import io.netty5.resolver.AddressResolverGroup;
@@ -1038,7 +1039,7 @@ public class TcpClientTests {
 	@Test
 	void testDefaultResolverWithCustomEventLoop() throws Exception {
 		LoopResources loop1 = LoopResources.create("test", 1, true);
-		EventLoopGroup loop2 = new NioEventLoopGroup(1);
+		EventLoopGroup loop2 = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
 		TcpClient client = TcpClient.create();
 		TcpClient newClient = null;
 		try {

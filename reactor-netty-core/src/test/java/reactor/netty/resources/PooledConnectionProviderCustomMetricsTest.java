@@ -27,7 +27,8 @@ import java.util.function.Supplier;
 
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.nio.NioEventLoopGroup;
+import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.nio.NioHandler;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.DefaultAddressResolverGroup;
@@ -56,7 +57,7 @@ class PooledConnectionProviderCustomMetricsTest {
 	@BeforeEach
 	void setUp() {
 		remoteAddress = () -> InetSocketAddress.createUnresolved("localhost", 0);
-		group = new NioEventLoopGroup(2);
+		group = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
 	}
 
 	@AfterEach
