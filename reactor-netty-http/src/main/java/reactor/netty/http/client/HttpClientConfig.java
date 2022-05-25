@@ -522,6 +522,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(observer));
 	}
 
+	@SuppressWarnings("deprecation")
 	static void configureHttp11OrH2CleartextPipeline(
 			ChannelPipeline p,
 			boolean acceptGzip,
@@ -585,6 +586,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	}
 
+	@SuppressWarnings("deprecation")
 	static void configureHttp11Pipeline(ChannelPipeline p,
 			boolean acceptGzip,
 			HttpResponseDecoderSpec decoder,
