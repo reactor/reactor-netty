@@ -42,6 +42,7 @@ import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.DefaultHttpResponse;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
+import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpContent;
@@ -575,7 +576,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 		if (msg instanceof HttpContent) {
-			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
+			if (!(msg instanceof EmptyLastHttpContent)) {
 				super.onInboundNext(ctx, msg);
 			}
 			if (msg instanceof LastHttpContent) {
@@ -638,7 +639,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			f = channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER));
 		}
 		else if (markSentBody()) {
-			LastHttpContent lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
+			LastHttpContent<?> lastHttpContent = new EmptyLastHttpContent(channel().bufferAllocator());
 			// https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
 			// A trailer allows the sender to include additional fields at the end
 			// of a chunked message in order to supply metadata that might be

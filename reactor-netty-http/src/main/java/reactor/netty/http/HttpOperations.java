@@ -34,6 +34,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.CombinedChannelDuplexHandler;
 import io.netty5.handler.codec.ByteToMessageCodec;
 import io.netty5.handler.codec.ByteToMessageDecoder;
+import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpMessage;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMessage;
@@ -423,7 +424,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 						ByteBuf bb = ((ByteBufHolder) msg).content();
 						ctx.fireChannelRead(bb);
 						if (msg instanceof LastHttpContent) {
-							ctx.fireChannelRead(LastHttpContent.EMPTY_LAST_CONTENT);
+							ctx.fireChannelRead(new EmptyLastHttpContent(ctx.bufferAllocator()));
 						}
 					}
 				}

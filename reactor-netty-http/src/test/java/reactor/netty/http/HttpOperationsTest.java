@@ -22,6 +22,7 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.DefaultHttpResponse;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
+import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponse;
@@ -85,7 +86,7 @@ class HttpOperationsTest {
 		b.release();
 
 		t = channel.readInbound();
-		assertThat(t).isEqualTo(LastHttpContent.EMPTY_LAST_CONTENT);
+		assertThat(t).isInstanceOf(EmptyLastHttpContent.class);
 		((LastHttpContent) t).release();
 
 		t = channel.readInbound();
