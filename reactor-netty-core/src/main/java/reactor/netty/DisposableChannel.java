@@ -125,7 +125,7 @@ public interface DisposableChannel extends Disposable {
 	 * @return a {@link Mono} terminating with success if shutdown successfully or error
 	 */
 	default Mono<Void> onDispose() {
-		return FutureMono.from(channel().closeFuture());
+		return Mono.fromCompletionStage(channel().closeFuture().asStage());
 	}
 
 	/**

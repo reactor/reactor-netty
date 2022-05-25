@@ -26,10 +26,8 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.util.concurrent.FastThreadLocalThread;
-import io.netty5.util.concurrent.Future;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.NonBlocking;
-import reactor.netty.FutureMono;
 
 /**
  * An adapted global eventLoop handler.
@@ -79,7 +77,6 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
 		return Mono.defer(() -> {
 			long quietPeriodMillis = quietPeriod.toMillis();
@@ -100,28 +97,28 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 			Mono<?> cnsrvlMono = Mono.empty();
 			if (running.compareAndSet(true, false)) {
 				if (clientLoopsGroup != null) {
-					clMono = FutureMono.from((Future) clientLoopsGroup.shutdownGracefully(
-							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+					clMono = Mono.fromCompletionStage(clientLoopsGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS).asStage());
 				}
 				if (serverSelectLoopsGroup != null) {
-					sslMono = FutureMono.from((Future) serverSelectLoopsGroup.shutdownGracefully(
-							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+					sslMono = Mono.fromCompletionStage(serverSelectLoopsGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS).asStage());
 				}
 				if (serverLoopsGroup != null) {
-					slMono = FutureMono.from((Future) serverLoopsGroup.shutdownGracefully(
-							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+					slMono = Mono.fromCompletionStage(serverLoopsGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS).asStage());
 				}
 				if (cacheNativeClientGroup != null) {
-					cnclMono = FutureMono.from((Future) cacheNativeClientGroup.shutdownGracefully(
-							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+					cnclMono = Mono.fromCompletionStage(cacheNativeClientGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS).asStage());
 				}
 				if (cacheNativeSelectGroup != null) {
-					cnslMono = FutureMono.from((Future) cacheNativeSelectGroup.shutdownGracefully(
-							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+					cnslMono = Mono.fromCompletionStage(cacheNativeSelectGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS).asStage());
 				}
 				if (cacheNativeServerGroup != null) {
-					cnsrvlMono = FutureMono.from((Future) cacheNativeServerGroup.shutdownGracefully(
-							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+					cnsrvlMono = Mono.fromCompletionStage(cacheNativeServerGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS).asStage());
 				}
 			}
 
