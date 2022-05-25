@@ -172,6 +172,7 @@ public final class ProxyProvider {
 		HTTP, SOCKS4, SOCKS5
 	}
 
+	@SuppressWarnings("deprecation")
 	public void addProxyHandler(Channel channel) {
 		Objects.requireNonNull(channel, "channel");
 		ChannelPipeline pipeline = channel.pipeline();
