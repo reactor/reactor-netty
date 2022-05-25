@@ -108,6 +108,14 @@ public interface NettyPipeline {
 	String OnChannelReadIdle     = LEFT + "onChannelReadIdle";
 	String OnChannelWriteIdle    = LEFT + "onChannelWriteIdle";
 	String ProxyHandler          = LEFT + "proxyHandler";
+	/**
+	 * Use to register a special handler which ensures that any {@link io.netty.channel.VoidChannelPromise}
+	 * will be converted to "unvoided" promises.
+	 *
+	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 does not support
+	 * {@link io.netty.channel.VoidChannelPromise}.
+	 */
+	@Deprecated
 	String UnvoidHandler         = LEFT + "unvoidHandler";
 	String ProxyLoggingHandler   = LEFT + "proxyLoggingHandler";
 	String ProxyProtocolDecoder  = LEFT + "proxyProtocolDecoder";
