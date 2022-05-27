@@ -52,7 +52,8 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 		if (onServer) {
 			try {
 				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
-			} catch (RuntimeException e) {
+			}
+			catch (RuntimeException e) {
 				log.warn("Exception caught while recording metrics.", e);
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
@@ -65,7 +66,8 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 		if (onServer) {
 			try {
 				recorder().recordServerConnectionClosed(ctx.channel().localAddress());
-			} catch (RuntimeException e) {
+			}
+			catch (RuntimeException e) {
 				log.warn("Exception caught while recording metrics.", e);
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
@@ -107,7 +109,8 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 					recordRead(ctx, remoteAddress != null ? remoteAddress : p.sender(), buffer.readableBytes());
 				}
 			}
-		} catch (RuntimeException e) {
+		}
+		catch (RuntimeException e) {
 			log.warn("Exception caught while recording metrics.", e);
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
@@ -132,7 +135,8 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 					recordWrite(ctx, remoteAddress != null ? remoteAddress : p.recipient(), buffer.readableBytes());
 				}
 			}
-		} catch (RuntimeException e) {
+		}
+		catch (RuntimeException e) {
 			log.warn("Exception caught while recording metrics.", e);
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
@@ -145,7 +149,8 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		try {
 			recordException(ctx, remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress());
-		} catch (RuntimeException e) {
+		}
+		catch (RuntimeException e) {
 			log.warn("Exception caught while recording metrics.", e);
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
