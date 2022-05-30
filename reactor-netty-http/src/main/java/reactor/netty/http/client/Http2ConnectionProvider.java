@@ -16,6 +16,7 @@
 package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameCodec;
@@ -76,6 +77,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 	Http2ConnectionProvider(ConnectionProvider parent) {
 		super(initConfiguration(parent));
 		this.parent = parent;
+		if (parent instanceof PooledConnectionProvider) {
+			((PooledConnectionProvider<?>) parent).onDispose(disposeLater());
+		}
 	}
 
 	static Builder initConfiguration(ConnectionProvider parent) {
@@ -332,11 +336,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		@Override
 		public void operationComplete(Future<Http2StreamChannel> future) {
 			Channel channel = pooledRef.poolable().channel();
-			Http2FrameCodec frameCodec = channel.pipeline().get(Http2FrameCodec.class);
+			ChannelHandlerContext frameCodec = ((Http2Pool.Http2PooledRef) pooledRef).slot.http2FrameCodecCtx();
 			if (future.isSuccess()) {
 				Http2StreamChannel ch = future.getNow();
 
-				if (!channel.isActive() || frameCodec == null || !frameCodec.connection().local().canOpenStream()) {
+				if (!channel.isActive() || frameCodec == null ||
+						!((Http2FrameCodec) frameCodec.handler()).connection().local().canOpenStream()) {
 					invalidate(this);
 					if (!retried) {
 						if (log.isDebugEnabled()) {
@@ -358,8 +363,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 						sink.success(ops);
 					}
 
-					Http2Connection.Endpoint<Http2LocalFlowController> localEndpoint = frameCodec.connection().local();
 					if (log.isDebugEnabled()) {
+						Http2Connection.Endpoint<Http2LocalFlowController> localEndpoint = ((Http2FrameCodec) frameCodec.handler()).connection().local();
 						logStreamsState(ch, localEndpoint, "Stream opened");
 					}
 				}
@@ -373,7 +378,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		boolean isH2cUpgrade() {
 			Channel channel = pooledRef.poolable().channel();
 			if (channel.pipeline().get(NettyPipeline.H2CUpgradeHandler) != null &&
-						channel.pipeline().get(NettyPipeline.H2MultiplexHandler) == null) {
+					((Http2Pool.Http2PooledRef) pooledRef).slot.http2MultiplexHandlerCtx() == null) {
 				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 				if (ops != null) {
 					sink.success(ops);
@@ -408,7 +413,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				}
 			}
 			else if (pipeline.get(NettyPipeline.H2CUpgradeHandler) == null &&
-					pipeline.get(NettyPipeline.H2MultiplexHandler) == null) {
+					((Http2Pool.Http2PooledRef) pooledRef).slot.http2MultiplexHandlerCtx() == null) {
 				// It is not H2. There are no handlers for H2C upgrade/H2C prior-knowledge,
 				// continue as an HTTP/1.1 request and remove the connection from this pool.
 				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
