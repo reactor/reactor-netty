@@ -89,6 +89,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	final Duration poolInactivity;
 	final Duration disposeTimeout;
 	final Map<SocketAddress, Integer> maxConnections = new HashMap<>();
+	Mono<Void> onDispose;
 
 	protected PooledConnectionProvider(Builder builder) {
 		this(builder, null);
@@ -106,6 +107,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			poolFactoryPerRemoteHost.put(entry.getKey(), new PoolFactory<>(entry.getValue(), builder.disposeTimeout));
 			maxConnections.put(entry.getKey(), entry.getValue().maxConnections);
 		}
+		this.onDispose = Mono.empty();
 		scheduleInactivePoolsDisposal();
 	}
 
@@ -190,10 +192,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			                    })
 			                    .collect(Collectors.toList());
 			if (pools.isEmpty()) {
-				return Mono.empty();
+				return onDispose;
 			}
 			channelPools.clear();
-			return Mono.when(pools);
+			return onDispose.and(Mono.when(pools));
 		});
 	}
 
@@ -241,6 +243,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	@Override
 	public String name() {
 		return name;
+	}
+
+	public void onDispose(Mono<Void> disposeMono) {
+		onDispose = onDispose.and(disposeMono);
 	}
 
 	protected abstract CoreSubscriber<PooledRef<T>> createDisposableAcquire(
