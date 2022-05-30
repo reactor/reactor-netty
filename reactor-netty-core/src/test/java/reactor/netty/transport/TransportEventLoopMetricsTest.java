@@ -121,6 +121,7 @@ class TransportEventLoopMetricsTest {
 	@Test
 	void testEventLoopMetricsFailure() throws InterruptedException {
 		registry.config().meterFilter(new MeterFilter() {
+			@Override
 			public Meter.Id map(Meter.Id id) {
 				throw new IllegalArgumentException("Test injected Exception");
 			}

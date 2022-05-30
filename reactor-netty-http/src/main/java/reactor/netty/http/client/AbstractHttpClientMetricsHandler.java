@@ -80,27 +80,22 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-		try {
-			if (msg instanceof HttpRequest) {
-				extractDetailsFromHttpRequest(ctx, (HttpRequest) msg);
-			}
+		if (msg instanceof HttpRequest) {
+			extractDetailsFromHttpRequest(ctx, (HttpRequest) msg);
+		}
 
-			dataSent += extractProcessedDataFromBuffer(msg);
+		dataSent += extractProcessedDataFromBuffer(msg);
 
-			if (msg instanceof LastHttpContent) {
-				SocketAddress address = ctx.channel().remoteAddress();
-				promise.addListener(future -> {
-					try {
-						recordWrite(address);
-					} catch (RuntimeException e) {
-						log.warn("Exception caught while recording metrics.", e);
-						// Allow request-response exchange to continue, unaffected by metrics problem
-					}
-				});
-			}
-		} catch (RuntimeException e) {
-			log.warn("Exception caught while recording metrics.", e);
-			// Allow request-response exchange to continue, unaffected by metrics problem
+		if (msg instanceof LastHttpContent) {
+			SocketAddress address = ctx.channel().remoteAddress();
+			promise.addListener(future -> {
+				try {
+					recordWrite(address);
+				} catch (RuntimeException e) {
+					log.warn("Exception caught while recording metrics.", e);
+					// Allow request-response exchange to continue, unaffected by metrics problem
+				}
+			});
 		}
 		//"FutureReturnValueIgnored" this is deliberate
 		ctx.write(msg, promise);
