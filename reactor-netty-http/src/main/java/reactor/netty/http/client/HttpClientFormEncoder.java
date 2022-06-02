@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		}
 		this.newFactory = Objects.requireNonNull(factory, "factory");
 		this.needNewEncoder = true;
-		return applyChanges(request);
+		return this;
 	}
 
 	@Override
@@ -316,6 +316,8 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 					newMode);
 
 			encoder.setBodyHttpDatas(getBodyListAttributes());
+
+			needNewEncoder = false;
 
 			return encoder;
 		}
