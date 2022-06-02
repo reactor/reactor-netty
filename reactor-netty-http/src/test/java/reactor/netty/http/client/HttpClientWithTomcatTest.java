@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpData;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -107,6 +108,16 @@ class HttpClientWithTomcatTest {
 	@Test
 	void postUploadNoMultipart() throws Exception {
 		doTestPostUpload((req, form) -> form.multipart(false).attr("attr1", "attr2"), "attr1=attr2");
+	}
+
+	@Test
+	void postUploadNoMultipartWithCustomFactory() throws Exception {
+		doTestPostUpload((req, form) -> {
+			DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+			form.factory(customFactory)
+			    .multipart(false)
+			    .attr("attr1", "attr2");
+		}, "attr1=attr2");
 	}
 
 	@SuppressWarnings("unchecked")
