@@ -31,7 +31,6 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -115,7 +114,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 							recordInactiveConnection(ops);
 						}
 					}
-				} catch (RuntimeException e) {
+				}
+				catch (RuntimeException e) {
 					log.warn("Exception caught while recording metrics.", e);
 					// Allow request-response exchange to continue, unaffected by metrics problem
 				}
@@ -154,7 +154,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 				dataReceived = 0;
 			}
-		} catch (RuntimeException e) {
+		}
+		catch (RuntimeException e) {
 			log.warn("Exception caught while recording metrics.", e);
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
@@ -171,7 +172,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				// Always take the remote address from the operations in order to consider proxy information
 				recordException(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path));
 			}
-		} catch (RuntimeException e) {
+		}
+		catch (RuntimeException e) {
 			log.warn("Exception caught while recording metrics.", e);
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}

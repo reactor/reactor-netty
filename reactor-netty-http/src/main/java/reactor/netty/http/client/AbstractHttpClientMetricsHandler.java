@@ -91,7 +91,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 			promise.addListener(future -> {
 				try {
 					recordWrite(address);
-				} catch (RuntimeException e) {
+				}
+				catch (RuntimeException e) {
 					log.warn("Exception caught while recording metrics.", e);
 					// Allow request-response exchange to continue, unaffected by metrics problem
 				}
@@ -116,7 +117,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 				recordRead(ctx.channel().remoteAddress());
 				reset();
 			}
-		} catch (RuntimeException e) {
+		}
+		catch (RuntimeException e) {
 			log.warn("Exception caught while recording metrics.", e);
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
@@ -127,7 +129,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		try {
 			recordException(ctx);
-		} catch (RuntimeException e) {
+		}
+		catch (RuntimeException e) {
 			log.warn("Exception caught while recording metrics.", e);
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
