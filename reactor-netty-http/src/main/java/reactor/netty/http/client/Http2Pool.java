@@ -61,6 +61,7 @@ import static reactor.netty.ReactorNetty.format;
  * <ul>
  *     <li>The connection is closed.</li>
  *     <li>The connection has reached its life time and there are no active streams.</li>
+ *     <li>The connection has reached its idle time and there are no active streams.</li>
  *     <li>When the client is in one of the two modes: 1) H2 and HTTP/1.1 or 2) H2C and HTTP/1.1,
  *     and the negotiated protocol is HTTP/1.1.</li>
  * </ul>
@@ -145,18 +146,20 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			AtomicIntegerFieldUpdater.newUpdater(Http2Pool.class, "wip");
 
 	final Clock clock;
+	final long maxIdleTime;
 	final long maxLifeTime;
 	final PoolConfig<Connection> poolConfig;
 
 	long lastInteractionTimestamp;
 
-	Http2Pool(PoolConfig<Connection> poolConfig, long maxLifeTime) {
+	Http2Pool(PoolConfig<Connection> poolConfig, long maxIdleTime, long maxLifeTime) {
 		if (poolConfig.allocationStrategy().getPermits(0) != 0) {
 			throw new IllegalArgumentException("No support for configuring minimum number of connections");
 		}
 		this.clock = poolConfig.clock();
 		this.connections = new ConcurrentLinkedQueue<>();
 		this.lastInteractionTimestamp = clock.millis();
+		this.maxIdleTime = maxIdleTime;
 		this.maxLifeTime = maxLifeTime;
 		this.pending = new ConcurrentLinkedDeque<>();
 		this.poolConfig = poolConfig;
@@ -458,7 +461,18 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				continue;
 			}
 
-			// check that the connection's max lifetime has not been reached
+			// check whether the connection's idle time has been reached
+			if (maxIdleTime != -1 && slot.idleTime() >= maxIdleTime) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(slot.connection.channel(), "Idle time is reached, remove from pool"));
+				}
+				//"FutureReturnValueIgnored" this is deliberate
+				slot.connection.channel().close();
+				slot.invalidate();
+				continue;
+			}
+
+			// check whether the connection's max lifetime has been reached
 			if (maxLifeReached(slot)) {
 				if (slot.concurrency() > 0) {
 					if (log.isDebugEnabled()) {
@@ -794,6 +808,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		final long creationTimestamp;
 		final Http2Pool pool;
 
+		long idleTimestamp;
+
 		volatile ChannelHandlerContext http2FrameCodecCtx;
 		volatile ChannelHandlerContext http2MultiplexHandlerCtx;
 
@@ -827,7 +843,17 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 
 		int decrementConcurrencyAndGet() {
-			return CONCURRENCY.decrementAndGet(this);
+			int concurrency = CONCURRENCY.decrementAndGet(this);
+			idleTimestamp = pool.clock.millis();
+			return concurrency;
+		}
+
+		long idleTime() {
+			if (concurrency() > 0) {
+				return 0L;
+			}
+			long idleTime = idleTimestamp != 0 ? idleTimestamp : creationTimestamp;
+			return pool.clock.millis() - idleTime;
 		}
 
 		@Nullable

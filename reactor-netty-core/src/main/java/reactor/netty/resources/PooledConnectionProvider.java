@@ -455,6 +455,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			return poolBuilder;
 		}
 
+		public long maxIdleTime() {
+			return this.maxIdleTime;
+		}
+
 		public long maxLifeTime() {
 			return maxLifeTime;
 		}
