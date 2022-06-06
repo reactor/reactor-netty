@@ -17,6 +17,7 @@ package reactor.netty.http.client;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -88,9 +89,6 @@ import static reactor.netty.ReactorNetty.format;
  * Configurations that are not applicable
  * <ul>
  *     <li>{@link PoolConfig#destroyHandler()} - the destroy handler cannot be used as the destruction is more complex.</li>
- *     <li>{@link PoolConfig#evictInBackgroundInterval()} and {@link PoolConfig#evictInBackgroundScheduler()} -
- *     there are no idle resources in the pool. Once the connection does not have active streams, it
- *     is returned to the parent pool.</li>
  *     <li>{@link PoolConfig#evictionPredicate()} - the eviction predicate cannot be used as more complex
  *     checks have to be done. Also the pool uses filtering for the connections (a connection might not be able
  *     to be used but is required to stay in the pool).</li>
@@ -155,6 +153,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 
 	long lastInteractionTimestamp;
 
+	Disposable evictionTask;
+
 	Http2Pool(PoolConfig<Connection> poolConfig, long maxIdleTime, long maxLifeTime) {
 		if (poolConfig.allocationStrategy().getPermits(0) != 0) {
 			throw new IllegalArgumentException("No support for configuring minimum number of connections");
@@ -168,6 +168,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		this.poolConfig = poolConfig;
 
 		recordInteractionTimestamp();
+
+		scheduleEviction();
 	}
 
 	@Override
@@ -203,6 +205,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			@SuppressWarnings("unchecked")
 			ConcurrentLinkedDeque<Borrower> q = PENDING.getAndSet(this, TERMINATED);
 			if (q != TERMINATED) {
+				evictionTask.dispose();
+
 				Borrower p;
 				while ((p = pollPending(q, true)) != null) {
 					p.fail(new PoolShutdownException());
@@ -431,6 +435,67 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
+	void evictInBackground() {
+		@SuppressWarnings("unchecked")
+		ConcurrentLinkedQueue<Slot> resources = CONNECTIONS.get(this);
+		if (resources == null) {
+			//no need to schedule the task again, pool has been disposed
+			return;
+		}
+
+		if (WIP.getAndIncrement(this) == 0) {
+			if (pendingSize == 0) {
+				Iterator<Slot> slots = resources.iterator();
+				while (slots.hasNext()) {
+					Slot slot = slots.next();
+					if (slot.concurrency() == 0) {
+						if (!slot.connection.channel().isActive()) {
+							if (log.isDebugEnabled()) {
+								log.debug(format(slot.connection.channel(), "Channel is closed, remove from pool"));
+							}
+							recordInteractionTimestamp();
+							slots.remove();
+							IDLE_SIZE.decrementAndGet(this);
+							slot.invalidate();
+							continue;
+						}
+
+						if (maxLifeReached(slot)) {
+							if (log.isDebugEnabled()) {
+								log.debug(format(slot.connection.channel(), "Max life time is reached, remove from pool"));
+							}
+							//"FutureReturnValueIgnored" this is deliberate
+							slot.connection.channel().close();
+							recordInteractionTimestamp();
+							slots.remove();
+							IDLE_SIZE.decrementAndGet(this);
+							slot.invalidate();
+							continue;
+						}
+					}
+					if (maxIdleReached(slot)) {
+						if (log.isDebugEnabled()) {
+							log.debug(format(slot.connection.channel(), "Idle time is reached, remove from pool"));
+						}
+						//"FutureReturnValueIgnored" this is deliberate
+						slot.connection.channel().close();
+						recordInteractionTimestamp();
+						slots.remove();
+						IDLE_SIZE.decrementAndGet(this);
+						slot.invalidate();
+					}
+				}
+			}
+			//at the end if there are racing drain calls, go into the drainLoop
+			if (WIP.decrementAndGet(this) > 0) {
+				drainLoop();
+			}
+		}
+		//schedule the next iteration
+		scheduleEviction();
+	}
+
 	@Nullable
 	@SuppressWarnings("FutureReturnValueIgnored")
 	Slot findConnection(ConcurrentLinkedQueue<Slot> resources) {
@@ -465,7 +530,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			}
 
 			// check whether the connection's idle time has been reached
-			if (maxIdleTime != -1 && slot.idleTime() >= maxIdleTime) {
+			if (maxIdleReached(slot)) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(slot.connection.channel(), "Idle time is reached, remove from pool"));
 				}
@@ -508,6 +573,10 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 
 		return null;
+	}
+
+	boolean maxIdleReached(Slot slot) {
+		return maxIdleTime != -1 && slot.idleTime() >= maxIdleTime;
 	}
 
 	boolean maxLifeReached(Slot slot) {
@@ -605,6 +674,17 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		ConcurrentLinkedQueue<Slot> q = CONNECTIONS.get(slot.pool);
 		if (q != null && q.remove(slot)) {
 			IDLE_SIZE.decrementAndGet(this);
+		}
+	}
+
+	void scheduleEviction() {
+		if (!poolConfig.evictInBackgroundInterval().isZero()) {
+			long nanosEvictionInterval = poolConfig.evictInBackgroundInterval().toNanos();
+			this.evictionTask = poolConfig.evictInBackgroundScheduler()
+					.schedule(this::evictInBackground, nanosEvictionInterval, TimeUnit.NANOSECONDS);
+		}
+		else {
+			this.evictionTask = Disposables.disposed();
 		}
 	}
 
