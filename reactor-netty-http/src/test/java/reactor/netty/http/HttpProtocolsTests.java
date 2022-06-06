@@ -407,7 +407,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 				              timeout.set(((ReadTimeoutHandler) handler).getReaderIdleTimeInMillis());
 				          }
 				      })
-				      .doOnDisconnected(conn -> onDisconnected.set(handlerAvailable.test(conn)));
+				      .doOnDisconnected(conn -> onDisconnected.set(conn.channel().isActive() && handlerAvailable.test(conn)));
 
 		Mono<String> response =
 				localClient.get()
