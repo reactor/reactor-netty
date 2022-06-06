@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
@@ -51,6 +52,7 @@ import reactor.netty.internal.shaded.reactor.pool.PoolConfig;
 import reactor.netty.internal.shaded.reactor.pool.PoolShutdownException;
 import reactor.netty.internal.shaded.reactor.pool.PooledRef;
 import reactor.netty.internal.shaded.reactor.pool.PooledRefMetadata;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -86,6 +88,10 @@ import static reactor.netty.ReactorNetty.format;
  *     <li>{@link Http2Pool#activeStreams()} always return the active streams from all connections currently in the pool.</li>
  * </ul>
  * <p>
+ * If minimum connections is specified, the cached connections with active streams will be kept at that minimum
+ * (can be the best effort). However, if the cached connections have reached max concurrent streams,
+ * then new connections will be allocated up to the maximum connections limit.
+ * <p>
  * Configurations that are not applicable
  * <ul>
  *     <li>{@link PoolConfig#destroyHandler()} - the destroy handler cannot be used as the destruction is more complex.</li>
@@ -97,7 +103,6 @@ import static reactor.netty.ReactorNetty.format;
  *     <li>{@link PoolConfig#reuseIdleResourcesInLruOrder()} - FIFO is used when checking the connections.</li>
  *     <li>FIFO is used when obtaining the pending borrowers</li>
  *     <li>Warm up functionality is not supported</li>
- *     <li>Setting minimum connections configuration is not supported</li>
  * </ul>
  * <p>This class is based on
  * https://github.com/reactor/reactor-pool/blob/v0.2.7/src/main/java/reactor/pool/SimpleDequePool.java
@@ -142,28 +147,35 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	@SuppressWarnings("rawtypes")
 	static final ConcurrentLinkedDeque TERMINATED = new ConcurrentLinkedDeque();
 
+	volatile long totalMaxConcurrentStreams;
+	static final AtomicLongFieldUpdater<Http2Pool> TOTAL_MAX_CONCURRENT_STREAMS =
+			AtomicLongFieldUpdater.newUpdater(Http2Pool.class, "totalMaxConcurrentStreams");
+
 	volatile int wip;
 	static final AtomicIntegerFieldUpdater<Http2Pool> WIP =
 			AtomicIntegerFieldUpdater.newUpdater(Http2Pool.class, "wip");
 
 	final Clock clock;
+	final Long maxConcurrentStreams;
 	final long maxIdleTime;
 	final long maxLifeTime;
+	final int minConnections;
 	final PoolConfig<Connection> poolConfig;
 
 	long lastInteractionTimestamp;
 
 	Disposable evictionTask;
 
-	Http2Pool(PoolConfig<Connection> poolConfig, long maxIdleTime, long maxLifeTime) {
-		if (poolConfig.allocationStrategy().getPermits(0) != 0) {
-			throw new IllegalArgumentException("No support for configuring minimum number of connections");
-		}
+	Http2Pool(PoolConfig<Connection> poolConfig, @Nullable ConnectionProvider.AllocationStrategy<?> allocationStrategy,
+			long maxIdleTime, long maxLifeTime) {
 		this.clock = poolConfig.clock();
 		this.connections = new ConcurrentLinkedQueue<>();
 		this.lastInteractionTimestamp = clock.millis();
+		this.maxConcurrentStreams = allocationStrategy instanceof Http2AllocationStrategy ?
+				((Http2AllocationStrategy) allocationStrategy).maxConcurrentStreams() : -1;
 		this.maxIdleTime = maxIdleTime;
 		this.maxLifeTime = maxLifeTime;
+		this.minConnections = allocationStrategy == null ? 0 : allocationStrategy.permitMinimum();
 		this.pending = new ConcurrentLinkedDeque<>();
 		this.poolConfig = poolConfig;
 
@@ -356,7 +368,10 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 
 			if (borrowersCount != 0) {
 				// find a connection that can be used for opening a new stream
-				Slot slot = findConnection(resources);
+				// when cached connections are below minimum connections, then allocate a new connection
+				boolean belowMinConnections = minConnections > 0 &&
+						poolConfig.allocationStrategy().permitGranted() < minConnections;
+				Slot slot = belowMinConnections ? null : findConnection(resources);
 				if (slot != null) {
 					Borrower borrower = pollPending(borrowers, true);
 					if (borrower == null) {
@@ -378,52 +393,64 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 					});
 				}
 				else {
-					int permits = poolConfig.allocationStrategy().getPermits(1);
-					if (permits <= 0) {
-						if (maxPending >= 0) {
-							borrowersCount = pendingSize;
-							int toCull = borrowersCount - maxPending;
-							for (int i = 0; i < toCull; i++) {
-								Borrower extraneous = pollPending(borrowers, true);
-								if (extraneous != null) {
-									pendingAcquireLimitReached(extraneous, maxPending);
+					int resourcesCount = idleSize;
+					if (minConnections > 0 &&
+							poolConfig.allocationStrategy().permitGranted() >= minConnections &&
+							resourcesCount == 0) {
+						// connections allocations were triggered
+					}
+					else {
+						int permits = poolConfig.allocationStrategy().getPermits(1);
+						if (permits <= 0) {
+							if (maxPending >= 0) {
+								borrowersCount = pendingSize;
+								int toCull = borrowersCount - maxPending;
+								for (int i = 0; i < toCull; i++) {
+									Borrower extraneous = pollPending(borrowers, true);
+									if (extraneous != null) {
+										pendingAcquireLimitReached(extraneous, maxPending);
+									}
 								}
 							}
 						}
-					}
-					else {
-						Borrower borrower = pollPending(borrowers, true);
-						if (borrower == null) {
-							continue;
-						}
-						if (isDisposed()) {
-							borrower.fail(new PoolShutdownException());
-							return;
-						}
-						borrower.stopPendingCountdown();
-						Mono<Connection> allocator = poolConfig.allocator();
-						Mono<Connection> primary =
-								allocator.doOnEach(sig -> {
-								             if (sig.isOnNext()) {
-								                 Connection newInstance = sig.get();
-								                 assert newInstance != null;
-								                 Slot newSlot = new Slot(this, newInstance);
-								                 if (log.isDebugEnabled()) {
-								                     log.debug(format(newInstance.channel(), "Channel activated"));
-								                 }
-								                 ACQUIRED.incrementAndGet(this);
-								                 borrower.deliver(new Http2PooledRef(newSlot));
-								             }
-								             else if (sig.isOnError()) {
-								                 Throwable error = sig.getThrowable();
-								                 assert error != null;
-								                 poolConfig.allocationStrategy().returnPermits(1);
-								                 borrower.fail(error);
-								             }
-								         })
-								         .contextWrite(borrower.currentContext());
+						else {
+							if (permits > 1) {
+								// warmup is not supported
+								poolConfig.allocationStrategy().returnPermits(permits - 1);
+							}
+							Borrower borrower = pollPending(borrowers, true);
+							if (borrower == null) {
+								continue;
+							}
+							if (isDisposed()) {
+								borrower.fail(new PoolShutdownException());
+								return;
+							}
+							borrower.stopPendingCountdown();
+							Mono<Connection> allocator = poolConfig.allocator();
+							Mono<Connection> primary =
+									allocator.doOnEach(sig -> {
+									             if (sig.isOnNext()) {
+									                 Connection newInstance = sig.get();
+									                 assert newInstance != null;
+									                 Slot newSlot = new Slot(this, newInstance);
+									                 if (log.isDebugEnabled()) {
+									                     log.debug(format(newInstance.channel(), "Channel activated"));
+									                 }
+									                 ACQUIRED.incrementAndGet(this);
+									                 borrower.deliver(new Http2PooledRef(newSlot));
+									             }
+									             else if (sig.isOnError()) {
+									                 Throwable error = sig.getThrowable();
+									                 assert error != null;
+									                 poolConfig.allocationStrategy().returnPermits(1);
+									                 borrower.fail(error);
+									             }
+									         })
+									         .contextWrite(borrower.currentContext());
 
-						primary.subscribe(alreadyPropagated -> {}, alreadyPropagatedOrLogged -> drain(), this::drain);
+							primary.subscribe(alreadyPropagated -> {}, alreadyPropagatedOrLogged -> drain(), this::drain);
+						}
 					}
 				}
 			}
@@ -728,10 +755,10 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		@Override
 		public void request(long n) {
 			if (Operators.validate(n)) {
-				// Cannot rely on idleSize because there might be idle connections but not suitable for use
+				long estimateStreamsCount = pool.totalMaxConcurrentStreams - pool.acquired;
 				int permits = pool.poolConfig.allocationStrategy().estimatePermitCount();
 				int pending = pool.pendingSize;
-				if (!acquireTimeout.isZero() && permits <= pending) {
+				if (!acquireTimeout.isZero() && permits + estimateStreamsCount <= pending) {
 					timeoutTask = Schedulers.parallel().schedule(this, acquireTimeout.toMillis(), TimeUnit.MILLISECONDS);
 				}
 				pool.doAcquire(this);
@@ -893,6 +920,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		final String applicationProtocol;
 
 		long idleTimestamp;
+		long maxConcurrentStreams;
 
 		volatile ChannelHandlerContext http2FrameCodecCtx;
 		volatile ChannelHandlerContext http2MultiplexHandlerCtx;
@@ -910,12 +938,26 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			else {
 				this.applicationProtocol = null;
 			}
+			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
+			if (frameCodec != null && http2MultiplexHandlerCtx() != null) {
+				this.maxConcurrentStreams = ((Http2FrameCodec) frameCodec.handler()).connection().local().maxActiveStreams();
+				this.maxConcurrentStreams = pool.maxConcurrentStreams == -1 ? maxConcurrentStreams :
+						Math.min(pool.maxConcurrentStreams, maxConcurrentStreams);
+			}
+			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, this.maxConcurrentStreams);
 		}
 
 		boolean canOpenStream() {
 			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
 			if (frameCodec != null && http2MultiplexHandlerCtx() != null) {
-				int maxActiveStreams = ((Http2FrameCodec) frameCodec.handler()).connection().local().maxActiveStreams();
+				long maxActiveStreams = ((Http2FrameCodec) frameCodec.handler()).connection().local().maxActiveStreams();
+				maxActiveStreams = pool.maxConcurrentStreams == -1 ? maxActiveStreams :
+						Math.min(pool.maxConcurrentStreams, maxActiveStreams);
+				long diff = maxActiveStreams - maxConcurrentStreams;
+				if (diff != 0) {
+					maxConcurrentStreams = maxActiveStreams;
+					TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, diff);
+				}
 				int concurrency = this.concurrency;
 				return concurrency < maxActiveStreams;
 			}
@@ -992,6 +1034,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 					log.debug(format(connection.channel(), "Channel removed from pool"));
 				}
 				pool.poolConfig.allocationStrategy().returnPermits(1);
+				TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, -maxConcurrentStreams);
 			}
 		}
 

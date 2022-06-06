@@ -30,7 +30,6 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
 import reactor.netty.transport.TransportConfig;
 import reactor.netty.internal.util.MapUtils;
-import reactor.pool.AllocationStrategy;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.Pool;
 import reactor.pool.PoolBuilder;
@@ -370,6 +369,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final Supplier<? extends MeterRegistrar> registrar;
 		final Clock clock;
 		final Duration disposeTimeout;
+		final AllocationStrategy<?> allocationStrategy;
 
 		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout) {
 			this(conf, disposeTimeout, null);
@@ -389,11 +389,12 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			this.registrar = conf.registrar;
 			this.clock = clock;
 			this.disposeTimeout = disposeTimeout;
+			this.allocationStrategy = conf.allocationStrategy;
 		}
 
 		public InstrumentedPool<T> newPool(
 				Publisher<T> allocator,
-				@Nullable AllocationStrategy allocationStrategy,
+				@Nullable reactor.pool.AllocationStrategy allocationStrategy, // this is not used but kept for backwards compatibility
 				Function<T, Publisher<Void>> destroyHandler,
 				BiPredicate<T, PooledRefMetadata> evictionPredicate) {
 			if (disposeTimeout != null) {
@@ -405,7 +406,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 		public InstrumentedPool<T> newPool(
 				Publisher<T> allocator,
-				@Nullable AllocationStrategy allocationStrategy,
+				@Nullable reactor.pool.AllocationStrategy allocationStrategy, // this is not used but kept for backwards compatibility
 				Function<T, Publisher<Void>> destroyHandler,
 				BiPredicate<T, PooledRefMetadata> evictionPredicate,
 				Function<PoolConfig<T>, InstrumentedPool<T>> poolFactory) {
@@ -438,7 +439,12 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 						DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE));
 			}
 			else {
-				poolBuilder = poolBuilder.sizeBetween(0, maxConnections);
+				if (allocationStrategy == null) {
+					poolBuilder = poolBuilder.sizeBetween(0, maxConnections);
+				}
+				else {
+					poolBuilder = poolBuilder.allocationStrategy(new DelegatingAllocationStrategy(allocationStrategy.copy()));
+				}
 			}
 
 			if (clock != null) {
@@ -453,6 +459,11 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			}
 
 			return poolBuilder;
+		}
+
+		@Nullable
+		public AllocationStrategy<?> allocationStrategy() {
+			return allocationStrategy;
 		}
 
 		public long maxIdleTime() {
@@ -475,6 +486,45 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					", pendingAcquireMaxCount=" + pendingAcquireMaxCount +
 					", pendingAcquireTimeout=" + pendingAcquireTimeout +
 					'}';
+		}
+
+		static final class DelegatingAllocationStrategy implements reactor.pool.AllocationStrategy {
+
+			final AllocationStrategy<?> delegate;
+
+			DelegatingAllocationStrategy(AllocationStrategy<?> delegate) {
+				this.delegate = delegate;
+			}
+
+			@Override
+			public int estimatePermitCount() {
+				return delegate.estimatePermitCount();
+			}
+
+			@Override
+			public int getPermits(int desired) {
+				return delegate.getPermits(desired);
+			}
+
+			@Override
+			public int permitGranted() {
+				return delegate.permitGranted();
+			}
+
+			@Override
+			public int permitMinimum() {
+				return delegate.permitMinimum();
+			}
+
+			@Override
+			public int permitMaximum() {
+				return delegate.permitMaximum();
+			}
+
+			@Override
+			public void returnPermits(int returned) {
+				delegate.returnPermits(returned);
+			}
 		}
 	}
 
