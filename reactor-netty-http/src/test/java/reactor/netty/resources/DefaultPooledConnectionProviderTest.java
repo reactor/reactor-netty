@@ -49,6 +49,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.client.Http2AllocationStrategy;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
@@ -536,6 +537,86 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			double totalConn = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS,
 					REMOTE_ADDRESS, address, NAME, "doTestIssue1982");
 			assertThat(totalConn).isEqualTo(idleConn);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	//https://github.com/reactor/reactor-netty/issues/1808
+	@Test
+	void testMinConnections() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		disposableServer =
+				createServer()
+				        .wiretap(false)
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(serverCtx))
+				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().retain())))
+				        .bindNow();
+
+		int requestsNum = 100;
+		CountDownLatch latch = new CountDownLatch(1);
+		DefaultPooledConnectionProvider provider =
+				(DefaultPooledConnectionProvider) ConnectionProvider.builder("testMinConnections")
+						.allocationStrategy(Http2AllocationStrategy.builder().maxConnections(20).minConnections(5).build())
+						.build();
+		AtomicInteger counter = new AtomicInteger();
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		HttpClient client =
+				createClient(provider, disposableServer.port())
+				        .wiretap(false)
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(clientCtx))
+				        .metrics(true, Function.identity())
+				        .doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
+				        .observe((conn, state) -> {
+				            if (state == STREAM_CONFIGURED) {
+				                counter.incrementAndGet();
+				                conn.onTerminate()
+				                    .subscribe(null,
+				                            t -> conn.channel().eventLoop().execute(() -> {
+				                                if (counter.decrementAndGet() == 0) {
+				                                    latch.countDown();
+				                                }
+				                            }),
+				                            () -> conn.channel().eventLoop().execute(() -> {
+				                                if (counter.decrementAndGet() == 0) {
+				                                    latch.countDown();
+				                                }
+				                            }));
+				            }
+				        });
+
+		try {
+			Flux.range(0, requestsNum)
+			    .flatMap(i ->
+			        client.post()
+			              .uri("/")
+			              .send(ByteBufMono.fromString(Mono.just("testMinConnections")))
+			              .responseContent()
+			              .aggregate()
+			              .asString())
+			    .blockLast(Duration.ofSeconds(5));
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+			String address = sa.getHostString() + ":" + sa.getPort();
+
+			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
+					REMOTE_ADDRESS, address, NAME, "http2.testMinConnections")).isEqualTo(0);
+			double idleConn = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS,
+					REMOTE_ADDRESS, address, NAME, "http2.testMinConnections");
+			double totalConn = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS,
+					REMOTE_ADDRESS, address, NAME, "testMinConnections");
+			assertThat(totalConn).isEqualTo(idleConn);
+			assertThat(totalConn).isLessThan(10);
 		}
 		finally {
 			provider.disposeLater()
