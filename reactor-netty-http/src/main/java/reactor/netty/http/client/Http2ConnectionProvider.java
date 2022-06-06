@@ -22,6 +22,7 @@ import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2LocalFlowController;
 import io.netty.handler.codec.http2.Http2StreamChannel;
+import io.netty.handler.codec.http2.Http2StreamChannelBootstrap;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.resolver.AddressResolverGroup;
@@ -303,8 +304,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				return;
 			}
 
-			HttpClientConfig.openStream(channel, this, obs, opsFactory, acceptGzip, metricsRecorder, uriTagValue)
-			                .addListener(this);
+			http2StreamChannelBootstrap(channel).open().addListener(this);
 		}
 
 		@Override
@@ -357,6 +357,10 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					}
 				}
 				else {
+					Http2ConnectionProvider.registerClose(ch, this);
+					HttpClientConfig.addStreamHandlers(ch, obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
+							opsFactory, acceptGzip, metricsRecorder, -1, uriTagValue);
+
 					ChannelOperations<?, ?> ops = ChannelOperations.get(ch);
 					if (ops != null) {
 						obs.onStateChange(ops, STREAM_CONFIGURED);
@@ -424,6 +428,27 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				}
 			}
 			return false;
+		}
+
+		static final AttributeKey<Http2StreamChannelBootstrap> HTTP2_STREAM_CHANNEL_BOOTSTRAP =
+				AttributeKey.valueOf("http2StreamChannelBootstrap");
+
+		static Http2StreamChannelBootstrap http2StreamChannelBootstrap(Channel channel) {
+			Http2StreamChannelBootstrap http2StreamChannelBootstrap;
+
+			for (;;) {
+				http2StreamChannelBootstrap = channel.attr(HTTP2_STREAM_CHANNEL_BOOTSTRAP).get();
+				if (http2StreamChannelBootstrap == null) {
+					http2StreamChannelBootstrap = new Http2StreamChannelBootstrap(channel);
+				}
+				else {
+					return http2StreamChannelBootstrap;
+				}
+				if (channel.attr(HTTP2_STREAM_CHANNEL_BOOTSTRAP)
+						.compareAndSet(null, http2StreamChannelBootstrap)) {
+					return http2StreamChannelBootstrap;
+				}
+			}
 		}
 	}
 
