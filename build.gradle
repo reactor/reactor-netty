@@ -132,7 +132,7 @@ ext {
 	println "JDK Javadoc link for this build is ${jdkJavadoc}"
 	javadocLinks = [jdkJavadoc,
 					"https://fasterxml.github.io/jackson-databind/javadoc/2.5/",
-					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
+					"https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
 					"https://netty.io/4.1/api/",
 					"https://projectreactor.io/docs/netty/release/api/",] as String[]
