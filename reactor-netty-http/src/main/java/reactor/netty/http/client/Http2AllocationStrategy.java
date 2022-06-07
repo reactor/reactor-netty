@@ -42,7 +42,7 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		/**
 		 * Configures the maximum number of the concurrent streams that can be opened to the remote peer.
 		 * When evaluating how many streams can be opened to the remote peer,
-		 * the minimum of this configuration and the remote peer configuration is taken.
+		 * the minimum of this configuration and the remote peer configuration is taken (unless -1 is used).
 		 * Default to {@code -1} - use always the remote peer configuration.
 		 *
 		 * @param maxConcurrentStreams the maximum number of the concurrent streams that can be opened to the remote peer
@@ -174,7 +174,8 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		@Override
 		public Http2AllocationStrategy build() {
 			if (minConnections > maxConnections) {
-				throw new IllegalArgumentException("minConnections must be less than or equal to maxConnections");
+				throw new IllegalArgumentException("minConnections (" + minConnections + ")" +
+						" must be less than or equal to maxConnections (" + maxConnections + ")");
 			}
 			return new Http2AllocationStrategy(this);
 		}
@@ -182,7 +183,7 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		@Override
 		public Builder maxConcurrentStreams(long maxConcurrentStreams) {
 			if (maxConcurrentStreams < -1) {
-				throw new IllegalArgumentException("maxConcurrentStreams must be grater than or equal to -1");
+				throw new IllegalArgumentException("maxConcurrentStreams must be greater than or equal to -1");
 			}
 			this.maxConcurrentStreams = maxConcurrentStreams;
 			return this;

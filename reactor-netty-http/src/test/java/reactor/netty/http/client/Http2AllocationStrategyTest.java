@@ -45,7 +45,7 @@ class Http2AllocationStrategyTest {
 	void buildBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxConnections(1).minConnections(2).build())
-				.withMessage("minConnections must be less than or equal to maxConnections");
+				.withMessage("minConnections (2) must be less than or equal to maxConnections (1)");
 	}
 
 	@Test
@@ -71,7 +71,7 @@ class Http2AllocationStrategyTest {
 	void maxConcurrentStreamsBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxConcurrentStreams(-2))
-				.withMessage("maxConcurrentStreams must be grater than or equal to -1");
+				.withMessage("maxConcurrentStreams must be greater than or equal to -1");
 	}
 
 	@Test
