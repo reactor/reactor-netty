@@ -154,7 +154,7 @@ spotless {
 		enforceCheck false
 	}
 	else {
-		String spotlessBranch = "1.0.x"
+		String spotlessBranch = "origin/1.0.x"
 		println "[Spotless] Local run detected, ratchet from $spotlessBranch"
 		ratchetFrom spotlessBranch
 	}
