@@ -37,6 +37,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslClosedEngineException;
@@ -446,7 +447,7 @@ class HttpClientConnect extends HttpClient {
 	static final class HttpClientHandler extends SocketAddress
 			implements Predicate<Throwable>, Supplier<SocketAddress> {
 
-		final HttpMethod              method;
+		volatile HttpMethod           method;
 		final HttpHeaders             defaultHeaders;
 		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
 		                              handler;
@@ -675,6 +676,9 @@ class HttpClientConnect extends HttpClient {
 		public boolean test(Throwable throwable) {
 			if (throwable instanceof RedirectClientException) {
 				RedirectClientException re = (RedirectClientException) throwable;
+				if (HttpResponseStatus.SEE_OTHER.equals(re.status)) {
+					method = HttpMethod.GET;
+				}
 				redirect(re.location);
 				return true;
 			}

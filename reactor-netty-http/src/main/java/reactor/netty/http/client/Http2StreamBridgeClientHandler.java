@@ -17,15 +17,11 @@ package reactor.netty.http.client;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
-import reactor.netty.Connection;
-import reactor.netty.ConnectionObserver;
-import reactor.netty.channel.ChannelOperations;
-
-import static reactor.netty.ReactorNetty.format;
 
 /**
  * This handler is intended to work together with {@link Http2StreamFrameToHttpObjectCodec}
@@ -35,31 +31,12 @@ import static reactor.netty.ReactorNetty.format;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
+@ChannelHandler.Sharable
 final class Http2StreamBridgeClientHandler extends ChannelDuplexHandler {
-
-	final ConnectionObserver observer;
-	final ChannelOperations.OnSetup opsFactory;
-
-	Http2StreamBridgeClientHandler(ConnectionObserver listener, ChannelOperations.OnSetup opsFactory) {
-		this.observer = listener;
-		this.opsFactory = opsFactory;
-	}
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
 		ctx.read();
-	}
-
-	@Override
-	public void handlerAdded(ChannelHandlerContext ctx) {
-		if (HttpClientOperations.log.isDebugEnabled()) {
-			HttpClientOperations.log.debug(format(ctx.channel(), "New HTTP/2 stream"));
-		}
-
-		ChannelOperations<?, ?> ops = opsFactory.create(Connection.from(ctx.channel()), observer, null);
-		if (ops != null) {
-			ops.bind();
-		}
 	}
 
 	@Override

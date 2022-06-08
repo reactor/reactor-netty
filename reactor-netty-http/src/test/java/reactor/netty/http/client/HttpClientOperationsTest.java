@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -145,7 +145,8 @@ class HttpClientOperationsTest {
 		ops1.followRedirectPredicate((req, res) -> true);
 		ops1.started = true;
 		ops1.retrying = true;
-		ops1.redirecting = new RedirectClientException(new DefaultHttpHeaders().add(HttpHeaderNames.LOCATION, "/"));
+		ops1.redirecting = new RedirectClientException(new DefaultHttpHeaders().add(HttpHeaderNames.LOCATION, "/"),
+				HttpResponseStatus.MOVED_PERMANENTLY);
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);
 

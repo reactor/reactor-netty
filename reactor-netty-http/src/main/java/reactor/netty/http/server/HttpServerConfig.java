@@ -414,7 +414,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		if (accessLogEnabled) {
 			pipeline.addLast(NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H2.create(accessLog));
 		}
-		pipeline.addLast(NettyPipeline.H2ToHttp11Codec, new Http2StreamFrameToHttpObjectCodec(true))
+		pipeline.addLast(NettyPipeline.H2ToHttp11Codec, HTTP2_STREAM_FRAME_TO_HTTP_OBJECT)
 		        .addLast(NettyPipeline.HttpTrafficHandler,
 		                 new Http2StreamBridgeServerHandler(compressPredicate, decoder, encoder, formDecoderProvider,
 		                         forwardedHeaderHandler, listener, mapHandle));
@@ -663,6 +663,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	static final int h11orH2 = h11 | h2;
 
 	static final int h11orH2C = h11 | h2c;
+
+	static final Http2StreamFrameToHttpObjectCodec HTTP2_STREAM_FRAME_TO_HTTP_OBJECT =
+			new Http2StreamFrameToHttpObjectCodec(true);
 
 	static final Logger log = Loggers.getLogger(HttpServerConfig.class);
 

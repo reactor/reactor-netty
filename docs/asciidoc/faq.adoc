@@ -136,6 +136,7 @@ Issues related to TCP keep-alive configuration on various load balancers were re
 ** limit for buffering data in memory
 ** multipart exceeds the max file size limit
 ** bad request
+** max keep alive requests (the connection is closed when the requests reach the configured maximum number)
 
 Consider checking <<Timeout Configuration>>. The section describes various timeout configuration options that are available for Reactor Netty clients.
 Configuring a proper timeout may improve or solve issues in the communication process.
