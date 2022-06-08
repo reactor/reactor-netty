@@ -24,8 +24,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -144,6 +144,10 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	@SuppressWarnings("rawtypes")
 	static final ConcurrentLinkedDeque TERMINATED = new ConcurrentLinkedDeque();
 
+	volatile long totalMaxConcurrentStreams;
+	static final AtomicLongFieldUpdater<Http2Pool> TOTAL_MAX_CONCURRENT_STREAMS =
+			AtomicLongFieldUpdater.newUpdater(Http2Pool.class, "totalMaxConcurrentStreams");
+
 	volatile int wip;
 	static final AtomicIntegerFieldUpdater<Http2Pool> WIP =
 			AtomicIntegerFieldUpdater.newUpdater(Http2Pool.class, "wip");
@@ -154,7 +158,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	final long maxLifeTime;
 	final int minConnections;
 	final PoolConfig<Connection> poolConfig;
-	final LongAdder totalMaxConcurrentStreams = new LongAdder();
 
 	long lastInteractionTimestamp;
 
@@ -749,7 +752,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		@Override
 		public void request(long n) {
 			if (Operators.validate(n)) {
-				long estimateStreamsCount = pool.totalMaxConcurrentStreams.longValue() - pool.acquired;
+				long estimateStreamsCount = pool.totalMaxConcurrentStreams - pool.acquired;
 				int permits = pool.poolConfig.allocationStrategy().estimatePermitCount();
 				int pending = pool.pendingSize;
 				if (!acquireTimeout.isZero() && permits + estimateStreamsCount <= pending) {
@@ -928,7 +931,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				this.maxConcurrentStreams = pool.maxConcurrentStreams == -1 ? maxConcurrentStreams :
 						Math.min(pool.maxConcurrentStreams, maxConcurrentStreams);
 			}
-			this.pool.totalMaxConcurrentStreams.add(this.maxConcurrentStreams);
+			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, this.maxConcurrentStreams);
 		}
 
 		boolean canOpenStream() {
@@ -940,7 +943,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				long diff = maxActiveStreams - maxConcurrentStreams;
 				if (diff != 0) {
 					maxConcurrentStreams = maxActiveStreams;
-					pool.totalMaxConcurrentStreams.add(diff);
+					TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, diff);
 				}
 				int concurrency = this.concurrency;
 				return concurrency < maxActiveStreams;
