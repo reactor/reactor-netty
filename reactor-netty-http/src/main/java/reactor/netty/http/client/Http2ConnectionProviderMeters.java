@@ -28,6 +28,26 @@ import io.micrometer.core.instrument.docs.DocumentedMeter;
 enum Http2ConnectionProviderMeters implements DocumentedMeter {
 
 	/**
+	 * The number of the connections in the connection pool that have been successfully acquired and are in active use.
+	 */
+	ACTIVE_CONNECTIONS {
+		@Override
+		public String getName() {
+			return "reactor.netty.connection.provider.active.connections";
+		}
+
+		@Override
+		public KeyName[] getKeyNames() {
+			return Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.values();
+		}
+
+		@Override
+		public Meter.Type getType() {
+			return Meter.Type.GAUGE;
+		}
+	},
+
+	/**
 	 * The number of the active HTTP/2 streams.
 	 */
 	ACTIVE_STREAMS {
@@ -39,6 +59,26 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 		@Override
 		public KeyName[] getKeyNames() {
 			return Http2ConnectionProviderMetersTags.values();
+		}
+
+		@Override
+		public Meter.Type getType() {
+			return Meter.Type.GAUGE;
+		}
+	},
+
+	/**
+	 * The number of the idle connections in the connection pool.
+	 */
+	IDLE_CONNECTIONS {
+		@Override
+		public String getName() {
+			return "reactor.netty.connection.provider.idle.connections";
+		}
+
+		@Override
+		public KeyName[] getKeyNames() {
+			return Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.values();
 		}
 
 		@Override

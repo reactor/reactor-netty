@@ -93,6 +93,7 @@ public interface NettyPipeline {
 	String CompressionHandler    = LEFT + "compressionHandler";
 	String ConnectMetricsHandler = LEFT + "connectMetricsHandler";
 	String H2CUpgradeHandler     = LEFT + "h2cUpgradeHandler";
+	String H2Flush               = LEFT + "h2Flush";
 	String H2MultiplexHandler    = LEFT + "h2MultiplexHandler";
 	String H2OrHttp11Codec       = LEFT + "h2OrHttp11Codec";
 	String H2ToHttp11Codec       = LEFT + "h2ToHttp11Codec";

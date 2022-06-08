@@ -23,10 +23,12 @@ import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 import java.net.SocketAddress;
 
 import static reactor.netty.Metrics.REGISTRY;
+import static reactor.netty.http.client.Http2ConnectionProviderMeters.ACTIVE_CONNECTIONS;
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.ACTIVE_STREAMS;
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.ID;
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.NAME;
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.REMOTE_ADDRESS;
+import static reactor.netty.http.client.Http2ConnectionProviderMeters.IDLE_CONNECTIONS;
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.PENDING_STREAMS;
 
 final class MicrometerHttp2ConnectionProviderMeterRegistrar {
@@ -41,7 +43,15 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
 		Tags tags = Tags.of(ID.getKeyName(), id, REMOTE_ADDRESS.getKeyName(), addressAsString, NAME.getKeyName(), poolName);
 
-		Gauge.builder(ACTIVE_STREAMS.getName(), metrics, InstrumentedPool.PoolMetrics::acquiredSize)
+		Gauge.builder(ACTIVE_CONNECTIONS.getName(), metrics, InstrumentedPool.PoolMetrics::acquiredSize)
+		     .tags(tags)
+		     .register(REGISTRY);
+
+		Gauge.builder(ACTIVE_STREAMS.getName(), metrics, poolMetrics -> ((Http2Pool) poolMetrics).activeStreams())
+		     .tags(tags)
+		     .register(REGISTRY);
+
+		Gauge.builder(IDLE_CONNECTIONS.getName(), metrics, InstrumentedPool.PoolMetrics::idleSize)
 		     .tags(tags)
 		     .register(REGISTRY);
 
