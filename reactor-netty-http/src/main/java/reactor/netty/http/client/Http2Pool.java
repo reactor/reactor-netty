@@ -31,6 +31,8 @@ import java.util.function.Function;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
+import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.SslHandler;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -42,6 +44,7 @@ import reactor.core.publisher.Operators;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.FutureMono;
+import reactor.netty.NettyPipeline;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquirePendingLimitException;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
@@ -914,12 +917,14 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		final Connection connection;
 		final long creationTimestamp;
 		final Http2Pool pool;
+		final String applicationProtocol;
 
 		long idleTimestamp;
 		long maxConcurrentStreams;
 
 		volatile ChannelHandlerContext http2FrameCodecCtx;
 		volatile ChannelHandlerContext http2MultiplexHandlerCtx;
+		volatile ChannelHandlerContext h2cUpgradeHandlerCtx;
 
 		Slot(Http2Pool pool, Connection connection) {
 			this.connection = connection;
@@ -932,6 +937,14 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 						Math.min(pool.maxConcurrentStreams, maxConcurrentStreams);
 			}
 			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, this.maxConcurrentStreams);
+			SslHandler handler = connection.channel().pipeline().get(SslHandler.class);
+			if (handler != null) {
+				this.applicationProtocol = handler.applicationProtocol() != null ?
+						handler.applicationProtocol() : ApplicationProtocolNames.HTTP_1_1;
+			}
+			else {
+				this.applicationProtocol = null;
+			}
 		}
 
 		boolean canOpenStream() {
@@ -997,6 +1010,17 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			}
 			ctx = connection.channel().pipeline().context(Http2MultiplexHandler.class);
 			http2MultiplexHandlerCtx = ctx;
+			return ctx;
+		}
+
+		@Nullable
+		ChannelHandlerContext h2cUpgradeHandlerCtx() {
+			ChannelHandlerContext ctx = h2cUpgradeHandlerCtx;
+			if (ctx != null && !ctx.isRemoved()) {
+				return ctx;
+			}
+			ctx = connection.channel().pipeline().context(NettyPipeline.H2CUpgradeHandler);
+			h2cUpgradeHandlerCtx = ctx;
 			return ctx;
 		}
 

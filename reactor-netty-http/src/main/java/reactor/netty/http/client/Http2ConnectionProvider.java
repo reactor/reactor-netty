@@ -17,14 +17,12 @@ package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2LocalFlowController;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.codec.http2.Http2StreamChannelBootstrap;
 import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
@@ -39,7 +37,6 @@ import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.Operators;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.NettyPipeline;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.ConnectionProvider;
@@ -381,7 +378,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		boolean isH2cUpgrade() {
 			Channel channel = pooledRef.poolable().channel();
-			if (channel.pipeline().get(NettyPipeline.H2CUpgradeHandler) != null &&
+			if (((Http2Pool.Http2PooledRef) pooledRef).slot.h2cUpgradeHandlerCtx() != null &&
 					((Http2Pool.Http2PooledRef) pooledRef).slot.http2MultiplexHandlerCtx() == null) {
 				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 				if (ops != null) {
@@ -394,11 +391,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		boolean notHttp2() {
 			Channel channel = pooledRef.poolable().channel();
-			ChannelPipeline pipeline = channel.pipeline();
-			SslHandler handler = pipeline.get(SslHandler.class);
-			if (handler != null) {
-				String protocol = handler.applicationProtocol() != null ? handler.applicationProtocol() : ApplicationProtocolNames.HTTP_1_1;
-				if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
+			String applicationProtocol = ((Http2Pool.Http2PooledRef) pooledRef).slot.applicationProtocol;
+			if (applicationProtocol != null) {
+				if (ApplicationProtocolNames.HTTP_1_1.equals(applicationProtocol)) {
 					// No information for the negotiated application-level protocol,
 					// or it is HTTP/1.1, continue as an HTTP/1.1 request
 					// and remove the connection from this pool.
@@ -409,14 +404,14 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 						return true;
 					}
 				}
-				else if (!ApplicationProtocolNames.HTTP_2.equals(handler.applicationProtocol())) {
+				else if (!ApplicationProtocolNames.HTTP_2.equals(applicationProtocol)) {
 					channel.attr(OWNER).set(null);
 					invalidate(this);
-					sink.error(new IOException("Unknown protocol [" + protocol + "]."));
+					sink.error(new IOException("Unknown protocol [" + applicationProtocol + "]."));
 					return true;
 				}
 			}
-			else if (pipeline.get(NettyPipeline.H2CUpgradeHandler) == null &&
+			else if (((Http2Pool.Http2PooledRef) pooledRef).slot.h2cUpgradeHandlerCtx() == null &&
 					((Http2Pool.Http2PooledRef) pooledRef).slot.http2MultiplexHandlerCtx() == null) {
 				// It is not H2. There are no handlers for H2C upgrade/H2C prior-knowledge,
 				// continue as an HTTP/1.1 request and remove the connection from this pool.
