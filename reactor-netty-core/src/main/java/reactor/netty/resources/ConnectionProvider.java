@@ -498,6 +498,7 @@ public interface ConnectionProvider extends Disposable {
 		 *
 		 * @param maxConnections the maximum number of connections (per connection pool) before start pending
 		 * @return {@literal this}
+		 * @see #allocationStrategy(AllocationStrategy)
 		 * @throws IllegalArgumentException if maxConnections is negative
 		 */
 		public final SPEC maxConnections(int maxConnections) {
