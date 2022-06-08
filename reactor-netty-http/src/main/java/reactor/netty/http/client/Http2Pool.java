@@ -1010,6 +1010,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 					log.debug(format(connection.channel(), "Channel removed from pool"));
 				}
 				pool.poolConfig.allocationStrategy().returnPermits(1);
+				TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, -maxConcurrentStreams);
 			}
 		}
 
