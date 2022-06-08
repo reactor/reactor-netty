@@ -431,8 +431,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
 					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
 					           .maxPendingAcquire(pendingAcquireMaxCount)
-					           .evictInBackground(evictionInterval)
-							   .pendingAcquireTimer(pendingAcquireTimer);
+					           .evictInBackground(evictionInterval);
 
 			if (DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE <= 1d
 					&& DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE <= 1d) {
@@ -449,6 +448,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				else {
 					poolBuilder = poolBuilder.allocationStrategy(new DelegatingAllocationStrategy(allocationStrategy.copy()));
 				}
+			}
+
+			if (pendingAcquireTimer != null) {
+				poolBuilder = poolBuilder.pendingAcquireTimer(pendingAcquireTimer);
 			}
 
 			if (clock != null) {
