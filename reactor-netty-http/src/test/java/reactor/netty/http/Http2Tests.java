@@ -179,13 +179,13 @@ class Http2Tests extends BaseHttpTest {
 		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 	}
 
-	void doTestMaxActiveStreams_1_CustomPool(BiFunction<Runnable, Duration, Disposable> acquireTimer) throws Exception {
+	void doTestMaxActiveStreams_1_CustomPool(BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer) throws Exception {
 		ConnectionProvider.Builder builder =
 				ConnectionProvider.builder("testMaxActiveStreams_1_CustomPool")
 						.maxConnections(1)
 						.pendingAcquireTimeout(Duration.ofMillis(10)); // the default is 45s
-		if (acquireTimer != null) {
-			builder.acquireTimer(acquireTimer);
+		if (pendingAcquireTimer != null) {
+			builder = builder.pendingAcquireTimer(pendingAcquireTimer);
 		}
 		ConnectionProvider provider = builder.build();
 		doTestMaxActiveStreams(HttpClient.create(provider), 1, 1, 1);

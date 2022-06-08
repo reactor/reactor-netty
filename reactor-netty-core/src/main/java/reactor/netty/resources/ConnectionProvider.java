@@ -354,7 +354,7 @@ public interface ConnectionProvider extends Disposable {
 			this.poolInactivity = copy.poolInactivity;
 			this.disposeTimeout = copy.disposeTimeout;
 			copy.confPerRemoteHost.forEach((address, spec) -> this.confPerRemoteHost.put(address, new ConnectionPoolSpec<>(spec)));
-			this.acquireTimer = copy.acquireTimer;
+			this.pendingAcquireTimer = copy.pendingAcquireTimer;
 		}
 
 		/**
@@ -447,7 +447,7 @@ public interface ConnectionProvider extends Disposable {
 		/**
 		 * Default timer service used for scheduling connection acquisition timers.
 		 */
-		static final BiFunction<Runnable, Duration, Disposable> DEFAULT_ACQUIRE_TIMER = (task, duration) ->
+		static final BiFunction<Runnable, Duration, Disposable> DEFAULT_PENDING_ACQUIRE_TIMER = (task, duration) ->
 				Schedulers.parallel().schedule(task, duration.toNanos(), TimeUnit.NANOSECONDS);
 
 		Duration evictionInterval       = EVICT_IN_BACKGROUND_DISABLED;
@@ -459,7 +459,7 @@ public interface ConnectionProvider extends Disposable {
 		boolean  metricsEnabled;
 		String   leasingStrategy        = DEFAULT_POOL_LEASING_STRATEGY;
 		Supplier<? extends ConnectionProvider.MeterRegistrar> registrar;
-		BiFunction<Runnable, Duration, Disposable> acquireTimer = DEFAULT_ACQUIRE_TIMER;
+		BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer = DEFAULT_PENDING_ACQUIRE_TIMER;
 		AllocationStrategy<?> allocationStrategy;
 
 		/**
@@ -484,7 +484,7 @@ public interface ConnectionProvider extends Disposable {
 			this.metricsEnabled = copy.metricsEnabled;
 			this.leasingStrategy = copy.leasingStrategy;
 			this.registrar = copy.registrar;
-			this.acquireTimer = copy.acquireTimer;
+			this.pendingAcquireTimer = copy.pendingAcquireTimer;
 			this.allocationStrategy = copy.allocationStrategy;
 		}
 
@@ -662,14 +662,16 @@ public interface ConnectionProvider extends Disposable {
 
 		/**
 		 * Set the function to apply when scheduling pending acquisition timers.
+		 * i.e. there is no idle resource and no new resource can be created currently, so a timeout is scheduled using the
+		 * specified function.
 		 * By default, the {@link Schedulers#parallel()} will be used.
 		 *
-		 * @param acquireTimer the function to apply when scheduling pending acquisition timers
+		 * @param pendingAcquireTimer the function to apply when scheduling pending acquisition timers
 		 * @return {@literal this}
-		 * @since 1.0.19
+		 * @since 1.0.20
 		 */
-		public final SPEC acquireTimer(BiFunction<Runnable, Duration, Disposable> acquireTimer) {
-			this.acquireTimer = Objects.requireNonNull(acquireTimer, "acquireTimer");
+		public final SPEC pendingAcquireTimer(BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer) {
+			this.pendingAcquireTimer = Objects.requireNonNull(pendingAcquireTimer, "pendingAcquireTimer");
 			return get();
 		}
 

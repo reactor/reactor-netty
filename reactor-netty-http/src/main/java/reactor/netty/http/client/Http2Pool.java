@@ -758,7 +758,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				int permits = pool.poolConfig.allocationStrategy().estimatePermitCount();
 				int pending = pool.pendingSize;
 				if (!acquireTimeout.isZero() && permits + estimateStreamsCount <= pending) {
-					timeoutTask = pool.poolConfig.acquireTimer().apply(this, acquireTimeout);
+					timeoutTask = pool.poolConfig.pendingAcquireTimer().apply(this, acquireTimeout);
 				}
 				pool.doAcquire(this);
 			}

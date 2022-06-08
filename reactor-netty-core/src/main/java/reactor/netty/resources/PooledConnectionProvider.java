@@ -370,7 +370,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final Supplier<? extends MeterRegistrar> registrar;
 		final Clock clock;
 		final Duration disposeTimeout;
-		final BiFunction<Runnable, Duration, Disposable> acquireTimer;
+		final BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
 		final AllocationStrategy<?> allocationStrategy;
 
 		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout) {
@@ -391,7 +391,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			this.registrar = conf.registrar;
 			this.clock = clock;
 			this.disposeTimeout = disposeTimeout;
-			this.acquireTimer = conf.acquireTimer;
+			this.pendingAcquireTimer = conf.pendingAcquireTimer;
 			this.allocationStrategy = conf.allocationStrategy;
 		}
 
@@ -432,7 +432,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
 					           .maxPendingAcquire(pendingAcquireMaxCount)
 					           .evictInBackground(evictionInterval)
-							   .acquireTimer(acquireTimer);
+							   .pendingAcquireTimer(pendingAcquireTimer);
 
 			if (DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE <= 1d
 					&& DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE <= 1d) {

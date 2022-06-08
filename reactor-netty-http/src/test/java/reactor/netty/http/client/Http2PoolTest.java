@@ -852,7 +852,7 @@ class Http2PoolTest {
 		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 	}
 
-	private void doMaxLifeTimeMaxConnectionsReached(BiFunction<Runnable, Duration, Disposable> acquireTimer) throws Exception {
+	private void doMaxLifeTimeMaxConnectionsReached(BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer) throws Exception {
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.fromSupplier(() -> {
 				               Channel channel = new EmbeddedChannel(
@@ -863,8 +863,8 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1);
-		if (acquireTimer != null) {
-			poolBuilder.acquireTimer(acquireTimer);
+		if (pendingAcquireTimer != null) {
+			poolBuilder = poolBuilder.pendingAcquireTimer(pendingAcquireTimer);
 		}
 		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, 10));
 
