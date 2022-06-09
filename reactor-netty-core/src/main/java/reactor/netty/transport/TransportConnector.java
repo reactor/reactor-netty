@@ -27,7 +27,6 @@ import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.resolver.AddressResolver;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.util.AttributeKey;
-import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import org.reactivestreams.Subscription;
@@ -88,12 +87,12 @@ public final class TransportConnector {
 							channel.bind(bindAddress)
 									.addListener(f -> {
 										if (f.isSuccess()) {
-											promise.asPromise().setSuccess(null);
+											promise.setSuccess();
 										}
 										else {
 											// "FutureReturnValueIgnored" this is deliberate
 											channel.close();
-											promise.asPromise().setFailure(f.cause());
+											promise.setFailure(f.cause());
 										}
 									}));
 					return promise;
@@ -248,7 +247,7 @@ public final class TransportConnector {
 
 			f.addListener(future -> {
 				if (future.isSuccess()) {
-					connectPromise.asPromise().setSuccess(null);
+					connectPromise.setSuccess();
 				}
 				else {
 					// "FutureReturnValueIgnored" this is deliberate
@@ -261,10 +260,10 @@ public final class TransportConnector {
 
 					int next = index + 1;
 					if (next < addresses.size()) {
-						connectPromise.asPromise().setFailure(new RetryConnectException(addresses));
+						connectPromise.setFailure(new RetryConnectException(addresses));
 					}
 					else {
-						connectPromise.asPromise().setFailure(cause);
+						connectPromise.setFailure(cause);
 					}
 				}
 			});
@@ -319,7 +318,7 @@ public final class TransportConnector {
 				if (future.isSuccess()) {
 					channel.register().addListener(f -> {
 						if (f.isSuccess()) {
-							monoChannelPromise.asPromise().setSuccess(null);
+							monoChannelPromise.setSuccess();
 						}
 						else {
 							if (channel.isRegistered()) {
@@ -329,13 +328,13 @@ public final class TransportConnector {
 							else {
 								channel.unsafe().closeForcibly();
 							}
-							monoChannelPromise.asPromise().setFailure(f.cause());
+							monoChannelPromise.setFailure(f.cause());
 						}
 					});
 				}
 				else {
 					channel.unsafe().closeForcibly();
-					monoChannelPromise.asPromise().setFailure(future.cause());
+					monoChannelPromise.setFailure(future.cause());
 				}
 			});
 		});
@@ -408,7 +407,7 @@ public final class TransportConnector {
 				if (future.cause() != null) {
 					// "FutureReturnValueIgnored" this is deliberate
 					channel.close();
-					monoChannelPromise.asPromise().tryFailure(future.cause());
+					monoChannelPromise.setFailure(future.cause());
 				}
 				else {
 					doConnect(future.getNow(), bindAddress, monoChannelPromise, 0);
@@ -424,13 +423,11 @@ public final class TransportConnector {
 	static final class MonoChannelPromise extends Mono<Channel> implements Subscription {
 
 		final Channel channel;
-		final ChannelPromise channelPromise;
 
 		CoreSubscriber<? super Channel> actual;
 
 		MonoChannelPromise(Channel channel) {
 			this.channel = channel;
-			this.channelPromise = new ChannelPromise(channel);
 		}
 
 		@Override
@@ -456,137 +453,57 @@ public final class TransportConnector {
 			}
 		}
 
-		Promise<Void> asPromise() {
-			return channelPromise;
+		Throwable cause() {
+			Object result = this.result;
+			return result == SUCCESS ? null : (Throwable) result;
+		}
+
+		boolean isDone() {
+			Object result = this.result;
+			return result != null;
+		}
+
+		boolean isSuccess() {
+			Object result = this.result;
+			return result == SUCCESS;
+		}
+
+		void setFailure(Throwable cause) {
+			if (RESULT_UPDATER.compareAndSet(this, null, cause)) {
+				if (actual != null) {
+					actual.onError(cause);
+				}
+			}
+		}
+
+		void setSuccess() {
+			if (RESULT_UPDATER.compareAndSet(this, null, SUCCESS)) {
+				if (actual != null) {
+					actual.onNext(channel);
+					actual.onComplete();
+				}
+			}
 		}
 
 		void _subscribe(CoreSubscriber<? super Channel> actual) {
 			this.actual = actual;
-			channelPromise.actual = actual;
 			actual.onSubscribe(this);
 
-			if (channelPromise.isDone()) {
-				if (channelPromise.isSuccess()) {
+			if (isDone()) {
+				if (isSuccess()) {
 					actual.onNext(channel);
 					actual.onComplete();
 				}
 				else {
-					actual.onError(channelPromise.cause());
+					actual.onError(cause());
 				}
 			}
 		}
 
-		static final class ChannelPromise implements Promise<Void> {
-
-			final Channel channel;
-
-			CoreSubscriber<? super Channel> actual;
-
-			ChannelPromise(Channel channel) {
-				this.channel = channel;
-			}
-
-			@Override
-			public Future<Void> asFuture() {
-				throw new UnsupportedOperationException();
-			}
-
-			@Override
-			@SuppressWarnings("FutureReturnValueIgnored")
-			public boolean cancel() {
-				// "FutureReturnValueIgnored" this is deliberate
-				channel.close();
-				return true;
-			}
-
-			@Override
-			public Throwable cause() {
-				Object result = this.result;
-				return result == SUCCESS ? null : (Throwable) result;
-			}
-
-			@Override
-			public EventExecutor executor() {
-				return channel.executor();
-			}
-
-			@Override
-			public Void getNow() {
-				throw new UnsupportedOperationException();
-			}
-
-			@Override
-			public boolean isCancellable() {
-				return false;
-			}
-
-			@Override
-			public boolean isCancelled() {
-				return false;
-			}
-
-			@Override
-			public boolean isDone() {
-				Object result = this.result;
-				return result != null;
-			}
-
-			@Override
-			public boolean isFailed() {
-				return !isSuccess();
-			}
-
-			@Override
-			public boolean isSuccess() {
-				Object result = this.result;
-				return result == SUCCESS;
-			}
-
-			@Override
-			public Promise<Void> setFailure(Throwable cause) {
-				tryFailure(cause);
-				return this;
-			}
-
-			@Override
-			public Promise<Void> setSuccess(Void result) {
-				trySuccess(result);
-				return this;
-			}
-
-			@Override
-			public boolean setUncancellable() {
-				return true;
-			}
-
-			@Override
-			public boolean tryFailure(Throwable cause) {
-				if (RESULT_UPDATER.compareAndSet(this, null, cause)) {
-					if (actual != null) {
-						actual.onError(cause);
-					}
-					return true;
-				}
-				return false;
-			}
-
-			@Override
-			public boolean trySuccess(Void result) {
-				if (RESULT_UPDATER.compareAndSet(this, null, SUCCESS)) {
-					if (actual != null) {
-						actual.onNext(channel);
-						actual.onComplete();
-					}
-					return true;
-				}
-				return false;
-			}
-
-			static final Object SUCCESS = new Object();
-			static final AtomicReferenceFieldUpdater<ChannelPromise, Object> RESULT_UPDATER =
-					AtomicReferenceFieldUpdater.newUpdater(ChannelPromise.class, Object.class, "result");
-			volatile Object result;
-		}
+		static final Object SUCCESS = new Object();
+		static final AtomicReferenceFieldUpdater<MonoChannelPromise, Object> RESULT_UPDATER =
+				AtomicReferenceFieldUpdater.newUpdater(MonoChannelPromise.class, Object.class, "result");
+		volatile Object result;
 	}
 
 	static final class RetryConnectException extends RuntimeException {
