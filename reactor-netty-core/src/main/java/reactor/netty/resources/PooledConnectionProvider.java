@@ -58,6 +58,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -377,6 +378,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final Supplier<? extends MeterRegistrar> registrar;
 		final Clock clock;
 		final Duration disposeTimeout;
+		final BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
 		final AllocationStrategy<?> allocationStrategy;
 
 		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout) {
@@ -397,6 +399,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			this.registrar = conf.registrar;
 			this.clock = clock;
 			this.disposeTimeout = disposeTimeout;
+			this.pendingAcquireTimer = conf.pendingAcquireTimer;
 			this.allocationStrategy = conf.allocationStrategy;
 		}
 
@@ -453,6 +456,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				else {
 					poolBuilder = poolBuilder.allocationStrategy(new DelegatingAllocationStrategy(allocationStrategy.copy()));
 				}
+			}
+
+			if (pendingAcquireTimer != null) {
+				poolBuilder = poolBuilder.pendingAcquireTimer(pendingAcquireTimer);
 			}
 
 			if (clock != null) {

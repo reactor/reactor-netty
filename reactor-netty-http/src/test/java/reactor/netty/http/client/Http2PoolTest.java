@@ -22,8 +22,10 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import org.junit.jupiter.api.Test;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
 import reactor.netty.internal.shaded.reactor.pool.PoolBuilder;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -832,6 +835,24 @@ class Http2PoolTest {
 
 	@Test
 	void maxLifeTimeMaxConnectionsReached() throws Exception {
+		doMaxLifeTimeMaxConnectionsReached(null);
+	}
+
+	@Test
+	void maxLifeTimeMaxConnectionsReachedWithCustomTimer() throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		BiFunction<Runnable, Duration, Disposable> timer = (r, d) -> {
+			Runnable wrapped = () -> {
+				r.run();
+				latch.countDown();
+			};
+			return Schedulers.single().schedule(wrapped, d.toNanos(), TimeUnit.NANOSECONDS);
+		};
+		doMaxLifeTimeMaxConnectionsReached(timer);
+		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+	}
+
+	private void doMaxLifeTimeMaxConnectionsReached(BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer) throws Exception {
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.fromSupplier(() -> {
 				               Channel channel = new EmbeddedChannel(
@@ -842,6 +863,9 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1);
+		if (pendingAcquireTimer != null) {
+			poolBuilder = poolBuilder.pendingAcquireTimer(pendingAcquireTimer);
+		}
 		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, 10));
 
 		Connection connection = null;
