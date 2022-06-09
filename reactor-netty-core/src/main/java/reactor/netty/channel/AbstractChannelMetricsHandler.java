@@ -15,7 +15,7 @@
  */
 package reactor.netty.channel;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
@@ -79,15 +79,15 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof ByteBuf) {
-			ByteBuf buffer = (ByteBuf) msg;
+		if (msg instanceof Buffer) {
+			Buffer buffer = (Buffer) msg;
 			if (buffer.readableBytes() > 0) {
 				recordRead(ctx, remoteAddress, buffer.readableBytes());
 			}
 		}
 		else if (msg instanceof DatagramPacket) {
 			DatagramPacket p = (DatagramPacket) msg;
-			ByteBuf buffer = p.content();
+			Buffer buffer = p.content();
 			if (buffer.readableBytes() > 0) {
 				recordRead(ctx, remoteAddress != null ? remoteAddress : p.sender(), buffer.readableBytes());
 			}
@@ -98,15 +98,15 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof ByteBuf) {
-			ByteBuf buffer = (ByteBuf) msg;
+		if (msg instanceof Buffer) {
+			Buffer buffer = (Buffer) msg;
 			if (buffer.readableBytes() > 0) {
 				recordWrite(ctx, remoteAddress, buffer.readableBytes());
 			}
 		}
 		else if (msg instanceof DatagramPacket) {
 			DatagramPacket p = (DatagramPacket) msg;
-			ByteBuf buffer = p.content();
+			Buffer buffer = p.content();
 			if (buffer.readableBytes() > 0) {
 				recordWrite(ctx, remoteAddress != null ? remoteAddress : p.recipient(), buffer.readableBytes());
 			}
