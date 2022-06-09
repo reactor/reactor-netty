@@ -41,7 +41,6 @@ import reactor.core.Disposables;
 import reactor.core.Scannable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
-import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
@@ -759,7 +758,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				int permits = pool.poolConfig.allocationStrategy().estimatePermitCount();
 				int pending = pool.pendingSize;
 				if (!acquireTimeout.isZero() && permits + estimateStreamsCount <= pending) {
-					timeoutTask = Schedulers.parallel().schedule(this, acquireTimeout.toMillis(), TimeUnit.MILLISECONDS);
+					timeoutTask = pool.poolConfig.pendingAcquireTimer().apply(this, acquireTimeout);
 				}
 				pool.doAcquire(this);
 			}

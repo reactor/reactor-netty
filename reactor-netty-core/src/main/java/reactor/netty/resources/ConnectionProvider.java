@@ -18,6 +18,7 @@ package reactor.netty.resources;
 import io.netty.resolver.AddressResolverGroup;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
@@ -32,6 +33,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -449,6 +451,7 @@ public interface ConnectionProvider extends Disposable {
 		boolean  metricsEnabled;
 		String   leasingStrategy        = DEFAULT_POOL_LEASING_STRATEGY;
 		Supplier<? extends ConnectionProvider.MeterRegistrar> registrar;
+		BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
 		AllocationStrategy<?> allocationStrategy;
 
 		/**
@@ -473,6 +476,7 @@ public interface ConnectionProvider extends Disposable {
 			this.metricsEnabled = copy.metricsEnabled;
 			this.leasingStrategy = copy.leasingStrategy;
 			this.registrar = copy.registrar;
+			this.pendingAcquireTimer = copy.pendingAcquireTimer;
 			this.allocationStrategy = copy.allocationStrategy;
 		}
 
@@ -645,6 +649,43 @@ public interface ConnectionProvider extends Disposable {
 		 */
 		public final SPEC evictInBackground(Duration evictionInterval) {
 			this.evictionInterval = Objects.requireNonNull(evictionInterval, "evictionInterval");
+			return get();
+		}
+
+		/**
+		 * Set the option to use for configuring {@link ConnectionProvider} pending acquire timer.
+		 * The pending acquire timer must be specified as a function which is used to schedule a pending acquire timeout
+		 * when there is no idle connection and no new connection can be created currently.
+		 * The function takes as argument a {@link Duration} which is the one configured by {@link #pendingAcquireTimeout(Duration)}.
+		 * <p>
+		 * Use this function if you want to specify your own implementation for scheduling pending acquire timers.
+		 *
+		 * <p> Default to {@link Schedulers#parallel()}.
+		 *
+		 * <p>Examples using Netty HashedWheelTimer implementation:</p>
+		 * <pre>
+		 * {@code
+		 * final static HashedWheelTimer wheel = new HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024);
+		 *
+		 * HttpClient client = HttpClient.create(
+		 *     ConnectionProvider.builder("myprovider")
+		 *         .pendingAcquireTimeout(Duration.ofMillis(10000))
+		 *         .pendingAcquireTimer((r, d) -> {
+		 *             Timeout t = wheel.newTimeout(timeout -> r.run(), d.toMillis(), TimeUnit.MILLISECONDS);
+		 *             return () -> t.cancel();
+		 *         })
+		 *         .build());
+		 * }
+		 * </pre>
+		 *
+		 * @param pendingAcquireTimer the function to apply when scheduling pending acquire timers
+		 * @return {@literal this}
+		 * @throws NullPointerException if pendingAcquireTimer is null
+		 * @since 1.0.20
+		 * @see #pendingAcquireTimeout(Duration)
+		 */
+		public final SPEC pendingAcquireTimer(BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer) {
+			this.pendingAcquireTimer = Objects.requireNonNull(pendingAcquireTimer, "pendingAcquireTimer");
 			return get();
 		}
 

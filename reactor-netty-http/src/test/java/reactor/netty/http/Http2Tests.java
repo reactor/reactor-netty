@@ -21,9 +21,11 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
@@ -43,6 +45,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
@@ -159,14 +162,35 @@ class Http2Tests extends BaseHttpTest {
 
 	@Test
 	void testMaxActiveStreams_1_CustomPool() throws Exception {
-		ConnectionProvider provider =
+		doTestMaxActiveStreams_1_CustomPool(null);
+	}
+
+	@Test
+	void testMaxActiveStreams_1_CustomPool_Custom_AcquireTimer() throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		BiFunction<Runnable, Duration, Disposable> timer = (r, d) -> {
+			Runnable wrapped = () -> {
+				r.run();
+				latch.countDown();
+			};
+			return Schedulers.single().schedule(wrapped, d.toNanos(), TimeUnit.NANOSECONDS);
+		};
+		doTestMaxActiveStreams_1_CustomPool(timer);
+		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+	}
+
+	void doTestMaxActiveStreams_1_CustomPool(BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer) throws Exception {
+		ConnectionProvider.Builder builder =
 				ConnectionProvider.builder("testMaxActiveStreams_1_CustomPool")
-				                  .maxConnections(1)
-				                  .pendingAcquireTimeout(Duration.ofMillis(10)) // the default is 45s
-				                  .build();
+						.maxConnections(1)
+						.pendingAcquireTimeout(Duration.ofMillis(10)); // the default is 45s
+		if (pendingAcquireTimer != null) {
+			builder = builder.pendingAcquireTimer(pendingAcquireTimer);
+		}
+		ConnectionProvider provider = builder.build();
 		doTestMaxActiveStreams(HttpClient.create(provider), 1, 1, 1);
 		provider.disposeLater()
-		        .block();
+				.block();
 	}
 
 	@Test
