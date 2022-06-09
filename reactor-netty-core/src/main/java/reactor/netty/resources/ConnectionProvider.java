@@ -442,10 +442,6 @@ public interface ConnectionProvider extends Disposable {
 		static final Duration EVICT_IN_BACKGROUND_DISABLED       = Duration.ZERO;
 		static final int PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED = -2;
 
-		/**
-		 * Default timer service used for scheduling connection acquisition timers.
-		 */
-
 		Duration evictionInterval       = EVICT_IN_BACKGROUND_DISABLED;
 		int      maxConnections         = DEFAULT_POOL_MAX_CONNECTIONS;
 		int      pendingAcquireMaxCount = PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED;
