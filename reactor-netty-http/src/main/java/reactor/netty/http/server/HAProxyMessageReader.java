@@ -66,16 +66,15 @@ final class HAProxyMessageReader extends ChannelHandlerAdapter {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		if (msg instanceof HAProxyMessage) {
-			HAProxyMessage proxyMessage = (HAProxyMessage) msg;
-			if (proxyMessage.sourceAddress() != null && proxyMessage.sourcePort() != 0) {
-				InetSocketAddress remoteAddress = AddressUtils
-						.createUnresolved(proxyMessage.sourceAddress(), proxyMessage.sourcePort());
-				ctx.channel()
-				   .attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL)
-				   .set(remoteAddress);
+			try (HAProxyMessage proxyMessage = (HAProxyMessage) msg) {
+				if (proxyMessage.sourceAddress() != null && proxyMessage.sourcePort() != 0) {
+					InetSocketAddress remoteAddress = AddressUtils
+							.createUnresolved(proxyMessage.sourceAddress(), proxyMessage.sourcePort());
+					ctx.channel()
+							.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL)
+							.set(remoteAddress);
+				}
 			}
-
-			proxyMessage.release();
 
 			ctx.channel()
 			   .pipeline()
