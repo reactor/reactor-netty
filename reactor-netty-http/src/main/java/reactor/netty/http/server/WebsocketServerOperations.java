@@ -87,9 +87,8 @@ final class WebsocketServerOperations extends HttpServerOperations
 			removeHandler(NettyPipeline.AccessLogHandler);
 			removeHandler(NettyPipeline.HttpMetricsHandler);
 
-			HttpRequest request = new DefaultFullHttpRequest(replaced.version(),
-					replaced.method(),
-					replaced.uri());
+			HttpRequest request = new DefaultFullHttpRequest(replaced.version(), replaced.method(), replaced.uri(),
+					channel.bufferAllocator().allocate(0));
 
 			request.headers()
 			       .set(replaced.nettyRequest.headers());

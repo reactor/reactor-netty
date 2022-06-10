@@ -20,7 +20,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
@@ -145,8 +145,8 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof ByteBuf) {
-			return ctx.write(new DefaultHttpContent((ByteBuf) msg));
+		if (msg instanceof Buffer) {
+			return ctx.write(new DefaultHttpContent((Buffer) msg));
 		}
 		else {
 			Future<Void> f = ctx.write(msg);

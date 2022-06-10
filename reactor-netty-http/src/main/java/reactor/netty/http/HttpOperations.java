@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.CombinedChannelDuplexHandler;
 import io.netty5.handler.codec.ByteToMessageCodec;
@@ -55,6 +55,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
+import static io.netty5.buffer.api.adaptor.ByteBufAdaptor.extractOrCopy;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.toPrettyHexDump;
 
@@ -123,7 +124,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 										"since response has Content-Length: 0 {}"), toPrettyHexDump(msg));
 								msg.release();
 								return Mono.fromCompletionStage(
-										channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)).asStage());
+										channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage());
 							}
 							return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(msg)).asStage());
 						}
@@ -157,7 +158,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					log.debug(format(channel(), "Dropped HTTP content, " +
 							"since response has Content-Length: 0 {}"), toPrettyHexDump(b));
 					b.release();
-					return channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)).asStage();
+					return channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage();
 				}
 				return channel().writeAndFlush(newFullBodyMessage(b)).asStage();
 			}
@@ -184,7 +185,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 							.remove(HttpHeaderNames.TRANSFER_ENCODING);
 					if (HttpUtil.getContentLength(outboundHttpMessage(), 0) == 0) {
 						markSentBody();
-						msg = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
+						msg = newFullBodyMessage(channel().bufferAllocator().allocate(0));
 					}
 					else {
 						msg = outboundHttpMessage();
@@ -218,7 +219,12 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	protected abstract void onHeadersSent();
 
-	protected abstract HttpMessage newFullBodyMessage(ByteBuf body);
+	// TODO this is temporary and has to be removed
+	protected HttpMessage newFullBodyMessage(ByteBuf body) {
+		return newFullBodyMessage(extractOrCopy(channel().bufferAllocator(), body));
+	}
+
+	protected abstract HttpMessage newFullBodyMessage(Buffer body);
 
 	@Override
 	public final NettyOutbound sendFile(Path file, long position, long count) {
