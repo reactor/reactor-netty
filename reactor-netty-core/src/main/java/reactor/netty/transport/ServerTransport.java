@@ -29,16 +29,17 @@ import java.util.function.Consumer;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
-import io.netty5.channel.ChannelFutureListener;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.util.AttributeKey;
+import io.netty5.util.concurrent.Promise;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
@@ -372,20 +373,18 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		public void channelRead(ChannelHandlerContext ctx, Object msg) {
 			final Channel child = (Channel) msg;
 
-			child.pipeline().addLast(childHandler);
-
-			TransportConnector.setChannelOptions(child, childOptions, isDomainSocket);
-			TransportConnector.setAttributes(child, childAttrs);
-
-			try {
-				childGroup.register(child).addListener((ChannelFutureListener) future -> {
-					if (!future.isSuccess()) {
-						forceClose(child, future.cause());
-					}
-				});
+			EventLoop childEventLoop = child.executor();
+			// Ensure we always execute on the child EventLoop.
+			if (childEventLoop.inEventLoop()) {
+				initChild(child);
 			}
-			catch (Throwable t) {
-				forceClose(child, t);
+			else {
+				try {
+					childEventLoop.execute(() -> initChild(child));
+				}
+				catch (Throwable cause) {
+					forceClose(child, cause);
+				}
 			}
 		}
 
@@ -420,6 +419,24 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			enableAutoReadTask = () -> channel.config().setAutoRead(true);
 		}
 
+		void initChild(final Channel child) {
+			try {
+				TransportConnector.setChannelOptions(child, childOptions, isDomainSocket);
+				TransportConnector.setAttributes(child, childAttrs);
+
+				child.pipeline().addLast(childHandler);
+
+				child.register().addListener(future -> {
+					if (future.isFailed()) {
+						forceClose(child, future.cause());
+					}
+				});
+			}
+			catch (Throwable t) {
+				forceClose(child, t);
+			}
+		}
+
 		static void forceClose(Channel child, Throwable t) {
 			child.unsafe().closeForcibly();
 			log.warn(format(child, "Failed to register an accepted channel: {}"), child, t);
@@ -430,13 +447,18 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 		final Acceptor acceptor;
 
+		Promise<Void> initPromise;
+
 		AcceptorInitializer(Acceptor acceptor) {
 			this.acceptor = acceptor;
 		}
 
 		@Override
 		public void initChannel(final Channel ch) {
-			ch.executor().execute(() -> ch.pipeline().addLast(acceptor));
+			ch.executor().execute(() -> {
+				ch.pipeline().addLast(acceptor);
+				initPromise.setSuccess(null);
+			});
 		}
 	}
 
