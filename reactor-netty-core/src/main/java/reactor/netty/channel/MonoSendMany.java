@@ -20,7 +20,6 @@ import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -32,16 +31,12 @@ import java.util.stream.Stream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelFuture;
-import io.netty5.channel.ChannelFutureListener;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelPromise;
-import io.netty5.channel.DefaultChannelPromise;
 import io.netty5.channel.EventLoop;
 import io.netty5.util.IllegalReferenceCountException;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.GenericFutureListener;
+import io.netty5.util.concurrent.FutureListener;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -114,9 +109,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		return null;
 	}
 
-	static final class SendManyInner<I, O> implements CoreSubscriber<I>, Subscription,
-	                                                  Fuseable, Context, Consumer<I>,
-	                                                  ChannelFutureListener, Runnable, Scannable, ChannelPromise {
+	static final class SendManyInner<I, O> implements CoreSubscriber<I>, Subscription, Fuseable, Context,
+			FutureListener<Void>, Consumer<I>, Runnable, Scannable {
 
 		final ChannelHandlerContext        ctx;
 		final EventLoop                    eventLoop;
@@ -150,11 +144,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			this.eventLoop = ctx.channel().executor();
 
 			this.asyncFlush = new AsyncFlush();
-
-			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
-			ctx.channel()
-			   .closeFuture()
-			   .addListener(this);
 		}
 
 		@Override
@@ -263,18 +252,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
-		public void operationComplete(ChannelFuture future) {
-			if (Operators.terminate(SUBSCRIPTION, this)) {
-				int wip = wipIncrement(WIP, this);
-				if (wip == 0) {
-					onInterruptionCleanup();
-				}
-				//actual.onError(new AbortedException("Closed channel ["+ctx.channel().id().asShortText()+"] while sending operation active"));
-				actual.onComplete();
-			}
-		}
-
-		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void run() {
 			Queue<I> queue = this.queue;
@@ -317,7 +294,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						}
 						pending++;
 						//"FutureReturnValueIgnored" this is deliberate
-						ctx.write(encodedMessage, this);
+						ctx.write(encodedMessage).addListener(this);
 
 						if (parent.predicate.test(sourceMessage) || !ctx.channel().isWritable() || readableBytes > ctx.channel().bytesBeforeUnwritable()) {
 							needFlush = false;
@@ -339,10 +316,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 					}
 
 					if (checkTerminated() && queue.isEmpty()) {
-						ctx.channel()
-						   .closeFuture()
-						   .removeListener(this);
-
 						Throwable t = terminalSignal;
 						if (t == Completion.INSTANCE) {
 							actual.onComplete();
@@ -376,13 +349,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			}
 		}
 
-		@SuppressWarnings("FutureReturnValueIgnored")
 		void onInterruptionCleanup() {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.channel()
-			   .closeFuture()
-			   .removeListener(this);
-
 			Queue<I> queue = this.queue;
 			if (queue == null) {
 				return;
@@ -462,118 +429,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			return null;
 		}
 
-		@Override
-		public Channel channel() {
-			return ctx.channel();
-		}
-
-		@Override
-		public ChannelPromise setSuccess(Void result) {
-			trySuccess(null);
-			return this;
-		}
-
-		@Override
-		public ChannelPromise setSuccess() {
-			trySuccess(null);
-			return this;
-		}
-
-		@Override
-		public boolean trySuccess() {
-			trySuccess(null);
-			return true;
-		}
-
-		@Override
-		public ChannelPromise setFailure(Throwable cause) {
-			if (tryFailure(cause)) {
-				return this;
-			}
-			Operators.onErrorDropped(cause, actualContext);
-			return this;
-		}
-
-		@Override
-		public ChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
-			throw new UnsupportedOperationException();
-		}
-
-		@SuppressWarnings("unchecked")
-		@Override
-		public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
-			return this;
-		}
-
-		@SuppressWarnings("unchecked")
-		@Override
-		public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-			return this;
-		}
-
-		@Override
-		public ChannelPromise sync() {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public ChannelPromise syncUninterruptibly() {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public ChannelPromise await()  {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public ChannelPromise awaitUninterruptibly() {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public ChannelPromise unvoid() {
-			return new DefaultChannelPromise(ctx.channel()) {
-				@Override
-				public ChannelPromise setSuccess(Void result) {
-					super.trySuccess(null);
-					SendManyInner.this.trySuccess(null);
-					return this;
-				}
-
-				@Override
-				public boolean trySuccess(Void result) {
-					super.trySuccess(null);
-					return SendManyInner.this.trySuccess(null);
-				}
-
-				@Override
-				public ChannelPromise setFailure(Throwable cause) {
-					super.tryFailure(cause);
-					SendManyInner.this.tryFailure(cause);
-					return this;
-				}
-
-				@Override
-				public boolean tryFailure(Throwable cause) {
-					super.tryFailure(cause);
-					return SendManyInner.this.tryFailure(cause);
-				}
-			};
-		}
-
-		@Override
-		public boolean isVoid() {
-			return false;
-		}
-
-		@Override
-		public boolean trySuccess(Void result) {
+		void trySuccess() {
 			requested--;
 			pending--;
 
@@ -584,7 +440,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 					nextRequest += u;
 				}
 				trySchedule();
-				return true;
+				return;
 			}
 
 			if (requested <= REFILL_SIZE) {
@@ -593,11 +449,10 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				nextRequest += u;
 				trySchedule();
 			}
-			return true;
+			return;
 		}
 
-		@Override
-		public boolean tryFailure(Throwable cause) {
+		void tryFailure(Throwable cause) {
 			if (Operators.terminate(SUBSCRIPTION, this)) {
 				int wip = wipIncrement(WIP, this);
 				if (wip == 0) {
@@ -605,78 +460,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				}
 				actual.onError(cause);
 			}
-			return true;
-		}
-
-		@Override
-		public boolean setUncancellable() {
-			return true;
-		}
-
-		@Override
-		public boolean isSuccess() {
-			return hasOnComplete() && queue.isEmpty();
-		}
-
-		@Override
-		public boolean isCancellable() {
-			return false;
-		}
-
-		@Override
-		@Nullable
-		public Throwable cause() {
-			return null;
-		}
-
-		@Override
-		public boolean await(long timeout, TimeUnit unit) {
-			return false;
-		}
-
-		@Override
-		public boolean await(long timeoutMillis) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public boolean awaitUninterruptibly(long timeoutMillis) {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public Void getNow() {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public boolean cancel(boolean mayInterruptIfRunning) {
-			return false;
-		}
-
-		@Override
-		public boolean isCancelled() {
-			return false;
-		}
-
-		@Override
-		public boolean isDone() {
-			return false;
-		}
-
-		@Override
-		public Void get() {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public Void get(long timeout, TimeUnit unit) {
-			throw new UnsupportedOperationException();
 		}
 
 		// this as discard hook
@@ -774,6 +557,16 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		@SuppressWarnings("rawtypes")
 		static final AtomicReferenceFieldUpdater<SendManyInner, Subscription> SUBSCRIPTION =
 				AtomicReferenceFieldUpdater.newUpdater(SendManyInner.class, Subscription.class, "s");
+
+		@Override
+		public void operationComplete(Future<? extends Void> future) {
+			if (future.isSuccess()) {
+				trySuccess();
+			}
+			else {
+				tryFailure(future.cause());
+			}
+		}
 
 		final class AsyncFlush implements Runnable {
 			@Override
