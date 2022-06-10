@@ -148,7 +148,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
 			CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(true, ((CloseWebSocketFrame) frame).rsv(),
-					((CloseWebSocketFrame) frame).content());
+					((CloseWebSocketFrame) frame).binaryData());
 			if (closeFrame.statusCode() != -1) {
 				// terminate() will invoke onInboundComplete()
 				sendCloseNow(closeFrame, f -> terminate());
@@ -161,7 +161,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 		}
 		if (!this.proxyPing && frame instanceof PingWebSocketFrame) {
 			//"FutureReturnValueIgnored" this is deliberate
-			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()));
+			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).binaryData()));
 			ctx.read();
 			return;
 		}
@@ -235,11 +235,11 @@ final class WebsocketServerOperations extends HttpServerOperations
 					                .addListener(channel(), ChannelFutureListeners.CLOSE)
 					                .asStage();
 				}
-				frame.release();
+				frame.close();
 				return channel().newSucceededFuture().asStage();
 			}).doOnCancel(() -> ReactorNetty.safeRelease(frame));
 		}
-		frame.release();
+		frame.close();
 		return Mono.empty();
 	}
 	void sendCloseNow(CloseWebSocketFrame frame, FutureListener<Void> listener) {
@@ -263,7 +263,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			         .addListener(listener);
 		}
 		else {
-			frame.release();
+			frame.close();
 		}
 	}
 

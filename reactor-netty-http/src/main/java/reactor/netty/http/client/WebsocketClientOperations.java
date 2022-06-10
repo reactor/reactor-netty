@@ -106,38 +106,32 @@ final class WebsocketClientOperations extends HttpClientOperations
 			started = true;
 			channel().pipeline()
 			         .remove(HttpObjectAggregator.class);
-			FullHttpResponse response = (FullHttpResponse) msg;
+			try (FullHttpResponse response = (FullHttpResponse) msg) {
 
-			setNettyResponse(response);
+				setNettyResponse(response);
 
-			if (notRedirected(response)) {
-				try {
-					handshaker.finishHandshake(channel(), response);
-					// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
-					ctx.read();
-					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
+				if (notRedirected(response)) {
+					try {
+						handshaker.finishHandshake(channel(), response);
+						// This change is needed after the Netty change https://github.com/netty/netty/pull/11966
+						ctx.read();
+						listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
+					}
+					catch (Exception e) {
+						onInboundError(e);
+						//"FutureReturnValueIgnored" this is deliberate
+						ctx.close();
+					}
 				}
-				catch (Exception e) {
-					onInboundError(e);
-					//"FutureReturnValueIgnored" this is deliberate
-					ctx.close();
+				else {
+					listener().onUncaughtException(this, redirecting);
 				}
-				finally {
-					//Release unused content (101 status)
-					response.content()
-					        .release();
-				}
-			}
-			else {
-				response.content()
-				        .release();
-				listener().onUncaughtException(this, redirecting);
 			}
 			return;
 		}
 		if (!this.proxyPing && msg instanceof PingWebSocketFrame) {
 			//"FutureReturnValueIgnored" this is deliberate
-			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()));
+			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).binaryData()));
 			ctx.read();
 			return;
 		}
@@ -147,7 +141,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
 			CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(true, ((CloseWebSocketFrame) msg).rsv(),
-					((CloseWebSocketFrame) msg).content());
+					((CloseWebSocketFrame) msg).binaryData());
 			if (closeFrame.statusCode() != -1) {
 				sendCloseNow(closeFrame);
 			}
@@ -241,11 +235,11 @@ final class WebsocketClientOperations extends HttpClientOperations
 					                .addListener(channel(), ChannelFutureListeners.CLOSE)
 					                .asStage();
 				}
-				frame.release();
+				frame.close();
 				return channel().newSucceededFuture().asStage();
 			}).doOnCancel(() -> ReactorNetty.safeRelease(frame));
 		}
-		frame.release();
+		frame.close();
 		return Mono.empty();
 	}
 
@@ -270,7 +264,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			         .addListener(channel(), ChannelFutureListeners.CLOSE);
 		}
 		else {
-			frame.release();
+			frame.close();
 		}
 	}
 

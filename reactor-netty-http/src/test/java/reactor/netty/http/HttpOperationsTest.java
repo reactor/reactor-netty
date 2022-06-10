@@ -87,7 +87,7 @@ class HttpOperationsTest {
 
 		t = channel.readInbound();
 		assertThat(t).isInstanceOf(EmptyLastHttpContent.class);
-		((LastHttpContent) t).release();
+		((LastHttpContent) t).close();
 
 		t = channel.readInbound();
 		assertThat(t).isNull();

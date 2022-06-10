@@ -626,11 +626,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 			if (msg instanceof FullHttpResponse) {
 				FullHttpResponse request = (FullHttpResponse) msg;
-				if (request.content().readableBytes() > 0) {
+				if (request.payload().readableBytes() > 0) {
 					super.onInboundNext(ctx, msg);
 				}
 				else {
-					request.release();
+					request.close();
 				}
 				terminate();
 			}

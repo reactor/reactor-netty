@@ -561,11 +561,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 			if (msg instanceof FullHttpRequest) {
 				FullHttpRequest request = (FullHttpRequest) msg;
-				if (request.content().readableBytes() > 0) {
+				if (request.payload().readableBytes() > 0) {
 					super.onInboundNext(ctx, msg);
 				}
 				else {
-					request.release();
+					request.close();
 				}
 				if (isHttp2()) {
 					//force auto read to enable more accurate close selection now inbound is done

@@ -496,7 +496,7 @@ class WebsocketTest extends BaseHttpTest {
 				          .handle((req, res) -> res.sendWebsocket((in, out) ->
 				              out.sendObject(in.aggregateFrames()
 				                               .receiveFrames()
-				                               .map(WebSocketFrame::content)
+				                               .map(WebSocketFrame::binaryData)
 				                               .map(byteBuf ->
 				                                   byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 				                               .map(TextWebSocketFrame::new)),
@@ -510,7 +510,7 @@ class WebsocketTest extends BaseHttpTest {
 		          .handle((in, out) -> out.sendString(input)
 		                                  .then(in.aggregateFrames()
 		                                          .receiveFrames()
-		                                          .map(WebSocketFrame::content)
+		                                          .map(WebSocketFrame::binaryData)
 		                                          .map(byteBuf ->
 		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                          .take(count)
@@ -612,7 +612,7 @@ class WebsocketTest extends BaseHttpTest {
 		doTestConnectionAliveWhenTransformationErrors((in, out) ->
 		        out.sendObject(in.aggregateFrames()
 		                         .receiveFrames()
-		                         .map(WebSocketFrame::content)
+		                         .map(WebSocketFrame::binaryData)
 		                         //.share()
 		                         .publish()
 		                         .autoConnect()
@@ -629,7 +629,7 @@ class WebsocketTest extends BaseHttpTest {
 		doTestConnectionAliveWhenTransformationErrors((in, out) ->
 		        out.sendObject(in.aggregateFrames()
 		                         .receiveFrames()
-		                         .map(WebSocketFrame::content)
+		                         .map(WebSocketFrame::binaryData)
 		                         .concatMap(content ->
 		                             Mono.just(content)
 		                                 .map(byteBuf ->
@@ -654,7 +654,7 @@ class WebsocketTest extends BaseHttpTest {
 		          .handle((in, out) -> out.sendString(Flux.just("1", "text", "2"))
 		                                  .then(in.aggregateFrames()
 		                                          .receiveFrames()
-		                                          .map(WebSocketFrame::content)
+		                                          .map(WebSocketFrame::binaryData)
 		                                          .map(byteBuf ->
 		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                          .take(count)
