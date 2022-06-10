@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import io.netty5.channel.Channel;
+import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.resolver.AddressResolverGroup;
 import reactor.core.publisher.Mono;
@@ -176,17 +177,10 @@ public class UdpResources implements LoopResources {
 	}
 
 	@Override
-	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoopGroup group) {
+	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoop eventLoop) {
 		requireNonNull(channelType, "channelType");
-		requireNonNull(group, "group");
-		return defaultLoops.onChannel(channelType, group);
-	}
-
-	@Override
-	public <CHANNEL extends Channel> Class<? extends CHANNEL> onChannelClass(Class<CHANNEL> channelType, EventLoopGroup group) {
-		requireNonNull(channelType, "channelType");
-		requireNonNull(group, "group");
-		return defaultLoops.onChannelClass(channelType, group);
+		requireNonNull(eventLoop, "eventLoop");
+		return defaultLoops.onChannel(channelType, eventLoop);
 	}
 
 	@Override

@@ -23,11 +23,10 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty5.channel.Channel;
+import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.group.ChannelGroup;
-import io.netty5.channel.socket.ServerSocketChannel;
-import io.netty5.channel.unix.ServerDomainSocketChannel;
 import io.netty5.util.AttributeKey;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
@@ -161,7 +160,12 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 
 	@Override
 	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
-		return isDomainSocket ? ServerDomainSocketChannel.class : ServerSocketChannel.class;
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	protected ChannelFactory<? extends Channel> connectionFactory(boolean isDomainSocket) {
+		throw new UnsupportedOperationException();
 	}
 
 	/**

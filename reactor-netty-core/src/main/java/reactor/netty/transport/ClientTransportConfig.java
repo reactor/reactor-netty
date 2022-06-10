@@ -27,9 +27,9 @@ import java.util.function.Supplier;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.ServerChannel;
+import io.netty5.channel.ServerChannelFactory;
 import io.netty5.channel.group.ChannelGroup;
-import io.netty5.channel.socket.SocketChannel;
-import io.netty5.channel.unix.DomainSocketChannel;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.dns.DnsAddressResolverGroup;
 import reactor.netty.ChannelPipelineConfigurer;
@@ -182,11 +182,6 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.resolver = parent.resolver;
 	}
 
-	@Override
-	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
-		return isDomainSocket ? DomainSocketChannel.class : SocketChannel.class;
-	}
-
 	/**
 	 * Provides a global {@link AddressResolverGroup} that is shared amongst all clients.
 	 *
@@ -234,6 +229,16 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		else {
 			return resolverGroup;
 		}
+	}
+
+	@Override
+	protected Class<? extends ServerChannel> serverChannelType(boolean isDomainSocket) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(boolean isDomainSocket) {
+		throw new UnsupportedOperationException();
 	}
 
 	static final ConcurrentMap<Integer, DnsAddressResolverGroup> RESOLVERS_CACHE = new ConcurrentHashMap<>();
