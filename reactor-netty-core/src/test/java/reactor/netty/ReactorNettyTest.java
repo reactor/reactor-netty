@@ -20,7 +20,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
-import io.netty5.channel.EventLoop;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 import reactor.util.annotation.Nullable;
@@ -118,7 +117,7 @@ class ReactorNettyTest {
 		}
 
 		TestChannel(Channel parent, @Nullable SocketAddress localAddress, @Nullable SocketAddress remoteAddress) {
-			super(parent);
+			super(parent, parent.executor());
 			this.localAddress = localAddress;
 			this.remoteAddress = remoteAddress;
 		}
@@ -126,11 +125,6 @@ class ReactorNettyTest {
 		@Override
 		protected AbstractUnsafe newUnsafe() {
 			return null;
-		}
-
-		@Override
-		protected boolean isCompatible(EventLoop loop) {
-			return false;
 		}
 
 		@Override
