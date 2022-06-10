@@ -24,7 +24,7 @@ import java.util.Map;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.handler.logging.ByteBufFormat;
+import io.netty5.handler.logging.BufferFormat;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import org.junit.jupiter.api.Test;
@@ -44,18 +44,18 @@ class TransportTest {
 		TestTransportConfig config = new TestTransportConfig(Collections.emptyMap());
 		TestTransport transport = new TestTransport(config);
 
-		doTestWiretap(transport.wiretap(true), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
-		doTestWiretap(transport.wiretap("category"), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
-		doTestWiretap(transport.wiretap("category", LogLevel.DEBUG), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
-		doTestWiretap(transport.wiretap("category", LogLevel.INFO), LogLevel.INFO, ByteBufFormat.HEX_DUMP);
+		doTestWiretap(transport.wiretap(true), LogLevel.DEBUG, BufferFormat.HEX_DUMP);
+		doTestWiretap(transport.wiretap("category"), LogLevel.DEBUG, BufferFormat.HEX_DUMP);
+		doTestWiretap(transport.wiretap("category", LogLevel.DEBUG), LogLevel.DEBUG, BufferFormat.HEX_DUMP);
+		doTestWiretap(transport.wiretap("category", LogLevel.INFO), LogLevel.INFO, BufferFormat.HEX_DUMP);
 		doTestWiretap(
 			transport.wiretap("category", LogLevel.INFO, AdvancedByteBufFormat.HEX_DUMP),
 			LogLevel.INFO,
-			ByteBufFormat.HEX_DUMP);
+			BufferFormat.HEX_DUMP);
 		doTestWiretap(
 			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.SIMPLE),
 			LogLevel.DEBUG,
-			ByteBufFormat.SIMPLE);
+			BufferFormat.SIMPLE);
 
 		doTestWiretapForTextualLogger(
 			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL), LogLevel.DEBUG);
@@ -63,11 +63,11 @@ class TransportTest {
 			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL, Charset.defaultCharset()), LogLevel.DEBUG);
 	}
 
-	private void doTestWiretap(TestTransport transport, LogLevel expectedLevel, ByteBufFormat expectedFormat) {
+	private void doTestWiretap(TestTransport transport, LogLevel expectedLevel, BufferFormat expectedFormat) {
 		LoggingHandler loggingHandler = transport.config.loggingHandler;
 
 		assertThat(loggingHandler.level()).isSameAs(expectedLevel);
-		assertThat(loggingHandler.byteBufFormat()).isSameAs(expectedFormat);
+		assertThat(loggingHandler.bufferFormat()).isSameAs(expectedFormat);
 	}
 
 	private void doTestWiretapForTextualLogger(TestTransport transport, LogLevel expectedLevel) {
