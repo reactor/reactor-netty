@@ -39,7 +39,7 @@ class AdvancedByteBufFormatTest {
 				Charset.defaultCharset());
 
 		assertThat(loggingHandler).isInstanceOf(LoggingHandler.class);
-		assertThat(loggingHandler.byteBufFormat()).isSameAs(io.netty5.handler.logging.ByteBufFormat.SIMPLE);
+		assertThat(loggingHandler.bufferFormat()).isSameAs(io.netty5.handler.logging.BufferFormat.SIMPLE);
 	}
 
 	@Test
@@ -51,7 +51,7 @@ class AdvancedByteBufFormatTest {
 				Charset.defaultCharset());
 
 		assertThat(loggingHandler).isInstanceOf(LoggingHandler.class);
-		assertThat(loggingHandler.byteBufFormat()).isSameAs(io.netty5.handler.logging.ByteBufFormat.HEX_DUMP);
+		assertThat(loggingHandler.bufferFormat()).isSameAs(io.netty5.handler.logging.BufferFormat.HEX_DUMP);
 	}
 
 	@Test
