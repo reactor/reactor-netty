@@ -33,7 +33,6 @@ import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelFuture;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.DefaultHeaders;
@@ -65,6 +64,8 @@ import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.codec.http2.HttpConversionUtil;
 import io.netty5.util.AsciiString;
 import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.FutureListener;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -625,7 +626,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 
-		final ChannelFuture f;
+		final Future<Void> f;
 		if (log.isDebugEnabled()) {
 			log.debug(format(channel(), "Last HTTP response frame"));
 		}
@@ -812,7 +813,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
 	}
 
-	static final class WebsocketSubscriber implements CoreSubscriber<Void>, ChannelFutureListener {
+	static final class WebsocketSubscriber implements CoreSubscriber<Void>, FutureListener<Void> {
 		final WebsocketServerOperations ops;
 		final Context                context;
 
@@ -837,7 +838,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 
 		@Override
-		public void operationComplete(ChannelFuture future)  {
+		public void operationComplete(Future<? extends Void> future)  {
 			ops.terminate();
 		}
 

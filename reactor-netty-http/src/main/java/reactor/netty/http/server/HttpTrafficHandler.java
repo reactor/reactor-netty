@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
-import io.netty5.channel.ChannelFuture;
+import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -47,6 +47,7 @@ import io.netty5.handler.timeout.IdleStateEvent;
 import io.netty5.handler.timeout.IdleStateHandler;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.FutureContextListener;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -66,7 +67,7 @@ import static reactor.netty.ReactorNetty.toPrettyHexDump;
  * Replace {@link io.netty5.handler.codec.http.HttpServerKeepAliveHandler} with extra
  * handler management.
  */
-final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable, ChannelFutureListener {
+final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable, FutureContextListener<Channel, Void> {
 
 	static final String MULTIPART_PREFIX = "multipart";
 
@@ -310,12 +311,12 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							pendingResponses);
 				}
 				return ctx.write(msg)
-				          .addListener(this)
+				          .addListener(ctx.channel(), this)
 				          .addListener(ctx, ChannelFutureListeners.CLOSE);
 			}
 
 			Future<Void> future = ctx.write(msg)
-			                         .addListener(this);
+			                         .addListener(ctx.channel(), this);
 
 			if (!persistentConnection) {
 				return future;
@@ -401,24 +402,24 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	}
 
 	@Override
-	public void operationComplete(ChannelFuture future) {
+	public void operationComplete(Channel channel, Future<? extends Void> future) {
 		if (!future.isSuccess()) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(future.channel(),
+				HttpServerOperations.log.debug(format(channel,
 				        "Sending last HTTP packet was not successful, terminating the channel"),
 				        future.cause());
 			}
 		}
 		else {
 			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(future.channel(),
+				HttpServerOperations.log.debug(format(channel,
 				        "Last HTTP packet was sent, terminating the channel"));
 			}
 		}
 
-		IdleTimeoutHandler.addIdleTimeoutHandler(future.channel().pipeline(), idleTimeout);
+		IdleTimeoutHandler.addIdleTimeoutHandler(channel.pipeline(), idleTimeout);
 
-		HttpServerOperations.cleanHandlerTerminate(future.channel());
+		HttpServerOperations.cleanHandlerTerminate(channel);
 	}
 
 	@Override
