@@ -15,6 +15,7 @@
  */
 package reactor.netty.http;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -145,6 +146,15 @@ public final class HttpResources extends TcpResources {
 	HttpResources(LoopResources loops, ConnectionProvider provider) {
 		super(loops, provider);
 		http2ConnectionProvider = new AtomicReference<>();
+	}
+
+	@Override
+	public void disposeWhen(SocketAddress remoteAddress) {
+		ConnectionProvider provider = http2ConnectionProvider.get();
+		if (provider != null) {
+			provider.disposeWhen(remoteAddress);
+		}
+		super.disposeWhen(remoteAddress);
 	}
 
 	@Override

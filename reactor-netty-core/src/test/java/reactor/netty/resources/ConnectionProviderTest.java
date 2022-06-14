@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,24 @@
 package reactor.netty.resources;
 
 import org.junit.jupiter.api.Test;
+import reactor.core.Disposable;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ConnectionProviderTest {
 
+	static final TestAllocationStrategy TEST_ALLOCATION_STRATEGY = new TestAllocationStrategy();
 	static final String TEST_STRING = "";
 	static final Supplier<ConnectionProvider.MeterRegistrar> TEST_SUPPLIER = () -> (a, b, c, d) -> {};
+	static final BiFunction<Runnable, Duration, Disposable> TEST_BI_FUNCTION = (r, duration) -> () -> {};
 
 	@Test
 	void testBuilderCopyConstructor() throws IllegalAccessException {
@@ -64,14 +68,57 @@ class ConnectionProviderTest {
 		else if (Supplier.class == clazz) {
 			field.set(builder, TEST_SUPPLIER);
 		}
+		else if (ConnectionProvider.AllocationStrategy.class == clazz) {
+			field.set(builder, TEST_ALLOCATION_STRATEGY);
+		}
 		else if (boolean.class == clazz) {
 			field.setBoolean(builder, true);
 		}
 		else if (int.class == clazz) {
 			field.setInt(builder, 1);
 		}
+		else if (BiFunction.class == clazz) {
+			field.set(builder, TEST_BI_FUNCTION);
+		}
 		else {
 			throw new IllegalArgumentException("Unknown field type " + clazz);
+		}
+	}
+
+	static final class TestAllocationStrategy implements ConnectionProvider.AllocationStrategy<TestAllocationStrategy> {
+
+		@Override
+		public TestAllocationStrategy copy() {
+			return this;
+		}
+
+		@Override
+		public int estimatePermitCount() {
+			return 0;
+		}
+
+		@Override
+		public int getPermits(int desired) {
+			return 0;
+		}
+
+		@Override
+		public int permitGranted() {
+			return 0;
+		}
+
+		@Override
+		public int permitMinimum() {
+			return 0;
+		}
+
+		@Override
+		public int permitMaximum() {
+			return 0;
+		}
+
+		@Override
+		public void returnPermits(int returned) {
 		}
 	}
 }

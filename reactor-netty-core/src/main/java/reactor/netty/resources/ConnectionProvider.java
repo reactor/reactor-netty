@@ -18,6 +18,7 @@ package reactor.netty.resources;
 import io.netty5.resolver.AddressResolverGroup;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
@@ -32,6 +33,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -253,6 +255,68 @@ public interface ConnectionProvider extends Disposable {
 		return null;
 	}
 
+	interface AllocationStrategy<A extends AllocationStrategy<A>> {
+
+		/**
+		 * Returns a deep copy of this instance.
+		 *
+		 * @return a deep copy of this instance
+		 */
+		A copy();
+
+		/**
+		 * Best-effort peek at the state of the strategy which indicates roughly how many more connections can currently be
+		 * allocated. Should be paired with {@link #getPermits(int)} for an atomic permission.
+		 *
+		 * @return an ESTIMATED count of how many more connections can currently be allocated
+		 */
+		int estimatePermitCount();
+
+		/**
+		 * Try to get the permission to allocate a {@code desired} positive number of new connections. Returns the permissible
+		 * number of connections which MUST be created (otherwise the internal live counter of the strategy might be off).
+		 * This permissible number might be zero, and it can also be a greater number than {@code desired}.
+		 * Once a connection is discarded from the pool, it must update the strategy using {@link #returnPermits(int)}
+		 * (which can happen in batches or with value {@literal 1}).
+		 *
+		 * @param desired the desired number of new connections
+		 * @return the actual number of new connections that MUST be created, can be 0 and can be more than {@code desired}
+		 */
+		int getPermits(int desired);
+
+		/**
+		 * Returns the best estimate of the number of permits currently granted, between 0 and {@link Integer#MAX_VALUE}
+		 *
+		 * @return the best estimate of the number of permits currently granted, between 0 and {@link Integer#MAX_VALUE}
+		 */
+		int permitGranted();
+
+		/**
+		 * Return the minimum number of permits this strategy tries to maintain granted
+		 * (reflecting a minimal size for the pool), or {@code 0} for scale-to-zero.
+		 *
+		 * @return the minimum number of permits this strategy tries to maintain, or {@code 0}
+		 */
+		int permitMinimum();
+
+		/**
+		 * Returns the maximum number of permits this strategy can grant in total, or {@link Integer#MAX_VALUE} for unbounded
+		 *
+		 * @return the maximum number of permits this strategy can grant in total, or {@link Integer#MAX_VALUE} for unbounded
+		 */
+		int permitMaximum();
+
+		/**
+		 * Update the strategy to indicate that N connections were discarded, potentially leaving space
+		 * for N new ones to be allocated. Users MUST ensure that this method isn't called with a value greater than the
+		 * number of held permits it has.
+		 * <p>
+		 * Some strategy MIGHT throw an {@link IllegalArgumentException} if it can be determined the number of returned permits
+		 * is not consistent with the strategy's limits and delivered permits.
+		 */
+		void returnPermits(int returned);
+	}
+
 	/**
 	 * Build a {@link ConnectionProvider} to cache and reuse a fixed maximum number of
 	 * {@link Connection}. Further connections will be pending acquisition depending on
@@ -387,6 +451,8 @@ public interface ConnectionProvider extends Disposable {
 		boolean  metricsEnabled;
 		String   leasingStrategy        = DEFAULT_POOL_LEASING_STRATEGY;
 		Supplier<? extends ConnectionProvider.MeterRegistrar> registrar;
+		BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
+		AllocationStrategy<?> allocationStrategy;
 
 		/**
 		 * Returns {@link ConnectionPoolSpec} new instance with default properties.
@@ -410,6 +476,8 @@ public interface ConnectionProvider extends Disposable {
 			this.metricsEnabled = copy.metricsEnabled;
 			this.leasingStrategy = copy.leasingStrategy;
 			this.registrar = copy.registrar;
+			this.pendingAcquireTimer = copy.pendingAcquireTimer;
+			this.allocationStrategy = copy.allocationStrategy;
 		}
 
 		/**
@@ -428,10 +496,13 @@ public interface ConnectionProvider extends Disposable {
 
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} maximum connections per connection pool.
+		 * This is a pre-made allocation strategy where only max connections is specified.
+		 * Custom allocation strategies can be provided via {@link #allocationStrategy(AllocationStrategy)}.
 		 * Default to {@link #DEFAULT_POOL_MAX_CONNECTIONS}.
 		 *
 		 * @param maxConnections the maximum number of connections (per connection pool) before start pending
 		 * @return {@literal this}
+		 * @see #allocationStrategy(AllocationStrategy)
 		 * @throws IllegalArgumentException if maxConnections is negative
 		 */
 		public final SPEC maxConnections(int maxConnections) {
@@ -439,6 +510,7 @@ public interface ConnectionProvider extends Disposable {
 				throw new IllegalArgumentException("Max Connections value must be strictly positive");
 			}
 			this.maxConnections = maxConnections;
+			this.allocationStrategy = null;
 			return get();
 		}
 
@@ -577,6 +649,59 @@ public interface ConnectionProvider extends Disposable {
 		 */
 		public final SPEC evictInBackground(Duration evictionInterval) {
 			this.evictionInterval = Objects.requireNonNull(evictionInterval, "evictionInterval");
+			return get();
+		}
+
+		/**
+		 * Set the option to use for configuring {@link ConnectionProvider} pending acquire timer.
+		 * The pending acquire timer must be specified as a function which is used to schedule a pending acquire timeout
+		 * when there is no idle connection and no new connection can be created currently.
+		 * The function takes as argument a {@link Duration} which is the one configured by {@link #pendingAcquireTimeout(Duration)}.
+		 * <p>
+		 * Use this function if you want to specify your own implementation for scheduling pending acquire timers.
+		 *
+		 * <p> Default to {@link Schedulers#parallel()}.
+		 *
+		 * <p>Examples using Netty HashedWheelTimer implementation:</p>
+		 * <pre>
+		 * {@code
+		 * final static HashedWheelTimer wheel = new HashedWheelTimer(10, TimeUnit.MILLISECONDS, 1024);
+		 *
+		 * HttpClient client = HttpClient.create(
+		 *     ConnectionProvider.builder("myprovider")
+		 *         .pendingAcquireTimeout(Duration.ofMillis(10000))
+		 *         .pendingAcquireTimer((r, d) -> {
+		 *             Timeout t = wheel.newTimeout(timeout -> r.run(), d.toMillis(), TimeUnit.MILLISECONDS);
+		 *             return () -> t.cancel();
+		 *         })
+		 *         .build());
+		 * }
+		 * </pre>
+		 *
+		 * @param pendingAcquireTimer the function to apply when scheduling pending acquire timers
+		 * @return {@literal this}
+		 * @throws NullPointerException if pendingAcquireTimer is null
+		 * @since 1.0.20
+		 * @see #pendingAcquireTimeout(Duration)
+		 */
+		public final SPEC pendingAcquireTimer(BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer) {
+			this.pendingAcquireTimer = Objects.requireNonNull(pendingAcquireTimer, "pendingAcquireTimer");
+			return get();
+		}
+
+		/**
+		 * Limits in how many connections can be allocated and managed by the pool are driven by the
+		 * provided {@link AllocationStrategy}. This is a customization escape hatch that replaces the last
+		 * configured strategy, but most cases should be covered by the {@link #maxConnections()}
+		 * pre-made allocation strategy.
+		 *
+		 * @param allocationStrategy the {@link AllocationStrategy} to use
+		 * @return {@literal this}
+		 * @see #maxConnections()
+		 * @since 1.0.20
+		 */
+		public final SPEC allocationStrategy(AllocationStrategy<?> allocationStrategy) {
+			this.allocationStrategy = Objects.requireNonNull(allocationStrategy, "allocationStrategy");
 			return get();
 		}
 
