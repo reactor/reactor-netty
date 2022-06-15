@@ -35,7 +35,7 @@ public class Application {
 				                   .map(o -> {
 				                       if (o instanceof DomainDatagramPacket) {
 				                           DomainDatagramPacket p = (DomainDatagramPacket) o;
-				                           return new DomainDatagramPacket(p.content().retain(), p.sender());
+				                           return new DomainDatagramPacket(p.content().split(), p.sender());
 				                       }
 				                       else {
 				                           return Mono.error(new Exception("Unexpected type of the message: " + o));

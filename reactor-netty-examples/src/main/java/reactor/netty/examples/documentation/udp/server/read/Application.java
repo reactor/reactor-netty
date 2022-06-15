@@ -33,7 +33,7 @@ public class Application {
 				                   .map(o -> {
 				                       if (o instanceof DatagramPacket) {
 				                           DatagramPacket p = (DatagramPacket) o;
-				                           return new DatagramPacket(p.content().retain(), p.sender()); //<1>
+				                           return new DatagramPacket(p.content().split(), p.sender()); //<1>
 				                       }
 				                       else {
 				                           return Mono.error(new Exception("Unexpected type of the message: " + o));
