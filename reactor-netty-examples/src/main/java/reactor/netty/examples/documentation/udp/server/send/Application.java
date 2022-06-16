@@ -15,8 +15,7 @@
  */
 package reactor.netty.examples.documentation.udp.server.send;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.CharsetUtil;
 import reactor.core.publisher.Mono;
@@ -34,9 +33,8 @@ public class Application {
 				             out.sendObject(
 				                 in.receiveObject()
 				                   .map(o -> {
-				                       if (o instanceof DatagramPacket) {
-				                           DatagramPacket p = (DatagramPacket) o;
-				                           ByteBuf buf = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
+				                       if (o instanceof DatagramPacket p) {
+				                           Buffer buf = out.alloc().copyOf("hello".getBytes(CharsetUtil.UTF_8));
 				                           return new DatagramPacket(buf, p.sender()); //<1>
 				                       }
 				                       else {

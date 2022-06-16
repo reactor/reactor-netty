@@ -48,6 +48,7 @@ import java.util.zip.GZIPOutputStream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
@@ -80,7 +81,6 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -93,7 +93,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -163,9 +163,9 @@ class HttpServerTests extends BaseHttpTest {
 		                             .handle((req, resp) -> req.receive().then(resp.status(200).send()))
 		                             .bindNow();
 
-		Flux<ByteBuf> src = Flux.range(0, 3)
-		                        .map(n -> Unpooled.wrappedBuffer(Integer.toString(n)
-		                                                                .getBytes(Charset.defaultCharset())));
+		Flux<Buffer> src = Flux.range(0, 3)
+		                       .map(n -> preferredAllocator().copyOf(Integer.toString(n)
+		                                                                    .getBytes(Charset.defaultCharset())));
 
 		Flux.range(0, 100)
 		    .concatMap(n -> createClient(disposableServer.port())
@@ -284,7 +284,7 @@ class HttpServerTests extends BaseHttpTest {
 				                         x.addHandlerFirst(new HttpClientCodec()))
 				                   .receiveObject()
 				                   .ofType(DefaultHttpContent.class)
-				                   .as(ByteBufFlux::fromInbound)
+				                   .as(BufferFlux::fromInbound)
 				                   .asString()
 				                   .log()
 				                   .map(Integer::parseInt)
@@ -706,7 +706,7 @@ class HttpServerTests extends BaseHttpTest {
 	private void doTestIssue186(HttpClient client) {
 		Mono<String> content = client.post()
 				                     .uri("/")
-				                     .send(ByteBufFlux.fromString(Mono.just("bodysample")))
+				                     .send(BufferFlux.fromString(Mono.just("bodysample")))
 				                     .responseContent()
 				                     .aggregate()
 				                     .asString();
@@ -733,7 +733,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .bindNow();
 
 		AtomicReference<Channel> ch = new AtomicReference<>();
-		Flux<ByteBuf> r =
+		Flux<Buffer> r =
 				createClient(disposableServer.port())
 				          .doOnResponse((res, c) -> ch.set(c.channel()))
 				          .get()
@@ -765,7 +765,7 @@ class HttpServerTests extends BaseHttpTest {
 			for (int i = 0; i < 1000; i++) {
 				Mono<String> content = client.post()
 				                             .uri("/")
-				                             .send(ByteBufFlux.fromString(Mono.just("bodysample")
+				                             .send(BufferFlux.fromString(Mono.just("bodysample")
 				                                                              .contextWrite(
 				                                                                      c -> {
 				                                                                          context.set(c);
@@ -861,7 +861,7 @@ class HttpServerTests extends BaseHttpTest {
 		createClient(disposableServer::address)
 		          .post()
 		          .uri("/")
-		          .send(ByteBufFlux.fromString(Mono.just("bodysample")))
+		          .send(BufferFlux.fromString(Mono.just("bodysample")))
 		          .responseContent()
 		          .aggregate()
 		          .asString()
@@ -896,15 +896,18 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testDropPublisherConnectionClose() throws Exception {
-		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
-		data.writeCharSequence("test", Charset.defaultCharset());
+		Buffer data = preferredAllocator().copyOf("test".getBytes(Charset.defaultCharset())).makeReadOnly();
+		Buffer data1 = data.copy(0, data.readableBytes(), true);
+		Buffer data2 = data.copy(0, data.readableBytes(), true);
 		CountDownLatch latch = new CountDownLatch(1);
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .send(Flux.defer(() -> Flux.just(data, data.retain(), data.retain())))
+				                 .send(Flux.just(data, data1, data2))
 				                 .then()
 				                 .doOnCancel(() -> {
-				                     data.release(3);
+				                     data.close();
+				                     data1.close();
+				                     data2.close();
 				                     latch.countDown();
 				                 }),
 				(req, out) -> {
@@ -912,7 +915,9 @@ class HttpServerTests extends BaseHttpTest {
 					return out;
 				});
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
-		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+		assertThat(data.isAccessible()).isFalse();
+		assertThat(data1.isAccessible()).isFalse();
+		assertThat(data2.isAccessible()).isFalse();
 	}
 
 	@Test
@@ -932,28 +937,30 @@ class HttpServerTests extends BaseHttpTest {
 	@Test
 	void testDropPublisher_1() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
-		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
-		data.writeCharSequence("test", Charset.defaultCharset());
+		Buffer data = preferredAllocator().copyOf("test".getBytes(Charset.defaultCharset())).makeReadOnly();
+		Buffer data1 = data.copy(0, data.readableBytes(), true);
+		Buffer data2 = data.copy(0, data.readableBytes(), true);
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .send(Flux.defer(() -> Flux.just(data, data.retain(), data.retain()))
-				                           .doFinally(s -> latch.countDown()))
+				                 .send(Flux.defer(() -> Flux.just(data, data1, data2))
+				                                 .doFinally(s -> latch.countDown()))
 				                 .then(),
 				(req, out) -> out);
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
-		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+		assertThat(data.isAccessible()).isFalse();
+		assertThat(data1.isAccessible()).isFalse();
+		assertThat(data2.isAccessible()).isFalse();
 	}
 
 	@Test
 	void testDropPublisher_2() throws Exception {
-		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
-		data.writeCharSequence("test", Charset.defaultCharset());
+		Buffer data = preferredAllocator().copyOf("test".getBytes(Charset.defaultCharset())).makeReadOnly();
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .send(Mono.just(data))
 				                 .then(),
 				(req, out) -> out);
-		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+		assertThat(data.isAccessible()).isFalse();
 	}
 
 	@Test
@@ -1000,8 +1007,7 @@ class HttpServerTests extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor()))
-				          .handle((req, res) -> res.send(req.receive()
-				                                            .retain()))
+				          .handle((req, res) -> res.send(req.receive().transferOwnership()))
 				          .bindNow(Duration.ofSeconds(30));
 
 		byte[] bytes = "test".getBytes(Charset.defaultCharset());
@@ -1010,7 +1016,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .headers(h -> h.add("Content-Encoding", "gzip"))
 				          .post()
 				          .uri("/")
-				          .send(Mono.just(Unpooled.wrappedBuffer(compress(bytes))))
+				          .send((req, out) -> out.send(Mono.just(out.alloc().copyOf(compress(bytes)))))
 				          .responseContent()
 				          .aggregate()
 				          .asString()
@@ -1077,7 +1083,7 @@ class HttpServerTests extends BaseHttpTest {
 		                  .remoteAddress(disposableServer::address)
 		                  .post()
 		                  .uri("/")
-		                  .send(ByteBufFlux.fromString(Mono.just("test")))
+		                  .send(BufferFlux.fromString(Mono.just("test")))
 		                  .responseConnection((res, conn) -> {
 		                      int status = res.status().code();
 		                      conn.dispose();
@@ -1416,10 +1422,10 @@ class HttpServerTests extends BaseHttpTest {
 				             in.withConnection(x -> x.addHandlerFirst(new HttpClientCodec()))
 				               .receiveObject()
 				               .ofType(DefaultHttpContent.class)
-				               .as(ByteBufFlux::fromInbound)
+				               .as(BufferFlux::fromInbound)
 				               // ReferenceCounted::release is deliberately invoked
 				               // so that .release() in FluxReceive.drainReceiver will fail
-				               .subscribe(ReferenceCounted::release, t -> latch.countDown(), null);
+				               .subscribe(Buffer::close, t -> latch.countDown(), null);
 
 				             return out.sendObject(Flux.just(request))
 				                       .neverComplete();
@@ -1449,7 +1455,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .route(r -> r.put("/1", (req, res) -> req.receive()
 				                                                   .then(res.sendString(Mono.just("test"))
 				                                                            .then()))
-				                       .put("/2", (req, res) -> res.send(req.receive().retain())))
+				                       .put("/2", (req, res) -> res.send(req.receive().transferOwnership())))
 				          .bindNow();
 
 		doTestDecodingFailureLastHttpContent("PUT /1 HTTP/1.1\r\nHost: a.example.com\r\n" +
@@ -1742,7 +1748,7 @@ class HttpServerTests extends BaseHttpTest {
 				              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
 				          });
 				          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
-				          return res.send(req.receive().retain());
+				          return res.send(req.receive().transferOwnership());
 				      })
 				      .bindNow();
 
@@ -1751,7 +1757,7 @@ class HttpServerTests extends BaseHttpTest {
 				      .wiretap(true)
 				      .post()
 				      .uri("/")
-				      .send(ByteBufFlux.fromString(Flux.just("1", "2", "3")))
+				      .send(BufferFlux.fromString(Flux.just("1", "2", "3")))
 				      .responseContent()
 				      .aggregate()
 				      .asString()
@@ -1864,7 +1870,7 @@ class HttpServerTests extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .secure(spec -> spec.sslContext(defaultSslContextBuilder)
-				                              .setSniAsyncMappings((input, promise) -> promise.setSuccess(testSslProvider)))
+				                              .setSniAsyncMappings((input, promise) -> promise.setSuccess(testSslProvider).asFuture()))
 				          .doOnChannelInit((obs, channel, remoteAddress) ->
 				              channel.pipeline()
 				                     .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
@@ -2026,7 +2032,7 @@ class HttpServerTests extends BaseHttpTest {
 		HttpServer server =
 				createServer()
 				          .idleTimeout(Duration.ofMillis(200))
-				          .handle((req, resp) -> resp.send(req.receive().retain()));
+				          .handle((req, resp) -> resp.send(req.receive().transferOwnership()));
 
 		HttpClient client =
 				createClient(() -> disposableServer.address())
@@ -2454,7 +2460,7 @@ class HttpServerTests extends BaseHttpTest {
 		    .flatMap(i ->
 		        client.post()
 		              .uri("/")
-		              .send(ByteBufFlux.fromString(clientRequest))
+		              .send(BufferFlux.fromString(clientRequest))
 		              .responseContent()
 		              .aggregate()
 		              .asString())

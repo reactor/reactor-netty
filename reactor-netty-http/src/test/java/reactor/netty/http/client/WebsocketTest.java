@@ -30,7 +30,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.handler.codec.http.HttpHeaderNames;
@@ -499,7 +498,7 @@ class WebsocketTest extends BaseHttpTest {
 				                               .map(WebSocketFrame::binaryData)
 				                               .map(byteBuf ->
 				                                   byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
-				                               .map(s -> new TextWebSocketFrame(out.bufferAlloc(), s))),
+				                               .map(s -> new TextWebSocketFrame(out.alloc(), s))),
 				              WebsocketServerSpec.builder().maxFramePayloadLength(maxFramePayloadLength).build()))
 				          .bindNow();
 
@@ -572,7 +571,7 @@ class WebsocketTest extends BaseHttpTest {
 				          .websocket()
 				          .uri("/")
 				          .handle((in, out) -> out.sendString(Mono.just("echo"))
-				                                  .sendObject(new CloseWebSocketFrame(true, 0, out.bufferAlloc().allocate(0)))
+				                                  .sendObject(new CloseWebSocketFrame(true, 0, out.alloc().allocate(0)))
 				                                  .then()
 				                                  .thenMany(in.receiveFrames()));
 
@@ -590,7 +589,7 @@ class WebsocketTest extends BaseHttpTest {
 				createServer()
 				          .handle((req, res) ->
 				                  res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
-				                                                    .sendObject(new CloseWebSocketFrame(true, 0, out.bufferAlloc().allocate(0)))))
+				                                                    .sendObject(new CloseWebSocketFrame(true, 0, out.alloc().allocate(0)))))
 				          .bindNow();
 
 		Mono<Void> response =
@@ -619,7 +618,7 @@ class WebsocketTest extends BaseHttpTest {
 		                         .map(byteBuf ->
 		                             byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                         .map(Integer::parseInt)
-		                         .map(i -> new TextWebSocketFrame(out.bufferAlloc(), i + ""))
+		                         .map(i -> new TextWebSocketFrame(out.alloc(), i + ""))
 		                         .retry()),
 		       Flux.just("1", "2"), 2);
 	}
@@ -635,8 +634,8 @@ class WebsocketTest extends BaseHttpTest {
 		                                 .map(byteBuf ->
 		                                     byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                 .map(Integer::parseInt)
-		                                 .map(i -> new TextWebSocketFrame(out.bufferAlloc(), i + ""))
-		                                 .onErrorResume(t -> Mono.just(new TextWebSocketFrame(out.bufferAlloc(), "error"))))),
+		                                 .map(i -> new TextWebSocketFrame(out.alloc(), i + ""))
+		                                 .onErrorResume(t -> Mono.just(new TextWebSocketFrame(out.alloc(), "error"))))),
 		        Flux.just("1", "error", "2"), 3);
 	}
 
@@ -871,7 +870,7 @@ class WebsocketTest extends BaseHttpTest {
 				                 if (i == 5) {
 				                     out.sendClose(1001, "Going Away").subscribe();
 				                 }
-				                 return Unpooled.copiedBuffer((i + "").getBytes(Charset.defaultCharset()));
+				                 return out.alloc().copyOf((i + "").getBytes(Charset.defaultCharset()));
 				             })));
 	}
 
@@ -882,7 +881,7 @@ class WebsocketTest extends BaseHttpTest {
 				                   .onErrorResume(ex -> Flux.empty())
 				                   .cast(WebSocketFrame.class))
 				   .then(Mono.defer(() -> out.sendObject(
-				       new CloseWebSocketFrame(out.bufferAlloc(), 1001, "Going Away")).then())));
+				       new CloseWebSocketFrame(out.alloc(), 1001, "Going Away")).then())));
 	}
 
 	private void doTestIssue444(BiFunction<WebsocketInbound, WebsocketOutbound, Publisher<Void>> fn) {
@@ -989,8 +988,8 @@ class WebsocketTest extends BaseHttpTest {
 				                })
 				                .subscribe();
 
-				              return out.sendObject(Flux.just(new TextWebSocketFrame(out.bufferAlloc(), "echo"),
-				                                              new CloseWebSocketFrame(out.bufferAlloc(), 1008, "something")))
+				              return out.sendObject(Flux.just(new TextWebSocketFrame(out.alloc(), "echo"),
+				                                              new CloseWebSocketFrame(out.alloc(), 1008, "something")))
 				                        .then()
 				                        .thenMany(in.receiveFrames());
 				          });
@@ -1024,8 +1023,8 @@ class WebsocketTest extends BaseHttpTest {
 				                    })
 				                    .subscribe();
 
-				                  return out.sendObject(Flux.just(new TextWebSocketFrame(out.bufferAlloc(), "echo"),
-				                                                  new CloseWebSocketFrame(out.bufferAlloc(), 1008, "something"))
+				                  return out.sendObject(Flux.just(new TextWebSocketFrame(out.alloc(), "echo"),
+				                                                  new CloseWebSocketFrame(out.alloc(), 1008, "something"))
 				                                            .delayElements(Duration.ofMillis(100)))
 				                            .then(in.receiveFrames()
 				                                    .doOnNext(o -> {
@@ -1061,8 +1060,8 @@ class WebsocketTest extends BaseHttpTest {
 				createServer()
 				          .handle((req, resp) ->
 				              resp.sendWebsocket((i, o) ->
-				                  o.sendObject(Flux.just(new PingWebSocketFrame(o.bufferAlloc().allocate(0)),
-				                                         new CloseWebSocketFrame(true, 0, o.bufferAlloc().allocate(0)))
+				                  o.sendObject(Flux.just(new PingWebSocketFrame(o.alloc().allocate(0)),
+				                                         new CloseWebSocketFrame(true, 0, o.alloc().allocate(0)))
 				                                   .delayElements(Duration.ofMillis(100)))
 				                   .then(i.receiveFrames()
 				                          .doOnNext(f -> {
@@ -1093,8 +1092,8 @@ class WebsocketTest extends BaseHttpTest {
 				createServer()
 				          .handle((req, resp) ->
 				              resp.sendWebsocket((i, o) ->
-				                  o.sendObject(Flux.just(new PingWebSocketFrame(o.bufferAlloc().allocate(0)),
-				                                         new CloseWebSocketFrame(true, 0, o.bufferAlloc().allocate(0)))
+				                  o.sendObject(Flux.just(new PingWebSocketFrame(o.alloc().allocate(0)),
+				                                         new CloseWebSocketFrame(true, 0, o.alloc().allocate(0)))
 				                   .delayElements(Duration.ofMillis(100)))
 				                   .then(i.receiveFrames()
 				                          .doOnNext(f -> incomingData.set(true))
@@ -1126,8 +1125,8 @@ class WebsocketTest extends BaseHttpTest {
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) ->
-		              out.sendObject(Flux.just(new PingWebSocketFrame(out.bufferAlloc().allocate(0)),
-		                                       new CloseWebSocketFrame(true, 0, out.bufferAlloc().allocate(0)))
+		              out.sendObject(Flux.just(new PingWebSocketFrame(out.alloc().allocate(0)),
+		                                       new CloseWebSocketFrame(true, 0, out.alloc().allocate(0)))
 		                                 .delayElements(Duration.ofMillis(100)))
 		                 .then(in.receiveFrames()
 		                         .doOnNext(f -> {
@@ -1158,8 +1157,8 @@ class WebsocketTest extends BaseHttpTest {
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) ->
-		              out.sendObject(Flux.just(new PingWebSocketFrame(out.bufferAlloc().allocate(0)),
-		                                       new CloseWebSocketFrame(true, 0, out.bufferAlloc().allocate(0)))
+		              out.sendObject(Flux.just(new PingWebSocketFrame(out.alloc().allocate(0)),
+		                                       new CloseWebSocketFrame(true, 0, out.alloc().allocate(0)))
 		                                 .delayElements(Duration.ofMillis(100)))
 		                 .then(in.receiveFrames()
 		                         .doOnNext(f -> incomingData.set(true))
@@ -1324,7 +1323,7 @@ class WebsocketTest extends BaseHttpTest {
 		                  latch.countDown();
 		              })
 		              .subscribe();
-		            return out.sendObject(new CloseWebSocketFrame(true, 0, out.bufferAlloc().allocate(0)))
+		            return out.sendObject(new CloseWebSocketFrame(true, 0, out.alloc().allocate(0)))
 		                      .then(in.receive().then());
 		        })
 		        .blockLast(Duration.ofSeconds(5));
@@ -1356,7 +1355,7 @@ class WebsocketTest extends BaseHttpTest {
 				                      latch.countDown();
 				                  })
 				                  .subscribe();
-				                return out.sendObject(new CloseWebSocketFrame(true, 0, out.bufferAlloc().allocate(0)))
+				                return out.sendObject(new CloseWebSocketFrame(true, 0, out.alloc().allocate(0)))
 				                          .then(in.receive().then());
 				            }))
 				        .bindNow();

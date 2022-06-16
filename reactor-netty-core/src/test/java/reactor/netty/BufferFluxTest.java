@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package reactor.netty;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ByteBufFluxTest {
+class BufferFluxTest {
 
 	private static File temporaryDirectory;
 
@@ -70,20 +70,20 @@ class ByteBufFluxTest {
 	@Test
 	void testFromString_Flux() {
 		List<String> original = Arrays.asList("1", "2", "3");
-		StepVerifier.create(ByteBufFlux.fromString(Flux.fromIterable(original)).collectList())
-		            .expectNextMatches(list -> {
-		                List<String> newList =
-		                        list.stream()
-		                            .map(b -> {
-		                                String result = b.toString(Charset.defaultCharset());
-		                                b.release();
-		                                return result;
-		                            })
-		                            .collect(Collectors.toList());
-		                return Objects.equals(original, newList);
-		            })
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		StepVerifier.create(BufferFlux.fromString(Flux.fromIterable(original)).collectList())
+				.expectNextMatches(list -> {
+					List<String> newList =
+							list.stream()
+									.map(b -> {
+										String result = b.toString(Charset.defaultCharset());
+										b.close();
+										return result;
+									})
+									.collect(Collectors.toList());
+					return Objects.equals(original, newList);
+				})
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -92,20 +92,20 @@ class ByteBufFluxTest {
 	}
 
 	private void doTestFromString(Publisher<? extends String> source) {
-		StepVerifier.create(ByteBufFlux.fromString(source))
-		            .expectNextMatches(b -> {
-		                String result = b.toString(Charset.defaultCharset());
-		                b.release();
-		                return "123".equals(result);
-		            })
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		StepVerifier.create(BufferFlux.fromString(source))
+				.expectNextMatches(b -> {
+					String result = b.toString(Charset.defaultCharset());
+					b.close();
+					return "123".equals(result);
+				})
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 	}
 
 	private void doTestFromStringEmptyPublisher(Publisher<? extends String> source) {
-		StepVerifier.create(ByteBufFlux.fromString(source))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		StepVerifier.create(BufferFlux.fromString(source))
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -118,16 +118,16 @@ class ByteBufFluxTest {
 		// Make sure the file is 10 bytes (i.e. the same as the data length)
 		assertThat(data.length).isEqualTo(Files.size(tmpFile));
 
-		// Use the ByteBufFlux to read the file in chunks of 3 bytes max and write them into a ByteArrayOutputStream for verification
-		final Iterator<ByteBuf> it = ByteBufFlux.fromPath(tmpFile, chunkSize)
-		                                        .toIterable()
-		                                        .iterator();
+		// Use the BufferFlux to read the file in chunks of 3 bytes max and write them into a ByteArrayOutputStream for verification
+		final Iterator<Buffer> it = BufferFlux.fromPath(tmpFile, chunkSize)
+				.toIterable()
+				.iterator();
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
 		while (it.hasNext()) {
-			ByteBuf bb = it.next();
+			Buffer bb = it.next();
 			byte[] read = new byte[bb.readableBytes()];
-			bb.readBytes(read);
-			bb.release();
+			bb.readBytes(read, 0, read.length);
+			bb.close();
 			assertThat(bb.readableBytes()).isEqualTo(0);
 			out.write(read);
 		}
@@ -139,7 +139,7 @@ class ByteBufFluxTest {
 
 	private static File createTemporaryDirectory() {
 		try {
-			final File tempDir = File.createTempFile("ByteBufFluxTest", "", null);
+			final File tempDir = File.createTempFile("BufferFluxTest", "", null);
 			assertThat(tempDir.delete()).isTrue();
 			assertThat(tempDir.mkdir()).isTrue();
 			return tempDir;

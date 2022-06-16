@@ -27,7 +27,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.HttpHeaders;
@@ -44,8 +44,8 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.ByteBufFlux;
-import reactor.netty.ByteBufMono;
+import reactor.netty.BufferFlux;
+import reactor.netty.BufferMono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
@@ -159,7 +159,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
-		ResponseReceiver<?> send(Publisher<? extends ByteBuf> body);
+		ResponseReceiver<?> send(Publisher<? extends Buffer> body);
 
 		/**
 		 * Configure a body to send on request using the {@link NettyOutbound} sending
@@ -221,7 +221,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 
 		/**
 		 * Extract a response flux from the given {@link HttpClientResponse} and body
-		 * {@link ByteBufFlux}.
+		 * {@link BufferFlux}.
 		 * <p> Will automatically close the response if necessary after the returned
 		 * {@link Flux} terminates or is being cancelled.
 		 *
@@ -230,7 +230,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a {@link Flux} forwarding the returned {@link Publisher} sequence
 		 */
-		<V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver);
+		<V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super BufferFlux, ? extends Publisher<V>> receiver);
 
 		/**
 		 * Extract a response flux from the given {@link HttpClientResponse} and
@@ -247,18 +247,18 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		<V> Flux<V> responseConnection(BiFunction<? super HttpClientResponse, ? super Connection, ? extends Publisher<V>> receiver);
 
 		/**
-		 * Return the response body chunks as {@link ByteBufFlux}.
+		 * Return the response body chunks as {@link BufferFlux}.
 		 *
 		 * <p> Will automatically close the response if necessary after the returned
 		 * {@link Flux} terminates or is being cancelled.
 		 *
-		 * @return the response body chunks as {@link ByteBufFlux}.
+		 * @return the response body chunks as {@link BufferFlux}.
 		 */
-		ByteBufFlux responseContent();
+		BufferFlux responseContent();
 
 		/**
 		 * Extract a response mono from the given {@link HttpClientResponse} and
-		 * aggregated body {@link ByteBufMono}.
+		 * aggregated body {@link BufferMono}.
 		 *
 		 * <p> Will automatically close the response if necessary after the returned
 		 * {@link Mono} terminates or is being cancelled.
@@ -268,7 +268,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @return a {@link Mono} forwarding the returned {@link Mono} result
 		 */
-		<V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver);
+		<V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super BufferMono, ? extends Mono<V>> receiver);
 	}
 
 	/**
@@ -316,9 +316,9 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 * <p> If the upgrade fails, the returned {@link Flux} will emit a
 		 * {@link io.netty5.handler.codec.http.websocketx.WebSocketHandshakeException}
 		 *
-		 * @return a {@link ByteBufFlux} of the inbound websocket content
+		 * @return a {@link BufferFlux} of the inbound websocket content
 		 */
-		ByteBufFlux receive();
+		BufferFlux receive();
 	}
 
 	/**

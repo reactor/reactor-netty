@@ -15,15 +15,12 @@
  */
 package reactor.netty.channel;
 
-import io.netty.buffer.EmptyByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.DecoderResultProvider;
-import io.netty5.util.IllegalReferenceCountException;
-import io.netty5.util.ReferenceCountUtil;
-import io.netty5.util.ReferenceCounted;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
@@ -84,7 +81,11 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	final public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg == null || msg == Unpooled.EMPTY_BUFFER || msg instanceof EmptyByteBuf) {
+		if (msg == null) {
+			return;
+		}
+		else if ((msg instanceof Buffer buffer) && buffer.readableBytes() == 0) {
+			buffer.close();
 			return;
 		}
 		try {
@@ -105,7 +106,7 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 					log.debug(format(ctx.channel(), "No ChannelOperation attached. Dropping: {}"),
 							toPrettyHexDump(msg));
 				}
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 			}
 		}
 		catch (Throwable err) {
@@ -131,16 +132,13 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 	}
 
 	static void safeRelease(Object msg) {
-		if (msg instanceof ReferenceCounted) {
-			ReferenceCounted referenceCounted = (ReferenceCounted) msg;
-			if (referenceCounted.refCnt() > 0) {
-				try {
-					referenceCounted.release();
-				}
-				catch (IllegalReferenceCountException e) {
-					if (log.isDebugEnabled()) {
-						log.debug("", e);
-					}
+		if (msg instanceof Resource<?> resource && resource.isAccessible()) {
+			try {
+				resource.close();
+			}
+			catch (RuntimeException e) {
+				if (log.isDebugEnabled()) {
+					log.debug("", e);
 				}
 			}
 		}

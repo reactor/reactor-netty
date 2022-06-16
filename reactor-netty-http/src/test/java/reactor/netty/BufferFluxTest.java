@@ -33,11 +33,11 @@ import reactor.netty.http.server.HttpServer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link ByteBufFlux}
+ * Unit tests for {@link BufferFlux}
  *
  * @author Silvano Riz
  */
-class ByteBufFluxTest extends BaseHttpTest {
+class BufferFluxTest extends BaseHttpTest {
 
 	static SelfSignedCertificate ssc;
 
@@ -69,7 +69,7 @@ class ByteBufFluxTest extends BaseHttpTest {
 
 		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		disposableServer = server.handle((req, res) ->
-		                                   res.send(ByteBufFlux.fromPath(path))
+		                                   res.send(BufferFlux.fromPath(path))
 		                                      .then())
 		                        .bindNow();
 

@@ -21,7 +21,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.read.ListAppender;
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
@@ -38,7 +38,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.Connection;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
@@ -292,7 +292,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 				          if (serverConfig.isSecure() != secure) {
 				              return res.status(400).send();
 				          }
-				          Flux<ByteBuf> publisher = req.receive().retain();
+				          Flux<Buffer> publisher = req.receive().transferOwnership();
 				          if (externalThread) {
 				              publisher = publisher.subscribeOn(Schedulers.boundedElastic());
 				          }
@@ -304,7 +304,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 				client.port(disposableServer.port())
 				      .post()
 				      .uri("/")
-				      .send(ByteBufFlux.fromString(Mono.just("Hello")))
+				      .send(BufferFlux.fromString(Mono.just("Hello")))
 				      .responseContent()
 				      .aggregate()
 				      .asString();
@@ -565,14 +565,14 @@ class HttpProtocolsTests extends BaseHttpTest {
 		disposableServer =
 				server.idleTimeout(Duration.ofSeconds(60))
 						.route(routes ->
-								routes.post("/echo", (req, res) -> res.send(req.receive().retain())))
+								routes.post("/echo", (req, res) -> res.send(req.receive().transferOwnership())))
 						.bindNow();
 
 		StepVerifier.create(
 						client.port(disposableServer.port())
 								.post()
 								.uri("/echo")
-								.send(ByteBufFlux.fromString(Mono.just("Hello world!")))
+								.send(BufferFlux.fromString(Mono.just("Hello world!")))
 								.responseContent()
 								.aggregate()
 								.asString()

@@ -17,6 +17,7 @@ package reactor.netty;
 
 import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.ZoneId;
 import java.util.List;
@@ -31,11 +32,14 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.BufferHolder;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -47,7 +51,6 @@ import io.netty5.handler.timeout.IdleState;
 import io.netty5.handler.timeout.IdleStateEvent;
 import io.netty5.handler.timeout.IdleStateHandler;
 import io.netty5.util.AttributeKey;
-import io.netty5.util.ReferenceCounted;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CorePublisher;
@@ -193,16 +196,13 @@ public final class ReactorNetty {
 	public static final ZoneId ZONE_ID_SYSTEM = ZoneId.systemDefault();
 
 	/**
-	 * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
-	 * If the specified message doesn't implement {@link ReferenceCounted} or it is already released,
+	 * Try to call {@link Resource#close()} if the specified message implements {@link Resource}.
+	 * If the specified message doesn't implement {@link Resource} or it is already closed,
 	 * this method does nothing.
 	 */
 	public static void safeRelease(Object msg) {
-		if (msg instanceof ReferenceCounted) {
-			ReferenceCounted referenceCounted = (ReferenceCounted) msg;
-			if (referenceCounted.refCnt() > 0) {
-				referenceCounted.release();
-			}
+		if (msg instanceof Resource<?> resource && resource.isAccessible()) {
+			resource.close();
 		}
 	}
 
@@ -261,7 +261,7 @@ public final class ReactorNetty {
 	}
 
 	/**
-	 * Pretty hex dump will be returned when the object is {@link ByteBuf} or {@link ByteBufHolder}
+	 * Pretty hex dump will be returned when the object is {@link Buffer} or {@link ByteBufHolder}
 	 */
 	public static String toPrettyHexDump(Object msg) {
 		Objects.requireNonNull(msg, "msg");
@@ -271,8 +271,13 @@ public final class ReactorNetty {
 			ByteBuf buffer = ((ByteBufHolder) msg).content();
 			result = "\n" + ByteBufUtil.prettyHexDump(buffer);
 		}
-		else if (msg instanceof ByteBuf) {
-			result = "\n" + ByteBufUtil.prettyHexDump((ByteBuf) msg);
+		else if (msg instanceof Buffer) {
+			Buffer buffer = (Buffer) msg;
+			int length = buffer.readableBytes();
+			int rows = length / 16 + ((length & 15) == 0 ? 0 : 1) + 4;
+			StringBuilder buf = new StringBuilder(rows * 80);
+			BufferUtil.appendPrettyHexDump(buf, buffer, buffer.readerOffset(), length);
+			result = "\n" + buf;
 		}
 		else {
 			result = msg.toString();
@@ -732,13 +737,8 @@ public final class ReactorNetty {
 		}
 
 		@Override
-		public ByteBufAllocator alloc() {
+		public BufferAllocator alloc() {
 			return source.alloc();
-		}
-
-		@Override
-		public BufferAllocator bufferAlloc() {
-			return source.bufferAlloc();
 		}
 
 		@Override
@@ -747,7 +747,7 @@ public final class ReactorNetty {
 		}
 
 		@Override
-		public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
+		public NettyOutbound send(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
 			return then(source.send(dataStream, predicate));
 		}
 
@@ -842,7 +842,7 @@ public final class ReactorNetty {
 	};
 
 	/**
-	 * A handler that can be used to extract {@link ByteBuf} out of {@link ByteBufHolder},
+	 * A handler that can be used to extract {@link Buffer} out of {@link BufferHolder},
 	 * optionally also outputting additional messages
 	 *
 	 * @author Stephane Maldini
@@ -907,8 +907,8 @@ public final class ReactorNetty {
 	static NettyInbound unavailableInbound(Connection c) {
 		return new NettyInbound() {
 			@Override
-			public ByteBufFlux receive() {
-				return ByteBufFlux.fromInbound(Mono.error(new IllegalStateException("Receiver Unavailable")));
+			public BufferFlux receive() {
+				return BufferFlux.fromInbound(Mono.error(new IllegalStateException("Receiver Unavailable")));
 			}
 
 			@Override
@@ -926,18 +926,14 @@ public final class ReactorNetty {
 
 	static NettyOutbound unavailableOutbound(Connection c) {
 		return new NettyOutbound() {
-			@Override
-			public ByteBufAllocator alloc() {
-				return c.channel().alloc();
-			}
 
 			@Override
-			public BufferAllocator bufferAlloc() {
+			public BufferAllocator alloc() {
 				return c.channel().bufferAllocator();
 			}
 
 			@Override
-			public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
+			public NettyOutbound send(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
 				return this;
 			}
 
@@ -1006,11 +1002,9 @@ public final class ReactorNetty {
 	};
 
 
-	static final Predicate<ByteBuf>        PREDICATE_BB_FLUSH    = b -> false;
+	static final Predicate<Buffer>         PREDICATE_BUFFER_FLUSH = b -> false;
 
-	static final Predicate<Object>         PREDICATE_FLUSH       = o -> false;
-
-	static final ByteBuf                   BOUNDARY              = Unpooled.EMPTY_BUFFER;
+	static final Predicate<Object>         PREDICATE_FLUSH        = o -> false;
 
 	static final char CHANNEL_ID_PREFIX = '[';
 	static final String CHANNEL_ID_SUFFIX_1 = "] ";
@@ -1019,8 +1013,8 @@ public final class ReactorNetty {
 	static final int ORIGINAL_CHANNEL_ID_PREFIX_LENGTH = ORIGINAL_CHANNEL_ID_PREFIX.length();
 	static final char TRACE_ID_PREFIX = '(';
 
-	@SuppressWarnings("ReferenceEquality")
-	//Design to use reference comparison here
-	public static final Predicate<ByteBuf> PREDICATE_GROUP_FLUSH = b -> b == BOUNDARY;
+	public static final String PREDICATE_GROUP_BOUNDARY = "ReactorNettyBoundary";
+	public static final Predicate<Buffer> PREDICATE_GROUP_FLUSH =
+			b -> PREDICATE_GROUP_BOUNDARY.equals(b.toString(StandardCharsets.UTF_8));
 
 }

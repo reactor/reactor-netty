@@ -17,7 +17,7 @@ package reactor.netty.examples.documentation.http.client.send.headers;
 
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import reactor.core.publisher.Mono;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.http.client.HttpClient;
 
 public class Application {
@@ -29,7 +29,7 @@ public class Application {
 
 		client.post()
 		      .uri("https://example.com/")
-		      .send(ByteBufFlux.fromString(Mono.just("hello")))
+		      .send(BufferFlux.fromString(Mono.just("hello")))
 		      .response()
 		      .block();
 	}

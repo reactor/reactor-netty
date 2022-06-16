@@ -15,7 +15,7 @@
  */
 package reactor.netty.http;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
@@ -27,8 +27,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.ByteBufFlux;
-import reactor.netty.ByteBufMono;
+import reactor.netty.BufferFlux;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
@@ -106,7 +105,7 @@ class Http2Tests extends BaseHttpTest {
 				createServer()
 				          .protocol(HttpProtocol.H2C)
 				          .route(routes ->
-				              routes.post("/echo", (req, res) -> res.send(req.receive().retain())))
+				              routes.post("/echo", (req, res) -> res.send(req.receive().transferOwnership())))
 				          .bindNow();
 
 		ConnectionProvider provider = ConnectionProvider.create("testCustomConnectionProvider", 1);
@@ -115,7 +114,7 @@ class Http2Tests extends BaseHttpTest {
 				          .protocol(HttpProtocol.H2C)
 				          .post()
 				          .uri("/echo")
-				          .send(ByteBufFlux.fromString(Mono.just("testCustomConnectionProvider")))
+				          .send(BufferFlux.fromString(Mono.just("testCustomConnectionProvider")))
 				          .responseContent()
 				          .aggregate()
 				          .asString()
@@ -142,7 +141,7 @@ class Http2Tests extends BaseHttpTest {
 				createServer()
 				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
 				          .route(routes ->
-				              routes.post("/echo", (request, response) -> response.send(request.receive().retain())))
+				              routes.post("/echo", (request, response) -> response.send(request.receive().transferOwnership())))
 				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(length))
 				          .bindNow();
 
@@ -151,7 +150,7 @@ class Http2Tests extends BaseHttpTest {
 				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
 				          .post()
 				          .uri("/echo")
-				          .send(ByteBufFlux.fromString(Mono.just("doTestIssue1071")))
+				          .send(BufferFlux.fromString(Mono.just("doTestIssue1071")))
 				          .responseSingle((res, bytes) -> bytes.asString().defaultIfEmpty("NO RESPONSE").zipWith(Mono.just(res.status().code())))
 				          .block(Duration.ofSeconds(30));
 
@@ -227,7 +226,7 @@ class Http2Tests extends BaseHttpTest {
 				          .route(routes ->
 				              routes.post("/echo", (req, res) -> res.send(req.receive()
 				                                                             .aggregate()
-				                                                             .retain()
+				                                                             .transferOwnership()
 				                                                             .delayElement(Duration.ofMillis(100)))))
 				          .http2Settings(setting -> setting.maxConcurrentStreams(maxActiveStreams))
 				          .bindNow();
@@ -244,7 +243,7 @@ class Http2Tests extends BaseHttpTest {
 				    .flatMapDelayError(i ->
 				            client.post()
 				                  .uri("/echo")
-				                  .send(ByteBufFlux.fromString(Mono.just("doTestMaxActiveStreams")))
+				                  .send(BufferFlux.fromString(Mono.just("doTestMaxActiveStreams")))
 				                  .responseContent()
 				                  .aggregate()
 				                  .asString()
@@ -356,16 +355,16 @@ class Http2Tests extends BaseHttpTest {
 	@Test
 	void testMonoRequestBodySentAsFullRequest_Flux() {
 		// sends the message and then last http content
-		doTestMonoRequestBodySentAsFullRequest(ByteBufFlux.fromString(Mono.just("test")), 2);
+		doTestMonoRequestBodySentAsFullRequest(BufferFlux.fromString(Mono.just("test")), 2);
 	}
 
 	@Test
 	void testMonoRequestBodySentAsFullRequest_Mono() {
 		// sends "full" request
-		doTestMonoRequestBodySentAsFullRequest(ByteBufMono.fromString(Mono.just("test")), 1);
+		doTestMonoRequestBodySentAsFullRequest(BufferFlux.fromString(Mono.just("test")), 1);
 	}
 
-	private void doTestMonoRequestBodySentAsFullRequest(Publisher<? extends ByteBuf> body, int expectedMsg) {
+	private void doTestMonoRequestBodySentAsFullRequest(Publisher<? extends Buffer> body, int expectedMsg) {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()

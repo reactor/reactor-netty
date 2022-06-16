@@ -30,12 +30,10 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
@@ -79,6 +77,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.ReactorNetty.toPrettyHexDump;
 
 /**
  * @author Stephane Maldini
@@ -379,7 +378,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
+	public NettyOutbound send(Publisher<? extends Buffer> source) {
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
@@ -388,10 +387,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
 
-			ByteBufAllocator alloc = channel().alloc();
+			BufferAllocator alloc = channel().bufferAllocator();
 			return new PostHeadersNettyOutbound(Flux.from(source)
 			                .collectList()
-			                .doOnDiscard(ByteBuf.class, ByteBuf::release)
+			                .doOnDiscard(Buffer.class, Buffer::close)
 			                .flatMap(list -> {
 				                if (markSentHeaderAndBody(list.toArray())) {
 					                if (list.isEmpty()) {
@@ -399,16 +398,16 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 							                    channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage());
 					                }
 
-					                ByteBuf output;
+					                Buffer output;
 					                int i = list.size();
 					                if (i == 1) {
 						                output = list.get(0);
 					                }
 					                else {
-						                CompositeByteBuf agg = alloc.compositeBuffer(list.size());
+						                CompositeBuffer agg = alloc.compose();
 
-						                for (ByteBuf component : list) {
-							                agg.addComponent(true, component);
+						                for (Buffer component : list) {
+							                agg.extendWith(component.send());
 						                }
 
 						                output = agg;
@@ -417,14 +416,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					                if (output.readableBytes() > 0) {
 						                return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(output)).asStage());
 					                }
-					                output.release();
+					                output.close();
 					                return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage());
 				                }
-				                for (ByteBuf bb : list) {
+				                for (Buffer bb : list) {
 				                	if (log.isDebugEnabled()) {
-				                		log.debug(format(channel(), "Ignoring accumulated bytebuf on http GET {}"), ByteBufUtil.prettyHexDump(bb));
+				                		log.debug(format(channel(), "Ignoring accumulated bytebuf on http GET {}"), toPrettyHexDump(bb));
 					                }
-				                	bb.release();
+				                	bb.close();
 				                }
 				                return Mono.empty();
 			                }), this, null);

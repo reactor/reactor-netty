@@ -15,7 +15,6 @@
  */
 package reactor.netty.examples.documentation.http.client.websocket;
 
-import io.netty.buffer.Unpooled;
 import io.netty5.util.CharsetUtil;
 import reactor.core.publisher.Flux;
 import reactor.netty.http.client.HttpClient;
@@ -34,7 +33,7 @@ public class Application {
 		                 .subscribe(System.out::println);
 
 		          final byte[] msgBytes = "hello".getBytes(CharsetUtil.ISO_8859_1);
-		          return outbound.send(Flux.just(Unpooled.wrappedBuffer(msgBytes), Unpooled.wrappedBuffer(msgBytes)))
+		          return outbound.send(Flux.just(outbound.alloc().copyOf(msgBytes), outbound.alloc().copyOf(msgBytes)))
 		                         .neverComplete();
 		      })
 		      .blockLast();

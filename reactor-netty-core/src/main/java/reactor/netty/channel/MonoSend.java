@@ -20,12 +20,12 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.FileRegion;
-import io.netty5.util.ReferenceCountUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.ReactorNetty;
 
@@ -60,7 +60,7 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 
 	static final int                    REFILL_SIZE = MAX_SIZE / 2;
 
-	static final Function<ByteBuf, ByteBuf> TRANSFORMATION_FUNCTION_BB =
+	static final Function<Buffer, Buffer> TRANSFORMATION_FUNCTION_BB =
 		msg -> {
 			if (ReactorNetty.PREDICATE_GROUP_FLUSH.test(msg)) {
 				return null;
@@ -70,17 +70,17 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 
 	static final Function<Object, Object>   TRANSFORMATION_FUNCTION    = Function.identity();
 
-	static final Consumer<Object>  CONSUMER_NOCHECK_CLEANUP    = ReferenceCountUtil::release;
+	static final Consumer<Object>  CONSUMER_NOCHECK_CLEANUP    = Resource::dispose;
 
-	static final ToIntFunction<ByteBuf> SIZE_OF_BB  = ByteBuf::readableBytes;
+	static final ToIntFunction<Buffer> SIZE_OF_BB  = Buffer::readableBytes;
 
 	static final ToIntFunction<Object>  SIZE_OF     = msg -> {
 		if (msg instanceof ByteBufHolder) {
 			return ((ByteBufHolder) msg).content()
 			                            .readableBytes();
 		}
-		if (msg instanceof ByteBuf) {
-			return ((ByteBuf) msg).readableBytes();
+		if (msg instanceof Buffer) {
+			return ((Buffer) msg).readableBytes();
 		}
 		if (msg instanceof FileRegion) {
 			// aligns with DefaultMessageSizeEstimator.DEFAULT

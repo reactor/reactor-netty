@@ -399,6 +399,7 @@ public abstract class TransportConfig {
 		}
 
 		@Override
+		@SuppressWarnings("removal")
 		protected void initChannel(Channel channel) {
 			ChannelPipeline pipeline = channel.pipeline();
 

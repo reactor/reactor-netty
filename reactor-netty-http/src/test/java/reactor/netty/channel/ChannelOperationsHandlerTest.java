@@ -38,7 +38,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
 import reactor.test.StepVerifier;
@@ -96,8 +96,8 @@ class ChannelOperationsHandlerTest extends BaseHttpTest {
 				          })
 				          .post()
 				          .uri("/")
-				          .send(ByteBufFlux.fromString(flux)
-				                           .log("send"))
+				          .send(BufferFlux.fromString(flux)
+				                          .log("send"))
 				          .responseSingle((res, buf) -> Mono.just(res.status().code()));
 
 		StepVerifier.create(code)
@@ -143,7 +143,7 @@ class ChannelOperationsHandlerTest extends BaseHttpTest {
 			throw new IOException("Fail to start test server");
 		}
 
-		ByteBufFlux response =
+		BufferFlux response =
 				createClient(abortServerPort)
 				          .request(HttpMethod.GET)
 				          .uri("/")

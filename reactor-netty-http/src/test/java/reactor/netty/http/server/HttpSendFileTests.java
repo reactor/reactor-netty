@@ -39,8 +39,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Test;
@@ -54,6 +53,7 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.http.client.HttpClient;
 import reactor.util.annotation.Nullable;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class HttpSendFileTests extends BaseHttpTest {
@@ -311,19 +311,17 @@ class HttpSendFileTests extends BaseHttpTest {
 			Files.write(tempFile, fileBytes, StandardOpenOption.APPEND);
 		}
 
-		ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
-
-		Flux<ByteBuf> content =
+		Flux<Buffer> content =
 				Flux.using(
 				        () -> AsynchronousFileChannel.open(tempFile, StandardOpenOption.READ),
-				        ch -> Flux.<ByteBuf>create(fluxSink -> {
-				                TestCompletionHandler handler = new TestCompletionHandler(ch, fluxSink, allocator, chunk);
+				        ch -> Flux.<Buffer>create(fluxSink -> {
+				                TestCompletionHandler handler = new TestCompletionHandler(ch, fluxSink, chunk);
 				                fluxSink.onDispose(handler::dispose);
 				                ByteBuffer buf = ByteBuffer.allocate(chunk);
 				                ch.read(buf, 0, buf, handler);
 				        }),
 				        ch -> {/*the channel will be closed in the handler*/})
-				    .doOnDiscard(ByteBuf.class, ByteBuf::release)
+				    .doOnDiscard(Buffer.class, Buffer::close)
 				    .log("send", Level.INFO, SignalType.REQUEST, SignalType.ON_COMPLETE);
 
 		disposableServer =
@@ -366,9 +364,7 @@ class HttpSendFileTests extends BaseHttpTest {
 
 		private final AsynchronousFileChannel channel;
 
-		private final FluxSink<ByteBuf> sink;
-
-		private final ByteBufAllocator allocator;
+		private final FluxSink<Buffer> sink;
 
 		private final int chunk;
 
@@ -376,11 +372,9 @@ class HttpSendFileTests extends BaseHttpTest {
 
 		private final AtomicBoolean disposed = new AtomicBoolean();
 
-		TestCompletionHandler(AsynchronousFileChannel channel, FluxSink<ByteBuf> sink,
-							  ByteBufAllocator allocator, int chunk) {
+		TestCompletionHandler(AsynchronousFileChannel channel, FluxSink<Buffer> sink, int chunk) {
 			this.channel = channel;
 			this.sink = sink;
-			this.allocator = allocator;
 			this.chunk = chunk;
 		}
 
@@ -389,11 +383,11 @@ class HttpSendFileTests extends BaseHttpTest {
 			if (read != -1 && !disposed.get()) {
 				long pos = this.position.addAndGet(read);
 				dataBuffer.flip();
-				ByteBuf buf = allocator.buffer().writeBytes(dataBuffer);
+				Buffer buf = preferredAllocator().allocate(dataBuffer.remaining()).writeBytes(dataBuffer);
 				this.sink.next(buf);
 
 				if (disposed.get()) {
-					buf.release();
+					buf.close();
 					this.sink.complete();
 					closeChannel(channel);
 				}

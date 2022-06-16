@@ -99,14 +99,14 @@ class WebsocketClientOperationsTest extends BaseHttpTest {
 				.bindNow();
 
 		List<String> response = createClient(disposableServer.port())
-				.websocket(WebsocketClientSpec.builder().version(WebSocketVersion.V08).build())
+				.websocket(WebsocketClientSpec.builder().version(WebSocketVersion.V13).build())
 				.uri("/test")
 				.handle((in, out) -> in.receive().aggregate().asString())
 				.collectList()
 				.block(Duration.ofSeconds(10));
 
 		assertThat(response).hasSize(1);
-		assertThat(response.get(0)).isEqualTo("8");
+		assertThat(response.get(0)).isEqualTo("13");
 	}
 
 	@Test

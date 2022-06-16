@@ -20,17 +20,19 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.ChannelOption;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.ByteBufFlux;
-import reactor.netty.ByteBufMono;
+import reactor.netty.BufferFlux;
+import reactor.netty.BufferMono;
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
 import reactor.netty.channel.ChannelOperations;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 
 /**
  * Configures the HTTP request before calling one of the terminal,
@@ -88,7 +90,7 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 	}
 
 	@Override
-	public <V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver) {
+	public <V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super BufferFlux, ? extends Publisher<V>> receiver) {
 		return _connect().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp.receive()))
 		                                          .doFinally(s -> discard(resp)));
 	}
@@ -99,20 +101,20 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 	}
 
 	@Override
-	public ByteBufFlux responseContent() {
-		ByteBufAllocator alloc = (ByteBufAllocator) configuration().options()
-		                                                           .get(ChannelOption.ALLOCATOR);
+	public BufferFlux responseContent() {
+		BufferAllocator alloc = (BufferAllocator) configuration().options()
+		                                                         .get(ChannelOption.BUFFER_ALLOCATOR);
 		if (alloc == null) {
-			alloc = ByteBufAllocator.DEFAULT;
+			alloc = preferredAllocator();
 		}
 
 		@SuppressWarnings("unchecked")
 		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) connect();
-		return ByteBufFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
+		return BufferFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
 	}
 
 	@Override
-	public <V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver) {
+	public <V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super BufferMono, ? extends Mono<V>> receiver) {
 		return _connect().flatMap(resp -> receiver.apply(resp, resp.receive().aggregate())
 		                                          .doFinally(s -> discard(resp)));
 	}
@@ -129,7 +131,7 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 	}
 
 	@Override
-	public HttpClientFinalizer send(Publisher<? extends ByteBuf> requestBody) {
+	public HttpClientFinalizer send(Publisher<? extends Buffer> requestBody) {
 		Objects.requireNonNull(requestBody, "requestBody");
 		return send((req, out) -> out.send(requestBody));
 	}
@@ -150,7 +152,7 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 		}
 	}
 
-	static final Function<ChannelOperations<?, ?>, Publisher<ByteBuf>> contentReceiver = ChannelOperations::receive;
+	static final Function<ChannelOperations<?, ?>, Publisher<Buffer>> contentReceiver = ChannelOperations::receive;
 
 	static final Function<HttpClientOperations, HttpClientResponse> RESPONSE_ONLY = ops -> {
 		//defer the dispose to avoid over disposing on receive

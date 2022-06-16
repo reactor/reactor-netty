@@ -15,11 +15,13 @@
  */
 package reactor.netty.transport.logging;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.nio.charset.Charset;
 
+import io.netty5.buffer.api.Buffer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +33,6 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.Appender;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
@@ -70,7 +71,7 @@ class ReactorNettyLoggingHandlerTest {
 
 	@Test
 	void shouldLogByteBuf() {
-		final ByteBuf byteBuf = Unpooled.copiedBuffer("TEST", Charset.defaultCharset());
+		final Buffer byteBuf = preferredAllocator().copyOf("TEST".getBytes(Charset.defaultCharset()));
 
 		sendMessage(byteBuf, "[embedded, L:embedded - R:embedded] READ: 4B TEST");
 	}

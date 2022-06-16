@@ -22,8 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import org.assertj.core.api.Assertions;
@@ -32,7 +31,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.ByteBufFlux;
+import reactor.netty.BufferFlux;
 import reactor.netty.ChannelOperationsId;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
@@ -40,6 +39,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -58,11 +58,11 @@ class HttpTests extends BaseHttpTest {
 
 		HttpClient client = createClient(disposableServer.port());
 
-		Mono<ByteBuf> content =
+		Mono<Buffer> content =
 				client.headers(h -> h.add("Content-Type", "text/plain"))
 				      .post()
 				      .uri("/test/World")
-				      .send(ByteBufFlux.fromString(Mono.just("Hello")
+				      .send(BufferFlux.fromString(Mono.just("Hello")
 				                                       .log("client-send")))
 				      .responseContent()
 				      .log("client-received")
@@ -93,8 +93,8 @@ class HttpTests extends BaseHttpTest {
 				client.headers(h -> h.add("Content-Type", "text/plain"))
 				      .post()
 				      .uri("/test/World")
-				      .send(ByteBufFlux.fromString(Flux.just("Hello")
-				                                       .log("client-send")))
+				      .send(BufferFlux.fromString(Flux.just("Hello")
+				                                      .log("client-send")))
 				      .responseContent()
 				      .aggregate()
 				      .asString()
@@ -115,21 +115,21 @@ class HttpTests extends BaseHttpTest {
 		CountDownLatch errored4 = new CountDownLatch(1);
 		CountDownLatch errored5 = new CountDownLatch(1);
 
-		Flux<ByteBuf> flux1 = Flux.range(0, 257)
+		Flux<Buffer> flux1 = Flux.range(0, 257)
 		                         .flatMap(i -> {
 		                             if (i == 4) {
 		                                 // this is deliberate
 		                                 throw new RuntimeException("test");
 		                             }
-		                             return Mono.just(Unpooled.copyInt(i));
+		                             return Mono.just(preferredAllocator().allocate(16).writeInt(i));
 		                         });
 
-		Flux<ByteBuf> flux2 = Flux.range(0, 257)
+		Flux<Buffer> flux2 = Flux.range(0, 257)
 		                          .flatMap(i -> {
 			                          if (i == 4) {
 				                          return Mono.error(new Exception("test"));
 			                          }
-			                          return Mono.just(Unpooled.copyInt(i));
+			                          return Mono.just(preferredAllocator().allocate(16).writeInt(i));
 		                          });
 
 		disposableServer =
@@ -172,7 +172,7 @@ class HttpTests extends BaseHttpTest {
 				    .expectNext(500)
 				    .verifyComplete();
 
-		Mono<ByteBuf> content =
+		Mono<Buffer> content =
 				client.get()
 				      .uri("/test2")
 				      .responseContent()
@@ -203,7 +203,7 @@ class HttpTests extends BaseHttpTest {
 
 		Assertions.assertThat(errored3.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		Flux<ByteBuf> content2 = client.get()
+		Flux<Buffer> content2 = client.get()
 		                               .uri("/issue237_1")
 		                               .responseContent()
 		                               .log("received-status-5");
@@ -319,7 +319,7 @@ class HttpTests extends BaseHttpTest {
 				          .headers(h -> h.add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE))
 				          .post()
 				          .uri("/")
-				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+				          .send(BufferFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
 				          .responseSingle((res, bytes) -> bytes.asString()
 				                                               .zipWith(Mono.just(res.status().code())))
 				          .block(Duration.ofSeconds(5));
@@ -354,7 +354,7 @@ class HttpTests extends BaseHttpTest {
 				          .compress(true)
 				          .post()
 				          .uri("/hi")
-				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+				          .send(BufferFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
 				          .responseContent()
 				          .aggregate()
 				          .asString()
@@ -386,7 +386,7 @@ class HttpTests extends BaseHttpTest {
 		          .compress(true)
 		          .post()
 		          .uri("/hi")
-		          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+		          .send(BufferFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
 		          .responseContent()
 		          .aggregate()
 		          .asString()
@@ -419,7 +419,7 @@ class HttpTests extends BaseHttpTest {
 				          .compress(true)
 				          .post()
 				          .uri("/hi")
-				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+				          .send(BufferFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
 				          .responseContent()
 				          .aggregate()
 				          .asString()
@@ -451,7 +451,7 @@ class HttpTests extends BaseHttpTest {
 		          .compress(true)
 		          .post()
 		          .uri("/hi")
-		          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+		          .send(BufferFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
 		          .responseContent()
 		          .aggregate()
 		          .asString()

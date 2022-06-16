@@ -28,13 +28,12 @@ import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.api.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.EventLoop;
-import io.netty5.util.IllegalReferenceCountException;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import org.reactivestreams.Publisher;
@@ -67,9 +66,9 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 	}
 
-	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
+	static MonoSendMany<Buffer, Buffer> bufferSource(Publisher<? extends Buffer> source,
 			Channel channel,
-			Predicate<ByteBuf> predicate) {
+			Predicate<Buffer> predicate) {
 		return new MonoSendMany<>(source, channel, predicate, TRANSFORMATION_FUNCTION_BB, CONSUMER_NOCHECK_CLEANUP, SIZE_OF_BB);
 	}
 
@@ -200,7 +199,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				return;
 			}
 
-			// ReferenceCountUtil.touch(t);
 			if (!queue.offer(t)) {
 				onError(Operators.onOperatorError(s,
 						Exceptions.failWithOverflow(Exceptions.BACKPRESSURE_ERROR_QUEUE_FULL),
@@ -288,7 +286,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 
 						if (readableBytes == 0 && !(encodedMessage instanceof ByteBufHolder)) {
-							ReferenceCountUtil.release(encodedMessage);
+							Resource.dispose(encodedMessage);
 							nextRequest++;
 							continue;
 						}
@@ -468,7 +466,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			try {
 				parent.sourceCleanup.accept(i);
 			}
-			catch (IllegalReferenceCountException e) {
+			catch (RuntimeException e) {
 				// FIXME: should be removed once fusion is fixed in reactor-core
 				//        for now we have double releasing issue
 			}

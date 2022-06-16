@@ -21,7 +21,7 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import io.netty.buffer.ByteBuf;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.group.ChannelGroup;
@@ -267,7 +267,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 
 	/**
 	 * Apply or remove a wire logger configuration using {@link Transport} category (logger),
-	 * {@code DEBUG} logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link ByteBuf} format,
+	 * {@code DEBUG} logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link Buffer} format,
 	 * which means both events and content will be logged and the content will be in hex format.
 	 *
 	 * @param enable specifies whether the wire logger configuration will be added to the pipeline
@@ -293,7 +293,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 
 	/**
 	 * Apply a wire logger configuration using the specified category (logger),
-	 * {@code DEBUG} logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link ByteBuf} format,
+	 * {@code DEBUG} logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link Buffer} format,
 	 * which means both events and content will be logged and the content will be in hex format.
 	 *
 	 * @param category the logger category
@@ -306,7 +306,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 
 	/**
 	 * Apply a wire logger configuration using the specified category (logger),
-	 * logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link ByteBuf} format,
+	 * logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link Buffer} format,
 	 * which means both events and content will be logged and the content will be in hex format.
 	 *
 	 * @param category the logger category
@@ -321,7 +321,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 
 	/**
 	 * Apply a wire logger configuration using the specified category (logger),
-	 * logger level and {@link ByteBuf} format.
+	 * logger level and {@link Buffer} format.
 	 * Depending on the format:
 	 * <ul>
 	 *     <li>{@link AdvancedByteBufFormat#SIMPLE} - only the events will be logged</li>
@@ -334,7 +334,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 *
 	 * @param category the logger category
 	 * @param level the logger level
-	 * @param format the {@link ByteBuf} format
+	 * @param format the {@link Buffer} format
 	 * @return a new {@link Transport} reference
 	 */
 	public final T wiretap(String category, LogLevel level, AdvancedByteBufFormat format) {
@@ -346,7 +346,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 
 	/**
 	 * Apply a wire logger configuration using the specific category (logger),
-	 * logger level, {@link ByteBuf} format and charset.
+	 * logger level, {@link Buffer} format and charset.
 	 * The charset is relevant in case of {@link AdvancedByteBufFormat#TEXTUAL}
 	 * and a different charset than {@link Charset#defaultCharset()} is required.
 	 * Depending on the format:
@@ -360,7 +360,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 *
 	 * @param category the logger category
 	 * @param level    the logger level
-	 * @param format   the {@link ByteBuf} format
+	 * @param format   the {@link Buffer} format
 	 * @param charset  the charset
 	 * @return a new {@link Transport} reference
 	 */

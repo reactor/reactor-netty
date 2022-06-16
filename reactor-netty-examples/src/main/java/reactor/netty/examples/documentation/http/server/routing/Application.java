@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,11 @@ public class Application {
 				              routes.get("/hello",        //<1>
 				                        (request, response) -> response.sendString(Mono.just("Hello World!")))
 				                    .post("/echo",        //<2>
-				                        (request, response) -> response.send(request.receive().retain()))
+				                        (request, response) -> response.send(request.receive().transferOwnership()))
 				                    .get("/path/{param}", //<3>
 				                        (request, response) -> response.sendString(Mono.just(request.param("param"))))
 				                    .ws("/ws",            //<4>
-				                        (wsInbound, wsOutbound) -> wsOutbound.send(wsInbound.receive().retain())))
+				                        (wsInbound, wsOutbound) -> wsOutbound.send(wsInbound.receive().transferOwnership())))
 				          .bindNow();
 
 		server.onDispose()
