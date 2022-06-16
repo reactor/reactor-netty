@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import org.reactivestreams.Subscription;

@@ -21,7 +21,8 @@ dependencies {
 	api "io.micrometer:micrometer-core:$micrometerVersion"
 
 	api "io.netty:netty-buffer:$nettyByteBufVersion"
-	api "io.netty:netty5-transport-native-epoll:$nettyVersion:linux-x86_64"
+	// TODO temporary depend on natives from 5.0.0.Alpha2
+	api "io.netty:netty5-transport-native-epoll:5.0.0.Alpha2:linux-x86_64"
 
 	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"

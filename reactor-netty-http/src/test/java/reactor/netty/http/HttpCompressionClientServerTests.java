@@ -28,6 +28,7 @@ import java.util.zip.GZIPInputStream;
 import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -49,6 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author smaldini
  * @author Violeta Georgieva
  */
+@Disabled
 class HttpCompressionClientServerTests extends BaseHttpTest {
 
 	@Retention(RetentionPolicy.RUNTIME)

@@ -23,8 +23,10 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import reactor.netty.http.client.HttpClient;
 
+@Disabled
 class HttpsSendFileTests extends HttpSendFileTests {
 
 	static SelfSignedCertificate ssc;

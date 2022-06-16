@@ -18,6 +18,7 @@ package reactor.netty.http.server;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
+import org.junit.jupiter.api.Disabled;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 
@@ -29,6 +30,7 @@ import javax.net.ssl.SSLException;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
+@Disabled
 class Http2ConnectionInfoTests extends ConnectionInfoTests {
 	@Override
 	protected HttpClient customizeClientOptions(HttpClient httpClient) {

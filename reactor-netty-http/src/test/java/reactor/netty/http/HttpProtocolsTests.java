@@ -29,6 +29,7 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.concurrent.DefaultPromise;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
@@ -70,6 +71,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
+@Disabled
 class HttpProtocolsTests extends BaseHttpTest {
 	static final ConnectionProvider provider =
 			ConnectionProvider.builder("HttpProtocolsTests")

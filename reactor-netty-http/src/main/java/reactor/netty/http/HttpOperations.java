@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.Resource;
+import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.CombinedChannelDuplexHandler;
 import io.netty5.handler.codec.ByteToMessageCodec;

@@ -24,6 +24,7 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty5.channel.ChannelOption;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
@@ -54,6 +55,7 @@ import static reactor.netty.Metrics.USED_HEAP_MEMORY;
 /**
  * @author Violeta Georgieva
  */
+@Disabled
 class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 	private MeterRegistry registry;
 
