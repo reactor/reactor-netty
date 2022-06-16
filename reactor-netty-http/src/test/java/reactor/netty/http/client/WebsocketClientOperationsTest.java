@@ -106,7 +106,7 @@ class WebsocketClientOperationsTest extends BaseHttpTest {
 				.block(Duration.ofSeconds(10));
 
 		assertThat(response).hasSize(1);
-		assertThat(response.get(0)).isEqualTo("8");
+		assertThat(response.get(0)).isEqualTo("13");
 	}
 
 	@Test
