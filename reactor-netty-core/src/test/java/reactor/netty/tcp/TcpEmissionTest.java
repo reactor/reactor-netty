@@ -42,7 +42,7 @@ class TcpEmissionTest {
 		DisposableServer server =
 				TcpServer.create()
 				         .handle((inbound, outbound) ->
-				                 outbound.sendBuffer(
+				                 outbound.send(
 				                         Flux.fromStream(IntStream.range(0, emissionCount)
 				                                                  .mapToObj(i -> {
 				                                                      random.nextBytes(array);

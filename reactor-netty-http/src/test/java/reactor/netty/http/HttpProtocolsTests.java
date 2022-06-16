@@ -22,7 +22,6 @@ import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.read.ListAppender;
 import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.Send;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
@@ -30,7 +29,6 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.concurrent.DefaultPromise;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
@@ -294,7 +292,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 				          if (serverConfig.isSecure() != secure) {
 				              return res.status(400).send();
 				          }
-				          Flux<Send<Buffer>> publisher = req.receive().send();
+				          Flux<Buffer> publisher = req.receive().transfer();
 				          if (externalThread) {
 				              publisher = publisher.subscribeOn(Schedulers.boundedElastic());
 				          }
@@ -567,7 +565,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		disposableServer =
 				server.idleTimeout(Duration.ofSeconds(60))
 						.route(routes ->
-								routes.post("/echo", (req, res) -> res.send(req.receive().send())))
+								routes.post("/echo", (req, res) -> res.send(req.receive().transfer())))
 						.bindNow();
 
 		StepVerifier.create(

@@ -49,8 +49,8 @@ public final class EchoClient {
 		}
 
 		Connection connection =
-				client.handle((in, out) -> out.send(Flux.concat(BufferFlux.fromString(Mono.just("echo")).send(),
-				                                                in.receive().send())))
+				client.handle((in, out) -> out.send(Flux.concat(BufferFlux.fromString(Mono.just("echo")),
+				                                                in.receive().transfer())))
 				      .connectNow();
 
 		connection.onDispose()

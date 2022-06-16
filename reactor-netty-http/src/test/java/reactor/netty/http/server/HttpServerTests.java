@@ -902,7 +902,7 @@ class HttpServerTests extends BaseHttpTest {
 		CountDownLatch latch = new CountDownLatch(1);
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .sendBuffer(Flux.just(data, data1, data2))
+				                 .send(Flux.just(data, data1, data2))
 				                 .then()
 				                 .doOnCancel(() -> {
 				                     data.close();
@@ -942,7 +942,7 @@ class HttpServerTests extends BaseHttpTest {
 		Buffer data2 = data.copy(0, data.readableBytes(), true);
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .sendBuffer(Flux.defer(() -> Flux.just(data, data1, data2))
+				                 .send(Flux.defer(() -> Flux.just(data, data1, data2))
 				                                 .doFinally(s -> latch.countDown()))
 				                 .then(),
 				(req, out) -> out);
@@ -957,7 +957,7 @@ class HttpServerTests extends BaseHttpTest {
 		Buffer data = preferredAllocator().copyOf("test".getBytes(Charset.defaultCharset())).makeReadOnly();
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .sendBuffer(Mono.just(data))
+				                 .send(Mono.just(data))
 				                 .then(),
 				(req, out) -> out);
 		assertThat(data.isAccessible()).isFalse();
@@ -1007,7 +1007,7 @@ class HttpServerTests extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor()))
-				          .handle((req, res) -> res.send(req.receive().send()))
+				          .handle((req, res) -> res.send(req.receive().transfer()))
 				          .bindNow(Duration.ofSeconds(30));
 
 		byte[] bytes = "test".getBytes(Charset.defaultCharset());
@@ -1016,7 +1016,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .headers(h -> h.add("Content-Encoding", "gzip"))
 				          .post()
 				          .uri("/")
-				          .send((req, out) -> out.sendBuffer(Mono.just(out.alloc().copyOf(compress(bytes)))))
+				          .send((req, out) -> out.send(Mono.just(out.alloc().copyOf(compress(bytes)))))
 				          .responseContent()
 				          .aggregate()
 				          .asString()
@@ -1455,7 +1455,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .route(r -> r.put("/1", (req, res) -> req.receive()
 				                                                   .then(res.sendString(Mono.just("test"))
 				                                                            .then()))
-				                       .put("/2", (req, res) -> res.send(req.receive().send())))
+				                       .put("/2", (req, res) -> res.send(req.receive().transfer())))
 				          .bindNow();
 
 		doTestDecodingFailureLastHttpContent("PUT /1 HTTP/1.1\r\nHost: a.example.com\r\n" +
@@ -1748,7 +1748,7 @@ class HttpServerTests extends BaseHttpTest {
 				              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
 				          });
 				          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
-				          return res.send(req.receive().send());
+				          return res.send(req.receive().transfer());
 				      })
 				      .bindNow();
 
@@ -2032,7 +2032,7 @@ class HttpServerTests extends BaseHttpTest {
 		HttpServer server =
 				createServer()
 				          .idleTimeout(Duration.ofMillis(200))
-				          .handle((req, resp) -> resp.send(req.receive().send()));
+				          .handle((req, resp) -> resp.send(req.receive().transfer()));
 
 		HttpClient client =
 				createClient(() -> disposableServer.address())

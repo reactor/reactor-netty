@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
@@ -106,7 +105,7 @@ class Http2Tests extends BaseHttpTest {
 				createServer()
 				          .protocol(HttpProtocol.H2C)
 				          .route(routes ->
-				              routes.post("/echo", (req, res) -> res.send(req.receive().send())))
+				              routes.post("/echo", (req, res) -> res.send(req.receive().transfer())))
 				          .bindNow();
 
 		ConnectionProvider provider = ConnectionProvider.create("testCustomConnectionProvider", 1);
@@ -142,7 +141,7 @@ class Http2Tests extends BaseHttpTest {
 				createServer()
 				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
 				          .route(routes ->
-				              routes.post("/echo", (request, response) -> response.send(request.receive().send())))
+				              routes.post("/echo", (request, response) -> response.send(request.receive().transfer())))
 				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(length))
 				          .bindNow();
 
@@ -227,7 +226,7 @@ class Http2Tests extends BaseHttpTest {
 				          .route(routes ->
 				              routes.post("/echo", (req, res) -> res.send(req.receive()
 				                                                             .aggregate()
-				                                                             .send()
+				                                                             .transfer()
 				                                                             .delayElement(Duration.ofMillis(100)))))
 				          .http2Settings(setting -> setting.maxConcurrentStreams(maxActiveStreams))
 				          .bindNow();

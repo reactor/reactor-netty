@@ -32,7 +32,6 @@ import java.util.function.Predicate;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.Send;
 import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.channel.Channel;
 import io.netty5.channel.DefaultFileRegion;
@@ -88,7 +87,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return A new {@link NettyOutbound} to append further send. It will emit a complete
 	 * signal successful sequence write (e.g. after "flush") or any error during write.
 	 */
-	default NettyOutbound send(Publisher<? extends Send<Buffer>> dataStream) {
+	default NettyOutbound send(Publisher<? extends Buffer> dataStream) {
 		return send(dataStream, ReactorNetty.PREDICATE_BUFFER_FLUSH);
 	}
 
@@ -106,42 +105,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return A new {@link NettyOutbound} to append further send. It will emit a complete
 	 * signal successful sequence write (e.g. after "flush") or any error during write.
 	 */
-	default NettyOutbound send(Publisher<? extends Send<Buffer>> dataStream, Predicate<Buffer> predicate) {
-		return sendBuffer(ReactorNetty.publisherOrScalarMap(dataStream, Send::receive), predicate);
-	}
-
-	/**
-	 * Sends data to the peer, listens for any error on write and closes on terminal signal
-	 * (complete|error). <p>A new {@link NettyOutbound} type (or the same) for typed send
-	 * sequences.</p>
-	 * <p>Note: Nesting any send* method is not supported.</p>
-	 * <p>Note: If you need to transform from {@link io.netty.buffer.ByteBuf} to {@link Buffer}
-	 * you can use {@link ByteBufAdaptor#extractOrCopy(BufferAllocator, io.netty.buffer.ByteBuf)}</p>
-	 *
-	 * @param dataStream the dataStream publishing OUT items to write on this channel
-	 *
-	 * @return A new {@link NettyOutbound} to append further send. It will emit a complete
-	 * signal successful sequence write (e.g. after "flush") or any error during write.
-	 */
-	default NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream) {
-		return sendBuffer(dataStream, ReactorNetty.PREDICATE_BUFFER_FLUSH);
-	}
-
-	/**
-	 * Sends data to the peer, listens for any error on write and closes on terminal signal
-	 * (complete|error). <p>A new {@link NettyOutbound} type (or the same) for typed send
-	 * sequences.</p>
-	 * <p>Note: Nesting any send* method is not supported.</p>
-	 * <p>Note: If you need to transform from {@link io.netty.buffer.ByteBuf} to {@link Buffer}
-	 * you can use {@link ByteBufAdaptor#extractOrCopy(BufferAllocator, io.netty.buffer.ByteBuf)}</p>
-	 *
-	 * @param dataStream the dataStream publishing OUT items to write on this channel
-	 * @param predicate that returns true if explicit flush operation is needed after that buffer
-	 *
-	 * @return A new {@link NettyOutbound} to append further send. It will emit a complete
-	 * signal successful sequence write (e.g. after "flush") or any error during write.
-	 */
-	NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate);
+	NettyOutbound send(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate);
 
 	/**
 	 * Sends bytes to the peer, listens for any error on write and closes on terminal
@@ -155,7 +119,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * error during write
 	 */
 	default NettyOutbound sendByteArray(Publisher<? extends byte[]> dataStream) {
-		return sendBuffer(ReactorNetty.publisherOrScalarMap(dataStream, bytes -> alloc().copyOf(bytes)));
+		return send(ReactorNetty.publisherOrScalarMap(dataStream, bytes -> alloc().copyOf(bytes)));
 	}
 
 	/**
@@ -268,7 +232,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 */
 	default NettyOutbound sendGroups(Publisher<? extends Publisher<? extends Buffer>> dataStreams) {
 		Buffer BOUNDARY = alloc().copyOf(PREDICATE_GROUP_BOUNDARY.getBytes(StandardCharsets.UTF_8)).makeReadOnly();
-		return sendBuffer(
+		return send(
 				Flux.from(dataStreams)
 				    .concatMap(p -> Flux.<Buffer>from(p)
 				                        .concatWith(Mono.just(BOUNDARY.copy(0, BOUNDARY.readableBytes(), true))), 32)
@@ -347,7 +311,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	default NettyOutbound sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
 		Objects.requireNonNull(charset, "charset");
-		return sendBuffer(ReactorNetty.publisherOrScalarMap(dataStream, s -> alloc().copyOf(s.getBytes(charset))));
+		return send(ReactorNetty.publisherOrScalarMap(dataStream, s -> alloc().copyOf(s.getBytes(charset))));
 	}
 
 	/**

@@ -378,12 +378,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	public NettyOutbound sendBuffer(Publisher<? extends Buffer> source) {
+	public NettyOutbound send(Publisher<? extends Buffer> source) {
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (source instanceof Mono) {
-			return super.sendBuffer(source);
+			return super.send(source);
 		}
 		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
 
@@ -429,7 +429,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			                }), this, null);
 		}
 
-		return super.sendBuffer(source);
+		return super.send(source);
 	}
 
 	final URI websocketUri() {

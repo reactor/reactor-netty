@@ -32,7 +32,6 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -139,14 +138,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.metrics(true, Function.identity())
 				.httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
 				.route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().send().delayElements(Duration.ofMillis(10))))
+								.send(req.receive().transfer().delayElements(Duration.ofMillis(10))))
 						.post("/2", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().send().delayElements(Duration.ofMillis(10))))
+								.send(req.receive().transfer().delayElements(Duration.ofMillis(10))))
 						.post("/4", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().send().doOnNext(b ->
+								.send(req.receive().transfer().doOnNext(b ->
 										checkServerConnectionsMicrometer(req))))
 						.post("/5", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().send().doOnNext(b ->
+								.send(req.receive().transfer().doOnNext(b ->
 										checkServerConnectionsRecorder(req)))));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);

@@ -26,7 +26,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -143,19 +142,19 @@ class HttpTests extends BaseHttpTest {
 						                                                 .log("send-1")
 						                                                 .doOnError(t -> errored1.countDown()))
 						               .get("/test3", (req, res) -> Flux.error(new Exception("test3")))
-						               .get("/issue231_1", (req, res) -> res.sendBuffer(flux1)
+						               .get("/issue231_1", (req, res) -> res.send(flux1)
 						                                                      .then()
 						                                                      .log("send-2")
 						                                                      .doOnError(t -> errored2.countDown()))
-						               .get("/issue231_2", (req, res) -> res.sendBuffer(flux2)
+						               .get("/issue231_2", (req, res) -> res.send(flux2)
 						                                                      .then()
 						                                                      .log("send-3")
 						                                                      .doOnError(t -> errored3.countDown()))
-						               .get("/issue237_1", (req, res) -> res.sendBuffer(flux1)
+						               .get("/issue237_1", (req, res) -> res.send(flux1)
 						                                                      .then()
 						                                                      .log("send-4")
 						                                                      .doOnError(t -> errored4.countDown()))
-						               .get("/issue237_2", (req, res) -> res.sendBuffer(flux2)
+						               .get("/issue237_2", (req, res) -> res.send(flux2)
 						                                                      .then()
 						                                                      .log("send-5")
 						                                                      .doOnError(t -> errored5.countDown())))

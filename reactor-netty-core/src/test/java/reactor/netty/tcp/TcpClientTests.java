@@ -758,7 +758,7 @@ public class TcpClientTests {
 				TcpServer.create()
 				         .port(0)
 				         .handle((req, res) -> res.send(req.receive()
-				                                           .send()
+				                                           .transfer()
 				                                           .delaySubscription(Duration.ofSeconds(1))))
 				         .wiretap(true)
 				         .bindNow();
@@ -879,7 +879,7 @@ public class TcpClientTests {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
-				         .handle((req, res) -> res.send(req.receive().send()))
+				         .handle((req, res) -> res.send(req.receive().transfer()))
 				         .wiretap(true)
 				         .bindNow();
 
@@ -938,7 +938,7 @@ public class TcpClientTests {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
-				         .handle((req, res) -> res.send(req.receive().send()))
+				         .handle((req, res) -> res.send(req.receive().transfer()))
 				         .wiretap(true)
 				         .bindNow();
 

@@ -49,7 +49,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	String selectedSubprotocol();
 
 	@Override
-	NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream);
+	NettyOutbound send(Publisher<? extends Buffer> dataStream);
 
 	/**
 	 * Prepare to send a close frame on subscribe then close the underlying channel

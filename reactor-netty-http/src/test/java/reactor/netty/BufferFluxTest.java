@@ -26,7 +26,6 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
@@ -70,7 +69,7 @@ class BufferFluxTest extends BaseHttpTest {
 
 		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		disposableServer = server.handle((req, res) ->
-		                                   res.sendBuffer(BufferFlux.fromPath(path))
+		                                   res.send(BufferFlux.fromPath(path))
 		                                      .then())
 		                        .bindNow();
 

@@ -865,7 +865,7 @@ class WebsocketTest extends BaseHttpTest {
 	@Test
 	void testIssue444_2() {
 		doTestIssue444((in, out) ->
-				out.sendBuffer(Flux.range(0, 10)
+				out.send(Flux.range(0, 10)
 				             .map(i -> {
 				                 if (i == 5) {
 				                     out.sendClose(1001, "Going Away").subscribe();

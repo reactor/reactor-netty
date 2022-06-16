@@ -190,7 +190,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 	}
 
 	@Override
-	public NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream) {
+	public NettyOutbound send(Publisher<? extends Buffer> dataStream) {
 		return sendObject(Flux.from(dataStream).map(bytebufToWebsocketFrame));
 	}
 

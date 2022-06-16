@@ -150,7 +150,7 @@ public interface HttpServerRoutes extends
 		Objects.requireNonNull(path, "path");
 		return route(uri, (req, resp) -> {
 			if (!Files.isReadable(path)) {
-				return resp.sendBuffer(BufferFlux.fromPath(path));
+				return resp.send(BufferFlux.fromPath(path));
 			}
 			if (interceptor != null) {
 				return interceptor.apply(resp)

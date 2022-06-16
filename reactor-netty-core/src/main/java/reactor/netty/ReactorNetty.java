@@ -747,8 +747,8 @@ public final class ReactorNetty {
 		}
 
 		@Override
-		public NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
-			return then(source.sendBuffer(dataStream, predicate));
+		public NettyOutbound send(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
+			return then(source.send(dataStream, predicate));
 		}
 
 		@Override
@@ -933,7 +933,7 @@ public final class ReactorNetty {
 			}
 
 			@Override
-			public NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
+			public NettyOutbound send(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
 				return this;
 			}
 

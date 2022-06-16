@@ -281,7 +281,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
+	public NettyOutbound send(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
 		requireNonNull(predicate, "predicate");
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));

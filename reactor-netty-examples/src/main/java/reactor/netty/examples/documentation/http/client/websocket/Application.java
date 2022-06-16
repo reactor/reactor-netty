@@ -33,7 +33,7 @@ public class Application {
 		                 .subscribe(System.out::println);
 
 		          final byte[] msgBytes = "hello".getBytes(CharsetUtil.ISO_8859_1);
-		          return outbound.sendBuffer(Flux.just(outbound.alloc().copyOf(msgBytes), outbound.alloc().copyOf(msgBytes)))
+		          return outbound.send(Flux.just(outbound.alloc().copyOf(msgBytes), outbound.alloc().copyOf(msgBytes)))
 		                         .neverComplete();
 		      })
 		      .blockLast();

@@ -164,7 +164,7 @@ class TcpServerTests {
 			  });
 
 			//out
-			return out.sendBuffer(Flux.just(new Pojo("John" + " Doe"))
+			return out.send(Flux.just(new Pojo("John" + " Doe"))
 			                    .map(s -> {
 			                        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
 			                            m.writeValue(os, s);
@@ -556,7 +556,7 @@ class TcpServerTests {
 
 		DisposableServer server =
 		        TcpServer.create()
-		                 .handle((in, out) -> out.sendBuffer(in.receive()
+		                 .handle((in, out) -> out.send(in.receive()
 		                                                 .asString()
 		                                                 .map(jsonDecoder)
 		                                                 .log()
@@ -620,7 +620,7 @@ class TcpServerTests {
 				                                .map(jsonDecoder)
 				                                .concatMap(Flux::fromArray)
 				                                .window(5)
-				                                .concatMap(w -> out.sendBuffer(w.collectList().map(jsonEncoder))))
+				                                .concatMap(w -> out.send(w.collectList().map(jsonEncoder))))
 				         .wiretap(true)
 				         .bindNow();
 
@@ -638,7 +638,7 @@ class TcpServerTests {
 		                                   .concatMap(Flux::fromArray)
 		                                   .subscribe(c -> dataLatch.countDown());
 
-		                                 return out.sendBuffer(Flux.range(1, 10)
+		                                 return out.send(Flux.range(1, 10)
 		                                                     .map(it -> new Pojo("test" + it))
 		                                                     .log("send")
 		                                                     .collectList()
@@ -714,7 +714,7 @@ class TcpServerTests {
 		                                   .log("receive")
 		                                   .subscribe(c -> latch.countDown());
 
-		                                 return out.sendBuffer(Flux.range(1, elem)
+		                                 return out.send(Flux.range(1, elem)
 		                                                     .map(i -> new Pojo("test" + i))
 		                                                     .log("send")
 		                                                     .collectList()
@@ -1000,7 +1000,7 @@ class TcpServerTests {
 				TcpServer.create()
 				         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
 				         .wiretap(true)
-				         .handle((in, out) -> out.send(in.receive().send()))
+				         .handle((in, out) -> out.send(in.receive().transfer()))
 				         .bindNow();
 
 		Connection conn =

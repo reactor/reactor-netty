@@ -107,7 +107,7 @@ class NettyOutboundTest {
 			}
 
 			@Override
-			public NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
+			public NettyOutbound send(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
 				return this;
 			}
 
@@ -196,7 +196,7 @@ class NettyOutboundTest {
 			}
 
 			@Override
-			public NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
+			public NettyOutbound send(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
 				return this;
 			}
 
@@ -288,7 +288,7 @@ class NettyOutboundTest {
 			}
 
 			@Override
-			public NettyOutbound sendBuffer(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
+			public NettyOutbound send(Publisher<? extends Buffer> dataStream, Predicate<Buffer> predicate) {
 				return this;
 			}
 

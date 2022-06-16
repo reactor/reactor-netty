@@ -1057,7 +1057,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		disposableServer =
 				createServer()
-				          .handle((req, res) -> res.send(req.receive().send()))
+				          .handle((req, res) -> res.send(req.receive().transfer()))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1194,7 +1194,7 @@ class HttpClientTest extends BaseHttpTest {
 				                                .get(HttpHeaderNames.CONTENT_LENGTH))
 				                     .send(req.receive()
 				                              .aggregate()
-				                              .send()))
+				                              .transfer()))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1223,7 +1223,7 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .secure(ssl -> ssl.sslContext(sslServer))
-				          .handle((req, res) -> res.send(req.receive().send()))
+				          .handle((req, res) -> res.send(req.receive().transfer()))
 				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.create("testExplicitEmptyBodyOnGetWorks", 1);
@@ -1246,7 +1246,7 @@ class HttpClientTest extends BaseHttpTest {
 	void testExplicitSendMonoErrorOnGet() {
 		disposableServer =
 				createServer()
-				          .handle((req, res) -> res.send(req.receive().send()))
+				          .handle((req, res) -> res.send(req.receive().transfer()))
 				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.create("test", 1);
@@ -1407,7 +1407,7 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .handle((req, res) -> res.send(req.receive()
-				                                            .send()
+				                                            .transfer()
 				                                            .delaySubscription(Duration.ofSeconds(1))))
 				          .bindNow();
 
@@ -1527,7 +1527,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		try (Buffer buffer1 = alloc.allocate(16).writeInt(1).makeReadOnly()) {
 			client.request(HttpMethod.GET)
-			      .send((req, out) -> out.sendBuffer(Flux.range(0, 10)
+			      .send((req, out) -> out.send(Flux.range(0, 10)
 			                                             .map(i -> buffer1.copy(0, buffer1.readableBytes(), true))))
 			      .response()
 			      .block(Duration.ofSeconds(30));
@@ -1644,7 +1644,7 @@ class HttpClientTest extends BaseHttpTest {
 	void testDoOnRequestInvokedBeforeSendingRequest() {
 		disposableServer =
 				createServer()
-				          .handle((req, res) -> res.send(req.receive().send()))
+				          .handle((req, res) -> res.send(req.receive().transfer()))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -2678,7 +2678,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .handle((req, res) -> res.addHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
 				                                   .status(HttpResponseStatus.BAD_REQUEST)
 				                                   .send(req.receive()
-				                                            .send()
+				                                            .transfer()
 				                                            .next()))
 				          .bindNow();
 

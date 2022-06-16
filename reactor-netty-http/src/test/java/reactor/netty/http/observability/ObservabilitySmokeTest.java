@@ -109,7 +109,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 					          .metrics(true, Function.identity())
 					          .secure(spec -> spec.sslContext(serverCtxHttp))
 					          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2)
-					          .route(r -> r.post("/post", (req, res) -> res.send(req.receive().send())))
+					          .route(r -> r.post("/post", (req, res) -> res.send(req.receive().transfer())))
 					          .bindNow();
 
 			HttpClient client;
@@ -175,7 +175,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 				    .flatMap(i ->
 				        localClient.post()
 				                   .uri("/post")
-				                   .send((req, out) -> out.sendBuffer(Mono.just(out.alloc().copyOf(content))))
+				                   .send((req, out) -> out.send(Mono.just(out.alloc().copyOf(content))))
 				                   .responseSingle((res, byteBuf) -> byteBuf.asByteArray()))
 				    .collectList()
 				    .block(Duration.ofSeconds(10));

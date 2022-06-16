@@ -133,7 +133,7 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 	@Override
 	public HttpClientFinalizer send(Publisher<? extends Buffer> requestBody) {
 		Objects.requireNonNull(requestBody, "requestBody");
-		return send((req, out) -> out.sendBuffer(requestBody));
+		return send((req, out) -> out.send(requestBody));
 	}
 
 	@Override

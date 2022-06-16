@@ -268,13 +268,14 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * Returns {@link Flux} of temporary holders of {@link Buffer}s.
+	 * Returns {@link Flux} of split {@link Buffer}s.
 	 * This transfers the ownership to the recipient.
+	 * The caller of this method should ensure the {@link Buffer}s are closed.
 	 *
-	 * @return {@link Flux} of temporary holders of {@link Buffer}
+	 * @return {@link Flux} of split {@link Buffer}s
 	 */
-	public final Flux<Send<Buffer>> send() {
-		return map(Buffer::send);
+	public final Flux<Buffer> transfer() {
+		return map(Buffer::split);
 	}
 
 	final BufferAllocator alloc;

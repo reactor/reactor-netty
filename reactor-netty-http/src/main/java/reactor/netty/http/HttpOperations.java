@@ -102,7 +102,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public NettyOutbound sendBuffer(Publisher<? extends Buffer> source) {
+	public NettyOutbound send(Publisher<? extends Buffer> source) {
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
@@ -130,7 +130,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					})
 					.doOnDiscard(Buffer.class, Buffer::close), this, null);
 		}
-		return super.sendBuffer(source);
+		return super.send(source);
 	}
 
 	@Override
@@ -481,8 +481,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		}
 
 		@Override
-		public NettyOutbound sendBuffer(Publisher<? extends Buffer> publisher, Predicate<Buffer> predicate) {
-			return parent.sendBuffer(publisher, predicate);
+		public NettyOutbound send(Publisher<? extends Buffer> publisher, Predicate<Buffer> predicate) {
+			return parent.send(publisher, predicate);
 		}
 
 		@Override

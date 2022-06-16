@@ -51,7 +51,7 @@ public class Application {
 		Flux<Long> flux = Flux.interval(Duration.ofSeconds(10));
 		return (request, response) ->
 		        response.sse()
-		                .sendBuffer(flux.map(obj -> toBuffer(obj, response.alloc())), b -> true);
+		                .send(flux.map(obj -> toBuffer(obj, response.alloc())), b -> true);
 	}
 
 	/**

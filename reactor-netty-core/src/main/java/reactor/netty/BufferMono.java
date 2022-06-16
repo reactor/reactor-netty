@@ -19,7 +19,6 @@ import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.buffer.api.Send;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.Fuseable;
@@ -140,13 +139,14 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * Returns {@link Mono} of temporary holders of {@link Buffer}s.
+	 * Returns {@link Mono} of split {@link Buffer}s.
 	 * This transfers the ownership to the recipient.
+	 * The caller of this method should ensure the {@link Buffer}s are closed.
 	 *
-	 * @return {@link Mono} of temporary holders of {@link Buffer}
+	 * @return {@link Mono} of split {@link Buffer}s
 	 */
-	public final Mono<Send<Buffer>> send() {
-		return map(Buffer::send);
+	public final Mono<Buffer> transfer() {
+		return map(Buffer::split);
 	}
 
 	@Override

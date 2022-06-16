@@ -44,7 +44,7 @@ public final class EchoServer {
 				          .compress(COMPRESS)
 				          .route(r -> r.post("/echo",
 				                  (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
-				                                   .send(req.receive().send())));
+				                                   .send(req.receive().transfer())));
 
 		if (SECURE) {
 			SelfSignedCertificate ssc = new SelfSignedCertificate();

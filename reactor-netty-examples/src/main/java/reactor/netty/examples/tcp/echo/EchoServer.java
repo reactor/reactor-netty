@@ -35,7 +35,7 @@ public final class EchoServer {
 				TcpServer.create()
 				         .port(PORT)
 				         .wiretap(WIRETAP)
-				         .handle((in, out) -> out.send(in.receive().send()));
+				         .handle((in, out) -> out.send(in.receive().transfer()));
 
 		if (SECURE) {
 			SelfSignedCertificate ssc = new SelfSignedCertificate();
