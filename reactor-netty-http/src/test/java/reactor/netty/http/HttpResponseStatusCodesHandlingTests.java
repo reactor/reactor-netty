@@ -34,7 +34,7 @@ class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .route(r -> r.post("/test", (req, res) -> res.send(req.receive()
-				                                                                .transfer()
+				                                                                .transferOwnership()
 				                                                                .log("server-received"))))
 				          .bindNow();
 

@@ -105,7 +105,7 @@ class Http2Tests extends BaseHttpTest {
 				createServer()
 				          .protocol(HttpProtocol.H2C)
 				          .route(routes ->
-				              routes.post("/echo", (req, res) -> res.send(req.receive().transfer())))
+				              routes.post("/echo", (req, res) -> res.send(req.receive().transferOwnership())))
 				          .bindNow();
 
 		ConnectionProvider provider = ConnectionProvider.create("testCustomConnectionProvider", 1);
@@ -141,7 +141,7 @@ class Http2Tests extends BaseHttpTest {
 				createServer()
 				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
 				          .route(routes ->
-				              routes.post("/echo", (request, response) -> response.send(request.receive().transfer())))
+				              routes.post("/echo", (request, response) -> response.send(request.receive().transferOwnership())))
 				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(length))
 				          .bindNow();
 
@@ -226,7 +226,7 @@ class Http2Tests extends BaseHttpTest {
 				          .route(routes ->
 				              routes.post("/echo", (req, res) -> res.send(req.receive()
 				                                                             .aggregate()
-				                                                             .transfer()
+				                                                             .transferOwnership()
 				                                                             .delayElement(Duration.ofMillis(100)))))
 				          .http2Settings(setting -> setting.maxConcurrentStreams(maxActiveStreams))
 				          .bindNow();

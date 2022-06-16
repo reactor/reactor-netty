@@ -464,9 +464,9 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 					                        .uri("/")
 					                        .responseContent()
 					                        .doOnError(error::set)))
-					          // .transfer() deliberately not invoked
+					          // .transferOwnership() deliberately not invoked
 					          // so that .close() in FluxReceive.drainReceiver will fail
-					          //.transfer()))
+					          //.transferOwnership()))
 					          .bindNow();
 
 			server2 =
@@ -517,7 +517,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 					                        .get()
 					                        .uri("/")
 					                        .responseContent()
-					                        .transfer()
+					                        .transferOwnership()
 					                        .flatMap(b -> out.send(Mono.just(b)))
 					                        .doOnError(error::set))
 					          .bindNow();

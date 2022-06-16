@@ -274,7 +274,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	 *
 	 * @return {@link Flux} of split {@link Buffer}s
 	 */
-	public final Flux<Buffer> transfer() {
+	public final Flux<Buffer> transferOwnership() {
 		return map(Buffer::split);
 	}
 

@@ -1057,7 +1057,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		disposableServer =
 				createServer()
-				          .handle((req, res) -> res.send(req.receive().transfer()))
+				          .handle((req, res) -> res.send(req.receive().transferOwnership()))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1194,7 +1194,7 @@ class HttpClientTest extends BaseHttpTest {
 				                                .get(HttpHeaderNames.CONTENT_LENGTH))
 				                     .send(req.receive()
 				                              .aggregate()
-				                              .transfer()))
+				                              .transferOwnership()))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1223,7 +1223,7 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .secure(ssl -> ssl.sslContext(sslServer))
-				          .handle((req, res) -> res.send(req.receive().transfer()))
+				          .handle((req, res) -> res.send(req.receive().transferOwnership()))
 				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.create("testExplicitEmptyBodyOnGetWorks", 1);
@@ -1246,7 +1246,7 @@ class HttpClientTest extends BaseHttpTest {
 	void testExplicitSendMonoErrorOnGet() {
 		disposableServer =
 				createServer()
-				          .handle((req, res) -> res.send(req.receive().transfer()))
+				          .handle((req, res) -> res.send(req.receive().transferOwnership()))
 				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.create("test", 1);
@@ -1407,7 +1407,7 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .handle((req, res) -> res.send(req.receive()
-				                                            .transfer()
+				                                            .transferOwnership()
 				                                            .delaySubscription(Duration.ofSeconds(1))))
 				          .bindNow();
 
@@ -1644,7 +1644,7 @@ class HttpClientTest extends BaseHttpTest {
 	void testDoOnRequestInvokedBeforeSendingRequest() {
 		disposableServer =
 				createServer()
-				          .handle((req, res) -> res.send(req.receive().transfer()))
+				          .handle((req, res) -> res.send(req.receive().transferOwnership()))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -2678,7 +2678,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .handle((req, res) -> res.addHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
 				                                   .status(HttpResponseStatus.BAD_REQUEST)
 				                                   .send(req.receive()
-				                                            .transfer()
+				                                            .transferOwnership()
 				                                            .next()))
 				          .bindNow();
 

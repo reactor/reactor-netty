@@ -1000,7 +1000,7 @@ class TcpServerTests {
 				TcpServer.create()
 				         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
 				         .wiretap(true)
-				         .handle((in, out) -> out.send(in.receive().transfer()))
+				         .handle((in, out) -> out.send(in.receive().transferOwnership()))
 				         .bindNow();
 
 		Connection conn =

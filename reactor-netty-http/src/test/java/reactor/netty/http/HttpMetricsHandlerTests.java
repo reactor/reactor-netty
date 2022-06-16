@@ -138,14 +138,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.metrics(true, Function.identity())
 				.httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
 				.route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().transfer().delayElements(Duration.ofMillis(10))))
+								.send(req.receive().transferOwnership().delayElements(Duration.ofMillis(10))))
 						.post("/2", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().transfer().delayElements(Duration.ofMillis(10))))
+								.send(req.receive().transferOwnership().delayElements(Duration.ofMillis(10))))
 						.post("/4", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().transfer().doOnNext(b ->
+								.send(req.receive().transferOwnership().doOnNext(b ->
 										checkServerConnectionsMicrometer(req))))
 						.post("/5", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().transfer().doOnNext(b ->
+								.send(req.receive().transferOwnership().doOnNext(b ->
 										checkServerConnectionsRecorder(req)))));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);

@@ -292,7 +292,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 				          if (serverConfig.isSecure() != secure) {
 				              return res.status(400).send();
 				          }
-				          Flux<Buffer> publisher = req.receive().transfer();
+				          Flux<Buffer> publisher = req.receive().transferOwnership();
 				          if (externalThread) {
 				              publisher = publisher.subscribeOn(Schedulers.boundedElastic());
 				          }
@@ -565,7 +565,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		disposableServer =
 				server.idleTimeout(Duration.ofSeconds(60))
 						.route(routes ->
-								routes.post("/echo", (req, res) -> res.send(req.receive().transfer())))
+								routes.post("/echo", (req, res) -> res.send(req.receive().transferOwnership())))
 						.bindNow();
 
 		StepVerifier.create(

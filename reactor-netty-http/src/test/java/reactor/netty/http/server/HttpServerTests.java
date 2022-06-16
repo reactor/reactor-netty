@@ -1007,7 +1007,7 @@ class HttpServerTests extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor()))
-				          .handle((req, res) -> res.send(req.receive().transfer()))
+				          .handle((req, res) -> res.send(req.receive().transferOwnership()))
 				          .bindNow(Duration.ofSeconds(30));
 
 		byte[] bytes = "test".getBytes(Charset.defaultCharset());
@@ -1455,7 +1455,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .route(r -> r.put("/1", (req, res) -> req.receive()
 				                                                   .then(res.sendString(Mono.just("test"))
 				                                                            .then()))
-				                       .put("/2", (req, res) -> res.send(req.receive().transfer())))
+				                       .put("/2", (req, res) -> res.send(req.receive().transferOwnership())))
 				          .bindNow();
 
 		doTestDecodingFailureLastHttpContent("PUT /1 HTTP/1.1\r\nHost: a.example.com\r\n" +
@@ -1748,7 +1748,7 @@ class HttpServerTests extends BaseHttpTest {
 				              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
 				          });
 				          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
-				          return res.send(req.receive().transfer());
+				          return res.send(req.receive().transferOwnership());
 				      })
 				      .bindNow();
 
@@ -2032,7 +2032,7 @@ class HttpServerTests extends BaseHttpTest {
 		HttpServer server =
 				createServer()
 				          .idleTimeout(Duration.ofMillis(200))
-				          .handle((req, resp) -> resp.send(req.receive().transfer()));
+				          .handle((req, resp) -> resp.send(req.receive().transferOwnership()));
 
 		HttpClient client =
 				createClient(() -> disposableServer.address())

@@ -334,7 +334,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				        .wiretap(false)
 				        .protocol(HttpProtocol.H2)
 				        .secure(spec -> spec.sslContext(serverCtx))
-				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().transfer())))
+				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().transferOwnership())))
 				        .bindNow();
 
 		int requestsNum = 10;
@@ -560,7 +560,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				        .wiretap(false)
 				        .protocol(HttpProtocol.H2)
 				        .secure(spec -> spec.sslContext(serverCtx))
-				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().transfer())))
+				        .route(routes -> routes.post("/", (req, res) -> res.send(req.receive().transferOwnership())))
 				        .bindNow();
 
 		int requestsNum = 100;

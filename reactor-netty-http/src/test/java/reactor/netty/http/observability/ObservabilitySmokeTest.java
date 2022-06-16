@@ -109,7 +109,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 					          .metrics(true, Function.identity())
 					          .secure(spec -> spec.sslContext(serverCtxHttp))
 					          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2)
-					          .route(r -> r.post("/post", (req, res) -> res.send(req.receive().transfer())))
+					          .route(r -> r.post("/post", (req, res) -> res.send(req.receive().transferOwnership())))
 					          .bindNow();
 
 			HttpClient client;

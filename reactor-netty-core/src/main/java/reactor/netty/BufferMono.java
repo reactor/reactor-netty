@@ -145,7 +145,7 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 	 *
 	 * @return {@link Mono} of split {@link Buffer}s
 	 */
-	public final Mono<Buffer> transfer() {
+	public final Mono<Buffer> transferOwnership() {
 		return map(Buffer::split);
 	}
 

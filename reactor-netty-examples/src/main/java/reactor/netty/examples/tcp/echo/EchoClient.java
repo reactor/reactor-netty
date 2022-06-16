@@ -50,7 +50,7 @@ public final class EchoClient {
 
 		Connection connection =
 				client.handle((in, out) -> out.send(Flux.concat(BufferFlux.fromString(Mono.just("echo")),
-				                                                in.receive().transfer())))
+				                                                in.receive().transferOwnership())))
 				      .connectNow();
 
 		connection.onDispose()

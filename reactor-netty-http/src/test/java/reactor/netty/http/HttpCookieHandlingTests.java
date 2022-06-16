@@ -48,7 +48,7 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 				          .route(r -> r.get("/test", (req, resp) ->
 				                resp.addHeader("Set-Cookie", "name:with_colon=value")
 				                    .send(req.receive()
-				                             .transfer()
+				                             .transferOwnership()
 				                             .log("server received"))))
 				          .bindNow();
 
@@ -75,7 +75,7 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 				          .route(r -> r.get("/test", (req, resp) ->
 				                            resp.addCookie(new DefaultCookie("cookie1", "test_value"))
 				                                .send(req.receive()
-				                                         .transfer()
+				                                         .transferOwnership()
 				                                         .log("server received"))))
 				          .bindNow();
 
