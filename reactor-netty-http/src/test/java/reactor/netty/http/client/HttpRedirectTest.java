@@ -39,6 +39,7 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.ReferenceCountUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -767,6 +768,7 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
+	@Disabled
 	void testHttp2Redirect() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =

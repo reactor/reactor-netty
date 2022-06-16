@@ -19,6 +19,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
@@ -56,6 +57,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
+@Disabled
 class Http2Tests extends BaseHttpTest {
 	private final static String H2_WITHOUT_TLS_SERVER = "Configured H2 protocol without TLS. Use" +
 			" a Clear-Text H2 protocol via HttpServer#protocol or configure TLS" +

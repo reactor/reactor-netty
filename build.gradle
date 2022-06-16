@@ -97,7 +97,7 @@ ext {
 	logbackVersion = '1.2.11'
 
 	// Netty
-	nettyDefaultVersion = '5.0.0.Alpha2'
+	nettyDefaultVersion = '5.0.0.Alpha3-SNAPSHOT'
 	if (!project.hasProperty("forceNettyVersion")) {
 		nettyVersion = nettyDefaultVersion
 	}
@@ -105,7 +105,7 @@ ext {
 		nettyVersion = forceNettyVersion
 		println "Netty version defined from command line: ${forceNettyVersion}"
 	}
-	nettyByteBufVersion = '4.1.77.Final'
+	nettyByteBufVersion = '4.1.78.Final'
 	nettyContribVersion = '5.0.0.Final-SNAPSHOT'
 	//nettyIoUringVersion = '0.0.14.Final'
 	//nettyQuicVersion = '0.0.27.Final'

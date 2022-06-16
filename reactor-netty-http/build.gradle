@@ -92,7 +92,8 @@ dependencies {
 				testRuntimeOnly "io.netty:netty5-transport-native-kqueue:$nettyVersion$os_suffix"
 			}
 			else if (osdetector.os == "linux") {
-				testRuntimeOnly "io.netty:netty5-transport-native-epoll:$nettyVersion$os_suffix"
+				// TODO temporary depend on natives from 5.0.0.Alpha2
+				testRuntimeOnly "io.netty:netty5-transport-native-epoll:5.0.0.Alpha2$os_suffix"
 			}
 		}
 		//else if (forceTransport == "io_uring" && osdetector.os == "linux") {
@@ -104,7 +105,8 @@ dependencies {
 	}
 	else {
 		//classic build to be distributed
-		api "io.netty:netty5-transport-native-epoll:$nettyVersion:linux-x86_64"
+		// TODO temporary depend on natives from 5.0.0.Alpha2
+		api "io.netty:netty5-transport-native-epoll:5.0.0.Alpha2:linux-x86_64"
 		compileOnly "io.netty:netty5-transport-classes-kqueue:$nettyVersion"
 		//compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	}

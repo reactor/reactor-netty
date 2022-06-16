@@ -37,6 +37,7 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
@@ -52,6 +53,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 
 @SuppressWarnings("rawtypes")
+@Disabled
 class ObservabilitySmokeTest extends SampleTestRunner {
 	static byte[] content;
 	static DisposableServer disposableServer;

@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelId;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty5.handler.codec.http2.Http2MultiplexHandler;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -45,6 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Disabled
 class Http2PoolTest {
 
 	@Test

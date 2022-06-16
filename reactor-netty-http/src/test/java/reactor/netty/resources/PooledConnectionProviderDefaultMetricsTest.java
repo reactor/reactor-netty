@@ -24,6 +24,7 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -97,6 +98,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
+	@Disabled
 	void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabledHttp2() throws Exception {
 		// by default, when the max number of pending acquire is not specified, it will bet set to 2 * max-connection
 		// (see PoolFactory from PoolConnectionProvider.java)
@@ -135,6 +137,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
+	@Disabled
 	void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabledHttp2() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -224,6 +227,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
+	@Disabled
 	void testConnectionPoolPendingAcquireSize() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =

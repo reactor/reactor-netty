@@ -27,6 +27,7 @@ import io.netty5.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import reactor.core.publisher.Flux;
@@ -340,6 +341,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	}
 
 	@Test
+	@Disabled
 	void testClientWithProtocols() {
 		Http11SslContextSpec http11SslContextSpec =
 				Http11SslContextSpec.forClient()
