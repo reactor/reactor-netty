@@ -563,7 +563,7 @@ class WebsocketTest extends BaseHttpTest {
 				createServer()
 				          .handle((req, res) ->
 				                  res.sendWebsocket((in, out) -> out.sendObject(in.receiveFrames()
-				                                                                  .doOnNext(WebSocketFrame::send))))
+				                                                                  .map(frame -> frame.send().receive()))))
 				          .bindNow();
 
 		Flux<WebSocketFrame> response =
@@ -597,7 +597,7 @@ class WebsocketTest extends BaseHttpTest {
 				          .websocket()
 				          .uri("/")
 				          .handle((in, out) -> out.sendObject(in.receiveFrames()
-				                                                .doOnNext(WebSocketFrame::send)
+				                                                .map(frame -> frame.send().receive())
 				                                                .then()))
 				          .next();
 
@@ -910,11 +910,12 @@ class WebsocketTest extends BaseHttpTest {
 
 		HttpClientResponse res =
 				createClient(disposableServer.port())
-				          .headers(h -> {
-				                  h.add(HttpHeaderNames.CONNECTION, "keep-alive, Upgrade");
-				                  h.add(HttpHeaderNames.UPGRADE, "websocket");
-				                  h.add(HttpHeaderNames.ORIGIN, "http://localhost");
-				          })
+				          .headers(h ->
+				                  h.add(HttpHeaderNames.CONNECTION, "keep-alive, Upgrade")
+				                   .add(HttpHeaderNames.UPGRADE, "websocket")
+				                   .add(HttpHeaderNames.ORIGIN, "http://localhost")
+				                   .add(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13")
+				                   .add(HttpHeaderNames.SEC_WEBSOCKET_KEY, "Ex6C3J0T352QOL9CgUjdUQ"))
 				          .get()
 				          .uri("/ws")
 				          .response()
@@ -972,7 +973,7 @@ class WebsocketTest extends BaseHttpTest {
 				createServer()
 				          .handle((req, res) ->
 				              res.sendWebsocket((in, out) -> out.sendObject(in.receiveFrames()
-				                                                              .doOnNext(WebSocketFrame::send))))
+				                                                              .map(frame -> frame.send().receive()))))
 				          .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -1041,7 +1042,7 @@ class WebsocketTest extends BaseHttpTest {
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> out.sendObject(in.receiveFrames()
-		                                                .doOnNext(WebSocketFrame::send)))
+		                                                .map(frame -> frame.send().receive())))
 		          .subscribe();
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
