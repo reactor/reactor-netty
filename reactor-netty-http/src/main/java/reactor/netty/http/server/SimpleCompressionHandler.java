@@ -17,13 +17,11 @@ package reactor.netty.http.server;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.HttpContentCompressor;
 import io.netty5.handler.codec.http.HttpRequest;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 
 /**
@@ -34,32 +32,20 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof Buffer) {
-			super.write(ctx, new DefaultHttpContent((Buffer) msg));
+			return super.write(ctx, new DefaultHttpContent((Buffer) msg));
 		}
-		return ctx.write(msg);
+		return super.write(ctx, msg);
 	}
 
 	@Override
-	protected void decode(ChannelHandlerContext ctx, HttpRequest msg) {
+	protected void decodeAndClose(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
 		HttpRequest request = msg;
-		try {
-			if (msg instanceof FullHttpRequest && !((FullHttpRequest) msg).payload().isAccessible()) {
-				// This can happen only in HTTP2 use case and delayed response
-				// When the incoming FullHttpRequest content is with 0 readableBytes it is released immediately
-				// decode(...) will observe a freed content
-				request = new DefaultHttpRequest(msg.protocolVersion(), msg.method(), msg.uri(), msg.headers());
-			}
-			super.decode(ctx, request);
+		if (msg instanceof FullHttpRequest && !((FullHttpRequest) msg).payload().isAccessible()) {
+			// This can happen only in HTTP2 use case and delayed response
+			// When the incoming FullHttpRequest content is with 0 readableBytes it is released immediately
+			// decode(...) will observe a freed content
+			request = new DefaultHttpRequest(msg.protocolVersion(), msg.method(), msg.uri(), msg.headers());
 		}
-		catch (DecoderException e) {
-			throw e;
-		}
-		catch (Exception e) {
-			throw new DecoderException(e);
-		}
-		finally {
-			// ReferenceCountUtil.retain(...) is invoked in decode(...) so release(...) here
-			ReferenceCountUtil.release(request);
-		}
+		super.decodeAndClose(ctx, request);
 	}
 }
