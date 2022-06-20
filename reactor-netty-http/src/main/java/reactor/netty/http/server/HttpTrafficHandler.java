@@ -62,6 +62,7 @@ import static io.netty5.handler.codec.http.HttpUtil.isTransferEncodingChunked;
 import static io.netty5.handler.codec.http.HttpUtil.setKeepAlive;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.toPrettyHexDump;
+import static reactor.netty.channel.ChannelOperations.get;
 
 /**
  * Replace {@link io.netty5.handler.codec.http.HttpServerKeepAliveHandler} with extra
@@ -366,6 +367,11 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	public void run() {
 		Object next;
 		HttpRequest nextRequest = null;
+		if (get(ctx.channel()) != null) {
+			ctx.channel().executor().execute(this);
+			return;
+		}
+
 		while ((next = pipelined.peek()) != null) {
 			if (next instanceof HttpRequest) {
 				if (nextRequest != null) {

@@ -54,8 +54,8 @@ import io.netty5.channel.group.DefaultChannelGroup;
 import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
-import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
+import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpContent;
@@ -269,8 +269,10 @@ class HttpServerTests extends BaseHttpTest {
 		                                                                     .map(x -> d + "\n"))))
 		                             .bindNow();
 
-		DefaultFullHttpRequest request =
+		FullHttpRequest request1 =
 				new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/plaintext", preferredAllocator().allocate(0));
+		FullHttpRequest request2 = request1.copy();
+		FullHttpRequest request3 = request1.copy();
 
 		CountDownLatch latch = new CountDownLatch(6);
 
@@ -281,7 +283,7 @@ class HttpServerTests extends BaseHttpTest {
 				                 in.withConnection(x ->
 				                         x.addHandlerFirst(new HttpClientCodec()))
 				                   .receiveObject()
-				                   .ofType(DefaultHttpContent.class)
+				                   .ofType(HttpContent.class)
 				                   .as(BufferFlux::fromInbound)
 				                   .asString()
 				                   .log()
@@ -292,9 +294,7 @@ class HttpServerTests extends BaseHttpTest {
 				                       }
 				                   });
 
-				                 return out.sendObject(Flux.just(request.send(),
-				                                                 request.send(),
-				                                                 request.send()))
+				                 return out.sendObject(Flux.just(request1, request2, request3))
 				                           .neverComplete();
 				         })
 				         .wiretap(true)
@@ -1089,7 +1089,6 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void testExpectErrorWhenConnectionClosed() throws Exception {
 		SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
@@ -1099,7 +1098,6 @@ class HttpServerTests extends BaseHttpTest {
 				createServer()
 				          .secure(spec -> spec.sslContext(serverCtx))
 				          .handle((req, res) -> {
-				              // "FutureReturnValueIgnored" is suppressed deliberately
 					          res.withConnection(conn -> conn.channel().close().addListener(f -> {
 						          res.sendString(Flux.just("OK").hide())
 								          .then()
