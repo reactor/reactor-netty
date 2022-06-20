@@ -298,12 +298,12 @@ subprojects {
 		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 		maven { url 'https://repo.spring.io/milestone' }
 		if (version.endsWith('-SNAPSHOT') || version.contains('-SNAPSHOT-')) { //classic or customized snapshots
-			if (System.getenv()["GITHUB_ACTION"] == null) {
+			//if (System.getenv()["GITHUB_ACTION"] == null) {
 				mavenLocal()
-			}
-			else {
-				println 'GitHub Action detected, avoiding use of mavenLocal()'
-			}
+			//}
+			//else {
+			//	println 'GitHub Action detected, avoiding use of mavenLocal()'
+			//}
 			maven { url 'https://repo.spring.io/snapshot' }
 			maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
 		}

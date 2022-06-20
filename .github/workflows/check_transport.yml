@@ -4,38 +4,39 @@ on:
   pull_request: {}
 permissions: read-all
 jobs:
-  preliminary:
-    name: preliminary sanity checks
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 #needed by spotless
-      - uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: 17
-      - name: spotless (license header)
-        if: always()
-        run: ./gradlew clean spotlessCheck -PspotlessFrom=origin/${{ github.base_ref }}
-      - name: api compatibility
-        if: always()
-        run: ./gradlew clean japicmp
-      - name: how to fix
-        if: failure()
+# Temporary disable and execute it in the main builds as the build depends on Netty 5 SNAPSHOT
+#  preliminary:
+#    name: preliminary sanity checks
+#    runs-on: ubuntu-20.04
+#    steps:
+#      - uses: actions/checkout@v3
+#        with:
+#          fetch-depth: 0 #needed by spotless
+#      - uses: actions/setup-java@v3
+#        with:
+#          distribution: 'temurin'
+#          java-version: 17
+#      - name: spotless (license header)
+#        if: always()
+#        run: ./gradlew clean spotlessCheck -PspotlessFrom=origin/${{ github.base_ref }}
+#      - name: api compatibility
+#        if: always()
+#        run: ./gradlew clean japicmp
+#      - name: how to fix
+#        if: failure()
         # the foreground (38;5) color code 208 is orange. we also have bold, white bg (38;5;0;48;5;255m), white fg on black bg...
-        run: |
-          echo -e "\n\033[38;5;0;48;5;208m \u001b[1m How to deal with errors in preliminary job: \u001b[0m\033[0m"
-          echo "(Have a look at the steps above to see what failed exactly)"
-          echo -e "\n - \u001b[1mSpotless (license headers)\u001b[0m failures on touched java files \033[38;5;255;48;5;0m\u001b[1mcan be automatically fixed by running\u001b[0m:"
-          echo -e "   \033[38;5;0;48;5;255m ./gradlew spotlessApply \033[0m"
-          echo -e "\n - \u001b[1mAPI Compatibility\u001b[0m failures should be considered carefully and \033[38;5;255;48;5;0m\u001b[1mdiscussed with maintainers in the PR\u001b[0m"
-          echo "   If there are failures, the detail should be available in the logs of the api compatibility step above"
-          echo ""
-          exit -1
+#        run: |
+#          echo -e "\n\033[38;5;0;48;5;208m \u001b[1m How to deal with errors in preliminary job: \u001b[0m\033[0m"
+#          echo "(Have a look at the steps above to see what failed exactly)"
+#          echo -e "\n - \u001b[1mSpotless (license headers)\u001b[0m failures on touched java files \033[38;5;255;48;5;0m\u001b[1mcan be automatically fixed by running\u001b[0m:"
+#          echo -e "   \033[38;5;0;48;5;255m ./gradlew spotlessApply \033[0m"
+#          echo -e "\n - \u001b[1mAPI Compatibility\u001b[0m failures should be considered carefully and \033[38;5;255;48;5;0m\u001b[1mdiscussed with maintainers in the PR\u001b[0m"
+#          echo "   If there are failures, the detail should be available in the logs of the api compatibility step above"
+#          echo ""
+#          exit -1
 
   build:
-    needs: preliminary
+#    needs: preliminary
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -48,11 +49,43 @@ jobs:
             transport: native
     steps:
       - uses: actions/checkout@v3
+        with:
+          path: reactor-netty
+          fetch-depth: 0 #needed by spotless
+      - uses: actions/checkout@v3
+        with:
+          repository: netty/netty
+          path: netty
+      - uses: actions/checkout@v3
+        with:
+          repository: netty-contrib/codec-haproxy
+          path: codec-haproxy
+      - uses: actions/checkout@v3
+        with:
+          repository: netty-contrib/codec-extras
+          path: codec-extras
+      - uses: actions/checkout@v3
+        with:
+          repository: netty-contrib/socks-proxy
+          path: socks-proxy
       - uses: gradle/wrapper-validation-action@v1
-      - name: Set up JDK 1.8
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: 17
+      - name: Build netty
+        run: ./mvnw clean install -DskipTests=true
+        working-directory: ./netty
+      - name: Build codec-haproxy
+        run: ./mvnw clean install -DskipTests=true
+        working-directory: ./codec-haproxy
+      - name: Build codec-extras
+        run: ./mvnw clean install -DskipTests=true
+        working-directory: ./codec-extras
+      - name: Build socks-proxy
+        run: ./mvnw clean install -DskipTests=true
+        working-directory: ./socks-proxy
       - name: Build with Gradle
-        run: ./gradlew clean check --no-daemon -x spotlessCheck -PforceTransport=${{ matrix.transport }}
+        run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -PspotlessFrom=origin/netty5
+        working-directory: ./reactor-netty
