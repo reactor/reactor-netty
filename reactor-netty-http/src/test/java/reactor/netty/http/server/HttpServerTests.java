@@ -58,6 +58,7 @@ import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpClientCodec;
+import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaders;
@@ -1416,7 +1417,7 @@ class HttpServerTests extends BaseHttpTest {
 				         .handle((in, out) -> {
 				             in.withConnection(x -> x.addHandlerFirst(new HttpClientCodec()))
 				               .receiveObject()
-				               .ofType(DefaultHttpContent.class)
+				               .ofType(HttpContent.class)
 				               .as(BufferFlux::fromInbound)
 				               // Resource::dispose is deliberately invoked
 				               // so that .dispose() in FluxReceive.drainReceiver will fail
