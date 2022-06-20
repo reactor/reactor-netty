@@ -1105,13 +1105,17 @@ class HttpServerTests extends BaseHttpTest {
 				          .secure(spec -> spec.sslContext(serverCtx))
 				          .handle((req, res) -> {
 				              // "FutureReturnValueIgnored" is suppressed deliberately
-				              res.withConnection(conn -> conn.channel().close());
-				              return res.sendString(Flux.just("OK").hide())
-				                        .then()
-				                        .doOnError(t -> {
-				                            error.set(t);
-				                            latch.countDown();
-				                        });
+					          res.withConnection(conn -> conn.channel().close().addListener(f -> {
+						          res.sendString(Flux.just("OK").hide())
+								          .then()
+								          .doOnError(t -> {
+									          error.set(t);
+									          latch.countDown();
+								          })
+								          .subscribe();
+					          }));
+
+					          return Mono.never();
 				          })
 				          .bindNow();
 
