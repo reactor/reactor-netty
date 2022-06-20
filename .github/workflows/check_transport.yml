@@ -55,6 +55,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: netty/netty
+          ref: main
           path: netty
       - uses: actions/checkout@v3
         with:
