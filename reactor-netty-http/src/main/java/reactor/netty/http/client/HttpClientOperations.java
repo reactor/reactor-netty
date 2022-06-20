@@ -56,7 +56,7 @@ import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty5.handler.codec.http.cookie.Cookie;
 import io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -571,12 +571,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			            .isFailure()) {
 				onInboundError(response.decoderResult()
 				                       .cause());
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 				return;
 			}
 			if (HttpResponseStatus.CONTINUE.equals(response.status())) {
 				is100Continue = true;
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 				return;
 			}
 			if (started) {
@@ -585,7 +585,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 							response.headers()
 							        .toString());
 				}
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 				return;
 			}
 			is100Continue = false;
@@ -596,7 +596,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				markPersistent(false);
 			}
 			if (isInboundCancelled()) {
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 				return;
 			}
 
@@ -614,7 +614,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				}
 				catch (Exception e) {
 					onInboundError(e);
-					ReferenceCountUtil.release(msg);
+					Resource.dispose(msg);
 					return;
 				}
 			}
@@ -638,7 +638,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 		if (msg instanceof LastHttpContent) {
 			if (is100Continue) {
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 				channel().read();
 				return;
 			}
@@ -647,7 +647,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					log.debug(format(channel(), "HttpClientOperations received an incorrect end " +
 							"delimiter (previously used connection?)"));
 				}
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 				return;
 			}
 			if (log.isDebugEnabled()) {
@@ -655,7 +655,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 			if (!(msg instanceof EmptyLastHttpContent)) {
 				if (redirecting != null) {
-					ReferenceCountUtil.release(msg);
+					Resource.dispose(msg);
 				}
 				else {
 					super.onInboundNext(ctx, msg);
@@ -688,12 +688,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 								"(previously used connection?)"),
 						msg);
 			}
-			ReferenceCountUtil.release(msg);
+			Resource.dispose(msg);
 			return;
 		}
 
 		if (redirecting != null) {
-			ReferenceCountUtil.release(msg);
+			Resource.dispose(msg);
 			// when redirecting auto-read is set to true, no need of manual reading
 			return;
 		}

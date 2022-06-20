@@ -36,7 +36,6 @@ import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.ReferenceCountUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -708,7 +707,7 @@ class HttpRedirectTest extends BaseHttpTest {
 		                  super.channelRead(ctx, msg);
 
 		                  if (initialPath.equals("/" + r.path()) && msg instanceof HttpContent) {
-		                      redirectBufferRefCounts.add(ReferenceCountUtil.refCnt(msg));
+		                      redirectBufferRefCounts.add(((HttpContent<?>) msg).isAccessible() ? 1 : 0);
 		                  }
 		              }
 		          }))
