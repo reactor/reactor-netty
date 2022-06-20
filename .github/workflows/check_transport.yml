@@ -76,16 +76,16 @@ jobs:
           distribution: 'temurin'
           java-version: 17
       - name: Build netty
-        run: ./mvnw clean install -DskipTests=true
+        run: ./mvnw install -pl :netty-buffer,:netty5-handler,:netty5-resolver-dns,:netty5-resolver-dns-classes-macos,:netty5-transport-classes-epoll,:netty5-transport-classes-kqueue,:netty5-codec-http,:netty5-codec-http2 -DskipTests=true
         working-directory: ./netty
       - name: Build codec-haproxy
-        run: ./mvnw clean install -DskipTests=true
+        run: ./mvnw install -DskipTests=true
         working-directory: ./codec-haproxy
       - name: Build codec-extras
-        run: ./mvnw clean install -DskipTests=true
+        run: ./mvnw install -DskipTests=true
         working-directory: ./codec-extras
       - name: Build socks-proxy
-        run: ./mvnw clean install -DskipTests=true
+        run: ./mvnw install -DskipTests=true
         working-directory: ./socks-proxy
       - name: Build with Gradle
         run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -PspotlessFrom=origin/netty5

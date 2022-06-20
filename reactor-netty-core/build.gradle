@@ -81,7 +81,8 @@ dependencies {
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
-				testImplementation "io.netty:netty5-transport-native-kqueue:$nettyVersion$os_suffix"
+				// TODO temporary depend on natives from 5.0.0.Alpha2
+				testImplementation "io.netty:netty5-transport-native-kqueue:5.0.0.Alpha2$os_suffix"
 			}
 			else if (osdetector.os == "linux") {
 				// TODO temporary depend on natives from 5.0.0.Alpha2
