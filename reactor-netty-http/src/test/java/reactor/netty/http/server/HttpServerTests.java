@@ -45,9 +45,6 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -80,7 +77,6 @@ import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -580,14 +576,14 @@ class HttpServerTests extends BaseHttpTest {
 				                       .route(req -> req.uri().startsWith("/12"),
 				                                  (req, res) -> {
 				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
-				                                                return res.sendObject(Unpooled.wrappedBuffer("OK".getBytes(Charset.defaultCharset())))
+				                                                return res.sendObject(res.alloc().copyOf("OK", Charset.defaultCharset()))
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/13"),
 				                                  (req, res) -> {
 				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 0);
-				                                                return res.sendObject(Unpooled.wrappedBuffer("OK".getBytes(Charset.defaultCharset())))
+				                                                return res.sendObject(res.alloc().copyOf("OK", Charset.defaultCharset()))
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                }))
@@ -923,8 +919,7 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testDropMessageConnectionClose() throws Exception {
-		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
-		data.writeCharSequence("test", Charset.defaultCharset());
+		Buffer data = preferredAllocator().copyOf("test", Charset.defaultCharset()).makeReadOnly();
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .sendObject(data),
@@ -932,7 +927,7 @@ class HttpServerTests extends BaseHttpTest {
 					req.addHeader("Connection", "close");
 					return out;
 				});
-		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+		assertThat(data.isAccessible()).isFalse();
 	}
 
 	@Test
@@ -944,7 +939,7 @@ class HttpServerTests extends BaseHttpTest {
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .send(Flux.defer(() -> Flux.just(data, data1, data2))
-				                                 .doFinally(s -> latch.countDown()))
+				                           .doFinally(s -> latch.countDown()))
 				                 .then(),
 				(req, out) -> out);
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
@@ -966,13 +961,12 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testDropMessage() throws Exception {
-		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
-		data.writeCharSequence("test", Charset.defaultCharset());
+		Buffer data = preferredAllocator().copyOf("test".getBytes(Charset.defaultCharset())).makeReadOnly();
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .sendObject(data),
 				(req, out) -> out);
-		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+		assertThat(data.isAccessible()).isFalse();
 	}
 
 	private void doTestDropData(
@@ -1424,8 +1418,8 @@ class HttpServerTests extends BaseHttpTest {
 				               .receiveObject()
 				               .ofType(DefaultHttpContent.class)
 				               .as(BufferFlux::fromInbound)
-				               // ReferenceCounted::release is deliberately invoked
-				               // so that .release() in FluxReceive.drainReceiver will fail
+				               // Resource::dispose is deliberately invoked
+				               // so that .dispose() in FluxReceive.drainReceiver will fail
 				               .subscribe(Buffer::close, t -> latch.countDown(), null);
 
 				             return out.sendObject(Flux.just(request))

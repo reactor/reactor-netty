@@ -63,7 +63,7 @@ import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.codec.http2.HttpConversionUtil;
 import io.netty5.util.AsciiString;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import org.reactivestreams.Publisher;
@@ -556,7 +556,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 			catch (Exception e) {
 				onInboundError(e);
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 				return;
 			}
 			if (msg instanceof FullHttpRequest) {
@@ -729,7 +729,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			log.warn(format(ctx.channel(), "Decoding failed: " + msg + " : "), cause);
 		}
 
-		ReferenceCountUtil.release(msg);
+		Resource.dispose(msg);
 
 		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 				cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE :

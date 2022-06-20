@@ -45,7 +45,7 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.timeout.IdleState;
 import io.netty5.handler.timeout.IdleStateEvent;
 import io.netty5.handler.timeout.IdleStateHandler;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureContextListener;
 import reactor.core.Exceptions;
@@ -168,7 +168,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 					HttpServerOperations.log.debug(format(ctx.channel(), "Dropping pipelined HTTP request, " +
 									"previous response requested connection close"));
 				}
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 				return;
 			}
 			if (pendingResponses > 1) {
@@ -235,7 +235,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 					HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
 							"since response has been sent already: {}"), msg);
 				}
-				ReferenceCountUtil.release(msg);
+				Resource.dispose(msg);
 			}
 			ctx.read();
 			return;
@@ -356,7 +356,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 				HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
 						"since response has been sent already: {}"), toPrettyHexDump(msg));
 			}
-			ReferenceCountUtil.release(msg);
+			Resource.dispose(msg);
 			return ctx.newSucceededFuture();
 		}
 		return ctx.write(msg);
@@ -437,7 +437,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		if (pipelined != null && !pipelined.isEmpty()) {
 			Object o;
 			while ((o = pipelined.poll()) != null) {
-				ReferenceCountUtil.release(o);
+				Resource.dispose(o);
 			}
 
 		}
