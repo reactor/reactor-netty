@@ -54,11 +54,6 @@ jobs:
           fetch-depth: 0 #needed by spotless
       - uses: actions/checkout@v3
         with:
-          repository: netty/netty
-          ref: main
-          path: netty
-      - uses: actions/checkout@v3
-        with:
           repository: netty-contrib/codec-haproxy
           path: codec-haproxy
       - uses: actions/checkout@v3
@@ -75,9 +70,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 17
-      - name: Build netty
-        run: ./mvnw install -pl :netty-buffer,:netty5-handler,:netty5-resolver-dns,:netty5-resolver-dns-classes-macos,:netty5-transport-classes-epoll,:netty5-transport-classes-kqueue,:netty5-codec-http,:netty5-codec-http2 -DskipTests=true
-        working-directory: ./netty
       - name: Build codec-haproxy
         run: ./mvnw install -DskipTests=true
         working-directory: ./codec-haproxy

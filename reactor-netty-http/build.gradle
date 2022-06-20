@@ -89,12 +89,10 @@ dependencies {
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
-				// TODO temporary depend on natives from 5.0.0.Alpha2
-				testRuntimeOnly "io.netty:netty5-transport-native-kqueue:5.0.0.Alpha2$os_suffix"
+				testRuntimeOnly "io.netty:netty5-transport-native-kqueue:$nettyVersion$os_suffix"
 			}
 			else if (osdetector.os == "linux") {
-				// TODO temporary depend on natives from 5.0.0.Alpha2
-				testRuntimeOnly "io.netty:netty5-transport-native-epoll:5.0.0.Alpha2$os_suffix"
+				testRuntimeOnly "io.netty:netty5-transport-native-epoll:$nettyVersion$os_suffix"
 			}
 		}
 		//else if (forceTransport == "io_uring" && osdetector.os == "linux") {
@@ -106,8 +104,7 @@ dependencies {
 	}
 	else {
 		//classic build to be distributed
-		// TODO temporary depend on natives from 5.0.0.Alpha2
-		api "io.netty:netty5-transport-native-epoll:5.0.0.Alpha2:linux-x86_64"
+		api "io.netty:netty5-transport-native-epoll:$nettyVersion:linux-x86_64"
 		compileOnly "io.netty:netty5-transport-classes-kqueue:$nettyVersion"
 		//compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	}
