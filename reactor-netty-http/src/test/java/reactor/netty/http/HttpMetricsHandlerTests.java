@@ -237,17 +237,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, id -> {
 					throw new IllegalArgumentException("Testcase injected Exception");
 				})
 				.bindNow();
 
-		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
-            serverAddress.set(conn.channel().remoteAddress())
-		);
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
 
 		StepVerifier.create(httpClient.post()
                                       .uri("/1")
@@ -264,14 +261,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.bindNow();
 
-		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
-            serverAddress.set(conn.channel().remoteAddress())
-		).metrics(true, id -> {
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).metrics(true, id -> {
 			throw new IllegalArgumentException("Testcase injected Exception");
 		});
 

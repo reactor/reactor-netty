@@ -71,7 +71,13 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		// by the ChannelMetricsHandler itself. ChannelMetricsHandler is only present when the recorder is
 		// not our MicrometerHttpServerMetricsRecorder. See HttpServerConfig class.
 		if (!(ctx.channel() instanceof Http2StreamChannel) && recorder() instanceof MicrometerHttpServerMetricsRecorder) {
-			recorder().recordServerConnectionOpened(ctx.channel().localAddress());
+			try {
+				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
+			}
+			catch (RuntimeException e) {
+				log.warn("Exception caught while recording metrics.", e);
+				// Allow request-response exchange to continue, unaffected by metrics problem
+			}
 		}
 		ctx.fireChannelActive();
 	}
@@ -79,7 +85,13 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) {
 		if (!(ctx.channel() instanceof Http2StreamChannel) && recorder() instanceof MicrometerHttpServerMetricsRecorder) {
-			recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+			try {
+				recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+			}
+			catch (RuntimeException e) {
+				log.warn("Exception caught while recording metrics.", e);
+				// Allow request-response exchange to continue, unaffected by metrics problem
+			}
 		}
 		ctx.fireChannelInactive();
 	}
@@ -87,45 +99,50 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-		if (msg instanceof HttpResponse) {
-			if (((HttpResponse) msg).status().equals(HttpResponseStatus.CONTINUE)) {
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(msg, promise);
-				return;
+		try {
+			if (msg instanceof HttpResponse) {
+				if (((HttpResponse) msg).status().equals(HttpResponseStatus.CONTINUE)) {
+					return;
+				}
+
+				dataSentTime = System.nanoTime();
 			}
 
-			dataSentTime = System.nanoTime();
-		}
+			dataSent += extractProcessedDataFromBuffer(msg);
 
-        dataSent += extractProcessedDataFromBuffer(msg);
-
-		if (msg instanceof LastHttpContent) {
-			promise.addListener(future -> {
-				try {
-					ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-					if (channelOps instanceof HttpServerOperations) {
-						HttpServerOperations ops = (HttpServerOperations) channelOps;
-						recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-								ops.method().name(), ops.status().codeAsText().toString());
-						if (!ops.isHttp2() && ops.hostAddress() != null) {
-							// This metric is not applicable for HTTP/2
-							// ops.hostAddress() == null when request decoding failed, in this case
-							// we do not report active connection, so we do not report inactive connection
-							recordInactiveConnection(ops);
+			if (msg instanceof LastHttpContent) {
+				promise.addListener(future -> {
+					try {
+						ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+						if (channelOps instanceof HttpServerOperations) {
+							HttpServerOperations ops = (HttpServerOperations) channelOps;
+							recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
+									ops.method().name(), ops.status().codeAsText().toString());
+							if (!ops.isHttp2() && ops.hostAddress() != null) {
+								// This metric is not applicable for HTTP/2
+								// ops.hostAddress() == null when request decoding failed, in this case
+								// we do not report active connection, so we do not report inactive connection
+								recordInactiveConnection(ops);
+							}
 						}
 					}
-				}
-				catch (RuntimeException e) {
-					log.warn("Exception caught while recording metrics.", e);
-					// Allow request-response exchange to continue, unaffected by metrics problem
-				}
+          catch (RuntimeException e) {
+						log.warn("Exception caught while recording metrics.", e);
+						// Allow request-response exchange to continue, unaffected by metrics problem
+					}
 
-				dataSent = 0;
-			});
+					dataSent = 0;
+				});
+			}
 		}
-
-		//"FutureReturnValueIgnored" this is deliberate
-		ctx.write(msg, promise);
+    catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
+		}
+    finally {
+			//"FutureReturnValueIgnored" this is deliberate
+			ctx.write(msg, promise);
+		}
 	}
 
 	@Override
