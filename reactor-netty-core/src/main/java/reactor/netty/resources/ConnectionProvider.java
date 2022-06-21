@@ -162,6 +162,28 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
+	 * Create a new {@link ConnectionProvider} to cache and reuse a fixed maximum
+	 * number of {@link Connection}.
+	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max connection value.
+	 * Further connections will be pending acquisition until {@link #DEFAULT_POOL_ACQUIRE_TIMEOUT}
+	 * and the default pending acquisition max count will be 2 * max connections value.
+	 *
+	 * @param name the connection pool name
+	 * @param maxConnections the maximum number of connections before starting pending
+	 * acquisition on existing ones
+	 * @param metricsEnabled true enables metrics collection; false disables it
+	 *
+	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
+	 * number of {@link Connection}
+	 */
+	static ConnectionProvider create(String name, int maxConnections, boolean metricsEnabled) {
+		return builder(name).maxConnections(maxConnections)
+				.pendingAcquireTimeout(Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT))
+				.metrics(metricsEnabled)
+				.build();
+	}
+
+	/**
 	 * Return an existing or new {@link Connection} on subscribe.
 	 *
 	 * @param config the transport configuration
