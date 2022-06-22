@@ -194,6 +194,9 @@ task japicmp(type: JapicmpTask) {
 	ignoreMissingClasses = true
 	includeSynthetic = true
 	onlyIf { "$compatibleVersion" != "SKIP" }
+	methodExcludes = [
+			"reactor.netty.resources.ConnectionProvider#create(java.lang.String, int, boolean)"
+	]
 }
 
 tasks.japicmp.dependsOn(downloadBaseline)
