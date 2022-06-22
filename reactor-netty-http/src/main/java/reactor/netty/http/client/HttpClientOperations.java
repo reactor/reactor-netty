@@ -565,8 +565,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpResponse) {
-			HttpResponse response = (HttpResponse) msg;
+		if (msg instanceof HttpResponse response) {
 			if (response.decoderResult()
 			            .isFailure()) {
 				onInboundError(response.decoderResult()
@@ -623,8 +622,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				channel().config().setAutoRead(true);
 			}
 
-			if (msg instanceof FullHttpResponse) {
-				FullHttpResponse request = (FullHttpResponse) msg;
+			if (msg instanceof FullHttpResponse request) {
 				if (request.payload().readableBytes() > 0) {
 					super.onInboundNext(ctx, msg);
 				}

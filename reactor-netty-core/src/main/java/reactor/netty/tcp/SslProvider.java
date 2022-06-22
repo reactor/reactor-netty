@@ -387,8 +387,7 @@ public final class SslProvider {
 
 		SslHandler sslHandler;
 
-		if (remoteAddress instanceof InetSocketAddress) {
-			InetSocketAddress sniInfo = (InetSocketAddress) remoteAddress;
+		if (remoteAddress instanceof InetSocketAddress sniInfo) {
 			sslHandler = getSslContext()
 					.newHandler(channel.bufferAllocator(), sniInfo.getHostString(), sniInfo.getPort());
 
@@ -598,10 +597,9 @@ public final class SslProvider {
 			if (this == o) {
 				return true;
 			}
-			if (!(o instanceof Build)) {
+			if (!(o instanceof Build build)) {
 				return false;
 			}
-			Build build = (Build) o;
 			return handshakeTimeoutMillis == build.handshakeTimeoutMillis &&
 					closeNotifyFlushTimeoutMillis == build.closeNotifyFlushTimeoutMillis &&
 					closeNotifyReadTimeoutMillis == build.closeNotifyReadTimeoutMillis &&
@@ -647,9 +645,8 @@ public final class SslProvider {
 
 		@Override
 		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-			if (evt instanceof SslHandshakeCompletionEvent) {
+			if (evt instanceof SslHandshakeCompletionEvent handshake) {
 				handshakeDone = true;
-				SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
 				if (handshake.isSuccess()) {
 					ctx.fireChannelActive();
 				}

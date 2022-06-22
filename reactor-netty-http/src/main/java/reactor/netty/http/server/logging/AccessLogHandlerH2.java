@@ -42,8 +42,7 @@ final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof Http2HeadersFrame) {
-			final Http2HeadersFrame requestHeaders = (Http2HeadersFrame) msg;
+		if (msg instanceof Http2HeadersFrame requestHeaders) {
 
 			if (accessLogArgProvider == null) {
 				accessLogArgProvider = new AccessLogArgProviderH2(ctx.channel().remoteAddress());
@@ -56,8 +55,7 @@ final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		boolean lastContent = false;
-		if (msg instanceof Http2HeadersFrame) {
-			final Http2HeadersFrame responseHeaders = (Http2HeadersFrame) msg;
+		if (msg instanceof Http2HeadersFrame responseHeaders) {
 			lastContent = responseHeaders.isEndStream();
 
 			accessLogArgProvider.responseHeaders(responseHeaders)
@@ -68,8 +66,7 @@ final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 				accessLogArgProvider.cookies(((HttpInfos) ops).cookies());
 			}
 		}
-		if (msg instanceof Http2DataFrame) {
-			final Http2DataFrame data = (Http2DataFrame) msg;
+		if (msg instanceof Http2DataFrame data) {
 			lastContent = data.isEndStream();
 
 			accessLogArgProvider.increaseContentLength(data.content().readableBytes());

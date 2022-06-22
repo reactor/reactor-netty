@@ -271,8 +271,7 @@ public final class ReactorNetty {
 			ByteBuf buffer = ((ByteBufHolder) msg).content();
 			result = "\n" + ByteBufUtil.prettyHexDump(buffer);
 		}
-		else if (msg instanceof Buffer) {
-			Buffer buffer = (Buffer) msg;
+		else if (msg instanceof Buffer buffer) {
 			int length = buffer.readableBytes();
 			int rows = length / 16 + ((length & 15) == 0 ? 0 : 1) + 4;
 			StringBuilder buf = new StringBuilder(rows * 80);

@@ -79,14 +79,12 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof Buffer) {
-			Buffer buffer = (Buffer) msg;
+		if (msg instanceof Buffer buffer) {
 			if (buffer.readableBytes() > 0) {
 				recordRead(ctx, remoteAddress, buffer.readableBytes());
 			}
 		}
-		else if (msg instanceof DatagramPacket) {
-			DatagramPacket p = (DatagramPacket) msg;
+		else if (msg instanceof DatagramPacket p) {
 			Buffer buffer = p.content();
 			if (buffer.readableBytes() > 0) {
 				recordRead(ctx, remoteAddress != null ? remoteAddress : p.sender(), buffer.readableBytes());
@@ -98,14 +96,12 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof Buffer) {
-			Buffer buffer = (Buffer) msg;
+		if (msg instanceof Buffer buffer) {
 			if (buffer.readableBytes() > 0) {
 				recordWrite(ctx, remoteAddress, buffer.readableBytes());
 			}
 		}
-		else if (msg instanceof DatagramPacket) {
-			DatagramPacket p = (DatagramPacket) msg;
+		else if (msg instanceof DatagramPacket p) {
 			Buffer buffer = p.content();
 			if (buffer.readableBytes() > 0) {
 				recordWrite(ctx, remoteAddress != null ? remoteAddress : p.recipient(), buffer.readableBytes());

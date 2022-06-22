@@ -535,8 +535,7 @@ class HttpClientConnect extends HttpClient {
 		}
 
 		static String resolveHostHeaderValue(@Nullable SocketAddress remoteAddress) {
-			if (remoteAddress instanceof InetSocketAddress) {
-				InetSocketAddress address = (InetSocketAddress) remoteAddress;
+			if (remoteAddress instanceof InetSocketAddress address) {
 				String host = HttpUtil.formatHostnameForHttp(address);
 				int port = address.getPort();
 				if (port != 80 && port != 443) {
@@ -603,8 +602,7 @@ class HttpClientConnect extends HttpClient {
 
 		@Override
 		public boolean test(Throwable throwable) {
-			if (throwable instanceof RedirectClientException) {
-				RedirectClientException re = (RedirectClientException) throwable;
+			if (throwable instanceof RedirectClientException re) {
 				if (HttpResponseStatus.SEE_OTHER.equals(re.status)) {
 					method = HttpMethod.GET;
 				}

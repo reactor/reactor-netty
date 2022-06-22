@@ -47,9 +47,8 @@ final class NonSslRedirectHandler extends ChannelHandlerAdapter {
 	@SuppressWarnings("FutureReturnValueIgnored")
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest) {
+		if (msg instanceof HttpRequest request) {
 			ctx.pipeline().remove(this);
-			HttpRequest request = (HttpRequest) msg;
 			String url = getRequestedUrlInHttps(request);
 			if (url == null) {
 				// "FutureReturnValueIgnored" this is deliberate

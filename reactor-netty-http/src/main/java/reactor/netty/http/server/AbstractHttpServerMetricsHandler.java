@@ -88,8 +88,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 			}
 
 			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-			if (channelOps instanceof HttpServerOperations) {
-				HttpServerOperations ops = (HttpServerOperations) channelOps;
+			if (channelOps instanceof HttpServerOperations ops) {
 				startWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
 						ops.method().name(), ops.status().codeAsText().toString());
 			}
@@ -106,9 +105,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 			return ctx.write(msg)
 			          .addListener(future -> {
 			              ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-			              if (channelOps instanceof HttpServerOperations) {
-			                  HttpServerOperations ops = (HttpServerOperations) channelOps;
-			                  recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
+			              if (channelOps instanceof HttpServerOperations ops) {
+				              recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
 			                          ops.method().name(), ops.status().codeAsText().toString());
 			                  if (!ops.isHttp2() && ops.hostAddress() != null) {
 			                      // This metric is not applicable for HTTP/2
@@ -129,8 +127,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
 			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-			if (channelOps instanceof HttpServerOperations) {
-				HttpServerOperations ops = (HttpServerOperations) channelOps;
+			if (channelOps instanceof HttpServerOperations ops) {
 				if (!ops.isHttp2()) {
 					// This metric is not applicable for HTTP/2
 					recordActiveConnection(ops);
@@ -148,8 +145,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 
 		if (msg instanceof LastHttpContent) {
 			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-			if (channelOps instanceof HttpServerOperations) {
-				HttpServerOperations ops = (HttpServerOperations) channelOps;
+			if (channelOps instanceof HttpServerOperations ops) {
 				recordRead(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), ops.method().name());
 			}
 
@@ -162,8 +158,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-		if (channelOps instanceof HttpServerOperations) {
-			HttpServerOperations ops = (HttpServerOperations) channelOps;
+		if (channelOps instanceof HttpServerOperations ops) {
 			// Always take the remote address from the operations in order to consider proxy information
 			recordException(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path));
 		}

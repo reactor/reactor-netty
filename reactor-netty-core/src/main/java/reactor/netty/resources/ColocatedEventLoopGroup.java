@@ -38,8 +38,7 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 	ColocatedEventLoopGroup(EventLoopGroup eventLoopGroup) {
 		this.eventLoopGroup = eventLoopGroup;
 		for (EventExecutor ex : eventLoopGroup) {
-			if (ex instanceof EventLoop) {
-				EventLoop eventLoop = (EventLoop) ex;
+			if (ex instanceof EventLoop eventLoop) {
 				if (eventLoop.inEventLoop()) {
 					if (!localLoop.isSet()) {
 						localLoop.set(eventLoop);

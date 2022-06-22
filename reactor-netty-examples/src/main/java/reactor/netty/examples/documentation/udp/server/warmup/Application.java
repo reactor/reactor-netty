@@ -31,9 +31,8 @@ public class Application {
 				             out.sendObject(
 				                 in.receiveObject()
 				                   .map(o -> {
-				                       if (o instanceof DatagramPacket) {
-				                           DatagramPacket p = (DatagramPacket) o;
-				                           return new DatagramPacket(p.content().split(), p.sender());
+				                       if (o instanceof DatagramPacket p) {
+					                       return new DatagramPacket(p.content().split(), p.sender());
 				                       }
 				                       else {
 				                           return Mono.error(new Exception("Unexpected type of the message: " + o));

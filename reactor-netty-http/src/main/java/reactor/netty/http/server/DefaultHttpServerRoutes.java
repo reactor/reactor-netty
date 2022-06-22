@@ -90,8 +90,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		Objects.requireNonNull(condition, "condition");
 		Objects.requireNonNull(handler, "handler");
 
-		if (condition instanceof HttpPredicate) {
-			HttpPredicate predicate = (HttpPredicate) condition;
+		if (condition instanceof HttpPredicate predicate) {
 			HttpRouteHandler httpRouteHandler = new HttpRouteHandler(condition,
 					handler, predicate, predicate.uri, predicate.method);
 

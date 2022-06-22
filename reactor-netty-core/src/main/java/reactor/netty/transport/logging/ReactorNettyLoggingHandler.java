@@ -105,10 +105,9 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		if (this == o) {
 			return true;
 		}
-		if (!(o instanceof ReactorNettyLoggingHandler)) {
+		if (!(o instanceof ReactorNettyLoggingHandler that)) {
 			return false;
 		}
-		ReactorNettyLoggingHandler that = (ReactorNettyLoggingHandler) o;
 		return byteBufFormat == that.byteBufFormat &&
 				Objects.equals(charset, that.charset) &&
 				level() == that.level() &&

@@ -195,10 +195,9 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		if (this == o) {
 			return true;
 		}
-		if (!(o instanceof HttpDecoderSpec)) {
+		if (!(o instanceof HttpDecoderSpec<?> that)) {
 			return false;
 		}
-		HttpDecoderSpec<?> that = (HttpDecoderSpec<?>) o;
 		return maxInitialLineLength == that.maxInitialLineLength &&
 				maxHeaderSize == that.maxHeaderSize &&
 				validateHeaders == that.validateHeaders &&
