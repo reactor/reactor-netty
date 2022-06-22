@@ -175,6 +175,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
+	 * @since 1.0.21
 	 */
 	static ConnectionProvider create(String name, int maxConnections, boolean metricsEnabled) {
 		return builder(name).maxConnections(maxConnections)
