@@ -38,7 +38,7 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 
 		@Override
 		public KeyName[] getKeyNames() {
-			return Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.values();
+			return Http2ConnectionProviderMetersTags.values();
 		}
 
 		@Override
@@ -78,7 +78,7 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 
 		@Override
 		public KeyName[] getKeyNames() {
-			return Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.values();
+			return Http2ConnectionProviderMetersTags.values();
 		}
 
 		@Override
