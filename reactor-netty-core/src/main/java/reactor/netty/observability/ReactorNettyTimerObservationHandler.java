@@ -17,7 +17,7 @@ package reactor.netty.observability;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.observation.TimerObservationHandler;
+import io.micrometer.core.instrument.observation.MeterObservationHandler;
 import io.micrometer.observation.Observation;
 
 /**
@@ -25,11 +25,20 @@ import io.micrometer.observation.Observation;
  * This timer observation handler is used to reduce memory overhead when creating Timer object instances.
  *
  * @author Pierre De Rop
+ * @author Violeta Georgieva
  * @since 1.1.0
  */
-public final class ReactorNettyTimerObservationHandler extends TimerObservationHandler {
+public final class ReactorNettyTimerObservationHandler implements MeterObservationHandler<Observation.Context> {
+	final MeterRegistry meterRegistry;
+
 	public ReactorNettyTimerObservationHandler(MeterRegistry meterRegistry) {
-		super(meterRegistry);
+		this.meterRegistry = meterRegistry;
+	}
+
+	@Override
+	public void onStart(Observation.Context context) {
+		Timer.Sample sample = Timer.start(meterRegistry);
+		context.put(Timer.Sample.class, sample);
 	}
 
 	@Override
