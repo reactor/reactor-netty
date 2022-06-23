@@ -282,9 +282,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		if (origin.equals(target)) {
 			return true;
 		}
-		else if (origin instanceof InetSocketAddress && target instanceof InetSocketAddress) {
-			InetSocketAddress isaOrigin = (InetSocketAddress) origin;
-			InetSocketAddress isaTarget = (InetSocketAddress) target;
+		else if (origin instanceof InetSocketAddress isaOrigin && target instanceof InetSocketAddress isaTarget) {
 			if (isaOrigin.getPort() == isaTarget.getPort()) {
 				InetAddress iaTarget = isaTarget.getAddress();
 				return (iaTarget != null && iaTarget.isAnyLocalAddress()) ||

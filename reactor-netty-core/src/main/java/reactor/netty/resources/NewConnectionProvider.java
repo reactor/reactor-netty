@@ -79,8 +79,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 			else {
 				Objects.requireNonNull(config.bindAddress(), "bindAddress");
 				SocketAddress local = Objects.requireNonNull(config.bindAddress().get(), "Bind Address supplier returned null");
-				if (local instanceof InetSocketAddress) {
-					InetSocketAddress localInet = (InetSocketAddress) local;
+				if (local instanceof InetSocketAddress localInet) {
 
 					if (localInet.isUnresolved()) {
 						local = AddressUtils.createResolved(localInet.getHostName(), localInet.getPort());

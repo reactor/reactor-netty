@@ -186,10 +186,9 @@ public final class HttpServerFormDecoderProvider {
 		if (this == o) {
 			return true;
 		}
-		if (!(o instanceof HttpServerFormDecoderProvider)) {
+		if (!(o instanceof HttpServerFormDecoderProvider that)) {
 			return false;
 		}
-		HttpServerFormDecoderProvider that = (HttpServerFormDecoderProvider) o;
 		return maxInMemorySize == that.maxInMemorySize &&
 				maxSize == that.maxSize &&
 				streaming == that.streaming &&

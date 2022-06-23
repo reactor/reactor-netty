@@ -79,8 +79,7 @@ class TransportEventLoopMetricsTest {
 					.doOnConnection(c -> {
 						EventLoop eventLoop = c.channel().executor();
 						IntStream.range(0, 10).forEach(i -> eventLoop.execute(() -> {}));
-						if (eventLoop instanceof SingleThreadEventExecutor) {
-							SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
+						if (eventLoop instanceof SingleThreadEventExecutor singleThreadEventExecutor) {
 							String[] tags = new String[]{
 									NAME, singleThreadEventExecutor.threadProperties().name(),
 							};

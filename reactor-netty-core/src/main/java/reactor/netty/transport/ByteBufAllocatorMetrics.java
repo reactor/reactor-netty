@@ -65,8 +65,7 @@ final class ByteBufAllocatorMetrics {
 			     .tags(tags)
 			     .register(REGISTRY);
 
-			if (metrics instanceof PooledByteBufAllocatorMetric) {
-				PooledByteBufAllocatorMetric pooledMetrics = (PooledByteBufAllocatorMetric) metrics;
+			if (metrics instanceof PooledByteBufAllocatorMetric pooledMetrics) {
 				PooledByteBufAllocator pooledAlloc = (PooledByteBufAllocator) alloc;
 
 				Gauge.builder(HEAP_ARENAS.getName(), pooledMetrics, PooledByteBufAllocatorMetric::numHeapArenas)

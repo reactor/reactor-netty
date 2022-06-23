@@ -162,10 +162,9 @@ public final class Http2SettingsSpec {
 		if (this == o) {
 			return true;
 		}
-		if (!(o instanceof Http2SettingsSpec)) {
+		if (!(o instanceof Http2SettingsSpec that)) {
 			return false;
 		}
-		Http2SettingsSpec that = (Http2SettingsSpec) o;
 		return Objects.equals(headerTableSize, that.headerTableSize) &&
 				Objects.equals(initialWindowSize, that.initialWindowSize) &&
 				Objects.equals(maxConcurrentStreams, that.maxConcurrentStreams) &&

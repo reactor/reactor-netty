@@ -243,8 +243,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			ConnectionObserver current = c.attr(OWNER)
 			                              .getAndSet(this);
 
-			if (current instanceof PendingConnectionObserver) {
-				PendingConnectionObserver pending = (PendingConnectionObserver) current;
+			if (current instanceof PendingConnectionObserver pending) {
 				PendingConnectionObserver.Pending p;
 				current = null;
 				registerClose(pooledRef, pool);

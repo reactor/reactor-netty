@@ -282,8 +282,7 @@ public class Metrics {
 	@Nullable
 	public static String formatSocketAddress(@Nullable SocketAddress socketAddress) {
 		if (socketAddress != null) {
-			if (socketAddress instanceof InetSocketAddress) {
-				InetSocketAddress address = (InetSocketAddress) socketAddress;
+			if (socketAddress instanceof InetSocketAddress address) {
 				return address.getHostString() + ":" + address.getPort();
 			}
 			else {

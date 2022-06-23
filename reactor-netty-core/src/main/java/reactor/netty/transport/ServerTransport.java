@@ -87,8 +87,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 		Mono<? extends DisposableServer> mono =  Mono.create(sink -> {
 			SocketAddress local = Objects.requireNonNull(config.bindAddress().get(), "Bind Address supplier returned null");
-			if (local instanceof InetSocketAddress) {
-				InetSocketAddress localInet = (InetSocketAddress) local;
+			if (local instanceof InetSocketAddress localInet) {
 
 				if (localInet.isUnresolved()) {
 					local = AddressUtils.createResolved(localInet.getHostName(), localInet.getPort());

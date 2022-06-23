@@ -356,8 +356,7 @@ public final class TransportConnector {
 				return monoChannelPromise;
 			}
 
-			if (config instanceof ClientTransportConfig) {
-				final ClientTransportConfig<?> clientTransportConfig = (ClientTransportConfig<?>) config;
+			if (config instanceof ClientTransportConfig<?> clientTransportConfig) {
 				if (clientTransportConfig.doOnResolve != null) {
 					clientTransportConfig.doOnResolve.accept(Connection.from(channel));
 				}
@@ -368,8 +367,7 @@ public final class TransportConnector {
 				resolveFuture = resolver.resolveAll(remoteAddress);
 			}
 
-			if (config instanceof ClientTransportConfig) {
-				final ClientTransportConfig<?> clientTransportConfig = (ClientTransportConfig<?>) config;
+			if (config instanceof ClientTransportConfig<?> clientTransportConfig) {
 
 				if (clientTransportConfig.doOnResolveError != null) {
 					resolveFuture.addListener(future -> {

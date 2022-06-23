@@ -51,10 +51,9 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 	 */
 	@Override
 	public Mono<Void> join(final InetAddress multicastAddress, @Nullable NetworkInterface iface) {
-		if (!(connection().channel() instanceof DatagramChannel)) {
+		if (!(connection().channel() instanceof DatagramChannel datagramChannel)) {
 			throw new UnsupportedOperationException();
 		}
-		DatagramChannel datagramChannel = (DatagramChannel) connection().channel();
 		if (null == iface && null != datagramChannel.config().getNetworkInterface()) {
 			iface = datagramChannel.config().getNetworkInterface();
 		}
@@ -86,10 +85,9 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 	 */
 	@Override
 	public Mono<Void> leave(final InetAddress multicastAddress, @Nullable NetworkInterface iface) {
-		if (!(connection().channel() instanceof DatagramChannel)) {
+		if (!(connection().channel() instanceof DatagramChannel datagramChannel)) {
 			throw new UnsupportedOperationException();
 		}
-		DatagramChannel datagramChannel = (DatagramChannel) connection().channel();
 		if (null == iface && null != datagramChannel.config().getNetworkInterface()) {
 			iface = datagramChannel.config().getNetworkInterface();
 		}

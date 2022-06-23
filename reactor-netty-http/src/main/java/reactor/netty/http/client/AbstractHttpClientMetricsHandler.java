@@ -80,8 +80,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 			method = ((HttpRequest) msg).method().name();
 
 			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-			if (channelOps instanceof HttpClientOperations) {
-				HttpClientOperations ops = (HttpClientOperations) channelOps;
+			if (channelOps instanceof HttpClientOperations ops) {
 				path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
 				contextView = ops.currentContextView();
 			}

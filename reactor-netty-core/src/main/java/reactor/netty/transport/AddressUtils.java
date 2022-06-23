@@ -194,11 +194,9 @@ public final class AddressUtils {
 			throw new IllegalArgumentException("Cannot update DomainSocketAddress with host name [" + host + "].");
 		}
 
-		if (!(socketAddress instanceof InetSocketAddress)) {
+		if (!(socketAddress instanceof InetSocketAddress inet)) {
 			return createUnresolved(host, 0);
 		}
-
-		InetSocketAddress inet = (InetSocketAddress) socketAddress;
 
 		return createUnresolved(host, inet.getPort());
 	}
@@ -220,11 +218,9 @@ public final class AddressUtils {
 			throw new IllegalArgumentException("Cannot update DomainSocketAddress with post number [" + port + "].");
 		}
 
-		if (!(address.get() instanceof InetSocketAddress)) {
+		if (!(address.get() instanceof InetSocketAddress inet)) {
 			return createUnresolved(NetUtil.LOCALHOST.getHostAddress(), port);
 		}
-
-		InetSocketAddress inet = (InetSocketAddress) address.get();
 
 		InetAddress addr = inet.getAddress();
 

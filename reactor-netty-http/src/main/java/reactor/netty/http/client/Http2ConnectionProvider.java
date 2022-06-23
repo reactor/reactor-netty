@@ -131,8 +131,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 	}
 
 	static void invalidate(@Nullable ConnectionObserver owner) {
-		if (owner instanceof DisposableAcquire) {
-			DisposableAcquire da = (DisposableAcquire) owner;
+		if (owner instanceof DisposableAcquire da) {
 			da.pooledRef
 			  .invalidate()
 			  .subscribe();
@@ -285,8 +284,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			ConnectionObserver current = channel.attr(OWNER)
 			                                    .getAndSet(this);
 
-			if (current instanceof PendingConnectionObserver) {
-				PendingConnectionObserver pending = (PendingConnectionObserver) current;
+			if (current instanceof PendingConnectionObserver pending) {
 				PendingConnectionObserver.Pending p;
 
 				while ((p = pending.pendingQueue.poll()) != null) {

@@ -46,10 +46,9 @@ public class ChannelBindException extends RuntimeException {
 						cause.getMessage().contains("bind(..)"))) {
 			cause = null;
 		}
-		if (!(bindAddress instanceof InetSocketAddress)) {
+		if (!(bindAddress instanceof InetSocketAddress address)) {
 			return new ChannelBindException(bindAddress.toString(), cause);
 		}
-		InetSocketAddress address = (InetSocketAddress) bindAddress;
 
 		return new ChannelBindException(address.getHostString(), address.getPort(), cause);
 	}

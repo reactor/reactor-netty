@@ -103,8 +103,7 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel().parent()))
 					        .orElse(ctx.channel().parent().remoteAddress());
 		}
-		if (msg instanceof HttpRequest) {
-			HttpRequest request = (HttpRequest) msg;
+		if (msg instanceof HttpRequest request) {
 			HttpServerOperations ops;
 			try {
 				pendingResponse = true;

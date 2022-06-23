@@ -559,8 +559,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				Resource.dispose(msg);
 				return;
 			}
-			if (msg instanceof FullHttpRequest) {
-				FullHttpRequest request = (FullHttpRequest) msg;
+			if (msg instanceof FullHttpRequest request) {
 				if (request.payload().readableBytes() > 0) {
 					super.onInboundNext(ctx, msg);
 				}

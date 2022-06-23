@@ -47,8 +47,7 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest) {
-			final HttpRequest request = (HttpRequest) msg;
+		if (msg instanceof HttpRequest request) {
 
 			if (accessLogArgProvider == null) {
 				accessLogArgProvider = new AccessLogArgProviderH1(ctx.channel().remoteAddress());
@@ -60,8 +59,7 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpResponse) {
-			final HttpResponse response = (HttpResponse) msg;
+		if (msg instanceof HttpResponse response) {
 			final HttpResponseStatus status = response.status();
 
 			if (status.equals(HttpResponseStatus.CONTINUE)) {

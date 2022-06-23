@@ -426,10 +426,9 @@ public final class NameResolverProvider {
 		if (this == o) {
 			return true;
 		}
-		if (!(o instanceof NameResolverProvider)) {
+		if (!(o instanceof NameResolverProvider that)) {
 			return false;
 		}
-		NameResolverProvider that = (NameResolverProvider) o;
 		return completeOncePreferredResolved == that.completeOncePreferredResolved &&
 				disableRecursionDesired == that.disableRecursionDesired &&
 				disableOptionalRecord == that.disableOptionalRecord &&

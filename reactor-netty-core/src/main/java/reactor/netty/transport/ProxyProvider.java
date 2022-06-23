@@ -513,10 +513,9 @@ public final class ProxyProvider {
 		 */
 		@Override
 		public boolean test(SocketAddress socketAddress) {
-			if (!(socketAddress instanceof InetSocketAddress)) {
+			if (!(socketAddress instanceof InetSocketAddress isa)) {
 				return false;
 			}
-			InetSocketAddress isa = (InetSocketAddress) socketAddress;
 			String hostString = isa.getHostString();
 			return hostString != null && pattern.matcher(hostString).matches();
 		}

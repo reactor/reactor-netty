@@ -46,8 +46,7 @@ final class MicrometerEventLoopMeterRegistrar {
 	private MicrometerEventLoopMeterRegistrar() {}
 
 	void registerMetrics(EventLoop eventLoop) {
-		if (eventLoop instanceof SingleThreadEventExecutor) {
-			SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
+		if (eventLoop instanceof SingleThreadEventExecutor singleThreadEventExecutor) {
 			String executorName = singleThreadEventExecutor.threadProperties().name();
 			MapUtils.computeIfAbsent(cache, executorName, key -> {
 				Gauge.builder(PENDING_TASKS.getName(), singleThreadEventExecutor::pendingTasks)

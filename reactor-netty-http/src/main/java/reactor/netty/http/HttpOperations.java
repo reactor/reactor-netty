@@ -139,10 +139,9 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			ReactorNetty.safeRelease(message);
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
-		if (!(message instanceof Buffer)) {
+		if (!(message instanceof Buffer b)) {
 			return super.sendObject(message);
 		}
-		Buffer b = (Buffer) message;
 		return new PostHeadersNettyOutbound(Mono.fromCompletionStage(() -> {
 			if (markSentHeaderAndBody(b)) {
 				try {

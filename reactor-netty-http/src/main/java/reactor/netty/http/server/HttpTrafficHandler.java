@@ -145,10 +145,8 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 					        .orElse(ctx.channel().remoteAddress());
 		}
 		// read message and track if it was keepAlive
-		if (msg instanceof HttpRequest) {
+		if (msg instanceof HttpRequest request) {
 			IdleTimeoutHandler.removeIdleTimeoutHandler(ctx.pipeline());
-
-			final HttpRequest request = (HttpRequest) msg;
 
 			if (H2.equals(request.protocolVersion())) {
 				sendDecodingFailures(new IllegalStateException(
@@ -291,8 +289,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		// modify message on way out to add headers if needed
-		if (msg instanceof HttpResponse) {
-			final HttpResponse response = (HttpResponse) msg;
+		if (msg instanceof HttpResponse response) {
 			nonInformationalResponse = !isInformational(response);
 			// Assume the response writer knows if they can persist or not and sets isKeepAlive on the response
 			boolean maxKeepAliveRequestsReached = maxKeepAliveRequests != -1 && HttpServerOperations.requestsCounter(ctx.channel()) == maxKeepAliveRequests;
