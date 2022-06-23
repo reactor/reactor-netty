@@ -55,7 +55,7 @@ public class Application {
 	}
 
 	/**
-	 * Transforms the Object to ByteBuf following the expected SSE format.
+	 * Transforms the Object to Buffer following the expected SSE format.
 	 */
 	private static Buffer toBuffer(Object obj, BufferAllocator allocator) {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();

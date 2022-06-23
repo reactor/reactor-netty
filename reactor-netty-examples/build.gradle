@@ -20,7 +20,6 @@ dependencies {
 
 	api "io.micrometer:micrometer-core:$micrometerVersion"
 
-	api "io.netty:netty-buffer:$nettyByteBufVersion"
 	// TODO temporary depend on natives from 5.0.0.Alpha2
 	api "io.netty:netty5-transport-native-epoll:5.0.0.Alpha2:linux-x86_64"
 
