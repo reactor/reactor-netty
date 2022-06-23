@@ -85,7 +85,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 				contextView = ops.currentContextView();
 			}
 
-			startWrite((HttpRequest) msg, ctx.channel());
+			startWrite((HttpRequest) msg, ctx.channel(), contextView);
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -174,7 +174,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		dataReceivedTime = System.nanoTime();
 	}
 
-	protected void startWrite(HttpRequest msg, Channel channel) {
+	protected void startWrite(HttpRequest msg, Channel channel, @Nullable ContextView contextView) {
 		dataSentTime = System.nanoTime();
 	}
 

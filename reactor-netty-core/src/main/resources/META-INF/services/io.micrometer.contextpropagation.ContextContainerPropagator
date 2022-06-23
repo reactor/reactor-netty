@@ -1,2 +1,0 @@
-reactor.netty.observability.contextpropagation.propagator.ChannelContextContainerPropagator
-reactor.netty.observability.contextpropagation.propagator.ReactorContextContainerPropagator
