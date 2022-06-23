@@ -29,6 +29,8 @@ import reactor.netty.DisposableServer;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -49,6 +51,7 @@ import static reactor.netty.Metrics.PENDING_TASKS;
 class TransportEventLoopMetricsTest {
 
 	private MeterRegistry registry;
+	final Logger log = Loggers.getLogger(TransportEventLoopMetricsTest.class);
 
 	@BeforeEach
 	void setUp() {
@@ -80,9 +83,16 @@ class TransportEventLoopMetricsTest {
 						EventLoop eventLoop = c.channel().executor();
 						IntStream.range(0, 10).forEach(i -> eventLoop.execute(() -> {}));
 						if (eventLoop instanceof SingleThreadEventExecutor singleThreadEventExecutor) {
-							String[] tags = new String[]{
-									NAME, singleThreadEventExecutor.threadProperties().name(),
-							};
+							String[] tags = new String[0];
+							try {
+								tags = new String[]{
+										NAME, singleThreadEventExecutor.threadProperties().name(),
+								};
+							}
+							catch (InterruptedException e) {
+								log.warn("operation interrupted", e);
+								return;
+							}
 							assertThat(getGaugeValue(EVENT_LOOP_PREFIX + PENDING_TASKS, tags)).isEqualTo(10);
 							latch.countDown();
 						}

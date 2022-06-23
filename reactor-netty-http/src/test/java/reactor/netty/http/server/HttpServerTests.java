@@ -1827,11 +1827,11 @@ class HttpServerTests extends BaseHttpTest {
 				              channel.pipeline()
 				                     .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
 				                         @Override
-				                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				                         public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
 				                             if (evt instanceof SniCompletionEvent) {
 				                                 hostname.set(((SniCompletionEvent) evt).hostname());
 				                             }
-				                             ctx.fireUserEventTriggered(evt);
+				                             ctx.fireInboundEventTriggered(evt);
 				                         }
 				                     }))
 				          .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
@@ -1874,11 +1874,11 @@ class HttpServerTests extends BaseHttpTest {
 				              channel.pipeline()
 				                     .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
 				                         @Override
-				                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				                         public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
 				                             if (evt instanceof SniCompletionEvent) {
 				                                 hostname.set(((SniCompletionEvent) evt).hostname());
 				                             }
-				                                 ctx.fireUserEventTriggered(evt);
+				                                 ctx.fireInboundEventTriggered(evt);
 				                             }
 				                         }))
 				          .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))

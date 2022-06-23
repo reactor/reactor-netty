@@ -20,6 +20,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 import reactor.util.annotation.Nullable;
@@ -160,6 +161,10 @@ class ReactorNettyTest {
 		}
 
 		@Override
+		protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
+		}
+
+		@Override
 		protected void doBeginRead() {
 		}
 
@@ -180,6 +185,11 @@ class ReactorNettyTest {
 		@Override
 		public boolean isActive() {
 			return active;
+		}
+
+		@Override
+		public boolean isShutdown(ChannelShutdownDirection direction) {
+			return false;
 		}
 
 		@Override

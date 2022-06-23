@@ -644,7 +644,7 @@ public final class SslProvider {
 		}
 
 		@Override
-		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+		public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
 			if (evt instanceof SslHandshakeCompletionEvent handshake) {
 				handshakeDone = true;
 				if (handshake.isSuccess()) {
@@ -654,7 +654,7 @@ public final class SslProvider {
 					ctx.fireExceptionCaught(handshake.cause());
 				}
 			}
-			ctx.fireUserEventTriggered(evt);
+			ctx.fireInboundEventTriggered(evt);
 			if (handshakeDone && ctx.pipeline().context(this) != null) {
 				ctx.pipeline().remove(this);
 			}

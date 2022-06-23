@@ -47,6 +47,7 @@ import io.netty5.channel.AdaptiveRecvBufferAllocator;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
 import io.netty5.channel.unix.DomainSocketAddress;
@@ -895,7 +896,7 @@ class TcpServerTests {
 		conn.outbound()
 		    .sendString(Flux.range(1, 257).map(count -> count + "\n"))
 		    .then()
-		    .subscribe(null, null, () -> ((io.netty5.channel.socket.SocketChannel) conn.channel()).shutdownOutput()); // FutureReturnValueIgnored
+		    .subscribe(null, null, () -> ((io.netty5.channel.socket.SocketChannel) conn.channel()).shutdown(ChannelShutdownDirection.Outbound)); // FutureReturnValueIgnored
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
@@ -1130,11 +1131,11 @@ class TcpServerTests {
 				             channel.pipeline()
 				                    .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
 				                        @Override
-				                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				                        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
 				                            if (evt instanceof SniCompletionEvent) {
 				                                hostname.set(((SniCompletionEvent) evt).hostname());
 				                            }
-				                            ctx.fireUserEventTriggered(evt);
+				                            ctx.fireInboundEventTriggered(evt);
 				                        }
 				                    }))
 				         .handle((in, out) -> out.sendString(Mono.just("testSniSupport")))

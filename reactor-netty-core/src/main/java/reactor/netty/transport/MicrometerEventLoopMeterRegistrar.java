@@ -19,6 +19,8 @@ import io.micrometer.core.instrument.Gauge;
 import io.netty5.channel.EventLoop;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import reactor.netty.internal.util.MapUtils;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -40,6 +42,7 @@ import static reactor.netty.Metrics.REGISTRY;
 final class MicrometerEventLoopMeterRegistrar {
 
 	final static MicrometerEventLoopMeterRegistrar INSTANCE = new MicrometerEventLoopMeterRegistrar();
+	static final Logger log = Loggers.getLogger(MicrometerEventLoopMeterRegistrar.class);
 
 	private final ConcurrentMap<String, EventLoop> cache = new ConcurrentHashMap<>();
 
@@ -47,13 +50,18 @@ final class MicrometerEventLoopMeterRegistrar {
 
 	void registerMetrics(EventLoop eventLoop) {
 		if (eventLoop instanceof SingleThreadEventExecutor singleThreadEventExecutor) {
-			String executorName = singleThreadEventExecutor.threadProperties().name();
-			MapUtils.computeIfAbsent(cache, executorName, key -> {
-				Gauge.builder(PENDING_TASKS.getName(), singleThreadEventExecutor::pendingTasks)
-				     .tag(NAME.getKeyName(), executorName)
-				     .register(REGISTRY);
-				return eventLoop;
-			});
+			try {
+				String executorName = singleThreadEventExecutor.threadProperties().name();
+				MapUtils.computeIfAbsent(cache, executorName, key -> {
+					Gauge.builder(PENDING_TASKS.getName(), singleThreadEventExecutor::pendingTasks)
+							.tag(NAME.getKeyName(), executorName)
+							.register(REGISTRY);
+					return eventLoop;
+				});
+			}
+			catch (InterruptedException e) {
+				log.warn("Thread interrupted while registering metrics", e);
+			}
 		}
 	}
 }
