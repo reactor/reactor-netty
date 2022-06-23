@@ -506,7 +506,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 				// FutureReturnValueIgnored is deliberate
 				ctx.close();
 			}
-			ctx.fireUserEventTriggered(evt);
+			ctx.fireInboundEventTriggered(evt);
 		}
 
 		static void addIdleTimeoutHandler(ChannelPipeline pipeline, @Nullable Duration idleTimeout) {

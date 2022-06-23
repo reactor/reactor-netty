@@ -80,7 +80,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
-	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+	public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
 		Channel channel = ctx.channel();
 		if (evt == UPGRADE_ISSUED) {
 			if (log.isDebugEnabled()) {
@@ -100,7 +100,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter {
 			}
 			sendNewState(Connection.from(channel), HttpClientState.UPGRADE_REJECTED);
 		}
-		ctx.fireUserEventTriggered(evt);
+		ctx.fireInboundEventTriggered(evt);
 	}
 
 	void sendNewState(Connection connection, ConnectionObserver.State state) {
