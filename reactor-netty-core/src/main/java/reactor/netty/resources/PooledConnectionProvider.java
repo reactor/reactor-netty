@@ -15,7 +15,7 @@
  */
 package reactor.netty.resources;
 
-import io.micrometer.contextpropagation.ContextContainer;
+import io.micrometer.context.ContextSnapshot;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -44,7 +44,6 @@ import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
-import reactor.util.context.Context;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -151,10 +150,6 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				return newPool;
 			});
 
-			ContextContainer container = ContextContainer.create().captureThreadLocalValues();
-			container.captureContext(Context.of(sink.contextView()));
-			Context currentPropagationContext = container.save(Context.empty());
-
 			EventLoop eventLoop;
 			if (sink.contextView().hasKey(CONTEXT_CALLER_EVENTLOOP)) {
 				eventLoop = sink.contextView().get(CONTEXT_CALLER_EVENTLOOP);
@@ -173,9 +168,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			if (eventLoop != null) {
 				mono = mono.contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop));
 			}
-			mono.contextWrite(ctx -> ctx.putAll(currentPropagationContext.readOnly()))
+			ContextSnapshot snapshot = ContextSnapshot.forContextAndThreadLocalValues(sink.contextView());
+			mono.contextWrite(snapshot::updateContext)
 			    .subscribe(createDisposableAcquire(config, connectionObserver,
-			            poolFactory.pendingAcquireTimeout, pool, currentPropagationContext, sink));
+			            poolFactory.pendingAcquireTimeout, pool, sink, snapshot));
 		});
 	}
 
@@ -261,8 +257,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			ConnectionObserver connectionObserver,
 			long pendingAcquireTimeout,
 			InstrumentedPool<T> pool,
-			Context propagationContext,
-			MonoSink<Connection> sink);
+			MonoSink<Connection> sink,
+			ContextSnapshot snapshot);
 
 	protected abstract InstrumentedPool<T> createPool(
 			TransportConfig config,

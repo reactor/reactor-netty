@@ -16,9 +16,10 @@
 package reactor.netty.http.client;
 
 import io.micrometer.common.KeyValues;
-import io.micrometer.contextpropagation.ContextContainer;
+import io.micrometer.context.ContextSnapshot;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
+import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor;
 import io.micrometer.observation.transport.http.HttpClientRequest;
 import io.micrometer.observation.transport.http.HttpClientResponse;
 import io.micrometer.observation.transport.http.context.HttpClientContext;
@@ -27,11 +28,13 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
@@ -50,6 +53,8 @@ import static reactor.netty.http.client.HttpClientObservations.ResponseTimeLowCa
  * @since 1.1.0
  */
 final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetricsHandler {
+	static final Predicate<Object> OBSERVATION_KEY = k -> k == ObservationThreadLocalAccessor.KEY;
+
 	final MicrometerHttpClientMetricsRecorder recorder;
 
 	ResponseTimeHandlerContext responseTimeHandlerContext;
@@ -109,13 +114,14 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	// writing the request
 	@Override
 	@SuppressWarnings("try")
-	protected void startWrite(HttpRequest msg, Channel channel) {
-		super.startWrite(msg, channel);
+	protected void startWrite(HttpRequest msg, Channel channel, @Nullable ContextView contextView) {
+		super.startWrite(msg, channel, contextView);
 
 		HttpClientRequest httpClientRequest = new ObservationHttpClientRequest(msg, method, path);
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, httpClientRequest, channel.remoteAddress());
-		ContextContainer container = ContextContainer.restore(channel);
-		try (ContextContainer.Scope scope = container.restoreThreadLocalValues()) {
+		ContextSnapshot snapshot = contextView != null ? ContextSnapshot.forContextAndThreadLocalValues(contextView) :
+				ContextSnapshot.forContextAndThreadLocalValues();
+		try (ContextSnapshot.Scope scope = snapshot.setThreadLocalValues(OBSERVATION_KEY)) {
 			responseTimeObservation = Observation.start(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		}
 	}

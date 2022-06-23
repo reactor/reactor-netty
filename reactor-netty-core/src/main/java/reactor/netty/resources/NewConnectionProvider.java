@@ -22,7 +22,7 @@ import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import io.micrometer.contextpropagation.ContextContainer;
+import io.micrometer.context.ContextSnapshot;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.unix.DomainSocketAddress;
@@ -71,9 +71,8 @@ final class NewConnectionProvider implements ConnectionProvider {
 			DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
 			if (remote != null && resolverGroup != null) {
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
-				ContextContainer container = ContextContainer.create().captureThreadLocalValues();
-				container.captureContext(Context.of(sink.contextView()));
-				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, container)
+				ContextSnapshot snapshot = ContextSnapshot.forContextAndThreadLocalValues(sink.contextView());
+				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, snapshot)
 				                  .subscribe(disposableConnect);
 			}
 			else {

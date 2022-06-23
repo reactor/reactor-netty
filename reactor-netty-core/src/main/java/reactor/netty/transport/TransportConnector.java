@@ -15,7 +15,7 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.contextpropagation.ContextContainer;
+import io.micrometer.context.ContextSnapshot;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
@@ -82,7 +82,7 @@ public final class TransportConnector {
 		Objects.requireNonNull(bindAddress, "bindAddress");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
 
-		return doInitAndRegister(config, channelInitializer, isDomainSocket, config.eventLoopGroup().next(), ContextContainer.NOOP)
+		return doInitAndRegister(config, channelInitializer, isDomainSocket, config.eventLoopGroup().next())
 				.flatMap(channel -> {
 					MonoChannelPromise promise = new MonoChannelPromise(channel);
 					// "FutureReturnValueIgnored" this is deliberate
@@ -103,7 +103,7 @@ public final class TransportConnector {
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer) {
 		return connect(config, remoteAddress, resolverGroup, channelInitializer, config.eventLoopGroup().next(),
-				ContextContainer.NOOP);
+				ContextSnapshot.forContextAndThreadLocalValues());
 	}
 
 	/**
@@ -113,12 +113,12 @@ public final class TransportConnector {
 	 * @param remoteAddress the {@link SocketAddress} to connect to
 	 * @param resolverGroup the resolver which will resolve the address of the unresolved named address
 	 * @param channelInitializer the {@link ChannelInitializer} that will be used for initializing the channel pipeline
-	 * @param container {@link ContextContainer} is a holder of values that are being propagated through various contexts
+	 * @param snapshot {@link ContextSnapshot} is a holder of values that are being propagated through various contexts
 	 * @return a {@link Mono} of {@link Channel}
 	 */
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
-			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer, ContextContainer container) {
-		return connect(config, remoteAddress, resolverGroup, channelInitializer, config.eventLoopGroup().next(), container);
+			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer, ContextSnapshot snapshot) {
+		return connect(config, remoteAddress, resolverGroup, channelInitializer, config.eventLoopGroup().next(), snapshot);
 	}
 
 	/**
@@ -133,7 +133,7 @@ public final class TransportConnector {
 	 */
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer, EventLoop eventLoop) {
-		return connect(config, remoteAddress, resolverGroup, channelInitializer, eventLoop, ContextContainer.NOOP);
+		return connect(config, remoteAddress, resolverGroup, channelInitializer, eventLoop, ContextSnapshot.forContextAndThreadLocalValues());
 	}
 
 	/**
@@ -144,27 +144,27 @@ public final class TransportConnector {
 	 * @param resolverGroup the resolver which will resolve the address of the unresolved named address
 	 * @param channelInitializer the {@link ChannelInitializer} that will be used for initializing the channel pipeline
 	 * @param eventLoop the {@link EventLoop} to use for handling the channel.
-	 * @param container {@link ContextContainer} is a holder of values that are being propagated through various contexts
+	 * @param snapshot {@link ContextSnapshot} is a holder of values that are being propagated through various contexts
 	 * @return a {@link Mono} of {@link Channel}
 	 */
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer, EventLoop eventLoop,
-			ContextContainer container) {
+			ContextSnapshot snapshot) {
 		Objects.requireNonNull(config, "config");
 		Objects.requireNonNull(remoteAddress, "remoteAddress");
 		Objects.requireNonNull(resolverGroup, "resolverGroup");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
 		Objects.requireNonNull(eventLoop, "eventLoop");
-		Objects.requireNonNull(container, "container");
+		Objects.requireNonNull(snapshot, "snapshot");
 
 		boolean isDomainAddress = remoteAddress instanceof DomainSocketAddress;
-		return doInitAndRegister(config, channelInitializer, isDomainAddress, eventLoop, container)
-				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup, container)
+		return doInitAndRegister(config, channelInitializer, isDomainAddress, eventLoop)
+				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup, snapshot)
 						.onErrorResume(RetryConnectException.class,
 								t -> {
 									AtomicInteger index = new AtomicInteger(1);
 									return Mono.defer(() ->
-											doInitAndRegister(config, channelInitializer, isDomainAddress, eventLoop, container)
+											doInitAndRegister(config, channelInitializer, isDomainAddress, eventLoop)
 													.flatMap(ch -> {
 														MonoChannelPromise mono = new MonoChannelPromise(ch);
 														doConnect(t.addresses, config.bindAddress(), mono, index.get());
@@ -267,14 +267,12 @@ public final class TransportConnector {
 			TransportConfig config,
 			ChannelInitializer<Channel> channelInitializer,
 			boolean isDomainSocket,
-			EventLoop eventLoop,
-			ContextContainer container) {
+			EventLoop eventLoop) {
 		ChannelFactory<? extends Channel> channelFactory = config.connectionFactory(config.eventLoopGroup(), isDomainSocket);
 
 		Channel channel = null;
 		try {
 			channel = channelFactory.newChannel();
-			container.save(channel);
 			if (channelInitializer instanceof ServerTransport.AcceptorInitializer) {
 				((ServerTransport.AcceptorInitializer) channelInitializer).acceptor.enableAutoReadTask(channel);
 			}
@@ -308,7 +306,7 @@ public final class TransportConnector {
 
 	@SuppressWarnings({"unchecked", "FutureReturnValueIgnored", "try"})
 	static Mono<Channel> doResolveAndConnect(Channel channel, TransportConfig config,
-			SocketAddress remoteAddress, AddressResolverGroup<?> resolverGroup, ContextContainer container) {
+			SocketAddress remoteAddress, AddressResolverGroup<?> resolverGroup, ContextSnapshot snapshot) {
 		try {
 			AddressResolver<SocketAddress> resolver;
 			try {
@@ -334,8 +332,10 @@ public final class TransportConnector {
 				}
 			}
 
+			channel.attr(CONTEXT_SNAPSHOT).compareAndSet(null, snapshot);
+
 			Future<List<SocketAddress>> resolveFuture;
-			try (ContextContainer.Scope scope = container.restoreThreadLocalValues()) {
+			try (ContextSnapshot.Scope scope = snapshot.setThreadLocalValues(OBSERVATION_KEY)) {
 				resolveFuture = resolver.resolveAll(remoteAddress);
 			}
 
@@ -666,6 +666,10 @@ public final class TransportConnector {
 	}
 
 	static final Logger log = Loggers.getLogger(TransportConnector.class);
+
+	static final AttributeKey<ContextSnapshot> CONTEXT_SNAPSHOT = AttributeKey.valueOf("$CONTEXT_SNAPSHOT");
+
+	static final Predicate<Object> OBSERVATION_KEY = "micrometer.observation"::equals;
 
 	static final Predicate<Throwable> RETRY_PREDICATE = t -> t instanceof RetryConnectException;
 }
