@@ -1808,9 +1808,9 @@ class HttpClientTest extends BaseHttpTest {
 		doTestIssue777_1(client, "/test", "error", receiver);
 
 		BiFunction<HttpClientResponse, BufferMono, Mono<Tuple2<String, HttpClientResponse>>> receiver1 =
-				(resp, byteBuf) ->
-						Mono.zip(byteBuf.asString(StandardCharsets.UTF_8)
-						                .switchIfEmpty(Mono.just(resp.status().reasonPhrase())),
+				(resp, buffer) ->
+						Mono.zip(buffer.asString(StandardCharsets.UTF_8)
+						               .switchIfEmpty(Mono.just(resp.status().reasonPhrase())),
 						         Mono.just(resp));
 		doTestIssue777_2(client, "/empty", "Bad Request", receiver1);
 		doTestIssue777_2(client, "/test", "Test", receiver1);

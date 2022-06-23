@@ -203,8 +203,8 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				      .headers(h -> h.add("Accept-Encoding", "gzip"))
 				      .get()
 				      .uri("/test")
-				      .response((res, byteBufFlux) -> byteBufFlux.asString()
-				                                                 .zipWith(Mono.just(res.responseHeaders())))
+				      .response((res, bufferFlux) -> bufferFlux.asString()
+				                                               .zipWith(Mono.just(res.responseHeaders())))
 				      .blockFirst(Duration.ofSeconds(10));
 		assertThat(resp).isNotNull();
 
@@ -245,8 +245,8 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				      .headers(h -> h.add("Accept-Encoding", "gzip"))
 				      .get()
 				      .uri("/test")
-				      .responseSingle((res, byteBufMono) -> Mono.just(res.responseHeaders())
-				                                                .zipWith(byteBufMono.asByteArray()))
+				      .responseSingle((res, bufferMono) -> Mono.just(res.responseHeaders())
+				                                               .zipWith(bufferMono.asByteArray()))
 				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();

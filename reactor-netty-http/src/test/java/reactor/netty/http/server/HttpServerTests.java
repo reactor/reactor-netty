@@ -824,7 +824,7 @@ class HttpServerTests extends BaseHttpTest {
 				createClient(disposableServer.port())
 				          .get()
 				          .uri(path)
-				          .responseSingle((res, byteBufMono) -> Mono.just(res.status()));
+				          .responseSingle((res, bufferMono) -> Mono.just(res.status()));
 
 		StepVerifier.create(status)
 		            .expectNextMatches(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE::equals)
@@ -2117,7 +2117,7 @@ class HttpServerTests extends BaseHttpTest {
 		disposableServer = HttpServer.create().handle(serverRoutes).bindNow();
 
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
-				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.responseSingle((response, bufferMono) -> bufferMono.asString()))
 				.expectNext("/yes/{value}")
 				.verifyComplete();
 	}
@@ -2131,7 +2131,7 @@ class HttpServerTests extends BaseHttpTest {
 		disposableServer = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
 
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
-				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.responseSingle((response, bufferMono) -> bufferMono.asString()))
 				.expectNext("/yes/value")
 				.verifyComplete();
 	}
@@ -2146,7 +2146,7 @@ class HttpServerTests extends BaseHttpTest {
 			disposableServer = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
 
 			StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
-					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.responseSingle((response, bufferMono) -> bufferMono.asString()))
 					.expectNext("/yes/value")
 					.verifyComplete();
 		}
@@ -2160,7 +2160,7 @@ class HttpServerTests extends BaseHttpTest {
 				.bindNow();
 
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
-				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.responseSingle((response, bufferMono) -> bufferMono.asString()))
 				.expectNext("/yes/{value}")
 				.verifyComplete();
 	}
@@ -2175,7 +2175,7 @@ class HttpServerTests extends BaseHttpTest {
 			disposableServer = HttpServer.create().handle(serverRoutes.comparator(comparator)).bindNow();
 
 			StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
-					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.responseSingle((response, bufferMono) -> bufferMono.asString()))
 					.expectNext("/yes/value")
 					.verifyComplete();
 		}
@@ -2189,7 +2189,7 @@ class HttpServerTests extends BaseHttpTest {
 				.bindNow();
 
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
-				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.responseSingle((response, bufferMono) -> bufferMono.asString()))
 				.expectNext("/yes/{value}")
 				.verifyComplete();
 	}
@@ -2252,12 +2252,12 @@ class HttpServerTests extends BaseHttpTest {
 			disposableServer = HttpServer.create().handle(serverRoutes).bindNow();
 
 			StepVerifier.create(createClient(disposableServer.port()).get().uri("/route1")
-					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.responseSingle((response, bufferMono) -> bufferMono.asString()))
 					.expectNext("/route1")
 					.verifyComplete();
 
 			StepVerifier.create(createClient(disposableServer.port()).get().uri("/route2")
-					.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+					.responseSingle((response, bufferMono) -> bufferMono.asString()))
 					.expectNext("/route2")
 					.verifyComplete();
 		}
@@ -2279,7 +2279,7 @@ class HttpServerTests extends BaseHttpTest {
 				.verifyComplete();
 
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/route2")
-				.responseSingle((response, byteBufMono) -> byteBufMono.asString()))
+				.responseSingle((response, bufferMono) -> bufferMono.asString()))
 				.expectNext("/route2")
 				.verifyComplete();
 	}

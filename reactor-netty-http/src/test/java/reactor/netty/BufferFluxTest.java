@@ -47,16 +47,16 @@ class BufferFluxTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testByteBufFluxFromPathWithoutSecurity() throws Exception {
-		doTestByteBufFluxFromPath(false);
+	void testBufferFluxFromPathWithoutSecurity() throws Exception {
+		doTestBufferFluxFromPath(false);
 	}
 
 	@Test
-	void testByteBufFluxFromPathWithSecurity() throws Exception {
-		doTestByteBufFluxFromPath(true);
+	void testBufferFluxFromPathWithSecurity() throws Exception {
+		doTestBufferFluxFromPath(true);
 	}
 
-	private void doTestByteBufFluxFromPath(boolean withSecurity) throws Exception {
+	private void doTestBufferFluxFromPath(boolean withSecurity) throws Exception {
 		HttpServer server = createServer();
 		HttpClient client = createClient(() -> disposableServer.address());
 		if (withSecurity) {

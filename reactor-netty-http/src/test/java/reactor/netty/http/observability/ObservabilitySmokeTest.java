@@ -179,7 +179,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 				        localClient.post()
 				                   .uri("/post")
 				                   .send((req, out) -> out.send(Mono.just(out.alloc().copyOf(content))))
-				                   .responseSingle((res, byteBuf) -> byteBuf.asByteArray()))
+				                   .responseSingle((res, buffer) -> buffer.asByteArray()))
 				    .collectList()
 				    .block(Duration.ofSeconds(10));
 

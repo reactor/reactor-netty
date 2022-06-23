@@ -496,8 +496,8 @@ class WebsocketTest extends BaseHttpTest {
 				              out.sendObject(in.aggregateFrames()
 				                               .receiveFrames()
 				                               .map(WebSocketFrame::binaryData)
-				                               .map(byteBuf ->
-				                                   byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
+				                               .map(buffer ->
+				                                   buffer.readCharSequence(buffer.readableBytes(), Charset.defaultCharset()).toString())
 				                               .map(s -> new TextWebSocketFrame(out.alloc(), s))),
 				              WebsocketServerSpec.builder().maxFramePayloadLength(maxFramePayloadLength).build()))
 				          .bindNow();
@@ -510,8 +510,8 @@ class WebsocketTest extends BaseHttpTest {
 		                                  .then(in.aggregateFrames()
 		                                          .receiveFrames()
 		                                          .map(WebSocketFrame::binaryData)
-		                                          .map(byteBuf ->
-		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
+		                                          .map(buffer ->
+		                                              buffer.readCharSequence(buffer.readableBytes(), Charset.defaultCharset()).toString())
 		                                          .take(count)
 		                                          .doOnNext(s -> output.get().add(s))
 		                                          .then()))
@@ -615,8 +615,8 @@ class WebsocketTest extends BaseHttpTest {
 		                         //.share()
 		                         .publish()
 		                         .autoConnect()
-		                         .map(byteBuf ->
-		                             byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
+		                         .map(buffer ->
+		                             buffer.readCharSequence(buffer.readableBytes(), Charset.defaultCharset()).toString())
 		                         .map(Integer::parseInt)
 		                         .map(i -> new TextWebSocketFrame(out.alloc(), i + ""))
 		                         .retry()),
@@ -631,8 +631,8 @@ class WebsocketTest extends BaseHttpTest {
 		                         .map(WebSocketFrame::binaryData)
 		                         .concatMap(content ->
 		                             Mono.just(content)
-		                                 .map(byteBuf ->
-		                                     byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
+		                                 .map(buffer ->
+		                                     buffer.readCharSequence(buffer.readableBytes(), Charset.defaultCharset()).toString())
 		                                 .map(Integer::parseInt)
 		                                 .map(i -> new TextWebSocketFrame(out.alloc(), i + ""))
 		                                 .onErrorResume(t -> Mono.just(new TextWebSocketFrame(out.alloc(), "error"))))),
@@ -654,8 +654,8 @@ class WebsocketTest extends BaseHttpTest {
 		                                  .then(in.aggregateFrames()
 		                                          .receiveFrames()
 		                                          .map(WebSocketFrame::binaryData)
-		                                          .map(byteBuf ->
-		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
+		                                          .map(buffer ->
+		                                              buffer.readCharSequence(buffer.readableBytes(), Charset.defaultCharset()).toString())
 		                                          .take(count)
 		                                          .doOnNext(s -> output.get().add(s))
 		                                          .then()))

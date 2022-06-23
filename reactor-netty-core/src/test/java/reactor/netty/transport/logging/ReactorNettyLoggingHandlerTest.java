@@ -71,9 +71,9 @@ class ReactorNettyLoggingHandlerTest {
 
 	@Test
 	void shouldLogByteBuf() {
-		final Buffer byteBuf = preferredAllocator().copyOf("TEST".getBytes(Charset.defaultCharset()));
+		final Buffer buffer = preferredAllocator().copyOf("TEST".getBytes(Charset.defaultCharset()));
 
-		sendMessage(byteBuf, "[embedded, L:embedded - R:embedded] READ: 4B TEST");
+		sendMessage(buffer, "[embedded, L:embedded - R:embedded] READ: 4B TEST");
 	}
 
 	@Test

@@ -666,7 +666,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		httpClient.get()
 		          .uri("/max_header_size")
-		          .responseSingle((res, byteBufMono) -> Mono.just(res.status().code()))
+		          .responseSingle((res, bufferMono) -> Mono.just(res.status().code()))
 		          .as(StepVerifier::create)
 		          .expectNext(413)
 		          .expectComplete()
