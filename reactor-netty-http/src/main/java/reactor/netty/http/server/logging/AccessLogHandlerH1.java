@@ -15,8 +15,8 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.HttpRequest;
@@ -91,8 +91,8 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 			              }
 			          });
 		}
-		if (msg instanceof ByteBuf) {
-			accessLogArgProvider.increaseContentLength(((ByteBuf) msg).readableBytes());
+		if (msg instanceof Buffer) {
+			accessLogArgProvider.increaseContentLength(((Buffer) msg).readableBytes());
 		}
 		if (msg instanceof ByteBufHolder) {
 			accessLogArgProvider.increaseContentLength(((ByteBufHolder) msg).content().readableBytes());

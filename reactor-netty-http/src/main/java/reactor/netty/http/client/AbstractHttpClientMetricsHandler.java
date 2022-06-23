@@ -15,8 +15,8 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
@@ -91,8 +91,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		if (msg instanceof ByteBufHolder) {
 			dataSent += ((ByteBufHolder) msg).content().readableBytes();
 		}
-		else if (msg instanceof ByteBuf) {
-			dataSent += ((ByteBuf) msg).readableBytes();
+		else if (msg instanceof Buffer) {
+			dataSent += ((Buffer) msg).readableBytes();
 		}
 
 		if (msg instanceof LastHttpContent) {
@@ -113,8 +113,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		if (msg instanceof ByteBufHolder) {
 			dataReceived += ((ByteBufHolder) msg).content().readableBytes();
 		}
-		else if (msg instanceof ByteBuf) {
-			dataReceived += ((ByteBuf) msg).readableBytes();
+		else if (msg instanceof Buffer) {
+			dataReceived += ((Buffer) msg).readableBytes();
 		}
 
 		if (msg instanceof LastHttpContent) {
