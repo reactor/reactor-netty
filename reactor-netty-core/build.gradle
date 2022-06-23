@@ -207,6 +207,8 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.NettyPipeline#UnvoidHandler'
 	]
 	methodExcludes = [
+			"reactor.netty.resources.ConnectionProvider#create(java.lang.String, int, boolean)", // new static method in 1.0.21
+
 			'reactor.netty.NettyInbound#receive()',
 			'reactor.netty.NettyOutbound#alloc()',
 			'reactor.netty.NettyOutbound#send(org.reactivestreams.Publisher, java.util.function.Predicate)',
