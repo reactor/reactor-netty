@@ -499,10 +499,10 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		Publisher<PooledConnection> connectChannel() {
 			return Mono.create(sink -> {
-				ContextSnapshot snapshot = ContextSnapshot.forContextAndThreadLocalValues(sink.contextView());
-				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink, snapshot);
+				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink);
 				EventLoop callerEventLoop = sink.contextView().hasKey(CONTEXT_CALLER_EVENTLOOP) ?
 						sink.contextView().get(CONTEXT_CALLER_EVENTLOOP) : null;
+				ContextSnapshot snapshot = ContextSnapshot.forContextAndThreadLocalValues(sink.contextView());
 				if (callerEventLoop != null) {
 					TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop, snapshot)
 							.subscribe(initializer);
@@ -515,13 +515,11 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		final class PooledConnectionInitializer extends ChannelInitializer<Channel> implements CoreSubscriber<Channel> {
 			final MonoSink<PooledConnection> sink;
-			final ContextSnapshot snapshot;
 
 			PooledConnection pooledConnection;
 
-			PooledConnectionInitializer(MonoSink<PooledConnection> sink, ContextSnapshot snapshot) {
+			PooledConnectionInitializer(MonoSink<PooledConnection> sink) {
 				this.sink = sink;
-				this.snapshot = snapshot;
 			}
 
 			@Override
