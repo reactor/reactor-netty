@@ -51,7 +51,7 @@ import static reactor.netty.Metrics.PENDING_TASKS;
 class TransportEventLoopMetricsTest {
 
 	private MeterRegistry registry;
-	final Logger log = Loggers.getLogger(TransportEventLoopMetricsTest.class);
+	final static Logger log = Loggers.getLogger(TransportEventLoopMetricsTest.class);
 
 	@BeforeEach
 	void setUp() {
