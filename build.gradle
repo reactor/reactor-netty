@@ -88,7 +88,7 @@ ext {
 	micrometerTracingVersion = '1.0.0-SNAPSHOT' //optional baseline
 	micrometerDocsVersion = '1.0.0-SNAPSHOT' //optional baseline
 
-	contextPropagationVersion = '1.0.0-M2'
+	contextPropagationVersion = '1.0.0-SNAPSHOT'
 
 	braveVersion = '5.13.9'
 

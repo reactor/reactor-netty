@@ -24,11 +24,14 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import io.micrometer.context.ContextRegistry;
+import io.micrometer.context.ReactorContextAccessor;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
+import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.test.SampleTestRunner;
 import io.micrometer.tracing.test.reporter.BuildingBlocks;
@@ -75,6 +78,11 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 		content = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
+
+		// TODO temporary
+		ContextRegistry.getInstance()
+				.registerThreadLocalAccessor(new ObservationThreadLocalAccessor())
+				.registerContextAccessor(new ReactorContextAccessor());
 	}
 
 	@AfterAll

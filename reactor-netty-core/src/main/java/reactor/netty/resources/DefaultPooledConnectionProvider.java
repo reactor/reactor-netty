@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
-import io.micrometer.contextpropagation.ContextContainer;
+import io.micrometer.context.ContextSnapshot;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
@@ -80,10 +80,9 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			ConnectionObserver connectionObserver,
 			long pendingAcquireTimeout,
 			InstrumentedPool<PooledConnection> pool,
-			Context propagationContext,
 			MonoSink<Connection> sink) {
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				pendingAcquireTimeout, pool, propagationContext, sink);
+				pendingAcquireTimeout, pool, sink);
 	}
 
 	@Override
@@ -107,7 +106,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		final ChannelOperations.OnSetup opsFactory;
 		final long pendingAcquireTimeout;
 		final InstrumentedPool<PooledConnection> pool;
-		final Context propagationContext;
 		final boolean retried;
 		final MonoSink<Connection> sink;
 
@@ -119,7 +117,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				ChannelOperations.OnSetup opsFactory,
 				long pendingAcquireTimeout,
 				InstrumentedPool<PooledConnection> pool,
-				Context propagationContext,
 				MonoSink<Connection> sink) {
 			this.cancellations = Disposables.composite();
 			this.currentContext = Context.of(sink.contextView());
@@ -127,7 +124,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			this.opsFactory = opsFactory;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
 			this.pool = pool;
-			this.propagationContext = propagationContext;
 			this.retried = false;
 			this.sink = sink;
 		}
@@ -139,7 +135,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			this.opsFactory = parent.opsFactory;
 			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
 			this.pool = parent.pool;
-			this.propagationContext = parent.propagationContext;
 			this.retried = true;
 			this.sink = parent.sink;
 		}
@@ -172,8 +167,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			pooledConnection.pooledRef = pooledRef;
 
 			Channel c = pooledConnection.channel;
-			ContextContainer container = ContextContainer.restore(propagationContext);
-			container.save(c);
 
 			if (c.eventLoop().inEventLoop()) {
 				run();
@@ -419,7 +412,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 				ConnectionObserver obs = channel.attr(OWNER)
 				                                .getAndSet(ConnectionObserver.emptyListener());
-				ContextContainer.reset(channel);
 
 				if (pooledRef == null) {
 					return;
@@ -507,27 +499,29 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 		Publisher<PooledConnection> connectChannel() {
 			return Mono.create(sink -> {
-				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink);
+				ContextSnapshot snapshot = ContextSnapshot.forContextAndThreadLocalValues(sink.contextView());
+				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink, snapshot);
 				EventLoop callerEventLoop = sink.contextView().hasKey(CONTEXT_CALLER_EVENTLOOP) ?
 						sink.contextView().get(CONTEXT_CALLER_EVENTLOOP) : null;
-				ContextContainer container = ContextContainer.restore(Context.of(sink.contextView()));
 				if (callerEventLoop != null) {
-					TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop, container)
+					TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop, snapshot)
 							.subscribe(initializer);
 				}
 				else {
-					TransportConnector.connect(config, remoteAddress, resolver, initializer, container).subscribe(initializer);
+					TransportConnector.connect(config, remoteAddress, resolver, initializer, snapshot).subscribe(initializer);
 				}
 			});
 		}
 
 		final class PooledConnectionInitializer extends ChannelInitializer<Channel> implements CoreSubscriber<Channel> {
 			final MonoSink<PooledConnection> sink;
+			final ContextSnapshot snapshot;
 
 			PooledConnection pooledConnection;
 
-			PooledConnectionInitializer(MonoSink<PooledConnection> sink) {
+			PooledConnectionInitializer(MonoSink<PooledConnection> sink, ContextSnapshot snapshot) {
 				this.sink = sink;
+				this.snapshot = snapshot;
 			}
 
 			@Override
@@ -535,6 +529,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				if (log.isDebugEnabled()) {
 					logPoolState(ch, pool, "Created a new pooled channel");
 				}
+
+				ch.attr(CONTEXT_SNAPSHOT).compareAndSet(null, snapshot);
 
 				PooledConnection pooledConnection = new PooledConnection(ch, pool);
 
@@ -568,6 +564,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				s.request(Long.MAX_VALUE);
 			}
 		}
+
+		static final AttributeKey<ContextSnapshot> CONTEXT_SNAPSHOT = AttributeKey.valueOf("$CONTEXT_SNAPSHOT");
 
 		static final BiPredicate<PooledConnection, PooledRefMetadata> DEFAULT_EVICTION_PREDICATE =
 				(pooledConnection, metadata) -> !pooledConnection.channel.isActive() || !pooledConnection.isPersistent();
