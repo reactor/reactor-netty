@@ -171,7 +171,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			ContextSnapshot snapshot = ContextSnapshot.forContextAndThreadLocalValues(sink.contextView());
 			mono.contextWrite(snapshot::updateContext)
 			    .subscribe(createDisposableAcquire(config, connectionObserver,
-			            poolFactory.pendingAcquireTimeout, pool, sink));
+			            poolFactory.pendingAcquireTimeout, pool, sink, snapshot));
 		});
 	}
 
@@ -257,7 +257,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			ConnectionObserver connectionObserver,
 			long pendingAcquireTimeout,
 			InstrumentedPool<T> pool,
-			MonoSink<Connection> sink);
+			MonoSink<Connection> sink,
+			ContextSnapshot snapshot);
 
 	protected abstract InstrumentedPool<T> createPool(
 			TransportConfig config,
