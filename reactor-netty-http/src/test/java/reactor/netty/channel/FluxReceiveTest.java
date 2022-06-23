@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FluxReceiveTest extends BaseHttpTest {
 
 	@Test
-	void testByteBufsReleasedWhenTimeout() {
+	void testBuffersReleasedWhenTimeout() {
 		byte[] content = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
@@ -82,7 +82,7 @@ class FluxReceiveTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testByteBufsReleasedWhenTimeoutUsingHandlers() {
+	void testBuffersReleasedWhenTimeoutUsingHandlers() {
 		byte[] content = new byte[1024 * 8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);

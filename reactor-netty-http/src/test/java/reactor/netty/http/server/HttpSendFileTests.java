@@ -266,7 +266,7 @@ class HttpSendFileTests extends BaseHttpTest {
 				          .wiretap(true)
 				          .get()
 				          .uri("/foo")
-				          .responseSingle((res, byteBufMono) -> byteBufMono.asString(StandardCharsets.UTF_8));
+				          .responseSingle((res, bufferMono) -> bufferMono.asString(StandardCharsets.UTF_8));
 
 		String body = response.block(Duration.ofSeconds(5));
 

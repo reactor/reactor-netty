@@ -35,12 +35,12 @@ class UrlExceptionTest {
 				})
 				.request(HttpMethod.GET)
 				.uri(Mono.error(new IllegalArgumentException("URL cannot be resolved")))
-				.responseSingle((httpClientResponse, byteBufMono) -> {
+				.responseSingle((httpClientResponse, bufferMono) -> {
 					HttpResponseStatus status = httpClientResponse.status();
 					if (status.code() != 200) {
 						return Mono.error(new IllegalStateException(status.toString()));
 					}
-					return byteBufMono.asString();
+					return bufferMono.asString();
 				})
 
 				.as(StepVerifier::create)

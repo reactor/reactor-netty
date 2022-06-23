@@ -76,12 +76,12 @@ class AccessLogHandlerH1Tests {
 
 		channel.writeOutbound(newHttpResponse(true));
 
-		Buffer byteBuf1 = channel.bufferAllocator().allocate(RESPONSE_CONTENT.length);
-		byteBuf1.writeBytes(RESPONSE_CONTENT).makeReadOnly();
-		Buffer byteBuf2 = byteBuf1.copy(byteBuf1.readerOffset(), 0, true);
-		channel.writeOutbound(byteBuf1);
+		Buffer buffer1 = channel.bufferAllocator().allocate(RESPONSE_CONTENT.length);
+		buffer1.writeBytes(RESPONSE_CONTENT).makeReadOnly();
+		Buffer buffer2 = buffer1.copy(buffer1.readerOffset(), 0, true);
+		channel.writeOutbound(buffer1);
 
-		channel.writeOutbound(new DefaultHttpContent(byteBuf2));
+		channel.writeOutbound(new DefaultHttpContent(buffer2));
 
 		channel.writeOutbound(new DefaultLastHttpContent(channel.bufferAllocator().allocate(0)));
 	}

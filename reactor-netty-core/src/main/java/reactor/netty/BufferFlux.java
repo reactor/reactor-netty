@@ -114,7 +114,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	 * {@link Buffer} chunks with a given maximum size into the returned {@link BufferFlux}
 	 *
 	 * @param path the path to the resource to stream
-	 * @param maxChunkSize the maximum per-item ByteBuf size
+	 * @param maxChunkSize the maximum per-item Buffer size
 	 * @return a {@link BufferFlux}
 	 */
 	public static BufferFlux fromPath(Path path, int maxChunkSize) {
@@ -141,7 +141,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	 * {@link BufferFlux}, using the provided {@link BufferAllocator}.
 	 *
 	 * @param path the path to the resource to stream
-	 * @param maxChunkSize the maximum per-item ByteBuf size
+	 * @param maxChunkSize the maximum per-item Buffer size
 	 * @param allocator the channel {@link BufferAllocator}
 	 *
 	 * @return a {@link BufferFlux}

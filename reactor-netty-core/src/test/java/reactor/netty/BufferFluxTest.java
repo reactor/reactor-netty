@@ -110,7 +110,7 @@ class BufferFluxTest {
 
 	@Test
 	void testFromPath() throws Exception {
-		// Create a temporary file with some binary data that will be read in chunks using the ByteBufFlux
+		// Create a temporary file with some binary data that will be read in chunks using the BufferFlux
 		final int chunkSize = 3;
 		final Path tmpFile = new File(temporaryDirectory, "content.in").toPath();
 		final byte[] data = new byte[]{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9};

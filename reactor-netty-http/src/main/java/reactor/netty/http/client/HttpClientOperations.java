@@ -421,7 +421,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				                }
 				                for (Buffer bb : list) {
 				                	if (log.isDebugEnabled()) {
-				                		log.debug(format(channel(), "Ignoring accumulated bytebuf on http GET {}"), toPrettyHexDump(bb));
+				                		log.debug(format(channel(), "Ignoring accumulated buffer on http GET {}"), toPrettyHexDump(bb));
 					                }
 				                	bb.close();
 				                }
