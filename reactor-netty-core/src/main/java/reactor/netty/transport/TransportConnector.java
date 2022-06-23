@@ -332,6 +332,8 @@ public final class TransportConnector {
 				}
 			}
 
+			channel.attr(CONTEXT_SNAPSHOT).compareAndSet(null, snapshot);
+
 			Future<List<SocketAddress>> resolveFuture;
 			try (ContextSnapshot.Scope scope = snapshot.setThreadLocalValues(OBSERVATION_KEY)) {
 				resolveFuture = resolver.resolveAll(remoteAddress);
@@ -664,6 +666,8 @@ public final class TransportConnector {
 	}
 
 	static final Logger log = Loggers.getLogger(TransportConnector.class);
+
+	static final AttributeKey<ContextSnapshot> CONTEXT_SNAPSHOT = AttributeKey.valueOf("$CONTEXT_SNAPSHOT");
 
 	static final Predicate<Object> OBSERVATION_KEY = "micrometer.observation"::equals;
 

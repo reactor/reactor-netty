@@ -530,8 +530,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 					logPoolState(ch, pool, "Created a new pooled channel");
 				}
 
-				ch.attr(CONTEXT_SNAPSHOT).compareAndSet(null, snapshot);
-
 				PooledConnection pooledConnection = new PooledConnection(ch, pool);
 
 				this.pooledConnection = pooledConnection;
@@ -564,8 +562,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				s.request(Long.MAX_VALUE);
 			}
 		}
-
-		static final AttributeKey<ContextSnapshot> CONTEXT_SNAPSHOT = AttributeKey.valueOf("$CONTEXT_SNAPSHOT");
 
 		static final BiPredicate<PooledConnection, PooledRefMetadata> DEFAULT_EVICTION_PREDICATE =
 				(pooledConnection, metadata) -> !pooledConnection.channel.isActive() || !pooledConnection.isPersistent();

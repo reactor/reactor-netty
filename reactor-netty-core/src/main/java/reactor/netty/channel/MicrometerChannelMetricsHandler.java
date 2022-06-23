@@ -54,9 +54,9 @@ import static reactor.netty.channel.ConnectObservations.ConnectTimeLowCardinalit
  * @since 1.1.0
  */
 public final class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandler {
-	static final Predicate<Object> OBSERVATION_KEY = k -> k == ObservationThreadLocalAccessor.KEY;
-
 	static final AttributeKey<ContextSnapshot> CONTEXT_SNAPSHOT = AttributeKey.valueOf("$CONTEXT_SNAPSHOT");
+
+	static final Predicate<Object> OBSERVATION_KEY = k -> k == ObservationThreadLocalAccessor.KEY;
 
 	final MicrometerChannelMetricsRecorder recorder;
 
