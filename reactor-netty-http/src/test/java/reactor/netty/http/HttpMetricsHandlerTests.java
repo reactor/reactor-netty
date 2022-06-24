@@ -233,6 +233,53 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				numWrites[1], bytesWrite[1]);
 	}
 
+	// https://github.com/reactor/reactor-netty/issues/2187
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.metrics(true, id -> {
+					throw new IllegalArgumentException("Testcase injected Exception");
+				})
+				.bindNow();
+
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
+
+		StepVerifier.create(httpClient.post()
+		                              .uri("/1")
+		                              .send(body)
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectNext("Hello World!")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(2));
+	}
+
+	// https://github.com/reactor/reactor-netty/issues/2187
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.bindNow();
+
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).metrics(true, id -> {
+			throw new IllegalArgumentException("Testcase injected Exception");
+		});
+
+		StepVerifier.create(httpClient.post()
+		                              .uri("/1")
+		                              .send(body)
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectNext("Hello World!")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(2));
+	}
+
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
