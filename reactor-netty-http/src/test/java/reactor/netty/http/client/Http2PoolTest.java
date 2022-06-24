@@ -32,6 +32,7 @@ import reactor.netty.internal.shaded.reactor.pool.PoolBuilder;
 import reactor.netty.internal.shaded.reactor.pool.PoolConfig;
 import reactor.netty.internal.shaded.reactor.pool.PooledRef;
 import reactor.test.StepVerifier;
+import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -852,7 +853,8 @@ class Http2PoolTest {
 		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 	}
 
-	private void doMaxLifeTimeMaxConnectionsReached(BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer) throws Exception {
+	private void doMaxLifeTimeMaxConnectionsReached(@Nullable BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer)
+			throws Exception {
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.fromSupplier(() -> {
 				               Channel channel = new EmbeddedChannel(
