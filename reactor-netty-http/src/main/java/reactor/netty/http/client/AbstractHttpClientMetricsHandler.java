@@ -27,6 +27,8 @@ import io.netty5.util.concurrent.Future;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -37,6 +39,8 @@ import java.util.function.Function;
  * @since 1.0.8
  */
 abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
+
+	private static final Logger log = Loggers.getLogger(AbstractHttpClientMetricsHandler.class);
 
 	String path;
 
@@ -76,50 +80,54 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest) {
-			method = ((HttpRequest) msg).method().name();
-
-			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-			if (channelOps instanceof HttpClientOperations ops) {
-				path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
-				contextView = ops.currentContextView();
+		try {
+			if (msg instanceof HttpRequest) {
+				extractDetailsFromHttpRequest(ctx, (HttpRequest) msg);
 			}
 
-			startWrite((HttpRequest) msg, ctx.channel(), contextView);
+			dataSent += extractProcessedDataFromBuffer(msg);
+
+			if (msg instanceof LastHttpContent) {
+				SocketAddress address = ctx.channel().remoteAddress();
+				return ctx.write(msg)
+						.addListener(future -> {
+							try {
+								recordWrite(address);
+							}
+							catch (RuntimeException e) {
+								log.warn("Exception caught while recording metrics.", e);
+								// Allow request-response exchange to continue, unaffected by metrics problem
+							}
+				});
+			}
+		}
+		catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
-		if (msg instanceof ByteBufHolder) {
-			dataSent += ((ByteBufHolder) msg).content().readableBytes();
-		}
-		else if (msg instanceof Buffer) {
-			dataSent += ((Buffer) msg).readableBytes();
-		}
-
-		if (msg instanceof LastHttpContent) {
-			SocketAddress address = ctx.channel().remoteAddress();
-			return ctx.write(msg).addListener(future -> recordWrite(address));
-		}
 		return ctx.write(msg);
 	}
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpResponse) {
-			status = ((HttpResponse) msg).status().codeAsText().toString();
+		try {
+			if (msg instanceof HttpResponse) {
+				status = ((HttpResponse) msg).status().codeAsText().toString();
 
-			startRead((HttpResponse) msg);
-		}
+				startRead((HttpResponse) msg);
+			}
 
-		if (msg instanceof ByteBufHolder) {
-			dataReceived += ((ByteBufHolder) msg).content().readableBytes();
-		}
-		else if (msg instanceof Buffer) {
-			dataReceived += ((Buffer) msg).readableBytes();
-		}
+			dataReceived += extractProcessedDataFromBuffer(msg);
 
-		if (msg instanceof LastHttpContent) {
-			recordRead(ctx.channel().remoteAddress());
-			reset();
+			if (msg instanceof LastHttpContent) {
+				recordRead(ctx.channel().remoteAddress());
+				reset();
+			}
+		}
+		catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		ctx.fireChannelRead(msg);
@@ -127,9 +135,37 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	@Override
 	public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		recordException(ctx);
+		try {
+			recordException(ctx);
+		}
+		catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
+		}
 
 		ctx.fireChannelExceptionCaught(cause);
+	}
+
+	private void extractDetailsFromHttpRequest(ChannelHandlerContext ctx, HttpRequest request) {
+		method = request.method().name();
+
+		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+		if (channelOps instanceof HttpClientOperations ops) {
+			path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
+			contextView = ops.currentContextView();
+		}
+
+		startWrite(request, ctx.channel(), contextView);
+	}
+
+	private long extractProcessedDataFromBuffer(Object msg) {
+		if (msg instanceof ByteBufHolder) {
+			return ((ByteBufHolder) msg).content().readableBytes();
+		}
+		else if (msg instanceof Buffer) {
+			return ((Buffer) msg).readableBytes();
+		}
+		return 0;
 	}
 
 	protected abstract HttpClientMetricsRecorder recorder();

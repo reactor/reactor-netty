@@ -22,6 +22,8 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.concurrent.Future;
 import reactor.netty.NettyPipeline;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -33,6 +35,8 @@ import java.net.SocketAddress;
  * @since 1.0.8
  */
 public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapter {
+
+	private static final Logger log = Loggers.getLogger(AbstractChannelMetricsHandler.class);
 
 	final SocketAddress remoteAddress;
 
@@ -46,7 +50,13 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
 		if (onServer) {
-			recorder().recordServerConnectionOpened(ctx.channel().localAddress());
+			try {
+				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
+			}
+			catch (RuntimeException e) {
+				log.warn("Exception caught while recording metrics.", e);
+				// Allow request-response exchange to continue, unaffected by metrics problem
+			}
 		}
 		ctx.fireChannelActive();
 	}
@@ -54,7 +64,13 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) {
 		if (onServer) {
-			recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+			try {
+				recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+			}
+			catch (RuntimeException e) {
+				log.warn("Exception caught while recording metrics.", e);
+				// Allow request-response exchange to continue, unaffected by metrics problem
+			}
 		}
 		ctx.fireChannelInactive();
 	}
@@ -79,16 +95,22 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof Buffer buffer) {
-			if (buffer.readableBytes() > 0) {
-				recordRead(ctx, remoteAddress, buffer.readableBytes());
+		try {
+			if (msg instanceof Buffer buffer) {
+				if (buffer.readableBytes() > 0) {
+					recordRead(ctx, remoteAddress, buffer.readableBytes());
+				}
+			}
+			else if (msg instanceof DatagramPacket p) {
+				Buffer buffer = p.content();
+				if (buffer.readableBytes() > 0) {
+					recordRead(ctx, remoteAddress != null ? remoteAddress : p.sender(), buffer.readableBytes());
+				}
 			}
 		}
-		else if (msg instanceof DatagramPacket p) {
-			Buffer buffer = p.content();
-			if (buffer.readableBytes() > 0) {
-				recordRead(ctx, remoteAddress != null ? remoteAddress : p.sender(), buffer.readableBytes());
-			}
+		catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		ctx.fireChannelRead(msg);
@@ -96,16 +118,22 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof Buffer buffer) {
-			if (buffer.readableBytes() > 0) {
-				recordWrite(ctx, remoteAddress, buffer.readableBytes());
+		try {
+			if (msg instanceof Buffer buffer) {
+				if (buffer.readableBytes() > 0) {
+					recordWrite(ctx, remoteAddress, buffer.readableBytes());
+				}
+			}
+			else if (msg instanceof DatagramPacket p) {
+				Buffer buffer = p.content();
+				if (buffer.readableBytes() > 0) {
+					recordWrite(ctx, remoteAddress != null ? remoteAddress : p.recipient(), buffer.readableBytes());
+				}
 			}
 		}
-		else if (msg instanceof DatagramPacket p) {
-			Buffer buffer = p.content();
-			if (buffer.readableBytes() > 0) {
-				recordWrite(ctx, remoteAddress != null ? remoteAddress : p.recipient(), buffer.readableBytes());
-			}
+		catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		return ctx.write(msg);
@@ -113,7 +141,13 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 
 	@Override
 	public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		recordException(ctx, remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress());
+		try {
+			recordException(ctx, remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress());
+		}
+		catch (RuntimeException e) {
+			log.warn("Exception caught while recording metrics.", e);
+			// Allow request-response exchange to continue, unaffected by metrics problem
+		}
 
 		ctx.fireChannelExceptionCaught(cause);
 	}
