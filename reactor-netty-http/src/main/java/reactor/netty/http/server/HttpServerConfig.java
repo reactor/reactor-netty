@@ -735,8 +735,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		@Override
-		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-			ctx.fireExceptionCaught(cause);
+		public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireChannelExceptionCaught(cause);
 		}
 
 		@Override

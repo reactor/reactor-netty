@@ -282,7 +282,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			                  .get();
 		}
 		if (!pipelined.offer(msg)) {
-			ctx.fireExceptionCaught(Exceptions.failWithOverflow());
+			ctx.fireChannelExceptionCaught(Exceptions.failWithOverflow());
 		}
 	}
 
@@ -506,7 +506,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 				// FutureReturnValueIgnored is deliberate
 				ctx.close();
 			}
-			ctx.fireInboundEventTriggered(evt);
+			ctx.fireChannelInboundEvent(evt);
 		}
 
 		static void addIdleTimeoutHandler(ChannelPipeline pipeline, @Nullable Duration idleTimeout) {

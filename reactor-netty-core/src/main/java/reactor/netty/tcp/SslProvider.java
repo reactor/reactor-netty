@@ -644,17 +644,17 @@ public final class SslProvider {
 		}
 
 		@Override
-		public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+		public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
 			if (evt instanceof SslHandshakeCompletionEvent handshake) {
 				handshakeDone = true;
 				if (handshake.isSuccess()) {
 					ctx.fireChannelActive();
 				}
 				else {
-					ctx.fireExceptionCaught(handshake.cause());
+					ctx.fireChannelExceptionCaught(handshake.cause());
 				}
 			}
-			ctx.fireInboundEventTriggered(evt);
+			ctx.fireChannelInboundEvent(evt);
 			if (handshakeDone && ctx.pipeline().context(this) != null) {
 				ctx.pipeline().remove(this);
 			}
