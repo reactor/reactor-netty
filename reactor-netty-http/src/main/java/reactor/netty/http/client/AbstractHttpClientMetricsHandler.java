@@ -93,14 +93,14 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 					try {
 						recordWrite(address);
 					}
-          catch (RuntimeException e) {
+					catch (RuntimeException e) {
 						log.warn("Exception caught while recording metrics.", e);
 						// Allow request-response exchange to continue, unaffected by metrics problem
 					}
 				});
 			}
 		}
-    catch (RuntimeException e) {
+		catch (RuntimeException e) {
 			log.warn("Exception caught while recording metrics.", e);
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}

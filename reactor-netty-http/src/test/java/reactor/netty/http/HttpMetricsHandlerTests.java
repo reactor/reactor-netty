@@ -237,7 +237,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, id -> {
 					throw new IllegalArgumentException("Testcase injected Exception");
@@ -247,21 +247,21 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
 
 		StepVerifier.create(httpClient.post()
-                                      .uri("/1")
-                                      .send(body)
-                                      .responseContent()
-                                      .aggregate()
-                                      .asString())
-				    .expectNext("Hello World!")
-				    .expectComplete()
-				    .verify(Duration.ofSeconds(2));
+		                              .uri("/1")
+		                              .send(body)
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectNext("Hello World!")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(2));
 	}
 
 	// https://github.com/reactor/reactor-netty/issues/2187
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.bindNow();
 
@@ -270,14 +270,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		});
 
 		StepVerifier.create(httpClient.post()
-						              .uri("/1")
-						              .send(body)
-						              .responseContent()
-						              .aggregate()
-						              .asString())
-				    .expectNext("Hello World!")
-				    .expectComplete()
-				    .verify(Duration.ofSeconds(2));
+		                              .uri("/1")
+		                              .send(body)
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectNext("Hello World!")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(2));
 	}
 
 	@ParameterizedTest

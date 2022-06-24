@@ -126,7 +126,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 							}
 						}
 					}
-          catch (RuntimeException e) {
+					catch (RuntimeException e) {
 						log.warn("Exception caught while recording metrics.", e);
 						// Allow request-response exchange to continue, unaffected by metrics problem
 					}
@@ -135,11 +135,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				});
 			}
 		}
-    catch (RuntimeException e) {
+		catch (RuntimeException e) {
 			log.warn("Exception caught while recording metrics.", e);
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
-    finally {
+		finally {
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.write(msg, promise);
 		}
