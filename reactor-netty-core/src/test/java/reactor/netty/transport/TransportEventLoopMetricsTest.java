@@ -16,8 +16,10 @@
 package reactor.netty.transport;
 
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -100,6 +102,52 @@ class TransportEventLoopMetricsTest {
 
 			assertThat(client).isNotNull();
 			assertThat(latch.await(5, TimeUnit.SECONDS)).as("Did not find 10 pending tasks from meter").isTrue();
+		}
+
+		finally {
+			if (client != null) {
+				client.disposeNow();
+			}
+			if (server != null) {
+				server.disposeNow();
+			}
+			if (loop != null) {
+				loop.disposeLater().block(Duration.ofSeconds(10));
+			}
+		}
+	}
+
+	// https://github.com/reactor/reactor-netty/issues/2187
+	@Test
+	void testEventLoopMetricsFailure() throws InterruptedException {
+		registry.config().meterFilter(new MeterFilter() {
+			@Override
+			public Meter.Id map(Meter.Id id) {
+				throw new IllegalArgumentException("Test injected Exception");
+			}
+		});
+
+		final CountDownLatch latch = new CountDownLatch(1);
+		DisposableServer server = null;
+		Connection client = null;
+		LoopResources loop = null;
+
+		try {
+			loop = LoopResources.create(TransportEventLoopMetricsTest.class.getName(), 3, true);
+			server = TcpServer.create()
+					.port(0)
+					.metrics(true)
+					.runOn(loop)
+					.doOnConnection(c -> latch.countDown())
+					.bindNow();
+
+			assertThat(server).isNotNull();
+			client = TcpClient.create()
+					.port(server.port())
+					.connectNow();
+
+			assertThat(client).isNotNull();
+			assertThat(latch.await(5, TimeUnit.SECONDS)).as("Failed to connect").isTrue();
 		}
 
 		finally {

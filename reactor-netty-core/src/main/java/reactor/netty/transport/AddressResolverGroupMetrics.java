@@ -22,6 +22,8 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.internal.util.MapUtils;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -38,6 +40,8 @@ import static reactor.netty.Metrics.SUCCESS;
  * @author Violeta Georgieva
  */
 class AddressResolverGroupMetrics<T extends SocketAddress> extends AddressResolverGroup<T> {
+
+	private static final Logger log = Loggers.getLogger(AddressResolverGroupMetrics.class);
 
 	static final ConcurrentMap<Integer, AddressResolverGroupMetrics<?>> cache = new ConcurrentHashMap<>();
 
@@ -125,10 +129,16 @@ class AddressResolverGroupMetrics<T extends SocketAddress> extends AddressResolv
 		}
 
 		void record(long resolveTimeStart, String status, SocketAddress remoteAddress) {
-			recorder.recordResolveAddressTime(
-					remoteAddress,
-					Duration.ofNanos(System.nanoTime() - resolveTimeStart),
-					status);
+			try {
+				recorder.recordResolveAddressTime(
+						remoteAddress,
+						Duration.ofNanos(System.nanoTime() - resolveTimeStart),
+						status);
+			}
+			catch (RuntimeException e) {
+				log.warn("Exception caught while recording metrics.", e);
+				// Allow request-response exchange to continue, unaffected by metrics problem
+			}
 		}
 	}
 }
