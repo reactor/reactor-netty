@@ -15,8 +15,7 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponseStatus;
@@ -59,9 +58,9 @@ class AccessLogHandlerH2Tests {
 		responseHeaders.status(HttpResponseStatus.OK.codeAsText());
 		channel.writeOutbound(new DefaultHttp2HeadersFrame(responseHeaders));
 
-		ByteBuf byteBuf = Unpooled.buffer(RESPONSE_CONTENT.length);
-		byteBuf.writeBytes(RESPONSE_CONTENT);
-		channel.writeOutbound(new DefaultHttp2DataFrame(byteBuf, true));
+		Buffer buffer = channel.bufferAllocator().allocate(RESPONSE_CONTENT.length);
+		buffer.writeBytes(RESPONSE_CONTENT).makeReadOnly();
+		channel.writeOutbound(new DefaultHttp2DataFrame(buffer.send(), true));
 	}
 
 	private void assertAccessLogArgProvider(AccessLogArgProvider args, SocketAddress remoteAddress) {
