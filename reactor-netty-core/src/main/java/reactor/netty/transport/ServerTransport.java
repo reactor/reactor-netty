@@ -388,7 +388,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		}
 
 		@Override
-		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+		public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 			ChannelConfig config = ctx.channel().config();
 			if (config.isAutoRead()) {
 				// stop accept new connections for 1 second to allow the channel to recover
@@ -405,7 +405,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			}
 			// still let the exceptionCaught event flow through the pipeline to give the user
 			// a chance to do something with it
-			ctx.fireExceptionCaught(cause);
+			ctx.fireChannelExceptionCaught(cause);
 		}
 
 		void enableAutoReadTask(Channel channel) {

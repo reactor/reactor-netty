@@ -1131,11 +1131,11 @@ class TcpServerTests {
 				             channel.pipeline()
 				                    .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
 				                        @Override
-				                        public void inboundEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				                        public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
 				                            if (evt instanceof SniCompletionEvent) {
 				                                hostname.set(((SniCompletionEvent) evt).hostname());
 				                            }
-				                            ctx.fireInboundEventTriggered(evt);
+				                            ctx.fireChannelInboundEvent(evt);
 				                        }
 				                    }))
 				         .handle((in, out) -> out.sendString(Mono.just("testSniSupport")))

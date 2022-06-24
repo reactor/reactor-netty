@@ -74,7 +74,7 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 			}
 		}
 		catch (Throwable err) {
-			exceptionCaught(ctx, err);
+			channelExceptionCaught(ctx, err);
 		}
 	}
 
@@ -115,12 +115,12 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 					" The connection will be closed."), err);
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.close();
-			exceptionCaught(ctx, err);
+			channelExceptionCaught(ctx, err);
 		}
 	}
 
 	@Override
-	final public void exceptionCaught(ChannelHandlerContext ctx, Throwable err) {
+	final public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable err) {
 		Connection connection = Connection.from(ctx.channel());
 		ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
 		if (ops != null) {

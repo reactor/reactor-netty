@@ -126,10 +126,10 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+	public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		recordException(ctx);
 
-		ctx.fireExceptionCaught(cause);
+		ctx.fireChannelExceptionCaught(cause);
 	}
 
 	protected abstract HttpClientMetricsRecorder recorder();

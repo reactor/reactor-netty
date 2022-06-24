@@ -156,14 +156,14 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+	public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 		if (channelOps instanceof HttpServerOperations ops) {
 			// Always take the remote address from the operations in order to consider proxy information
 			recordException(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path));
 		}
 
-		ctx.fireExceptionCaught(cause);
+		ctx.fireChannelExceptionCaught(cause);
 	}
 
 	protected abstract HttpServerMetricsRecorder recorder();

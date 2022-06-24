@@ -112,10 +112,10 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 	}
 
 	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+	public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		recordException(ctx, remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress());
 
-		ctx.fireExceptionCaught(cause);
+		ctx.fireChannelExceptionCaught(cause);
 	}
 
 	public abstract ChannelHandler connectMetricsHandler();
