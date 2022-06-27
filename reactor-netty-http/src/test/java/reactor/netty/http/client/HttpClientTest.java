@@ -90,7 +90,6 @@ import io.netty5.resolver.dns.DnsAddressResolverGroup;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -1940,7 +1939,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionLifeTimeFixedPoolHttp2_1() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -1983,7 +1981,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionLifeTimeElasticPoolHttp2() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2025,7 +2022,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionNoLifeTimeFixedPoolHttp2() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2064,7 +2060,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionNoLifeTimeElasticPoolHttp2() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2111,7 +2106,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionLifeTimeFixedPoolHttp2_2() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2676,7 +2670,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testIssue1478() throws Exception {
 		disposableServer =
 				HttpServer.create()
@@ -2712,7 +2705,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConfigurationSecurityThenProtocols_DefaultHTTP11SslProvider() {
 		HttpClient client = HttpClient.create().secure();
 
@@ -2724,7 +2716,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConfigurationSecurityThenProtocols_DefaultH2SslProvider() {
 		HttpClient client = HttpClient.create().secure();
 
@@ -2742,7 +2733,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConfigurationOnlyProtocols_NoDefaultSslProvider() {
 		HttpClient client = HttpClient.create();
 
@@ -3062,7 +3052,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testIssue1943H2C() {
 		doTestIssue1943(HttpProtocol.H2C);
 	}

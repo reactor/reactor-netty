@@ -23,7 +23,6 @@ import java.util.List;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import reactor.core.publisher.Flux;
@@ -74,7 +73,6 @@ class HttpClientNoMicrometerTest {
 	}
 
 	@Test
-	@Disabled
 	void clientCreatedWithMetricsDoesntLoadGaugeHttp2() throws Exception {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());

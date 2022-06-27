@@ -718,7 +718,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				if (!connection.channel().isActive()) {
 					return Mono.empty();
 				}
-				return Mono.fromCompletionStage(connection.channel().closeFuture().asStage());
+				return Mono.fromCompletionStage(connection.channel().close().asStage());
 			};
 
 	static final class Borrower extends AtomicBoolean implements Scannable, Subscription, Runnable {

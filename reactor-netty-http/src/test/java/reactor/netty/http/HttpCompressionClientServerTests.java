@@ -50,7 +50,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author smaldini
  * @author Violeta Georgieva
  */
-@Disabled
 class HttpCompressionClientServerTests extends BaseHttpTest {
 
 	@Retention(RetentionPolicy.RUNTIME)
@@ -218,6 +217,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompressionTest
+	@Disabled
 	void serverCompressionPredicateTrue(HttpServer server, HttpClient client) throws Exception {
 		testServerCompressionPredicateTrue(server, client, false);
 	}
@@ -297,6 +297,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompressionTest
+	@Disabled
 	void serverCompressionEnabledBigResponse(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.compress(4)
@@ -392,6 +393,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompressionTest
+	@Disabled
 	void testIssue282(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(2048)
@@ -413,6 +415,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompressionTest
+	@Disabled
 	void testIssue292(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(10)

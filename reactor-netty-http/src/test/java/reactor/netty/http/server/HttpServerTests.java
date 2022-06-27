@@ -80,7 +80,6 @@ import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -1721,7 +1720,6 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testHttpServerWithDomainSockets_HTTP2() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2386,14 +2384,12 @@ class HttpServerTests extends BaseHttpTest {
 	 */
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
-	@Disabled
 	void testIssue1978H2CNoDelay(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
 		doTestIssue1978(serverProtocols, clientProtocols, null, null, 0, 0);
 	}
 
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
-	@Disabled
 	void testIssue1978H2CWithDelay(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
 		doTestIssue1978(serverProtocols, clientProtocols, null, null, 50, 20);
 	}
@@ -2403,7 +2399,6 @@ class HttpServerTests extends BaseHttpTest {
 	 */
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
-	@Disabled
 	void testIssue1978H2NoDelay(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2414,7 +2409,6 @@ class HttpServerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
-	@Disabled
 	void testIssue1978H2WithDelay(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
