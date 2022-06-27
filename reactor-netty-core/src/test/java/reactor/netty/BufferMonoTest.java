@@ -15,6 +15,7 @@
  */
 package reactor.netty;
 
+import io.netty5.buffer.api.Buffer;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -23,8 +24,45 @@ import reactor.test.StepVerifier;
 
 import java.nio.charset.Charset;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Random;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 
 class BufferMonoTest {
+	static final Random rndm = new Random();
+
+	@Test
+	void testAsByteArray() {
+		byte[] bytes = new byte[256];
+		rndm.nextBytes(bytes);
+		byte[] expected = Arrays.copyOfRange(bytes, 5, bytes.length);
+		try (Buffer buffer = preferredAllocator().copyOf(bytes)) {
+			BufferMono mono = new BufferMono(Mono.just(buffer.skipReadableBytes(5)));
+			StepVerifier.create(mono.asByteArray())
+					.expectNextMatches(byteArray -> Arrays.equals(expected, byteArray))
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+		}
+	}
+
+	@Test
+	void testAsByteBuffer() {
+		byte[] bytes = new byte[256];
+		rndm.nextBytes(bytes);
+		byte[] expected = Arrays.copyOfRange(bytes, 5, bytes.length);
+		try (Buffer buffer = preferredAllocator().copyOf(bytes)) {
+			BufferMono mono = new BufferMono(Mono.just(buffer.skipReadableBytes(5)));
+			StepVerifier.create(mono.asByteBuffer())
+					.expectNextMatches(byteArray -> {
+						byte[] bArray = new byte[byteArray.remaining()];
+						byteArray.get(bArray);
+						return Arrays.equals(expected, bArray);
+					})
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+		}
+	}
 
 	@Test
 	void testFromString_EmptyFlux() {

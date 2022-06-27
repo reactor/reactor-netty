@@ -184,7 +184,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 		return handle((b, sink) -> {
 			int readableBytes = b.readableBytes();
 			ByteBuffer copy = b.isDirect() ? ByteBuffer.allocateDirect(readableBytes) : ByteBuffer.allocate(readableBytes);
-			b.copyInto(0, copy, 0, readableBytes);
+			b.copyInto(b.readerOffset(), copy, 0, readableBytes);
 			sink.next(copy);
 		});
 	}
@@ -198,7 +198,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 		return handle((b, sink) -> {
 			int readableBytes = b.readableBytes();
 			byte[] copy = new byte[readableBytes];
-			b.copyInto(0, copy, 0, readableBytes);
+			b.copyInto(b.readerOffset(), copy, 0, readableBytes);
 			sink.next(copy);
 		});
 	}
