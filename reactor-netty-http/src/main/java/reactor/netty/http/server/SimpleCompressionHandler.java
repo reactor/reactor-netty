@@ -40,10 +40,13 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 	@Override
 	protected void decodeAndClose(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
 		HttpRequest request = msg;
-		if (msg instanceof FullHttpRequest && !((FullHttpRequest) msg).payload().isAccessible()) {
-			// This can happen only in HTTP2 use case and delayed response
+		if (msg instanceof FullHttpRequest &&
+				(!((FullHttpRequest) msg).isAccessible() || ((FullHttpRequest) msg).payload().readableBytes() == 0)) {
+			// 1. This can happen only in HTTP2 use case and delayed response
 			// When the incoming FullHttpRequest content is with 0 readableBytes it is released immediately
-			// decode(...) will observe a freed content
+			// decode(...) will observe a freed content.
+			// 2. fireChannelRead(...) is invoked at the end of super.decodeAndClose(...) which will end up
+			// in io.netty5.channel.DefaultChannelPipeline.onUnhandledInboundMessage which closes the msg.
 			request = new DefaultHttpRequest(msg.protocolVersion(), msg.method(), msg.uri(), msg.headers());
 		}
 		super.decodeAndClose(ctx, request);

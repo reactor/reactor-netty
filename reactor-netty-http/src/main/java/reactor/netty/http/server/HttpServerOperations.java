@@ -536,7 +536,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		                  .get(NettyPipeline.CompressionHandler) == null) {
 			SimpleCompressionHandler handler = new SimpleCompressionHandler();
 			try {
-				//Do not invoke handler.channelRead as it will trigger ctx.fireChannelRead
+				// decodeAndClose(...) is needed only to initialize the acceptEncodingQueue
 				handler.decodeAndClose(channel().pipeline().context(NettyPipeline.ReactiveBridge), nettyRequest);
 
 				addHandlerFirst(NettyPipeline.CompressionHandler, handler);
