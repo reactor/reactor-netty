@@ -60,17 +60,17 @@ jobs:
           fetch-depth: 0 #needed by spotless
       - uses: actions/checkout@v3
         with:
-          repository: netty/codec-haproxy
+          repository: netty-contrib/codec-haproxy
           path: codec-haproxy
           ref: channel-handler-methods-names
       - uses: actions/checkout@v3
         with:
-          repository: netty/codec-extras
+          repository: netty-contrib/codec-extras
           path: codec-extras
           ref: channel-handler-methods-names
       - uses: actions/checkout@v3
         with:
-          repository: netty/socks-proxy
+          repository: netty-contrib/socks-proxy
           path: socks-proxy
           ref: channel-handler-methods-names
       - uses: gradle/wrapper-validation-action@v1
