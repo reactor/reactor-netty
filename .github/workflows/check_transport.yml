@@ -62,17 +62,14 @@ jobs:
         with:
           repository: netty-contrib/codec-haproxy
           path: codec-haproxy
-          ref: channel-handler-methods-names
       - uses: actions/checkout@v3
         with:
           repository: netty-contrib/codec-extras
           path: codec-extras
-          ref: channel-handler-methods-names
       - uses: actions/checkout@v3
         with:
           repository: netty-contrib/socks-proxy
           path: socks-proxy
-          ref: channel-handler-methods-names
       - uses: gradle/wrapper-validation-action@v1
       - name: Set up JDK 17
         uses: actions/setup-java@v3
