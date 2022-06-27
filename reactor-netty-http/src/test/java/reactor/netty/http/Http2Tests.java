@@ -19,7 +19,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
@@ -29,6 +28,7 @@ import reactor.core.publisher.Signal;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.BufferFlux;
+import reactor.netty.BufferMono;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
@@ -360,10 +360,9 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testMonoRequestBodySentAsFullRequest_Mono() {
 		// sends "full" request
-		doTestMonoRequestBodySentAsFullRequest(BufferFlux.fromString(Mono.just("test")), 1);
+		doTestMonoRequestBodySentAsFullRequest(BufferMono.fromString(Mono.just("test")), 1);
 	}
 
 	private void doTestMonoRequestBodySentAsFullRequest(Publisher<? extends Buffer> body, int expectedMsg) {
