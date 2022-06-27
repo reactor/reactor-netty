@@ -34,11 +34,14 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 import java.util.stream.Collectors;
 
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class BufferFluxTest {
+	private static final Random rndm = new Random();
 
 	private static File temporaryDirectory;
 
@@ -50,6 +53,49 @@ class BufferFluxTest {
 	@AfterAll
 	static void deleteTempDir() {
 		deleteTemporaryDirectoryRecursively(temporaryDirectory);
+	}
+
+	@Test
+	void testAsByteArray() {
+		byte[] bytes = new byte[256];
+		rndm.nextBytes(bytes);
+		byte[] expected = Arrays.copyOfRange(bytes, 5, bytes.length);
+		try (Buffer buffer1 = preferredAllocator().copyOf(bytes);
+		     Buffer buffer2 = preferredAllocator().copyOf(bytes)) {
+			BufferFlux mono = new BufferFlux(Flux.just(buffer1.skipReadableBytes(5), buffer2.skipReadableBytes(5)),
+					preferredAllocator());
+			StepVerifier.create(mono.asByteArray().collectList())
+					.expectNextMatches(byteArrayList ->
+						byteArrayList.size() == 2 && Arrays.equals(expected, byteArrayList.get(0)) &&
+								Arrays.equals(expected, byteArrayList.get(1)))
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+		}
+	}
+
+	@Test
+	void testAsByteBuffer() {
+		byte[] bytes = new byte[256];
+		rndm.nextBytes(bytes);
+		byte[] expected = Arrays.copyOfRange(bytes, 5, bytes.length);
+		try (Buffer buffer1 = preferredAllocator().copyOf(bytes);
+		     Buffer buffer2 = preferredAllocator().copyOf(bytes)) {
+			BufferFlux mono = new BufferFlux(Flux.just(buffer1.skipReadableBytes(5), buffer2.skipReadableBytes(5)),
+					preferredAllocator());
+			StepVerifier.create(mono.asByteBuffer().collectList())
+					.expectNextMatches(byteArrayList -> {
+						if (byteArrayList.size() == 2) {
+							byte[] bArray1 = new byte[byteArrayList.get(0).remaining()];
+							byteArrayList.get(0).get(bArray1);
+							byte[] bArray2 = new byte[byteArrayList.get(1).remaining()];
+							byteArrayList.get(1).get(bArray2);
+							return Arrays.equals(expected, bArray1) && Arrays.equals(expected, bArray2);
+						}
+						return false;
+					})
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+		}
 	}
 
 	@Test
