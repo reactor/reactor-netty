@@ -28,7 +28,6 @@ import java.util.zip.GZIPInputStream;
 import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -217,7 +216,6 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompressionTest
-	@Disabled
 	void serverCompressionPredicateTrue(HttpServer server, HttpClient client) throws Exception {
 		testServerCompressionPredicateTrue(server, client, false);
 	}
@@ -297,7 +295,6 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompressionTest
-	@Disabled
 	void serverCompressionEnabledBigResponse(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.compress(4)
@@ -393,7 +390,6 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompressionTest
-	@Disabled
 	void testIssue282(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(2048)
@@ -415,7 +411,6 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompressionTest
-	@Disabled
 	void testIssue292(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(10)
