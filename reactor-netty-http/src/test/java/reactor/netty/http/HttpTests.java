@@ -26,7 +26,6 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -397,8 +396,6 @@ class HttpTests extends BaseHttpTest {
 
 
 	@Test
-	@Disabled
-	// TODO temporary disable https://github.com/netty/netty/pull/12482
 	void streamAndPoolDefaultCompression() {
 		Sinks.Many<String> ep = Sinks.unsafe().many().unicast().onBackpressureBuffer();
 
