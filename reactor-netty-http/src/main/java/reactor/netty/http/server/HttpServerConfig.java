@@ -807,6 +807,18 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 	}
 
+	@ChannelHandler.Sharable
+	static final class H2CleartextReadContextHandler extends ChannelHandlerAdapter {
+		static final H2CleartextReadContextHandler INSTANCE = new H2CleartextReadContextHandler();
+
+		@Override
+		public void channelRegistered(ChannelHandlerContext ctx) {
+			ctx.read();
+			ctx.fireChannelRegistered();
+			ctx.pipeline().remove(this);
+		}
+	}
+
 	static final class H2Codec extends ChannelInitializer<Channel> {
 
 		final boolean                                                 accessLogEnabled;
@@ -1064,8 +1076,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		@Override
 		public void onChannelInit(ConnectionObserver observer, Channel channel, @Nullable SocketAddress remoteAddress) {
-			boolean needRead = false;
-
 			if (sslProvider != null) {
 				ChannelPipeline pipeline = channel.pipeline();
 				if (redirectHttpToHttps && ((protocols & h2) != h2)) {
@@ -1182,7 +1192,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							opsFactory,
 							uriTagValue,
 							decoder.validateHeaders());
-					needRead = true;
+					channel.pipeline().addLast(H2CleartextReadContextHandler.INSTANCE);
 				}
 			}
 
@@ -1196,10 +1206,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			else if (proxyProtocolSupportType == ProxyProtocolSupportType.AUTO) {
 				channel.pipeline()
 				       .addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDetector());
-			}
-
-			if (needRead) {
-				channel.read();
 			}
 		}
 	}

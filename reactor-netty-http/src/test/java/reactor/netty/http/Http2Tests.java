@@ -57,7 +57,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-@Disabled
 class Http2Tests extends BaseHttpTest {
 	private final static String H2_WITHOUT_TLS_SERVER = "Configured H2 protocol without TLS. Use" +
 			" a Clear-Text H2 protocol via HttpServer#protocol or configure TLS" +
@@ -361,6 +360,7 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
+	@Disabled
 	void testMonoRequestBodySentAsFullRequest_Mono() {
 		// sends "full" request
 		doTestMonoRequestBodySentAsFullRequest(BufferFlux.fromString(Mono.just("test")), 1);

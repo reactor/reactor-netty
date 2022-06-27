@@ -323,7 +323,6 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void testConnectionIdleWhenNoActiveStreams() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -462,14 +461,12 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
-	@Disabled
 	void testIssue1982H2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
 		doTestIssue1982(serverProtocols, clientProtocols, null, null);
 	}
 
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
-	@Disabled
 	void testIssue1982H2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -552,7 +549,6 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	//https://github.com/reactor/reactor-netty/issues/1808
 	@Test
-	@Disabled
 	void testMinConnections() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
