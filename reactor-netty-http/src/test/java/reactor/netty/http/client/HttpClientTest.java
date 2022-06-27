@@ -575,7 +575,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@Disabled
 	void secureSendFile() throws SSLException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
