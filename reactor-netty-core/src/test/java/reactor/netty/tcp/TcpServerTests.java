@@ -62,7 +62,6 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.reactivestreams.Publisher;
@@ -309,7 +308,6 @@ class TcpServerTests {
 	}
 
 	@Test
-	@Disabled
 	void sendFileSecure() throws Exception {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -394,7 +392,6 @@ class TcpServerTests {
 	}
 
 	@Test
-	@Disabled
 	void sendFileChunked() throws Exception {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
@@ -402,7 +399,6 @@ class TcpServerTests {
 	}
 
 	@Test
-	@Disabled
 	void sendZipFileChunked() throws Exception {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);

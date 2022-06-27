@@ -42,7 +42,6 @@ import java.util.logging.Level;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMethod;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -57,7 +56,6 @@ import reactor.util.annotation.Nullable;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Disabled
 class HttpSendFileTests extends BaseHttpTest {
 	protected HttpClient customizeClientOptions(HttpClient httpClient) {
 		return httpClient;
