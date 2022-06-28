@@ -93,7 +93,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter {
 				log.debug(format(channel, "The upgrade to H2C protocol was successful."));
 			}
 			sendNewState(Connection.from(channel), HttpClientState.UPGRADE_SUCCESSFUL);
-			removeThisHandler = true; // we have to remove ourselves from the pipleline after having fired the event below.
+			removeThisHandler = true; // we have to remove ourselves from the pipeline after having fired the event below.
 		}
 		else if (evt == UPGRADE_REJECTED) {
 			if (log.isDebugEnabled()) {
