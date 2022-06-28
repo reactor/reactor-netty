@@ -1039,8 +1039,8 @@ class HttpServerTests extends BaseHttpTest {
 				          .doOnConnection(c -> c.addHandlerFirst("custom", new ChannelHandlerAdapter() {
 				                      @Override
 				                      public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-				                          if (msg instanceof HttpRequest) {
-				                              ((HttpRequest) msg).headers().add("test", "test");
+					                      if (msg instanceof HttpRequest request) {
+				                              request.headers().add("test", "test");
 				                          }
 				                          super.channelRead(ctx, msg);
 				                      }
@@ -1826,8 +1826,8 @@ class HttpServerTests extends BaseHttpTest {
 				                     .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
 				                         @Override
 				                         public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-				                             if (evt instanceof SniCompletionEvent) {
-				                                 hostname.set(((SniCompletionEvent) evt).hostname());
+					                         if (evt instanceof SniCompletionEvent sniCompletionEvent) {
+				                                 hostname.set(sniCompletionEvent.hostname());
 				                             }
 				                             ctx.fireChannelInboundEvent(evt);
 				                         }
@@ -1873,8 +1873,8 @@ class HttpServerTests extends BaseHttpTest {
 				                     .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
 				                         @Override
 				                         public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-				                             if (evt instanceof SniCompletionEvent) {
-				                                 hostname.set(((SniCompletionEvent) evt).hostname());
+					                         if (evt instanceof SniCompletionEvent sniCompletionEvent) {
+				                                 hostname.set(sniCompletionEvent.hostname());
 				                             }
 				                                 ctx.fireChannelInboundEvent(evt);
 				                             }

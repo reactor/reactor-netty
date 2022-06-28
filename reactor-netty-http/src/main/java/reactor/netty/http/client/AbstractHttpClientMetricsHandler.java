@@ -81,8 +81,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		try {
-			if (msg instanceof HttpRequest) {
-				extractDetailsFromHttpRequest(ctx, (HttpRequest) msg);
+			if (msg instanceof HttpRequest request) {
+				extractDetailsFromHttpRequest(ctx, request);
 			}
 
 			dataSent += extractProcessedDataFromBuffer(msg);
@@ -112,10 +112,10 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		try {
-			if (msg instanceof HttpResponse) {
-				status = ((HttpResponse) msg).status().codeAsText().toString();
+			if (msg instanceof HttpResponse response) {
+				status = response.status().codeAsText().toString();
 
-				startRead((HttpResponse) msg);
+				startRead(response);
 			}
 
 			dataReceived += extractProcessedDataFromBuffer(msg);
@@ -159,11 +159,11 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 	}
 
 	private long extractProcessedDataFromBuffer(Object msg) {
-		if (msg instanceof ByteBufHolder) {
-			return ((ByteBufHolder) msg).content().readableBytes();
+		if (msg instanceof ByteBufHolder byteBufHolder) {
+			return byteBufHolder.content().readableBytes();
 		}
-		else if (msg instanceof Buffer) {
-			return ((Buffer) msg).readableBytes();
+		else if (msg instanceof Buffer buffer) {
+			return buffer.readableBytes();
 		}
 		return 0;
 	}
@@ -216,8 +216,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	private String resolveUri(ChannelHandlerContext ctx) {
 		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-		if (channelOps instanceof HttpClientOperations) {
-			String path = ((HttpClientOperations) channelOps).uri();
+		if (channelOps instanceof HttpClientOperations ops) {
+			String path = ops.uri();
 			return uriTagValue == null ? path : uriTagValue.apply(path);
 		}
 		else {

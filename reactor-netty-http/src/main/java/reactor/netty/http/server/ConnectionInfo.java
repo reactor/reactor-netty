@@ -51,11 +51,11 @@ public final class ConnectionInfo {
 	@Nullable
 	static ConnectionInfo from(Channel channel, HttpRequest request, boolean secured, SocketAddress remoteAddress,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
-		if (!(remoteAddress instanceof InetSocketAddress)) {
+		if (!(remoteAddress instanceof InetSocketAddress inetSocketAddress)) {
 			return null;
 		}
 		else {
-			ConnectionInfo connectionInfo = ConnectionInfo.newConnectionInfo(channel, secured, (InetSocketAddress) remoteAddress);
+			ConnectionInfo connectionInfo = ConnectionInfo.newConnectionInfo(channel, secured, inetSocketAddress);
 			if (forwardedHeaderHandler != null) {
 				return forwardedHeaderHandler.apply(connectionInfo, request);
 			}

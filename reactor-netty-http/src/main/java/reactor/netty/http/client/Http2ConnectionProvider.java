@@ -76,8 +76,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 	Http2ConnectionProvider(ConnectionProvider parent) {
 		super(initConfiguration(parent));
 		this.parent = parent;
-		if (parent instanceof PooledConnectionProvider) {
-			((PooledConnectionProvider<?>) parent).onDispose(disposeLater());
+		if (parent instanceof PooledConnectionProvider<?> pooledConnectionProvider) {
+			pooledConnectionProvider.onDispose(disposeLater());
 		}
 	}
 
@@ -107,9 +107,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		boolean acceptGzip = false;
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
 		Function<String, String> uriTagValue = null;
-		if (config instanceof HttpClientConfig) {
-			acceptGzip = ((HttpClientConfig) config).acceptGzip;
-			uriTagValue = ((HttpClientConfig) config).uriTagValue;
+		if (config instanceof HttpClientConfig httpClientConfig) {
+			acceptGzip = httpClientConfig.acceptGzip;
+			uriTagValue = httpClientConfig.uriTagValue;
 		}
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
 				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, sink, snapshot, uriTagValue);

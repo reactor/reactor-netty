@@ -705,8 +705,8 @@ class HttpRedirectTest extends BaseHttpTest {
 		              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		                  super.channelRead(ctx, msg);
 
-		                  if (initialPath.equals("/" + r.path()) && msg instanceof HttpContent) {
-		                      redirectBufferRefCounts.add(((HttpContent<?>) msg).isAccessible() ? 1 : 0);
+			              if (initialPath.equals("/" + r.path()) && msg instanceof HttpContent<?> httpContent) {
+		                      redirectBufferRefCounts.add(httpContent.isAccessible() ? 1 : 0);
 		                  }
 		              }
 		          }))

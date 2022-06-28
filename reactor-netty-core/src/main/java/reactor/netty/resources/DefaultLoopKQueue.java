@@ -89,8 +89,8 @@ final class DefaultLoopKQueue implements DefaultLoop {
 
 	@Override
 	public boolean supportGroup(EventLoopGroup group) {
-		if (group instanceof ColocatedEventLoopGroup) {
-			group = ((ColocatedEventLoopGroup) group).get();
+		if (group instanceof ColocatedEventLoopGroup colocatedEventLoopGroup) {
+			group = colocatedEventLoopGroup.get();
 		}
 		return group instanceof KQueueEventLoopGroup;
 	}

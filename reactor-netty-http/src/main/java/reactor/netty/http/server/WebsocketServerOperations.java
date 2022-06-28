@@ -141,12 +141,12 @@ final class WebsocketServerOperations extends HttpServerOperations
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
-		if (frame instanceof CloseWebSocketFrame && ((CloseWebSocketFrame) frame).isFinalFragment()) {
+		if (frame instanceof CloseWebSocketFrame closeWebSocketFrame && closeWebSocketFrame.isFinalFragment()) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
-			CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(true, ((CloseWebSocketFrame) frame).rsv(),
-					((CloseWebSocketFrame) frame).binaryData());
+			CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(true, closeWebSocketFrame.rsv(),
+					closeWebSocketFrame.binaryData());
 			if (closeFrame.statusCode() != -1) {
 				// terminate() will invoke onInboundComplete()
 				sendCloseNow(closeFrame, f -> terminate());
@@ -157,9 +157,9 @@ final class WebsocketServerOperations extends HttpServerOperations
 			}
 			return;
 		}
-		if (!this.proxyPing && frame instanceof PingWebSocketFrame) {
+		if (!this.proxyPing && frame instanceof PingWebSocketFrame pingWebSocketFrame) {
 			//"FutureReturnValueIgnored" this is deliberate
-			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).binaryData()));
+			ctx.writeAndFlush(new PongWebSocketFrame(pingWebSocketFrame.binaryData()));
 			ctx.read();
 			return;
 		}

@@ -45,7 +45,7 @@ class BaseAccessLogHandler extends ChannelHandlerAdapter {
 	}
 
 	static String applyAddress(@Nullable SocketAddress socketAddress) {
-		return socketAddress instanceof InetSocketAddress ? ((InetSocketAddress) socketAddress).getHostString() : MISSING;
+		return socketAddress instanceof InetSocketAddress inetSocketAddress ? inetSocketAddress.getHostString() : MISSING;
 	}
 
 }

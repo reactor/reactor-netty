@@ -41,8 +41,8 @@ final class Http2StreamBridgeClientHandler extends ChannelHandlerAdapter {
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof Buffer) {
-			return ctx.write(new DefaultHttpContent((Buffer) msg));
+		if (msg instanceof Buffer buffer) {
+			return ctx.write(new DefaultHttpContent(buffer));
 		}
 		else {
 			return ctx.write(msg);

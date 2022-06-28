@@ -131,11 +131,11 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 
 	@Override
 	protected String format(ChannelHandlerContext ctx, String eventName, Object arg) {
-		if (arg instanceof Buffer) {
-			return formatBuffer(ctx, eventName, (Buffer) arg);
+		if (arg instanceof Buffer buffer) {
+			return formatBuffer(ctx, eventName, buffer);
 		}
-		else if (arg instanceof ByteBufHolder) {
-			return formatByteBufHolder(ctx, eventName, (ByteBufHolder) arg);
+		else if (arg instanceof ByteBufHolder byteBufHolder) {
+			return formatByteBufHolder(ctx, eventName, byteBufHolder);
 		}
 		else {
 			return formatSimple(ctx, eventName, arg);
@@ -166,8 +166,8 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		String channelStr;
 		StringBuilder result;
 		Connection connection = Connection.from(channel);
-		if (connection instanceof ChannelOperationsId) {
-			channelStr = ((ChannelOperationsId) connection).asLongText();
+		if (connection instanceof ChannelOperationsId channelOperationsId) {
+			channelStr = channelOperationsId.asLongText();
 			if (channelStr.charAt(0) != TRACE_ID_PREFIX) {
 				result = new StringBuilder(1 + channelStr.length() + 1)
 						.append(CHANNEL_ID_PREFIX)
