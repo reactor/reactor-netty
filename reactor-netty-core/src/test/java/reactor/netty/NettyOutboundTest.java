@@ -48,10 +48,8 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.stream.ChunkedNioFile;
 import io.netty5.handler.stream.ChunkedWriteHandler;
 import io.netty5.util.CharsetUtil;
-import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -76,7 +74,7 @@ class NettyOutboundTest {
 				new MessageToMessageEncoder<FileRegion>() {
 
 					@Override
-					protected void encode(ChannelHandlerContext ctx, FileRegion msg,
+					protected void encodeAndClose(ChannelHandlerContext ctx, FileRegion msg,
 							List<Object> out) throws Exception {
 						ByteArrayOutputStream bais = new ByteArrayOutputStream();
 						WritableByteChannel wbc = Channels.newChannel(bais);
@@ -87,10 +85,9 @@ class NettyOutboundTest {
 				},
 				new MessageToMessageEncoder<>() {
 					@Override
-					protected void encode(ChannelHandlerContext ctx, Object msg,
+					protected void encodeAndClose(ChannelHandlerContext ctx, Object msg,
 							List<Object> out) {
 						messageClasses.add(msg.getClass());
-						ReferenceCountUtil.retain(msg);
 						out.add(msg);
 					}
 				});
@@ -149,7 +146,6 @@ class NettyOutboundTest {
 	}
 
 	@Test
-	@Disabled
 	void sendFileWithTlsUsesChunkedFile() throws URISyntaxException, SSLException {
 		SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		final SslHandler sslHandler = sslCtx.newHandler(preferredAllocator());
@@ -164,7 +160,7 @@ class NettyOutboundTest {
 				//capture the chunks unencrypted, transform as Strings:
 				new MessageToMessageEncoder<Buffer>() {
 					@Override
-					protected void encode(ChannelHandlerContext ctx, Buffer msg,
+					protected void encodeAndClose(ChannelHandlerContext ctx, Buffer msg,
 							List<Object> out) {
 						clearMessages.add(msg.readCharSequence(msg.readableBytes(), CharsetUtil.UTF_8));
 						out.add(msg.split());
@@ -175,10 +171,8 @@ class NettyOutboundTest {
 				//helps to ensure a ChunkedFile was written outs
 				new MessageToMessageEncoder<>() {
 					@Override
-					protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) {
+					protected void encodeAndClose(ChannelHandlerContext ctx, Object msg, List<Object> out) {
 						messageWritten.add(msg.getClass());
-						//passing the ChunkedFile through this method releases it, which is undesired
-						ReferenceCountUtil.retain(msg);
 						out.add(msg);
 					}
 				});
@@ -251,7 +245,6 @@ class NettyOutboundTest {
 	}
 
 	@Test
-	@Disabled
 	void sendFileWithForceChunkedFileUsesStrategyChunks()
 			throws URISyntaxException, IOException {
 		List<Class<?>> messageWritten = new ArrayList<>(2);
@@ -260,7 +253,7 @@ class NettyOutboundTest {
 				//transform the Buffer chunks into Strings:
 				new MessageToMessageEncoder<Buffer>() {
 					@Override
-					protected void encode(ChannelHandlerContext ctx, Buffer msg,
+					protected void encodeAndClose(ChannelHandlerContext ctx, Buffer msg,
 							List<Object> out) {
 						out.add(msg.readCharSequence(msg.readableBytes(), CharsetUtil.UTF_8));
 					}
@@ -270,7 +263,7 @@ class NettyOutboundTest {
 				//helps to ensure a ChunkedFile was written outs
 				new MessageToMessageEncoder<>() {
 					@Override
-					protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) {
+					protected void encodeAndClose(ChannelHandlerContext ctx, Object msg, List<Object> out) {
 						messageWritten.add(msg.getClass());
 						out.add(msg);
 					}
