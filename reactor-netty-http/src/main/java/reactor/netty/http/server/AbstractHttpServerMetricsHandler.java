@@ -127,7 +127,13 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 							// This metric is not applicable for HTTP/2
 							// ops.hostAddress() == null when request decoding failed, in this case
 							// we do not report active connection, so we do not report inactive connection
-							recordInactiveConnection(ops);
+							try {
+								recordInactiveConnection(ops);
+							}
+							catch (RuntimeException e) {
+								log.warn("Exception caught while recording metrics.", e);
+								// Allow request-response exchange to continue, unaffected by metrics problem
+							}
 						}
 					}
 
