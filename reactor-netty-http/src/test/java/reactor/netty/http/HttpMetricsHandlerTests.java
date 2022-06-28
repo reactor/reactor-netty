@@ -240,7 +240,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negociatedProtocol) {
+	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+	                                  @SuppressWarnings("unused") HttpProtocol negociatedProtocol) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, id -> {
 					throw new IllegalArgumentException("Testcase injected Exception");
@@ -264,7 +265,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negociatedProtocol) {
+	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+	                                  @SuppressWarnings("unused") HttpProtocol negociatedProtocol) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.bindNow();
 
@@ -289,7 +291,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negociatedProtocol) throws Exception {
 		// For HTTP11, we expect to observe 2 DISCONNECTS for client, and 2 DISCONNECT for server.
 		// Else, we expect to observe 2 DISCONNECTS for client, and 1 DISCONNECT for server.
-		boolean isHTTP11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
 		int expectedDisconnects = getExpectedCloses(negociatedProtocol);
 
 		CountDownLatch latch = new CountDownLatch(expectedDisconnects);
@@ -500,7 +501,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testContextAwareRecorderOnClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negociatedProtocol) throws Exception {
+	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+	                                      @SuppressWarnings("unused") HttpProtocol negociatedProtocol) throws Exception {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		ClientContextAwareRecorder recorder = ClientContextAwareRecorder.INSTANCE;
@@ -531,7 +533,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testContextAwareRecorderOnServer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negociatedProtocol) throws Exception {
+	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+	                                      @SuppressWarnings("unused") HttpProtocol negociatedProtocol) throws Exception {
 		ServerContextAwareRecorder recorder = ServerContextAwareRecorder.INSTANCE;
 		disposableServer =
 				customizeServerOptions(httpServer, serverCtx, serverProtocols).metrics(true, () -> recorder)
@@ -620,7 +623,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsRecorder(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negociatedProtocol) throws Exception {
+	                                   @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+	                                   @SuppressWarnings("unused") HttpProtocol negociatedProtocol) throws Exception {
 		// Invoke ServerRecorder.INSTANCE.reset() here as disposableServer.dispose (AfterEach) might be invoked after
 		// ServerRecorder.INSTANCE.reset() (AfterEach) and thus leave ServerRecorder.INSTANCE in a bad state
 		ServerRecorder.INSTANCE.reset();
@@ -914,10 +918,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 */
 	int getExpectedCloses(HttpProtocol protocol) {
 		return switch (protocol) {
-			case H2 -> 3;
-			case H2C -> 3;
+			case H2, H2C -> 3;
 			case HTTP11 -> 4;
-			default -> throw new IllegalArgumentException("unexpected protocol");
 		};
 	}
 
