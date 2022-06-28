@@ -323,14 +323,14 @@ public final class TransportConnector {
 								channel.close();
 							}
 							else {
-								channel.unsafe().closeForcibly();
+								channel.close();
 							}
 							monoChannelPromise.setFailure(f.cause());
 						}
 					});
 				}
 				else {
-					channel.unsafe().closeForcibly();
+					channel.close();
 					monoChannelPromise.setFailure(future.cause());
 				}
 			});
