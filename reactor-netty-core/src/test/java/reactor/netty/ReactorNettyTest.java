@@ -22,6 +22,7 @@ import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import reactor.util.annotation.Nullable;
 
@@ -124,11 +125,6 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		protected AbstractUnsafe newUnsafe() {
-			return null;
-		}
-
-		@Override
 		public SocketAddress localAddress() {
 			return localAddress0();
 		}
@@ -170,6 +166,10 @@ class ReactorNettyTest {
 
 		@Override
 		protected void doWrite(ChannelOutboundBuffer in) {
+		}
+
+		@Override
+		protected void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
 		}
 
 		@Override

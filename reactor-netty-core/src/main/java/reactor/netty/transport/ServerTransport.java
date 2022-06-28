@@ -437,7 +437,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		}
 
 		static void forceClose(Channel child, Throwable t) {
-			child.unsafe().closeForcibly();
+			child.close();
 			log.warn(format(child, "Failed to register an accepted channel: {}"), child, t);
 		}
 	}
