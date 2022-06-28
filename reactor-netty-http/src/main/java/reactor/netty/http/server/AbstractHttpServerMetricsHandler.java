@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
@@ -114,25 +115,34 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 			dataSent += extractProcessedDataFromBuffer(msg);
 
 			if (msg instanceof LastHttpContent) {
+				// The listeners are now invoked asynchronously (see https://github.com/netty/netty/pull/9489),
+				// and it seems we need to first obtain the channelOps, which may not be present anymore
+				// when the listener will be invoked.
+				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				return ctx.write(msg)
 						.addListener(future -> {
-							try {
-								ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 								if (channelOps instanceof HttpServerOperations ops) {
-									recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-											ops.method().name(), ops.status().codeAsText().toString());
+									try {
+										recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
+												ops.method().name(), ops.status().codeAsText().toString());
+									}
+									catch (RuntimeException e) {
+										log.warn("Exception caught while recording metrics.", e);
+										// Allow request-response exchange to continue, unaffected by metrics problem
+									}
 									if (!ops.isHttp2() && ops.hostAddress() != null) {
 										// This metric is not applicable for HTTP/2
 										// ops.hostAddress() == null when request decoding failed, in this case
 										// we do not report active connection, so we do not report inactive connection
-										recordInactiveConnection(ops);
+										try {
+											recordInactiveConnection(ops);
+										}
+										catch (RuntimeException e) {
+											log.warn("Exception caught while recording metrics.", e);
+											// Allow request-response exchange to continue, unaffected by metrics problem
+										}
 									}
 								}
-							}
-							catch (RuntimeException e) {
-								log.warn("Exception caught while recording metrics.", e);
-								// Allow request-response exchange to continue, unaffected by metrics problem
-							}
 
 							dataSent = 0;
 						});
@@ -201,6 +211,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 		}
 		else if (msg instanceof Buffer) {
 			return ((Buffer) msg).readableBytes();
+		}
+		else if (msg instanceof HttpContent) {
+			return ((HttpContent) msg).payload().readableBytes();
 		}
 		return 0;
 	}
