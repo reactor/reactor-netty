@@ -116,23 +116,29 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 			if (msg instanceof LastHttpContent) {
 				return ctx.write(msg)
 						.addListener(future -> {
-							try {
 								ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 								if (channelOps instanceof HttpServerOperations ops) {
-									recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-											ops.method().name(), ops.status().codeAsText().toString());
+									try {
+										recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
+												ops.method().name(), ops.status().codeAsText().toString());
+									}
+									catch (RuntimeException e) {
+										log.warn("Exception caught while recording metrics.", e);
+										// Allow request-response exchange to continue, unaffected by metrics problem
+									}
 									if (!ops.isHttp2() && ops.hostAddress() != null) {
 										// This metric is not applicable for HTTP/2
 										// ops.hostAddress() == null when request decoding failed, in this case
 										// we do not report active connection, so we do not report inactive connection
-										recordInactiveConnection(ops);
+										try {
+											recordInactiveConnection(ops);
+										}
+										catch (RuntimeException e) {
+											log.warn("Exception caught while recording metrics.", e);
+											// Allow request-response exchange to continue, unaffected by metrics problem
+										}
 									}
 								}
-							}
-							catch (RuntimeException e) {
-								log.warn("Exception caught while recording metrics.", e);
-								// Allow request-response exchange to continue, unaffected by metrics problem
-							}
 
 							dataSent = 0;
 						});
