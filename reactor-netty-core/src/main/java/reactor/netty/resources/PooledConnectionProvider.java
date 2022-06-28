@@ -156,8 +156,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			}
 			else {
 				EventLoopGroup group = config.loopResources().onClient(config.isPreferNative());
-				if (group instanceof ColocatedEventLoopGroup) {
-					eventLoop = ((ColocatedEventLoopGroup) group).nextInternal();
+				if (group instanceof ColocatedEventLoopGroup colocatedEventLoopGroup) {
+					eventLoop = colocatedEventLoopGroup.nextInternal();
 				}
 				else {
 					eventLoop = null;

@@ -443,8 +443,8 @@ class HttpClientConnect extends HttpClient {
 		@Override
 		public SocketAddress get() {
 			SocketAddress address = toURI.getRemoteAddress();
-			if (proxyProvider != null && !proxyProvider.shouldProxy(address) && address instanceof InetSocketAddress) {
-				address = AddressUtils.replaceWithResolved((InetSocketAddress) address);
+			if (proxyProvider != null && !proxyProvider.shouldProxy(address) && address instanceof InetSocketAddress inetSocketAddress) {
+				address = AddressUtils.replaceWithResolved(inetSocketAddress);
 			}
 
 			return address;

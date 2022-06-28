@@ -536,8 +536,8 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 					channel.close();
 
 					LoopResources loopResources = config.loopResources();
-					if (loopResources instanceof ConnectionProvider) {
-						((ConnectionProvider) loopResources).disposeWhen(bindAddress);
+					if (loopResources instanceof ConnectionProvider connectionProvider) {
+						connectionProvider.disposeWhen(bindAddress);
 					}
 				}
 			}

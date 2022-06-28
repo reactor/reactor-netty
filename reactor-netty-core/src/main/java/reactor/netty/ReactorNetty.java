@@ -219,8 +219,8 @@ public final class ReactorNetty {
 			String channelStr;
 			StringBuilder result;
 			Connection connection = Connection.from(channel);
-			if (connection instanceof ChannelOperationsId) {
-				channelStr = ((ChannelOperationsId) connection).asLongText();
+			if (connection instanceof ChannelOperationsId channelOperationsId) {
+				channelStr = channelOperationsId.asLongText();
 				if (channelStr.charAt(0) != TRACE_ID_PREFIX) {
 					result = new StringBuilder(1 + channelStr.length() + 2 + msg.length())
 							.append(CHANNEL_ID_PREFIX)
@@ -266,9 +266,9 @@ public final class ReactorNetty {
 	public static String toPrettyHexDump(Object msg) {
 		Objects.requireNonNull(msg, "msg");
 		String result;
-		if (msg instanceof ByteBufHolder &&
-				!Objects.equals(Unpooled.EMPTY_BUFFER, ((ByteBufHolder) msg).content())) {
-			ByteBuf buffer = ((ByteBufHolder) msg).content();
+		if (msg instanceof ByteBufHolder byteBufHolder &&
+				!Objects.equals(Unpooled.EMPTY_BUFFER, byteBufHolder.content())) {
+			ByteBuf buffer = byteBufHolder.content();
 			result = "\n" + ByteBufUtil.prettyHexDump(buffer);
 		}
 		else if (msg instanceof Buffer buffer) {
@@ -488,16 +488,16 @@ public final class ReactorNetty {
 		final ConnectionObserver[] otherObservers;
 		int length = 2;
 
-		if (observer instanceof CompositeConnectionObserver) {
-			thizObservers = ((CompositeConnectionObserver) observer).observers;
+		if (observer instanceof CompositeConnectionObserver compositeConnectionObserver) {
+			thizObservers = compositeConnectionObserver.observers;
 			length += thizObservers.length - 1;
 		}
 		else {
 			thizObservers = null;
 		}
 
-		if (other instanceof CompositeConnectionObserver) {
-			otherObservers = ((CompositeConnectionObserver) other).observers;
+		if (other instanceof CompositeConnectionObserver compositeConnectionObserver) {
+			otherObservers = compositeConnectionObserver.observers;
 			length += otherObservers.length - 1;
 		}
 		else {
@@ -617,16 +617,16 @@ public final class ReactorNetty {
 			final ChannelPipelineConfigurer[] otherConfigurers;
 			int length = 2;
 
-			if (configurer instanceof CompositeChannelPipelineConfigurer) {
-				thizConfigurers = ((CompositeChannelPipelineConfigurer) configurer).configurers;
+			if (configurer instanceof CompositeChannelPipelineConfigurer compositeChannelPipelineConfigurer) {
+				thizConfigurers = compositeChannelPipelineConfigurer.configurers;
 				length += thizConfigurers.length - 1;
 			}
 			else {
 				thizConfigurers = null;
 			}
 
-			if (other instanceof CompositeChannelPipelineConfigurer) {
-				otherConfigurers = ((CompositeChannelPipelineConfigurer) other).configurers;
+			if (other instanceof CompositeChannelPipelineConfigurer compositeChannelPipelineConfigurer) {
+				otherConfigurers = compositeChannelPipelineConfigurer.configurers;
 				length += otherConfigurers.length - 1;
 			}
 			else {

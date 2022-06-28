@@ -543,11 +543,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					}
 				}
 				else {
-					if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder) {
-						handler = new MicrometerHttpClientMetricsHandler((MicrometerHttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+					if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder micrometerHttpClientMetricsRecorder) {
+						handler = new MicrometerHttpClientMetricsHandler(micrometerHttpClientMetricsRecorder, uriTagValue);
 					}
-					else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder) {
-						handler = new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+					else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder contextAwareHttpClientMetricsRecorder) {
+						handler = new ContextAwareHttpClientMetricsHandler(contextAwareHttpClientMetricsRecorder, uriTagValue);
 					}
 					else {
 						handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
@@ -637,11 +637,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpClientMetricsRecorder) {
 				ChannelHandler handler;
-				if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder) {
-					handler = new MicrometerHttpClientMetricsHandler((MicrometerHttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder micrometerHttpClientMetricsRecorder) {
+					handler = new MicrometerHttpClientMetricsHandler(micrometerHttpClientMetricsRecorder, uriTagValue);
 				}
-				else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder) {
-					handler = new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder contextAwareHttpClientMetricsRecorder) {
+					handler = new ContextAwareHttpClientMetricsHandler(contextAwareHttpClientMetricsRecorder, uriTagValue);
 				}
 				else {
 					handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
@@ -675,11 +675,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpClientMetricsRecorder) {
 				ChannelHandler handler;
-				if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder) {
-					handler = new MicrometerHttpClientMetricsHandler((MicrometerHttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder micrometerHttpClientMetricsRecorder) {
+					handler = new MicrometerHttpClientMetricsHandler(micrometerHttpClientMetricsRecorder, uriTagValue);
 				}
-				else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder) {
-					handler = new ContextAwareHttpClientMetricsHandler((ContextAwareHttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+				else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder contextAwareHttpClientMetricsRecorder) {
+					handler = new ContextAwareHttpClientMetricsHandler(contextAwareHttpClientMetricsRecorder, uriTagValue);
 				}
 				else {
 					handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);

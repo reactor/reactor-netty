@@ -577,8 +577,8 @@ class WebsocketTest extends BaseHttpTest {
 
 		StepVerifier.create(response)
 		            .expectNextMatches(webSocketFrame ->
-		                    webSocketFrame instanceof TextWebSocketFrame &&
-		                    "echo".equals(((TextWebSocketFrame) webSocketFrame).text()))
+		                    webSocketFrame instanceof TextWebSocketFrame textWebSocketFrame &&
+		                    "echo".equals(textWebSocketFrame.text()))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
@@ -997,8 +997,8 @@ class WebsocketTest extends BaseHttpTest {
 
 		StepVerifier.create(response)
 		            .expectNextMatches(webSocketFrame ->
-		                webSocketFrame instanceof TextWebSocketFrame &&
-		                    "echo".equals(((TextWebSocketFrame) webSocketFrame).text()))
+		                webSocketFrame instanceof TextWebSocketFrame textWebSocketFrame &&
+		                    "echo".equals(textWebSocketFrame.text()))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
@@ -1029,8 +1029,8 @@ class WebsocketTest extends BaseHttpTest {
 				                                            .delayElements(Duration.ofMillis(100)))
 				                            .then(in.receiveFrames()
 				                                    .doOnNext(o -> {
-				                                        if (o instanceof TextWebSocketFrame) {
-				                                            incomingData.set(((TextWebSocketFrame) o).text());
+					                                    if (o instanceof TextWebSocketFrame textWebSocketFrame) {
+				                                            incomingData.set(textWebSocketFrame.text());
 				                                        }
 				                                    })
 				                                    .then());

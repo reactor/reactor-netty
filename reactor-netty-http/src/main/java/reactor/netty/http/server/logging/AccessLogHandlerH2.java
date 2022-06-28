@@ -62,8 +62,8 @@ final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 					.chunked(true);
 
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
-			if (ops instanceof HttpInfos) {
-				accessLogArgProvider.cookies(((HttpInfos) ops).cookies());
+			if (ops instanceof HttpInfos httpInfos) {
+				accessLogArgProvider.cookies(httpInfos.cookies());
 			}
 		}
 		if (msg instanceof Http2DataFrame data) {

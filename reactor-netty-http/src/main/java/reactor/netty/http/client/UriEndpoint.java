@@ -61,8 +61,8 @@ final class UriEndpoint {
 	String toExternalForm() {
 		StringBuilder sb = new StringBuilder();
 		SocketAddress address = remoteAddress.get();
-		if (address instanceof DomainSocketAddress) {
-			sb.append(((DomainSocketAddress) address).path());
+		if (address instanceof DomainSocketAddress domainSocketAddress) {
+			sb.append(domainSocketAddress.path());
 		}
 		else {
 			sb.append(scheme);
@@ -76,10 +76,10 @@ final class UriEndpoint {
 	}
 
 	static String toSocketAddressStringWithoutDefaultPort(SocketAddress address, boolean secure) {
-		if (!(address instanceof InetSocketAddress)) {
+		if (!(address instanceof InetSocketAddress inetSocketAddress)) {
 			throw new IllegalStateException("Only support InetSocketAddress representation");
 		}
-		String addressString = NetUtil.toSocketAddressString((InetSocketAddress) address);
+		String addressString = NetUtil.toSocketAddressString(inetSocketAddress);
 		if (secure) {
 			if (addressString.endsWith(":443")) {
 				addressString = addressString.substring(0, addressString.length() - 4);

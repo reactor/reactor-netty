@@ -129,19 +129,19 @@ final class WebsocketClientOperations extends HttpClientOperations
 			}
 			return;
 		}
-		if (!this.proxyPing && msg instanceof PingWebSocketFrame) {
+		if (!this.proxyPing && msg instanceof PingWebSocketFrame pingWebSocketFrame) {
 			//"FutureReturnValueIgnored" this is deliberate
-			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).binaryData()));
+			ctx.writeAndFlush(new PongWebSocketFrame(pingWebSocketFrame.binaryData()));
 			ctx.read();
 			return;
 		}
-		if (msg instanceof CloseWebSocketFrame &&
-				((CloseWebSocketFrame) msg).isFinalFragment()) {
+		if (msg instanceof CloseWebSocketFrame closeWebSocketFrame &&
+				closeWebSocketFrame.isFinalFragment()) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
-			CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(true, ((CloseWebSocketFrame) msg).rsv(),
-					((CloseWebSocketFrame) msg).binaryData());
+			CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(true, closeWebSocketFrame.rsv(),
+					closeWebSocketFrame.binaryData());
 			if (closeFrame.statusCode() != -1) {
 				sendCloseNow(closeFrame);
 			}

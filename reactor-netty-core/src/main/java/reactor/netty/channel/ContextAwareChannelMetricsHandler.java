@@ -65,8 +65,8 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 		if (ops != null) {
 			recorder().incrementErrorsCount(ops.currentContext(), address);
 		}
-		else if (connection instanceof ConnectionObserver) {
-			recorder().incrementErrorsCount(((ConnectionObserver) connection).currentContext(), address);
+		else if (connection instanceof ConnectionObserver connectionObserver) {
+			recorder().incrementErrorsCount(connectionObserver.currentContext(), address);
 		}
 		else {
 			super.recordException(ctx, address);
@@ -115,9 +115,9 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 
 		void recordConnectTime(ChannelHandlerContext ctx, SocketAddress address, long connectTimeStart, String status) {
 			Connection connection = Connection.from(ctx.channel());
-			if (connection instanceof ConnectionObserver) {
+			if (connection instanceof ConnectionObserver connectionObserver) {
 				recorder.recordConnectTime(
-						((ConnectionObserver) connection).currentContext(),
+						connectionObserver.currentContext(),
 						address,
 						Duration.ofNanos(System.nanoTime() - connectTimeStart),
 						status);
@@ -136,9 +136,9 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 		@Override
 		protected void recordTlsHandshakeTime(ChannelHandlerContext ctx, long tlsHandshakeTimeStart, String status) {
 			Connection connection = Connection.from(ctx.channel());
-			if (connection instanceof ConnectionObserver) {
+			if (connection instanceof ConnectionObserver connectionObserver) {
 				((ContextAwareChannelMetricsRecorder) recorder).recordTlsHandshakeTime(
-						((ConnectionObserver) connection).currentContext(),
+						connectionObserver.currentContext(),
 						ctx.channel().remoteAddress(),
 						Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
 						status);

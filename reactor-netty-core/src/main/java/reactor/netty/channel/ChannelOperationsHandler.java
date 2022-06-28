@@ -95,8 +95,8 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					if (msg instanceof DecoderResultProvider) {
-						DecoderResult decoderResult = ((DecoderResultProvider) msg).decoderResult();
+					if (msg instanceof DecoderResultProvider decoderResultProvider) {
+						DecoderResult decoderResult = decoderResultProvider.decoderResult();
 						if (decoderResult.isFailure()) {
 							log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "),
 									decoderResult.cause());

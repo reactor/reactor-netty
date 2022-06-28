@@ -74,12 +74,12 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 			}
 
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
-			if (ops instanceof HttpInfos) {
-				accessLogArgProvider.cookies(((HttpInfos) ops).cookies());
+			if (ops instanceof HttpInfos httpInfos) {
+				accessLogArgProvider.cookies(httpInfos.cookies());
 			}
 		}
-		if (msg instanceof LastHttpContent) {
-			accessLogArgProvider.increaseContentLength(((LastHttpContent) msg).payload().readableBytes());
+		if (msg instanceof LastHttpContent<?> lastHttpContent) {
+			accessLogArgProvider.increaseContentLength(lastHttpContent.payload().readableBytes());
 			return ctx.write(msg)
 			          .addListener(future -> {
 			              if (future.isSuccess()) {
@@ -91,11 +91,11 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 			              }
 			          });
 		}
-		if (msg instanceof Buffer) {
-			accessLogArgProvider.increaseContentLength(((Buffer) msg).readableBytes());
+		if (msg instanceof Buffer buffer) {
+			accessLogArgProvider.increaseContentLength(buffer.readableBytes());
 		}
-		if (msg instanceof ByteBufHolder) {
-			accessLogArgProvider.increaseContentLength(((ByteBufHolder) msg).content().readableBytes());
+		if (msg instanceof ByteBufHolder byteBufHolder) {
+			accessLogArgProvider.increaseContentLength(byteBufHolder.content().readableBytes());
 		}
 		return ctx.write(msg);
 	}

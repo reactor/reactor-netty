@@ -31,8 +31,8 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof Buffer) {
-			return super.write(ctx, new DefaultHttpContent((Buffer) msg));
+		if (msg instanceof Buffer buffer) {
+			return super.write(ctx, new DefaultHttpContent(buffer));
 		}
 		return super.write(ctx, msg);
 	}
@@ -40,8 +40,8 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 	@Override
 	protected void decodeAndClose(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
 		HttpRequest request = msg;
-		if (msg instanceof FullHttpRequest &&
-				(!((FullHttpRequest) msg).isAccessible() || ((FullHttpRequest) msg).payload().readableBytes() == 0)) {
+		if (msg instanceof FullHttpRequest fullHttpRequest &&
+				(!fullHttpRequest.isAccessible() || fullHttpRequest.payload().readableBytes() == 0)) {
 			// 1. This can happen only in HTTP2 use case and delayed response
 			// When the incoming FullHttpRequest content is with 0 readableBytes it is released immediately
 			// decode(...) will observe a freed content.

@@ -220,8 +220,8 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			}
 		}
 		else if (persistentConnection && pendingResponses == 0) {
-			if (msg instanceof LastHttpContent) {
-				DecoderResult decoderResult = ((LastHttpContent) msg).decoderResult();
+			if (msg instanceof LastHttpContent<?> lastHttpContent) {
+				DecoderResult decoderResult = lastHttpContent.decoderResult();
 				if (decoderResult.isFailure()) {
 					sendDecodingFailures(decoderResult.cause(), msg);
 					return;
@@ -250,8 +250,8 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			return;
 		}
 
-		if (msg instanceof DecoderResultProvider) {
-			DecoderResult decoderResult = ((DecoderResultProvider) msg).decoderResult();
+		if (msg instanceof DecoderResultProvider decoderResultProvider) {
+			DecoderResult decoderResult = decoderResultProvider.decoderResult();
 			if (decoderResult.isFailure()) {
 				sendDecodingFailures(decoderResult.cause(), msg);
 				return;

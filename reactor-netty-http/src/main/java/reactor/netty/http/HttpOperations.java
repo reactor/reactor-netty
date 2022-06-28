@@ -355,8 +355,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	protected final String initShortId() {
-		if (connection() instanceof AtomicLong) {
-			return channel().id().asShortText() + '-' + ((AtomicLong) connection()).incrementAndGet();
+		if (connection() instanceof AtomicLong atomicLong) {
+			return channel().id().asShortText() + '-' + atomicLong.incrementAndGet();
 		}
 		return super.initShortId();
 	}
@@ -414,13 +414,13 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	final static ChannelHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
 			(ctx, msg) -> {
-				if (msg instanceof HttpContent) {
+				if (msg instanceof HttpContent<?> httpContent) {
 					if (msg instanceof FullHttpMessage) {
 						// TODO convert into 2 messages if FullHttpMessage
 						ctx.fireChannelRead(msg);
 					}
 					else {
-						Buffer bb = ((HttpContent<?>) msg).payload();
+						Buffer bb = httpContent.payload();
 						ctx.fireChannelRead(bb);
 						if (msg instanceof LastHttpContent) {
 							ctx.fireChannelRead(new EmptyLastHttpContent(ctx.bufferAllocator()));
