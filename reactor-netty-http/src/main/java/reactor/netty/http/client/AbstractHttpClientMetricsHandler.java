@@ -166,8 +166,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		else if (msg instanceof Buffer buffer) {
 			return buffer.readableBytes();
 		}
-		else if (msg instanceof HttpContent) {
-			return ((HttpContent) msg).payload().readableBytes();
+		else if (msg instanceof HttpContent httpContent) {
+			return httpContent.payload().readableBytes();
 		}
 		return 0;
 	}
