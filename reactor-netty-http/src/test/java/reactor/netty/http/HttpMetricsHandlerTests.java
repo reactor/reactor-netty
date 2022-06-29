@@ -32,7 +32,6 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -52,6 +51,8 @@ import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.test.StepVerifier;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
@@ -106,6 +107,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	static Http2SslContextSpec serverCtx2;
 	static Http11SslContextSpec clientCtx11;
 	static Http2SslContextSpec clientCtx2;
+
+	static final Logger log = Loggers.getLogger(HttpMetricsHandlerTests.class);
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
@@ -292,7 +295,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
 		int expectedDisconnects = getExpectedCloses(negotiatedProtocol);
 
-		System.out.println("XX: testNonExistingEndpoint: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
+		log.warn("XX: testNonExistingEndpoint: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
 				Arrays.toString(clientProtocols) + ", negotiatedProtocol=" + negotiatedProtocol +
 				", expectedDisconnects=" + expectedDisconnects);
 
