@@ -32,7 +32,7 @@ import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.CombinedChannelDuplexHandler;
 import io.netty5.handler.codec.ByteToMessageCodec;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpMessage;
 import io.netty5.handler.codec.http.HttpContent;
@@ -276,7 +276,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	static void autoAddHttpExtractor(Connection c, String name, ChannelHandler handler) {
 
-		if (handler instanceof ByteToMessageDecoderForBuffer
+		if (handler instanceof ByteToMessageDecoder
 				|| handler instanceof ByteToMessageCodec
 				|| handler instanceof CombinedChannelDuplexHandler) {
 			String extractorName = name + "$extractor";

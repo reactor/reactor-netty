@@ -847,7 +847,6 @@ public final class ReactorNetty {
 	 * @author Stephane Maldini
 	 * @author Simon Baslé
 	 */
-	@ChannelHandler.Sharable
 	static final class ExtractorHandler extends ChannelHandlerAdapter {
 
 
@@ -861,6 +860,10 @@ public final class ReactorNetty {
 			extractor.accept(ctx, msg);
 		}
 
+		@Override
+		public boolean isSharable() {
+			return true;
+		}
 	}
 
 	static final class ChannelDisposer extends BaseSubscriber<Void> {
