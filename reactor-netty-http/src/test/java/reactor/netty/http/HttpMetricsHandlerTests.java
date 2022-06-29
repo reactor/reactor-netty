@@ -240,7 +240,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	// https://github.com/reactor/reactor-netty/issues/2187
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	@Disabled
 	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
 	                                  @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
@@ -266,7 +265,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	// https://github.com/reactor/reactor-netty/issues/2187
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	@Disabled
 	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
 	                                  @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
@@ -293,6 +291,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
 		int expectedDisconnects = getExpectedCloses(negotiatedProtocol);
+
+		System.out.println("XX: testNonExistingEndpoint: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
+				Arrays.toString(clientProtocols) + ", negotiatedProtocol=" + negotiatedProtocol +
+				", expectedDisconnects=" + expectedDisconnects);
 
 		CountDownLatch latch = new CountDownLatch(expectedDisconnects);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
