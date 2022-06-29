@@ -18,7 +18,7 @@ package reactor.netty.http.server;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.ssl.SslHandler;
 import reactor.netty.NettyPipeline;
 import reactor.netty.tcp.SslProvider;
@@ -35,7 +35,7 @@ import java.net.SocketAddress;
  * @author James Chen
  * @since 1.0.5
  */
-final class NonSslRedirectDetector extends ByteToMessageDecoderForBuffer {
+final class NonSslRedirectDetector extends ByteToMessageDecoder {
 
 	private static final int SSL_RECORD_HEADER_LENGTH = 5;
 

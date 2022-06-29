@@ -807,7 +807,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 	}
 
-	@ChannelHandler.Sharable
 	static final class H2CleartextReadContextHandler extends ChannelHandlerAdapter {
 		static final H2CleartextReadContextHandler INSTANCE = new H2CleartextReadContextHandler();
 
@@ -816,6 +815,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ctx.read();
 			ctx.fireChannelRegistered();
 			ctx.pipeline().remove(this);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
 		}
 	}
 

@@ -16,7 +16,6 @@
 package reactor.netty.http.client;
 
 import io.netty5.buffer.api.Buffer;
-import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultHttpContent;
@@ -31,7 +30,6 @@ import io.netty5.util.concurrent.Future;
  * @author Violeta Georgieva
  * @since 1.0.0
  */
-@ChannelHandler.Sharable
 final class Http2StreamBridgeClientHandler extends ChannelHandlerAdapter {
 
 	@Override
@@ -47,5 +45,10 @@ final class Http2StreamBridgeClientHandler extends ChannelHandlerAdapter {
 		else {
 			return ctx.write(msg);
 		}
+	}
+
+	@Override
+	public boolean isSharable() {
+		return true;
 	}
 }
