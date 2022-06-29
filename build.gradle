@@ -175,8 +175,12 @@ subprojects {
 	apply from: "${rootDir}/gradle/javadoc.gradle"
 	apply from: "${rootDir}/gradle/errorprone.gradle"
 
-	sourceCompatibility = '1.8'
-	targetCompatibility = '1.8'
+
+	java {
+		toolchain {
+			languageVersion = JavaLanguageVersion.of(8)
+		}
+	}
 
 	jacoco {
 		toolVersion = '0.8.7'
@@ -212,16 +216,6 @@ subprojects {
 															 "-Xlint:fallthrough",
 															 "-Xlint:rawtypes"
 	]
-
-	compileJava {
-		sourceCompatibility = 1.8
-		targetCompatibility = 1.8
-	}
-
-	compileTestJava {
-		sourceCompatibility = 1.8
-		targetCompatibility = 1.8
-	}
 
 	if (JavaVersion.current().isJava8Compatible()) {
 		compileTestJava.options.compilerArgs += "-parameters"
