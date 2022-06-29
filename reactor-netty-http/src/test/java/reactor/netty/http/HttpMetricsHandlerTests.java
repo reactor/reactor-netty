@@ -32,6 +32,7 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -51,8 +52,6 @@ import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.test.StepVerifier;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
@@ -107,8 +106,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	static Http2SslContextSpec serverCtx2;
 	static Http11SslContextSpec clientCtx11;
 	static Http2SslContextSpec clientCtx2;
-
-	static final Logger log = Loggers.getLogger(HttpMetricsHandlerTests.class);
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
@@ -175,9 +172,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
 		int expectedCloses = getExpectedCloses(negotiatedProtocol);
-		log.warn("XX: testExistingEndpoint: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null) + ", negotiatedProtocol=" + negotiatedProtocol +
-				", expectedDisconnects=" + expectedCloses);
 		CountDownLatch latch1 = new CountDownLatch(expectedCloses);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
@@ -246,11 +240,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	// https://github.com/reactor/reactor-netty/issues/2187
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
+	@Disabled
 	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
 	                                  @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
-		log.warn("XX: testRecordingFailsServerSide: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null) + ", negotiatedProtocol=" + negotiatedProtocol);
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, id -> {
 					throw new IllegalArgumentException("Testcase injected Exception");
@@ -273,11 +266,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	// https://github.com/reactor/reactor-netty/issues/2187
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
+	@Disabled
 	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
 	                                  @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
-		log.warn("XX: testRecordingFailsClientSide: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null) + ", negotiatedProtocol=" + negotiatedProtocol);
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.bindNow();
 
@@ -299,11 +291,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                             @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
 		int expectedDisconnects = getExpectedCloses(negotiatedProtocol);
-		log.warn("XX: testNonExistingEndpoint: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null) + ", negotiatedProtocol=" + negotiatedProtocol +
-				", expectedDisconnects=" + expectedDisconnects);
 
 		CountDownLatch latch = new CountDownLatch(expectedDisconnects);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
@@ -383,9 +372,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testUriTagValueFunction(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
 		int expectedCloses = getExpectedCloses(negotiatedProtocol);
-		log.warn("XX: testUriTagValueFunction: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null) + ", negotiatedProtocol=" + negotiatedProtocol +
-				", expectedDisconnects=" + expectedCloses);
 		CountDownLatch latch1 = new CountDownLatch(expectedCloses);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
@@ -438,9 +424,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testUriTagValueFunctionNotSharedForClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
 		int expectedCloses = getExpectedCloses(negotiatedProtocol);
-		log.warn("XX: testUriTagValueFunctionNotSharedForClient: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null) + ", negotiatedProtocol=" + negotiatedProtocol +
-				", expectedDisconnects=" + expectedCloses);
 		CountDownLatch latch1 = new CountDownLatch(expectedCloses);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
@@ -521,8 +504,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testContextAwareRecorderOnClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
 	                                      @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) throws Exception {
-		log.warn("XX: testContextAwareRecorderOnClient: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null) + ", negotiatedProtocol=" + negotiatedProtocol);
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		ClientContextAwareRecorder recorder = ClientContextAwareRecorder.INSTANCE;
@@ -555,8 +536,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testContextAwareRecorderOnServer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
 	                                      @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) throws Exception {
-		log.warn("XX: testContextAwareRecorderOnServer: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null) + ", negotiatedProtocol=" + negotiatedProtocol);
 		ServerContextAwareRecorder recorder = ServerContextAwareRecorder.INSTANCE;
 		disposableServer =
 				customizeServerOptions(httpServer, serverCtx, serverProtocols).metrics(true, () -> recorder)
@@ -590,9 +569,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testServerConnectionsMicrometer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
 		int expectedCloses = getExpectedCloses(negotiatedProtocol);
-		log.warn("XX: testServerConnectionsMicrometer: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null) + ", negotiatedProtocol=" + negotiatedProtocol +
-				", expectedDisconnects=" + expectedCloses);
 		CountDownLatch latch = new CountDownLatch(expectedCloses);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
@@ -650,8 +626,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testServerConnectionsRecorder(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                   @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
 	                                   @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) throws Exception {
-		log.warn("XX: testServerConnectionsRecorder: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null) + ", negotiatedProtocol=" + negotiatedProtocol);
 		// Invoke ServerRecorder.INSTANCE.reset() here as disposableServer.dispose (AfterEach) might be invoked after
 		// ServerRecorder.INSTANCE.reset() (AfterEach) and thus leave ServerRecorder.INSTANCE in a bad state
 		ServerRecorder.INSTANCE.reset();
@@ -701,7 +675,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue896() throws Exception {
-		log.warn("XX: testIssue896");
 		disposableServer = httpServer.noSSL()
 		                             .bindNow();
 
@@ -731,8 +704,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("http11CompatibleProtocols")
 	void testBadRequest(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		log.warn("XX: testBadRequest: serverProtocols=" + Arrays.toString(serverProtocols) + ", clientProtocols=" +
-				Arrays.toString(clientProtocols) + ", serverSSL=" + (serverCtx != null) + ", clientSSL=" + (clientCtx != null));
 		CountDownLatch latch1 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
@@ -965,13 +936,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	static Stream<Arguments> httpCompatibleProtocols() {
-		return Stream.of(
-				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2), HttpProtocol.H2)
-		);
-	}
-
-	static Stream<Arguments> _httpCompatibleProtocols() {
 		return Stream.of(
 				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null, HttpProtocol.HTTP11),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},

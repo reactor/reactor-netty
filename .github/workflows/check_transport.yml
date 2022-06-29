@@ -92,5 +92,5 @@ jobs:
         run: ./mvnw install -DskipTests=true
         working-directory: ./socks-proxy
       - name: Build with Gradle
-        run: ./gradlew clean check -i --no-daemon -PforceTransport=${{ matrix.transport }} -PspotlessFrom=origin/netty5
+        run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -PspotlessFrom=origin/netty5
         working-directory: ./reactor-netty
