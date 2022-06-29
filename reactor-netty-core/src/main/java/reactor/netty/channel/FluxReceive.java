@@ -271,8 +271,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 							buffer.touch(format(channel, "Receiver " + a.getClass().getName() +
 									" will handle the message from this point"));
 						}
-						else if (v instanceof ByteBufHolder) {
-							((ByteBufHolder) v).touch(format(channel, "Receiver " + a.getClass().getName() +
+						else if (v instanceof ByteBufHolder byteBufHolder) {
+							byteBufHolder.touch(format(channel, "Receiver " + a.getClass().getName() +
 									" will handle the message from this point"));
 						}
 					}
@@ -356,8 +356,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 						buffer.touch(format(channel, "Receiver " + receiver.getClass().getName() +
 								" will handle the message from this point"));
 					}
-					else if (msg instanceof ByteBufHolder) {
-						((ByteBufHolder) msg).touch(format(channel, "Receiver " + receiver.getClass().getName() +
+					else if (msg instanceof ByteBufHolder byteBufHolder) {
+						byteBufHolder.touch(format(channel, "Receiver " + receiver.getClass().getName() +
 								" will handle the message from this point"));
 					}
 				}
@@ -380,8 +380,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				if (msg instanceof Buffer buffer) {
 					buffer.touch(format(channel, "Buffered Buffer in the inbound buffer queue"));
 				}
-				else if (msg instanceof ByteBufHolder) {
-					((ByteBufHolder) msg).touch(format(channel, "Buffered ByteBufHolder in the inbound buffer queue"));
+				else if (msg instanceof ByteBufHolder byteBufHolder) {
+					byteBufHolder.touch(format(channel, "Buffered ByteBufHolder in the inbound buffer queue"));
 				}
 			}
 			q.offer(msg);

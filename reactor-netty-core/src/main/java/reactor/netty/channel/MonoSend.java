@@ -75,12 +75,12 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 	static final ToIntFunction<Buffer> SIZE_OF_BB  = Buffer::readableBytes;
 
 	static final ToIntFunction<Object>  SIZE_OF     = msg -> {
-		if (msg instanceof ByteBufHolder) {
-			return ((ByteBufHolder) msg).content()
+		if (msg instanceof ByteBufHolder byteBufHolder) {
+			return byteBufHolder.content()
 			                            .readableBytes();
 		}
-		if (msg instanceof Buffer) {
-			return ((Buffer) msg).readableBytes();
+		if (msg instanceof Buffer buffer) {
+			return buffer.readableBytes();
 		}
 		if (msg instanceof FileRegion) {
 			// aligns with DefaultMessageSizeEstimator.DEFAULT

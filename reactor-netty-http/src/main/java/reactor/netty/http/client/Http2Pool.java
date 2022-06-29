@@ -169,8 +169,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		this.clock = poolConfig.clock();
 		this.connections = new ConcurrentLinkedQueue<>();
 		this.lastInteractionTimestamp = clock.millis();
-		this.maxConcurrentStreams = allocationStrategy instanceof Http2AllocationStrategy ?
-				((Http2AllocationStrategy) allocationStrategy).maxConcurrentStreams() : -1;
+		this.maxConcurrentStreams = allocationStrategy instanceof Http2AllocationStrategy http2AllocationStrategy ?
+				http2AllocationStrategy.maxConcurrentStreams() : -1L;
 		this.maxIdleTime = maxIdleTime;
 		this.maxLifeTime = maxLifeTime;
 		this.minConnections = allocationStrategy == null ? 0 : allocationStrategy.permitMinimum();

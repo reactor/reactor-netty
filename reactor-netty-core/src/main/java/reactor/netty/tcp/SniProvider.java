@@ -110,8 +110,8 @@ final class SniProvider {
 		protected void onLookupComplete(ChannelHandlerContext ctx, String hostname, Future<? extends SslProvider> future) {
 			if (!future.isSuccess()) {
 				final Throwable cause = future.cause();
-				if (cause instanceof Error) {
-					throw (Error) cause;
+				if (cause instanceof Error error) {
+					throw error;
 				}
 				throw new DecoderException("failed to get the SslContext for " + hostname, cause);
 			}

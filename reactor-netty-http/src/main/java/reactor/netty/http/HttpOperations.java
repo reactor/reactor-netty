@@ -32,7 +32,7 @@ import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.CombinedChannelDuplexHandler;
 import io.netty5.handler.codec.ByteToMessageCodec;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpMessage;
 import io.netty5.handler.codec.http.HttpContent;
@@ -276,7 +276,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	static void autoAddHttpExtractor(Connection c, String name, ChannelHandler handler) {
 
-		if (handler instanceof ByteToMessageDecoderForBuffer
+		if (handler instanceof ByteToMessageDecoder
 				|| handler instanceof ByteToMessageCodec
 				|| handler instanceof CombinedChannelDuplexHandler) {
 			String extractorName = name + "$extractor";
@@ -355,8 +355,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	protected final String initShortId() {
-		if (connection() instanceof AtomicLong) {
-			return channel().id().asShortText() + '-' + ((AtomicLong) connection()).incrementAndGet();
+		if (connection() instanceof AtomicLong atomicLong) {
+			return channel().id().asShortText() + '-' + atomicLong.incrementAndGet();
 		}
 		return super.initShortId();
 	}
@@ -414,13 +414,13 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	final static ChannelHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
 			(ctx, msg) -> {
-				if (msg instanceof HttpContent) {
+				if (msg instanceof HttpContent<?> httpContent) {
 					if (msg instanceof FullHttpMessage) {
 						// TODO convert into 2 messages if FullHttpMessage
 						ctx.fireChannelRead(msg);
 					}
 					else {
-						Buffer bb = ((HttpContent<?>) msg).payload();
+						Buffer bb = httpContent.payload();
 						ctx.fireChannelRead(bb);
 						if (msg instanceof LastHttpContent) {
 							ctx.fireChannelRead(new EmptyLastHttpContent(ctx.bufferAllocator()));

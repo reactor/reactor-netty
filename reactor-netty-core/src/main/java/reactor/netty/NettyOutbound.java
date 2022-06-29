@@ -32,7 +32,6 @@ import java.util.function.Predicate;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.adaptor.ByteBufAdaptor;
 import io.netty5.channel.Channel;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.handler.stream.ChunkedNioFile;
@@ -80,7 +79,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * sequences.</p>
 	 * <p>Note: Nesting any send* method is not supported.</p>
 	 * <p>Note: If you need to transform from {@link io.netty.buffer.ByteBuf} to {@link Buffer}
-	 * you can use {@link ByteBufAdaptor#extractOrCopy(BufferAllocator, io.netty.buffer.ByteBuf)}</p>
+	 * you can use {@link io.netty5.buffer.api.adaptor.ByteBufAdaptor#extractOrCopy(BufferAllocator, io.netty.buffer.ByteBuf)}</p>
 	 *
 	 * @param dataStream the dataStream publishing OUT items to write on this channel
 	 *
@@ -97,7 +96,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * sequences.</p>
 	 * <p>Note: Nesting any send* method is not supported.</p>
 	 * <p>Note: If you need to transform from {@link io.netty.buffer.ByteBuf} to {@link Buffer}
-	 * you can use {@link ByteBufAdaptor#extractOrCopy(BufferAllocator, io.netty.buffer.ByteBuf)}</p>
+	 * you can use {@link io.netty5.buffer.api.adaptor.ByteBufAdaptor#extractOrCopy(BufferAllocator, io.netty.buffer.ByteBuf)}</p>
 	 *
 	 * @param dataStream the dataStream publishing OUT items to write on this channel
 	 * @param predicate that returns true if explicit flush operation is needed after that buffer

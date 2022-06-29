@@ -219,8 +219,8 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	protected AddressResolverGroup<?> resolverInternal() {
 		AddressResolverGroup<?> resolverGroup = resolver != null ? resolver : defaultAddressResolverGroup();
 		if (metricsRecorder != null) {
-			if (metricsRecorder instanceof MicrometerChannelMetricsRecorder) {
-				return MicrometerAddressResolverGroupMetrics.getOrCreate(resolverGroup, (MicrometerChannelMetricsRecorder) metricsRecorder);
+			if (metricsRecorder instanceof MicrometerChannelMetricsRecorder micrometerChannelMetricsRecorder) {
+				return MicrometerAddressResolverGroupMetrics.getOrCreate(resolverGroup, micrometerChannelMetricsRecorder);
 			}
 			else {
 				return AddressResolverGroupMetrics.getOrCreate(resolverGroup, metricsRecorder);

@@ -308,8 +308,8 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			       .addListener(ff -> {
 			           // When the connection is released the owner is NOOP
 			           ConnectionObserver owner = channel.attr(OWNER).get();
-			           if (owner instanceof DisposableAcquire) {
-			               ((DisposableAcquire) owner).pooledRef
+				       if (owner instanceof DisposableAcquire disposableAcquire) {
+			               disposableAcquire.pooledRef
 			                       .invalidate()
 			                       .subscribe(null, null, () -> {
 			                           if (log.isDebugEnabled()) {

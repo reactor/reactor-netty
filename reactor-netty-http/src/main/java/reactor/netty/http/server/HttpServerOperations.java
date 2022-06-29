@@ -741,8 +741,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		Connection ops = ChannelOperations.get(ctx.channel());
 		if (ops == null) {
 			Connection conn = Connection.from(ctx.channel());
-			if (msg instanceof HttpRequest) {
-				ops = new FailedHttpServerRequest(conn, listener, (HttpRequest) msg, response, secure);
+			if (msg instanceof HttpRequest request) {
+				ops = new FailedHttpServerRequest(conn, listener, request, response, secure);
 				ops.bind();
 			}
 			else {

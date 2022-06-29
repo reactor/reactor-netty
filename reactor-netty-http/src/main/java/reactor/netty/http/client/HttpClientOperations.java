@@ -679,8 +679,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 		if (!started) {
 			if (log.isDebugEnabled()) {
-				if (msg instanceof ByteBufHolder) {
-					msg = ((ByteBufHolder) msg).content();
+				if (msg instanceof ByteBufHolder byteBufHolder) {
+					msg = byteBufHolder.content();
 				}
 				log.debug(format(channel(), "HttpClientOperations received an incorrect chunk {} " +
 								"(previously used connection?)"),

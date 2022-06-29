@@ -452,11 +452,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 					}
 				}
 				else {
-					if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
-						handler = new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+					if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder micrometerHttpServerMetricsRecorder) {
+						handler = new MicrometerHttpServerMetricsHandler(micrometerHttpServerMetricsRecorder, uriTagValue);
 					}
-					else if (metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder) {
-						handler = new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+					else if (metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder contextAwareHttpServerMetricsRecorder) {
+						handler = new ContextAwareHttpServerMetricsHandler(contextAwareHttpServerMetricsRecorder, uriTagValue);
 					}
 					else {
 						handler = new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
@@ -601,11 +601,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
 				ChannelHandler handler;
-				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
-					handler = new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder micrometerHttpServerMetricsRecorder) {
+					handler = new MicrometerHttpServerMetricsHandler(micrometerHttpServerMetricsRecorder, uriTagValue);
 				}
-				else if (metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder) {
-					handler = new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+				else if (metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder contextAwareHttpServerMetricsRecorder) {
+					handler = new ContextAwareHttpServerMetricsHandler(contextAwareHttpServerMetricsRecorder, uriTagValue);
 				}
 				else {
 					handler = new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
@@ -659,11 +659,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
 				ChannelHandler handler;
-				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
-					handler = new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder micrometerHttpServerMetricsRecorder) {
+					handler = new MicrometerHttpServerMetricsHandler(micrometerHttpServerMetricsRecorder, uriTagValue);
 				}
-				else if (metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder) {
-					handler = new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+				else if (metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder contextAwareHttpServerMetricsRecorder) {
+					handler = new ContextAwareHttpServerMetricsHandler(contextAwareHttpServerMetricsRecorder, uriTagValue);
 				}
 				else {
 					handler = new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
@@ -807,7 +807,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 	}
 
-	@ChannelHandler.Sharable
 	static final class H2CleartextReadContextHandler extends ChannelHandlerAdapter {
 		static final H2CleartextReadContextHandler INSTANCE = new H2CleartextReadContextHandler();
 
@@ -816,6 +815,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ctx.read();
 			ctx.fireChannelRegistered();
 			ctx.pipeline().remove(this);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
 		}
 	}
 

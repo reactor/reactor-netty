@@ -100,8 +100,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		try {
-			if (msg instanceof HttpResponse) {
-				if (((HttpResponse) msg).status().equals(HttpResponseStatus.CONTINUE)) {
+			if (msg instanceof HttpResponse httpResponse) {
+				if (httpResponse.status().equals(HttpResponseStatus.CONTINUE)) {
 					return ctx.write(msg);
 				}
 
@@ -206,11 +206,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	}
 
 	private long extractProcessedDataFromBuffer(Object msg) {
-		if (msg instanceof ByteBufHolder) {
-			return ((ByteBufHolder) msg).content().readableBytes();
+		if (msg instanceof ByteBufHolder byteBufHolder) {
+			return byteBufHolder.content().readableBytes();
 		}
-		else if (msg instanceof Buffer) {
-			return ((Buffer) msg).readableBytes();
+		else if (msg instanceof Buffer buffer) {
+			return buffer.readableBytes();
 		}
 		else if (msg instanceof HttpContent) {
 			return ((HttpContent) msg).payload().readableBytes();

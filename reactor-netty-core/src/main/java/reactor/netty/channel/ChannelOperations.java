@@ -96,11 +96,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			remote = ch.remoteAddress();
 		}
 		ChannelHandler handler;
-		if (recorder instanceof MicrometerChannelMetricsRecorder) {
-			handler = new MicrometerChannelMetricsHandler((MicrometerChannelMetricsRecorder) recorder, remote, onServer);
+		if (recorder instanceof MicrometerChannelMetricsRecorder micrometerChannelMetricsRecorder) {
+			handler = new MicrometerChannelMetricsHandler(micrometerChannelMetricsRecorder, remote, onServer);
 		}
-		else if (recorder instanceof ContextAwareChannelMetricsRecorder) {
-			handler = new ContextAwareChannelMetricsHandler((ContextAwareChannelMetricsRecorder) recorder, remote, onServer);
+		else if (recorder instanceof ContextAwareChannelMetricsRecorder contextAwareChannelMetricsRecorder) {
+			handler = new ContextAwareChannelMetricsHandler(contextAwareChannelMetricsRecorder, remote, onServer);
 		}
 		else {
 			handler = new ChannelMetricsHandler(recorder, remote, onServer);
@@ -286,8 +286,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
-		if (dataStream instanceof Mono) {
-			return then(((Mono<?>) dataStream).flatMap(m -> Mono.fromCompletionStage(channel().writeAndFlush(m).asStage()))
+		if (dataStream instanceof Mono<?> mono) {
+			return then(mono.flatMap(m -> Mono.fromCompletionStage(channel().writeAndFlush(m).asStage()))
 			                                 .doOnDiscard(Buffer.class, Buffer::close));
 		}
 		return then(MonoSendMany.bufferSource(dataStream, channel(), predicate));
@@ -299,8 +299,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
-		if (dataStream instanceof Mono) {
-			return then(((Mono<?>) dataStream).flatMap(m -> Mono.fromCompletionStage(channel().writeAndFlush(m).asStage()))
+		if (dataStream instanceof Mono<?> mono) {
+			return then(mono.flatMap(m -> Mono.fromCompletionStage(channel().writeAndFlush(m).asStage()))
 			                                  .doOnDiscard(Resource.class, Resource::dispose));
 		}
 		return then(MonoSendMany.objectSource(dataStream, channel(), predicate));

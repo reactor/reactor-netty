@@ -17,7 +17,7 @@ package reactor.netty.http.server;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.handler.codec.ByteToMessageDecoderForBuffer;
+import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.codec.ProtocolDetectionResult;
 import io.netty.contrib.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.contrib.handler.codec.haproxy.HAProxyProtocolVersion;
@@ -31,7 +31,7 @@ import reactor.netty.NettyPipeline;
  *
  * @author aftersss
  */
-final class HAProxyMessageDetector extends ByteToMessageDecoderForBuffer {
+final class HAProxyMessageDetector extends ByteToMessageDecoder {
 
 	@Override
 	protected void decode(ChannelHandlerContext ctx, Buffer in) {

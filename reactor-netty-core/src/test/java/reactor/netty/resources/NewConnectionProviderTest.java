@@ -49,9 +49,9 @@ class NewConnectionProviderTest {
 		connect.onError(new IOException("bind(..) failed: Address already in use"));
 		Mockito.verify(sink).error(
 				Mockito.argThat(
-						a -> a instanceof ChannelBindException &&
-								((ChannelBindException) a).localHost().equals("test2") &&
-								((ChannelBindException) a).localPort() == 4956
+						a -> a instanceof ChannelBindException channelBindException &&
+								channelBindException.localHost().equals("test2") &&
+								channelBindException.localPort() == 4956
 				)
 		);
 
@@ -60,9 +60,9 @@ class NewConnectionProviderTest {
 		connect.onError(new IOException("bind(..) failed: Die Adresse wird bereits verwendet"));
 		Mockito.verify(sink).error(
 				Mockito.argThat(a ->
-						a instanceof ChannelBindException &&
-								((ChannelBindException) a).localHost().equals("test3") &&
-								((ChannelBindException) a).localPort() == 7956
+						a instanceof ChannelBindException channelBindException &&
+								channelBindException.localHost().equals("test3") &&
+								channelBindException.localPort() == 7956
 				)
 		);
 	}
