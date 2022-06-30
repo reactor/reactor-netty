@@ -259,17 +259,13 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 							.observe((conn, state) -> {
 								if (state == STREAM_CONFIGURED) {
 									counter.incrementAndGet();
-									conn.onTerminate()
-									    .subscribe(null,
-									        t -> conn.channel().executor().execute(() -> {
-									                if (counter.decrementAndGet() == 0) {
-									                    latch.countDown();
-									                }
-									        }),
-									        () -> conn.channel().executor().execute(() -> {
-									                if (counter.decrementAndGet() == 0) {
-									                    latch.countDown();
-									                }
+									conn.channel()
+									    .closeFuture()
+									    .addListener(f ->
+									        conn.channel().executor().execute(() -> {
+									            if (counter.decrementAndGet() == 0) {
+									                latch.countDown();
+									            }
 									        }));
 								}
 							});
