@@ -95,7 +95,8 @@ class TransportEventLoopMetricsTest {
 								log.warn("operation interrupted", e);
 								return;
 							}
-							assertThat(getGaugeValue(EVENT_LOOP_PREFIX + PENDING_TASKS, tags)).isEqualTo(10);
+							// 10 tasks added by us, and a listener for child channel registration
+							assertThat(getGaugeValue(EVENT_LOOP_PREFIX + PENDING_TASKS, tags)).isEqualTo(11);
 							latch.countDown();
 						}
 					})
