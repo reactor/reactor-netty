@@ -82,6 +82,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter {
 	@Override
 	public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
 		Channel channel = ctx.channel();
+		boolean removeThisHandler = false;
 		if (evt == UPGRADE_ISSUED) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel, "An upgrade request was sent to the server."));
@@ -92,7 +93,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter {
 				log.debug(format(channel, "The upgrade to H2C protocol was successful."));
 			}
 			sendNewState(Connection.from(channel), HttpClientState.UPGRADE_SUCCESSFUL);
-			ctx.pipeline().remove(this);
+			removeThisHandler = true; // we have to remove ourselves from the pipeline after having fired the event below.
 		}
 		else if (evt == UPGRADE_REJECTED) {
 			if (log.isDebugEnabled()) {
@@ -101,6 +102,9 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter {
 			sendNewState(Connection.from(channel), HttpClientState.UPGRADE_REJECTED);
 		}
 		ctx.fireChannelInboundEvent(evt);
+		if (removeThisHandler) {
+			ctx.pipeline().remove(this);
+		}
 	}
 
 	void sendNewState(Connection connection, ConnectionObserver.State state) {

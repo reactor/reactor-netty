@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
@@ -114,9 +115,12 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 			dataSent += extractProcessedDataFromBuffer(msg);
 
 			if (msg instanceof LastHttpContent) {
+				// The listeners are now invoked asynchronously (see https://github.com/netty/netty/pull/9489),
+				// and it seems we need to first obtain the channelOps, which may not be present anymore
+				// when the listener will be invoked.
+				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				return ctx.write(msg)
 						.addListener(future -> {
-								ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 								if (channelOps instanceof HttpServerOperations ops) {
 									try {
 										recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
@@ -207,6 +211,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 		}
 		else if (msg instanceof Buffer buffer) {
 			return buffer.readableBytes();
+		}
+		else if (msg instanceof HttpContent<?> httpContent) {
+			return httpContent.payload().readableBytes();
 		}
 		return 0;
 	}

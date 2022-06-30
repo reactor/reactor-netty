@@ -20,6 +20,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.LastHttpContent;
@@ -164,6 +165,9 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		}
 		else if (msg instanceof Buffer buffer) {
 			return buffer.readableBytes();
+		}
+		else if (msg instanceof HttpContent<?> httpContent) {
+			return httpContent.payload().readableBytes();
 		}
 		return 0;
 	}
