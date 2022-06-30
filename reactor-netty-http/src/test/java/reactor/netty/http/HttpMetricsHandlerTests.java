@@ -140,9 +140,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.host("127.0.0.1")
 				.metrics(true, Function.identity())
 				.httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
-				.doOnConnection(c -> {
-					eventLoops.add(c.channel().executor());
-				})
+				.doOnConnection(c -> eventLoops.add(c.channel().executor()))
 				.route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().transferOwnership().delayElements(Duration.ofMillis(10))))
 						.post("/2", (req, res) -> res.header("Connection", "close")
@@ -201,8 +199,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch1);
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -236,9 +233,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
-
+		awaitForHttpClientCompletion(latch2);
 		sa = (InetSocketAddress) serverAddress.get();
 
 		checkExpectationsExisting("/2", sa.getHostString() + ":" + sa.getPort(), connIndex, serverCtx != null,
@@ -323,8 +318,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch);
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -367,8 +361,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch2);
 		sa = (InetSocketAddress) serverAddress.get();
 
 		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), connIndex, 2, serverCtx != null,
@@ -405,8 +398,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch1);
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -467,8 +459,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch1);
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -501,8 +492,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch2);
 
 		sa = (InetSocketAddress) serverAddress.get();
 
@@ -536,8 +526,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch);
 
 		assertThat(recorder.onDataReceivedContextView).isTrue();
 		assertThat(recorder.onDataSentContextView).isTrue();
@@ -570,8 +559,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch);
 
 		assertThat(recorder.onDataReceivedContextView).isTrue();
 		assertThat(recorder.onDataSentContextView).isTrue();
@@ -614,8 +602,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch);
 
 		// now check the server counters
 		if (isHttp11) {
@@ -672,8 +659,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch);
 		assertThat(ServerRecorder.INSTANCE.done.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
 		if (isHttp11) {
 			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
@@ -706,8 +692,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.responseContent()
 				.subscribe();
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch);
 
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
@@ -742,8 +727,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		ensureEventLoopsAreIdle();
+		awaitForHttpClientCompletion(latch1);
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -758,11 +742,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		};
 	}
 
-	private void ensureEventLoopsAreIdle() throws InterruptedException {
-		CountDownLatch latch = new CountDownLatch(eventLoops.size());
-		eventLoops.forEach(el -> el.execute(latch::countDown));
-		latch.await(30, TimeUnit.SECONDS);
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("event loop idleness checker task failed").isTrue();
+	private void awaitForHttpClientCompletion(CountDownLatch latch) throws InterruptedException {
+		// Wait for HttpClizent response to be complete
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		// since Netty PR #9489, channel listeners execution are not synchronous anymore and are rescheduled in event loop queues.
+		// So, to prevent situation where an HttpClient response is available while any server pending listeners are not yet executed,
+		// ensure for all event loop idleness. This is necessary, else we may start to test metrics while they are not up-to-date
+		CountDownLatch idleEventLoopslatch = new CountDownLatch(eventLoops.size());
+		eventLoops.forEach(el -> el.execute(idleEventLoopslatch::countDown));
+		idleEventLoopslatch.await(30, TimeUnit.SECONDS);
+		assertThat(idleEventLoopslatch.await(30, TimeUnit.SECONDS)).as("event loop idleness checker task failed").isTrue();
 	}
 
 	private void checkServerConnectionsMicrometer(HttpServerRequest request) {
@@ -891,6 +881,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	HttpClient customizeClientOptions(HttpClient httpClient, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
+		httpClient.doOnConnected(connection -> eventLoops.add(connection.channel().executor()));
 		return ctx == null ? httpClient.protocol(protocols) : httpClient.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
 
