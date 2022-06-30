@@ -25,6 +25,7 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.core.tck.MeterRegistryAssert;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.channel.EventLoop;
 import io.netty5.handler.codec.http2.HttpConversionUtil;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
@@ -32,7 +33,6 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -62,6 +62,7 @@ import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -106,6 +107,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	static Http2SslContextSpec serverCtx2;
 	static Http11SslContextSpec clientCtx11;
 	static Http2SslContextSpec clientCtx2;
+	static final ConcurrentLinkedQueue<EventLoop> eventLoops = new ConcurrentLinkedQueue<>();
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
@@ -138,6 +140,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.host("127.0.0.1")
 				.metrics(true, Function.identity())
 				.httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
+				.doOnConnection(c -> {
+					eventLoops.add(c.channel().executor());
+				})
 				.route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().transferOwnership().delayElements(Duration.ofMillis(10))))
 						.post("/2", (req, res) -> res.header("Connection", "close")
@@ -159,6 +164,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@AfterEach
 	void tearDown() {
+		eventLoops.clear();
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
 
@@ -196,6 +202,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		            .verify(Duration.ofSeconds(30));
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -230,6 +237,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		            .verify(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		sa = (InetSocketAddress) serverAddress.get();
 
@@ -240,7 +248,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	// https://github.com/reactor/reactor-netty/issues/2187
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	@Disabled
 	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
 	                                  @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
@@ -266,7 +273,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	// https://github.com/reactor/reactor-netty/issues/2187
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	@Disabled
 	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
 	                                  @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
@@ -318,6 +324,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -361,6 +368,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 		sa = (InetSocketAddress) serverAddress.get();
 
 		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), connIndex, 2, serverCtx != null,
@@ -398,6 +406,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		            .verify(Duration.ofSeconds(30));
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -459,6 +468,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .verify(Duration.ofSeconds(30));
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -492,6 +502,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .verify(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		sa = (InetSocketAddress) serverAddress.get();
 
@@ -526,6 +537,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .verify(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		assertThat(recorder.onDataReceivedContextView).isTrue();
 		assertThat(recorder.onDataSentContextView).isTrue();
@@ -559,6 +571,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .verify(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		assertThat(recorder.onDataReceivedContextView).isTrue();
 		assertThat(recorder.onDataSentContextView).isTrue();
@@ -602,6 +615,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		// now check the server counters
 		if (isHttp11) {
@@ -659,6 +673,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 		assertThat(ServerRecorder.INSTANCE.done.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
 		if (isHttp11) {
 			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
@@ -692,6 +707,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.subscribe();
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
@@ -727,6 +743,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .verify(Duration.ofSeconds(30));
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		ensureEventLoopsAreIdle();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -739,6 +756,13 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				latchRef.get().countDown();
 			}
 		};
+	}
+
+	private void ensureEventLoopsAreIdle() throws InterruptedException {
+		CountDownLatch latch = new CountDownLatch(eventLoops.size());
+		eventLoops.forEach(el -> el.execute(latch::countDown));
+		latch.await(30, TimeUnit.SECONDS);
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("event loop idleness checker task failed").isTrue();
 	}
 
 	private void checkServerConnectionsMicrometer(HttpServerRequest request) {
