@@ -103,7 +103,7 @@ class ReactorNettyTest {
 				.isEqualTo(channelStr.replace(ReactorNetty.ORIGINAL_CHANNEL_ID_PREFIX, "[") + " testFormatWithChannel");
 	}
 
-	static class TestChannel extends AbstractChannel {
+	static class TestChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
 
 		final SocketAddress localAddress;
 		final SocketAddress remoteAddress;
@@ -125,18 +125,8 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		public SocketAddress localAddress() {
-			return localAddress0();
-		}
-
-		@Override
 		protected SocketAddress localAddress0() {
 			return localAddress;
-		}
-
-		@Override
-		public SocketAddress remoteAddress() {
-			return remoteAddress0();
 		}
 
 		@Override
