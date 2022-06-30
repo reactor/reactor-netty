@@ -743,12 +743,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	private void awaitForHttpClientCompletion(CountDownLatch latch) throws InterruptedException {
-		// Wait for HttpClizent response to be complete
+		// Wait for HttpClient response to be complete
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		// since Netty PR #9489, channel listeners execution are not synchronous anymore and are rescheduled in event loop queues.
 		// So, to prevent situation where an HttpClient response is available while any server pending listeners are not yet executed,
-		// ensure for all event loop idleness. This is necessary, else we may start to test metrics while they are not up-to-date
+		// we need to ensure that all event loop are idle. This is necessary, else we may start to test metrics while they are not up-to-date
 		CountDownLatch idleEventLoopslatch = new CountDownLatch(eventLoops.size());
 		eventLoops.forEach(el -> el.execute(idleEventLoopslatch::countDown));
 		idleEventLoopslatch.await(30, TimeUnit.SECONDS);
