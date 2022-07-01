@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -744,6 +745,12 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 			return context .put(KEY_ON_DISCARD, this)
 			               .delete(key);
+		}
+
+		@Override
+		public void forEach(BiConsumer<Object, Object> action) {
+			action.accept(KEY_ON_DISCARD, this);
+			actualContext.delete(KEY_ON_DISCARD).forEach(action);
 		}
 
 		@Override
