@@ -20,45 +20,25 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.docs.DocumentedMeter;
 
 /**
- * {@link io.netty.buffer.ByteBufAllocator} meters.
+ * {@link io.netty5.buffer.api.BufferAllocator} meters.
  *
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum ByteBufAllocatorMeters implements DocumentedMeter {
+enum BufferAllocatorMeters implements DocumentedMeter {
 
 	/**
-	 * The actual bytes consumed by in-use buffers allocated from direct buffer pools.
+	 * The actual bytes consumed by in-use buffers allocated from the buffer pools.
 	 */
-	ACTIVE_DIRECT_MEMORY {
+	ACTIVE_MEMORY {
 		@Override
 		public String getName() {
-			return "reactor.netty.bytebuf.allocator.active.direct.memory";
+			return "reactor.netty.buffer.allocator.active.memory";
 		}
 
 		@Override
 		public KeyName[] getKeyNames() {
-			return ByteBufAllocatorMetersTags.values();
-		}
-
-		@Override
-		public Meter.Type getType() {
-			return Meter.Type.GAUGE;
-		}
-	},
-
-	/**
-	 * The actual bytes consumed by in-use buffers allocated from heap buffer pools.
-	 */
-	ACTIVE_HEAP_MEMORY {
-		@Override
-		public String getName() {
-			return "reactor.netty.bytebuf.allocator.active.heap.memory";
-		}
-
-		@Override
-		public KeyName[] getKeyNames() {
-			return ByteBufAllocatorMetersTags.values();
+			return BufferAllocatorMetersTags.values();
 		}
 
 		@Override
@@ -73,12 +53,12 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 	CHUNK_SIZE {
 		@Override
 		public String getName() {
-			return "reactor.netty.bytebuf.allocator.chunk.size";
+			return "reactor.netty.buffer.allocator.chunk.size";
 		}
 
 		@Override
 		public KeyName[] getKeyNames() {
-			return ByteBufAllocatorMetersTags.values();
+			return BufferAllocatorMetersTags.values();
 		}
 
 		@Override
@@ -88,37 +68,17 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 	},
 
 	/**
-	 * The number of direct arenas.
+	 * The number of arenas.
 	 */
-	DIRECT_ARENAS {
+	ARENAS {
 		@Override
 		public String getName() {
-			return "reactor.netty.bytebuf.allocator.direct.arenas";
+			return "reactor.netty.buffer.allocator.arenas";
 		}
 
 		@Override
 		public KeyName[] getKeyNames() {
-			return ByteBufAllocatorMetersTags.values();
-		}
-
-		@Override
-		public Meter.Type getType() {
-			return Meter.Type.GAUGE;
-		}
-	},
-
-	/**
-	 * The number of heap arenas.
-	 */
-	HEAP_ARENAS {
-		@Override
-		public String getName() {
-			return "reactor.netty.bytebuf.allocator.heap.arenas";
-		}
-
-		@Override
-		public KeyName[] getKeyNames() {
-			return ByteBufAllocatorMetersTags.values();
+			return BufferAllocatorMetersTags.values();
 		}
 
 		@Override
@@ -133,12 +93,12 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 	NORMAL_CACHE_SIZE {
 		@Override
 		public String getName() {
-			return "reactor.netty.bytebuf.allocator.normal.cache.size";
+			return "reactor.netty.buffer.allocator.normal.cache.size";
 		}
 
 		@Override
 		public KeyName[] getKeyNames() {
-			return ByteBufAllocatorMetersTags.values();
+			return BufferAllocatorMetersTags.values();
 		}
 
 		@Override
@@ -153,12 +113,12 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 	SMALL_CACHE_SIZE {
 		@Override
 		public String getName() {
-			return "reactor.netty.bytebuf.allocator.small.cache.size";
+			return "reactor.netty.buffer.allocator.small.cache.size";
 		}
 
 		@Override
 		public KeyName[] getKeyNames() {
-			return ByteBufAllocatorMetersTags.values();
+			return BufferAllocatorMetersTags.values();
 		}
 
 		@Override
@@ -173,12 +133,12 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 	THREAD_LOCAL_CACHES {
 		@Override
 		public String getName() {
-			return "reactor.netty.bytebuf.allocator.threadlocal.caches";
+			return "reactor.netty.buffer.allocator.threadlocal.caches";
 		}
 
 		@Override
 		public KeyName[] getKeyNames() {
-			return ByteBufAllocatorMetersTags.values();
+			return BufferAllocatorMetersTags.values();
 		}
 
 		@Override
@@ -188,37 +148,17 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 	},
 
 	/**
-	 * The number of bytes reserved by direct buffer allocator.
+	 * The number of bytes reserved by the buffer allocator.
 	 */
-	USED_DIRECT_MEMORY {
+	USED_MEMORY {
 		@Override
 		public String getName() {
-			return "reactor.netty.bytebuf.allocator.used.direct.memory";
+			return "reactor.netty.buffer.allocator.used.memory";
 		}
 
 		@Override
 		public KeyName[] getKeyNames() {
-			return ByteBufAllocatorMetersTags.values();
-		}
-
-		@Override
-		public Meter.Type getType() {
-			return Meter.Type.GAUGE;
-		}
-	},
-
-	/**
-	 * The number of bytes reserved by heap buffer allocator.
-	 */
-	USED_HEAP_MEMORY {
-		@Override
-		public String getName() {
-			return "reactor.netty.bytebuf.allocator.used.heap.memory";
-		}
-
-		@Override
-		public KeyName[] getKeyNames() {
-			return ByteBufAllocatorMetersTags.values();
+			return BufferAllocatorMetersTags.values();
 		}
 
 		@Override
@@ -227,7 +167,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		}
 	};
 
-	enum ByteBufAllocatorMetersTags implements KeyName {
+	enum BufferAllocatorMetersTags implements KeyName {
 
 		/**
 		 * ID.

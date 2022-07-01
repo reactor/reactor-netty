@@ -92,10 +92,10 @@ public class Metrics {
 	public static final String CONNECTION_PROVIDER_PREFIX = "reactor.netty.connection.provider";
 
 	/**
-	 * Name prefix that will be used for the ByteBufAllocator's metrics
+	 * Name prefix that will be used for the BufferAllocator's metrics
 	 * registered in Micrometer's global registry
 	 */
-	public static final String BYTE_BUF_ALLOCATOR_PREFIX = "reactor.netty.bytebuf.allocator";
+	public static final String BUFFER_ALLOCATOR_PREFIX = "reactor.netty.buffer.allocator";
 
 
 	// Metrics
@@ -199,36 +199,21 @@ public class Metrics {
 	public static final String PENDING_STREAMS = ".pending.streams";
 
 
-	// ByteBufAllocator Metrics
+	// BufferAllocator Metrics
 	/**
-	 * The number of bytes reserved by heap buffer allocator
+	 * The number of bytes reserved by the buffer allocator
 	 */
-	public static final String USED_HEAP_MEMORY = ".used.heap.memory";
+	public static final String USED_MEMORY = ".used.memory";
 
 	/**
-	 * The number of bytes reserved by direct buffer allocator
+	 * The actual bytes consumed by in-use buffers allocated from the buffer pools
 	 */
-	public static final String USED_DIRECT_MEMORY = ".used.direct.memory";
+	public static final String ACTIVE_MEMORY = ".active.memory";
 
 	/**
-	 * The actual bytes consumed by in-use buffers allocated from heap buffer pools
+	 * The number of arenas
 	 */
-	public static final String ACTIVE_HEAP_MEMORY = ".active.heap.memory";
-
-	/**
-	 * The actual bytes consumed by in-use buffers allocated from direct buffer pools
-	 */
-	public static final String ACTIVE_DIRECT_MEMORY = ".active.direct.memory";
-
-	/**
-	 * The number of heap arenas
-	 */
-	public static final String HEAP_ARENAS = ".heap.arenas";
-
-	/**
-	 * The number of direct arenas
-	 */
-	public static final String DIRECT_ARENAS = ".direct.arenas";
+	public static final String ARENAS = ".arenas";
 
 	/**
 	 * The number of thread local caches
