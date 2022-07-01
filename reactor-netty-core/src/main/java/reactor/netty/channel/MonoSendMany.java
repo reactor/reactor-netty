@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -525,6 +526,12 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 			return context .put(KEY_ON_DISCARD, this)
 			               .delete(key);
+		}
+
+		@Override
+		public void forEach(BiConsumer<Object, Object> action) {
+			action.accept(KEY_ON_DISCARD, this);
+			actualContext.delete(KEY_ON_DISCARD).forEach(action);
 		}
 
 		@Override
