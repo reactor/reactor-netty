@@ -93,7 +93,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	@Override
 	public BiConsumer<BuildingBlocks, Deque<ObservationHandler<? extends Observation.Context>>> customizeObservationHandlers() {
 		return (bb, timerRecordingHandlers) -> {
-			ObservationHandler defaultHandler = timerRecordingHandlers.removeLast();
+			ObservationHandler<? extends Observation.Context> defaultHandler = timerRecordingHandlers.removeLast();
 			timerRecordingHandlers.addLast(new ReactorNettyTracingObservationHandler(bb.getTracer()));
 			timerRecordingHandlers.addLast(defaultHandler);
 			timerRecordingHandlers.addFirst(new ReactorNettyHttpClientTracingObservationHandler(bb.getTracer(), bb.getHttpClientHandler()));
