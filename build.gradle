@@ -233,9 +233,6 @@ subprojects {
 	}
 
 	project.tasks.withType(Test).all {
-		if (JavaVersion.current() > JavaVersion.VERSION_12) {
-			jvmArgs += "-XX:+AllowRedefinitionToAddDeleteMethods"
-		}
 		// run tests with IPv4 only when IPv6 is available
 		if (project.hasProperty('preferIPv4Stack')) {
 			systemProperty("java.net.preferIPv4Stack", "true")
