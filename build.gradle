@@ -121,7 +121,10 @@ ext {
 
 	javadocLinks = ["https://docs.oracle.com/javase/8/docs/api/",
 					"https://fasterxml.github.io/jackson-databind/javadoc/2.5/",
-					"https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/",
+					// Use Reactive Streams 1.0.3 version for javadoc generation
+					// With Reactive Streams 1.0.4 version there is
+					// javadoc: warning - Error fetching URL: https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/
+					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
 					"https://netty.io/4.1/api/",
 					"https://projectreactor.io/docs/netty/release/api/",] as String[]
