@@ -118,7 +118,6 @@ ext {
 	junitPlatformLauncherVersion = '1.8.2'
 	mockitoVersion = '4.6.1'
 	blockHoundVersion = '1.0.6.RELEASE'
-	bouncycastleVersion = '1.70'
 
 	javadocLinks = ["https://docs.oracle.com/javase/8/docs/api/",
 					"https://fasterxml.github.io/jackson-databind/javadoc/2.5/",
