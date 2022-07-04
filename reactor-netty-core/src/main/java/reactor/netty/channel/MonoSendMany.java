@@ -295,7 +295,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						//"FutureReturnValueIgnored" this is deliberate
 						ctx.write(encodedMessage).addListener(this);
 
-						if (parent.predicate.test(sourceMessage) || !ctx.channel().isWritable() || readableBytes > ctx.channel().bytesBeforeUnwritable()) {
+						if (parent.predicate.test(sourceMessage) || readableBytes > ctx.channel().writableBytes()) {
 							needFlush = false;
 							ctx.flush();
 						}
