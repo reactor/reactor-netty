@@ -30,6 +30,7 @@ import io.netty5.handler.codec.http2.HttpConversionUtil;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -107,7 +108,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	static Http2SslContextSpec serverCtx2;
 	static Http11SslContextSpec clientCtx11;
 	static Http2SslContextSpec clientCtx2;
-	static final ConcurrentLinkedQueue<EventLoop> eventLoops = new ConcurrentLinkedQueue<>();
+	final ConcurrentLinkedQueue<EventLoop> eventLoops = new ConcurrentLinkedQueue<>();
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
@@ -747,12 +748,28 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		// since Netty PR #9489, channel listeners execution are not synchronous anymore and are rescheduled in event loop queues.
-		// So, to prevent situation where an HttpClient response is available while any server pending listeners are not yet executed,
-		// we need to ensure that all event loop are idle. This is necessary, else we may start to test metrics while they are not up-to-date
+		// So, to prevent a situation where an HttpClient response is available while some server pending listeners are not yet executed,
+		// we need to ensure that all event loops are idle. This is necessary, else we may start to test metrics while they are not up-to-date
+		// So, for each event loop that has been used during the test, we schedule a task, which will do the following:
+		// 1. if the current event loop is empty, the task will execute (will decrement the countdown latch)
+		// 2. else, if the queue is non empty, it means another task has been enqueued after us, in this case
+		//    the task reschedules itself until it is the only remaining task.
 		CountDownLatch idleEventLoopslatch = new CountDownLatch(eventLoops.size());
-		eventLoops.forEach(el -> el.execute(idleEventLoopslatch::countDown));
-		idleEventLoopslatch.await(30, TimeUnit.SECONDS);
+		eventLoops.forEach(el -> el.execute(() -> scheduleCoundDown(el, idleEventLoopslatch, 1)));
 		assertThat(idleEventLoopslatch.await(30, TimeUnit.SECONDS)).as("event loop idleness checker task failed").isTrue();
+		eventLoops.clear();
+	}
+
+	private void scheduleCoundDown(EventLoop eventLoop, CountDownLatch latch, int recursion) {
+		int MAX_RECURSIONS = 100; // arbitrary watchdog, to avoid infinite loops
+		if (eventLoop instanceof SingleThreadEventExecutor exec) {
+			if (exec.pendingTasks() > 0 && (recursion + 1) < MAX_RECURSIONS) {
+				exec.execute(() -> scheduleCoundDown(eventLoop, latch, recursion + 1));
+			}
+			else {
+				latch.countDown();
+			}
+		}
 	}
 
 	private void checkServerConnectionsMicrometer(HttpServerRequest request) {
@@ -881,7 +898,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	HttpClient customizeClientOptions(HttpClient httpClient, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
-		httpClient.doOnConnected(connection -> eventLoops.add(connection.channel().executor()));
+		httpClient = httpClient.doOnConnected(connection -> eventLoops.add(connection.channel().executor()));
 		return ctx == null ? httpClient.protocol(protocols) : httpClient.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
 
