@@ -68,8 +68,10 @@ jobs:
           path: codec-extras
       - uses: actions/checkout@v3
         with:
-          repository: netty-contrib/socks-proxy
+          # TODO temporary https://github.com/netty-contrib/socks-proxy/pull/10
+          repository: violetagg/socks-proxy
           path: socks-proxy
+          ref: pending-write-queue
       - uses: gradle/wrapper-validation-action@v1
       - name: Set up JDK 17
         uses: actions/setup-java@v3
