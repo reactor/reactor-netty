@@ -46,7 +46,6 @@ import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.BufferFlux;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.ContextAwareHttpServerMetricsRecorder;
