@@ -85,6 +85,7 @@ import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
+import static reactor.netty.Metrics.STREAMS_ACTIVE;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.URI;
 import static reactor.netty.Metrics.formatSocketAddress;
@@ -602,6 +603,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 		else {
 			checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
+			checkGauge(SERVER_STREAMS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
 		}
 
 		// These metrics are meant only for the servers,
@@ -736,7 +738,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		String address = formatSocketAddress(request.hostAddress());
 		boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
-		if (!isHttp2) {
+		if (isHttp2) {
+			checkGauge(SERVER_STREAMS_ACTIVE, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
+		}
+		else {
 			checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
 		}
 	}
@@ -940,6 +945,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	private static final String SERVER_CONNECTIONS_ACTIVE = HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE;
 	private static final String SERVER_CONNECTIONS_TOTAL = HTTP_SERVER_PREFIX + CONNECTIONS_TOTAL;
+	private static final String SERVER_STREAMS_ACTIVE = HTTP_SERVER_PREFIX + STREAMS_ACTIVE;
 	private static final String SERVER_RESPONSE_TIME = HTTP_SERVER_PREFIX + RESPONSE_TIME;
 	private static final String SERVER_DATA_SENT_TIME = HTTP_SERVER_PREFIX + DATA_SENT_TIME;
 	private static final String SERVER_DATA_RECEIVED_TIME = HTTP_SERVER_PREFIX + DATA_RECEIVED_TIME;

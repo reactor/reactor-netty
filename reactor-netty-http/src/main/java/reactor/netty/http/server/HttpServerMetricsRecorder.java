@@ -71,4 +71,21 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	 * @since 1.0.15
 	 */
 	default void recordServerConnectionInactive(SocketAddress localAddress) { }
+
+	/**
+	 * Record an opened HTTP/2 stream
+	 *
+	 * @param localAddress the local server address
+	 * @since 1.0.21
+	 */
+	default void recordStreamOpened(SocketAddress localAddress) { }
+
+	/**
+	 * Record a closed HTTP/2 stream
+	 *
+	 * @param localAddress the local server address
+	 * @since 1.0.21
+	 */
+	default void recordStreamClosed(SocketAddress localAddress) { }
+
 }
