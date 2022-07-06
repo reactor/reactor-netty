@@ -150,7 +150,7 @@ class DefaultLoopResourcesTest {
 			loop1.disposeLater()
 			     .block(Duration.ofSeconds(5));
 			loop2.shutdownGracefully()
-			     .get(5, TimeUnit.SECONDS);
+			     .asStage().get(5, TimeUnit.SECONDS);
 		}
 	}
 

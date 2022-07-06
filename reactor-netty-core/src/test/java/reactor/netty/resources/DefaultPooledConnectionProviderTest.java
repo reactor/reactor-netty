@@ -221,7 +221,7 @@ class DefaultPooledConnectionProviderTest {
 			service.shutdownNow();
 			echoServer.close();
 			group.shutdownGracefully()
-			     .get(5, TimeUnit.SECONDS);
+			     .asStage().get(5, TimeUnit.SECONDS);
 
 			assertThat(f1).isNotNull();
 			assertThat(f1.get()).isNull();
@@ -418,7 +418,7 @@ class DefaultPooledConnectionProviderTest {
 			pool.disposeLater()
 			    .block(Duration.ofSeconds(5));
 			group.shutdownGracefully()
-			     .get(5, TimeUnit.SECONDS);
+			     .asStage().get(5, TimeUnit.SECONDS);
 		}
 	}
 
@@ -463,7 +463,7 @@ class DefaultPooledConnectionProviderTest {
 			pool.disposeLater()
 			    .block(Duration.ofSeconds(5));
 			group.shutdownGracefully()
-			     .get(5, TimeUnit.SECONDS);
+			     .asStage().get(5, TimeUnit.SECONDS);
 		}
 	}
 
