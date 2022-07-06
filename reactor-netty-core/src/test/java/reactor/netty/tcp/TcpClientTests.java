@@ -1061,7 +1061,7 @@ public class TcpClientTests {
 			loop1.disposeLater()
 			     .block(Duration.ofSeconds(10));
 			loop2.shutdownGracefully()
-			     .get(10, TimeUnit.SECONDS);
+			     .asStage().get(10, TimeUnit.SECONDS);
 		}
 	}
 

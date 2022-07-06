@@ -124,15 +124,12 @@ ext {
 	blockHoundVersion = '1.0.6.RELEASE'
 	bouncycastleVersion = '1.70'
 
-	jdk = JavaVersion.current().majorVersion
-	jdkJavadoc = "https://docs.oracle.com/javase/${jdk}/docs/api/"
-	if (JavaVersion.current().isJava11Compatible()) {
-		jdkJavadoc = "https://docs.oracle.com/en/java/javase/${jdk}/docs/api/"
-	}
-	println "JDK Javadoc link for this build is ${jdkJavadoc}"
-	javadocLinks = [jdkJavadoc,
+	javadocLinks = ["https://docs.oracle.com/en/java/javase/17/docs/api/",
 					"https://fasterxml.github.io/jackson-databind/javadoc/2.5/",
-					"https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/",
+					// Use Reactive Streams 1.0.3 version for javadoc generation
+					// With Reactive Streams 1.0.4 version there is
+					// javadoc: warning - Error fetching URL: https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/
+					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
 					"https://netty.io/5.0/api/",
 					"https://projectreactor.io/docs/netty/release/api/",] as String[]
@@ -220,12 +217,10 @@ subprojects {
 															 "-Xlint:rawtypes"
 	]
 
-	if (JavaVersion.current().isJava8Compatible()) {
-		compileTestJava.options.compilerArgs += "-parameters"
-		tasks.withType(Javadoc) {
-			options.addStringOption('Xdoclint:none', '-quiet')
-			options.addStringOption('encoding', 'UTF-8')
-		}
+	compileTestJava.options.compilerArgs += "-parameters"
+	tasks.withType(Javadoc) {
+		options.addStringOption('Xdoclint:none', '-quiet')
+		options.addStringOption('encoding', 'UTF-8')
 	}
 
 	[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
@@ -236,9 +231,7 @@ subprojects {
 	}
 
 	project.tasks.withType(Test).all {
-		if (JavaVersion.current() > JavaVersion.VERSION_12) {
-			jvmArgs += "-XX:+AllowRedefinitionToAddDeleteMethods"
-		}
+		jvmArgs += "-XX:+AllowRedefinitionToAddDeleteMethods"
 		// run tests with IPv4 only when IPv6 is available
 		if (project.hasProperty('preferIPv4Stack')) {
 			systemProperty("java.net.preferIPv4Stack", "true")

@@ -110,7 +110,7 @@ class ClientTransportTest {
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(10));
 			loop2.shutdownGracefully()
-			     .get(10, TimeUnit.SECONDS);
+					.asStage().get(10, TimeUnit.SECONDS);
 		}
 	}
 
@@ -309,7 +309,7 @@ class ClientTransportTest {
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(10));
 			loop2.shutdownGracefully()
-			     .get(10, TimeUnit.SECONDS);
+					.asStage().get(10, TimeUnit.SECONDS);
 		}
 	}
 

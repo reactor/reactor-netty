@@ -142,7 +142,7 @@ class UdpClientTest {
 			resources.disposeLater()
 			         .block(Duration.ofSeconds(5));
 			loop.shutdownGracefully()
-			    .get(5, TimeUnit.SECONDS);
+					.asStage().get(5, TimeUnit.SECONDS);
 		}
 	}
 

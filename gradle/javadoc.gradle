@@ -24,11 +24,9 @@ project.tasks.withType(Javadoc) {
 	description = "Generates aggregated Javadoc API documentation."
 	title = "${project.name} ${version}"
 
-	if (JavaVersion.current().isJava8Compatible()) {
-		compileTestJava.options.compilerArgs += "-parameters"
-		tasks.withType(Javadoc) {
-			options.addStringOption('Xdoclint:none', '-quiet')
-		}
+	compileTestJava.options.compilerArgs += "-parameters"
+	tasks.withType(Javadoc) {
+		options.addStringOption('Xdoclint:none', '-quiet')
 	}
 
 	options.addStringOption('charSet', 'UTF-8')
