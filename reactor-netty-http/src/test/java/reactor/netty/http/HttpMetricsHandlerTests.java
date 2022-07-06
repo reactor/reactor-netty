@@ -869,29 +869,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	HttpServer customizeServerOptions(HttpServer httpServer, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols,
-	                                  @Nullable AtomicReference<CountDownLatch> latch, boolean registerLatchHandlerOnConnection) {
+	                                  @Nullable AtomicReference<CountDownLatch> latchRef, boolean registerLatchHandlerOnConnection) {
 		HttpServer server = ctx == null ? httpServer.protocol(protocols) : httpServer.protocol(protocols).secure(spec -> spec.sslContext(ctx));
-		if (latch != null) {
-			ChannelHandlerAdapter latchHandler = new ChannelHandlerAdapter() {
-				@Override
-				public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-					if (msg instanceof LastHttpContent) {
-						return ctx.write(msg).addListener(future -> latch.get().countDown());
-					}
-					else {
-						return ctx.write(msg);
-					}
-				}
-
-				@Override
-				public boolean isSharable() {
-					return true;
-				}
-			};
-
+		if (latchRef != null) {
+			RequestCompletedHandler handler = RequestCompletedHandler.INSTANCE;
+			handler.reset(latchRef);
 			server = registerLatchHandlerOnConnection ?
-				server.doOnConnection(connection -> connection.channel().pipeline().addLast(latchHandler)) :
-				server.doOnChannelInit((connectionObserver, channel, socketAddress) -> channel.pipeline().addLast(latchHandler));
+				server.doOnConnection(connection -> connection.channel().pipeline().addLast(handler)) :
+				server.doOnChannelInit((connectionObserver, channel, socketAddress) -> channel.pipeline().addLast(handler));
 		}
 
 		return server;
@@ -1222,6 +1207,33 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		@Override
 		public void recordResolveAddressTime(SocketAddress socketAddress, Duration duration, String s) {
+		}
+	}
+
+	/**
+	 * Handler used to ensure that the request has completed on the server.
+	 */
+	static final class RequestCompletedHandler extends ChannelHandlerAdapter {
+		static final RequestCompletedHandler INSTANCE = new RequestCompletedHandler();
+		private AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(null);
+
+		void reset(AtomicReference<CountDownLatch> latchRef) {
+			this.latchRef = latchRef;
+		}
+
+		@Override
+		public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+			if (msg instanceof LastHttpContent) {
+				return ctx.write(msg).addListener(future -> latchRef.get().countDown());
+			}
+			else {
+				return ctx.write(msg);
+			}
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true; // A server may accept multiple connections, hence this handler must be sharable
 		}
 	}
 }
