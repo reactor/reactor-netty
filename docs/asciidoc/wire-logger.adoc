@@ -11,7 +11,7 @@ and apply the following configuration:
 [source,java,indent=0]
 .{examplesdir}/wiretap/Application.java
 ----
-include::{examplesdir}/wiretap/Application.java[lines=18..32]
+include::{examplesdir}/wiretap/Application.java[lines=18..35]
 ----
 <1> Enables the wire logging
 ====
@@ -56,7 +56,7 @@ When you need to change the default formatter you can configure it as follows:
 [source,java,indent=0]
 .{examplesdir}/wiretap/custom/Application.java
 ----
-include::{examplesdir}/wiretap/custom/Application.java[lines=18..34]
+include::{examplesdir}/wiretap/custom/Application.java[lines=18..38]
 ----
 <1> Enables the wire logging,
 {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
