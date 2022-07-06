@@ -17,7 +17,7 @@ The following example uses `ProxyProvider`:
 [source,java,indent=0]
 .{examplesdir}/proxy/Application.java
 ----
-include::{examplesdir}/proxy/Application.java[lines=18..38]
+include::{examplesdir}/proxy/Application.java[lines=18..42]
 ----
 <1> Configures the connection establishment timeout to 20 seconds.
 ====
