@@ -12,7 +12,7 @@ and further attempts are declined with an error.
 [source,java,indent=0]
 ../../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
 ----
-include::./../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java[lines=117..159]
+include::./../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java[lines=117..165]
 ----
 ====
 

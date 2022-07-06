@@ -265,7 +265,7 @@ to extend the default `TCP` client configuration (add an option, bind address et
 [source,java,indent=0]
 .{examplesdir}/channeloptions/Application.java
 ----
-include::{examplesdir}/channeloptions/Application.java[lines=18..46]
+include::{examplesdir}/channeloptions/Application.java[lines=18..54]
 ----
 <1> Configures the connection establishment timeout to 10 seconds.
 <2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
@@ -615,7 +615,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 [source,java,indent=0]
 .{examplesdir}/channeloptions/Application.java
 ----
-include::{examplesdir}/channeloptions/Application.java[lines=18..52]
+include::{examplesdir}/channeloptions/Application.java[lines=18..54]
 ----
 <1> Configures the connection establishment timeout to 10 seconds.
 <2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
@@ -663,7 +663,7 @@ To customize the default settings, you can configure `HttpClient` as follows:
 [source,java,indent=0]
 .{examplesdir}/proxy/Application.java
 ----
-include::{examplesdir}/proxy/Application.java[lines=18..41]
+include::{examplesdir}/proxy/Application.java[lines=18..42]
 ----
 <1> Configures the connection establishment timeout to 20 seconds.
 ====
