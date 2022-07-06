@@ -2846,7 +2846,7 @@ class HttpClientTest extends BaseHttpTest {
 		finally {
 			// Closing the executor cleans the AddressResolverGroup internal structures and closes the resolver
 			loop.shutdownGracefully()
-			    .get(500, TimeUnit.SECONDS);
+			    .asStage().get(500, TimeUnit.SECONDS);
 		}
 
 		assertThatExceptionOfType(IllegalStateException.class)

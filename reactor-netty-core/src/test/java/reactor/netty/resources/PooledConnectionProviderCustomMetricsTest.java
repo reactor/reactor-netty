@@ -63,7 +63,7 @@ class PooledConnectionProviderCustomMetricsTest {
 	@AfterEach
 	void tearDown() throws Exception {
 		group.shutdownGracefully()
-		     .get(10L, TimeUnit.SECONDS);
+		     .asStage().get(10L, TimeUnit.SECONDS);
 		pool.dispose();
 	}
 
