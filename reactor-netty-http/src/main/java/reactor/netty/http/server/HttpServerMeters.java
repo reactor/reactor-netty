@@ -48,6 +48,26 @@ enum HttpServerMeters implements DocumentedMeter {
 	},
 
 	/**
+	 * The number of HTTP/2 streams currently active on the server
+	 */
+	STREAMS_ACTIVE {
+		@Override
+		public String getName() {
+			return "reactor.netty.http.server.streams.active";
+		}
+
+		@Override
+		public KeyName[] getKeyNames() {
+			return StreamsActiveTags.values();
+		}
+
+		@Override
+		public Meter.Type getType() {
+			return Meter.Type.GAUGE;
+		}
+	},
+
+	/**
 	 * Amount of the data received, in bytes.
 	 */
 	HTTP_SERVER_DATA_RECEIVED {
@@ -156,6 +176,29 @@ enum HttpServerMeters implements DocumentedMeter {
 			return Meter.Type.COUNTER;
 		}
 	};
+
+	enum StreamsActiveTags implements KeyName {
+
+		/**
+		 * Local address.
+		 */
+		LOCAL_ADDRESS {
+			@Override
+			public String getKeyName() {
+				return "local.address";
+			}
+		},
+
+		/**
+		 * URI.
+		 */
+		URI {
+			@Override
+			public String getKeyName() {
+				return "uri";
+			}
+		}
+	}
 
 	enum ConnectionsActiveTags implements KeyName {
 
