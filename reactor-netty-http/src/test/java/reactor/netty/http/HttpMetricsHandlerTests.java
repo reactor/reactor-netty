@@ -175,7 +175,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
-		int expectedDisconnects = getExpectedDiconnects(negotiatedProtocol);
+		int expectedDisconnects = getExpectedDisconnects(negotiatedProtocol);
 		CountDownLatch latch1 = new CountDownLatch(expectedDisconnects + 1 /* server metrics are updated, see customizeServerOptions method */);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
@@ -293,7 +293,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                             @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
-		int expectedDisconnects = getExpectedDiconnects(negotiatedProtocol);
+		int expectedDisconnects = getExpectedDisconnects(negotiatedProtocol);
 
 		CountDownLatch latch = new CountDownLatch(expectedDisconnects + 1 /* server metrics are updated, see customizeServerOptions method */);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
@@ -372,7 +372,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testUriTagValueFunction(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
-		int expectedDisconnects = getExpectedDiconnects(negotiatedProtocol);
+		int expectedDisconnects = getExpectedDisconnects(negotiatedProtocol);
 		CountDownLatch latch1 = new CountDownLatch(expectedDisconnects + 1 /* server metrics are updated, see customizeServerOptions method */);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
@@ -424,7 +424,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testUriTagValueFunctionNotSharedForClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
-		int expectedDisconnects = getExpectedDiconnects(negotiatedProtocol);
+		int expectedDisconnects = getExpectedDisconnects(negotiatedProtocol);
 		CountDownLatch latch1 = new CountDownLatch(expectedDisconnects + 1 /* server metrics are updated, see customizeServerOptions method */);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
@@ -569,7 +569,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsMicrometer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
-		int expectedDisconnects = getExpectedDiconnects(negotiatedProtocol);
+		int expectedDisconnects = getExpectedDisconnects(negotiatedProtocol);
 		CountDownLatch latch = new CountDownLatch(expectedDisconnects + 1 /* server metrics are updated, see customizeServerOptions method */);
 		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
 		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
@@ -938,7 +938,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 * @param protocol the protocol used (for HTTP11, we expect to observe 4 disconnect events, and for other (H2/H2C), we expect 3 events)).
 	 * @return number of disconnect events we expect to observe on a given connection
 	 */
-	int getExpectedDiconnects(HttpProtocol protocol) {
+	int getExpectedDisconnects(HttpProtocol protocol) {
 		return switch (protocol) {
 			case H2, H2C -> 3;
 			case HTTP11 -> 4;
