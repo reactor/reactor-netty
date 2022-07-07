@@ -560,6 +560,7 @@ The following table provides information for the HTTP server metrics:
 [width="100%",options="header"]
 |=======
 | metric name | type | description
+| reactor.netty.http.server.streams.active | Gauge | The number of active HTTP/2 streams.
 | reactor.netty.http.server.connections.active | Gauge | The number of http connections currently processing requests
 | reactor.netty.http.server.connections.total | Gauge | The number of all opened connections
 | reactor.netty.http.server.data.received | DistributionSummary | Amount of the data received, in bytes

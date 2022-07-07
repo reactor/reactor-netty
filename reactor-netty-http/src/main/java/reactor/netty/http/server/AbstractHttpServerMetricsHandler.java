@@ -45,11 +45,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	long dataSent;
 
-
 	long dataReceivedTime;
 
 	long dataSentTime;
-
 
 	final Function<String, String> uriTagValue;
 
@@ -123,12 +121,16 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 							log.warn("Exception caught while recording metrics.", e);
 							// Allow request-response exchange to continue, unaffected by metrics problem
 						}
-						if (!ops.isHttp2() && ops.hostAddress() != null) {
-							// This metric is not applicable for HTTP/2
-							// ops.hostAddress() == null when request decoding failed, in this case
-							// we do not report active connection, so we do not report inactive connection
+						// ops.hostAddress() == null when request decoding failed, in this case
+						// we do not report active connection, so we do not report inactive connection
+						if (ops.hostAddress() != null) {
 							try {
-								recordInactiveConnection(ops);
+								if (ops.isHttp2()) {
+									recordClosedStream(ops);
+								}
+								else {
+									recordInactiveConnection(ops);
+								}
 							}
 							catch (RuntimeException e) {
 								log.warn("Exception caught while recording metrics.", e);
@@ -159,8 +161,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
-					if (!ops.isHttp2()) {
-						// This metric is not applicable for HTTP/2
+					if (ops.isHttp2()) {
+						recordOpenStream(ops);
+					}
+					else {
 						recordActiveConnection(ops);
 					}
 				}
@@ -249,5 +253,13 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	protected void recordInactiveConnection(HttpServerOperations ops) {
 		recorder().recordServerConnectionInactive(ops.hostAddress());
+	}
+
+	protected void recordOpenStream(HttpServerOperations ops) {
+		recorder().recordStreamOpened(ops.hostAddress());
+	}
+
+	protected void recordClosedStream(HttpServerOperations ops) {
+		recorder().recordStreamClosed(ops.hostAddress());
 	}
 }

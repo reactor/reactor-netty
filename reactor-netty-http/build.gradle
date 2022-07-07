@@ -190,6 +190,10 @@ task japicmp(type: JapicmpTask) {
 	ignoreMissingClasses = true
 	includeSynthetic = true
 	onlyIf { "$compatibleVersion" != "SKIP" }
+	methodExcludes = [
+			"reactor.netty.http.server.HttpServerMetricsRecorder#recordStreamClosed(java.net.SocketAddress)",
+			"reactor.netty.http.server.HttpServerMetricsRecorder#recordStreamOpened(java.net.SocketAddress)"
+	]
 }
 
 tasks.japicmp.dependsOn(downloadBaseline)

@@ -22,6 +22,7 @@ import io.micrometer.core.instrument.Timer;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 import reactor.netty.internal.util.MapUtils;
+import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -41,6 +42,7 @@ import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
+import static reactor.netty.Metrics.STREAMS_ACTIVE;
 import static reactor.netty.Metrics.URI;
 
 /**
@@ -52,8 +54,11 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	final static MicrometerHttpServerMetricsRecorder INSTANCE = new MicrometerHttpServerMetricsRecorder();
 	private final static String PROTOCOL_VALUE_HTTP = "http";
 	private final static String ACTIVE_CONNECTIONS_DESCRIPTION = "The number of http connections currently processing requests";
+	private final static String ACTIVE_STREAMS_DESCRIPTION = "The number of HTTP/2 streams currently active on the server";
 	private final LongAdder activeConnectionsAdder = new LongAdder();
+	private final LongAdder activeStreamsAdder = new LongAdder();
 	private final ConcurrentMap<String, LongAdder> activeConnectionsCache = new ConcurrentHashMap<>();
+	private final ConcurrentMap<String, LongAdder> activeStreamsCache = new ConcurrentHashMap<>();
 	private final ConcurrentMap<String, DistributionSummary> dataReceivedCache = new ConcurrentHashMap<>();
 	private final ConcurrentMap<String, DistributionSummary> dataSentCache = new ConcurrentHashMap<>();
 	private final ConcurrentMap<String, Counter> errorsCache = new ConcurrentHashMap<>();
@@ -155,6 +160,22 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	}
 
 	@Override
+	public void recordStreamOpened(SocketAddress localAddress) {
+		LongAdder adder = getActiveStreamsAdder(localAddress);
+		if (adder != null) {
+			adder.increment();
+		}
+	}
+
+	@Override
+	public void recordStreamClosed(SocketAddress localAddress) {
+		LongAdder adder = getActiveStreamsAdder(localAddress);
+		if (adder != null) {
+			adder.decrement();
+		}
+	}
+
+	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
 		// noop
 	}
@@ -184,6 +205,21 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		throw new UnsupportedOperationException();
 	}
 
+	@Nullable
+	private LongAdder getActiveStreamsAdder(SocketAddress localAddress) {
+		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		return MapUtils.computeIfAbsent(activeStreamsCache, address,
+				key -> {
+					Gauge gauge = filter(
+							Gauge.builder(name() + STREAMS_ACTIVE, activeStreamsAdder, LongAdder::longValue)
+							     .tags(URI, PROTOCOL_VALUE_HTTP, LOCAL_ADDRESS, address)
+							     .description(ACTIVE_STREAMS_DESCRIPTION)
+							     .register(REGISTRY));
+					return gauge != null ? activeStreamsAdder : null;
+				});
+	}
+
+	@Nullable
 	private LongAdder getServerConnectionAdder(SocketAddress localAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
 		return MapUtils.computeIfAbsent(activeConnectionsCache, address,

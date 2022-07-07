@@ -245,6 +245,11 @@ public class Metrics {
 	 */
 	public static final String PENDING_TASKS = ".pending.tasks";
 
+	// HttpServer Metrics
+	/**
+	 * The number of active HTTP/2 streams
+	 */
+	public static final String STREAMS_ACTIVE = ".streams.active";
 
 	// Tags
 	public static final String LOCAL_ADDRESS = "local.address";
