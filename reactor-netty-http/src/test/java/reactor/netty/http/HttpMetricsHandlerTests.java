@@ -938,6 +938,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 * @param protocol the protocol used (for HTTP11, we expect to observe 4 disconnect events, and for other (H2/H2C), we expect 3 events)).
 	 * @return number of disconnect events we expect to observe on a given connection
 	 */
+	@SuppressWarnings("UnnecessaryParentheses")
 	int getExpectedDisconnects(HttpProtocol protocol) {
 		return switch (protocol) {
 			case H2, H2C -> 3;
