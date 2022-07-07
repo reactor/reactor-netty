@@ -28,12 +28,10 @@ apply plugin: net.ltgt.gradle.errorprone.ErrorPronePlugin
 
 ext {
 	errorproneCoreVersion = "2.7.1"
-	errorproneJavacVersion = "9+181-r4173-1"
 	guavaVersion = "30.0-jre"
 }
 
 dependencies {
 	errorprone "com.google.errorprone:error_prone_core:$errorproneCoreVersion"
 	errorprone "com.google.guava:guava:$guavaVersion" // prevents conflicts with guava versions of other gradle plugins
-	errorproneJavac "com.google.errorprone:javac:$errorproneJavacVersion"
 }
