@@ -200,7 +200,16 @@ task japicmp(type: JapicmpTask) {
 	onlyIf { "$compatibleVersion" != "SKIP" }
 	fieldExcludes = [
 			// Deprecated field is removed
-			'reactor.netty.NettyPipeline#UnvoidHandler'
+			'reactor.netty.NettyPipeline#UnvoidHandler',
+
+			// Removed fields because of the new Buffer API
+			'reactor.netty.Metrics#ACTIVE_DIRECT_MEMORY',
+			'reactor.netty.Metrics#ACTIVE_HEAP_MEMORY',
+			'reactor.netty.Metrics#BYTE_BUF_ALLOCATOR_PREFIX',
+			'reactor.netty.Metrics#DIRECT_ARENAS',
+			'reactor.netty.Metrics#HEAP_ARENAS',
+			'reactor.netty.Metrics#USED_DIRECT_MEMORY',
+			'reactor.netty.Metrics#USED_HEAP_MEMORY'
 	]
 	methodExcludes = [
 			"reactor.netty.resources.ConnectionProvider#create(java.lang.String, int, boolean)", // new static method in 1.0.21
