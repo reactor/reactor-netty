@@ -19,6 +19,7 @@ import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.channel.unix.DomainDatagramPacket;
 import io.netty5.util.Send;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.http.HttpContent;
@@ -312,6 +313,9 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 			return buffer;
 		}
 		if (o instanceof DatagramPacket envelope) {
+			return envelope.content();
+		}
+		if (o instanceof DomainDatagramPacket envelope) {
 			return envelope.content();
 		}
 		if (o instanceof HttpContent<?> httpContent) {

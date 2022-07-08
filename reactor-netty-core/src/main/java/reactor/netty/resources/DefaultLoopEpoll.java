@@ -38,6 +38,7 @@ import io.netty5.channel.unix.DomainSocketChannel;
 import io.netty5.channel.unix.ServerDomainSocketChannel;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 /**
  * {@link DefaultLoop} that uses {@code Epoll} transport.
@@ -48,19 +49,24 @@ import reactor.util.Loggers;
 final class DefaultLoopEpoll implements DefaultLoop {
 
 	@Override
+	@Nullable
 	@SuppressWarnings("unchecked")
 	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop) {
 		if (channelClass.equals(SocketChannel.class)) {
-			return (CHANNEL) new EpollSocketChannel(eventLoop);
+			return eventLoop.isCompatible(EpollSocketChannel.class) ?
+					(CHANNEL) new EpollSocketChannel(eventLoop) : null;
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
-			return (CHANNEL) new EpollDatagramChannel(eventLoop);
+			return eventLoop.isCompatible(EpollDatagramChannel.class) ?
+					(CHANNEL) new EpollDatagramChannel(eventLoop) : null;
 		}
 		if (channelClass.equals(DomainSocketChannel.class)) {
-			return (CHANNEL) new EpollDomainSocketChannel(eventLoop);
+			return eventLoop.isCompatible(EpollDomainSocketChannel.class) ?
+					(CHANNEL) new EpollDomainSocketChannel(eventLoop) : null;
 		}
 		if (channelClass.equals(DomainDatagramChannel.class)) {
-			return (CHANNEL) new EpollDomainDatagramChannel(eventLoop);
+			return eventLoop.isCompatible(EpollDomainDatagramChannel.class) ?
+					(CHANNEL) new EpollDomainDatagramChannel(eventLoop) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
@@ -71,29 +77,24 @@ final class DefaultLoopEpoll implements DefaultLoop {
 	}
 
 	@Override
+	@Nullable
 	@SuppressWarnings("unchecked")
 	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
 			EventLoopGroup childEventLoopGroup) {
 		if (channelClass.equals(ServerSocketChannel.class)) {
-			return (SERVERCHANNEL) new EpollServerSocketChannel(eventLoop, childEventLoopGroup);
+			return eventLoop.isCompatible(EpollServerSocketChannel.class) ?
+					(SERVERCHANNEL) new EpollServerSocketChannel(eventLoop, childEventLoopGroup) : null;
 		}
 		if (channelClass.equals(ServerDomainSocketChannel.class)) {
-			return (SERVERCHANNEL) new EpollServerDomainSocketChannel(eventLoop, childEventLoopGroup);
+			return eventLoop.isCompatible(EpollServerDomainSocketChannel.class) ?
+					(SERVERCHANNEL) new EpollServerDomainSocketChannel(eventLoop, childEventLoopGroup) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
 
 	@Override
 	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		return new EpollEventLoopGroup(threads, factory);
-	}
-
-	@Override
-	public boolean supportGroup(EventLoopGroup group) {
-		if (group instanceof ColocatedEventLoopGroup colocatedEventLoopGroup) {
-			group = colocatedEventLoopGroup.get();
-		}
-		return group instanceof EpollEventLoopGroup;
+		return new MultithreadEventLoopGroup(threads, factory, EpollHandler.newFactory());
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultLoopEpoll.class);
@@ -112,13 +113,6 @@ final class DefaultLoopEpoll implements DefaultLoop {
 		epoll = epollCheck;
 		if (log.isDebugEnabled()) {
 			log.debug("Default Epoll support : " + epoll);
-		}
-	}
-
-	static final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
-
-		EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
-			super(nThreads, threadFactory, EpollHandler.newFactory());
 		}
 	}
 }
