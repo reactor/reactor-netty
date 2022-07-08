@@ -49,7 +49,7 @@ configurations {
 		extendsFrom implementation
 		// TODO temporary because 'context-propagation' has group 'io.micrometer'
 		exclude group: 'io.micrometer', module: 'micrometer-core'
-		exclude group: 'io.micrometer', module: 'micrometer-tracing-api'
+		exclude group: 'io.micrometer', module: 'micrometer-tracing'
 	}
 	noMicrometerTestRuntimeOnly.extendsFrom(runtimeOnly)
 }
