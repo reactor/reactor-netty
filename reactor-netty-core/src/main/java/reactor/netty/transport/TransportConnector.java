@@ -111,7 +111,7 @@ public final class TransportConnector {
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer) {
 		return connect(config, remoteAddress, resolverGroup, channelInitializer, config.eventLoopGroup().next(),
-				ContextSnapshot.forContextAndThreadLocalValues());
+				ContextSnapshot.capture());
 	}
 
 	/**
@@ -141,7 +141,7 @@ public final class TransportConnector {
 	 */
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer, EventLoop eventLoop) {
-		return connect(config, remoteAddress, resolverGroup, channelInitializer, eventLoop, ContextSnapshot.forContextAndThreadLocalValues());
+		return connect(config, remoteAddress, resolverGroup, channelInitializer, eventLoop, ContextSnapshot.capture());
 	}
 
 	/**

@@ -71,7 +71,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 			DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
 			if (remote != null && resolverGroup != null) {
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
-				ContextSnapshot snapshot = ContextSnapshot.forContextAndThreadLocalValues(sink.contextView());
+				ContextSnapshot snapshot = ContextSnapshot.capture(sink.contextView());
 				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, snapshot)
 				                  .subscribe(disposableConnect);
 			}

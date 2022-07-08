@@ -502,7 +502,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink);
 				EventLoop callerEventLoop = sink.contextView().hasKey(CONTEXT_CALLER_EVENTLOOP) ?
 						sink.contextView().get(CONTEXT_CALLER_EVENTLOOP) : null;
-				ContextSnapshot snapshot = ContextSnapshot.forContextAndThreadLocalValues(sink.contextView());
+				ContextSnapshot snapshot = ContextSnapshot.capture(sink.contextView());
 				if (callerEventLoop != null) {
 					TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop, snapshot)
 							.subscribe(initializer);
