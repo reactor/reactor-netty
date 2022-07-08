@@ -21,13 +21,16 @@ import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.EventLoop;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.concurrent.Promise;
+import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -119,7 +122,7 @@ class ReactorNettyTest {
 		}
 
 		TestChannel(Channel parent, @Nullable SocketAddress localAddress, @Nullable SocketAddress remoteAddress) {
-			super(parent, parent.executor());
+			super(parent, new TestEventLoop());
 			this.localAddress = localAddress;
 			this.remoteAddress = remoteAddress;
 		}
@@ -159,7 +162,13 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		protected void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+		protected boolean doConnect(SocketAddress socketAddress, SocketAddress socketAddress1) {
+			return false;
+		}
+
+		@Override
+		protected boolean doFinishConnect(SocketAddress socketAddress) {
+			return false;
 		}
 
 		@Override
@@ -185,6 +194,89 @@ class ReactorNettyTest {
 		@Override
 		public ChannelMetadata metadata() {
 			return null;
+		}
+	}
+
+	static final class TestEventLoop implements EventLoop {
+
+		@Override
+		public Future<Void> registerForIo(Channel channel) {
+			return null;
+		}
+
+		@Override
+		public Future<Void> deregisterForIo(Channel channel) {
+			return null;
+		}
+
+		@Override
+		public boolean isCompatible(Class<? extends Channel> channelType) {
+			return true;
+		}
+
+		@Override
+		public boolean inEventLoop(Thread thread) {
+			return false;
+		}
+
+		@Override
+		public boolean isShuttingDown() {
+			return false;
+		}
+
+		@Override
+		public boolean isShutdown() {
+			return false;
+		}
+
+		@Override
+		public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+			return null;
+		}
+
+		@Override
+		public Future<Void> terminationFuture() {
+			return null;
+		}
+
+		@Override
+		public Future<Void> submit(Runnable task) {
+			return null;
+		}
+
+		@Override
+		public <T> Future<T> submit(Runnable task, T result) {
+			return null;
+		}
+
+		@Override
+		public <T> Future<T> submit(Callable<T> task) {
+			return null;
+		}
+
+		@Override
+		public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
+			return null;
+		}
+
+		@Override
+		public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
+			return null;
+		}
+
+		@Override
+		public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
+			return null;
+		}
+
+		@Override
+		public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
+			return null;
+		}
+
+		@Override
+		public void execute(Runnable task) {
+
 		}
 	}
 
