@@ -60,16 +60,22 @@ jobs:
           fetch-depth: 0 #needed by spotless
       - uses: actions/checkout@v3
         with:
-          repository: netty-contrib/codec-haproxy
+          # TODO temporary https://github.com/netty-contrib/codec-haproxy/pull/9
+          repository: violetagg/codec-haproxy
           path: codec-haproxy
+          ref: use-asStage
       - uses: actions/checkout@v3
         with:
-          repository: netty-contrib/codec-extras
+          # TODO temporary https://github.com/netty-contrib/codec-extras/pull/10
+          repository: violetagg/codec-extras
           path: codec-extras
+          ref: use-asStage
       - uses: actions/checkout@v3
         with:
-          repository: netty-contrib/socks-proxy
+          # TODO temporary https://github.com/netty-contrib/socks-proxy/pull/12
+          repository: violetagg/socks-proxy
           path: socks-proxy
+          ref: use-asStage
       - uses: gradle/wrapper-validation-action@v1
       - name: Set up JDK 17
         uses: actions/setup-java@v3

@@ -22,7 +22,6 @@ import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import reactor.util.annotation.Nullable;
 
@@ -159,7 +158,13 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		protected void connectTransport(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+		protected boolean doConnect(SocketAddress socketAddress, SocketAddress socketAddress1) throws Exception {
+			return false;
+		}
+
+		@Override
+		protected boolean doFinishConnect(SocketAddress socketAddress) throws Exception {
+			return false;
 		}
 
 		@Override
