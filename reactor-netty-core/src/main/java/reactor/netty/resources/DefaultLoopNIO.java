@@ -27,6 +27,7 @@ import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
+import reactor.util.annotation.Nullable;
 
 /**
  * {@link DefaultLoop} that uses {@code NIO} transport.
@@ -38,13 +39,16 @@ import io.netty5.channel.socket.nio.NioSocketChannel;
 final class DefaultLoopNIO implements DefaultLoop {
 
 	@Override
+	@Nullable
 	@SuppressWarnings("unchecked")
 	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop) {
 		if (channelClass.equals(SocketChannel.class)) {
-			return (CHANNEL) new NioSocketChannel(eventLoop);
+			return eventLoop.isCompatible(NioSocketChannel.class) ?
+					(CHANNEL) new NioSocketChannel(eventLoop) : null;
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
-			return (CHANNEL) new NioDatagramChannel(eventLoop);
+			return eventLoop.isCompatible(NioDatagramChannel.class) ?
+					(CHANNEL) new NioDatagramChannel(eventLoop) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
@@ -55,11 +59,13 @@ final class DefaultLoopNIO implements DefaultLoop {
 	}
 
 	@Override
+	@Nullable
 	@SuppressWarnings("unchecked")
 	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
 			EventLoopGroup childEventLoopGroup) {
 		if (channelClass.equals(ServerSocketChannel.class)) {
-			return (SERVERCHANNEL) new NioServerSocketChannel(eventLoop, childEventLoopGroup);
+			return eventLoop.isCompatible(NioServerSocketChannel.class) ?
+					(SERVERCHANNEL) new NioServerSocketChannel(eventLoop, childEventLoopGroup) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
@@ -67,10 +73,5 @@ final class DefaultLoopNIO implements DefaultLoop {
 	@Override
 	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
 		throw new IllegalStateException("Missing Epoll/KQueue on current system");
-	}
-
-	@Override
-	public boolean supportGroup(EventLoopGroup group) {
-		return false;
 	}
 }

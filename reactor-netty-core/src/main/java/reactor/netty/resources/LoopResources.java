@@ -208,12 +208,15 @@ public interface LoopResources extends Disposable {
 	 * @return a {@link Channel} instance
 	 */
 	default <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoop eventLoop) {
-		DefaultLoop channelFactory =
-				DefaultLoopNativeDetector.INSTANCE.supportGroup(eventLoop) ?
-						DefaultLoopNativeDetector.INSTANCE :
-						DefaultLoopNativeDetector.NIO;
-
-		return channelFactory.getChannel(channelType, eventLoop);
+		CHANNEL channel = DefaultLoopNativeDetector.INSTANCE.getChannel(channelType, eventLoop);
+		if (channel != null) {
+			return channel;
+		}
+		channel = DefaultLoopNativeDetector.NIO.getChannel(channelType, eventLoop);
+		if (channel != null) {
+			return channel;
+		}
+		throw new IllegalArgumentException("Unsupported channel type: " + channelType.getSimpleName());
 	}
 
 	/**
@@ -246,12 +249,17 @@ public interface LoopResources extends Disposable {
 	 */
 	default <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL onServerChannel(Class<SERVERCHANNEL> channelType, EventLoop eventLoop,
 			EventLoopGroup childEventLoopGroup) {
-		DefaultLoop channelFactory =
-				DefaultLoopNativeDetector.INSTANCE.supportGroup(eventLoop) ?
-						DefaultLoopNativeDetector.INSTANCE :
-						DefaultLoopNativeDetector.NIO;
-
-		return channelFactory.getServerChannel(channelType, eventLoop, childEventLoopGroup);
+		SERVERCHANNEL serverchannel = DefaultLoopNativeDetector.INSTANCE
+				.getServerChannel(channelType, eventLoop, childEventLoopGroup);
+		if (serverchannel != null) {
+			return serverchannel;
+		}
+		serverchannel = DefaultLoopNativeDetector.NIO
+				.getServerChannel(channelType, eventLoop, childEventLoopGroup);
+		if (serverchannel != null) {
+			return serverchannel;
+		}
+		throw new IllegalArgumentException("Unsupported channel type: " + channelType.getSimpleName());
 	}
 
 	/**

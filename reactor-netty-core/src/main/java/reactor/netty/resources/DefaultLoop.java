@@ -21,6 +21,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannel;
+import reactor.util.annotation.Nullable;
 
 /**
  * An {@link EventLoopGroup} with associated {@link io.netty5.channel.Channel} factory.
@@ -29,14 +30,14 @@ import io.netty5.channel.ServerChannel;
  */
 interface DefaultLoop {
 
+	@Nullable
 	<CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop);
 
 	String getName();
 
+	@Nullable
 	<SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
 			EventLoopGroup childEventLoopGroup);
 
 	EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory);
-
-	boolean supportGroup(EventLoopGroup group);
 }
