@@ -24,7 +24,7 @@ dependencies {
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
 	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
-	compileOnly "io.micrometer:micrometer-tracing-api:$micrometerTracingVersion"
+	compileOnly "io.micrometer:micrometer-tracing:$micrometerTracingVersion"
 	compileOnly "io.netty:netty-codec-haproxy:$nettyVersion"
 	compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
 	compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
