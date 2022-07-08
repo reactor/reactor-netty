@@ -48,8 +48,8 @@ jobs:
           - os: windows-2019
             transport: native
           # macOS - https://github.com/netty/netty/issues/9689
-          - os: macos-10.15
-            transport: native
+          #- os: macos-10.15
+          #  transport: native
     steps:
       - uses: actions/checkout@v3
         with:
@@ -80,13 +80,13 @@ jobs:
           distribution: 'temurin'
           java-version: 17
       - name: Build codec-haproxy
-        run: ./mvnw install -DskipTests=true
+        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha3"
         working-directory: ./codec-haproxy
       - name: Build codec-extras
-        run: ./mvnw install -DskipTests=true
+        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha3"
         working-directory: ./codec-extras
       - name: Build socks-proxy
-        run: ./mvnw install -DskipTests=true
+        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha3"
         working-directory: ./socks-proxy
       - name: Build with Gradle
         run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -PspotlessFrom=origin/netty5
