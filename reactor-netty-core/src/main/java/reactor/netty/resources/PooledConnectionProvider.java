@@ -168,7 +168,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			if (eventLoop != null) {
 				mono = mono.contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop));
 			}
-			ContextSnapshot snapshot = ContextSnapshot.forContextAndThreadLocalValues(sink.contextView());
+			ContextSnapshot snapshot = ContextSnapshot.capture(sink.contextView());
 			mono.contextWrite(snapshot::updateContext)
 			    .subscribe(createDisposableAcquire(config, connectionObserver,
 			            poolFactory.pendingAcquireTimeout, pool, sink, snapshot));

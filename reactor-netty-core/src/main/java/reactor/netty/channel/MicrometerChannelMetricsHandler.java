@@ -126,7 +126,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			// Move the implementation from the recorder here
 			this.remoteAddress = formatSocketAddress(remoteAddress);
 			ContextSnapshot snapshot = ctx.channel().hasAttr(CONTEXT_SNAPSHOT) ?
-					ctx.channel().attr(CONTEXT_SNAPSHOT).get() : ContextSnapshot.forContextAndThreadLocalValues();
+					ctx.channel().attr(CONTEXT_SNAPSHOT).get() : ContextSnapshot.capture();
 			Observation observation;
 			try (ContextSnapshot.Scope scope = snapshot.setThreadLocalValues(OBSERVATION_KEY)) {
 				observation = Observation.start(recorder.name() + CONNECT_TIME, this, OBSERVATION_REGISTRY);
@@ -228,7 +228,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		public void channelActive(ChannelHandlerContext ctx) {
 			this.remoteAddress = formatSocketAddress(ctx.channel().remoteAddress());
 			ContextSnapshot snapshot = ctx.channel().hasAttr(CONTEXT_SNAPSHOT) ?
-					ctx.channel().attr(CONTEXT_SNAPSHOT).getAndSet(null) : ContextSnapshot.forContextAndThreadLocalValues();
+					ctx.channel().attr(CONTEXT_SNAPSHOT).getAndSet(null) : ContextSnapshot.capture();
 			try (ContextSnapshot.Scope scope = snapshot.setThreadLocalValues(OBSERVATION_KEY)) {
 				observation = Observation.start(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
 			}
