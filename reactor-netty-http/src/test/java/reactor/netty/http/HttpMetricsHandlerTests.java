@@ -664,8 +664,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		provider.disposeLater()
 				.block(Duration.ofSeconds(30));
 
-		// client sockets are closed, wait for the ServerRecorder to be called in closed before asserting test expectations
+		// client socket is closed, wait for the ServerRecorder to be called in recordServerConnectionClosed before asserting test expectations
 		assertThat(ServerRecorder.INSTANCE.closed.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
+
+		// now we can assert test expectations
 		assertThat(ServerRecorder.INSTANCE.error.get()).isNull();
 		if (isHttp11) {
 			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
