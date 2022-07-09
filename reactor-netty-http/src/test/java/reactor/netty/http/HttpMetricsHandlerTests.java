@@ -33,6 +33,7 @@ import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.concurrent.Future;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,6 +114,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
+		Assertions.setMaxStackTraceElementsDisplayed(100);
+
 		ssc = new SelfSignedCertificate();
 		serverCtx11 = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())
 		                                  .configure(builder -> builder.sslProvider(SslProvider.JDK));
@@ -662,6 +665,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		assertThat(ServerRecorder.INSTANCE.done.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
+		assertThat(ServerRecorder.INSTANCE.error.get()).isNull();
 		if (isHttp11) {
 			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
@@ -758,15 +762,20 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	private void checkServerConnectionsRecorder(HttpServerRequest request) {
-		String address = formatSocketAddress(request.hostAddress());
-		boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
-		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
-		assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
-		if (!isHttp2) {
-			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(1);
-			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+		try {
+			String address = formatSocketAddress(request.hostAddress());
+			boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
+			if (!isHttp2) {
+				assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(1);
+				assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+			}
+			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isNull();
 		}
-		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isNull();
+		catch (Throwable error) {
+			ServerRecorder.INSTANCE.error.set(error);
+		}
 	}
 
 	private void checkExpectationsExisting(String uri, String serverAddress, int connIndex, boolean checkTls,
@@ -1124,6 +1133,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	static final class ServerRecorder implements HttpServerMetricsRecorder {
 
 		static final ServerRecorder INSTANCE = new ServerRecorder();
+		private AtomicReference<Throwable> error = new AtomicReference<>();
 		private final AtomicInteger onServerConnectionsAmount = new AtomicInteger();
 		private final AtomicReference<String> onServerConnectionsLocalAddr = new AtomicReference<>();
 		private final AtomicReference<String> onActiveConnectionsLocalAddr = new AtomicReference<>();
@@ -1132,6 +1142,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		private volatile CountDownLatch done = new CountDownLatch(4);
 
 		void reset() {
+			error.set(null);
 			onServerConnectionsAmount.set(0);
 			onServerConnectionsLocalAddr.set(null);
 			onActiveConnectionsLocalAddr.set(null);
