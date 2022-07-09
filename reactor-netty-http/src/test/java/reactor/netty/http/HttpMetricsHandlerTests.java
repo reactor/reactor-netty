@@ -115,7 +115,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
 		Assertions.setMaxStackTraceElementsDisplayed(100);
-
 		ssc = new SelfSignedCertificate();
 		serverCtx11 = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())
 		                                  .configure(builder -> builder.sslProvider(SslProvider.JDK));
@@ -636,14 +635,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		ServerRecorder.INSTANCE.reset();
 		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
-				.metrics(true, () -> {
-							ServerRecorder.INSTANCE.done = isHttp11 ? new CountDownLatch(4) : new CountDownLatch(1);
-							return ServerRecorder.INSTANCE;
-						},
-						Function.identity())
+				.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity())
 				.bindNow();
 		String address = formatSocketAddress(disposableServer.address());
-
 		CountDownLatch latch = new CountDownLatch(1);
 
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
@@ -664,7 +658,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.verify(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		assertThat(ServerRecorder.INSTANCE.done.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
+
+		// dispose the server, and the client connection provider now, before asserting test expectations
+		disposableServer.disposeNow();
+		provider.disposeLater()
+				.block(Duration.ofSeconds(30));
+
+		// client sockets are closed, wait for the ServerRecorder to be called in closed before asserting test expectations
+		assertThat(ServerRecorder.INSTANCE.closed.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
 		assertThat(ServerRecorder.INSTANCE.error.get()).isNull();
 		if (isHttp11) {
 			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
@@ -673,10 +674,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
 		}
 		else {
-			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
 		}
-
-		disposableServer.disposeNow();
 	}
 
 	@Test
@@ -1139,7 +1138,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		private final AtomicReference<String> onActiveConnectionsLocalAddr = new AtomicReference<>();
 		private final AtomicReference<String> onInactiveConnectionsLocalAddr = new AtomicReference<>();
 		private final AtomicInteger onActiveConnectionsAmount = new AtomicInteger();
-		private volatile CountDownLatch done = new CountDownLatch(4);
+		private volatile CountDownLatch closed = new CountDownLatch(1);
 
 		void reset() {
 			error.set(null);
@@ -1148,35 +1147,32 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			onActiveConnectionsLocalAddr.set(null);
 			onInactiveConnectionsLocalAddr.set(null);
 			onActiveConnectionsAmount.set(0);
-			done = new CountDownLatch(4);
+			closed = new CountDownLatch(1);
 		}
 
 		@Override
 		public void recordServerConnectionOpened(SocketAddress localAddress) {
 			onServerConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onServerConnectionsAmount.addAndGet(1);
-			done.countDown();
 		}
 
 		@Override
 		public void recordServerConnectionClosed(SocketAddress localAddress) {
 			onServerConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onServerConnectionsAmount.addAndGet(-1);
-			done.countDown();
+			closed.countDown();
 		}
 
 		@Override
 		public void recordServerConnectionActive(SocketAddress localAddress) {
 			onActiveConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onActiveConnectionsAmount.addAndGet(1);
-			done.countDown();
 		}
 
 		@Override
 		public void recordServerConnectionInactive(SocketAddress localAddress) {
 			onInactiveConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onActiveConnectionsAmount.addAndGet(-1);
-			done.countDown();
 		}
 
 		@Override
