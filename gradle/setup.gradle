@@ -15,7 +15,7 @@
  */
 import org.gradle.util.VersionNumber
 
-if (project.name == 'reactor-netty-examples') {
+if (project.name == 'reactor-netty5-examples') {
 	return
 }
 
@@ -53,7 +53,7 @@ task qualifyVersionGha() {
 			throw new TaskExecutionException(tasks.getByName("qualifyVersionGha"), new IllegalArgumentException("Unable to parse $version to a VersionNumber with recognizable qualifier"))
 		}
 
-		if (project.name != 'reactor-netty') {
+		if (project.name != 'reactor-netty5') {
 			return
 		}
 		println "::set-output name=versionType::$versionType"

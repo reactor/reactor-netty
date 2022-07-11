@@ -31,8 +31,8 @@ ext {
 					"io.micrometer.*;resolution:=optional",
 					"*"
 			].join(","),
-			"Bundle-Name" : "reactor-netty-http",
-			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty-http",
+			"Bundle-Name" : "reactor-netty5-http",
+			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty5-http",
 			"Bundle-Version" : "$osgiVersion"
 	]
 }
@@ -55,7 +55,7 @@ configurations {
 }
 
 dependencies {
-	api project(path: ':reactor-netty-core', configuration: 'shadow')
+	api project(path: ':reactor-netty5-core', configuration: 'shadow')
 
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
@@ -120,8 +120,8 @@ dependencies {
 
 	api "io.projectreactor:reactor-core:$reactorCoreVersion"
 
-	testImplementation(testFixtures(project(':reactor-netty-core'))) {
-		exclude module: "reactor-netty-core"
+	testImplementation(testFixtures(project(':reactor-netty5-core'))) {
+		exclude module: "reactor-netty5-core"
 	}
 
 	// Testing
@@ -197,7 +197,7 @@ task downloadBaseline(type: Download) {
 
 task japicmp(type: JapicmpTask) {
 	oldClasspath.from(files("${buildDir}/baselineLibs/reactor-netty-http-${compatibleVersion}.jar"))
-	newClasspath.from(files(jar.archiveFile, project(':reactor-netty-core').jar))
+	newClasspath.from(files(jar.archiveFile, project(':reactor-netty5-core').jar))
 	onlyBinaryIncompatibleModified = true
 	failOnModification = true
 	failOnSourceIncompatibility = true

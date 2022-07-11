@@ -69,7 +69,7 @@ class JarFileShadingTest extends AbstractJarFileTest {
 				.get();
 
 		String version = jarFilePath.getFileName().toString()
-				.replace("reactor-netty-core-", "")
+				.replace("reactor-netty5-core-", "")
 				.replace("-original.jar", "")
 				.replace(".jar", "");
 
@@ -86,15 +86,15 @@ class JarFileShadingTest extends AbstractJarFileTest {
 			assertThat(lines)
 					.as("base content")
 					.contains(
-							"Implementation-Title: reactor-netty-core",
+							"Implementation-Title: reactor-netty5-core",
 							"Implementation-Version: " + version,
 							"Automatic-Module-Name: reactor.netty5.core"
 					);
 			assertThat(lines)
 					.as("OSGI content")
 					.contains(
-							"Bundle-Name: reactor-netty-core",
-							"Bundle-SymbolicName: io.projectreactor.netty.reactor-netty-core",
+							"Bundle-Name: reactor-netty5-core",
+							"Bundle-SymbolicName: io.projectreactor.netty.reactor-netty5-core",
 							"Import-Package: ", //only assert the section is there
 							"Require-Capability:",
 							"Export-Package:", //only assert the section is there

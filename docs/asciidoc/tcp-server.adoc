@@ -1,5 +1,5 @@
-:sourcedir: ./../../reactor-netty-core/src/main/java
-:examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server
+:sourcedir: ./../../reactor-netty5-core/src/main/java
+:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty/examples/documentation/tcp/server
 :javadoc: https://projectreactor.io/docs/netty/release/api
 :nettyjavadoc: https://netty.io/4.1/api
 :wirelogger: reactor.netty5.tcp.TcpServer

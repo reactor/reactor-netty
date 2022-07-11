@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 dependencies {
-	api project(':reactor-netty-http')
+	api project(':reactor-netty5-http')
 
 	api "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 

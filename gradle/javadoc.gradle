@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-if (project.name == 'reactor-netty-examples') {
+if (project.name == 'reactor-netty5-examples') {
 	return
 }
 
