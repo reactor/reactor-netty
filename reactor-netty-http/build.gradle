@@ -22,7 +22,7 @@ apply plugin: 'biz.aQute.bnd.builder'
 
 ext {
 	bndOptions = [
-			"Export-Package" : "reactor.netty.http*;version=$osgiVersion;-noimport:=true",
+			"Export-Package" : "reactor.netty5.http*;version=$osgiVersion;-noimport:=true",
 			"Import-Package": [
 					"!javax.annotation",
 					"io.netty5.channel.kqueue;resolution:=optional;version=\"[4.1,5)\"",
@@ -168,7 +168,7 @@ dependencies {
 
 jar {
 	manifest {
-		attributes("Automatic-Module-Name": "reactor.netty.http")
+		attributes("Automatic-Module-Name": "reactor.netty5.http")
 	}
 	bnd(bndOptions)
 }

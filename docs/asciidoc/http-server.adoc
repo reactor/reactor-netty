@@ -1,7 +1,7 @@
 :sourcedir: ./../../reactor-netty-http/src/main/java
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server
 :javadoc: https://projectreactor.io/docs/netty/release/api
-:wirelogger: reactor.netty.http.server.HttpServer
+:wirelogger: reactor.netty5.http.server.HttpServer
 
 [[http-server]]
 = HTTP Server
@@ -421,7 +421,7 @@ include::{examplesdir}/sni/Application.java[lines=18..47]
 
 You can enable the `HTTP` access log either programmatically or by configuration. By default, it is disabled.
 
-You can use `-Dreactor.netty.http.server.accessLogEnabled=true` to enable the `HTTP` access log by configuration.
+You can use `-Dreactor.netty5.http.server.accessLogEnabled=true` to enable the `HTTP` access log by configuration.
 
 You can use the following configuration (for Logback or similar logging frameworks) to have a separate
 `HTTP` access log file:
@@ -439,7 +439,7 @@ You can use the following configuration (for Logback or similar logging framewor
     <appender-ref ref="accessLog" />
 </appender>
 
-<logger name="reactor.netty.http.server.AccessLog" level="INFO" additivity="false">
+<logger name="reactor.netty5.http.server.AccessLog" level="INFO" additivity="false">
     <appender-ref ref="async"/>
 </logger>
 ----
@@ -553,30 +553,30 @@ include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..52]
 
 == Metrics
 The HTTP server supports built-in integration with https://micrometer.io/[`Micrometer`].
-It exposes all metrics with a prefix of `reactor.netty.http.server`.
+It exposes all metrics with a prefix of `reactor.netty5.http.server`.
 
 The following table provides information for the HTTP server metrics:
 
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.http.server.streams.active | Gauge | The number of active HTTP/2 streams.
+| reactor.netty5.http.server.streams.active | Gauge | The number of active HTTP/2 streams.
 See <<observability-metrics-streams-active>>
-| reactor.netty.http.server.connections.active | Gauge | The number of http connections currently processing requests.
+| reactor.netty5.http.server.connections.active | Gauge | The number of http connections currently processing requests.
 See <<observability-metrics-connections-active>>
-| reactor.netty.http.server.connections.total | Gauge | The number of all opened connections.
+| reactor.netty5.http.server.connections.total | Gauge | The number of all opened connections.
 See <<observability-metrics-connections-total>>
-| reactor.netty.http.server.data.received | DistributionSummary | Amount of the data received, in bytes.
+| reactor.netty5.http.server.data.received | DistributionSummary | Amount of the data received, in bytes.
 See <<observability-metrics-data-received>>
-| reactor.netty.http.server.data.sent | DistributionSummary | Amount of the data sent, in bytes.
+| reactor.netty5.http.server.data.sent | DistributionSummary | Amount of the data sent, in bytes.
 See <<observability-metrics-data-sent>>
-| reactor.netty.http.server.errors | Counter | Number of errors that occurred.
+| reactor.netty5.http.server.errors | Counter | Number of errors that occurred.
 See <<observability-metrics-errors-count>>
-| reactor.netty.http.server.data.received.time | Timer | Time spent in consuming incoming data.
+| reactor.netty5.http.server.data.received.time | Timer | Time spent in consuming incoming data.
 See <<observability-metrics-http-server-data-received-time>>
-| reactor.netty.http.server.data.sent.time | Timer | Time spent in sending outgoing data.
+| reactor.netty5.http.server.data.sent.time | Timer | Time spent in sending outgoing data.
 See <<observability-metrics-http-server-data-sent-time>>
-| reactor.netty.http.server.response.time | Timer | Total time for the request/response
+| reactor.netty5.http.server.response.time | Timer | Total time for the request/response
 See <<observability-metrics-http-server-response-time>>
 |=======
 

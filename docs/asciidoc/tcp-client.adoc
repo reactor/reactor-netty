@@ -2,7 +2,7 @@
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client
 :javadoc: https://projectreactor.io/docs/netty/release/api
 :nettyjavadoc: https://netty.io/4.1/api
-:wirelogger: reactor.netty.tcp.TcpClient
+:wirelogger: reactor.netty5.tcp.TcpClient
 
 [[tcp-client]]
 = TCP Client
@@ -270,24 +270,24 @@ include::proxy.adoc[]
 
 == Metrics
 The TCP client supports built-in integration with https://micrometer.io/[`Micrometer`].
-It exposes all metrics with a prefix of `reactor.netty.tcp.client`.
+It exposes all metrics with a prefix of `reactor.netty5.tcp.client`.
 
 The following table provides information for the TCP client metrics:
 
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.tcp.client.data.received | DistributionSummary | Amount of the data received, in bytes.
+| reactor.netty5.tcp.client.data.received | DistributionSummary | Amount of the data received, in bytes.
 See <<observability-metrics-data-received>>
-| reactor.netty.tcp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
+| reactor.netty5.tcp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
 See <<observability-metrics-data-sent>>
-| reactor.netty.tcp.client.errors | Counter | Number of errors that occurred.
+| reactor.netty5.tcp.client.errors | Counter | Number of errors that occurred.
 See <<observability-metrics-errors-count>>
-| reactor.netty.tcp.client.tls.handshake.time | Timer | Time spent for TLS handshake.
+| reactor.netty5.tcp.client.tls.handshake.time | Timer | Time spent for TLS handshake.
 See <<observability-metrics-tls-handshake-time>>
-| reactor.netty.tcp.client.connect.time | Timer | Time spent for connecting to the remote address.
+| reactor.netty5.tcp.client.connect.time | Timer | Time spent for connecting to the remote address.
 See <<observability-metrics-connect-time>>
-| reactor.netty.tcp.client.address.resolver | Timer | Time spent for resolving the address.
+| reactor.netty5.tcp.client.address.resolver | Timer | Time spent for resolving the address.
 See <<observability-metrics-hostname-resolution-time>>
 |=======
 

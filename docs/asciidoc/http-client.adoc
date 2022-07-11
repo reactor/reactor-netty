@@ -2,7 +2,7 @@
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client
 :javadoc: https://projectreactor.io/docs/netty/release/api
 :nettyjavadoc: https://netty.io/4.1/api
-:wirelogger: reactor.netty.http.client.HttpClient
+:wirelogger: reactor.netty5.http.client.HttpClient
 
 [[http-client]]
 = HTTP Client
@@ -358,30 +358,30 @@ include::proxy.adoc[]
 
 == Metrics
 The HTTP client supports built-in integration with https://micrometer.io/[`Micrometer`].
-It exposes all metrics with a prefix of `reactor.netty.http.client`.
+It exposes all metrics with a prefix of `reactor.netty5.http.client`.
 
 The following table provides information for the HTTP client metrics:
 
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.http.client.data.received | DistributionSummary | Amount of the data received, in bytes.
+| reactor.netty5.http.client.data.received | DistributionSummary | Amount of the data received, in bytes.
 See <<observability-metrics-data-received>>
-| reactor.netty.http.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
+| reactor.netty5.http.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
 See <<observability-metrics-data-sent>>
-| reactor.netty.http.client.errors | Counter | Number of errors that occurred.
+| reactor.netty5.http.client.errors | Counter | Number of errors that occurred.
 See <<observability-metrics-errors-count>>
-| reactor.netty.http.client.tls.handshake.time | Timer | Time spent for TLS handshake.
+| reactor.netty5.http.client.tls.handshake.time | Timer | Time spent for TLS handshake.
 See <<observability-metrics-tls-handshake-time>>
-| reactor.netty.http.client.connect.time | Timer | Time spent for connecting to the remote address.
+| reactor.netty5.http.client.connect.time | Timer | Time spent for connecting to the remote address.
 See <<observability-metrics-connect-time>>
-| reactor.netty.http.client.address.resolver | Timer | Time spent for resolving the address.
+| reactor.netty5.http.client.address.resolver | Timer | Time spent for resolving the address.
 See <<observability-metrics-hostname-resolution-time>>
-| reactor.netty.http.client.data.received.time | Timer | Time spent in consuming incoming data.
+| reactor.netty5.http.client.data.received.time | Timer | Time spent in consuming incoming data.
 See <<observability-metrics-http-client-data-received-time>>
-| reactor.netty.http.client.data.sent.time | Timer | Time spent in sending outgoing data.
+| reactor.netty5.http.client.data.sent.time | Timer | Time spent in sending outgoing data.
 See <<observability-metrics-http-client-data-sent-time>>
-| reactor.netty.http.client.response.time | Timer | Total time for the request/response
+| reactor.netty5.http.client.response.time | Timer | Total time for the request/response
 See <<observability-metrics-http-client-response-time>>
 |=======
 
@@ -394,9 +394,9 @@ The following table provides information for the HTTP client metrics when it is 
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.connection.provider.active.streams | Gauge | The number of the active HTTP/2 streams.
+| reactor.netty5.connection.provider.active.streams | Gauge | The number of the active HTTP/2 streams.
 See <<observability-metrics-active-streams>>
-| reactor.netty.connection.provider.pending.streams | Gauge | The number of requests that are waiting for opening HTTP/2 stream.
+| reactor.netty5.connection.provider.pending.streams | Gauge | The number of requests that are waiting for opening HTTP/2 stream.
 See <<observability-metrics-pending-streams>>
 |=======
 

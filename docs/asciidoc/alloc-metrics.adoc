@@ -3,18 +3,18 @@
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.buffer.allocator.used.memory | Gauge | The number of bytes reserved by the buffer allocator.
+| reactor.netty5.buffer.allocator.used.memory | Gauge | The number of bytes reserved by the buffer allocator.
 See <<observability-metrics-used-memory>>
-| reactor.netty.buffer.allocator.arenas | Gauge | The number of arenas.
+| reactor.netty5.buffer.allocator.arenas | Gauge | The number of arenas.
 See <<observability-metrics-arenas>>
-| reactor.netty.buffer.allocator.threadlocal.caches | Gauge | The number of thread local caches.
+| reactor.netty5.buffer.allocator.threadlocal.caches | Gauge | The number of thread local caches.
 See <<observability-metrics-thread-local-caches>>
-| reactor.netty.buffer.allocator.small.cache.size | Gauge | The size of the small cache.
+| reactor.netty5.buffer.allocator.small.cache.size | Gauge | The size of the small cache.
 See <<observability-metrics-small-cache-size>>
-| reactor.netty.buffer.allocator.normal.cache.size | Gauge | The size of the normal cache.
+| reactor.netty5.buffer.allocator.normal.cache.size | Gauge | The size of the normal cache.
 See <<observability-metrics-normal-cache-size>>
-| reactor.netty.buffer.allocator.chunk.size | Gauge | The chunk size for an arena.
+| reactor.netty5.buffer.allocator.chunk.size | Gauge | The chunk size for an arena.
 See <<observability-metrics-chunk-size>>
-| reactor.netty.buffer.allocator.active.memory | Gauge | The actual bytes consumed by in-use buffers allocated from buffer pools.
+| reactor.netty5.buffer.allocator.active.memory | Gauge | The actual bytes consumed by in-use buffers allocated from buffer pools.
 See <<observability-metrics-active-memory>>
 |=======

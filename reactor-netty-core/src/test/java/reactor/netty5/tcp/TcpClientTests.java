@@ -1,0 +1,1215 @@
+/*
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package reactor.netty5.tcp;
+
+import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import io.netty5.buffer.api.Buffer;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.handler.codec.LineBasedFrameDecoder;
+import io.netty5.resolver.AddressResolverGroup;
+import io.netty5.resolver.DefaultAddressResolverGroup;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import reactor.netty5.Connection;
+import reactor.netty5.DisposableServer;
+import reactor.netty5.NettyOutbound;
+import reactor.netty5.SocketUtils;
+import reactor.netty5.channel.AbortedException;
+import reactor.netty5.channel.ChannelOperations;
+import reactor.netty5.resources.ConnectionProvider;
+import reactor.netty5.resources.LoopResources;
+import reactor.netty5.transport.NameResolverProvider;
+import reactor.test.StepVerifier;
+import reactor.util.Logger;
+import reactor.util.Loggers;
+import reactor.util.retry.Retry;
+
+import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assumptions.assumeThat;
+
+/**
+ * @author Stephane Maldini
+ * @since 2.5
+ */
+public class TcpClientTests {
+
+	static final Logger log = Loggers.getLogger(TcpClientTests.class);
+
+	private final ExecutorService threadPool = Executors.newCachedThreadPool();
+	int                     echoServerPort;
+	EchoServer              echoServer;
+	Future<?>               echoServerFuture;
+	int                     abortServerPort;
+	ConnectionAbortServer   abortServer;
+	Future<?>               abortServerFuture;
+	int                     timeoutServerPort;
+	ConnectionTimeoutServer timeoutServer;
+	Future<?>               timeoutServerFuture;
+	int                     heartbeatServerPort;
+	HeartbeatServer         heartbeatServer;
+	Future<?>               heartbeatServerFuture;
+
+	@BeforeEach
+	void setup() throws Exception {
+		echoServerPort = SocketUtils.findAvailableTcpPort();
+		echoServer = new EchoServer(echoServerPort);
+		echoServerFuture = threadPool.submit(echoServer);
+		if (!echoServer.await(10, TimeUnit.SECONDS)) {
+			throw new IOException("fail to start test server");
+		}
+
+		abortServerPort = SocketUtils.findAvailableTcpPort();
+		abortServer = new ConnectionAbortServer(abortServerPort);
+		abortServerFuture = threadPool.submit(abortServer);
+		if (!abortServer.await(10, TimeUnit.SECONDS)) {
+			throw new IOException("fail to start test server");
+		}
+
+		timeoutServerPort = SocketUtils.findAvailableTcpPort();
+		timeoutServer = new ConnectionTimeoutServer(timeoutServerPort);
+		timeoutServerFuture = threadPool.submit(timeoutServer);
+		if (!timeoutServer.await(10, TimeUnit.SECONDS)) {
+			throw new IOException("fail to start test server");
+		}
+
+		heartbeatServerPort = SocketUtils.findAvailableTcpPort();
+		heartbeatServer = new HeartbeatServer(heartbeatServerPort);
+		heartbeatServerFuture = threadPool.submit(heartbeatServer);
+		if (!heartbeatServer.await(10, TimeUnit.SECONDS)) {
+			throw new IOException("fail to start test server");
+		}
+	}
+
+	@AfterEach
+	void cleanup() throws Exception {
+		echoServer.close();
+		abortServer.close();
+		timeoutServer.close();
+		heartbeatServer.close();
+		assertThat(echoServerFuture.get()).isNull();
+		assertThat(abortServerFuture.get()).isNull();
+		assertThat(timeoutServerFuture.get()).isNull();
+		assertThat(heartbeatServerFuture.get()).isNull();
+		threadPool.shutdown();
+		threadPool.awaitTermination(5, TimeUnit.SECONDS);
+		Thread.sleep(500);
+	}
+
+	@Test
+	void disableSsl() {
+		TcpClient secureClient = TcpClient.create()
+		                                  .secure();
+
+		assertThat(secureClient.configuration().isSecure()).isTrue();
+		assertThat(secureClient.noSSL().configuration().isSecure()).isFalse();
+	}
+
+	@Test
+	void testTcpClient() throws InterruptedException {
+		final CountDownLatch latch = new CountDownLatch(1);
+
+		Connection client = TcpClient.create()
+		                             .host("localhost")
+		                             .port(echoServerPort)
+		                             .handle((in, out) -> {
+		                                 in.receive()
+		                                   .log("conn")
+		                                   .subscribe(s -> latch.countDown());
+
+		                                 return out.sendString(Flux.just("Hello World!"))
+		                                           .neverComplete();
+		                             })
+		                             .wiretap(true)
+		                             .connectNow();
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		client.disposeNow();
+	}
+
+
+	@Test
+	void testTcpClient1ThreadAcquire() {
+		LoopResources resources = LoopResources.create("test", 1, true);
+
+		Connection client = TcpClient.create()
+		                             .host("localhost")
+		                             .port(echoServerPort)
+		                             .runOn(resources)
+		                             .wiretap(true)
+		                             .connectNow();
+
+		client.disposeNow();
+		resources.dispose();
+
+		assertThat(client).as("client was configured").isInstanceOf(ChannelOperations.class);
+	}
+
+	@Test
+	void testTcpClientWithInetSocketAddress() throws InterruptedException {
+		final CountDownLatch latch = new CountDownLatch(1);
+
+		TcpClient client = TcpClient.create().port(echoServerPort);
+
+		Connection s =
+				client.handle((in, out) -> {
+				          in.receive()
+				            .subscribe(d -> latch.countDown());
+
+				          return out.sendString(Flux.just("Hello"))
+				                    .neverComplete();
+				      })
+				      .wiretap(true)
+				      .connectNow(Duration.ofSeconds(5));
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		s.disposeNow();
+	}
+
+	@Test
+	void tcpClientHandlesLineFeedData() throws InterruptedException {
+		final int messages = 100;
+		final CountDownLatch latch = new CountDownLatch(messages);
+		final List<String> strings = new ArrayList<>();
+
+		Connection client =
+				TcpClient.create()
+				         .host("localhost")
+				         .port(echoServerPort)
+				         .doOnConnected(c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024)))
+				         .handle((in, out) ->
+				             out.sendString(Flux.range(1, messages)
+				                                .map(i -> "Hello World!" + i + "\n")
+				                                .subscribeOn(Schedulers.parallel()))
+				                .then(in.receive()
+				                        .asString()
+				                        .take(100)
+				                        .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+				                        .doOnNext(s -> {
+				                            strings.add(s);
+				                            latch.countDown();
+				                        })
+				                        .then()))
+				         .wiretap(true)
+				         .connectNow(Duration.ofSeconds(15));
+
+		assertThat(latch.await(15, TimeUnit.SECONDS))
+				.as("Expected messages not received. Received " + strings.size() + " messages: " + strings)
+				.isTrue();
+
+		assertThat(strings).hasSize(messages);
+		client.disposeNow();
+	}
+
+	@Test
+	void tcpClientHandlesLineFeedDataFixedPool() throws InterruptedException {
+		Consumer<? super Connection> channelInit = c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024));
+
+		ConnectionProvider p = ConnectionProvider.newConnection();
+
+		tcpClientHandlesLineFeedData(
+				TcpClient.create(p)
+				         .host("localhost")
+				         .port(echoServerPort)
+				         .doOnConnected(channelInit));
+	}
+
+	@Test
+	void tcpClientHandlesLineFeedDataElasticPool() throws InterruptedException {
+		Consumer<? super Connection> channelInit = c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024));
+
+		tcpClientHandlesLineFeedData(
+				TcpClient.create(ConnectionProvider.create("tcpClientHandlesLineFeedDataElasticPool", Integer.MAX_VALUE))
+				         .host("localhost")
+				         .port(echoServerPort)
+				         .doOnConnected(channelInit));
+	}
+
+	private void tcpClientHandlesLineFeedData(TcpClient client) throws InterruptedException {
+		final int messages = 100;
+		final CountDownLatch latch = new CountDownLatch(messages);
+		final List<String> strings = new ArrayList<>();
+
+		Connection c = client.handle((in, out) ->
+		                         out.sendString(Flux.range(1, messages)
+		                                            .map(i -> "Hello World!" + i + "\n")
+		                                            .subscribeOn(Schedulers.parallel()))
+		                            .then(in.receive()
+		                                    .asString()
+		                                    .take(100)
+		                                    .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+		                                    .doOnNext(s -> {
+		                                        strings.add(s);
+		                                        latch.countDown();
+		                                    }).then()))
+		                     .wiretap(true)
+		                     .connectNow(Duration.ofSeconds(30));
+
+		log.debug("Connected");
+
+		c.onDispose()
+		 .log()
+		 .block(Duration.ofSeconds(30));
+
+		assertThat(latch.await(15, TimeUnit.SECONDS))
+				.as("Expected messages not received. Received " + strings.size() + " messages: " + strings)
+				.isTrue();
+
+		assertThat(strings).hasSize(messages);
+	}
+
+	@Test
+	void closingPromiseIsFulfilled() {
+		TcpClient client =
+				TcpClient.newConnection()
+				         .host("localhost")
+				         .port(abortServerPort);
+
+		client.handle((in, out) -> Mono.empty())
+		      .wiretap(true)
+		      .connectNow()
+		      .disposeNow();
+	}
+
+	/*Check in details*/
+	private void connectionWillRetryConnectionAttemptWhenItFails(TcpClient client) throws InterruptedException {
+		final CountDownLatch latch = new CountDownLatch(1);
+		final AtomicLong totalDelay = new AtomicLong();
+
+		client.handle((in, out) -> Mono.never())
+		      .wiretap(true)
+		      .connect()
+		      .retryWhen(Retry.from(errors -> errors.flatMap(attempt -> {
+		                                          switch ((int) attempt.totalRetries()) {
+		                                              case 0:
+		                                                  totalDelay.addAndGet(100);
+		                                                  return Mono.delay(Duration.ofMillis(100));
+		                                              case 1:
+		                                                  totalDelay.addAndGet(500);
+		                                                  return Mono.delay(Duration.ofMillis(500));
+		                                              case 2:
+		                                                  totalDelay.addAndGet(1000);
+		                                                  return Mono.delay(Duration.ofSeconds(1));
+		                                              default:
+		                                                  latch.countDown();
+		                                                  return Mono.empty();
+		                                          }
+		                                    })))
+		      .subscribe(System.out::println);
+
+		assertThat(latch.await(15, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(totalDelay.get()).as("totalDelay was >1.6s").isGreaterThanOrEqualTo(1600L);
+	}
+
+	/*Check in details*/
+	@Test
+	void connectionWillRetryConnectionAttemptWhenItFailsElastic() throws InterruptedException {
+		connectionWillRetryConnectionAttemptWhenItFails(
+				TcpClient.create()
+				         .host("localhost")
+				         .port(abortServerPort + 3)
+				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100));
+	}
+
+	//see https://github.com/reactor/reactor-netty/issues/289
+	@Test
+	void connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool() throws InterruptedException {
+		connectionWillRetryConnectionAttemptWhenItFails(
+				TcpClient.create(ConnectionProvider.create("connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool", 1))
+				         .host("localhost")
+				         .port(abortServerPort + 3)
+				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100));
+	}
+
+	@Test
+	void connectionWillAttemptToReconnectWhenItIsDropped() throws InterruptedException {
+		final CountDownLatch connectionLatch = new CountDownLatch(1);
+		final CountDownLatch reconnectionLatch = new CountDownLatch(1);
+
+		try {
+			TcpClient tcpClient =
+					TcpClient.newConnection()
+					         .host("localhost")
+					         .port(abortServerPort);
+
+			Mono<? extends Connection> handler =
+					tcpClient.handle((in, out) -> {
+					             log.debug("Start");
+					             connectionLatch.countDown();
+					             in.receive().subscribe();
+					             return Flux.never();
+					         })
+					         .wiretap(true)
+					         .connect();
+
+			Connection c =
+					handler.log()
+					       .then(handler.doOnSuccess(s -> reconnectionLatch.countDown()))
+					       .block(Duration.ofSeconds(30));
+			assertThat(c).isNotNull();
+			c.onDispose();
+
+			assertThat(connectionLatch.await(5, TimeUnit.SECONDS)).as("Initial connection is made").isTrue();
+			assertThat(reconnectionLatch.await(5, TimeUnit.SECONDS)).as("A reconnect attempt was made").isTrue();
+		}
+		catch (AbortedException e) {
+			// ignored
+		}
+	}
+
+	@Test
+	void testCancelSend() throws InterruptedException {
+		final CountDownLatch connectionLatch = new CountDownLatch(3);
+
+		TcpClient tcpClient =
+				TcpClient.newConnection()
+				         .host("localhost")
+		                 .port(echoServerPort);
+		Connection c;
+
+		c = tcpClient.handle((i, o) -> {
+		                 o.sendObject(Mono.never()
+		                                  .doOnCancel(connectionLatch::countDown)
+		                                  .log("uno"))
+		                  .then()
+		                  .subscribe()
+		                  .dispose();
+
+		                 Schedulers.parallel()
+		                           .schedule(() -> o.sendObject(Mono.never()
+		                                                            .doOnCancel(connectionLatch::countDown)
+		                                                            .log("dos"))
+		                                            .then()
+		                                            .subscribe()
+		                                            .dispose());
+
+		                 o.sendObject(Mono.never()
+		                                  .doOnCancel(connectionLatch::countDown)
+		                                  .log("tres"))
+		                  .then()
+		                  .subscribe()
+		                  .dispose();
+
+		                 return Mono.never();
+		             })
+		             .connectNow();
+
+		assertThat(connectionLatch.await(30, TimeUnit.SECONDS)).as("Cancel not propagated").isTrue();
+		c.disposeNow();
+	}
+
+	@Test
+	void consumerSpecAssignsEventHandlers() throws InterruptedException {
+		final CountDownLatch latch = new CountDownLatch(2);
+		final CountDownLatch close = new CountDownLatch(1);
+		final AtomicLong totalDelay = new AtomicLong();
+		final long start = System.currentTimeMillis();
+
+		TcpClient client =
+				TcpClient.create()
+				         .host("localhost")
+				         .port(timeoutServerPort);
+
+		Connection s =
+				client.handle((in, out) -> {
+				          in.withConnection(c -> c.onDispose(close::countDown));
+
+				          out.withConnection(c -> c.onWriteIdle(200, () -> {
+				              totalDelay.addAndGet(System.currentTimeMillis() - start);
+				              latch.countDown();
+				          }));
+
+				          return Mono.delay(Duration.ofSeconds(1))
+				                     .then()
+				                     .log();
+				      })
+				      .wiretap(true)
+				      .connectNow();
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch was counted down").isTrue();
+		assertThat(close.await(30, TimeUnit.SECONDS)).as("close was counted down").isTrue();
+		assertThat(totalDelay.get()).as("totalDelay was > 200ms").isGreaterThanOrEqualTo(200L);
+
+		s.disposeNow();
+	}
+
+	@Test
+	void readIdleDoesNotFireWhileDataIsBeingRead() throws InterruptedException, IOException {
+		final CountDownLatch latch = new CountDownLatch(1);
+		long start = System.currentTimeMillis();
+
+		TcpClient client = TcpClient.create()
+		                            .port(heartbeatServerPort);
+
+		Connection s =
+				client.handle((in, out) -> {
+				          in.withConnection(c -> c.onReadIdle(200, latch::countDown));
+				          return Flux.never();
+				      })
+				      .wiretap(true)
+				      .connectNow();
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
+		heartbeatServer.close();
+
+		long duration = System.currentTimeMillis() - start;
+
+		assertThat(duration).isGreaterThanOrEqualTo(200L);
+		s.disposeNow();
+	}
+
+	@Test
+	void writeIdleDoesNotFireWhileDataIsBeingSent() throws InterruptedException {
+		final CountDownLatch latch = new CountDownLatch(1);
+		long start = System.currentTimeMillis();
+
+		Connection client = TcpClient.create()
+		                             .host("localhost")
+		                             .port(echoServerPort)
+		                             .handle((in, out) -> {
+		                                 log.debug("hello");
+		                                 out.withConnection(c -> c.onWriteIdle(500, latch::countDown));
+
+		                                 List<Publisher<Void>> allWrites = new ArrayList<>();
+		                                 for (int i = 0; i < 5; i++) {
+		                                     allWrites.add(out.sendString(Flux.just("a")
+		                                                                      .delayElements(Duration.ofMillis(750))));
+		                                 }
+		                                 return Flux.merge(allWrites);
+		                             })
+		                             .wiretap(true)
+		                             .connectNow();
+
+		log.debug("Started");
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		long duration = System.currentTimeMillis() - start;
+
+		assertThat(duration).isGreaterThanOrEqualTo(500L);
+		client.disposeNow();
+	}
+
+	@Test
+	void gettingOptionsDuplicates() {
+		TcpClient client1 = TcpClient.create();
+		TcpClient client2 = client1.host("example.com").port(123);
+		assertThat(client2)
+				.isNotSameAs(client1)
+				.isNotSameAs(((TcpClientConnect) client2).duplicate());
+	}
+
+	public static final class EchoServer extends CountDownLatch implements Runnable {
+
+		private final    int                 port;
+		private final    ServerSocketChannel server;
+		private volatile Thread              thread;
+
+		public EchoServer(int port) {
+			super(1);
+			this.port = port;
+			try {
+				server = ServerSocketChannel.open();
+			}
+			catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		@Override
+		public void run() {
+			try {
+				server.configureBlocking(true);
+				server.socket()
+				      .bind(new InetSocketAddress(port));
+				countDown();
+				thread = Thread.currentThread();
+				while (true) {
+					SocketChannel ch = server.accept();
+
+					ByteBuffer buffer = ByteBuffer.allocate(8192);
+					while (true) {
+						int read = ch.read(buffer);
+						if (read > 0) {
+							buffer.flip();
+						}
+
+						int written = ch.write(buffer);
+						if (written < 0) {
+							throw new IOException("Cannot write to client");
+						}
+						buffer.rewind();
+					}
+				}
+			}
+			catch (IOException e) {
+				// Server closed
+			}
+		}
+
+		public void close() throws IOException {
+			Thread thread = this.thread;
+			if (thread != null) {
+				thread.interrupt();
+			}
+			ServerSocketChannel server = this.server;
+			if (server != null) {
+				server.close();
+			}
+		}
+	}
+
+	private static final class ConnectionAbortServer extends CountDownLatch implements Runnable {
+
+		final         int                 port;
+		private final ServerSocketChannel server;
+
+		private ConnectionAbortServer(int port) {
+			super(1);
+			this.port = port;
+			try {
+				server = ServerSocketChannel.open();
+			}
+			catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		@Override
+		public void run() {
+			try {
+				server.configureBlocking(true);
+				server.socket()
+				      .bind(new InetSocketAddress(port));
+				countDown();
+				while (true) {
+					SocketChannel ch = server.accept();
+					log.debug("ABORTING");
+					ch.close();
+				}
+			}
+			catch (Exception e) {
+				Loggers.getLogger(this.getClass()).debug("", e);
+			}
+		}
+
+		public void close() throws IOException {
+			ServerSocketChannel server = this.server;
+			if (server != null) {
+				server.close();
+			}
+		}
+	}
+
+	private static final class ConnectionTimeoutServer extends CountDownLatch implements Runnable {
+
+		final         int                 port;
+		private final ServerSocketChannel server;
+
+		private ConnectionTimeoutServer(int port) {
+			super(1);
+			this.port = port;
+			try {
+				server = ServerSocketChannel.open();
+			}
+			catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		@Override
+		public void run() {
+			try {
+				server.configureBlocking(true);
+				server.socket()
+				      .bind(new InetSocketAddress(port));
+				countDown();
+				while (true) {
+					SocketChannel ch = server.accept();
+					ByteBuffer buff = ByteBuffer.allocate(1);
+					ch.read(buff);
+				}
+			}
+			catch (IOException e) {
+				// ignore
+			}
+		}
+
+		public void close() throws IOException {
+			ServerSocketChannel server = this.server;
+			if (server != null) {
+				server.close();
+			}
+		}
+	}
+
+	private static final class HeartbeatServer extends CountDownLatch implements Runnable {
+
+		final         int                 port;
+		private final ServerSocketChannel server;
+
+		private HeartbeatServer(int port) {
+			super(1);
+			this.port = port;
+			try {
+				server = ServerSocketChannel.open();
+			}
+			catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		@Override
+		public void run() {
+			try {
+				server.configureBlocking(true);
+				server.socket()
+				      .bind(new InetSocketAddress(port));
+				countDown();
+				while (true) {
+					SocketChannel ch = server.accept();
+					while (server.isOpen()) {
+						ByteBuffer out = ByteBuffer.allocate(1);
+						out.put((byte) '\n');
+						out.flip();
+						ch.write(out);
+						Thread.sleep(100);
+					}
+				}
+			}
+			catch (IOException e) {
+				// Server closed
+			}
+			catch (InterruptedException ie) {
+				// ignore
+			}
+		}
+
+		public void close() throws IOException {
+			ServerSocketChannel server = this.server;
+			if (server != null) {
+				server.close();
+			}
+		}
+	}
+
+
+	@Test
+	void testIssue600_1() {
+		doTestIssue600(true);
+	}
+
+	@Test
+	void testIssue600_2() {
+		doTestIssue600(false);
+	}
+
+	private void doTestIssue600(boolean withLoop) {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.send(req.receive()
+				                                           .transferOwnership()
+				                                           .delaySubscription(Duration.ofSeconds(1))))
+				         .wiretap(true)
+				         .bindNow();
+
+		ConnectionProvider pool = ConnectionProvider.create("doTestIssue600", 10);
+		LoopResources loop = LoopResources.create("test", 4, true);
+		TcpClient client;
+		if (withLoop) {
+			client =
+					TcpClient.create(pool)
+					         .remoteAddress(server::address)
+					         .runOn(loop);
+		}
+		else {
+			client =
+					TcpClient.create(pool)
+					         .remoteAddress(server::address);
+		}
+
+		Set<String> threadNames = new ConcurrentSkipListSet<>();
+		Flux.range(1, 4)
+		    .flatMap(i ->
+		        client.handle((in, out) -> {
+		                  threadNames.add(Thread.currentThread().getName());
+		                  return out.send(Flux.empty());
+		              })
+		              .connect())
+		    .as(StepVerifier::create)
+		    .expectNextCount(4)
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(30));
+
+		pool.dispose();
+		loop.dispose();
+		server.disposeNow();
+
+		assertThat(threadNames.size()).isGreaterThan(1);
+	}
+
+	@Test
+	void testRetryOnDifferentAddress() throws Exception {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .wiretap(true)
+				         .handle((req, res) -> res.sendString(Mono.just("test")))
+				         .bindNow();
+
+		final CountDownLatch latch = new CountDownLatch(1);
+
+		Supplier<SocketAddress> addressSupplier = new Supplier<>() {
+			int i = 2;
+
+			@Override
+			public SocketAddress get() {
+				return new InetSocketAddress("localhost", server.port() + i--);
+			}
+		};
+
+		Connection  conn =
+				TcpClient.create()
+				         .remoteAddress(addressSupplier)
+				         .doOnConnected(connection -> latch.countDown())
+				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100)
+				         .handle((in, out) -> Mono.never())
+				         .wiretap(true)
+				         .connect()
+				         .retry()
+				         .block(Duration.ofSeconds(30));
+		assertThat(conn).isNotNull();
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		conn.disposeNow();
+		server.disposeNow();
+	}
+
+	@Test
+	void testReconnectWhenDisconnected() throws Exception {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .wiretap(true)
+				         .handle((req, res) -> res.sendString(Mono.just("test")))
+				         .bindNow();
+
+		final CountDownLatch latch = new CountDownLatch(1);
+
+		TcpClient  client =
+				TcpClient.create()
+				         .port(echoServerPort)
+				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100)
+				         .handle((in, out) -> out.withConnection(Connection::dispose))
+				         .wiretap(true);
+
+		connect(client, true, latch);
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		server.disposeNow();
+	}
+
+	private void connect(TcpClient  client, boolean reconnect, CountDownLatch latch) {
+		client.connect()
+		      .subscribe(
+		          conn -> {
+		              if (reconnect) {
+		                  conn.onTerminate()
+		                      .subscribe(null, null, () -> connect(client, false, latch));
+		              }
+		          },
+		          null,
+		          latch::countDown);
+	}
+
+	@Test
+	void testIssue585_1() throws Exception {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.send(req.receive().transferOwnership()))
+				         .wiretap(true)
+				         .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+
+		byte[] bytes = "test".getBytes(Charset.defaultCharset());
+		Buffer b1 = preferredAllocator().copyOf(bytes);
+		Buffer b2 = preferredAllocator().copyOf(bytes);
+		Buffer b3 = preferredAllocator().copyOf(bytes);
+
+		WeakReference<Buffer> refCheck1 = new WeakReference<>(b1);
+		WeakReference<Buffer> refCheck2 = new WeakReference<>(b2);
+		WeakReference<Buffer> refCheck3 = new WeakReference<>(b3);
+
+		Connection conn =
+				TcpClient.create()
+				         .remoteAddress(server::address)
+				         .wiretap(true)
+				         .connectNow();
+
+		NettyOutbound out = conn.outbound();
+
+		Flux.concatDelayError(
+		        out.sendObject(Mono.error(new RuntimeException("test")))
+		           .sendObject(b1)
+		           .then(),
+		        out.sendObject(Mono.error(new RuntimeException("test")))
+		           .sendObject(b2)
+		           .then(),
+		        out.sendObject(Mono.error(new RuntimeException("test")))
+		           .sendObject(b3)
+		           .then())
+		    .doOnError(t -> latch.countDown())
+		    .subscribe(conn.disposeSubscriber());
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		assertThat(b1.isAccessible()).isFalse();
+		b1 = null;
+		checkReference(refCheck1);
+
+		assertThat(b2.isAccessible()).isFalse();
+		b2 = null;
+		checkReference(refCheck2);
+
+		assertThat(b3.isAccessible()).isFalse();
+		b3 = null;
+		checkReference(refCheck3);
+
+		server.disposeNow();
+		conn.disposeNow();
+	}
+
+	@Test
+	void testIssue585_2() throws Exception {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.send(req.receive().transferOwnership()))
+				         .wiretap(true)
+				         .bindNow();
+
+		byte[] bytes = "test".getBytes(Charset.defaultCharset());
+		Buffer b1 = preferredAllocator().copyOf(bytes);
+		Buffer b2 = preferredAllocator().copyOf(bytes);
+		Buffer b3 = preferredAllocator().copyOf(bytes);
+
+		WeakReference<Buffer> refCheck1 = new WeakReference<>(b1);
+		WeakReference<Buffer> refCheck2 = new WeakReference<>(b2);
+		WeakReference<Buffer> refCheck3 = new WeakReference<>(b3);
+
+		Connection conn =
+				TcpClient.create()
+				         .remoteAddress(server::address)
+				         .wiretap(true)
+				         .connectNow();
+
+		NettyOutbound out = conn.outbound();
+
+		out.sendObject(b1)
+		   .then()
+		   .block(Duration.ofSeconds(30));
+
+		assertThat(b1.isAccessible()).isFalse();
+		b1 = null;
+		checkReference(refCheck1);
+
+		out.sendObject(b2)
+		   .then()
+		   .block(Duration.ofSeconds(30));
+
+		assertThat(b2.isAccessible()).isFalse();
+		b2 = null;
+		checkReference(refCheck2);
+
+		out.sendObject(b3)
+		   .then()
+		   .block(Duration.ofSeconds(30));
+
+		assertThat(b3.isAccessible()).isFalse();
+		b3 = null;
+		checkReference(refCheck3);
+
+		server.disposeNow();
+		conn.disposeNow();
+	}
+
+	private void checkReference(WeakReference<Buffer> ref) throws Exception {
+		for (int i = 0; i < 10; i++) {
+			if (ref.get() == null) {
+				return;
+			}
+			System.gc();
+			Thread.sleep(100);
+		}
+
+		assertThat(ref.get()).isNull();
+	}
+
+	@Test
+	void testTcpClientWithDomainSocketsNIOTransport() {
+		LoopResources loop = LoopResources.create("testTcpClientWithDomainSocketsNIOTransport");
+		try {
+			assertThatExceptionOfType(IllegalArgumentException.class)
+					.isThrownBy(() ->
+						TcpClient.create()
+						         .runOn(loop, false)
+						         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+						         .connectNow());
+		}
+		finally {
+			loop.disposeLater()
+			    .block(Duration.ofSeconds(30));
+		}
+	}
+
+	@Test
+	void testTcpClientWithDomainSocketsWithHost() {
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> TcpClient.create()
+		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .host("localhost")
+		                                   .connectNow());
+	}
+
+	@Test
+	void testTcpClientWithDomainSocketsWithPort() {
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> TcpClient.create()
+		                                   .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		                                   .port(1234)
+		                                   .connectNow());
+	}
+
+	@Test
+	void testDefaultResolverWithCustomEventLoop() throws Exception {
+		LoopResources loop1 = LoopResources.create("test", 1, true);
+		EventLoopGroup loop2 = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+		TcpClient client = TcpClient.create();
+		TcpClient newClient = null;
+		try {
+			assertThat(client.configuration().resolver()).isNull();
+
+			newClient = client.runOn(loop1);
+
+			assertThat(newClient.configuration().resolver()).isNotNull();
+			newClient.configuration()
+			         .resolver()
+			         .getResolver(loop2.next())
+			         .resolve(new InetSocketAddress("example.com", 443))
+			         .addListener(f -> assertThat(Thread.currentThread().getName()).startsWith("test-"));
+		}
+		finally {
+			if (newClient != null && newClient.configuration().resolver() != null) {
+				newClient.configuration()
+				         .resolver()
+				         .close();
+			}
+			loop1.disposeLater()
+			     .block(Duration.ofSeconds(10));
+			loop2.shutdownGracefully()
+			     .asStage().get(10, TimeUnit.SECONDS);
+		}
+	}
+
+	@Test
+	void testCustomLoopCustomResolver() {
+		LoopResources loop1 = LoopResources.create("loop1", 1, true);
+		LoopResources loop2 = LoopResources.create("loop2", 1, true);
+		LoopResources loop3 = LoopResources.create("loop3", 1, true);
+
+		TcpClient client = TcpClient.create();
+
+		try {
+			assertThat(client.configuration().loopResources()).isSameAs(TcpResources.get());
+			assertThat(client.configuration().resolver()).isNull();
+			assertThat(client.configuration().getNameResolverProvider()).isNull();
+
+			client = client.runOn(loop1);
+
+			assertThat(client.configuration().loopResources()).isSameAs(loop1);
+			AddressResolverGroup<?> resolver1 = client.configuration().resolver();
+			NameResolverProvider nameResolverProvider1 = client.configuration().getNameResolverProvider();
+			assertThat(resolver1).isNotNull();
+			assertThat(nameResolverProvider1).isNotNull();
+			resolver1.close();
+
+			client = client.runOn(loop2);
+
+			assertThat(client.configuration().loopResources()).isSameAs(loop2);
+			AddressResolverGroup<?> resolver2 = client.configuration().resolver();
+			NameResolverProvider nameResolverProvider2 = client.configuration().getNameResolverProvider();
+			assertThat(resolver2).isNotNull().isNotSameAs(resolver1);
+			assertThat(nameResolverProvider2).isNotNull().isSameAs(nameResolverProvider1);
+			resolver2.close();
+
+			client = client.resolver(DefaultAddressResolverGroup.INSTANCE);
+			assertThat(client.configuration().loopResources()).isSameAs(loop2);
+			assertThat(client.configuration().resolver()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
+			assertThat(client.configuration().getNameResolverProvider()).isNull();
+
+			client = client.runOn(loop3);
+			assertThat(client.configuration().loopResources()).isSameAs(loop3);
+			assertThat(client.configuration().resolver()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
+			assertThat(client.configuration().getNameResolverProvider()).isNull();
+		}
+		finally {
+			loop1.disposeLater()
+			     .block(Duration.ofSeconds(5));
+			loop2.disposeLater()
+			     .block(Duration.ofSeconds(5));
+			loop3.disposeLater()
+			     .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	public void testSharedNameResolver_SharedClientWithConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(TcpClient.create(), true);
+	}
+
+	@Test
+	public void testSharedNameResolver_SharedClientNoConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(TcpClient.newConnection(), true);
+	}
+
+	@Test
+	public void testSharedNameResolver_NotSharedClientWithConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(TcpClient.create(), false);
+	}
+
+	@Test
+	public void testSharedNameResolver_NotSharedClientNoConnectionPool() throws InterruptedException {
+		doTestSharedNameResolver(TcpClient.newConnection(), false);
+	}
+
+	private void doTestSharedNameResolver(TcpClient client, boolean sharedClient) throws InterruptedException {
+		DisposableServer disposableServer =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.sendString(Mono.just("testNoOpenedFileDescriptors")))
+				         .bindNow(Duration.ofSeconds(30));
+
+		LoopResources loop = LoopResources.create("doTestSharedNameResolver", 4, true);
+		AtomicReference<List<AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
+		try {
+			int count = 8;
+			CountDownLatch latch = new CountDownLatch(count);
+			TcpClient localClient = null;
+			if (sharedClient) {
+				localClient = client.runOn(loop)
+				               .port(disposableServer.port())
+				               .doOnConnect(config -> resolvers.get().add(config.resolver()))
+				               .doOnConnected(conn -> conn.onDispose(latch::countDown));
+			}
+			for (int i = 0; i < count; i++) {
+				if (!sharedClient) {
+					localClient = client.runOn(loop)
+					               .port(disposableServer.port())
+					               .doOnConnect(config -> resolvers.get().add(config.resolver()))
+					               .doOnConnected(conn -> conn.onDispose(latch::countDown));
+				}
+				localClient.handle((in, out) -> in.receive().then())
+				      .connect()
+				      .subscribe();
+			}
+
+			assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(resolvers.get().size()).isEqualTo(count);
+			AddressResolverGroup<?> resolver = resolvers.get().get(0);
+			assertThat(resolvers.get()).allMatch(addressResolverGroup -> addressResolverGroup == resolver);
+		}
+		finally {
+			disposableServer.disposeNow();
+			loop.disposeLater()
+			    .block();
+		}
+	}
+
+	/* https://github.com/reactor/reactor-netty/issues/1765 */
+	@Test
+	void noSystemProxySettings() {
+		Properties props = System.getProperties();
+		assumeThat(!(props.containsKey("http.proxyHost") || props.containsKey("https.proxyHost")
+				|| props.containsKey("socksProxyHost"))).isTrue();
+
+		DisposableServer disposableServer =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.sendString(Mono.just("noSystemProxySettings")))
+				         .bindNow();
+
+		AtomicReference<AddressResolverGroup<?>> resolver = new AtomicReference<>();
+		Connection conn = null;
+		try {
+			conn = TcpClient.create()
+			                .host("localhost")
+			                .port(disposableServer.port())
+			                .proxyWithSystemProperties()
+			                .doOnConnect(conf -> resolver.set(conf.resolver()))
+			                .connectNow();
+		}
+		finally {
+			disposableServer.disposeNow();
+			if (conn != null) {
+				conn.disposeNow();
+			}
+		}
+
+		assertThat(resolver.get()).isNull();
+	}
+}
