@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-rootProject.name = 'reactor-netty'
-include 'reactor-netty-core'
-include 'reactor-netty-http'
+rootProject.name = 'reactor-netty5'
+include 'reactor-netty5-core'
+include 'reactor-netty5-http'
 //include 'reactor-netty-incubator-quic'
-include 'reactor-netty-examples'
-include 'reactor-netty'
+include 'reactor-netty5-examples'
+include 'reactor-netty5'

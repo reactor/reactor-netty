@@ -1,8 +1,8 @@
-:sourcedir: ./../../reactor-netty-core/src/main/java
-:examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server
+:sourcedir: ./../../reactor-netty5-core/src/main/java
+:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty/examples/documentation/tcp/server
 :javadoc: https://projectreactor.io/docs/netty/release/api
 :nettyjavadoc: https://netty.io/4.1/api
-:wirelogger: reactor.netty.tcp.TcpServer
+:wirelogger: reactor.netty5.tcp.TcpServer
 
 [[tcp-server]]
 = TCP Server
@@ -246,22 +246,22 @@ include::{examplesdir}/sni/Application.java[lines=18..47]
 
 == Metrics
 The TCP server supports built-in integration with https://micrometer.io/[`Micrometer`].
-It exposes all metrics with a prefix of `reactor.netty.tcp.server`.
+It exposes all metrics with a prefix of `reactor.netty5.tcp.server`.
 
 The following table provides information for the TCP server metrics:
 
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.tcp.server.connections.total | Gauge | The number of all opened connections.
+| reactor.netty5.tcp.server.connections.total | Gauge | The number of all opened connections.
 See <<observability-metrics-connections-total>>
-| reactor.netty.tcp.server.data.received | DistributionSummary | Amount of the data received, in bytes.
+| reactor.netty5.tcp.server.data.received | DistributionSummary | Amount of the data received, in bytes.
 See <<observability-metrics-data-received>>
-| reactor.netty.tcp.server.data.sent | DistributionSummary | Amount of the data sent, in bytes.
+| reactor.netty5.tcp.server.data.sent | DistributionSummary | Amount of the data sent, in bytes.
 See <<observability-metrics-data-sent>>
-| reactor.netty.tcp.server.errors | Counter | Number of errors that occurred.
+| reactor.netty5.tcp.server.errors | Counter | Number of errors that occurred.
 See <<observability-metrics-errors-count>>
-| reactor.netty.tcp.server.tls.handshake.time | Timer | Time spent for TLS handshake.
+| reactor.netty5.tcp.server.tls.handshake.time | Timer | Time spent for TLS handshake.
 See <<observability-metrics-tls-handshake-time>>
 |=======
 

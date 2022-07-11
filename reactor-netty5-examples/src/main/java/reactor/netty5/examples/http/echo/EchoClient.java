@@ -1,0 +1,62 @@
+/*
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package reactor.netty5.examples.http.echo;
+
+import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
+import reactor.core.publisher.Mono;
+import reactor.netty5.BufferFlux;
+import reactor.netty5.http.Http11SslContextSpec;
+import reactor.netty5.http.client.HttpClient;
+
+/**
+ * An HTTP client that sends POST request to the HTTP server and
+ * receives as a response the content that was sent as a request.
+ *
+ * @author Violeta Georgieva
+ */
+public final class EchoClient {
+
+	static final boolean SECURE = System.getProperty("secure") != null;
+	static final int PORT = Integer.parseInt(System.getProperty("port", SECURE ? "8443" : "8080"));
+	static final boolean WIRETAP = System.getProperty("wiretap") != null;
+	static final boolean COMPRESS = System.getProperty("compress") != null;
+
+	public static void main(String[] args) {
+		HttpClient client =
+				HttpClient.create()
+				          .port(PORT)
+				          .wiretap(WIRETAP)
+				          .compress(COMPRESS);
+
+		if (SECURE) {
+			Http11SslContextSpec http11SslContextSpec =
+					Http11SslContextSpec.forClient()
+					                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+			client = client.secure(spec -> spec.sslContext(http11SslContextSpec));
+		}
+
+		String response =
+				client.post()
+				      .uri("/echo")
+				      .send(BufferFlux.fromString(Mono.just("echo")))
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .block();
+
+		System.out.println("Response: " + response);
+	}
+}

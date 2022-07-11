@@ -60,13 +60,13 @@ asciidoctorPdf {
 }
 
 task docsZip(type: Zip, dependsOn: [asciidoctor, asciidoctorPdf]) {
-	archiveBaseName.set("reactor-netty")
+	archiveBaseName.set("reactor-netty5")
 	archiveClassifier.set("docs")
 	afterEvaluate() {
 		//we copy the pdf late, when a potential customVersion has been applied to rootProject
 		from(asciidoctorPdf) {
 			into("docs/")
-			rename("index.pdf", "reactor-netty-reference-guide-${rootProject.version}.pdf")
+			rename("index.pdf", "reactor-netty5-reference-guide-${rootProject.version}.pdf")
 		}
 	}
 	from(asciidoctor) { into("docs/") }

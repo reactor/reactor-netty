@@ -15,9 +15,9 @@ and is intentional because only the user/framework knows if the actual protocol 
 
 ====
 [source,java,indent=0]
-../../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
+../../../reactor-netty5-core/src/main/java/reactor/netty/ReactorNetty.java
 ----
-include::./../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java[lines=117..127]
+include::./../../reactor-netty5-core/src/main/java/reactor/netty/ReactorNetty.java[lines=117..127]
 ----
 ====
 
@@ -69,7 +69,7 @@ include::{examplesdir}/pool/Application.java[lines=18..35]
 
 === Metrics
 The pooled `ConnectionProvider` supports built-in integration with https://micrometer.io/[`Micrometer`].
-It exposes all metrics with a prefix of `reactor.netty.connection.provider`.
+It exposes all metrics with a prefix of `reactor.netty5.connection.provider`.
 
 include::conn-provider-metrics.adoc[]
 

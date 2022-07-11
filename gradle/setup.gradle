@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 import org.gradle.util.VersionNumber
 
-if (project.name == 'reactor-netty-examples') {
+if (project.name == 'reactor-netty5-examples') {
 	return
 }
 
@@ -53,7 +53,7 @@ task qualifyVersionGha() {
 			throw new TaskExecutionException(tasks.getByName("qualifyVersionGha"), new IllegalArgumentException("Unable to parse $version to a VersionNumber with recognizable qualifier"))
 		}
 
-		if (project.name != 'reactor-netty') {
+		if (project.name != 'reactor-netty5') {
 			return
 		}
 		println "::set-output name=versionType::$versionType"

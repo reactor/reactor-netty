@@ -1,8 +1,8 @@
-:sourcedir: ./../../reactor-netty-core/src/main/java
-:examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/udp/client
+:sourcedir: ./../../reactor-netty5-core/src/main/java
+:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty/examples/documentation/udp/client
 :javadoc: https://projectreactor.io/docs/netty/release/api
 :nettyjavadoc: https://netty.io/4.1/api
-:wirelogger: reactor.netty.udp.UdpClient
+:wirelogger: reactor.netty5.udp.UdpClient
 
 [[udp-client]]
 = UDP Client
@@ -201,22 +201,22 @@ include::{examplesdir}/eventloop/Application.java[lines=18..38]
 
 == Metrics
 The UDP client supports built-in integration with https://micrometer.io/[`Micrometer`].
-It exposes all metrics with a prefix of `reactor.netty.udp.client`.
+It exposes all metrics with a prefix of `reactor.netty5.udp.client`.
 
 The following table provides information for the UDP client metrics:
 
 [width="100%",options="header"]
 |=======
 | metric name | type | description
-| reactor.netty.udp.client.data.received | DistributionSummary | Amount of the data received, in bytes.
+| reactor.netty5.udp.client.data.received | DistributionSummary | Amount of the data received, in bytes.
 See <<observability-metrics-data-received>>
-| reactor.netty.udp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
+| reactor.netty5.udp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
 See <<observability-metrics-data-sent>>
-| reactor.netty.udp.client.errors | Counter | Number of errors that occurred.
+| reactor.netty5.udp.client.errors | Counter | Number of errors that occurred.
 See <<observability-metrics-errors-count>>
-| reactor.netty.udp.client.connect.time | Timer | Time spent for connecting to the remote address.
+| reactor.netty5.udp.client.connect.time | Timer | Time spent for connecting to the remote address.
 See <<observability-metrics-connect-time>>
-| reactor.netty.udp.client.address.resolver | Timer | Time spent for resolving the address.
+| reactor.netty5.udp.client.address.resolver | Timer | Time spent for resolving the address.
 See <<observability-metrics-hostname-resolution-time>>
 |=======
 

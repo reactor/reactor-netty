@@ -1,4 +1,4 @@
-:formattersourcedir: ./../../reactor-netty-core/src/main/java
+:formattersourcedir: ./../../reactor-netty5-core/src/main/java
 
 === Wire Logger
 

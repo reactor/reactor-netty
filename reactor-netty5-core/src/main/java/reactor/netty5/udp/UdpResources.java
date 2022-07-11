@@ -1,0 +1,338 @@
+/*
+ * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package reactor.netty5.udp;
+
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+
+import io.netty5.channel.Channel;
+import io.netty5.channel.EventLoop;
+import io.netty5.channel.EventLoopGroup;
+import io.netty5.resolver.AddressResolverGroup;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import reactor.netty5.ReactorNetty;
+import reactor.netty5.resources.LoopResources;
+import reactor.netty5.transport.NameResolverProvider;
+import reactor.util.Logger;
+import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
+
+import static java.util.Objects.requireNonNull;
+
+/**
+ * Hold the default UDP resources
+ *
+ * @author Violeta Georgieva
+ */
+public class UdpResources implements LoopResources {
+
+	/**
+	 * Return the global UDP resources for pooling
+	 *
+	 * @return the global UDP resources for pooling
+	 */
+	public static UdpResources get() {
+		return getOrCreate(null, ON_UDP_NEW, "udp");
+	}
+
+	/**
+	 * Reset UDP resources to default and return its instance
+	 *
+	 * @return the global UDP resources
+	 */
+	public static UdpResources reset() {
+		shutdown();
+		return getOrCreate(null, ON_UDP_NEW, "udp");
+	}
+
+	/**
+	 * Update event loops resources and return the global UDP resources.
+	 * Note: The previous {@link LoopResources} will be disposed.
+	 *
+	 * @param loops a new {@link LoopResources} to replace the current
+	 * @return the global UDP resources
+	 */
+	public static UdpResources set(LoopResources loops) {
+		return getOrCreate(loops, ON_UDP_NEW, "udp");
+	}
+
+	/**
+	 * Shutdown the global {@link UdpResources} without resetting them,
+	 * effectively cleaning up associated resources without creating new ones.
+	 * This method is NOT blocking. It is implemented as fire-and-forget.
+	 * Use {@link #shutdownLater()} when you need to observe the final
+	 * status of the operation, combined with {@link Mono#block()}
+	 * if you need to synchronously wait for the underlying resources to be disposed.
+	 */
+	public static void shutdown() {
+		UdpResources resources = udpResources.getAndSet(null);
+		if (resources != null) {
+			resources._dispose();
+		}
+	}
+
+	/**
+	 * Prepare to shutdown the global {@link UdpResources} without resetting them,
+	 * effectively cleaning up associated resources without creating new ones. This only
+	 * occurs when the returned {@link Mono} is subscribed to.
+	 * The quiet period will be {@code 2s} and the timeout will be {@code 15s}
+	 *
+	 * @return a {@link Mono} triggering the {@link #shutdown()} when subscribed to.
+	 */
+	public static Mono<Void> shutdownLater() {
+		return shutdownLater(Duration.ofSeconds(LoopResources.DEFAULT_SHUTDOWN_QUIET_PERIOD),
+				Duration.ofSeconds(LoopResources.DEFAULT_SHUTDOWN_TIMEOUT));
+	}
+
+	/**
+	 * Prepare to shutdown the global {@link UdpResources} without resetting them,
+	 * effectively cleaning up associated resources without creating new ones. This only
+	 * occurs when the returned {@link Mono} is subscribed to.
+	 * It is guaranteed that the disposal of the underlying LoopResources will not happen before
+	 * {@code quietPeriod} is over. If a task is submitted during the {@code quietPeriod},
+	 * it is guaranteed to be accepted and the {@code quietPeriod} will start over.
+	 *
+	 * @param quietPeriod the quiet period as described above
+	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
+	 * LoopResources regardless if a task was submitted during the quiet period
+	 * @return a {@link Mono} triggering the {@link #shutdown()} when subscribed to.
+	 * @since 0.9.3
+	 */
+	public static Mono<Void> shutdownLater(Duration quietPeriod, Duration timeout) {
+		requireNonNull(quietPeriod, "quietPeriod");
+		requireNonNull(timeout, "timeout");
+		return Mono.defer(() -> {
+			UdpResources resources = udpResources.getAndSet(null);
+			if (resources != null) {
+				return resources._disposeLater(quietPeriod, timeout);
+			}
+			return Mono.empty();
+		});
+	}
+
+	final LoopResources                            defaultLoops;
+	final AtomicReference<AddressResolverGroup<?>> defaultResolver;
+
+	protected UdpResources(LoopResources defaultLoops) {
+		this.defaultLoops = defaultLoops;
+		this.defaultResolver = new AtomicReference<>();
+	}
+
+	@Override
+	public boolean daemon() {
+		return defaultLoops.daemon();
+	}
+
+	/**
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global UDP resources which has a longer lifecycle than regular {@link LoopResources}.
+	 * If a disposal of the global UDP resources is needed, {@link #shutdown()} should be used instead.
+	 */
+	@Override
+	public void dispose() {
+		//noop on global by default
+	}
+
+	/**
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global UDP resources which has a longer lifecycle than regular {@link LoopResources}.
+	 * If a disposal of the global UDP resources is needed, {@link #shutdownLater()} should be used instead.
+	 */
+	@Override
+	public Mono<Void> disposeLater() {
+		//noop on global by default
+		return Mono.empty();
+	}
+
+	/**
+	 * This has a {@code NOOP} implementation by default in order to prevent unintended disposal of
+	 * the global UDP resources which has a longer lifecycle than regular {@link LoopResources}.
+	 * If a disposal of the global UDP resources is needed, {@link #shutdownLater(Duration, Duration)}
+	 * should be used instead.
+	 */
+	@Override
+	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
+		//noop on global by default
+		return Mono.empty();
+	}
+
+	@Override
+	public boolean isDisposed() {
+		return defaultLoops.isDisposed();
+	}
+
+	@Override
+	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoop eventLoop) {
+		requireNonNull(channelType, "channelType");
+		requireNonNull(eventLoop, "eventLoop");
+		return defaultLoops.onChannel(channelType, eventLoop);
+	}
+
+	@Override
+	public EventLoopGroup onClient(boolean useNative) {
+		return defaultLoops.onClient(useNative);
+	}
+
+	@Override
+	public EventLoopGroup onServer(boolean useNative) {
+		return defaultLoops.onServer(useNative);
+	}
+
+	@Override
+	public EventLoopGroup onServerSelect(boolean useNative) {
+		return defaultLoops.onServerSelect(useNative);
+	}
+
+	/**
+	 * Dispose underlying resources
+	 */
+	protected void _dispose() {
+		_disposeResolver();
+		defaultLoops.dispose();
+	}
+
+	/**
+	 * Dispose underlying resources in a listenable fashion.
+	 * It is guaranteed that the disposal of the underlying LoopResources will not happen before
+	 * {@code quietPeriod} is over. If a task is submitted during the {@code quietPeriod},
+	 * it is guaranteed to be accepted and the {@code quietPeriod} will start over.
+	 *
+	 * @param quietPeriod the quiet period as described above
+	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
+	 * LoopResources regardless if a task was submitted during the quiet period
+	 * @return the Mono that represents the end of disposal
+	 */
+	protected Mono<Void> _disposeLater(Duration quietPeriod, Duration timeout) {
+		return Mono.when(_disposeResolverLater(), defaultLoops.disposeLater(quietPeriod, timeout));
+	}
+
+	/**
+	 * Safely checks whether a name resolver exists and proceed with a creation if it does not exist.
+	 * The name resolver uses as an event loop group the {@link LoopResources} that are configured.
+	 * Guarantees that always one and the same instance is returned for a given {@link LoopResources}
+	 * and if the {@link LoopResources} is updated the name resolver is also updated.
+	 *
+	 * @return an existing or new {@link AddressResolverGroup}
+	 */
+	AddressResolverGroup<?> getOrCreateDefaultResolver() {
+		AddressResolverGroup<?> resolverGroup = defaultResolver.get();
+		if (resolverGroup == null) {
+			AddressResolverGroup<?> newResolverGroup =
+					DEFAULT_NAME_RESOLVER_PROVIDER.newNameResolverGroup(defaultLoops, LoopResources.DEFAULT_NATIVE);
+			if (!defaultResolver.compareAndSet(null, newResolverGroup)) {
+				newResolverGroup.close();
+			}
+			resolverGroup = getOrCreateDefaultResolver();
+		}
+		return resolverGroup;
+	}
+
+	void _disposeResolver() {
+		AddressResolverGroup<?> addressResolverGroup = defaultResolver.get();
+		if (addressResolverGroup != null) {
+			addressResolverGroup.close();
+		}
+	}
+
+	Mono<Void> _disposeResolverLater() {
+		Mono<Void> disposeResolver = Mono.empty();
+		AddressResolverGroup<?> addressResolverGroup = defaultResolver.get();
+		if (addressResolverGroup != null) {
+			disposeResolver = Mono.fromRunnable(addressResolverGroup::close);
+		}
+		return disposeResolver;
+	}
+
+	/**
+	 * Safely check if existing resource exist and proceed to update/cleanup if new
+	 * resources references are passed.
+	 *
+	 * @param loops the eventual new {@link LoopResources}
+	 * @param onNew a {@link UdpResources} factory
+	 * @param name a name for resources
+	 * @return an existing or new {@link UdpResources}
+	 */
+	protected static UdpResources getOrCreate(@Nullable LoopResources loops,
+			Function<LoopResources, UdpResources> onNew, String name) {
+		UdpResources update;
+		for (;;) {
+			UdpResources resources = udpResources.get();
+			if (resources == null || loops != null) {
+				update = create(resources, loops, name, onNew);
+				if (udpResources.compareAndSet(resources, update)) {
+					if (resources != null) {
+						if (log.isWarnEnabled()) {
+							log.warn("[{}] resources will use a new LoopResources: {}," +
+									"the previous LoopResources will be disposed", name, loops);
+						}
+						resources._disposeResolver();
+						resources.defaultLoops.dispose();
+					}
+					else {
+						String loopType = loops == null ? "default" : "provided";
+						if (log.isDebugEnabled()) {
+							log.debug("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
+						}
+					}
+					return update;
+				}
+				else {
+					update._dispose();
+				}
+			}
+			else {
+				return resources;
+			}
+		}
+	}
+
+	static <T extends UdpResources> T create(@Nullable T previous,
+			@Nullable LoopResources loops,
+			String name,
+			Function<LoopResources, T> onNew) {
+		if (previous == null) {
+			loops = loops == null ? LoopResources.create(name, DEFAULT_UDP_THREAD_COUNT, true) : loops;
+		}
+		else {
+			loops = loops == null ? previous.defaultLoops : loops;
+		}
+		return onNew.apply(loops);
+	}
+
+	/**
+	 * Default worker thread count, fallback to available processor
+	 * (but with a minimum value of 4)
+	 */
+	static final int DEFAULT_UDP_THREAD_COUNT = Integer.parseInt(System.getProperty(
+			ReactorNetty.UDP_IO_THREAD_COUNT,
+			"" + Schedulers.DEFAULT_POOL_SIZE));
+
+	static final NameResolverProvider                  DEFAULT_NAME_RESOLVER_PROVIDER;
+
+	static final Logger                                log = Loggers.getLogger(UdpResources.class);
+
+	static final Function<LoopResources, UdpResources> ON_UDP_NEW;
+
+	static final AtomicReference<UdpResources>         udpResources;
+
+	static {
+		DEFAULT_NAME_RESOLVER_PROVIDER = NameResolverProvider.builder().build();
+		ON_UDP_NEW = UdpResources::new;
+		udpResources = new AtomicReference<>();
+	}
+}
