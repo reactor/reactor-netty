@@ -1256,7 +1256,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	/**
-	 * Handler used to ensure that the server has closed the client channel after having sent the response
+	 * This handler is used to wait for the client channel to be closed on the server side. The handler is placed after
+	 * the HttpMetricsHandler or the ChannelMetricsHandler, in order to make sure the
+	 * recorder().recordServerConnectionClosed() method is called before counting down the latch.
 	 */
 	static final class ServerCloseHandler extends ChannelHandlerAdapter {
 		static final ServerCloseHandler INSTANCE = new ServerCloseHandler();
