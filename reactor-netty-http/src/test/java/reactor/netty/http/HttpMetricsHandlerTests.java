@@ -1272,7 +1272,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			}
 			else {
 				// we want to ensure that the ChannelMetricsHandler will invoke recorder().recordServerConnectionClosed() before our channelInactive method
-				connection.channel().parent().pipeline().addLast(INSTANCE);
+				connection.channel().parent().pipeline().addAfter(NettyPipeline.ChannelMetricsHandler, HANDLER_NAME, INSTANCE);
 			}
 		}
 
