@@ -638,6 +638,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity())
 				.bindNow();
 		String address = formatSocketAddress(disposableServer.address());
+
 		CountDownLatch latch = new CountDownLatch(1);
 
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
@@ -659,8 +660,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		// dispose the server, and the client connection provider now, before asserting test expectations
-		disposableServer.disposeNow();
+		// dispose the client connection provider now, before asserting test expectations.
 		provider.disposeLater()
 				.block(Duration.ofSeconds(30));
 
