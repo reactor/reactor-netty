@@ -46,7 +46,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.BufferFlux;
+import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.ContextAwareHttpServerMetricsRecorder;
@@ -634,18 +636,21 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		// ServerRecorder.INSTANCE.reset() (AfterEach) and thus leave ServerRecorder.INSTANCE in a bad state
 		ServerRecorder.INSTANCE.reset();
 		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+		CountDownLatch serverCloseLatch = new CountDownLatch(1);
+
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.doOnConnection(c -> ServerCloseHandler.register(c, serverCloseLatch, isHttp11))
 				.metrics(true, () -> ServerRecorder.INSTANCE, Function.identity())
 				.bindNow();
 		String address = formatSocketAddress(disposableServer.address());
 
-		CountDownLatch latch = new CountDownLatch(1);
+		CountDownLatch clientCloseLatch = new CountDownLatch(1);
 
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
 		httpClient.doOnResponse((res, conn) ->
 						conn.channel()
 								.closeFuture()
-								.addListener(f -> latch.countDown()))
+								.addListener(f -> clientCloseLatch.countDown()))
 				.metrics(true, Function.identity())
 				.post()
 				.uri("/5")
@@ -658,14 +663,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(clientCloseLatch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 		// dispose the client connection provider now, before asserting test expectations.
 		provider.disposeLater()
 				.block(Duration.ofSeconds(30));
 
 		// client socket is closed, wait for the ServerRecorder to be called in recordServerConnectionClosed before asserting test expectations
-		assertThat(ServerRecorder.INSTANCE.closed.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
+		assertThat(serverCloseLatch.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
 
 		// now we can assert test expectations
 		assertThat(ServerRecorder.INSTANCE.error.get()).isNull();
@@ -1140,7 +1145,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		private final AtomicReference<String> onActiveConnectionsLocalAddr = new AtomicReference<>();
 		private final AtomicReference<String> onInactiveConnectionsLocalAddr = new AtomicReference<>();
 		private final AtomicInteger onActiveConnectionsAmount = new AtomicInteger();
-		private volatile CountDownLatch closed = new CountDownLatch(1);
 
 		void reset() {
 			error.set(null);
@@ -1149,7 +1153,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			onActiveConnectionsLocalAddr.set(null);
 			onInactiveConnectionsLocalAddr.set(null);
 			onActiveConnectionsAmount.set(0);
-			closed = new CountDownLatch(1);
 		}
 
 		@Override
@@ -1162,7 +1165,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		public void recordServerConnectionClosed(SocketAddress localAddress) {
 			onServerConnectionsLocalAddr.set(formatSocketAddress(localAddress));
 			onServerConnectionsAmount.addAndGet(-1);
-			closed.countDown();
 		}
 
 		@Override
@@ -1250,6 +1252,39 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		@Override
 		public boolean isSharable() {
 			return true; // A server may accept multiple connections, hence this handler must be sharable
+		}
+	}
+
+	/**
+	 * Handler used to ensure that the server has closed the client channel after having sent the response
+	 */
+	static final class ServerCloseHandler extends ChannelHandlerAdapter {
+		static final ServerCloseHandler INSTANCE = new ServerCloseHandler();
+		static final String HANDLER_NAME = "test.serverclose.handler";
+		private CountDownLatch latch;
+
+		static void register(Connection connection, CountDownLatch latch, boolean http11) {
+			INSTANCE.latch = latch;
+
+			if (http11) {
+				// we want to ensure that the HttpMetricsHandler will invoke recorder().recordServerConnectionClosed() before our channelInactive method
+				connection.channel().pipeline().addAfter(NettyPipeline.HttpMetricsHandler, HANDLER_NAME, INSTANCE);
+			}
+			else {
+				// we want to ensure that the ChannelMetricsHandler will invoke recorder().recordServerConnectionClosed() before our channelInactive method
+				connection.channel().parent().pipeline().addLast(INSTANCE);
+			}
+		}
+
+		@Override
+		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+			latch.countDown();
+			ctx.fireChannelInactive();
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
 		}
 	}
 }
