@@ -84,11 +84,11 @@ ext {
 	}
 
 	//Metrics
-	micrometerVersion = '1.10.0-SNAPSHOT' //optional baseline
-	micrometerTracingVersion = '1.0.0-SNAPSHOT' //optional baseline
-	micrometerDocsVersion = '1.0.0-SNAPSHOT' //optional baseline
+	micrometerVersion = '1.10.0-M3' //optional baseline
+	micrometerTracingVersion = '1.0.0-M6' //optional baseline
+	micrometerDocsVersion = '1.0.0-M5' //optional baseline
 
-	contextPropagationVersion = '1.0.0-SNAPSHOT'
+	contextPropagationVersion = '1.0.0-M3'
 
 	jsr305Version = '3.0.2'
 
