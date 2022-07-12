@@ -212,8 +212,6 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.Metrics#USED_HEAP_MEMORY'
 	]
 	methodExcludes = [
-			"reactor.netty.resources.ConnectionProvider#create(java.lang.String, int, boolean)", // new static method in 1.0.21
-
 			'reactor.netty.NettyInbound#receive()',
 			'reactor.netty.NettyOutbound#alloc()',
 			'reactor.netty.NettyOutbound#send(org.reactivestreams.Publisher, java.util.function.Predicate)',
