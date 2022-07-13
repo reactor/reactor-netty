@@ -10,7 +10,6 @@ jobs:
   # We specify the ubuntu version to minimize the chances we have to deal with a migration during a release
   reactor-netty-core:
     # Notes on reactor-netty-core: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
-    # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
     name: reactor-netty-core
     runs-on: ubuntu-20.04
     outputs:
@@ -34,7 +33,6 @@ jobs:
         run: ./gradlew reactor-netty-core:check
   reactor-netty-http:
     # Notes on reactor-netty-http: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
-    # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
     name: reactor-netty-http
     runs-on: ubuntu-20.04
     steps:
@@ -49,7 +47,6 @@ jobs:
         run: ./gradlew reactor-netty-http:check
   reactor-netty-http-brave:
     # Notes on reactor-netty-http-brave: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
-    # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
     name: reactor-netty-http-brave
     runs-on: ubuntu-20.04
     steps:
@@ -64,7 +61,6 @@ jobs:
         run: ./gradlew reactor-netty-http-brave:check
   reactor-netty-incubator-quic:
     # Notes on reactor-netty-incubator-quic: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
-    # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
     name: reactor-netty-incubator-quic
     runs-on: ubuntu-20.04
     steps:
@@ -146,7 +142,7 @@ jobs:
 
   tagMilestone:
     name: Tag milestone
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, deployMilestone ]
+    needs: [ reactor-netty-core, deployMilestone ]
     runs-on: ubuntu-20.04
     permissions:
       contents: write
@@ -161,7 +157,7 @@ jobs:
 
   tagRelease:
     name: Tag release
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, deployRelease ]
+    needs: [ reactor-netty-core, deployRelease ]
     runs-on: ubuntu-20.04
     permissions:
       contents: write
