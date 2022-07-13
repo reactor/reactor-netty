@@ -1,6 +1,6 @@
 :sourcedir: ./../../reactor-netty-core/src/main/java
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client
-:javadoc: https://projectreactor.io/docs/netty/release/api
+:javadoc: https://projectreactor.io/docs/netty/{project-version}/api
 :nettyjavadoc: https://netty.io/4.1/api
 :wirelogger: reactor.netty.tcp.TcpClient
 
