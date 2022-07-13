@@ -8,10 +8,9 @@ permissions: read-all
 jobs:
   # General job notes: we DON'T want to cancel any previous runs, especially in the case of a "back to snapshots" build right after a release push
   # We specify the ubuntu version to minimize the chances we have to deal with a migration during a release
-  prepare:
-    # Notes on prepare: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
-    # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
-    name: prepare
+  reactor-netty-core:
+    # Notes on reactor-netty-core: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    name: reactor-netty-core
     runs-on: ubuntu-20.04
     outputs:
       versionType: ${{ steps.version.outputs.versionType }}
@@ -29,16 +28,58 @@ jobs:
         #output: versionType, fullVersion
         #fails if versionType is BAD, which interrupts the workflow
         run: ./gradlew qualifyVersionGha
-      - name: run checks
-        id: checks
-        run: ./gradlew check
+      - name: run reactor-netty-core checks
+        id: reactor-netty-core-checks
+        run: ./gradlew reactor-netty-core:check
+  reactor-netty-http:
+    # Notes on reactor-netty-http: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    name: reactor-netty-http
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+      - name: run reactor-netty-http checks
+        id: reactor-netty-http-checks
+        run: ./gradlew reactor-netty-http:check
+  reactor-netty-http-brave:
+    # Notes on reactor-netty-http-brave: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    name: reactor-netty-http-brave
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+      - name: run reactor-netty-http-brave checks
+        id: reactor-netty-http-brave-checks
+        run: ./gradlew reactor-netty-http-brave:check
+  reactor-netty-incubator-quic:
+    # Notes on reactor-netty-incubator-quic: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    name: reactor-netty-incubator-quic
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+      - name: run reactor-netty-incubator-quic checks
+        id: reactor-netty-incubator-quic-checks
+        run: ./gradlew reactor-netty-incubator-quic:check
 
   #deploy the snapshot artifacts to Artifactory
   deploySnapshot:
     name: deploySnapshot
     runs-on: ubuntu-20.04
-    needs: prepare
-    if: needs.prepare.outputs.versionType == 'SNAPSHOT'
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic ]
+    if: needs.reactor-netty-core.outputs.versionType == 'SNAPSHOT'
     environment: snapshots
     steps:
       - uses: actions/checkout@v3
@@ -57,8 +98,8 @@ jobs:
   deployMilestone:
     name: deployMilestone
     runs-on: ubuntu-20.04
-    needs: prepare
-    if: needs.prepare.outputs.versionType == 'MILESTONE'
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic ]
+    if: needs.reactor-netty-core.outputs.versionType == 'MILESTONE'
     environment: releases
     steps:
       - uses: actions/checkout@v3
@@ -79,8 +120,8 @@ jobs:
   deployRelease:
     name: deployRelease
     runs-on: ubuntu-20.04
-    needs: prepare
-    if: needs.prepare.outputs.versionType == 'RELEASE'
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic ]
+    if: needs.reactor-netty-core.outputs.versionType == 'RELEASE'
     environment: releases
     steps:
       - uses: actions/checkout@v3
@@ -101,7 +142,7 @@ jobs:
 
   tagMilestone:
     name: Tag milestone
-    needs: [ prepare, deployMilestone ]
+    needs: [ reactor-netty-core, deployMilestone ]
     runs-on: ubuntu-20.04
     permissions:
       contents: write
@@ -111,12 +152,12 @@ jobs:
         run: |
           git config --local user.name 'reactorbot'
           git config --local user.email '32325210+reactorbot@users.noreply.github.com'
-          git tag -m "Release milestone ${{ needs.prepare.outputs.fullVersion }}" v${{ needs.prepare.outputs.fullVersion }} ${{ github.sha }}
+          git tag -m "Release milestone ${{ needs.reactor-netty-core.outputs.fullVersion }}" v${{ needs.reactor-netty-core.outputs.fullVersion }} ${{ github.sha }}
           git push --tags
 
   tagRelease:
     name: Tag release
-    needs: [ prepare, deployRelease ]
+    needs: [ reactor-netty-core, deployRelease ]
     runs-on: ubuntu-20.04
     permissions:
       contents: write
@@ -126,7 +167,7 @@ jobs:
         run: |
           git config --local user.name 'reactorbot'
           git config --local user.email '32325210+reactorbot@users.noreply.github.com'
-          git tag -m "Release version ${{ needs.prepare.outputs.fullVersion }}" v${{ needs.prepare.outputs.fullVersion }} ${{ github.sha }}
+          git tag -m "Release version ${{ needs.reactor-netty-core.outputs.fullVersion }}" v${{ needs.reactor-netty-core.outputs.fullVersion }} ${{ github.sha }}
           git push --tags
 
 # For Gradle configuration of signing, see https://docs.gradle.org/current/userguide/signing_plugin.html#sec:in-memory-keys
