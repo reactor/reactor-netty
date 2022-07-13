@@ -1,6 +1,6 @@
 :sourcedir: ./../../reactor-netty-http/src/main/java
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server
-:javadoc: https://projectreactor.io/docs/netty/release/api
+:javadoc: https://projectreactor.io/docs/netty/{project-version}/api
 :wirelogger: reactor.netty.http.server.HttpServer
 
 [[http-server]]
