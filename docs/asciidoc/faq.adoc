@@ -102,10 +102,9 @@ logger (`_reactor.netty5.channel.LeakDetection`) that helps to identify where th
 or whether Reactor Netty already forwarded the ownership of the buffers to the application/framework.
 By default, this logger is disabled. To enable it, increase the log level to `DEBUG`.
 
-Another way to detect memory leaks is to monitor `reactor.netty5.bytebuf.allocator.active.heap.memory` and `reactor.netty5.bytebuf.allocator.active.direct.memory` meters:
+Another way to detect memory leaks is to monitor `reactor.netty5.buffer.allocator.active.memory` meter:
 
-- The `reactor.netty5.bytebuf.allocator.active.heap.memory` provides the actual bytes consumed by in-use buffers allocated from heap buffer pools
-- The `reactor.netty5.bytebuf.allocator.active.direct.memory` provides the actual bytes consumed by in-use buffers allocated from direct buffer pools
+- The `reactor.netty5.buffer.allocator.active.memory` provides the actual bytes consumed by in-use buffers allocated from the buffer pools
 
 If the above meters are constantly growing, then it's likely that there is a buffer memory leak.
 
