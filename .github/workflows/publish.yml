@@ -33,50 +33,50 @@ jobs:
         id: reactor-netty-core-checks
         run: ./gradlew reactor-netty-core:check
   reactor-netty-http:
-      # Notes on reactor-netty-http: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
-      # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
-      name: reactor-netty-http
-      runs-on: ubuntu-20.04
-      steps:
-          - uses: actions/checkout@v3
-          - name: setup java
-            uses: actions/setup-java@v3
-            with:
-                distribution: 'temurin'
-                java-version: '8'
-          - name: run reactor-netty-http checks
-            id: reactor-netty-http-checks
-            run: ./gradlew reactor-netty-http:check
+    # Notes on reactor-netty-http: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
+    name: reactor-netty-http
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+      - name: run reactor-netty-http checks
+        id: reactor-netty-http-checks
+        run: ./gradlew reactor-netty-http:check
   reactor-netty-http-brave:
-      # Notes on reactor-netty-http-brave: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
-      # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
-      name: reactor-netty-http-brave
-      runs-on: ubuntu-20.04
-      steps:
-          - uses: actions/checkout@v3
-          - name: setup java
-            uses: actions/setup-java@v3
-            with:
-                distribution: 'temurin'
-                java-version: '8'
-          - name: run reactor-netty-http-brave checks
-            id: reactor-netty-http-brave-checks
-            run: ./gradlew reactor-netty-http-brave:check
+    # Notes on reactor-netty-http-brave: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
+    name: reactor-netty-http-brave
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+      - name: run reactor-netty-http-brave checks
+        id: reactor-netty-http-brave-checks
+        run: ./gradlew reactor-netty-http-brave:check
   reactor-netty-incubator-quic:
-      # Notes on reactor-netty-incubator-quic: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
-      # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
-      name: reactor-netty-incubator-quic
-      runs-on: ubuntu-20.04
-      steps:
-          - uses: actions/checkout@v3
-          - name: setup java
-            uses: actions/setup-java@v3
-            with:
-                distribution: 'temurin'
-                java-version: '8'
-          - name: run reactor-netty-incubator-quic checks
-            id: reactor-netty-incubator-quic-checks
-            run: ./gradlew reactor-netty-incubator-quic:check
+    # Notes on reactor-netty-incubator-quic: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
+    # This includes the tagging and drafting of release notes. Still, when possible we favor plain run of gradle tasks
+    name: reactor-netty-incubator-quic
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+      - name: run reactor-netty-incubator-quic checks
+        id: reactor-netty-incubator-quic-checks
+        run: ./gradlew reactor-netty-incubator-quic:check
 
   #deploy the snapshot artifacts to Artifactory
   deploySnapshot:
