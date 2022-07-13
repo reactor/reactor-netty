@@ -1,7 +1,7 @@
 == Proxy Support
 
 Reactor Netty supports the proxy functionality provided by Netty and provides a way
-to specify `non proxy hosts` through the {javadoc}/reactor/netty/tcp/ProxyProvider.html[`ProxyProvider`] builder.
+to specify `non proxy hosts` through the {javadoc}/reactor/netty5/tcp/ProxyProvider.html[`ProxyProvider`] builder.
 
 // tag::proxy-connect-method[]
 Netty's HTTP proxy support always uses `CONNECT` method in order to establish a tunnel to the specified proxy regardless of the scheme that is used `http` or `https`.

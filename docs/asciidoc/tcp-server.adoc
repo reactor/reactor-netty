@@ -1,21 +1,21 @@
 :sourcedir: ./../../reactor-netty5-core/src/main/java
-:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty/examples/documentation/tcp/server
+:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty5/examples/documentation/tcp/server
 :javadoc: https://projectreactor.io/docs/netty/{project-version}/api
-:nettyjavadoc: https://netty.io/4.1/api
+:nettyjavadoc: https://netty.io/5.0/api
 :wirelogger: reactor.netty5.tcp.TcpServer
 
 [[tcp-server]]
 = TCP Server
 
 `Reactor Netty` provides an easy to use and configure
-{javadoc}/reactor/netty/tcp/TcpServer.html[`TcpServer`].
+{javadoc}/reactor/netty5/tcp/TcpServer.html[`TcpServer`].
 It hides most of the `Netty` functionality that is needed to create a `TCP` server
 and adds `Reactive Streams` backpressure.
 
 == Starting and Stopping
 
 To start a `TCP` server, you must create and configure a
-{javadoc}/reactor/netty/tcp/TcpServer.html[`TcpServer`] instance.
+{javadoc}/reactor/netty5/tcp/TcpServer.html[`TcpServer`] instance.
 By default, the `host` is configured for any local address, and the system picks up an ephemeral port
 when the `bind` operation is invoked. The following example shows how to create and
 configure a `TcpServer` instance:
@@ -26,13 +26,13 @@ configure a `TcpServer` instance:
 ----
 include::{examplesdir}/create/Application.java[lines=18..31]
 ----
-<1> Creates a {javadoc}/reactor/netty/tcp/TcpServer.html[`TcpServer`]
+<1> Creates a {javadoc}/reactor/netty5/tcp/TcpServer.html[`TcpServer`]
 instance that is ready for configuring.
 <2> Starts the server in a blocking fashion and waits for it to finish initializing.
 ====
 
-The returned {javadoc}/reactor/netty/DisposableServer.html[`DisposableServer`]
-offers a simple server API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+The returned {javadoc}/reactor/netty5/DisposableServer.html[`DisposableServer`]
+offers a simple server API, including {javadoc}/reactor/netty5/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
 which shuts the server down in a blocking fashion.
 
 === Host and Port
@@ -87,7 +87,7 @@ include::{examplesdir}/warmup/Application.java[lines=18..36]
 == Writing Data
 
 In order to send data to a connected client, you must attach an I/O handler.
-The I/O handler has access to {javadoc}/reactor/netty/NettyOutbound.html[`NettyOutbound`]
+The I/O handler has access to {javadoc}/reactor/netty5/NettyOutbound.html[`NettyOutbound`]
 to be able to write data. The following example shows how to attach an I/O handler:
 
 ====
@@ -102,7 +102,7 @@ include::{examplesdir}/send/Application.java[lines=18..33]
 == Consuming Data
 
 In order to receive data from a connected client, you must attach an I/O handler.
-The I/O handler has access to {javadoc}/reactor/netty/NettyInbound.html[`NettyInbound`]
+The I/O handler has access to {javadoc}/reactor/netty5/NettyInbound.html[`NettyInbound`]
 to be able to read data. The following example shows how to use it:
 
 ====
@@ -155,9 +155,9 @@ By default, the `TCP` server is configured with the following options:
 
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty/tcp/TcpServerBind.java
+.{sourcedir}/reactor/netty5/tcp/TcpServerBind.java
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=40..48]
+include::{sourcedir}/reactor/netty5/tcp/TcpServerBind.java[lines=37..45]
 ----
 ====
 
@@ -173,10 +173,11 @@ include::{examplesdir}/channeloptions/Application.java[lines=18..33]
 
 You can find more about `Netty` channel options at the following links:
 
-* {nettyjavadoc}/io/netty/channel/ChannelOption.html[Common ChannelOption]
-* {nettyjavadoc}/io/netty/channel/epoll/EpollChannelOption.html[Epoll ChannelOption]
-* {nettyjavadoc}/io/netty/channel/kqueue/KQueueChannelOption.html[KQueue ChannelOption]
-* https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[Socket Options]
+* {nettyjavadoc}/io.netty5.transport/io/netty5/channel/ChannelOption.html[Common ChannelOption]
+* {nettyjavadoc}/io.netty5.transport.classes.epoll/io/netty5/channel/epoll/EpollChannelOption.html[Epoll ChannelOption]
+* {nettyjavadoc}/io.netty5.transport.classes.kqueue/io/netty5/channel/kqueue/KQueueChannelOption.html[KQueue ChannelOption]
+* https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/StandardSocketOptions.html[Standard Socket Options]
+* https://docs.oracle.com/en/java/javase/17/docs/api/jdk.net/jdk/net/ExtendedSocketOptions.html[Extended Socket Options]
 
 [[server-tcp-level-configurations-event-wire-logger]]
 include::wire-logger.adoc[]
@@ -186,16 +187,16 @@ include::wire-logger.adoc[]
 
 By default, the `TCP` server uses an "`Event Loop Group,`" where the number of the worker threads equals the number of
 processors available to the runtime on initialization (but with a minimum value of 4). When you need a different configuration,
-you can use one of the {javadoc}/reactor/netty/resources/LoopResources.html[LoopResource]`#create`
+you can use one of the {javadoc}/reactor/netty5/resources/LoopResources.html[LoopResource]`#create`
 methods.
 
 The default configuration for the `Event Loop Group` is the following:
 
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty/ReactorNetty.java
+.{sourcedir}/reactor/netty5/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=85..114]
+include::{sourcedir}/reactor/netty5/ReactorNetty.java[lines=89..118]
 ----
 ====
 
@@ -213,12 +214,12 @@ include::{examplesdir}/eventloop/Application.java[lines=18..35]
 
 When you need SSL or TLS, you can apply the configuration shown in the next listing.
 By default, if `OpenSSL` is available,
-{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
+{nettyjavadoc}/io.netty5.handler/io/netty5/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
 provider is used as a provider. Otherwise
-{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
+{nettyjavadoc}/io.netty5.handler/io/netty5/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
 Switching the provider can be done through
-{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
-or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
+{nettyjavadoc}/io.netty5.handler/io/netty5/handler/ssl/SslContextBuilder.html#sslProvider(io.netty5.handler.ssl.SslProvider)[`SslContextBuilder`]
+or by setting `-Dio.netty5.handler.ssl.noOpenSsl=true`.
 
 The following example uses `SslContextBuilder`:
 
@@ -290,7 +291,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 ----
 include::{examplesdir}/metrics/custom/Application.java[lines=18..35]
 ----
-<1> Enables TCP server metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
+<1> Enables TCP server metrics and provides {javadoc}/reactor/netty5/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
 ====
 
 == Unix Domain Sockets

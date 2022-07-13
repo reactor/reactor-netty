@@ -1,21 +1,21 @@
 :sourcedir: ./../../reactor-netty5-core/src/main/java
-:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty/examples/documentation/udp/client
+:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty5/examples/documentation/udp/client
 :javadoc: https://projectreactor.io/docs/netty/{project-version}/api
-:nettyjavadoc: https://netty.io/4.1/api
+:nettyjavadoc: https://netty.io/5.0/api
 :wirelogger: reactor.netty5.udp.UdpClient
 
 [[udp-client]]
 = UDP Client
 
 Reactor Netty provides the easy-to-use and easy-to-configure
-{javadoc}/reactor/netty/udp/UdpClient.html[`UdpClient`].
+{javadoc}/reactor/netty5/udp/UdpClient.html[`UdpClient`].
 It hides most of the Netty functionality that is required to create a `UDP` client
 and adds Reactive Streams backpressure.
 
 == Connecting and Disconnecting
 
 To connect the UDP client to a given endpoint, you must create and configure a
-{javadoc}/reactor/netty/udp/UdpClient.html[UdpClient] instance.
+{javadoc}/reactor/netty5/udp/UdpClient.html[UdpClient] instance.
 By default, the host is configured for `localhost` and the port is `12012`.
 The following example shows how to create and connect a UDP client:
 
@@ -25,13 +25,13 @@ The following example shows how to create and connect a UDP client:
 ----
 include::{examplesdir}/create/Application.java[lines=18..32]
 ----
-<1> Creates a {javadoc}/reactor/netty/udp/UdpClient.html[`UdpClient`]
+<1> Creates a {javadoc}/reactor/netty5/udp/UdpClient.html[`UdpClient`]
 instance that is ready for configuring.
 <2> Connects the client in a blocking fashion and waits for it to finish initializing.
 ====
 
-The returned {javadoc}/reactor/netty/Connection.html[`Connection`]
-offers a simple connection API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+The returned {javadoc}/reactor/netty5/Connection.html[`Connection`]
+offers a simple connection API, including {javadoc}/reactor/netty5/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
 which shuts the client down in a blocking fashion.
 
 === Host and Port
@@ -72,7 +72,7 @@ include::{examplesdir}/warmup/Application.java[lines=18..40]
 == Writing Data
 
 To send data to a given peer, you must attach an I/O handler.
-The I/O handler has access to {javadoc}/reactor/netty/udp/UdpOutbound.html[`UdpOutbound`],
+The I/O handler has access to {javadoc}/reactor/netty5/udp/UdpOutbound.html[`UdpOutbound`],
 to be able to write data.
 
 The following example shows how to send `hello`:
@@ -89,7 +89,7 @@ include::{examplesdir}/send/Application.java[lines=18..37]
 == Consuming Data
 
 To receive data from a given peer, you must attach an I/O handler.
-The I/O handler has access to {javadoc}/reactor/netty/udp/UdpInbound.html[`UdpInbound`],
+The I/O handler has access to {javadoc}/reactor/netty5/udp/UdpInbound.html[`UdpInbound`],
 to be able to read data.
 The following example shows how to consume data:
 
@@ -145,9 +145,9 @@ By default, the `UDP` client is configured with the following options:
 
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty/udp/UdpClientConnect.java
+.{sourcedir}/reactor/netty5/udp/UdpClientConnect.java
 ----
-include::{sourcedir}/reactor/netty/udp/UdpClientConnect.java[lines=37..42]
+include::{sourcedir}/reactor/netty5/udp/UdpClientConnect.java[lines=37..42]
 ----
 ====
 
@@ -163,10 +163,11 @@ include::{examplesdir}/channeloptions/Application.java[lines=18..36]
 
 You can find more about Netty channel options at the following links:
 
-* {nettyjavadoc}/io/netty/channel/ChannelOption.html[Common ChannelOption]
-* {nettyjavadoc}/io/netty/channel/epoll/EpollChannelOption.html[Epoll ChannelOption]
-* {nettyjavadoc}/io/netty/channel/kqueue/KQueueChannelOption.html[KQueue ChannelOption]
-* https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[Socket Options]
+* {nettyjavadoc}/io.netty5.transport/io/netty5/channel/ChannelOption.html[Common ChannelOption]
+* {nettyjavadoc}/io.netty5.transport.classes.epoll/io/netty5/channel/epoll/EpollChannelOption.html[Epoll ChannelOption]
+* {nettyjavadoc}/io.netty5.transport.classes.kqueue/io/netty5/channel/kqueue/KQueueChannelOption.html[KQueue ChannelOption]
+* https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/StandardSocketOptions.html[Standard Socket Options]
+* https://docs.oracle.com/en/java/javase/17/docs/api/jdk.net/jdk/net/ExtendedSocketOptions.html[Extended Socket Options]
 
 [[client-udp-connection-configurations-wire-logger]]
 include::wire-logger.adoc[]
@@ -176,16 +177,16 @@ include::wire-logger.adoc[]
 
 By default, the UDP client uses "`Event Loop Group,`" where the number of the worker threads equals the number of
 processors available to the runtime on initialization (but with a minimum value of 4). When you need a different configuration,
-you can use one of the {javadoc}/reactor/netty/resources/LoopResources.html[`LoopResources`]`#create`
+you can use one of the {javadoc}/reactor/netty5/resources/LoopResources.html[`LoopResources`]`#create`
 methods.
 
 The following listing shows the default configuration for the "`Event Loop Group`":
 
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty/ReactorNetty.java
+.{sourcedir}/reactor/netty5/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=85..114]
+include::{sourcedir}/reactor/netty5/ReactorNetty.java[lines=89..119]
 ----
 ====
 
@@ -245,7 +246,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 ----
 include::{examplesdir}/metrics/custom/Application.java[lines=18..37]
 ----
-<1> Enables UDP client metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
+<1> Enables UDP client metrics and provides {javadoc}/reactor/netty5/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
 ====
 
 == Unix Domain Sockets

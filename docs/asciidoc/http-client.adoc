@@ -1,21 +1,21 @@
 :sourcedir: ./../../reactor-netty5-http/src/main/java
-:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty/examples/documentation/http/client
+:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty5/examples/documentation/http/client
 :javadoc: https://projectreactor.io/docs/netty/{project-version}/api
-:nettyjavadoc: https://netty.io/4.1/api
+:nettyjavadoc: https://netty.io/5.0/api
 :wirelogger: reactor.netty5.http.client.HttpClient
 
 [[http-client]]
 = HTTP Client
 
 Reactor Netty provides the easy-to-use and easy-to-configure
-{javadoc}/reactor/netty/http/client/HttpClient.html[`HttpClient`].
+{javadoc}/reactor/netty5/http/client/HttpClient.html[`HttpClient`].
 It hides most of the Netty functionality that is required to create an `HTTP` client
 and adds Reactive Streams backpressure.
 
 == Connect
 
 To connect the `HTTP` client to a given `HTTP` endpoint, you must create and configure a
-{javadoc}/reactor/netty/http/client/HttpClient.html[`HttpClient`] instance.
+{javadoc}/reactor/netty5/http/client/HttpClient.html[`HttpClient`] instance.
 The following example shows how to do so:
 
 ====
@@ -24,11 +24,11 @@ The following example shows how to do so:
 ----
 include::{examplesdir}/connect/Application.java[lines=18..30]
 ----
-<1> Creates a {javadoc}/reactor/netty/http/client/HttpClient.html[HttpClient]
+<1> Creates a {javadoc}/reactor/netty5/http/client/HttpClient.html[HttpClient]
 instance ready for configuring.
 <2> Specifies that `GET` method will be used.
 <3> Specifies the path.
-<4> Obtains the response {javadoc}/reactor/netty/http/client/HttpClientResponse.html[HttpClientResponse]
+<4> Obtains the response {javadoc}/reactor/netty5/http/client/HttpClientResponse.html[HttpClientResponse]
 ====
 
 
@@ -84,7 +84,7 @@ the subsequent requests to the same URL reuse the connections from the pool.
 == Writing Data
 
 To send data to a given `HTTP` endpoint, you can provide a `Publisher` by using the
-{javadoc}/reactor/netty/http/client/HttpClient.RequestSender.html#send-org.reactivestreams.Publisher-[`send(Publisher)`] method.
+{javadoc}/reactor/netty5/http/client/HttpClient.RequestSender.html#send-org.reactivestreams.Publisher-[`send(Publisher)`] method.
 By default, `Transfer-Encoding: chunked` is applied for those `HTTP` methods for which
 a request body is expected. `Content-Length` provided through request headers disables `Transfer-Encoding: chunked`,
 if necessary. The following example sends `hello`:
@@ -149,7 +149,7 @@ include::{examplesdir}/redirect/Application.java[lines=18..32]
 == Consuming Data
 
 To receive data from a given `HTTP` endpoint, you can use one of the methods from
-{javadoc}/reactor/netty/http/client/HttpClient.ResponseReceiver.html[`HttpClient.ResponseReceiver`].
+{javadoc}/reactor/netty5/http/client/HttpClient.ResponseReceiver.html[`HttpClient.ResponseReceiver`].
 The following example uses the `responseContent` method:
 
 ====
@@ -167,7 +167,7 @@ include::{examplesdir}/read/Application.java[lines=18..33]
 
 When receiving data from a given `HTTP` endpoint, you can check response headers, status code, and other metadata.
 You can obtain this additional metadata by using
-{javadoc}/reactor/netty/http/client/HttpClientResponse.html[`HttpClientResponse`].
+{javadoc}/reactor/netty5/http/client/HttpClientResponse.html[`HttpClientResponse`].
 The following example shows how to do so.
 
 ====
@@ -187,22 +187,22 @@ By default, `Netty` configures some restrictions for the incoming responses, suc
 * The maximum length of all headers.
 * The maximum length of the content or each chunk.
 
-For more information, see {nettyjavadoc}/io/netty/handler/codec/http/HttpResponseDecoder.html[HttpResponseDecoder]
+For more information, see {nettyjavadoc}/io.netty5.codec.http/io/netty5/handler/codec/http/HttpResponseDecoder.html[HttpResponseDecoder]
 
 By default, the `HTTP` client is configured with the following settings:
 
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty/http/HttpDecoderSpec.java
+.{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=29..38]
+include::{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java[lines=29..39]
 ----
 ====
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java
+.{sourcedir}/reactor/netty5/http/client/HttpResponseDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java[lines=44..52]
+include::{sourcedir}/reactor/netty5/http/client/HttpResponseDecoderSpec.java[lines=44..52]
 ----
 ====
 
@@ -216,7 +216,7 @@ include::{examplesdir}/responsedecoder/Application.java[lines=18..35]
 ----
 <1> The maximum length of all headers will be `16384`.
 When this value is exceeded, a
-{nettyjavadoc}/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
+{nettyjavadoc}/io.netty5.codec/io/netty5/handler/codec/TooLongFrameException.html[TooLongFrameException]
 is raised.
 ====
 
@@ -283,12 +283,12 @@ include::http-client-conn-provider.adoc[]
 == SSL and TLS
 When you need SSL or TLS, you can apply the configuration shown in the next example.
 By default, if `OpenSSL` is available, a
-{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#OPENSSL[SslProvider.OPENSSL]
+{nettyjavadoc}/io.netty5.handler/io/netty5/handler/ssl/SslProvider.html#OPENSSL[SslProvider.OPENSSL]
 provider is used as a provider. Otherwise, a
-{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[SslProvider.JDK] provider is used
+{nettyjavadoc}/io.netty5.handler/io/netty5/handler/ssl/SslProvider.html#JDK[SslProvider.JDK] provider is used
 You can switch the provider by using
-{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[SslContextBuilder]
-or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
+{nettyjavadoc}/io.netty5.handler/io/netty5/handler/ssl/SslContextBuilder.html#sslProvider(io.netty5.handler.ssl.SslProvider)[SslContextBuilder]
+or by setting `-Dio.netty5.handler.ssl.noOpenSsl=true`.
 The following example uses `SslContextBuilder`:
 
 ====
@@ -319,9 +319,6 @@ By default, the `HTTP` client retries the request once if it was aborted on the 
 By default, the `HTTP` client supports `HTTP/1.1`. If you need `HTTP/2`, you can get it through configuration.
 In addition to the protocol configuration, if you need `H2` but not `H2C (cleartext)`, you must also configure SSL.
 
-NOTE: As Application-Layer Protocol Negotiation (ALPN) is not supported "`out-of-the-box`" by JDK8 (although some vendors backported ALPN to JDK8), you need an additional dependency to a native library that
-supports it -- for example, https://netty.io/wiki/forked-tomcat-native.html[`netty-tcnative-boringssl-static`].
-
 The following listing presents a simple `H2` example:
 
 ====
@@ -348,9 +345,9 @@ include::{examplesdir}/http2/H2CApplication.java[lines=18..41]
 
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty/http/HttpProtocol.java
+.{sourcedir}/reactor/netty5/http/HttpProtocol.java
 ----
-include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..52]
+include::{sourcedir}/reactor/netty5/http/HttpProtocol.java[lines=24..52]
 ----
 ====
 
@@ -432,7 +429,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 ----
 include::{examplesdir}/metrics/custom/Application.java[lines=18..35]
 ----
-<1> Enables HTTP client metrics and provides {javadoc}/reactor/netty/http/client/HttpClientMetricsRecorder.html[`HttpClientMetricsRecorder`] implementation.
+<1> Enables HTTP client metrics and provides {javadoc}/reactor/netty5/http/client/HttpClientMetricsRecorder.html[`HttpClientMetricsRecorder`] implementation.
 ====
 
 == Unix Domain Sockets
@@ -487,8 +484,8 @@ This configuration is applicable for `DnsNameResolver#resolveAll(String)`. By de
 how much data the resolver can read per response. By default, this setting is enabled.
 | `disableRecursionDesired` | Specifies whether this resolver has to send a DNS query with the recursion desired (RD) flag set.
 By default, this setting is enabled.
-| `hostsFileEntriesResolver` | Sets a custom {nettyjavadoc}/io/netty/resolver/HostsFileEntriesResolver.html[`HostsFileEntriesResolver`] to be used for hosts file entries.
-Default: {nettyjavadoc}/io/netty/resolver/DefaultHostsFileEntriesResolver.html[`DefaultHostsFileEntriesResolver`].
+| `hostsFileEntriesResolver` | Sets a custom {nettyjavadoc}/io.netty5.resolver/io/netty5/resolver/HostsFileEntriesResolver.html[`HostsFileEntriesResolver`] to be used for hosts file entries.
+Default: {nettyjavadoc}/io.netty5.resolver/io/netty5/resolver/DefaultHostsFileEntriesResolver.html[`DefaultHostsFileEntriesResolver`].
 | `maxPayloadSize` | Sets the capacity of the datagram packet buffer (in bytes). Default: 4096.
 | `maxQueriesPerResolve` | Sets the maximum allowed number of DNS queries to send when resolving a host name. Default: 16.
 | `ndots` | Sets the number of dots that must appear in a name before an initial absolute query is made.
@@ -497,13 +494,13 @@ Default: -1 (to determine the value from the OS on Unix or use a value of 1 othe
 | `resolvedAddressTypes` | The list of the protocol families of the resolved address.
 | `bindAddressSupplier` | The supplier of the local address to bind to.
 | `roundRobinSelection` | Enables an
-{nettyjavadoc}/io/netty/resolver/AddressResolverGroup.html[`AddressResolverGroup`] of
-{nettyjavadoc}/io/netty/resolver/dns/DnsNameResolver.html[`DnsNameResolver`] that supports random selection
+{nettyjavadoc}/io.netty5.resolver/io/netty5/resolver/AddressResolverGroup.html[`AddressResolverGroup`] of
+{nettyjavadoc}/io.netty5.resolver.dns/io/netty5/resolver/dns/DnsNameResolver.html[`DnsNameResolver`] that supports random selection
 of destination addresses if multiple are provided by the nameserver.
-See {nettyjavadoc}/io/netty/resolver/dns/RoundRobinDnsAddressResolverGroup.html[`RoundRobinDnsAddressResolverGroup`].
-Default: {nettyjavadoc}/io/netty/resolver/dns/DnsAddressResolverGroup.html[`DnsAddressResolverGroup`]
+See {nettyjavadoc}/io.netty5.resolver.dns/io/netty5/resolver/dns/RoundRobinDnsAddressResolverGroup.html[`RoundRobinDnsAddressResolverGroup`].
+Default: {nettyjavadoc}/io.netty5.resolver.dns/io/netty5/resolver/dns/DnsAddressResolverGroup.html[`DnsAddressResolverGroup`]
 | `runOn` | Performs the communication with the DNS servers on the given
-{javadoc}/reactor/netty/resources/LoopResources.html[`LoopResources`]. By default, the LoopResources
+{javadoc}/reactor/netty5/resources/LoopResources.html[`LoopResources`]. By default, the LoopResources
 specified on the client level are used.
 | `searchDomains` | The list of search domains of the resolver.
 By default, the effective search domain list is populated by using the system DNS search domains.
@@ -544,14 +541,14 @@ be reused immediately for another request or may stay idle in the connection poo
 The following list describes the available timeout configuration options:
 
 * `maxIdleTime` - The maximum time (resolution: ms) that this connection stays idle in the connection pool. By default,
-{javadoc}/reactor/netty/resources/ConnectionProvider.ConnectionPoolSpec.html#maxIdleTime-java.time.Duration-[`maxIdleTime`] is not specified.
+{javadoc}/reactor/netty5/resources/ConnectionProvider.ConnectionPoolSpec.html#maxIdleTime-java.time.Duration-[`maxIdleTime`] is not specified.
 
 NOTE: When you configure `maxIdleTime`, you should consider the idle timeout configuration on the target server.
 Choose a configuration that is equal to or less than the one on the target server. By doing so, you can reduce the I/O
 issues caused by a connection closed by the target server.
 
 * `maxLifeTime` - The maximum time (resolution: ms) that this connection stays alive. By default,
-{javadoc}/reactor/netty/resources/ConnectionProvider.ConnectionPoolSpec.html#maxLifeTime-java.time.Duration-[`maxLifeTime`] is not specified.
+{javadoc}/reactor/netty5/resources/ConnectionProvider.ConnectionPoolSpec.html#maxLifeTime-java.time.Duration-[`maxLifeTime`] is not specified.
 * `pendingAcquireTimeout` - The maximum time (resolution: ms) after which a pending acquire operation must complete, or
 a `PoolAcquireTimeoutException` is thrown. Default: 45s.
 
@@ -584,7 +581,7 @@ By contrast, the `timeout` operator can only apply to the operation as a whole, 
 ==== Response Timeout
 `HttpClient` provides an API for configuring a default response timeout for all requests. You can change this default response timeout
 through an API for a specific request. By default,
-{javadoc}/reactor/netty/http/client/HttpClient.html#responseTimeout-java.time.Duration-[`responseTimeout`] is not specified.
+{javadoc}/reactor/netty5/http/client/HttpClient.html#responseTimeout-java.time.Duration-[`responseTimeout`] is not specified.
 
 NOTE: It is always a good practice to configure a response timeout.
 
@@ -608,7 +605,7 @@ The following listing shows all available connection timeout configuration optio
 the connection establishment attempt fails. Default: 30s.
 * `SO_KEEPALIVE` - When the connection stays idle for some time (the time is implementation dependent, but the default is typically two hours),
 TCP automatically sends a `keepalive` probe to the remote peer.
-By default, https://docs.oracle.com/javase/8/docs/api/java/net/SocketOptions.html#SO_KEEPALIVE[`SO_KEEPALIVE`] is not enabled.
+By default, https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/StandardSocketOptions.html#SO_KEEPALIVE[`SO_KEEPALIVE`] is not enabled.
 When you run with `Epoll`/`NIO` (https://bugs.openjdk.java.net/browse/JDK-8194298[since *Java 11* on *Mac or Linux*]) transport, you may also configure:
 ** `TCP_KEEPIDLE` - The maximum time (resolution: seconds) that this connection stays idle before TCP starts sending `keepalive` probes,
 if `SO_KEEPALIVE` has been set. The maximum time is implementation dependent, but the default is typically two hours.
@@ -618,7 +615,7 @@ if `SO_KEEPALIVE` has been set. The maximum time is implementation dependent, bu
 NOTE: Sometimes, between the client and the server, you may have a network component that silently drops the idle connections without sending a response.
 From the Reactor Netty point of view, in this use case, the remote peer just does not respond.
 To be able to handle such a use case you may consider configuring
-https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[`SO_KEEPALIVE`].
+https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/StandardSocketOptions.html#SO_KEEPALIVE[`SO_KEEPALIVE`].
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
@@ -664,7 +661,7 @@ include::{examplesdir}/security/custom/Application.java[lines=18..45]
 [[proxy-timeout]]
 ==== Proxy Timeout
 `HttpClient` supports the proxy functionality provided by Netty and provides a way to specify the
-{javadoc}/reactor/netty/transport/ProxyProvider.Builder.html#connectTimeoutMillis-long-[connection establishment timeout].
+{javadoc}/reactor/netty5/transport/ProxyProvider.Builder.html#connectTimeoutMillis-long-[connection establishment timeout].
 If the connection establishment attempt to the remote peer does not finish within the timeout,
 the connection establishment attempt fails. Default: 10s.
 

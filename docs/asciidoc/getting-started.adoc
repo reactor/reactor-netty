@@ -18,13 +18,13 @@ backpressure-ready network engines for `HTTP` (including Websockets), `TCP`, and
 [[prerequisites]]
 == Prerequisites
 
-`Reactor Netty` runs on `Java 8` and above.
+`Reactor Netty` runs on `Java 17` and above.
 
 It has transitive dependencies on:
 
 * Reactive Streams v1.0.4
 * Reactor Core v3.x
-* Netty v4.1.x
+* Netty v5.0.x
 
 [[getting-started-understanding-bom]]
 == Understanding the BOM and versioning scheme
