@@ -44,14 +44,12 @@ final class NonSslRedirectHandler extends ChannelHandlerAdapter {
 	private static final String HTTP_PROTOCOL = "http://";
 	private static final String HTTPS_PROTOCOL = "https://";
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest request) {
 			ctx.pipeline().remove(this);
 			String url = getRequestedUrlInHttps(request);
 			if (url == null) {
-				// "FutureReturnValueIgnored" this is deliberate
 				ctx.close();
 			}
 			else {

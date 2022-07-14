@@ -385,7 +385,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(connection.channel(), "onStateChange({}, {})"), connection, newState);
@@ -394,7 +393,6 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			if (newState == State.DISCONNECTING) {
 				if (!isPersistent() && channel.isActive()) {
 					// Will be released by closeFuture
-					// "FutureReturnValueIgnored" this is deliberate
 					channel.close();
 					owner().onStateChange(connection, State.DISCONNECTING);
 					return;

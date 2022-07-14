@@ -32,7 +32,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 class BlockHoundIntegrationTest {
 
 	@Test
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void shouldDisallowBlockingCalls() {
 		LoopResources resources = LoopResources.create("foo", 1, true);
 		try {

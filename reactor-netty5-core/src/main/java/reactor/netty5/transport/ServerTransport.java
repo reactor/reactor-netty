@@ -528,11 +528,9 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public final void dispose() {
 			if (channel != null) {
 				if (channel.isActive()) {
-					//"FutureReturnValueIgnored" this is deliberate
 					channel.close();
 
 					LoopResources loopResources = config.loopResources();
@@ -547,7 +545,6 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void disposeNow(Duration timeout) {
 			if (isDisposed()) {
 				return;
@@ -563,7 +560,6 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 						channels.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
 					}
 					else {
-						//"FutureReturnValueIgnored" this is deliberate
 						channel.close();
 					}
 				});

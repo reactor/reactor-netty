@@ -125,7 +125,6 @@ class UdpServerTests {
 	}
 
 	@Test
-	@SuppressWarnings("JdkObsolete")
 	void supportsUdpMulticast() throws Exception {
 		final Random rndm = new Random();
 		final int port = SocketUtils.findAvailableUdpPort();
@@ -213,7 +212,6 @@ class UdpServerTests {
 		}
 	}
 
-	@SuppressWarnings("JdkObsolete")
 	private boolean isMulticastEnabledIPv4Interface(NetworkInterface iface) {
 		try {
 			if (!iface.supportsMulticast() || !iface.isUp()) {
@@ -235,7 +233,6 @@ class UdpServerTests {
 		return false;
 	}
 
-	@SuppressWarnings("JdkObsolete")
 	private NetworkInterface findMulticastEnabledIPv4Interface() throws SocketException {
 		if (isMulticastEnabledIPv4Interface(NetUtil.LOOPBACK_IF)) {
 			return NetUtil.LOOPBACK_IF;

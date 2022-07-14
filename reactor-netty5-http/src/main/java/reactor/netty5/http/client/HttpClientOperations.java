@@ -241,12 +241,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
 	protected void onInboundCancel() {
 		if (isInboundDisposed()) {
 			return;
 		}
-		//"FutureReturnValueIgnored" this is deliberate
 		channel().close();
 	}
 
@@ -519,7 +517,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
 	protected void onOutboundComplete() {
 		if (isWebsocket() || isInboundCancelled()) {
 			return;
@@ -529,11 +526,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				log.debug(format(channel(), "No sendHeaders() called before complete, sending " +
 						"zero-length header"));
 			}
-			//"FutureReturnValueIgnored" this is deliberate
 			channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0)));
 		}
 		else if (markSentBody()) {
-			//"FutureReturnValueIgnored" this is deliberate
 			channel().writeAndFlush(new EmptyLastHttpContent(channel().bufferAllocator()));
 		}
 		listener().onStateChange(this, HttpClientState.REQUEST_SENT);
@@ -762,20 +757,16 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	final void withWebsocketSupport(WebsocketClientSpec websocketClientSpec, boolean compress) {
 		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
-			// Returned value is deliberately ignored
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 			removeHandler(NettyPipeline.HttpMetricsHandler);
 
 			if (websocketClientSpec.compress()) {
 				requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
-				// Returned value is deliberately ignored
 				removeHandler(NettyPipeline.HttpDecompressor);
-				// Returned value is deliberately ignored
 				addHandlerFirst(NettyPipeline.WsCompressionHandler, WebSocketClientCompressionHandler.INSTANCE);
 			}
 

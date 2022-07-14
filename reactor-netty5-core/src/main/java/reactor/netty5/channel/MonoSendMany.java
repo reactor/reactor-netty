@@ -120,10 +120,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		final Runnable                     asyncFlush;
 
 
-		@SuppressWarnings("unused")
 		volatile Subscription s;
 
-		@SuppressWarnings("unused")
 		volatile int          wip;
 
 		Queue<I> queue;
@@ -251,7 +249,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void run() {
 			Queue<I> queue = this.queue;
 			try {
@@ -292,7 +289,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 							continue;
 						}
 						pending++;
-						//"FutureReturnValueIgnored" this is deliberate
 						ctx.write(encodedMessage).addListener(this);
 
 						if (parent.predicate.test(sourceMessage) || readableBytes > ctx.channel().writableBytes()) {
@@ -477,7 +473,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		// Context interface impl
 		@Override
-		@SuppressWarnings({"unchecked", "rawtypes", "TypeParameterUnusedInFormals"})
+		@SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
 		public <T> T get(Object key) {
 			if (KEY_ON_DISCARD == key) {
 				return (T) this;

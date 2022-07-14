@@ -298,7 +298,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	Mono<Void> destroyPoolable(Http2PooledRef ref) {
 		assert ref.slot.connection.channel().executor().inEventLoop();
 		Mono<Void> mono = Mono.empty();
@@ -319,7 +318,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 					}
 					// max life reached
 					else if (maxLifeReached(ref.slot)) {
-						//"FutureReturnValueIgnored" this is deliberate
 						ref.slot.connection.channel().close();
 						ref.slot.invalidate();
 						removeSlot(ref.slot);
@@ -460,7 +458,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void evictInBackground() {
 		@SuppressWarnings("unchecked")
 		ConcurrentLinkedQueue<Slot> resources = CONNECTIONS.get(this);
@@ -490,7 +487,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 							if (log.isDebugEnabled()) {
 								log.debug(format(slot.connection.channel(), "Max life time is reached, remove from pool"));
 							}
-							//"FutureReturnValueIgnored" this is deliberate
 							slot.connection.channel().close();
 							recordInteractionTimestamp();
 							slots.remove();
@@ -503,7 +499,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 						if (log.isDebugEnabled()) {
 							log.debug(format(slot.connection.channel(), "Idle time is reached, remove from pool"));
 						}
-						//"FutureReturnValueIgnored" this is deliberate
 						slot.connection.channel().close();
 						recordInteractionTimestamp();
 						slots.remove();
@@ -522,7 +517,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	}
 
 	@Nullable
-	@SuppressWarnings("FutureReturnValueIgnored")
 	Slot findConnection(ConcurrentLinkedQueue<Slot> resources) {
 		int resourcesCount = idleSize;
 		while (resourcesCount > 0) {
@@ -559,7 +553,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				if (log.isDebugEnabled()) {
 					log.debug(format(slot.connection.channel(), "Idle time is reached, remove from pool"));
 				}
-				//"FutureReturnValueIgnored" this is deliberate
 				slot.connection.channel().close();
 				slot.invalidate();
 				continue;
@@ -578,7 +571,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Max life time is reached, remove from pool"));
 					}
-					//"FutureReturnValueIgnored" this is deliberate
 					slot.connection.channel().close();
 					slot.invalidate();
 				}

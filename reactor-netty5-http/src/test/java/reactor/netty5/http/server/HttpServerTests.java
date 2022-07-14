@@ -1769,7 +1769,6 @@ class HttpServerTests extends BaseHttpTest {
 		doTestStatus(new HttpResponseStatus(200, "Some custom reason phrase for 200 status code"));
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	private void doTestStatus(HttpResponseStatus status) {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpServerOperations ops = new HttpServerOperations(
@@ -1786,7 +1785,6 @@ class HttpServerTests extends BaseHttpTest {
 		ops.status(status);
 		HttpMessage response = ops.newFullBodyMessage(channel.bufferAllocator().allocate(0));
 		assertThat(((FullHttpResponse) response).status().reasonPhrase()).isEqualTo(status.reasonPhrase());
-		// "FutureReturnValueIgnored" is suppressed deliberately
 		channel.close();
 	}
 
@@ -2358,7 +2356,6 @@ class HttpServerTests extends BaseHttpTest {
 		doTestIsFormUrlencoded("application/x-www-form-urlencoded-bad", false);
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	private void doTestIsFormUrlencoded(String headerValue, boolean expectation) {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
@@ -2375,7 +2372,6 @@ class HttpServerTests extends BaseHttpTest {
 				null,
 				false);
 		assertThat(ops.isFormUrlencoded()).isEqualTo(expectation);
-		// "FutureReturnValueIgnored" is suppressed deliberately
 		channel.close();
 	}
 
