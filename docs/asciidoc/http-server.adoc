@@ -1,6 +1,7 @@
 :sourcedir: ./../../reactor-netty-http/src/main/java
 :examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server
 :javadoc: https://projectreactor.io/docs/netty/{project-version}/api
+:nettyjavadoc: https://netty.io/4.1/api
 :wirelogger: reactor.netty.http.server.HttpServer
 
 [[http-server]]
@@ -305,8 +306,8 @@ By default, `Netty` configures some restrictions for the incoming requests, such
 * The maximum length of all headers.
 * The maximum length of the content or each chunk.
 
-For more information, see https://netty.io/4.1/api/io/netty/handler/codec/http/HttpRequestDecoder.html[`HttpRequestDecoder`]
-and https://netty.io/4.1/api/io/netty/handler/codec/http/HttpServerUpgradeHandler.html[`HttpServerUpgradeHandler`]
+For more information, see {nettyjavadoc}/io/netty/handler/codec/http/HttpRequestDecoder.html[`HttpRequestDecoder`]
+and {nettyjavadoc}/io/netty/handler/codec/http/HttpServerUpgradeHandler.html[`HttpServerUpgradeHandler`]
 
 By default, the `HTTP` server is configured with the following settings:
 
@@ -335,7 +336,7 @@ include::{examplesdir}/requestdecoder/Application.java[lines=18..34]
 ----
 <1> The maximum length of all headers will be `16384`.
 When this value is exceeded, a
-https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
+{nettyjavadoc}/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
 is raised.
 ====
 
@@ -386,11 +387,11 @@ include::wire-logger.adoc[]
 
 When you need SSL or TLS, you can apply the configuration shown in the next example.
 By default, if `OpenSSL` is available,
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
+{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
 provider is used as a provider. Otherwise
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
+{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
 You can switch the provider by using
-https://netty.io/4.1/api/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
+{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
 or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 
 The following example uses `SslContextBuilder`:
