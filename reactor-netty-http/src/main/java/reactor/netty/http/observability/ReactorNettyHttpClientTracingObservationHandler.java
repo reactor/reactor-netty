@@ -17,37 +17,39 @@ package reactor.netty.http.observability;
 
 import io.micrometer.common.KeyValue;
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.transport.http.HttpClientRequest;
-import io.micrometer.observation.transport.http.context.HttpClientContext;
+import io.micrometer.observation.transport.RequestReplySenderContext;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
-import io.micrometer.tracing.handler.HttpClientTracingObservationHandler;
-import io.micrometer.tracing.http.HttpClientHandler;
+import io.micrometer.tracing.handler.PropagatingSenderTracingObservationHandler;
+import io.micrometer.tracing.propagation.Propagator;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 
 /**
- * Reactor Netty specific {@link HttpClientTracingObservationHandler}
+ * Reactor Netty specific {@link PropagatingSenderTracingObservationHandler}
  *
  * @author Marcin Grzejszczak
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-public final class ReactorNettyHttpClientTracingObservationHandler extends HttpClientTracingObservationHandler {
+public final class ReactorNettyHttpClientTracingObservationHandler extends PropagatingSenderTracingObservationHandler<RequestReplySenderContext<HttpRequest, HttpResponse>> {
 
 	/**
-	 * Creates a new instance of {@link HttpClientTracingObservationHandler}.
+	 * Creates a new instance of {@link ReactorNettyHttpClientTracingObservationHandler}.
 	 *
-	 * @param tracer  tracer
-	 * @param handler http client handler
+	 * @param tracer     tracer
+	 * @param propagator tracing propagator
 	 */
-	public ReactorNettyHttpClientTracingObservationHandler(Tracer tracer, HttpClientHandler handler) {
-		super(tracer, handler);
+	public ReactorNettyHttpClientTracingObservationHandler(Tracer tracer, Propagator propagator) {
+		super(tracer, propagator);
 	}
 
 	@Override
-	public void tagSpan(HttpClientContext context, Span span) {
+	public void tagSpan(RequestReplySenderContext<HttpRequest, HttpResponse> context, Span span) {
 		for (KeyValue tag : context.getHighCardinalityKeyValues()) {
 			span.tag(tag.getKey(), tag.getValue());
 		}

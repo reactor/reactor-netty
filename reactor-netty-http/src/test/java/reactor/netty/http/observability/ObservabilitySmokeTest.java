@@ -96,8 +96,8 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 			ObservationHandler<? extends Observation.Context> defaultHandler = timerRecordingHandlers.removeLast();
 			timerRecordingHandlers.addLast(new ReactorNettyTracingObservationHandler(bb.getTracer()));
 			timerRecordingHandlers.addLast(defaultHandler);
-			timerRecordingHandlers.addFirst(new ReactorNettyHttpClientTracingObservationHandler(bb.getTracer(), bb.getHttpClientHandler()));
-			timerRecordingHandlers.addFirst(new ReactorNettyHttpServerTracingObservationHandler(bb.getTracer(), bb.getHttpServerHandler()));
+			timerRecordingHandlers.addFirst(new ReactorNettyHttpClientTracingObservationHandler(bb.getTracer(), bb.getPropagator()));
+			timerRecordingHandlers.addFirst(new ReactorNettyHttpServerTracingObservationHandler(bb.getTracer(), bb.getPropagator()));
 		};
 	}
 
