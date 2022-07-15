@@ -853,7 +853,6 @@ class TcpServerTests {
 	}
 
 	@Test
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void testHalfClosedConnection() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
@@ -892,7 +891,7 @@ class TcpServerTests {
 		conn.outbound()
 		    .sendString(Flux.range(1, 257).map(count -> count + "\n"))
 		    .then()
-		    .subscribe(null, null, () -> ((io.netty5.channel.socket.SocketChannel) conn.channel()).shutdown(ChannelShutdownDirection.Outbound)); // FutureReturnValueIgnored
+		    .subscribe(null, null, () -> conn.channel().shutdown(ChannelShutdownDirection.Outbound));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 

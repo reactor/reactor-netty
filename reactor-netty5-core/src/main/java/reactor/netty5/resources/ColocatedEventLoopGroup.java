@@ -34,7 +34,6 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 	final EventLoopGroup eventLoopGroup;
 	final FastThreadLocal<EventLoop> localLoop = new FastThreadLocal<>();
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	ColocatedEventLoopGroup(EventLoopGroup eventLoopGroup) {
 		this.eventLoopGroup = eventLoopGroup;
 		for (EventExecutor ex : eventLoopGroup) {
@@ -45,7 +44,6 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 					}
 				}
 				else {
-					//"FutureReturnValueIgnored" this is deliberate
 					eventLoop.submit(() -> {
 						if (!localLoop.isSet()) {
 							localLoop.set(eventLoop);

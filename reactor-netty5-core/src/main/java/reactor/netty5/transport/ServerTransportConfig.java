@@ -246,7 +246,6 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
 			if (channelGroup != null && newState == State.CONNECTED) {
 				channelGroup.add(connection.channel());
@@ -258,7 +257,6 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 				}
 				catch (Throwable t) {
 					log.error(format(connection.channel(), ""), t);
-					//"FutureReturnValueIgnored" this is deliberate
 					connection.channel().close();
 				}
 			}

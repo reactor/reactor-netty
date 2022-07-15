@@ -714,7 +714,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return ((AtomicLong) ops.connection()).get();
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	static void sendDecodingFailures(
 			ChannelHandlerContext ctx,
 			ConnectionObserver listener,
@@ -750,7 +749,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 		}
 
-		//"FutureReturnValueIgnored" this is deliberate
 		ctx.channel().writeAndFlush(response);
 
 		listener.onStateChange(ops, REQUEST_DECODING_FAILED);

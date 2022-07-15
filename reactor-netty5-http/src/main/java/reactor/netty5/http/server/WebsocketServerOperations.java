@@ -65,7 +65,6 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	volatile int closeSent;
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	WebsocketServerOperations(String wsUrl, WebsocketServerSpec websocketServerSpec, HttpServerOperations replaced) {
 		super(replaced);
 		this.proxyPing = websocketServerSpec.handlePing();
@@ -78,7 +77,6 @@ final class WebsocketServerOperations extends HttpServerOperations
 				new WebSocketServerHandshakerFactory(wsUrl, websocketServerSpec.protocols(), true, websocketServerSpec.maxFramePayloadLength());
 		handshaker = wsFactory.newHandshaker(replaced.nettyRequest);
 		if (handshaker == null) {
-			//"FutureReturnValueIgnored" this is deliberate
 			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(channel);
 			handshakerResult = null;
 		}
@@ -139,7 +137,6 @@ final class WebsocketServerOperations extends HttpServerOperations
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
 		if (frame instanceof CloseWebSocketFrame closeWebSocketFrame && closeWebSocketFrame.isFinalFragment()) {
 			if (log.isDebugEnabled()) {
@@ -158,7 +155,6 @@ final class WebsocketServerOperations extends HttpServerOperations
 			return;
 		}
 		if (!this.proxyPing && frame instanceof PingWebSocketFrame pingWebSocketFrame) {
-			//"FutureReturnValueIgnored" this is deliberate
 			ctx.writeAndFlush(new PongWebSocketFrame(pingWebSocketFrame.binaryData()));
 			ctx.read();
 			return;
@@ -245,10 +241,8 @@ final class WebsocketServerOperations extends HttpServerOperations
 		sendCloseNow(frame, new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()), listener);
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void sendCloseNow(CloseWebSocketFrame frame, WebSocketCloseStatus closeStatus, FutureListener<Void> listener) {
 		if (!frame.isFinalFragment()) {
-			//"FutureReturnValueIgnored" this is deliberate
 			channel().writeAndFlush(frame);
 			return;
 		}

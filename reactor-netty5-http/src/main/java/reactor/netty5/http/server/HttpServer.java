@@ -755,7 +755,6 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == HttpServerState.REQUEST_RECEIVED) {
 				try {
@@ -775,7 +774,6 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 				}
 				catch (Throwable t) {
 					log.error(format(connection.channel(), ""), t);
-					//"FutureReturnValueIgnored" this is deliberate
 					connection.channel()
 					          .close();
 				}

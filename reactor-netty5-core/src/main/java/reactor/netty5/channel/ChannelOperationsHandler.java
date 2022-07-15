@@ -79,7 +79,6 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
 	final public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg == null) {
 			return;
@@ -113,7 +112,6 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 			safeRelease(msg);
 			log.error(format(ctx.channel(), "Error was received while reading the incoming data." +
 					" The connection will be closed."), err);
-			//"FutureReturnValueIgnored" this is deliberate
 			ctx.close();
 			channelExceptionCaught(ctx, err);
 		}

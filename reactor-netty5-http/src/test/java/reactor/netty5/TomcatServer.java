@@ -100,7 +100,6 @@ public class TomcatServer {
 	static final class DefaultServlet extends HttpServlet {
 
 		@Override
-		@SuppressWarnings("JdkObsolete")
 		protected void service(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 			String contentLength = req.getHeader("Content-Length");
 			if ("GET".equals(req.getMethod()) && contentLength != null

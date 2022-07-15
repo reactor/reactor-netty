@@ -100,7 +100,6 @@ final class WebsocketClientOperations extends HttpClientOperations
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
 			started = true;
@@ -119,7 +118,6 @@ final class WebsocketClientOperations extends HttpClientOperations
 					}
 					catch (Exception e) {
 						onInboundError(e);
-						//"FutureReturnValueIgnored" this is deliberate
 						ctx.close();
 					}
 				}
@@ -130,7 +128,6 @@ final class WebsocketClientOperations extends HttpClientOperations
 			return;
 		}
 		if (!this.proxyPing && msg instanceof PingWebSocketFrame pingWebSocketFrame) {
-			//"FutureReturnValueIgnored" this is deliberate
 			ctx.writeAndFlush(new PongWebSocketFrame(pingWebSocketFrame.binaryData()));
 			ctx.read();
 			return;
@@ -248,10 +245,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 		sendCloseNow(frame, new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void sendCloseNow(CloseWebSocketFrame frame, WebSocketCloseStatus closeStatus) {
 		if (!frame.isFinalFragment()) {
-			//"FutureReturnValueIgnored" this is deliberate
 			channel().writeAndFlush(frame);
 			return;
 		}

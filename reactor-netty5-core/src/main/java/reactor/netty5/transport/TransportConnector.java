@@ -72,7 +72,6 @@ public final class TransportConnector {
 	 * {@link io.netty5.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
 	 * @return a {@link Mono} of {@link Channel}
 	 */
-	@SuppressWarnings("FutureReturnValueIgnored")
 	public static Mono<Channel> bind(TransportConfig config, ChannelInitializer<Channel> channelInitializer,
 			SocketAddress bindAddress, boolean isDomainSocket) {
 		Objects.requireNonNull(config, "config");
@@ -82,7 +81,6 @@ public final class TransportConnector {
 		return doInitAndRegister(config, channelInitializer, isDomainSocket, config.eventLoopGroup().next())
 				.flatMap(channel -> {
 					MonoChannelPromise promise = new MonoChannelPromise(channel);
-					// "FutureReturnValueIgnored" this is deliberate
 					channel.executor().execute(() ->
 							channel.bind(bindAddress)
 									.addListener(f -> {
@@ -90,7 +88,6 @@ public final class TransportConnector {
 											promise.setSuccess();
 										}
 										else {
-											// "FutureReturnValueIgnored" this is deliberate
 											channel.close();
 											promise.setFailure(f.cause());
 										}
@@ -222,7 +219,6 @@ public final class TransportConnector {
 		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	static void doConnect(
 			List<SocketAddress> addresses,
 			@Nullable Supplier<? extends SocketAddress> bindAddress,
@@ -250,7 +246,6 @@ public final class TransportConnector {
 					connectPromise.setSuccess();
 				}
 				else {
-					// "FutureReturnValueIgnored" this is deliberate
 					channel.close();
 
 					Throwable cause = future.cause();
@@ -319,7 +314,6 @@ public final class TransportConnector {
 						}
 						else {
 							if (channel.isRegistered()) {
-								// "FutureReturnValueIgnored" this is deliberate
 								channel.close();
 							}
 							else {
@@ -339,7 +333,7 @@ public final class TransportConnector {
 		return monoChannelPromise;
 	}
 
-	@SuppressWarnings({"unchecked", "FutureReturnValueIgnored", "try"})
+	@SuppressWarnings({"unchecked", "try"})
 	static Mono<Channel> doResolveAndConnect(Channel channel, TransportConfig config,
 			SocketAddress remoteAddress, AddressResolverGroup<?> resolverGroup, ContextSnapshot snapshot) {
 		try {
@@ -388,7 +382,6 @@ public final class TransportConnector {
 			if (resolveFuture.isDone()) {
 				Throwable cause = resolveFuture.cause();
 				if (cause != null) {
-					// "FutureReturnValueIgnored" this is deliberate
 					channel.close();
 					return Mono.error(cause);
 				}
@@ -402,7 +395,6 @@ public final class TransportConnector {
 			MonoChannelPromise monoChannelPromise = new MonoChannelPromise(channel);
 			resolveFuture.addListener(future -> {
 				if (future.cause() != null) {
-					// "FutureReturnValueIgnored" this is deliberate
 					channel.close();
 					monoChannelPromise.setFailure(future.cause());
 				}
@@ -428,9 +420,7 @@ public final class TransportConnector {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public void cancel() {
-			// "FutureReturnValueIgnored" this is deliberate
 			channel.close();
 		}
 

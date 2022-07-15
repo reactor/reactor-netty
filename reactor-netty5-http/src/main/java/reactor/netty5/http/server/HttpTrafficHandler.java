@@ -495,7 +495,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		protected void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) {
 			if (evt.state() == IdleState.READER_IDLE) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
@@ -503,7 +502,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							"Connection was idle for [{}ms], as per configuration the connection will be closed."),
 							idleTimeout);
 				}
-				// FutureReturnValueIgnored is deliberate
 				ctx.close();
 			}
 			ctx.fireChannelInboundEvent(evt);
