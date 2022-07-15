@@ -16,7 +16,6 @@
 package reactor.netty.channel;
 
 import io.micrometer.common.KeyValues;
-import io.micrometer.context.ContextSnapshot;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor;
@@ -29,9 +28,9 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
-import java.util.function.Predicate;
 
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.ERROR;
@@ -54,9 +53,7 @@ import static reactor.netty.channel.ConnectObservations.ConnectTimeLowCardinalit
  * @since 1.1.0
  */
 public final class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandler {
-	static final AttributeKey<ContextSnapshot> CONTEXT_SNAPSHOT = AttributeKey.valueOf("$CONTEXT_SNAPSHOT");
-
-	static final Predicate<Object> OBSERVATION_KEY = k -> k == ObservationThreadLocalAccessor.KEY;
+	static final AttributeKey<ContextView> CONTEXT_VIEW = AttributeKey.valueOf("$CONTEXT_VIEW");
 
 	final MicrometerChannelMetricsRecorder recorder;
 
@@ -125,12 +122,14 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			//
 			// Move the implementation from the recorder here
 			this.remoteAddress = formatSocketAddress(remoteAddress);
-			ContextSnapshot snapshot = ctx.channel().hasAttr(CONTEXT_SNAPSHOT) ?
-					ctx.channel().attr(CONTEXT_SNAPSHOT).get() : ContextSnapshot.capture();
-			Observation observation;
-			try (ContextSnapshot.Scope scope = snapshot.setThreadLocalValues(OBSERVATION_KEY)) {
-				observation = Observation.start(recorder.name() + CONNECT_TIME, this, OBSERVATION_REGISTRY);
+			Observation observation = Observation.createNotStarted(recorder.name() + CONNECT_TIME, this, OBSERVATION_REGISTRY);
+			if (ctx.channel().hasAttr(CONTEXT_VIEW)) {
+				ContextView contextView = ctx.channel().attr(CONTEXT_VIEW).get();
+				if (contextView.hasKey(ObservationThreadLocalAccessor.KEY)) {
+					observation.parentObservation(contextView.get(ObservationThreadLocalAccessor.KEY));
+				}
 			}
+			observation.start();
 			ctx.connect(remoteAddress, localAddress, promise)
 			   .addListener(future -> {
 			       ctx.pipeline().remove(this);
@@ -227,11 +226,14 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		@SuppressWarnings("try")
 		public void channelActive(ChannelHandlerContext ctx) {
 			this.remoteAddress = formatSocketAddress(ctx.channel().remoteAddress());
-			ContextSnapshot snapshot = ctx.channel().hasAttr(CONTEXT_SNAPSHOT) ?
-					ctx.channel().attr(CONTEXT_SNAPSHOT).getAndSet(null) : ContextSnapshot.capture();
-			try (ContextSnapshot.Scope scope = snapshot.setThreadLocalValues(OBSERVATION_KEY)) {
-				observation = Observation.start(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
+			observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
+			if (ctx.channel().hasAttr(CONTEXT_VIEW)) {
+				ContextView contextView = ctx.channel().attr(CONTEXT_VIEW).get();
+				if (contextView.hasKey(ObservationThreadLocalAccessor.KEY)) {
+					observation.parentObservation(contextView.get(ObservationThreadLocalAccessor.KEY));
+				}
 			}
+			observation.start();
 			ctx.pipeline().get(SslHandler.class)
 					.handshakeFuture()
 					.addListener(f -> {

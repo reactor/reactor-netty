@@ -15,7 +15,6 @@
  */
 package reactor.netty.resources;
 
-import io.micrometer.context.ContextSnapshot;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -44,6 +43,7 @@ import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.Context;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -141,7 +141,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 						poolFactory.registrar.get().registerMetrics(name, id, remoteAddress,
 								new DelegatingConnectionPoolMetrics(newPool.metrics()));
 					}
-					else if (Metrics.isInstrumentationAvailable()) {
+					else if (Metrics.isMicrometerAvailable()) {
 						// work directly with the pool otherwise a weak reference is needed to ConnectionPoolMetrics
 						// we don't want to keep another map with weak references
 						registerDefaultMetrics(id, remoteAddress, newPool.metrics());
@@ -168,8 +168,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			if (eventLoop != null) {
 				mono = mono.contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop));
 			}
-			ContextSnapshot snapshot = ContextSnapshot.capture(sink.contextView());
-			mono.contextWrite(snapshot::updateContext)
+			Function<Context, Context> snapshot =
+					Metrics.isMicrometerAvailable() && Metrics.isContextPropagationAvailable() ?
+							ContextPropagationUtils.captureObservation(sink.contextView()) : Function.identity();
+			mono.contextWrite(snapshot)
 			    .subscribe(createDisposableAcquire(config, connectionObserver,
 			            poolFactory.pendingAcquireTimeout, pool, sink, snapshot));
 		});
@@ -258,7 +260,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			long pendingAcquireTimeout,
 			InstrumentedPool<T> pool,
 			MonoSink<Connection> sink,
-			ContextSnapshot snapshot);
+			Function<Context, Context> snapshot);
 
 	protected abstract InstrumentedPool<T> createPool(
 			TransportConfig config,
