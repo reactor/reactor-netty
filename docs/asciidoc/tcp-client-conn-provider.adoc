@@ -15,9 +15,9 @@ and is intentional because only the user/framework knows if the actual protocol 
 
 ====
 [source,java,indent=0]
-../../../reactor-netty5-core/src/main/java/reactor/netty/ReactorNetty.java
+../../../reactor-netty5-core/src/main/java/reactor/netty5/ReactorNetty.java
 ----
-include::./../../reactor-netty5-core/src/main/java/reactor/netty/ReactorNetty.java[lines=117..127]
+include::./../../reactor-netty5-core/src/main/java/reactor/netty5/ReactorNetty.java[lines=121..131]
 ----
 ====
 

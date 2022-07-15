@@ -10,9 +10,9 @@ and further attempts are declined with an error.
 
 ====
 [source,java,indent=0]
-../../../reactor-netty5-core/src/main/java/reactor/netty/ReactorNetty.java
+../../../reactor-netty5-core/src/main/java/reactor/netty5/ReactorNetty.java
 ----
-include::./../../reactor-netty5-core/src/main/java/reactor/netty/ReactorNetty.java[lines=117..165]
+include::./../../reactor-netty5-core/src/main/java/reactor/netty5/ReactorNetty.java[lines=121..169]
 ----
 ====
 

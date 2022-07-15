@@ -1,5 +1,5 @@
 :sourcedir: ./../../reactor-netty5-http/src/main/java
-:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty/examples/documentation/http/server
+:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty5/examples/documentation/http/server
 :javadoc: https://projectreactor.io/docs/netty/{project-version}/api
 :wirelogger: reactor.netty5.http.server.HttpServer
 :nettyjavadoc: https://netty.io/5.0/api
@@ -8,14 +8,14 @@
 = HTTP Server
 
 `Reactor Netty` provides the easy-to-use and easy-to-configure
-{javadoc}/reactor/netty/http/server/HttpServer.html[`HttpServer`] class.
+{javadoc}/reactor/netty5/http/server/HttpServer.html[`HttpServer`] class.
 It hides most of the `Netty` functionality that is needed in order to create a `HTTP` server
 and adds `Reactive Streams` backpressure.
 
 == Starting and Stopping
 
 To start an HTTP server, you must create and configure a
-{javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer] instance.
+{javadoc}/reactor/netty5/http/server/HttpServer.html[HttpServer] instance.
 By default, the `host` is configured for any local address, and the system picks up an ephemeral port
 when the `bind` operation is invoked.
 The following example shows how to create an `HttpServer` instance:
@@ -26,13 +26,13 @@ The following example shows how to create an `HttpServer` instance:
 ----
 include::{examplesdir}/create/Application.java[lines=18..31]
 ----
-<1> Creates an {javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer]
+<1> Creates an {javadoc}/reactor/netty5/http/server/HttpServer.html[HttpServer]
 instance ready for configuring.
 <2> Starts the server in a blocking fashion and waits for it to finish initializing.
 ====
 
-The returned {javadoc}/reactor/netty/DisposableServer.html[`DisposableServer`]
-offers a simple server API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+The returned {javadoc}/reactor/netty5/DisposableServer.html[`DisposableServer`]
+offers a simple server API, including {javadoc}/reactor/netty5/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
 which shuts the server down in a blocking fashion.
 
 === Host and Port
@@ -87,7 +87,7 @@ include::{examplesdir}/warmup/Application.java[lines=18..36]
 == Routing HTTP
 
 Defining routes for the `HTTP` server requires configuring the provided
-{javadoc}/reactor/netty/http/server/HttpServerRoutes.html[`HttpServerRoutes`] builder.
+{javadoc}/reactor/netty5/http/server/HttpServerRoutes.html[`HttpServerRoutes`] builder.
 The following example shows how to do so:
 
 ====
@@ -131,9 +131,9 @@ include::{examplesdir}/staticresources/Application.java[lines=18..37]
 == Writing Data
 
 To send data to a connected client, you must attach an I/O handler by using either
-{javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[`handle(...)`] or
-{javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[`route(...)`].
-The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerResponse.html[`HttpServerResponse`],
+{javadoc}/reactor/netty5/http/server/HttpServer.html#handle-java.util.function.BiFunction-[`handle(...)`] or
+{javadoc}/reactor/netty5/http/server/HttpServer.html#route-java.util.function.Consumer-[`route(...)`].
+The I/O handler has access to {javadoc}/reactor/netty5/http/server/HttpServerResponse.html[`HttpServerResponse`],
 to be able to write data. The following example uses the `handle(...)` method:
 
 ====
@@ -150,7 +150,7 @@ include::{examplesdir}/send/Application.java[lines=18..33]
 When you send data to the connected clients, you may need to send additional headers,
 cookies, status code, and other metadata.
 You can provide this additional metadata by using
-{javadoc}/reactor/netty/http/server/HttpServerResponse.html[`HttpServerResponse`].
+{javadoc}/reactor/netty5/http/server/HttpServerResponse.html[`HttpServerResponse`].
 The following example shows how to do so:
 
 ====
@@ -186,9 +186,9 @@ include::{examplesdir}/compression/Application.java[lines=18..38]
 == Consuming Data
 
 To receive data from a connected client, you must attach an I/O handler by using either
-{javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[`handle(...)`] or
-{javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[`route(...)`].
-The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`],
+{javadoc}/reactor/netty5/http/server/HttpServer.html#handle-java.util.function.BiFunction-[`handle(...)`] or
+{javadoc}/reactor/netty5/http/server/HttpServer.html#route-java.util.function.Consumer-[`route(...)`].
+The I/O handler has access to {javadoc}/reactor/netty5/http/server/HttpServerRequest.html[`HttpServerRequest`],
 to be able to read data.
 
 The following example uses the `handle(...)` method:
@@ -206,7 +206,7 @@ include::{examplesdir}/read/Application.java[lines=18..32]
 
 When you receive data from the connected clients, you might need to check request headers,
 parameters, and other metadata. You can obtain this additional metadata by using
-{javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`].
+{javadoc}/reactor/netty5/http/server/HttpServerRequest.html[`HttpServerRequest`].
 The following example shows how to do so:
 
 ====
@@ -221,7 +221,7 @@ include::{examplesdir}/read/headers/Application.java[lines=18..40]
 
 When you receive data from the connected clients, you might want to access `POST` `form` (`application/x-www-form-urlencoded`) or
 `multipart` (`multipart/form-data`) data. You can obtain this data by using
-{javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`].
+{javadoc}/reactor/netty5/http/server/HttpServerRequest.html[`HttpServerRequest`].
 
 ====
 [source,java,indent=0]
@@ -306,23 +306,23 @@ By default, `Netty` configures some restrictions for the incoming requests, such
 * The maximum length of all headers.
 * The maximum length of the content or each chunk.
 
-For more information, see {nettyjavadoc}/io/netty/handler/codec/http/HttpRequestDecoder.html[`HttpRequestDecoder`]
-and {nettyjavadoc}/io/netty/handler/codec/http/HttpServerUpgradeHandler.html[`HttpServerUpgradeHandler`]
+For more information, see {nettyjavadoc}/io.netty5.codec.http/io/netty5/handler/codec/http/HttpRequestDecoder.html[`HttpRequestDecoder`]
+and {nettyjavadoc}/io.netty5.codec.http/io/netty5/handler/codec/http/HttpServerUpgradeHandler.html[`HttpServerUpgradeHandler`]
 
 By default, the `HTTP` server is configured with the following settings:
 
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty/http/HttpDecoderSpec.java
+.{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=29..38]
+include::{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java[lines=29..39]
 ----
 ====
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java
+.{sourcedir}/reactor/netty5/http/server/HttpRequestDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=41..46]
+include::{sourcedir}/reactor/netty5/http/server/HttpRequestDecoderSpec.java[lines=41..46]
 ----
 ====
 
@@ -336,7 +336,7 @@ include::{examplesdir}/requestdecoder/Application.java[lines=18..34]
 ----
 <1> The maximum length of all headers will be `16384`.
 When this value is exceeded, a
-{nettyjavadoc}/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
+{nettyjavadoc}/io.netty5.codec/io/netty5/handler/codec/TooLongFrameException.html[TooLongFrameException]
 is raised.
 ====
 
@@ -387,12 +387,12 @@ include::wire-logger.adoc[]
 
 When you need SSL or TLS, you can apply the configuration shown in the next example.
 By default, if `OpenSSL` is available,
-{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
+{nettyjavadoc}/io.netty5.handler/io/netty5/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
 provider is used as a provider. Otherwise
-{nettyjavadoc}/io/netty/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
+{nettyjavadoc}/io.netty5.handler/io/netty5/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
 You can switch the provider by using
-{nettyjavadoc}/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
-or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
+{nettyjavadoc}/io.netty5.handler/io/netty5/handler/ssl/SslContextBuilder.html#sslProvider(io.netty5.handler.ssl.SslProvider)[`SslContextBuilder`]
+or by setting `-Dio.netty5.handler.ssl.noOpenSsl=true`.
 
 The following example uses `SslContextBuilder`:
 
@@ -493,16 +493,13 @@ include::{examplesdir}/accessLog/CustomFormatAndFilterAccessLogApplication.java[
 By default, the `HTTP` server supports `HTTP/1.1`. If you need `HTTP/2`, you can get it through configuration.
 In addition to the protocol configuration, if you need `H2` but not `H2C (cleartext)`, you must also configure SSL.
 
-NOTE: As Application-Layer Protocol Negotiation (ALPN) is not supported "`out-of-the-box`" by JDK8 (although some vendors backported ALPN to JDK8), you need an additional dependency to a native library that
-supports it -- for example, https://netty.io/wiki/forked-tomcat-native.html[`netty-tcnative-boringssl-static`].
-
 The following listing presents a simple `H2` example:
 
 ====
 [source,java,indent=0]
 .{examplesdir}/http2/H2Application.java
 ----
-include::{examplesdir}/http2/H2Application.java[lines=18..44]
+include::{examplesdir}/http2/H2Application.java[lines=18..45]
 ----
 <1> Configures the server to support only `HTTP/2`
 <2> Configures `SSL`
@@ -546,9 +543,9 @@ hello
 
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty/http/HttpProtocol.java
+.{sourcedir}/reactor/netty5/http/HttpProtocol.java
 ----
-include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..52]
+include::{sourcedir}/reactor/netty5/http/HttpProtocol.java[lines=24..52]
 ----
 ====
 
@@ -614,7 +611,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 ----
 include::{examplesdir}/metrics/custom/Application.java[lines=18..41]
 ----
-<1> Enables HTTP server metrics and provides {javadoc}/reactor/netty/http/server/HttpServerMetricsRecorder.html[`HttpServerMetricsRecorder`] implementation.
+<1> Enables HTTP server metrics and provides {javadoc}/reactor/netty5/http/server/HttpServerMetricsRecorder.html[`HttpServerMetricsRecorder`] implementation.
 ====
 
 == Unix Domain Sockets

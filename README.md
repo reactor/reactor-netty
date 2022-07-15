@@ -10,7 +10,7 @@
 clients & servers based on `Netty` framework.
 
 ## Getting it
-`Reactor Netty` requires Java 8 or + to run.
+`Reactor Netty` requires Java 17 or + to run.
 
 With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` repositories (stable releases only):
 
