@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
-import io.micrometer.context.ContextSnapshot;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.EventLoop;
@@ -80,7 +79,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			long pendingAcquireTimeout,
 			InstrumentedPool<PooledConnection> pool,
 			MonoSink<Connection> sink,
-			ContextSnapshot snapshot) {
+			Function<Context, Context> snapshot) {
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
 				pendingAcquireTimeout, pool, sink, snapshot);
 	}
@@ -118,9 +117,9 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				long pendingAcquireTimeout,
 				InstrumentedPool<PooledConnection> pool,
 				MonoSink<Connection> sink,
-				ContextSnapshot snapshot) {
+				Function<Context, Context> snapshot) {
 			this.cancellations = Disposables.composite();
-			this.currentContext = Context.of(snapshot.updateContext(sink.contextView()));
+			this.currentContext = snapshot.apply(Context.of(sink.contextView()));
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
@@ -500,13 +499,12 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink);
 				EventLoop callerEventLoop = sink.contextView().hasKey(CONTEXT_CALLER_EVENTLOOP) ?
 						sink.contextView().get(CONTEXT_CALLER_EVENTLOOP) : null;
-				ContextSnapshot snapshot = ContextSnapshot.capture(sink.contextView());
 				if (callerEventLoop != null) {
-					TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop, snapshot)
+					TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop, sink.contextView())
 							.subscribe(initializer);
 				}
 				else {
-					TransportConnector.connect(config, remoteAddress, resolver, initializer, snapshot).subscribe(initializer);
+					TransportConnector.connect(config, remoteAddress, resolver, initializer, sink.contextView()).subscribe(initializer);
 				}
 			});
 		}

@@ -604,7 +604,7 @@ public interface ConnectionProvider extends Disposable {
 		 */
 		public final SPEC metrics(boolean metricsEnabled) {
 			if (metricsEnabled) {
-				if (!Metrics.isInstrumentationAvailable()) {
+				if (!Metrics.isMicrometerAvailable()) {
 					throw new UnsupportedOperationException(
 							"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
 									" to the class path first");

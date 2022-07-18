@@ -16,7 +16,6 @@
 package reactor.netty5.http.client;
 
 import io.micrometer.common.KeyValues;
-import io.micrometer.context.ContextSnapshot;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor;
@@ -34,7 +33,6 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty5.Metrics.RESPONSE_TIME;
@@ -53,8 +51,6 @@ import static reactor.netty5.http.client.HttpClientObservations.ResponseTimeLowC
  * @since 1.1.0
  */
 final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetricsHandler {
-	static final Predicate<Object> OBSERVATION_KEY = k -> k == ObservationThreadLocalAccessor.KEY;
-
 	final MicrometerHttpClientMetricsRecorder recorder;
 
 	ResponseTimeHandlerContext responseTimeHandlerContext;
@@ -119,11 +115,11 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		HttpClientRequest httpClientRequest = new ObservationHttpClientRequest(msg, method, path);
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, httpClientRequest, channel.remoteAddress());
-		ContextSnapshot snapshot = contextView != null ? ContextSnapshot.capture(contextView) :
-				ContextSnapshot.capture();
-		try (ContextSnapshot.Scope scope = snapshot.setThreadLocalValues(OBSERVATION_KEY)) {
-			responseTimeObservation = Observation.start(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, OBSERVATION_REGISTRY);
+		responseTimeObservation = Observation.createNotStarted(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, OBSERVATION_REGISTRY);
+		if (contextView != null && contextView.hasKey(ObservationThreadLocalAccessor.KEY)) {
+			responseTimeObservation.parentObservation(contextView.get(ObservationThreadLocalAccessor.KEY));
 		}
+		responseTimeObservation.start();
 	}
 
 	static final class ObservationHttpClientRequest implements HttpClientRequest {

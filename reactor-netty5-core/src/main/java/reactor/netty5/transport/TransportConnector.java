@@ -15,7 +15,6 @@
  */
 package reactor.netty5.transport;
 
-import io.micrometer.context.ContextSnapshot;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.ChannelInitializer;
@@ -36,6 +35,8 @@ import reactor.netty5.Connection;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 import reactor.util.retry.Retry;
 
 import java.net.SocketAddress;
@@ -107,8 +108,7 @@ public final class TransportConnector {
 	 */
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer) {
-		return connect(config, remoteAddress, resolverGroup, channelInitializer, config.eventLoopGroup().next(),
-				ContextSnapshot.capture());
+		return connect(config, remoteAddress, resolverGroup, channelInitializer, config.eventLoopGroup().next(), Context.empty());
 	}
 
 	/**
@@ -118,12 +118,12 @@ public final class TransportConnector {
 	 * @param remoteAddress the {@link SocketAddress} to connect to
 	 * @param resolverGroup the resolver which will resolve the address of the unresolved named address
 	 * @param channelInitializer the {@link ChannelInitializer} that will be used for initializing the channel pipeline
-	 * @param snapshot {@link ContextSnapshot} is a holder of values that are being propagated through various contexts
+	 * @param contextView the current {@link ContextView}
 	 * @return a {@link Mono} of {@link Channel}
 	 */
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
-			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer, ContextSnapshot snapshot) {
-		return connect(config, remoteAddress, resolverGroup, channelInitializer, config.eventLoopGroup().next(), snapshot);
+			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer, ContextView contextView) {
+		return connect(config, remoteAddress, resolverGroup, channelInitializer, config.eventLoopGroup().next(), contextView);
 	}
 
 	/**
@@ -138,7 +138,7 @@ public final class TransportConnector {
 	 */
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer, EventLoop eventLoop) {
-		return connect(config, remoteAddress, resolverGroup, channelInitializer, eventLoop, ContextSnapshot.capture());
+		return connect(config, remoteAddress, resolverGroup, channelInitializer, eventLoop, Context.empty());
 	}
 
 	/**
@@ -149,22 +149,22 @@ public final class TransportConnector {
 	 * @param resolverGroup the resolver which will resolve the address of the unresolved named address
 	 * @param channelInitializer the {@link ChannelInitializer} that will be used for initializing the channel pipeline
 	 * @param eventLoop the {@link EventLoop} to use for handling the channel.
-	 * @param snapshot {@link ContextSnapshot} is a holder of values that are being propagated through various contexts
+	 * @param contextView the current {@link ContextView}
 	 * @return a {@link Mono} of {@link Channel}
 	 */
 	public static Mono<Channel> connect(TransportConfig config, SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup, ChannelInitializer<Channel> channelInitializer, EventLoop eventLoop,
-			ContextSnapshot snapshot) {
+			ContextView contextView) {
 		Objects.requireNonNull(config, "config");
 		Objects.requireNonNull(remoteAddress, "remoteAddress");
 		Objects.requireNonNull(resolverGroup, "resolverGroup");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
 		Objects.requireNonNull(eventLoop, "eventLoop");
-		Objects.requireNonNull(snapshot, "snapshot");
+		Objects.requireNonNull(contextView, "contextView");
 
 		boolean isDomainAddress = remoteAddress instanceof DomainSocketAddress;
 		return doInitAndRegister(config, channelInitializer, isDomainAddress, eventLoop)
-				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup, snapshot)
+				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup, contextView)
 						.onErrorResume(RetryConnectException.class,
 								t -> {
 									AtomicInteger index = new AtomicInteger(1);
@@ -335,7 +335,7 @@ public final class TransportConnector {
 
 	@SuppressWarnings({"unchecked", "try"})
 	static Mono<Channel> doResolveAndConnect(Channel channel, TransportConfig config,
-			SocketAddress remoteAddress, AddressResolverGroup<?> resolverGroup, ContextSnapshot snapshot) {
+			SocketAddress remoteAddress, AddressResolverGroup<?> resolverGroup, ContextView contextView) {
 		try {
 			AddressResolver<SocketAddress> resolver =
 					(AddressResolver<SocketAddress>) resolverGroup.getResolver(channel.executor());
@@ -353,10 +353,14 @@ public final class TransportConnector {
 				}
 			}
 
-			channel.attr(CONTEXT_SNAPSHOT).compareAndSet(null, snapshot);
-
 			Future<List<SocketAddress>> resolveFuture;
-			try (ContextSnapshot.Scope scope = snapshot.setThreadLocalValues(OBSERVATION_KEY)) {
+			if (resolver instanceof MicrometerAddressResolverGroupMetrics.MicrometerDelegatingAddressResolver) {
+				channel.attr(CONTEXT_VIEW).compareAndSet(null, contextView);
+
+				resolveFuture = ((MicrometerAddressResolverGroupMetrics.MicrometerDelegatingAddressResolver<SocketAddress>) resolver)
+						.resolveAll(remoteAddress, contextView);
+			}
+			else {
 				resolveFuture = resolver.resolveAll(remoteAddress);
 			}
 
@@ -512,9 +516,7 @@ public final class TransportConnector {
 
 	static final Logger log = Loggers.getLogger(TransportConnector.class);
 
-	static final AttributeKey<ContextSnapshot> CONTEXT_SNAPSHOT = AttributeKey.valueOf("$CONTEXT_SNAPSHOT");
-
-	static final Predicate<Object> OBSERVATION_KEY = "micrometer.observation"::equals;
+	static final AttributeKey<ContextView> CONTEXT_VIEW = AttributeKey.valueOf("$CONTEXT_VIEW");
 
 	static final Predicate<Throwable> RETRY_PREDICATE = t -> t instanceof RetryConnectException;
 }

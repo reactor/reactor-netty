@@ -15,7 +15,6 @@
  */
 package reactor.netty5.http.client;
 
-import io.micrometer.context.ContextSnapshot;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.Http2Connection;
@@ -103,7 +102,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			long pendingAcquireTimeout,
 			InstrumentedPool<Connection> pool,
 			MonoSink<Connection> sink,
-			ContextSnapshot snapshot) {
+			Function<Context, Context> snapshot) {
 		boolean acceptGzip = false;
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
 		Function<String, String> uriTagValue = null;
@@ -224,10 +223,10 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				long pendingAcquireTimeout,
 				InstrumentedPool<Connection> pool,
 				MonoSink<Connection> sink,
-				ContextSnapshot snapshot,
+				Function<Context, Context> snapshot,
 				@Nullable Function<String, String> uriTagValue) {
 			this.cancellations = Disposables.composite();
-			this.currentContext = Context.of(snapshot.updateContext(sink.contextView()));
+			this.currentContext = snapshot.apply(Context.of(sink.contextView()));
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.acceptGzip = acceptGzip;

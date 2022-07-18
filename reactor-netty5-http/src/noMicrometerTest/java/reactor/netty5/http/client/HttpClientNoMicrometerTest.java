@@ -54,7 +54,7 @@ class HttpClientNoMicrometerTest {
 
 	@Test
 	void smokeTestNoMicrometer() {
-		assertThat(Metrics.isInstrumentationAvailable()).as("isInstrumentationAvailable").isFalse();
+		assertThat(Metrics.isMicrometerAvailable()).as("isMicrometerAvailable").isFalse();
 	}
 
 	@Test

@@ -461,10 +461,10 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 */
 	public final HttpServer metrics(boolean enable, Function<String, String> uriTagValue) {
 		if (enable) {
-			if (!Metrics.isInstrumentationAvailable()) {
+			if (!Metrics.isMicrometerAvailable() && !Metrics.isTracingAvailable()) {
 				throw new UnsupportedOperationException(
-						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
-								" to the class path first");
+						"To enable metrics, you must add the dependencies to `io.micrometer:micrometer-core`" +
+								" and `io.micrometer:micrometer-tracing` to the class path first");
 			}
 			HttpServer dup = duplicate();
 			dup.configuration().metricsRecorder(() -> configuration().defaultMetricsRecorder());

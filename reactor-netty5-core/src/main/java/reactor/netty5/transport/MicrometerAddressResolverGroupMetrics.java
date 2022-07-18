@@ -18,6 +18,7 @@ package reactor.netty5.transport;
 import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
+import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor;
 import io.netty5.resolver.AddressResolver;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.util.concurrent.EventExecutor;
@@ -25,6 +26,7 @@ import io.netty5.util.concurrent.Future;
 import reactor.netty5.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty5.internal.util.MapUtils;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
+import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
 import java.util.List;
@@ -114,8 +116,11 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			this.name = recorder.name();
 		}
 
-		@Override
-		Future<List<T>> resolveAllInternal(SocketAddress address, Supplier<Future<List<T>>> resolver) {
+		Future<List<T>> resolveAll(SocketAddress address, ContextView contextView) {
+			return resolveAllInternal(address, () -> resolver.resolveAll(address), contextView);
+		}
+
+		Future<List<T>> resolveAllInternal(SocketAddress address, Supplier<Future<List<T>>> resolver, ContextView contextView) {
 			// Cannot invoke the recorder anymore:
 			// 1. The recorder is one instance only, it is invoked for all name resolutions that can happen
 			// 2. The recorder does not have knowledge about name resolution lifecycle
@@ -124,7 +129,11 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// Move the implementation from the recorder here
 			String remoteAddress = formatSocketAddress(address);
 			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, remoteAddress);
-			Observation sample = Observation.start(name + ADDRESS_RESOLVER, handlerContext, OBSERVATION_REGISTRY);
+			Observation sample = Observation.createNotStarted(name + ADDRESS_RESOLVER, handlerContext, OBSERVATION_REGISTRY);
+			if (contextView.hasKey(ObservationThreadLocalAccessor.KEY)) {
+				sample.parentObservation(contextView.get(ObservationThreadLocalAccessor.KEY));
+			}
+			sample.start();
 			return resolver.get()
 			               .addListener(future -> {
 			                   handlerContext.status = future.isSuccess() ? SUCCESS : ERROR;

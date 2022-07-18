@@ -404,7 +404,7 @@ public abstract class TransportConfig {
 			if (config.metricsRecorder != null) {
 				ChannelOperations.addMetricsHandler(channel, config.metricsRecorder, remoteAddress, onServer);
 
-				if (Metrics.isInstrumentationAvailable()) {
+				if (Metrics.isMicrometerAvailable()) {
 					try {
 						BufferAllocator alloc = channel.bufferAllocator();
 						if (alloc instanceof BufferAllocatorMetricProvider bufferAllocatorMetricProvider) {

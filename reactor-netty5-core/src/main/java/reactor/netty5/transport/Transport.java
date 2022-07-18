@@ -135,7 +135,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 */
 	protected T metrics(boolean enable) {
 		if (enable) {
-			if (!Metrics.isInstrumentationAvailable()) {
+			if (!Metrics.isMicrometerAvailable()) {
 				throw new UnsupportedOperationException(
 					"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
 						" to the class path first");
