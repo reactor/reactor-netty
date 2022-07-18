@@ -50,7 +50,6 @@ public final class ReactorNettyTracingObservationHandler extends DefaultTracingO
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public String getSpanName(Observation.Context context) {
 		String name = context.getContextualName();
 		return name != null ? name : super.getSpanName(context);

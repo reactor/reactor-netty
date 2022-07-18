@@ -375,7 +375,7 @@ public abstract class TransportConfig {
 			if (config.metricsRecorder != null) {
 				ChannelOperations.addMetricsHandler(channel, config.metricsRecorder, remoteAddress, onServer);
 
-				if (Metrics.isInstrumentationAvailable()) {
+				if (Metrics.isMicrometerAvailable()) {
 					try {
 						ByteBufAllocator alloc = channel.alloc();
 						if (alloc instanceof PooledByteBufAllocator) {

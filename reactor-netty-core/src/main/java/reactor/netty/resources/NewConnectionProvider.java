@@ -20,9 +20,9 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
-import io.micrometer.context.ContextSnapshot;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.unix.DomainSocketAddress;
@@ -36,6 +36,7 @@ import reactor.core.publisher.Operators;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.internal.util.Metrics;
 import reactor.netty.transport.AddressUtils;
 import reactor.netty.transport.TransportConfig;
 import reactor.netty.transport.TransportConnector;
@@ -71,8 +72,10 @@ final class NewConnectionProvider implements ConnectionProvider {
 			DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
 			if (remote != null && resolverGroup != null) {
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
-				ContextSnapshot snapshot = ContextSnapshot.capture(sink.contextView());
-				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, snapshot)
+				Function<Context, Context> snapshot =
+						Metrics.isMicrometerAvailable() && Metrics.isContextPropagationAvailable() ?
+								ContextPropagationUtils.captureObservation(sink.contextView()) : Function.identity();
+				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, snapshot.apply(Context.of(sink.contextView())))
 				                  .subscribe(disposableConnect);
 			}
 			else {

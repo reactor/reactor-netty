@@ -53,7 +53,6 @@ import reactor.netty.resources.ConnectionProvider;
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 
-@SuppressWarnings("rawtypes")
 class ObservabilitySmokeTest extends SampleTestRunner {
 	static byte[] content;
 	static DisposableServer disposableServer;
