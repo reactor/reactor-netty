@@ -23,10 +23,19 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +49,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.ContextAwareHttpServerMetricsRecorder;
@@ -65,6 +75,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -107,6 +118,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
+		Assertions.setMaxStackTraceElementsDisplayed(100);
 		ssc = new SelfSignedCertificate();
 		serverCtx11 = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())
 		                                  .configure(builder -> builder.sslProvider(SslProvider.JDK));
@@ -168,31 +180,34 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		CountDownLatch latch1 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
-		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
-		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
-
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
+		AtomicReference<CountDownLatch> responseSentRef = new AtomicReference<>(responseSent);
+		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
-				.childObserve(observerDisconnect)
+				.doOnConnection(cnx -> responseSentHandler.register(responseSentRef, cnx.channel().pipeline()))
 				.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
-			serverAddress.set(conn.channel().remoteAddress())
-		).observe(observerDisconnect);
+		CountDownLatch clientCompleted = new CountDownLatch(1); // client received full response
+		AtomicReference<CountDownLatch> clientCompletedRef = new AtomicReference<>(clientCompleted);
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols)
+				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
+				.doAfterResponseSuccess((resp, conn) -> clientCompletedRef.get().countDown());
 
-		StepVerifier.create(httpClient.post()
-		                              .uri("/1")
-		                              .send(body)
-		                              .responseContent()
-		                              .aggregate()
-		                              .asString())
-		            .expectNext("Hello World!")
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		StepVerifier.create(httpClient
+						.post()
+						.uri("/1")
+						.send(body)
+						.responseContent()
+						.aggregate()
+						.asString())
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
+		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -213,20 +228,22 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkExpectationsExisting("/1", sa.getHostString() + ":" + sa.getPort(), 1, serverCtx != null,
 				numWrites[0], bytesWrite[0]);
 
-		CountDownLatch latch2 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
-		latchRef.set(latch2);
+		responseSentRef.set(new CountDownLatch(1));
+		clientCompletedRef.set(new CountDownLatch(1));
 
-		StepVerifier.create(httpClient.post()
-		                              .uri("/2?i=1&j=2")
-		                              .send(body)
-		                              .responseContent()
-		                              .aggregate()
-		                              .asString())
-		            .expectNext("Hello World!")
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		StepVerifier.create(httpClient
+						.post()
+						.uri("/2?i=1&j=2")
+						.send(body)
+						.responseContent()
+						.aggregate()
+						.asString())
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
+		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef latch await").isTrue();
 
 		sa = (InetSocketAddress) serverAddress.get();
 
@@ -238,7 +255,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
+	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+	                                  @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, id -> {
 					throw new IllegalArgumentException("Testcase injected Exception");
@@ -262,7 +280,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
+	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+	                                  @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.bindNow();
 
@@ -284,24 +303,27 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		// For HTTP11, we expect to observe 2 DISCONNECTS for client, and 2 DISCONNECT for server.
-		// Else, we expect to observe 2 DISCONNECTS for client, and 1 DISCONNECT for server.
-		boolean isHTTP11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
-		int expectedDisconnects = isHTTP11 ? 4 : 3;
+	                             @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
+		AtomicReference<CountDownLatch> responseSentRef = new AtomicReference<>(responseSent);
+		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
+		CountDownLatch requestReceived = new CountDownLatch(1); // request fully received by the server
+		AtomicReference<CountDownLatch> requestReceivedRef = new AtomicReference<>(requestReceived);
+		RequestReceivedHandler requestReceivedHandler = RequestReceivedHandler.INSTANCE;
 
-		CountDownLatch latch = new CountDownLatch(expectedDisconnects);
-		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
-		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
-
+		// the serverReceivedHandler is used to detect when the server has received the last client request content
+		// the serverCompletedHandler is used to detect when the server has sent the last response content
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
-				.childObserve(observerDisconnect)
+				.doOnConnection(cnx -> responseSentHandler.register(responseSentRef, cnx.channel().pipeline()))
+				.doOnConnection(cnx -> requestReceivedHandler.register(requestReceivedRef, cnx.channel().pipeline()))
 				.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
-			serverAddress.set(conn.channel().remoteAddress())
-		).observe(observerDisconnect);
+		CountDownLatch clientCompleted = new CountDownLatch(1);
+		AtomicReference<CountDownLatch> clientCompletedRef = new AtomicReference<>(clientCompleted);
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols)
+				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
+				.doAfterResponseSuccess((rsp, conn) -> clientCompletedRef.get().countDown());
 
 		StepVerifier.create(httpClient
 						.headers(h -> h.add("Connection", "close"))
@@ -313,7 +335,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(requestReceivedRef.get().await(30, TimeUnit.SECONDS)).as("requestReceivedRef latch await").isTrue();
+		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
+		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -343,8 +367,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), 1, 1, serverCtx != null,
 				numWrites[0], numReads[0], bytesWrite[0], bytesRead[0]);
 
-		CountDownLatch latch2 = new CountDownLatch(expectedDisconnects);
-		latchRef.set(latch2);
+		requestReceivedRef.set(new CountDownLatch(1));
+		responseSentRef.set(new CountDownLatch(1));
+		clientCompletedRef.set(new CountDownLatch(1));
 
 		StepVerifier.create(httpClient
 						.headers(h -> h.add("Connection", "close"))
@@ -356,7 +381,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(requestReceivedRef.get().await(30, TimeUnit.SECONDS)).as("requestReceivedRef latch await").isTrue();
+		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
+		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef latch await").isTrue();
 		sa = (InetSocketAddress) serverAddress.get();
 
 		checkExpectationsNonExisting(sa.getHostString() + ":" + sa.getPort(), connIndex, 2, serverCtx != null,
@@ -366,33 +393,35 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testUriTagValueFunction(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		CountDownLatch latch1 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
-		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
-		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
+		CountDownLatch clientCompleted = new CountDownLatch(1); // client received full response
+		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
 
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.doOnConnection(cnx -> responseSentHandler.register(responseSent, cnx.channel().pipeline()))
 				.metrics(true, s -> "testUriTagValueResolver")
-				.childObserve(observerDisconnect)
 				.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
-			serverAddress.set(conn.channel().remoteAddress())
-		).observe(observerDisconnect);
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols)
+				.doAfterResponseSuccess((res, conn) -> clientCompleted.countDown())
+				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()));
 
-		StepVerifier.create(httpClient.metrics(true, s -> "testUriTagValueResolver")
-		                              .post()
-		                              .uri("/1")
-		                              .send(body)
-		                              .responseContent()
-		                              .aggregate()
-		                              .asString())
-		            .expectNext("Hello World!")
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		StepVerifier.create(httpClient
+						.metrics(true, s -> "testUriTagValueResolver")
+						.post()
+						.uri("/1")
+						.send(body)
+						.responseContent()
+						.aggregate()
+						.asString())
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(responseSent.await(30, TimeUnit.SECONDS)).as("responseSent latch await").isTrue();
+		assertThat(clientCompleted.await(30, TimeUnit.SECONDS)).as("clientCompleted latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -417,30 +446,33 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testUriTagValueFunctionNotSharedForClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		CountDownLatch latch1 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
-		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
-		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
-
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
+		AtomicReference<CountDownLatch> responseSentRef = new AtomicReference<>(responseSent);
+		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
 		disposableServer =
-				customizeServerOptions(httpServer, serverCtx, serverProtocols).metrics(true,
-				                s -> {
-				                    if ("/1".equals(s)) {
-				                        return "testUriTagValueFunctionNotShared_1";
-				                    }
-				                    else {
-				                        return "testUriTagValueFunctionNotShared_2";
-				                    }
-				                })
-						.childObserve(observerDisconnect)
+				customizeServerOptions(httpServer, serverCtx, serverProtocols)
+						.doOnConnection(cnx -> responseSentHandler.register(responseSentRef, cnx.channel().pipeline()))
+						.metrics(true,
+								s -> {
+									if ("/1".equals(s)) {
+										return "testUriTagValueFunctionNotShared_1";
+									}
+									else {
+										return "testUriTagValueFunctionNotShared_2";
+									}
+								})
 						.bindNow();
 
+		CountDownLatch clientCompleted = new CountDownLatch(1); // client received full response
+		AtomicReference<CountDownLatch> clientCompletedRef = new AtomicReference<>(clientCompleted);
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
-				serverAddress.set(conn.channel().remoteAddress())
-		).observe(observerDisconnect);
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols)
+				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
+				.doAfterResponseSuccess((resp, conn) -> clientCompletedRef.get().countDown());
 
-		httpClient.metrics(true, s -> "testUriTagValueFunctionNotShared_1")
+		httpClient
+				  .metrics(true, s -> "testUriTagValueFunctionNotShared_1")
 		          .post()
 		          .uri("/1")
 		          .send(body)
@@ -452,7 +484,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
+		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef latch await").isTrue();
 
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
@@ -470,10 +503,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkExpectationsExisting("testUriTagValueFunctionNotShared_1", sa.getHostString() + ":" + sa.getPort(),
 				1, serverCtx != null, numWrites[0], bytesWrite[0]);
 
-		CountDownLatch latch2 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
-		latchRef.set(latch2);
+		responseSentRef.set(new CountDownLatch(1));
+		clientCompletedRef.set(new CountDownLatch(1));
 
-		httpClient.metrics(true, s -> "testUriTagValueFunctionNotShared_2")
+		httpClient
+				.metrics(true, s -> "testUriTagValueFunctionNotShared_2")
 		          .post()
 		          .uri("/2")
 		          .send(body)
@@ -485,7 +519,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch2.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
+		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef await").isTrue();
 
 		sa = (InetSocketAddress) serverAddress.get();
 
@@ -496,16 +531,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testContextAwareRecorderOnClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+	                                      @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		ClientContextAwareRecorder recorder = ClientContextAwareRecorder.INSTANCE;
-		CountDownLatch latch = new CountDownLatch(1);
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
-		httpClient.doOnResponse((res, conn) -> conn.channel()
-		                                           .closeFuture()
-		                                           .addListener(f -> latch.countDown()))
-		          .metrics(true, () -> recorder)
+
+		httpClient.metrics(true, () -> recorder)
 		          .post()
 		          .uri("/1")
 		          .send(body)
@@ -518,8 +551,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-
 		assertThat(recorder.onDataReceivedContextView).isTrue();
 		assertThat(recorder.onDataSentContextView).isTrue();
 	}
@@ -527,19 +558,21 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testContextAwareRecorderOnServer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+	                                      @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) throws Exception {
+		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
 		ServerContextAwareRecorder recorder = ServerContextAwareRecorder.INSTANCE;
+		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
 		disposableServer =
-				customizeServerOptions(httpServer, serverCtx, serverProtocols).metrics(true, () -> recorder)
-				          .mapHandle((mono, conn) -> mono.contextWrite(Context.of("testContextAwareRecorder", "OK")))
-				          .bindNow();
+				customizeServerOptions(httpServer, serverCtx, serverProtocols)
+						.metrics(true, () -> recorder)
+						.doOnConnection(cnx -> responseSentHandler.register(responseSent, cnx.channel().pipeline()))
+						.mapHandle((mono, conn) -> mono.contextWrite(Context.of("testContextAwareRecorder", "OK")))
+						.bindNow();
 
-		CountDownLatch latch = new CountDownLatch(1);
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
-		httpClient.doOnResponse((res, conn) -> conn.channel()
-		                                           .closeFuture()
-		                                           .addListener(f -> latch.countDown()))
-		          .post()
+
+		httpClient.post()
 		          .uri("/1")
 		          .send(body)
 		          .responseContent()
@@ -550,7 +583,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(responseSent.await(30, TimeUnit.SECONDS)).as("responseSent latch await").isTrue();
 
 		assertThat(recorder.onDataReceivedContextView).isTrue();
 		assertThat(recorder.onDataSentContextView).isTrue();
@@ -559,26 +592,30 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsMicrometer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		CountDownLatch latch = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
-		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
-		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
+		CountDownLatch serverClosed = new CountDownLatch(1); // socket closed on the server side
+		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
+		ServerCloseHandler serverCloseHandler = ServerCloseHandler.INSTANCE;
+		boolean isHttp11 = negotiatedProtocol == HttpProtocol.HTTP11;
 
-		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
-		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+		HttpServer server = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, Function.identity())
-				.childObserve(observerDisconnect)
-				.bindNow();
+				.doOnConnection(cnx -> responseSentHandler.register(responseSent, cnx.channel().pipeline()));
+
+		server = isHttp11 ?
+				server.doOnChannelInit((cnxObs, ch, sockAddr) -> serverCloseHandler.register(ch, serverClosed, isHttp11)) : server;
+		disposableServer = server.bindNow();
 
 		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
-		httpClient = httpClient.doAfterRequest((req, conn) ->
-				clientAddress.set(conn.channel().localAddress())
-		).observe(observerDisconnect);
+		httpClient = httpClient
+				.doAfterRequest((req, conn) -> clientAddress.set(conn.channel().localAddress()));
 
 		String uri = "/4";
 		String address = formatSocketAddress(disposableServer.address());
 
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
+
 		httpClient
 				.metrics(true, Function.identity())
 				.post()
@@ -592,10 +629,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		assertThat(responseSent.await(30, TimeUnit.SECONDS)).as("responseSent latch await").isTrue();
 
 		// now check the server counters
 		if (isHttp11) {
+			assertThat(serverClosed.await(30, TimeUnit.SECONDS)).as("serverClosed latch await").isTrue();
 			checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
 			checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
 		}
@@ -621,22 +659,18 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		// ServerRecorder.INSTANCE.reset() (AfterEach) and thus leave ServerRecorder.INSTANCE in a bad state
 		ServerRecorder.INSTANCE.reset();
 		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+		CountDownLatch serverClosed = new CountDownLatch(1);
+		ServerCloseHandler serverCloseHandler = ServerCloseHandler.INSTANCE;
+
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
-				.metrics(true, () -> {
-							ServerRecorder.INSTANCE.done = isHttp11 ? new CountDownLatch(4) : new CountDownLatch(1);
-							return ServerRecorder.INSTANCE;
-						},
-						Function.identity())
+				.doOnConnection(c -> serverCloseHandler.register(c.channel(), serverClosed, isHttp11))
+				.metrics(true, ServerRecorder.supplier(), Function.identity())
 				.bindNow();
 		String address = formatSocketAddress(disposableServer.address());
 
-		CountDownLatch latch = new CountDownLatch(1);
-
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
-		httpClient.doOnResponse((res, conn) ->
-						conn.channel()
-								.closeFuture()
-								.addListener(f -> latch.countDown()))
+
+		httpClient
 				.metrics(true, Function.identity())
 				.post()
 				.uri("/5")
@@ -649,8 +683,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
-		assertThat(ServerRecorder.INSTANCE.done.await(30, TimeUnit.SECONDS)).as("recorder latch await").isTrue();
+		// dispose the client connection provider now, before asserting test expectations.
+		provider.disposeLater()
+				.block(Duration.ofSeconds(30));
+
+		// now the socket is closed, wait for the ServerRecorder to be called in recordServerConnectionClosed before asserting test expectations
+		assertThat(serverClosed.await(30, TimeUnit.SECONDS)).as("serverClosed latch await").isTrue();
+
+		// now we can assert test expectations
+		assertThat(ServerRecorder.INSTANCE.error.get()).isNull();
 		if (isHttp11) {
 			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
@@ -658,7 +699,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
 		}
 		else {
-			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
 		}
 
 		disposableServer.disposeNow();
@@ -667,7 +708,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@Test
 	void testIssue896() throws Exception {
 		disposableServer = httpServer.noSSL()
-		                             .bindNow();
+				.bindNow();
 
 		// the client will observe three DISCONNECT: one when a NotSSLRecordException is caught,
 		// one when DecoderException is caught, and one when the connection becomes inactive
@@ -695,19 +736,20 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("http11CompatibleProtocols")
 	void testBadRequest(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		CountDownLatch latch1 = new CountDownLatch(4); // expect to observe 2 server disconnect + 2 client disconnect events
-		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch1);
-		ConnectionObserver observerDisconnect = observeDisconnect(latchRef);
+		CountDownLatch serverClosed = new CountDownLatch(1);
+		CountDownLatch clientCompleted = new CountDownLatch(1);
+		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+		ServerCloseHandler serverCloseHandler = ServerCloseHandler.INSTANCE;
 
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.doOnChannelInit((obs, c, s) -> serverCloseHandler.register(c, serverClosed, isHttp11))
 				.httpRequestDecoder(spec -> spec.maxHeaderSize(32))
-				.childObserve(observerDisconnect)
 				.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols).doAfterRequest((req, conn) ->
-				serverAddress.set(conn.channel().remoteAddress())
-		).observe(observerDisconnect);
+		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols)
+				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
+				.doAfterResponseSuccess((resp, conn) -> clientCompleted.countDown());
 
 		httpClient.get()
 		          .uri("/max_header_size")
@@ -717,8 +759,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
-		assertThat(latch1.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+		// dispose the client connection provider now, before asserting test expectations.
+		provider.disposeLater()
+				.block(Duration.ofSeconds(30));
 
+		// now the socket is closed, wait for the ServerRecorder to be called in recordServerConnectionClosed before asserting test expectations
+		assertThat(serverClosed.await(30, TimeUnit.SECONDS)).as("serverClosed latch await").isTrue();
+
+		// Ensure client has fully received the response before asserting test expectations
+		assertThat(clientCompleted.await(30, TimeUnit.SECONDS)).as("clientCompleted latch await").isTrue();
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
 		checkExpectationsBadRequest(sa.getHostString() + ":" + sa.getPort(), serverCtx != null);
@@ -745,15 +794,20 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	private void checkServerConnectionsRecorder(HttpServerRequest request) {
-		String address = formatSocketAddress(request.hostAddress());
-		boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
-		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
-		assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
-		if (!isHttp2) {
-			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(1);
-			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+		try {
+			String address = formatSocketAddress(request.hostAddress());
+			boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsLocalAddr.get()).isEqualTo(address);
+			if (!isHttp2) {
+				assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(1);
+				assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+			}
+			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isNull();
 		}
-		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isNull();
+		catch (Throwable error) {
+			ServerRecorder.INSTANCE.error.set(error);
+		}
 	}
 
 	private void checkExpectationsExisting(String uri, String serverAddress, int connIndex, boolean checkTls,
@@ -825,7 +879,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, numReads, expectedReceivedAmount);
 		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
-
 
 	private void checkExpectationsBadRequest(String serverAddress, boolean checkTls) {
 		String uri = "/max_header_size";
@@ -917,23 +970,23 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	static Stream<Arguments> httpCompatibleProtocols() {
 		return Stream.of(
-				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null, HttpProtocol.HTTP11),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
-						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11)),
+						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11), HttpProtocol.HTTP11),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2), HttpProtocol.H2),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2), HttpProtocol.H2),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http11SslContextSpec", clientCtx11)),
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http11SslContextSpec", clientCtx11), HttpProtocol.HTTP11),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2), HttpProtocol.H2),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
-				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C}, new HttpProtocol[]{HttpProtocol.H2C}, null, null),
-				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null),
-				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C}, null, null),
-				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, null, null)
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2), HttpProtocol.H2),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C}, new HttpProtocol[]{HttpProtocol.H2C}, null, null, HttpProtocol.H2C),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null, HttpProtocol.HTTP11),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C}, null, null, HttpProtocol.H2C),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, null, null, HttpProtocol.H2C)
 		);
 	}
 
@@ -1082,6 +1135,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	static final class ServerRecorder implements HttpServerMetricsRecorder {
 
 		static final ServerRecorder INSTANCE = new ServerRecorder();
+		static final Supplier<ServerRecorder> SUPPLIER = () -> INSTANCE;
+		private AtomicReference<Throwable> error = new AtomicReference<>();
 		private final AtomicInteger onServerConnectionsAmount = new AtomicInteger();
 		private final AtomicReference<String> onServerConnectionsLocalAddr = new AtomicReference<>();
 		private final AtomicReference<String> onActiveConnectionsLocalAddr = new AtomicReference<>();
@@ -1089,7 +1144,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		private final AtomicInteger onActiveConnectionsAmount = new AtomicInteger();
 		private volatile CountDownLatch done = new CountDownLatch(4);
 
+		static Supplier<ServerRecorder> supplier() {
+			return SUPPLIER;
+		}
+
 		void reset() {
+			error.set(null);
 			onServerConnectionsAmount.set(0);
 			onServerConnectionsLocalAddr.set(null);
 			onActiveConnectionsLocalAddr.set(null);
@@ -1172,6 +1232,112 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		@Override
 		public void recordResolveAddressTime(SocketAddress socketAddress, Duration duration, String s) {
+		}
+	}
+
+	/**
+	 * Server Handler used to detect when the last http response content has been sent to the client.
+	 * Handler placed before the HttpMetricsHandler on the Server pipeline.
+	 * Metrics are up-to-date when the latch is counted down.
+	 */
+	static final class ResponseSentHandler extends ChannelOutboundHandlerAdapter {
+		final static String HANDLER_NAME = "ServerCompletedHandler.handler";
+		final static ResponseSentHandler INSTANCE = new ResponseSentHandler();
+		AtomicReference<CountDownLatch> latchRef;
+
+		void register(AtomicReference<CountDownLatch> latchRef, ChannelPipeline pipeline) {
+			this.latchRef = latchRef;
+			pipeline.addBefore(NettyPipeline.HttpMetricsHandler, HANDLER_NAME, this);
+		}
+
+		void register(CountDownLatch latch, ChannelPipeline pipeline) {
+			register(new AtomicReference<>(latch), pipeline);
+		}
+
+		@Override
+		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+			if (msg instanceof LastHttpContent) {
+				promise.addListener(future -> {
+					latchRef.get().countDown();
+				});
+			}
+
+			ctx.write(msg, promise);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true; // A server may accept multiple connections, hence this handler must be sharable
+		}
+	}
+
+	/**
+	 * Server Handler used to detect when the last http client request content has been received by the server.
+	 * Handler placed after the HttpMetricsHandler on the Server pipeline.
+	 * Metrics are up-to-date when the latch is counted down.
+	 */
+	static final class RequestReceivedHandler extends ChannelInboundHandlerAdapter {
+		final static RequestReceivedHandler INSTANCE = new RequestReceivedHandler();
+		final static String HANDLER_NAME = "ServerReceivedHandler.handler";
+		AtomicReference<CountDownLatch> latchRef;
+
+		void register(AtomicReference<CountDownLatch> latchRef, ChannelPipeline pipeline) {
+			this.latchRef = latchRef;
+			pipeline.addAfter(NettyPipeline.HttpMetricsHandler, HANDLER_NAME, this);
+		}
+
+		void register(CountDownLatch latch, ChannelPipeline pipeline) {
+			register(new AtomicReference<>(latch), pipeline);
+		}
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) {
+			if (msg instanceof LastHttpContent) {
+				latchRef.get().countDown();
+			}
+			else if (msg instanceof DefaultHttp2DataFrame && ((DefaultHttp2DataFrame) msg).isEndStream()) {
+				latchRef.get().countDown();
+			}
+
+			ctx.fireChannelRead(msg);
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
+		}
+	}
+
+	/**
+	 * Server handler used to wait until the client socket is closed on the server side.
+	 * For HTTP1.1, the handler is placed before the ReactorBridge, so all previous handlers will see
+	 * the close before this handler. For HTTP2, the handler is placed lastly on the pipeline.
+	 */
+	static final class ServerCloseHandler extends ChannelInboundHandlerAdapter {
+		static final ServerCloseHandler INSTANCE = new ServerCloseHandler();
+		static final String HANDLER_NAME = "ServerCloseHandler.handler";
+		private CountDownLatch latch;
+
+		void register(Channel channel, CountDownLatch latch, boolean http11) {
+			this.latch = latch;
+
+			if (http11) {
+				channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, HANDLER_NAME, this);
+			}
+			else {
+				channel.parent().pipeline().addLast(HANDLER_NAME, this);
+			}
+		}
+
+		@Override
+		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+			latch.countDown();
+			ctx.fireChannelInactive();
+		}
+
+		@Override
+		public boolean isSharable() {
+			return true;
 		}
 	}
 }
