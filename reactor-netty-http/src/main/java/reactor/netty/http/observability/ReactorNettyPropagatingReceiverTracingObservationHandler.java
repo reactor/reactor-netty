@@ -17,35 +17,36 @@ package reactor.netty.http.observability;
 
 import io.micrometer.common.KeyValue;
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.transport.http.HttpServerRequest;
-import io.micrometer.observation.transport.http.context.HttpServerContext;
+import io.micrometer.observation.transport.ReceiverContext;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
-import io.micrometer.tracing.handler.HttpServerTracingObservationHandler;
-import io.micrometer.tracing.http.HttpServerHandler;
+import io.micrometer.tracing.handler.PropagatingReceiverTracingObservationHandler;
+import io.micrometer.tracing.propagation.Propagator;
+import io.netty.handler.codec.http.HttpRequest;
+import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 
 /**
- * Reactor Netty specific {@link HttpServerTracingObservationHandler}
+ * Reactor Netty specific {@link PropagatingReceiverTracingObservationHandler}.
  *
  * @author Marcin Grzejszczak
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-public final class ReactorNettyHttpServerTracingObservationHandler extends HttpServerTracingObservationHandler {
+public final class ReactorNettyPropagatingReceiverTracingObservationHandler extends PropagatingReceiverTracingObservationHandler<ReceiverContext<HttpRequest>> {
 
 	/**
-	 * Creates a new instance of {@link HttpServerTracingObservationHandler}.
+	 * Creates a new instance of {@link ReactorNettyPropagatingReceiverTracingObservationHandler}.
 	 *
-	 * @param tracer  tracer
-	 * @param handler http server handler
+	 * @param tracer     tracer
+	 * @param propagator tracing propagator
 	 */
-	public ReactorNettyHttpServerTracingObservationHandler(Tracer tracer, HttpServerHandler handler) {
-		super(tracer, handler);
+	public ReactorNettyPropagatingReceiverTracingObservationHandler(Tracer tracer, Propagator propagator) {
+		super(tracer, propagator);
 	}
 
 	@Override
-	public void tagSpan(HttpServerContext context, Span span) {
+	public void tagSpan(ReceiverContext<HttpRequest> context, Span span) {
 		for (KeyValue tag : context.getHighCardinalityKeyValues()) {
 			span.tag(tag.getKey(), tag.getValue());
 		}
