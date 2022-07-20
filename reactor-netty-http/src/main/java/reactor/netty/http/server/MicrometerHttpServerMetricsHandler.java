@@ -93,10 +93,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	protected void startRead(HttpServerOperations ops, String path, String method) {
 		super.startRead(ops, path, method);
 
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(
-				recorder,
-				path,
-				ops.nettyRequest);
+		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops.nettyRequest);
 		responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 	}
 
@@ -106,17 +103,15 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		super.startWrite(ops, path, method, status);
 
 		if (responseTimeObservation == null) {
-			responseTimeHandlerContext = new ResponseTimeHandlerContext(
-					recorder,
-					path,
-					ops.nettyRequest);
+			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops.nettyRequest);
 			responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		}
 		responseTimeHandlerContext.setResponse(ops.nettyResponse); // TODO: Is this OK?
 		responseTimeHandlerContext.status = status;
 	}
 
-	static final class ResponseTimeHandlerContext extends RequestReplyReceiverContext<HttpRequest, HttpResponse> implements ReactorNettyHandlerContext {
+	static final class ResponseTimeHandlerContext extends RequestReplyReceiverContext<HttpRequest, HttpResponse>
+			implements ReactorNettyHandlerContext {
 		static final String TYPE = "server";
 
 		final String method;

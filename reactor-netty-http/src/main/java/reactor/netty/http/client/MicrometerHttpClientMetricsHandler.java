@@ -119,7 +119,8 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		responseTimeObservation.start();
 	}
 
-	static final class ResponseTimeHandlerContext extends RequestReplySenderContext<HttpRequest, HttpResponse> implements ReactorNettyHandlerContext {
+	static final class ResponseTimeHandlerContext extends RequestReplySenderContext<HttpRequest, HttpResponse>
+			implements ReactorNettyHandlerContext {
 		static final String TYPE = "client";
 
 		final String method;
