@@ -18,7 +18,6 @@ package reactor.netty.http.server;
 import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.transport.Kind;
 import io.micrometer.observation.transport.RequestReplyReceiverContext;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
