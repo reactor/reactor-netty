@@ -18,16 +18,14 @@ package reactor.netty5.http.server;
 import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.transport.http.HttpServerRequest;
-import io.micrometer.observation.transport.http.HttpServerResponse;
-import io.micrometer.observation.transport.http.context.HttpServerContext;
+import io.micrometer.observation.transport.RequestReplyReceiverContext;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.Collection;
+import java.util.Objects;
 import java.util.function.Function;
 
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
@@ -95,9 +93,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	protected void startRead(HttpServerOperations ops, String path, String method) {
 		super.startRead(ops, path, method);
 
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(
-				recorder,
-				new ObservationHttpServerRequest(ops.nettyRequest, method, path));
+		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops.nettyRequest);
 		responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 	}
 
@@ -107,83 +103,15 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		super.startWrite(ops, path, method, status);
 
 		if (responseTimeObservation == null) {
-			responseTimeHandlerContext = new ResponseTimeHandlerContext(
-					recorder,
-					new ObservationHttpServerRequest(ops.nettyRequest, method, path));
+			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops.nettyRequest);
 			responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		}
-		responseTimeHandlerContext.setResponse(new ObservationHttpServerResponse(ops.nettyResponse));
+		responseTimeHandlerContext.setResponse(ops.nettyResponse); // TODO: Is this OK?
 		responseTimeHandlerContext.status = status;
 	}
 
-	static final class ObservationHttpServerRequest implements HttpServerRequest {
-
-		final String method;
-		final HttpRequest nettyRequest;
-		final String path;
-
-		ObservationHttpServerRequest(HttpRequest nettyRequest, String method, String path) {
-			this.method = method;
-			this.nettyRequest = nettyRequest;
-			this.path = path;
-		}
-
-		@Override
-		public String header(String name) {
-			return nettyRequest.headers().get(name);
-		}
-
-		@Override
-		public Collection<String> headerNames() {
-			return nettyRequest.headers().names();
-		}
-
-		@Override
-		public String method() {
-			return method;
-		}
-
-		@Override
-		public String path() {
-			return path;
-		}
-
-		@Override
-		public Object unwrap() {
-			return nettyRequest;
-		}
-
-		@Override
-		public String url() {
-			return nettyRequest.uri();
-		}
-	}
-
-	static final class ObservationHttpServerResponse implements HttpServerResponse {
-
-		final HttpResponse nettyResponse;
-
-		ObservationHttpServerResponse(HttpResponse nettyResponse) {
-			this.nettyResponse = nettyResponse;
-		}
-
-		@Override
-		public Collection<String> headerNames() {
-			return nettyResponse.headers().names();
-		}
-
-		@Override
-		public int statusCode() {
-			return nettyResponse.status().code();
-		}
-
-		@Override
-		public Object unwrap() {
-			return nettyResponse;
-		}
-	}
-
-	static final class ResponseTimeHandlerContext extends HttpServerContext implements ReactorNettyHandlerContext {
+	static final class ResponseTimeHandlerContext extends RequestReplyReceiverContext<HttpRequest, HttpResponse>
+			implements ReactorNettyHandlerContext {
 		static final String TYPE = "server";
 
 		final String method;
@@ -193,12 +121,14 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		// status might not be known beforehand
 		String status;
 
-		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, HttpServerRequest request) {
-			super(request);
+		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, String path, HttpRequest request) {
+			super((carrier, key) -> Objects.requireNonNull(carrier).headers().get(key));
 			this.recorder = recorder;
-			this.method = request.method();
-			this.path = request.path();
+			this.method = request.method().name();
+			this.path = path;
 			put(HttpServerRequest.class, request);
+			setCarrier(request);
+			setContextualName(this.method);
 		}
 
 		@Override
@@ -218,9 +148,9 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		}
 
 		@Override
-		public HttpServerContext setResponse(HttpServerResponse response) {
+		public void setResponse(HttpResponse response) {
+			super.setResponse(response);
 			put(HttpServerResponse.class, response);
-			return super.setResponse(response);
 		}
 	}
 }

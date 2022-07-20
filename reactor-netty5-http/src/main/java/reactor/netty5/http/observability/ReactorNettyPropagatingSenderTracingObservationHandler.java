@@ -17,45 +17,39 @@ package reactor.netty5.http.observability;
 
 import io.micrometer.common.KeyValue;
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.transport.http.HttpClientRequest;
-import io.micrometer.observation.transport.http.context.HttpClientContext;
+import io.micrometer.observation.transport.SenderContext;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
-import io.micrometer.tracing.handler.HttpClientTracingObservationHandler;
-import io.micrometer.tracing.http.HttpClientHandler;
+import io.micrometer.tracing.handler.PropagatingSenderTracingObservationHandler;
+import io.micrometer.tracing.propagation.Propagator;
+import io.netty5.handler.codec.http.HttpRequest;
+import reactor.netty5.http.server.HttpServerRequest;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
 
-import static reactor.netty5.Metrics.REMOTE_ADDRESS;
-
 /**
- * Reactor Netty specific {@link HttpClientTracingObservationHandler}
+ * Reactor Netty specific {@link PropagatingSenderTracingObservationHandler}
  *
  * @author Marcin Grzejszczak
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-public final class ReactorNettyHttpClientTracingObservationHandler extends HttpClientTracingObservationHandler {
+public final class ReactorNettyPropagatingSenderTracingObservationHandler
+		extends PropagatingSenderTracingObservationHandler<SenderContext<HttpRequest>> {
 
 	/**
-	 * Creates a new instance of {@link HttpClientTracingObservationHandler}.
+	 * Creates a new instance of {@link ReactorNettyPropagatingSenderTracingObservationHandler}.
 	 *
-	 * @param tracer  tracer
-	 * @param handler http client handler
+	 * @param tracer     tracer
+	 * @param propagator tracing propagator
 	 */
-	public ReactorNettyHttpClientTracingObservationHandler(Tracer tracer, HttpClientHandler handler) {
-		super(tracer, handler);
+	public ReactorNettyPropagatingSenderTracingObservationHandler(Tracer tracer, Propagator propagator) {
+		super(tracer, propagator);
 	}
 
 	@Override
-	public void tagSpan(HttpClientContext context, Span span) {
+	public void tagSpan(SenderContext<HttpRequest> context, Span span) {
 		for (KeyValue tag : context.getHighCardinalityKeyValues()) {
 			span.tag(tag.getKey(), tag.getValue());
-		}
-		for (KeyValue tag : context.getLowCardinalityKeyValues()) {
-			if (tag.getKey().equals(REMOTE_ADDRESS)) {
-				span.tag(tag.getKey(), tag.getValue());
-				break;
-			}
 		}
 	}
 
@@ -63,6 +57,6 @@ public final class ReactorNettyHttpClientTracingObservationHandler extends HttpC
 	public boolean supportsContext(Observation.Context context) {
 		return context instanceof ReactorNettyHandlerContext &&
 				super.supportsContext(context) &&
-				context.get(HttpClientRequest.class) != null;
+				context.get(HttpServerRequest.class) != null;
 	}
 }
