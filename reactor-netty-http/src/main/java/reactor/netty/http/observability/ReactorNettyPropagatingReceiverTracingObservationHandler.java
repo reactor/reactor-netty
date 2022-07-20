@@ -33,15 +33,15 @@ import reactor.netty.observability.ReactorNettyHandlerContext;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-public final class ReactorNettyHttpServerTracingObservationHandler extends PropagatingReceiverTracingObservationHandler<ReceiverContext<HttpRequest>> {
+public final class ReactorNettyPropagatingReceiverTracingObservationHandler extends PropagatingReceiverTracingObservationHandler<ReceiverContext<HttpRequest>> {
 
 	/**
-	 * Creates a new instance of {@link ReactorNettyHttpServerTracingObservationHandler}.
+	 * Creates a new instance of {@link ReactorNettyPropagatingReceiverTracingObservationHandler}.
 	 *
 	 * @param tracer     tracer
 	 * @param propagator tracing propagator
 	 */
-	public ReactorNettyHttpServerTracingObservationHandler(Tracer tracer, Propagator propagator) {
+	public ReactorNettyPropagatingReceiverTracingObservationHandler(Tracer tracer, Propagator propagator) {
 		super(tracer, propagator);
 	}
 

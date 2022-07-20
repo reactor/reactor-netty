@@ -35,15 +35,15 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-public final class ReactorNettyHttpClientTracingObservationHandler extends PropagatingSenderTracingObservationHandler<SenderContext<HttpRequest>> {
+public final class ReactorNettyPropagatingSenderTracingObservationHandler extends PropagatingSenderTracingObservationHandler<SenderContext<HttpRequest>> {
 
 	/**
-	 * Creates a new instance of {@link ReactorNettyHttpClientTracingObservationHandler}.
+	 * Creates a new instance of {@link ReactorNettyPropagatingSenderTracingObservationHandler}.
 	 *
 	 * @param tracer     tracer
 	 * @param propagator tracing propagator
 	 */
-	public ReactorNettyHttpClientTracingObservationHandler(Tracer tracer, Propagator propagator) {
+	public ReactorNettyPropagatingSenderTracingObservationHandler(Tracer tracer, Propagator propagator) {
 		super(tracer, propagator);
 	}
 
