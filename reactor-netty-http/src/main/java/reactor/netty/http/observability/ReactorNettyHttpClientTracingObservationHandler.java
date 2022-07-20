@@ -17,13 +17,12 @@ package reactor.netty.http.observability;
 
 import io.micrometer.common.KeyValue;
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.transport.RequestReplySenderContext;
+import io.micrometer.observation.transport.SenderContext;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.PropagatingSenderTracingObservationHandler;
 import io.micrometer.tracing.propagation.Propagator;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 
@@ -36,7 +35,7 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-public final class ReactorNettyHttpClientTracingObservationHandler extends PropagatingSenderTracingObservationHandler<RequestReplySenderContext<HttpRequest, HttpResponse>> {
+public final class ReactorNettyHttpClientTracingObservationHandler extends PropagatingSenderTracingObservationHandler<SenderContext<HttpRequest>> {
 
 	/**
 	 * Creates a new instance of {@link ReactorNettyHttpClientTracingObservationHandler}.
@@ -49,7 +48,7 @@ public final class ReactorNettyHttpClientTracingObservationHandler extends Propa
 	}
 
 	@Override
-	public void tagSpan(RequestReplySenderContext<HttpRequest, HttpResponse> context, Span span) {
+	public void tagSpan(SenderContext<HttpRequest> context, Span span) {
 		for (KeyValue tag : context.getHighCardinalityKeyValues()) {
 			span.tag(tag.getKey(), tag.getValue());
 		}
