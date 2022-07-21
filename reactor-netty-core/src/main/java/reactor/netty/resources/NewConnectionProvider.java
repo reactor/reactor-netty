@@ -20,7 +20,6 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
@@ -72,10 +71,14 @@ final class NewConnectionProvider implements ConnectionProvider {
 			DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
 			if (remote != null && resolverGroup != null) {
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
-				Function<Context, Context> snapshot =
-						Metrics.isMicrometerAvailable() && Metrics.isContextPropagationAvailable() ?
-								ContextPropagationUtils.captureObservation(sink.contextView()) : Function.identity();
-				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, snapshot.apply(Context.of(sink.contextView())))
+				Context currentContext = Context.of(sink.contextView());
+				if (Metrics.isMicrometerAvailable()) {
+					Object currentObservation = reactor.netty.Metrics.currentObservation(currentContext);
+					if (currentObservation != null) {
+						currentContext = reactor.netty.Metrics.updateContext(currentContext, currentObservation);
+					}
+				}
+				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, currentContext)
 				                  .subscribe(disposableConnect);
 			}
 			else {

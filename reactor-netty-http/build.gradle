@@ -110,8 +110,6 @@ dependencies {
 	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
 	compileOnly "io.micrometer:micrometer-tracing:$micrometerTracingVersion"
 
-	compileOnly "io.micrometer:context-propagation:${contextPropagationVersion}"
-
 	// Logging
 	compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
 
@@ -142,7 +140,6 @@ dependencies {
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
-	testRuntimeOnly "io.micrometer:context-propagation:${contextPropagationVersion}"
 
 	// Needed for proxy testing
 	testRuntimeOnly "io.netty:netty-handler-proxy:$nettyVersion"

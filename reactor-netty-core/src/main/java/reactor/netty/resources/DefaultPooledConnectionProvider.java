@@ -80,9 +80,9 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			long pendingAcquireTimeout,
 			InstrumentedPool<PooledConnection> pool,
 			MonoSink<Connection> sink,
-			Function<Context, Context> snapshot) {
+			Context currentContext) {
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				pendingAcquireTimeout, pool, sink, snapshot);
+				pendingAcquireTimeout, pool, sink, currentContext);
 	}
 
 	@Override
@@ -118,9 +118,9 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				long pendingAcquireTimeout,
 				InstrumentedPool<PooledConnection> pool,
 				MonoSink<Connection> sink,
-				Function<Context, Context> snapshot) {
+				Context currentContext) {
 			this.cancellations = Disposables.composite();
-			this.currentContext = snapshot.apply(Context.of(sink.contextView()));
+			this.currentContext = currentContext;
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
