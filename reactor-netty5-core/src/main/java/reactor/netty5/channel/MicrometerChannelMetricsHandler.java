@@ -18,7 +18,6 @@ package reactor.netty5.channel;
 import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.ssl.SslHandler;
@@ -32,6 +31,7 @@ import java.net.SocketAddress;
 
 import static reactor.netty5.Metrics.CONNECT_TIME;
 import static reactor.netty5.Metrics.ERROR;
+import static reactor.netty5.Metrics.OBSERVATION_KEY;
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty5.Metrics.SUCCESS;
 import static reactor.netty5.Metrics.TLS_HANDSHAKE_TIME;
@@ -108,8 +108,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			Observation observation = Observation.createNotStarted(recorder.name() + CONNECT_TIME, this, OBSERVATION_REGISTRY);
 			if (ctx.channel().hasAttr(CONTEXT_VIEW)) {
 				ContextView contextView = ctx.channel().attr(CONTEXT_VIEW).get();
-				if (contextView.hasKey(ObservationThreadLocalAccessor.KEY)) {
-					observation.parentObservation(contextView.get(ObservationThreadLocalAccessor.KEY));
+				if (contextView.hasKey(OBSERVATION_KEY)) {
+					observation.parentObservation(contextView.get(OBSERVATION_KEY));
 				}
 			}
 			observation.start();
@@ -165,8 +165,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
 			if (ctx.channel().hasAttr(CONTEXT_VIEW)) {
 				ContextView contextView = ctx.channel().attr(CONTEXT_VIEW).get();
-				if (contextView.hasKey(ObservationThreadLocalAccessor.KEY)) {
-					observation.parentObservation(contextView.get(ObservationThreadLocalAccessor.KEY));
+				if (contextView.hasKey(OBSERVATION_KEY)) {
+					observation.parentObservation(contextView.get(OBSERVATION_KEY));
 				}
 			}
 			observation.start();

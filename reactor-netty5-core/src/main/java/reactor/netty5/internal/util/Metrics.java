@@ -24,7 +24,6 @@ package reactor.netty5.internal.util;
  */
 public class Metrics {
 
-	static final boolean isContextPropagationAvailable;
 	static final boolean isMicrometerAvailable;
 	static final boolean isTracingAvailable;
 
@@ -48,25 +47,6 @@ public class Metrics {
 			tracing = false;
 		}
 		isTracingAvailable = tracing;
-
-		boolean contextPropagation;
-		try {
-			io.micrometer.context.ContextRegistry.getInstance();
-			contextPropagation = true;
-		}
-		catch (Throwable t) {
-			contextPropagation = false;
-		}
-		isContextPropagationAvailable = contextPropagation;
-	}
-
-	/**
-	 * Check if the current runtime supports context propagation, by verifying if Context Propagation is on the classpath.
-	 *
-	 * @return true if the Micrometer is available
-	 */
-	public static boolean isContextPropagationAvailable() {
-		return isContextPropagationAvailable;
 	}
 
 	/**

@@ -102,7 +102,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			long pendingAcquireTimeout,
 			InstrumentedPool<Connection> pool,
 			MonoSink<Connection> sink,
-			Function<Context, Context> snapshot) {
+			Context currentContext) {
 		boolean acceptGzip = false;
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
 		Function<String, String> uriTagValue = null;
@@ -111,7 +111,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			uriTagValue = httpClientConfig.uriTagValue;
 		}
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, sink, snapshot, uriTagValue);
+				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, sink, currentContext, uriTagValue);
 	}
 
 	@Override
@@ -223,10 +223,10 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				long pendingAcquireTimeout,
 				InstrumentedPool<Connection> pool,
 				MonoSink<Connection> sink,
-				Function<Context, Context> snapshot,
+				Context currentContext,
 				@Nullable Function<String, String> uriTagValue) {
 			this.cancellations = Disposables.composite();
-			this.currentContext = snapshot.apply(Context.of(sink.contextView()));
+			this.currentContext = currentContext;
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.acceptGzip = acceptGzip;

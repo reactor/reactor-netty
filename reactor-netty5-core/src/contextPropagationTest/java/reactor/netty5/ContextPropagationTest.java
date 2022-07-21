@@ -13,24 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty5.resources;
+package reactor.netty5;
 
-import io.micrometer.context.ContextSnapshot;
 import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor;
-import reactor.util.context.Context;
-import reactor.util.context.ContextView;
+import org.junit.jupiter.api.Test;
 
-import java.util.function.Function;
-import java.util.function.Predicate;
+import static org.assertj.core.api.Assertions.assertThat;
 
-final class ContextPropagationUtils {
+class ContextPropagationTest {
 
-	static final Predicate<Object> OBSERVATION_KEY = k -> k == ObservationThreadLocalAccessor.KEY;
-
-	static Function<Context, Context> captureObservation(ContextView source) {
-		ContextSnapshot snapshot = ContextSnapshot.captureUsing(OBSERVATION_KEY, source);
-		return snapshot::updateContext;
+	@Test
+	void testObservationKey() {
+		assertThat(Metrics.OBSERVATION_KEY).isEqualTo(ObservationThreadLocalAccessor.KEY);
 	}
-
-	private ContextPropagationUtils() {}
 }

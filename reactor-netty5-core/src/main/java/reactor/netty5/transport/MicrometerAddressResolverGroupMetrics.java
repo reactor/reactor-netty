@@ -18,7 +18,6 @@ package reactor.netty5.transport;
 import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor;
 import io.netty5.resolver.AddressResolver;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.util.concurrent.EventExecutor;
@@ -37,6 +36,7 @@ import java.util.function.Supplier;
 
 import static reactor.netty5.Metrics.ADDRESS_RESOLVER;
 import static reactor.netty5.Metrics.ERROR;
+import static reactor.netty5.Metrics.OBSERVATION_KEY;
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty5.Metrics.SUCCESS;
 import static reactor.netty5.Metrics.formatSocketAddress;
@@ -130,8 +130,8 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			String remoteAddress = formatSocketAddress(address);
 			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, remoteAddress);
 			Observation sample = Observation.createNotStarted(name + ADDRESS_RESOLVER, handlerContext, OBSERVATION_REGISTRY);
-			if (contextView.hasKey(ObservationThreadLocalAccessor.KEY)) {
-				sample.parentObservation(contextView.get(ObservationThreadLocalAccessor.KEY));
+			if (contextView.hasKey(OBSERVATION_KEY)) {
+				sample.parentObservation(contextView.get(OBSERVATION_KEY));
 			}
 			sample.start();
 			return resolver.get()

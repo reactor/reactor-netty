@@ -168,12 +168,16 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			if (eventLoop != null) {
 				mono = mono.contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop));
 			}
-			Function<Context, Context> snapshot =
-					Metrics.isMicrometerAvailable() && Metrics.isContextPropagationAvailable() ?
-							ContextPropagationUtils.captureObservation(sink.contextView()) : Function.identity();
-			mono.contextWrite(snapshot)
-			    .subscribe(createDisposableAcquire(config, connectionObserver,
-			            poolFactory.pendingAcquireTimeout, pool, sink, snapshot));
+			Context currentContext = Context.of(sink.contextView());
+			if (Metrics.isMicrometerAvailable()) {
+				Object currentObservation = reactor.netty5.Metrics.currentObservation(currentContext);
+				if (currentObservation != null) {
+					currentContext = reactor.netty5.Metrics.updateContext(currentContext, currentObservation);
+					mono = mono.contextWrite(ctx -> reactor.netty5.Metrics.updateContext(ctx, currentObservation));
+				}
+			}
+			mono.subscribe(createDisposableAcquire(config, connectionObserver,
+					poolFactory.pendingAcquireTimeout, pool, sink, currentContext));
 		});
 	}
 
@@ -260,7 +264,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			long pendingAcquireTimeout,
 			InstrumentedPool<T> pool,
 			MonoSink<Connection> sink,
-			Function<Context, Context> snapshot);
+			Context currentContext);
 
 	protected abstract InstrumentedPool<T> createPool(
 			TransportConfig config,
