@@ -18,7 +18,6 @@ package reactor.netty.http.client;
 import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor;
 import io.micrometer.observation.transport.RequestReplySenderContext;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpRequest;
@@ -32,6 +31,7 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Function;
 
+import static reactor.netty.Metrics.OBSERVATION_KEY;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.formatSocketAddress;
@@ -113,8 +113,8 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, path, channel.remoteAddress());
 		responseTimeObservation = Observation.createNotStarted(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, OBSERVATION_REGISTRY);
-		if (contextView != null && contextView.hasKey(ObservationThreadLocalAccessor.KEY)) {
-			responseTimeObservation.parentObservation(contextView.get(ObservationThreadLocalAccessor.KEY));
+		if (contextView != null && contextView.hasKey(OBSERVATION_KEY)) {
+			responseTimeObservation.parentObservation(contextView.get(OBSERVATION_KEY));
 		}
 		responseTimeObservation.start();
 	}

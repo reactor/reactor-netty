@@ -41,10 +41,16 @@ ext {
 
 sourceSets {
 	jarFileTest
+	contextPropagationTest {
+		compileClasspath += sourceSets.main.output
+		runtimeClasspath += sourceSets.main.output
+	}
 }
 
 configurations {
 	shaded
+	contextPropagationTestImplementation.extendsFrom(implementation)
+	contextPropagationTestRuntimeOnly.extendsFrom(runtimeOnly)
 }
 
 dependencies {
@@ -106,8 +112,6 @@ dependencies {
 	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
 	compileOnly "io.micrometer:micrometer-tracing:$micrometerTracingVersion"
 
-	compileOnly "io.micrometer:context-propagation:${contextPropagationVersion}"
-
 	// Logging
 	compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
 
@@ -146,6 +150,12 @@ dependencies {
 	jarFileTestImplementation "org.assertj:assertj-core:$assertJVersion"
 	jarFileTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	jarFileTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+
+	contextPropagationTestImplementation "org.assertj:assertj-core:$assertJVersion"
+	contextPropagationTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	contextPropagationTestImplementation "io.micrometer:micrometer-core:$micrometerVersion"
+	contextPropagationTestImplementation "io.micrometer:context-propagation:$contextPropagationVersion"
+	contextPropagationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
 
 jar {
@@ -262,6 +272,13 @@ task jarFileTest(type: Test) {
 }
 
 tasks.check.dependsOn(jarFileTest)
+
+task contextPropagationTest(type: Test) {
+	testClassesDirs = sourceSets.contextPropagationTest.output.classesDirs
+	classpath = sourceSets.contextPropagationTest.runtimeClasspath
+}
+
+tasks.check.dependsOn(contextPropagationTest)
 
 task shadedJarTest(type: Test) {
 	testClassesDirs = sourceSets.test.output.classesDirs
