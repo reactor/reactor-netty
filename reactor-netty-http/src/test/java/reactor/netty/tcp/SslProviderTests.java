@@ -25,7 +25,10 @@ import java.util.function.Consumer;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.OpenSslClientContext;
 import io.netty.handler.ssl.OpenSslContext;
+import io.netty.handler.ssl.OpenSslServerContext;
+import io.netty.handler.ssl.OpenSslSessionContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -366,4 +369,59 @@ class SslProviderTests extends BaseHttpTest {
 						.sslContext(defaultSslContext)
 						.serverNames((SNIServerName[]) null));
 	}
+
+	@Test
+	void testDefaultClientProviderIsOpenSsl() {
+		final SslProvider clientProvider = SslProvider.defaultClientProvider();
+
+		final OpenSslClientContext clientContext = (OpenSslClientContext) clientProvider.getSslContext();
+		assertThat(clientContext.isClient()).isTrue();
+		assertThat(clientContext.applicationProtocolNegotiator().protocols())
+				.isEmpty();
+		assertThat(clientContext.cipherSuites())
+				.containsExactlyInAnyOrder("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+						"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+						"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+						"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+						"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+						"TLS_RSA_WITH_AES_128_GCM_SHA256",
+						"TLS_RSA_WITH_AES_128_CBC_SHA",
+						"TLS_RSA_WITH_AES_256_CBC_SHA",
+						"TLS_AES_128_GCM_SHA256",
+						"TLS_AES_256_GCM_SHA384",
+						"TLS_CHACHA20_POLY1305_SHA256");
+
+		final OpenSslSessionContext sessionContext = clientContext.sessionContext();
+		assertThat(sessionContext.getSessionTimeout()).isEqualTo(300);
+		assertThat(sessionContext.isSessionCacheEnabled()).isFalse();
+	}
+
+	@Test
+	void testServerSslProviderIsOpenSsl() {
+		final SslProvider serverProvider = SslProvider.builder()
+												.sslContext(serverSslContextBuilderH2)
+												.build();
+
+		final OpenSslServerContext serverContext = (OpenSslServerContext) serverProvider.getSslContext();
+		assertThat(serverContext.isServer()).isTrue();
+		assertThat(serverContext.applicationProtocolNegotiator().protocols())
+				.containsExactly("h2", "http/1.1");
+		assertThat(serverContext.cipherSuites())
+				.containsExactlyInAnyOrder("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+						"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+						"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+						"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+						"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+						"TLS_AES_128_GCM_SHA256",
+						"TLS_AES_256_GCM_SHA384",
+						"TLS_CHACHA20_POLY1305_SHA256");
+
+		final OpenSslSessionContext sessionContext = serverContext.sessionContext();
+		assertThat(sessionContext.getSessionTimeout()).isEqualTo(300);
+		assertThat(sessionContext.isSessionCacheEnabled()).isTrue();
+		assertThat(sessionContext.getSessionCacheSize()).isEqualTo(20480);
+	}
+
 }
