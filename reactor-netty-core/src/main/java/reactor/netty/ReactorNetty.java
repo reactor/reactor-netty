@@ -411,10 +411,13 @@ public final class ReactorNetty {
 			return true;
 		}
 		ChannelPipeline p = c.channel().pipeline();
+		//CHECKSTYLE:OFF
+		// "Unnecessary parentheses around expression"
 		return p.get(SslHandler.class) != null  ||
 				p.get(NettyPipeline.CompressionHandler) != null ||
 				(!(c.channel().eventLoop() instanceof NioEventLoop) &&
 						!"file".equals(file.toUri().getScheme()));
+		//CHECKSTYLE:ON
 	}
 
 	static void registerForClose(boolean shouldCleanupOnClose,

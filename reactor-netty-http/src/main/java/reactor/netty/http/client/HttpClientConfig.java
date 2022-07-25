@@ -985,7 +985,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				doOnRequestError.accept(connection.as(HttpClientOperations.class), error);
 				return;
 			}
-			if (doOnResponseError != null && (ops.responseState != null) && !(error instanceof RedirectClientException)) {
+			if (doOnResponseError != null && ops.responseState != null &&
+					!(error instanceof RedirectClientException)) {
 				doOnResponseError.accept(connection.as(HttpClientOperations.class), error);
 			}
 		}

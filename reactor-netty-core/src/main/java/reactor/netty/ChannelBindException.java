@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,8 +42,10 @@ public class ChannelBindException extends RuntimeException {
 		if (cause instanceof java.net.BindException ||
 				// With epoll/kqueue transport it is
 				// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
+				//CHECKSTYLE:OFF
+				// "Unnecessary parentheses around expression"
 				(cause instanceof IOException && cause.getMessage() != null &&
-						cause.getMessage().contains("bind(..)"))) {
+						cause.getMessage().contains("bind(..)"))) { //CHECKSTYLE:ON
 			cause = null;
 		}
 		if (!(bindAddress instanceof InetSocketAddress)) {

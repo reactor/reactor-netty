@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ public class AbortedException extends RuntimeException {
 	 * @return true if connection has been simply aborted on a tcp level
 	 */
 	public static boolean isConnectionReset(Throwable err) {
+		//CHECKSTYLE:OFF
+		// "Unnecessary parentheses around expression"
 		return (err instanceof AbortedException && CONNECTION_CLOSED_BEFORE_SEND.equals(err.getMessage())) ||
 		       (err instanceof IOException && (err.getMessage() == null ||
 		                                       err.getMessage()
@@ -53,6 +55,7 @@ public class AbortedException extends RuntimeException {
 		       (err instanceof SocketException && err.getMessage() != null &&
 		                                          err.getMessage()
 		                                             .contains("Connection reset by peer"));
+		//CHECKSTYLE:ON
 	}
 
 	public static AbortedException beforeSend() {
