@@ -16,12 +16,14 @@
 package reactor.netty5.http.server;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
@@ -120,7 +122,6 @@ import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
-import static org.assertj.core.api.Assumptions.assumeThat;
 import static reactor.netty5.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 
 /**
@@ -1679,24 +1680,6 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testHttpServerWithDomainSocketsNIOTransport() {
-		assertThatExceptionOfType(ChannelBindException.class)
-				.isThrownBy(() -> {
-					LoopResources loop = LoopResources.create("testHttpServerWithDomainSocketsNIOTransport");
-					try {
-						HttpServer.create()
-						          .runOn(loop, false)
-						          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-						          .bindNow();
-					}
-					finally {
-						loop.disposeLater()
-						    .block(Duration.ofSeconds(30));
-					}
-		});
-	}
-
-	@Test
 	void testHttpServerWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> HttpServer.create()
@@ -1732,14 +1715,13 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client, String expectedScheme) {
-		assumeThat(LoopResources.hasNativeSupport()).isTrue();
 		disposableServer =
-				server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				server.bindAddress(HttpServerTests::newDomainSocketAddress)
 				      .wiretap(true)
 				      .handle((req, res) -> {
 				          req.withConnection(conn -> {
-				              assertThat(conn.channel().localAddress()).isNull();
-				              assertThat(conn.channel().remoteAddress()).isNull();
+				              assertThat(conn.channel().localAddress()).isNotNull();
+				              assertThat(conn.channel().remoteAddress()).isNotNull();
 				              assertThat(req.hostAddress()).isNull();
 				              assertThat(req.remoteAddress()).isNull();
 				              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
@@ -1761,6 +1743,18 @@ class HttpServerTests extends BaseHttpTest {
 				      .block(Duration.ofSeconds(30));
 
 		assertThat(response).isEqualTo("123");
+	}
+
+	private static DomainSocketAddress newDomainSocketAddress() {
+		try {
+			File tempFile = Files.createTempFile("HttpServerTests", "UDS").toFile();
+			assertThat(tempFile.delete()).isTrue();
+			tempFile.deleteOnExit();
+			return new DomainSocketAddress(tempFile);
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Error creating a  temporary file", e);
+		}
 	}
 
 	@Test

@@ -143,7 +143,7 @@ class UdpServerTests {
 					UdpServer.create()
 					         .option(ChannelOption.SO_REUSEADDR, true)
 					         .bindAddress(() -> new InetSocketAddress(port))
-					         .runOn(resources, SocketProtocolFamily.INET)
+					         .runOn(resources, false, SocketProtocolFamily.INET)
 					         .handle((in, out) -> {
 						         Flux.<NetworkInterface>generate(s -> {
 					                             // Suppressed "JdkObsolete", usage of Enumeration is deliberate

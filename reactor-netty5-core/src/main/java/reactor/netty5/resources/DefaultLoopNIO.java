@@ -15,6 +15,8 @@
  */
 package reactor.netty5.resources;
 
+import java.net.ProtocolFamily;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.ThreadFactory;
 
 import io.netty5.channel.Channel;
@@ -24,6 +26,7 @@ import io.netty5.channel.ServerChannel;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -41,14 +44,18 @@ final class DefaultLoopNIO implements DefaultLoop {
 	@Override
 	@Nullable
 	@SuppressWarnings("unchecked")
-	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop) {
+	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop,
+			@Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(SocketChannel.class)) {
 			return eventLoop.isCompatible(NioSocketChannel.class) ?
-					(CHANNEL) new NioSocketChannel(eventLoop) : null;
+					(CHANNEL) new NioSocketChannel(eventLoop, SelectorProvider.provider(), protocolFamily) : null;
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
+			if (protocolFamily == SocketProtocolFamily.UNIX) {
+				throw new IllegalArgumentException("Channel type: NioDatagramChannel does not support Unix Domain Sockets");
+			}
 			return eventLoop.isCompatible(NioDatagramChannel.class) ?
-					(CHANNEL) new NioDatagramChannel(eventLoop) : null;
+					(CHANNEL) new NioDatagramChannel(eventLoop, SelectorProvider.provider(), protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
@@ -62,10 +69,11 @@ final class DefaultLoopNIO implements DefaultLoop {
 	@Nullable
 	@SuppressWarnings("unchecked")
 	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
-			EventLoopGroup childEventLoopGroup) {
+			EventLoopGroup childEventLoopGroup, @Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(ServerSocketChannel.class)) {
 			return eventLoop.isCompatible(NioServerSocketChannel.class) ?
-					(SERVERCHANNEL) new NioServerSocketChannel(eventLoop, childEventLoopGroup) : null;
+					(SERVERCHANNEL) new NioServerSocketChannel(eventLoop, childEventLoopGroup,
+							SelectorProvider.provider(), protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}

@@ -15,6 +15,7 @@
  */
 package reactor.netty5.resources;
 
+import java.net.ProtocolFamily;
 import java.util.concurrent.ThreadFactory;
 
 import io.netty5.channel.Channel;
@@ -24,18 +25,12 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.epoll.Epoll;
 import io.netty5.channel.epoll.EpollDatagramChannel;
-import io.netty5.channel.epoll.EpollDomainDatagramChannel;
-import io.netty5.channel.epoll.EpollDomainSocketChannel;
 import io.netty5.channel.epoll.EpollHandler;
-import io.netty5.channel.epoll.EpollServerDomainSocketChannel;
 import io.netty5.channel.epoll.EpollServerSocketChannel;
 import io.netty5.channel.epoll.EpollSocketChannel;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
-import io.netty5.channel.unix.DomainDatagramChannel;
-import io.netty5.channel.unix.DomainSocketChannel;
-import io.netty5.channel.unix.ServerDomainSocketChannel;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -51,22 +46,15 @@ final class DefaultLoopEpoll implements DefaultLoop {
 	@Override
 	@Nullable
 	@SuppressWarnings("unchecked")
-	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop) {
+	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop,
+			@Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(SocketChannel.class)) {
 			return eventLoop.isCompatible(EpollSocketChannel.class) ?
-					(CHANNEL) new EpollSocketChannel(eventLoop) : null;
+					(CHANNEL) new EpollSocketChannel(eventLoop, protocolFamily) : null;
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
 			return eventLoop.isCompatible(EpollDatagramChannel.class) ?
-					(CHANNEL) new EpollDatagramChannel(eventLoop) : null;
-		}
-		if (channelClass.equals(DomainSocketChannel.class)) {
-			return eventLoop.isCompatible(EpollDomainSocketChannel.class) ?
-					(CHANNEL) new EpollDomainSocketChannel(eventLoop) : null;
-		}
-		if (channelClass.equals(DomainDatagramChannel.class)) {
-			return eventLoop.isCompatible(EpollDomainDatagramChannel.class) ?
-					(CHANNEL) new EpollDomainDatagramChannel(eventLoop) : null;
+					(CHANNEL) new EpollDatagramChannel(eventLoop, protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
@@ -80,14 +68,10 @@ final class DefaultLoopEpoll implements DefaultLoop {
 	@Nullable
 	@SuppressWarnings("unchecked")
 	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
-			EventLoopGroup childEventLoopGroup) {
+			EventLoopGroup childEventLoopGroup, @Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(ServerSocketChannel.class)) {
 			return eventLoop.isCompatible(EpollServerSocketChannel.class) ?
-					(SERVERCHANNEL) new EpollServerSocketChannel(eventLoop, childEventLoopGroup) : null;
-		}
-		if (channelClass.equals(ServerDomainSocketChannel.class)) {
-			return eventLoop.isCompatible(EpollServerDomainSocketChannel.class) ?
-					(SERVERCHANNEL) new EpollServerDomainSocketChannel(eventLoop, childEventLoopGroup) : null;
+					(SERVERCHANNEL) new EpollServerSocketChannel(eventLoop, childEventLoopGroup, protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}

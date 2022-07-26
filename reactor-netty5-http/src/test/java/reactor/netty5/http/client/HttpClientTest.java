@@ -2292,27 +2292,6 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testHttpClientWithDomainSocketsNIOTransport() {
-		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> {
-					LoopResources loop = LoopResources.create("testHttpClientWithDomainSocketsNIOTransport");
-					try {
-						createClient(() -> new DomainSocketAddress("/tmp/test.sock"))
-						          .runOn(loop, false)
-						          .get()
-						          .uri("/")
-						          .responseContent()
-						          .aggregate()
-						          .block(Duration.ofSeconds(30));
-					}
-					finally {
-						loop.disposeLater()
-						    .block(Duration.ofSeconds(30));
-					}
-		});
-	}
-
-	@Test
 	void testHttpClientWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> createClient(() -> new DomainSocketAddress("/tmp/test.sock"))

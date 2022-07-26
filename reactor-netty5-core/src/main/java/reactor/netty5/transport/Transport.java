@@ -15,6 +15,7 @@
  */
 package reactor.netty5.transport;
 
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
 import java.time.Duration;
@@ -258,10 +259,24 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 */
 	public T runOn(LoopResources loopResources, boolean preferNative) {
 		Objects.requireNonNull(loopResources, "loopResources");
+		return runOn(loopResources, preferNative, null);
+	}
+
+	/**
+	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources} container.
+	 *
+	 * @param loopResources a new loop resources
+	 * @param preferNative should prefer running on epoll, kqueue or similar instead of java NIO
+	 * @param family a specific {@link ProtocolFamily} to run with
+	 * @return a new {@link Transport} reference
+	 */
+	public final T runOn(LoopResources loopResources, boolean preferNative, @Nullable ProtocolFamily family) {
+		Objects.requireNonNull(loopResources, "loopResources");
 		T dup = duplicate();
 		TransportConfig c = dup.configuration();
 		c.loopResources = loopResources;
 		c.preferNative = preferNative;
+		dup.configuration().family = family;
 		return dup;
 	}
 

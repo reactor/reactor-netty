@@ -16,12 +16,10 @@
 package reactor.netty5.udp;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.ServerChannelFactory;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.resolver.AddressResolverGroup;
@@ -32,7 +30,6 @@ import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.resources.LoopResources;
 import reactor.netty5.transport.ClientTransportConfig;
 import reactor.netty5.transport.logging.AdvancedByteBufFormat;
-import reactor.util.annotation.Nullable;
 
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
@@ -53,20 +50,8 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 		return DEFAULT_OPS;
 	}
 
-	/**
-	 * Return the configured {@link ProtocolFamily} to run with or null
-	 *
-	 * @return the configured {@link ProtocolFamily} to run with or null
-	 */
-	@Nullable
-	public final ProtocolFamily family() {
-		return family;
-	}
-
 
 	// Protected/Package private write API
-
-	ProtocolFamily family;
 
 	UdpClientConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
@@ -75,22 +60,11 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 
 	UdpClientConfig(UdpClientConfig parent) {
 		super(parent);
-		this.family = parent.family;
 	}
 
 	@Override
 	protected Class<? extends Channel> channelType() {
 		return DatagramChannel.class;
-	}
-
-	@Override
-	protected ChannelFactory<? extends Channel> connectionFactory(boolean isDomainSocket) {
-		if (isPreferNative()) {
-			return super.connectionFactory(isDomainSocket);
-		}
-		else {
-			return el -> new NioDatagramChannel(el, family());
-		}
 	}
 
 	/**
@@ -126,7 +100,7 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 	}
 
 	@Override
-	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(boolean isDomainSocket) {
+	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(ProtocolFamily protocolFamily) {
 		throw new UnsupportedOperationException();
 	}
 

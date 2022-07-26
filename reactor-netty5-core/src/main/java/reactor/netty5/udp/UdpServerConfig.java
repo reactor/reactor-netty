@@ -16,14 +16,12 @@
 package reactor.netty5.udp;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.ServerChannelFactory;
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import reactor.netty5.ChannelPipelineConfigurer;
@@ -87,23 +85,12 @@ public final class UdpServerConfig extends TransportConfig {
 		return doOnUnbound;
 	}
 
-	/**
-	 * Return the configured {@link ProtocolFamily} to run with or null
-	 *
-	 * @return the configured {@link ProtocolFamily} to run with or null
-	 */
-	@Nullable
-	public final ProtocolFamily family() {
-		return family;
-	}
-
 
 	// Protected/Package private write API
 
 	Consumer<? super UdpServerConfig> doOnBind;
 	Consumer<? super Connection>      doOnBound;
 	Consumer<? super Connection>      doOnUnbound;
-	ProtocolFamily                    family;
 
 	UdpServerConfig(Map<ChannelOption<?>, ?> options, Supplier<? extends SocketAddress> bindAddress) {
 		super(options, bindAddress);
@@ -114,22 +101,11 @@ public final class UdpServerConfig extends TransportConfig {
 		this.doOnBind = parent.doOnBind;
 		this.doOnBound = parent.doOnBound;
 		this.doOnUnbound = parent.doOnUnbound;
-		this.family = parent.family;
 	}
 
 	@Override
 	protected Class<? extends Channel> channelType() {
 		return DatagramChannel.class;
-	}
-
-	@Override
-	protected ChannelFactory<? extends Channel> connectionFactory(boolean isDomainSocket) {
-		if (isPreferNative()) {
-			return super.connectionFactory(isDomainSocket);
-		}
-		else {
-			return el -> new NioDatagramChannel(el, family());
-		}
 	}
 
 	@Override
@@ -171,7 +147,7 @@ public final class UdpServerConfig extends TransportConfig {
 	}
 
 	@Override
-	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(boolean isDomainSocket) {
+	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(ProtocolFamily protocolFamily) {
 		throw new UnsupportedOperationException();
 	}
 
