@@ -27,5 +27,7 @@ public class CustomBlockHoundIntegration implements BlockHoundIntegration {
 
 		builder.allowBlockingCallsInside("reactor.core.scheduler.BoundedElasticScheduler$BoundedServices", "pick");
 		builder.allowBlockingCallsInside("io.netty5.handler.ssl.BouncyCastle", "isInUse");
+		builder.allowBlockingCallsInside("io.netty5.buffer.api.pool.PoolSubpage", "lock");
+		builder.allowBlockingCallsInside("io.netty5.buffer.api.pool.PoolArena", "lock");
 	}
 }
