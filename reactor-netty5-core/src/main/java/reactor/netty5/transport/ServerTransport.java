@@ -28,7 +28,6 @@ import java.util.function.Consumer;
 
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
@@ -216,7 +215,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 	/**
 	 * Injects default options to the future child {@link Channel} connections. It
-	 * will be available via {@link Channel#config()}.
+	 * will be available via {@link Channel#getOption(ChannelOption)}.
 	 * If the {@code value} is {@code null}, the attribute of the specified {@code key}
 	 * is removed.
 	 * Note: Setting {@link ChannelOption#AUTO_READ} option will be ignored. It is configured to be {@code false}.
@@ -389,11 +388,10 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 		@Override
 		public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-			ChannelConfig config = ctx.channel().config();
-			if (config.isAutoRead()) {
+			if (ctx.channel().getOption(ChannelOption.AUTO_READ)) {
 				// stop accept new connections for 1 second to allow the channel to recover
 				// See https://github.com/netty/netty/issues/1328
-				config.setAutoRead(false);
+				ctx.channel().setOption(ChannelOption.AUTO_READ, false);
 				ctx.channel()
 				   .executor()
 				   .schedule(enableAutoReadTask, 1, TimeUnit.SECONDS)
@@ -415,7 +413,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			// not be able to load the class because of the file limit it already reached.
 			//
 			// See https://github.com/netty/netty/issues/1328
-			enableAutoReadTask = () -> channel.config().setAutoRead(true);
+			enableAutoReadTask = () -> channel.setOption(ChannelOption.AUTO_READ, true);
 		}
 
 		void initChild(final Channel child) {

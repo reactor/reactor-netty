@@ -36,6 +36,7 @@ import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.buffer.api.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
@@ -596,8 +597,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received response (auto-read:{}) : {}"),
-						channel().config()
-						         .isAutoRead(),
+						channel().getOption(ChannelOption.AUTO_READ),
 						responseHeaders().entries()
 						                 .toString());
 			}
@@ -614,7 +614,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 			else {
 				// when redirecting no need of manual reading
-				channel().config().setAutoRead(true);
+				channel().setOption(ChannelOption.AUTO_READ, true);
 			}
 
 			if (msg instanceof FullHttpResponse request) {
@@ -664,7 +664,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 
 			//force auto read to enable more accurate close selection now inbound is done
-			channel().config().setAutoRead(true);
+			channel().setOption(ChannelOption.AUTO_READ, true);
 			if (markSentBody()) {
 				markPersistent(false);
 			}
