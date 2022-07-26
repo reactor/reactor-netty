@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.IoHandle;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
@@ -189,17 +190,17 @@ class ReactorNettyTest {
 	static final class TestEventLoop implements EventLoop {
 
 		@Override
-		public Future<Void> registerForIo(Channel channel) {
+		public Future<Void> registerForIo(IoHandle handle) {
 			return null;
 		}
 
 		@Override
-		public Future<Void> deregisterForIo(Channel channel) {
+		public Future<Void> deregisterForIo(IoHandle handle) {
 			return null;
 		}
 
 		@Override
-		public boolean isCompatible(Class<? extends Channel> channelType) {
+		public boolean isCompatible(Class<? extends IoHandle> handleType) {
 			return true;
 		}
 
