@@ -16,7 +16,6 @@
 package reactor.netty5.udp;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 
 import io.netty5.channel.ChannelOption;
@@ -61,9 +60,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 
 		final Future<Void> future;
 		if (null != iface) {
-			future = datagramChannel.joinGroup(new InetSocketAddress(multicastAddress,
-					datagramChannel.localAddress()
-					               .getPort()), iface);
+			future = datagramChannel.joinGroup(multicastAddress, iface, null);
 		}
 		else {
 			future = datagramChannel.joinGroup(multicastAddress);
@@ -95,9 +92,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 
 		final Future<Void> future;
 		if (null != iface) {
-			future = datagramChannel.leaveGroup(new InetSocketAddress(multicastAddress,
-					datagramChannel.localAddress()
-					               .getPort()), iface);
+			future = datagramChannel.leaveGroup(multicastAddress, iface, null);
 		}
 		else {
 			future = datagramChannel.leaveGroup(multicastAddress);

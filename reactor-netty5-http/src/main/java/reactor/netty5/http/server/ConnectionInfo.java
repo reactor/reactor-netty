@@ -71,7 +71,7 @@ public final class ConnectionInfo {
 	 */
 	static ConnectionInfo newConnectionInfo(Channel c, boolean secured, InetSocketAddress remoteAddress) {
 		SocketChannel channel = (SocketChannel) c;
-		InetSocketAddress hostAddress = channel.localAddress();
+		InetSocketAddress hostAddress = (InetSocketAddress) channel.localAddress();
 		String scheme = secured ? "https" : "http";
 		return new ConnectionInfo(hostAddress, remoteAddress, scheme);
 	}
