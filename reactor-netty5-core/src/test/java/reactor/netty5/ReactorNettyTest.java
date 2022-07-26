@@ -154,7 +154,7 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		protected void doBeginRead() {
+		protected void doRead() {
 		}
 
 		@Override
