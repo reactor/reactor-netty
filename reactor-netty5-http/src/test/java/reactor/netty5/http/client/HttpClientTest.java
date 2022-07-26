@@ -67,7 +67,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
 import io.netty5.channel.nio.NioHandler;
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpContentDecompressor;

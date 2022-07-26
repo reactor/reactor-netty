@@ -35,7 +35,7 @@ import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.Promise;

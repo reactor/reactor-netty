@@ -16,7 +16,7 @@
 package reactor.netty5.http.client;
 
 import io.netty5.channel.ChannelHandlerAdapter;
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import java.security.cert.CertificateException;
 import java.time.Duration;

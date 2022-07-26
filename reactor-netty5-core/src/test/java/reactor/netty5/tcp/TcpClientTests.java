@@ -45,7 +45,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.DefaultAddressResolverGroup;

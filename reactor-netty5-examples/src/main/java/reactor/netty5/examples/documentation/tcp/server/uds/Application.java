@@ -15,7 +15,7 @@
  */
 package reactor.netty5.examples.documentation.tcp.server.uds;
 
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import reactor.netty5.DisposableServer;
 import reactor.netty5.tcp.TcpServer;
 

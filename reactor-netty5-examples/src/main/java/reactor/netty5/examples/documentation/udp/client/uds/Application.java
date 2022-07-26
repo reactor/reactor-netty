@@ -15,7 +15,7 @@
  */
 package reactor.netty5.examples.documentation.udp.client.uds;
 
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.udp.UdpClient;

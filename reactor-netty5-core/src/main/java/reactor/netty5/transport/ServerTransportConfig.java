@@ -159,7 +159,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	@Override
-	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
+	protected Class<? extends Channel> channelType() {
 		throw new UnsupportedOperationException();
 	}
 

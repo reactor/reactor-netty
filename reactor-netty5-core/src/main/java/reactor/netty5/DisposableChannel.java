@@ -20,7 +20,6 @@ import java.time.Duration;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.unix.DomainDatagramChannel;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
@@ -45,7 +44,7 @@ public interface DisposableChannel extends Disposable {
 	 */
 	default SocketAddress address() {
 		Channel c = channel();
-		if (c instanceof DatagramChannel || c instanceof DomainDatagramChannel) {
+		if (c instanceof DatagramChannel) {
 			SocketAddress a = c.remoteAddress();
 			return a != null ? a : c.localAddress();
 		}

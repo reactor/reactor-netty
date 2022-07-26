@@ -112,7 +112,7 @@ class TransportTest {
 		}
 
 		@Override
-		protected Class<? extends Channel> channelType(boolean isDomainSocket) {
+		protected Class<? extends Channel> channelType() {
 			return null;
 		}
 

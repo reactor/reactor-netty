@@ -36,8 +36,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.InternetProtocolFamily;
-import io.netty5.channel.unix.DomainSocketAddress;
 import io.netty5.util.NetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelInitializer;
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.resolver.AddressResolverGroup;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;

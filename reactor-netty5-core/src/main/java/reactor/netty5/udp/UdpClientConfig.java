@@ -23,7 +23,6 @@ import io.netty5.channel.ServerChannelFactory;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
-import io.netty5.channel.unix.DomainDatagramChannel;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.resolver.AddressResolverGroup;
@@ -80,8 +79,8 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 	}
 
 	@Override
-	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
-		return isDomainSocket ? DomainDatagramChannel.class : DatagramChannel.class;
+	protected Class<? extends Channel> channelType() {
+		return DatagramChannel.class;
 	}
 
 	@Override
@@ -122,7 +121,7 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 	}
 
 	@Override
-	protected Class<? extends ServerChannel> serverChannelType(boolean isDomainSocket) {
+	protected Class<? extends ServerChannel> serverChannelType() {
 		throw new UnsupportedOperationException();
 	}
 
