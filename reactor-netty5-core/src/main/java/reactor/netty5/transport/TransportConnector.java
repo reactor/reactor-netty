@@ -22,7 +22,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannelFactory;
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.resolver.AddressResolver;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.util.AttributeKey;
@@ -69,8 +69,7 @@ public final class TransportConnector {
 	 * @param config the transport configuration
 	 * @param channelInitializer the {@link ChannelInitializer} that will be used for initializing the channel pipeline
 	 * @param bindAddress the local address
-	 * @param isDomainSocket true if {@link io.netty5.channel.unix.DomainSocketChannel} or
-	 * {@link io.netty5.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
+	 * @param isDomainSocket true if domain socket is needed, false otherwise
 	 * @return a {@link Mono} of {@link Channel}
 	 */
 	public static Mono<Channel> bind(TransportConfig config, ChannelInitializer<Channel> channelInitializer,

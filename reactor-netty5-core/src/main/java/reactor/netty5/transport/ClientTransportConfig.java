@@ -232,7 +232,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	@Override
-	protected Class<? extends ServerChannel> serverChannelType(boolean isDomainSocket) {
+	protected Class<? extends ServerChannel> serverChannelType() {
 		throw new UnsupportedOperationException();
 	}
 

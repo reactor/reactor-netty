@@ -30,8 +30,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.channel.unix.DomainDatagramPacket;
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
@@ -208,12 +207,12 @@ class UdpClientTest {
 					         .runOn(resources)
 					         .handle((in, out) -> in.receiveObject()
 					                                .map(o -> {
-					                                    if (o instanceof DomainDatagramPacket received) {
+					                                    if (o instanceof DatagramPacket received) {
 					                                        Buffer buffer = received.content();
 					                                        System.out.println("Server received " + buffer.toString(CharsetUtil.UTF_8));
 					                                        Buffer buf1 = out.alloc().copyOf("echo ".getBytes(CharsetUtil.UTF_8));
 					                                        CompositeBuffer buf2 = out.alloc().compose(List.of(buf1.send(), buffer.send()));
-					                                        return new DomainDatagramPacket(buf2, received.sender());
+					                                        return new DatagramPacket(buf2, received.sender());
 					                                    }
 					                                    else {
 					                                        return Mono.error(new Exception());

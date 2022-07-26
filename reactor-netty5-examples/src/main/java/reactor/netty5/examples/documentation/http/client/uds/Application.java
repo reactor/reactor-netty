@@ -15,7 +15,7 @@
  */
 package reactor.netty5.examples.documentation.http.client.uds;
 
-import io.netty5.channel.unix.DomainSocketAddress;
+import io.netty5.channel.socket.DomainSocketAddress;
 import reactor.netty5.http.client.HttpClient;
 
 public class Application {
