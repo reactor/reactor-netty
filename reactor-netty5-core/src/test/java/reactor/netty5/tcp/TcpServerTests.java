@@ -462,7 +462,7 @@ class TcpServerTests {
 		Connection client2 =
 				TcpClient.create()
 				         .port(context.port())
-				         .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvBufferAllocator(64, 1024, 65536))
+				         .option(ChannelOption.RCVBUFFER_ALLOCATOR, new AdaptiveRecvBufferAllocator(64, 1024, 65536))
 				         .handle((in, out) -> {
 				             in.receive()
 				               .asString(StandardCharsets.UTF_8)
