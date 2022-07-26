@@ -208,8 +208,11 @@ public final class TransportConnector {
 				continue;
 			}
 			try {
-				if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
+				if (!channel.isOptionSupported(e.getKey())) {
 					log.warn(format(channel, "Unknown channel option '{}' for channel '{}'"), e.getKey(), channel);
+				}
+				else {
+					channel.setOption((ChannelOption<Object>) e.getKey(), e.getValue());
 				}
 			}
 			catch (Throwable t) {

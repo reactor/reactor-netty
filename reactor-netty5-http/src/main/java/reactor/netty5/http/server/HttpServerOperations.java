@@ -35,6 +35,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.DefaultHeaders;
 import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
@@ -568,7 +569,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				}
 				if (isHttp2()) {
 					//force auto read to enable more accurate close selection now inbound is done
-					channel().config().setAutoRead(true);
+					channel().setOption(ChannelOption.AUTO_READ, true);
 					onInboundComplete();
 				}
 			}
@@ -580,7 +581,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 			if (msg instanceof LastHttpContent) {
 				//force auto read to enable more accurate close selection now inbound is done
-				channel().config().setAutoRead(true);
+				channel().setOption(ChannelOption.AUTO_READ, true);
 				onInboundComplete();
 			}
 		}

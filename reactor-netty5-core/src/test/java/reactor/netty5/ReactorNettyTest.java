@@ -17,7 +17,6 @@ package reactor.netty5;
 
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelConfig;
 import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
@@ -122,7 +121,7 @@ class ReactorNettyTest {
 		}
 
 		TestChannel(Channel parent, @Nullable SocketAddress localAddress, @Nullable SocketAddress remoteAddress) {
-			super(parent, new TestEventLoop());
+			super(parent, new TestEventLoop(), new ChannelMetadata(false));
 			this.localAddress = localAddress;
 			this.remoteAddress = remoteAddress;
 		}
@@ -172,11 +171,6 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		public ChannelConfig config() {
-			return null;
-		}
-
-		@Override
 		public boolean isOpen() {
 			return false;
 		}
@@ -189,11 +183,6 @@ class ReactorNettyTest {
 		@Override
 		public boolean isShutdown(ChannelShutdownDirection direction) {
 			return false;
-		}
-
-		@Override
-		public ChannelMetadata metadata() {
-			return null;
 		}
 	}
 

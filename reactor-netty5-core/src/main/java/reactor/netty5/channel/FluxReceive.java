@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.api.Buffer;
+import io.netty5.channel.ChannelOption;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
@@ -80,8 +81,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		this.parent = parent;
 		this.channel = parent.channel();
 		this.eventLoop = channel.executor();
-		channel.config()
-		       .setAutoRead(false);
+		channel.setOption(ChannelOption.AUTO_READ, false);
 		CANCEL.lazySet(this, () -> {
 			if (eventLoop.inEventLoop()) {
 				unsubscribeReceiver();
@@ -307,8 +307,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				receiverFastpath = true;
 				if (needRead) {
 					needRead = false;
-					channel.config()
-					       .setAutoRead(true);
+					channel.setOption(ChannelOption.AUTO_READ, true);
 				}
 				//CHECKSTYLE:OFF
 				missed = (wip -= missed);
@@ -321,14 +320,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			if ((receiverDemand -= e) > 0L || (e > 0L && q.size() < QUEUE_LOW_LIMIT)) {
 				if (needRead) {
 					needRead = false;
-					channel.config()
-					       .setAutoRead(true);
+					channel.setOption(ChannelOption.AUTO_READ, true);
 				}
 			}
 			else if (!needRead) {
 				needRead = true;
-				channel.config()
-				       .setAutoRead(false);
+				channel.setOption(ChannelOption.AUTO_READ, false);
 			}
 
 			//CHECKSTYLE:OFF

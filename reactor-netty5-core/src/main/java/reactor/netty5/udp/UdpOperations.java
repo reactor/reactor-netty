@@ -19,6 +19,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 
+import io.netty5.channel.ChannelOption;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.util.concurrent.Future;
 import org.reactivestreams.Publisher;
@@ -54,8 +55,8 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		if (!(connection().channel() instanceof DatagramChannel datagramChannel)) {
 			throw new UnsupportedOperationException();
 		}
-		if (null == iface && null != datagramChannel.config().getNetworkInterface()) {
-			iface = datagramChannel.config().getNetworkInterface();
+		if (null == iface && null != datagramChannel.getOption(ChannelOption.IP_MULTICAST_IF)) {
+			iface = datagramChannel.getOption(ChannelOption.IP_MULTICAST_IF);
 		}
 
 		final Future<Void> future;
@@ -88,8 +89,8 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		if (!(connection().channel() instanceof DatagramChannel datagramChannel)) {
 			throw new UnsupportedOperationException();
 		}
-		if (null == iface && null != datagramChannel.config().getNetworkInterface()) {
-			iface = datagramChannel.config().getNetworkInterface();
+		if (null == iface && null != datagramChannel.getOption(ChannelOption.IP_MULTICAST_IF)) {
+			iface = datagramChannel.getOption(ChannelOption.IP_MULTICAST_IF);
 		}
 
 		final Future<Void> future;
