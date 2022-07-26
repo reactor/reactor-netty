@@ -23,7 +23,6 @@ import io.netty5.channel.ServerChannel;
 import io.netty5.channel.ServerChannelFactory;
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
@@ -38,6 +37,7 @@ import reactor.netty5.transport.TransportConfig;
 import reactor.netty5.transport.logging.AdvancedByteBufFormat;
 import reactor.util.annotation.Nullable;
 
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
 import java.util.Map;
@@ -88,12 +88,12 @@ public final class UdpServerConfig extends TransportConfig {
 	}
 
 	/**
-	 * Return the configured {@link InternetProtocolFamily} to run with or null
+	 * Return the configured {@link ProtocolFamily} to run with or null
 	 *
-	 * @return the configured {@link InternetProtocolFamily} to run with or null
+	 * @return the configured {@link ProtocolFamily} to run with or null
 	 */
 	@Nullable
-	public final InternetProtocolFamily family() {
+	public final ProtocolFamily family() {
 		return family;
 	}
 
@@ -103,7 +103,7 @@ public final class UdpServerConfig extends TransportConfig {
 	Consumer<? super UdpServerConfig> doOnBind;
 	Consumer<? super Connection>      doOnBound;
 	Consumer<? super Connection>      doOnUnbound;
-	InternetProtocolFamily            family;
+	ProtocolFamily                    family;
 
 	UdpServerConfig(Map<ChannelOption<?>, ?> options, Supplier<? extends SocketAddress> bindAddress) {
 		super(options, bindAddress);

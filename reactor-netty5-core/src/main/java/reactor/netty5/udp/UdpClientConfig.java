@@ -21,7 +21,6 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.ServerChannelFactory;
 import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
@@ -35,6 +34,7 @@ import reactor.netty5.transport.ClientTransportConfig;
 import reactor.netty5.transport.logging.AdvancedByteBufFormat;
 import reactor.util.annotation.Nullable;
 
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
 import java.util.Map;
@@ -54,19 +54,19 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 	}
 
 	/**
-	 * Return the configured {@link InternetProtocolFamily} to run with or null
+	 * Return the configured {@link ProtocolFamily} to run with or null
 	 *
-	 * @return the configured {@link InternetProtocolFamily} to run with or null
+	 * @return the configured {@link ProtocolFamily} to run with or null
 	 */
 	@Nullable
-	public final InternetProtocolFamily family() {
+	public final ProtocolFamily family() {
 		return family;
 	}
 
 
 	// Protected/Package private write API
 
-	InternetProtocolFamily family;
+	ProtocolFamily family;
 
 	UdpClientConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {

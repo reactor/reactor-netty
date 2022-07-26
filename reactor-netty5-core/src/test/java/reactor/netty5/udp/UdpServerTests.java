@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.socket.DomainSocketAddress;
-import io.netty5.channel.socket.InternetProtocolFamily;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.NetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -143,7 +143,7 @@ class UdpServerTests {
 					UdpServer.create()
 					         .option(ChannelOption.SO_REUSEADDR, true)
 					         .bindAddress(() -> new InetSocketAddress(port))
-					         .runOn(resources, InternetProtocolFamily.IPv4)
+					         .runOn(resources, SocketProtocolFamily.INET)
 					         .handle((in, out) -> {
 						         Flux.<NetworkInterface>generate(s -> {
 					                             // Suppressed "JdkObsolete", usage of Enumeration is deliberate
