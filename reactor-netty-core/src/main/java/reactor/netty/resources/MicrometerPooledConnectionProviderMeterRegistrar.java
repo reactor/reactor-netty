@@ -51,7 +51,7 @@ final class MicrometerPooledConnectionProviderMeterRegistrar {
 
 	void registerMetrics(String poolName, String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
 		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
-		Tags tags = Tags.of(ID.getKeyName(), id, REMOTE_ADDRESS.getKeyName(), addressAsString, NAME.getKeyName(), poolName);
+		Tags tags = Tags.of(ID.asString(), id, REMOTE_ADDRESS.asString(), addressAsString, NAME.asString(), poolName);
 		Gauge.builder(TOTAL_CONNECTIONS.getName(), metrics, InstrumentedPool.PoolMetrics::allocatedSize)
 		     .tags(tags)
 		     .register(REGISTRY);

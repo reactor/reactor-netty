@@ -114,7 +114,7 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 		 */
 		ID {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "id";
 			}
 		},
@@ -124,7 +124,7 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 		 */
 		NAME {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "name";
 			}
 		},
@@ -134,7 +134,7 @@ enum Http2ConnectionProviderMeters implements DocumentedMeter {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "remote.address";
 			}
 		}
