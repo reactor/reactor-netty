@@ -15,6 +15,7 @@
  */
 package reactor.netty5.resources;
 
+import java.net.ProtocolFamily;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -25,6 +26,7 @@ import io.netty5.channel.ServerChannel;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty5.ReactorNetty;
+import reactor.util.annotation.Nullable;
 
 /**
  * An {@link EventLoopGroup} selector with associated
@@ -202,17 +204,19 @@ public interface LoopResources extends Disposable {
 	/**
 	 * Callback for a {@link Channel} selection.
 	 *
-	 * @param channelType the channel type
-	 * @param eventLoop the {@link EventLoop} to assign
-	 * @param <CHANNEL> the {@link Channel} implementation
+	 * @param <CHANNEL>      the {@link Channel} implementation
+	 * @param channelType    the channel type
+	 * @param eventLoop      the {@link EventLoop} to assign
+	 * @param protocolFamily the configured {@link ProtocolFamily} to run with
 	 * @return a {@link Channel} instance
 	 */
-	default <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoop eventLoop) {
-		CHANNEL channel = DefaultLoopNativeDetector.INSTANCE.getChannel(channelType, eventLoop);
+	default <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoop eventLoop,
+			@Nullable ProtocolFamily protocolFamily) {
+		CHANNEL channel = DefaultLoopNativeDetector.INSTANCE.getChannel(channelType, eventLoop, protocolFamily);
 		if (channel != null) {
 			return channel;
 		}
-		channel = DefaultLoopNativeDetector.NIO.getChannel(channelType, eventLoop);
+		channel = DefaultLoopNativeDetector.NIO.getChannel(channelType, eventLoop, protocolFamily);
 		if (channel != null) {
 			return channel;
 		}
@@ -241,21 +245,22 @@ public interface LoopResources extends Disposable {
 	/**
 	 * Callback for a {@link Channel} selection.
 	 *
-	 * @param <SERVERCHANNEL> the {@link ServerChannel} implementation
-	 * @param channelType the channel type
-	 * @param eventLoop the {@link EventLoop} to assign
+	 * @param <SERVERCHANNEL>     the {@link ServerChannel} implementation
+	 * @param channelType         the channel type
+	 * @param eventLoop           the {@link EventLoop} to assign
 	 * @param childEventLoopGroup the {@link EventLoop} to assign for child {@link Channel}
+	 * @param protocolFamily      the configured {@link ProtocolFamily} to run with
 	 * @return a {@link ServerChannel} instance
 	 */
 	default <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL onServerChannel(Class<SERVERCHANNEL> channelType, EventLoop eventLoop,
-			EventLoopGroup childEventLoopGroup) {
+			EventLoopGroup childEventLoopGroup, @Nullable ProtocolFamily protocolFamily) {
 		SERVERCHANNEL serverchannel = DefaultLoopNativeDetector.INSTANCE
-				.getServerChannel(channelType, eventLoop, childEventLoopGroup);
+				.getServerChannel(channelType, eventLoop, childEventLoopGroup, protocolFamily);
 		if (serverchannel != null) {
 			return serverchannel;
 		}
 		serverchannel = DefaultLoopNativeDetector.NIO
-				.getServerChannel(channelType, eventLoop, childEventLoopGroup);
+				.getServerChannel(channelType, eventLoop, childEventLoopGroup, protocolFamily);
 		if (serverchannel != null) {
 			return serverchannel;
 		}

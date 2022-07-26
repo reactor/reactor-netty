@@ -486,8 +486,8 @@ public final class NameResolverProvider {
 				.ndots(ndots)
 				.queryTimeoutMillis(queryTimeout.toMillis())
 				.eventLoop(group.next())
-				.channelFactory(el -> loop.onChannel(DatagramChannel.class, el))
-				.socketChannelFactory(el -> loop.onChannel(SocketChannel.class, el));
+				.channelFactory(el -> loop.onChannel(DatagramChannel.class, el, null))
+				.socketChannelFactory(el -> loop.onChannel(SocketChannel.class, el, null));
 		if (hostsFileEntriesResolver != null) {
 			builder.hostsFileEntriesResolver(hostsFileEntriesResolver);
 		}

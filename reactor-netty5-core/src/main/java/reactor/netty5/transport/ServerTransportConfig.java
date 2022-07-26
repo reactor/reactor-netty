@@ -15,6 +15,7 @@
  */
 package reactor.netty5.transport;
 
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.Map;
@@ -164,7 +165,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	@Override
-	protected ChannelFactory<? extends Channel> connectionFactory(boolean isDomainSocket) {
+	protected ChannelFactory<? extends Channel> connectionFactory(@Nullable ProtocolFamily protocolFamily) {
 		throw new UnsupportedOperationException();
 	}
 

@@ -15,7 +15,6 @@
  */
 package reactor.netty5.udp;
 
-import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
@@ -24,7 +23,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty5.channel.ChannelOption;
-import io.netty5.channel.EventLoopGroup;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.util.AttributeKey;
 import org.reactivestreams.Publisher;
@@ -32,7 +30,6 @@ import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.channel.ChannelMetricsRecorder;
-import reactor.netty5.resources.LoopResources;
 import reactor.netty5.transport.ClientTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -158,46 +155,6 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 	@Override
 	public final UdpClient remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
 		return super.remoteAddress(remoteAddressSupplier);
-	}
-
-	@Override
-	public final UdpClient runOn(EventLoopGroup eventLoopGroup) {
-		return super.runOn(eventLoopGroup);
-	}
-
-	@Override
-	public final UdpClient runOn(LoopResources channelResources) {
-		return super.runOn(channelResources);
-	}
-
-	/**
-	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources} container.
-	 *
-	 * @param loopResources a new loop resources
-	 * @param preferNative should prefer running on epoll, kqueue or similar instead of java NIO
-	 * @return a new {@link UdpServer} reference
-	 */
-	@Override
-	public final UdpClient runOn(LoopResources loopResources, boolean preferNative) {
-		Objects.requireNonNull(loopResources, "loopResources");
-		UdpClient dup = super.runOn(loopResources, preferNative);
-		dup.configuration().family = null;
-		return dup;
-	}
-
-	/**
-	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources} container.
-	 *
-	 * @param loopResources a new loop resources
-	 * @param family a specific {@link ProtocolFamily} to run with
-	 * @return a new {@link UdpClient} reference
-	 */
-	public final UdpClient runOn(LoopResources loopResources, ProtocolFamily family) {
-		Objects.requireNonNull(loopResources, "loopResources");
-		Objects.requireNonNull(family, "family");
-		UdpClient dup = super.runOn(loopResources, false);
-		dup.configuration().family = family;
-		return dup;
 	}
 
 	@Override

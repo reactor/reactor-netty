@@ -16,6 +16,7 @@
 package reactor.netty5.tcp;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -68,7 +69,6 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty5.ChannelBindException;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.DisposableServer;
@@ -83,7 +83,6 @@ import reactor.util.Loggers;
 import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * @author Jon Brisbin
@@ -954,24 +953,6 @@ class TcpServerTests {
 	}
 
 	@Test
-	void testTcpServerWithDomainSocketsNIOTransport() {
-		assertThatExceptionOfType(ChannelBindException.class)
-				.isThrownBy(() -> {
-					LoopResources loop = LoopResources.create("testTcpServerWithDomainSocketsNIOTransport");
-					try {
-						TcpServer.create()
-						         .runOn(loop, false)
-						         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-						         .bindNow();
-					}
-					finally {
-						loop.disposeLater()
-						    .block(Duration.ofSeconds(30));
-					}
-		});
-	}
-
-	@Test
 	void testTcpServerWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> TcpServer.create()
@@ -991,10 +972,9 @@ class TcpServerTests {
 
 	@Test
 	void testTcpServerWithDomainSockets() throws Exception {
-		assumeThat(LoopResources.hasNativeSupport()).isTrue();
 		DisposableServer disposableServer =
 				TcpServer.create()
-				         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				         .bindAddress(TcpServerTests::newDomainSocketAddress)
 				         .wiretap(true)
 				         .handle((in, out) -> out.send(in.receive().transferOwnership()))
 				         .bindNow();
@@ -1025,6 +1005,18 @@ class TcpServerTests {
 
 		conn.disposeNow();
 		disposableServer.disposeNow();
+	}
+
+	private static DomainSocketAddress newDomainSocketAddress() {
+		try {
+			File tempFile = Files.createTempFile("TcpServerTests", "UDS").toFile();
+			assertThat(tempFile.delete()).isTrue();
+			tempFile.deleteOnExit();
+			return new DomainSocketAddress(tempFile);
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Error creating a  temporary file", e);
+		}
 	}
 
 	private static class SimpleClient extends Thread {

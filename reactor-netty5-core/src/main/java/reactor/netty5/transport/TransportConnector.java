@@ -23,6 +23,7 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannelFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.resolver.AddressResolver;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.util.AttributeKey;
@@ -39,6 +40,7 @@ import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 import reactor.util.retry.Retry;
 
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.List;
@@ -275,14 +277,16 @@ public final class TransportConnector {
 		boolean onServer = channelInitializer instanceof ServerTransport.AcceptorInitializer;
 		Channel channel;
 		try {
+			ProtocolFamily protocolFamily =
+					isDomainSocket && config.family() == null ? SocketProtocolFamily.UNIX : config.family();
 			if (onServer) {
 				EventLoopGroup childEventLoopGroup = ((ServerTransportConfig<?>) config).childEventLoopGroup();
-				ServerChannelFactory<? extends Channel> channelFactory = config.serverConnectionFactory(isDomainSocket);
+				ServerChannelFactory<? extends Channel> channelFactory = config.serverConnectionFactory(protocolFamily);
 				channel = channelFactory.newChannel(eventLoop, childEventLoopGroup);
 				((ServerTransport.AcceptorInitializer) channelInitializer).acceptor.enableAutoReadTask(channel);
 			}
 			else {
-				ChannelFactory<? extends Channel> channelFactory = config.connectionFactory(isDomainSocket);
+				ChannelFactory<? extends Channel> channelFactory = config.connectionFactory(protocolFamily);
 				channel = channelFactory.newChannel(eventLoop);
 			}
 		}

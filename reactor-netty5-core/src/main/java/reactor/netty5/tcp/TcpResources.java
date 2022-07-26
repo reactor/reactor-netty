@@ -15,6 +15,7 @@
  */
 package reactor.netty5.tcp;
 
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
@@ -247,10 +248,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	@Override
-	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoop eventLoop) {
+	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoop eventLoop,
+			@Nullable ProtocolFamily protocolFamily) {
 		requireNonNull(channelType, "channelType");
 		requireNonNull(eventLoop, "eventLoop");
-		return defaultLoops.onChannel(channelType, eventLoop);
+		return defaultLoops.onChannel(channelType, eventLoop, protocolFamily);
 	}
 
 	@Override
@@ -265,11 +267,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 
 	@Override
 	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL onServerChannel(Class<SERVERCHANNEL> channelType,
-			EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+			EventLoop eventLoop, EventLoopGroup childEventLoopGroup, @Nullable ProtocolFamily protocolFamily) {
 		requireNonNull(channelType, "channelType");
 		requireNonNull(eventLoop, "eventLoop");
 		requireNonNull(childEventLoopGroup, "childEventLoopGroup");
-		return defaultLoops.onServerChannel(channelType, eventLoop, childEventLoopGroup);
+		return defaultLoops.onServerChannel(channelType, eventLoop, childEventLoopGroup, protocolFamily);
 	}
 
 	@Override

@@ -1000,23 +1000,6 @@ public class TcpClientTests {
 	}
 
 	@Test
-	void testTcpClientWithDomainSocketsNIOTransport() {
-		LoopResources loop = LoopResources.create("testTcpClientWithDomainSocketsNIOTransport");
-		try {
-			assertThatExceptionOfType(IllegalArgumentException.class)
-					.isThrownBy(() ->
-						TcpClient.create()
-						         .runOn(loop, false)
-						         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-						         .connectNow());
-		}
-		finally {
-			loop.disposeLater()
-			    .block(Duration.ofSeconds(30));
-		}
-	}
-
-	@Test
 	void testTcpClientWithDomainSocketsWithHost() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> TcpClient.create()

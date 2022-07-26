@@ -15,6 +15,7 @@
  */
 package reactor.netty5.transport;
 
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.HashMap;
@@ -139,6 +140,16 @@ public abstract class TransportConfig {
 	}
 
 	/**
+	 * Return the configured {@link ProtocolFamily} to run with or null
+	 *
+	 * @return the configured {@link ProtocolFamily} to run with or null
+	 */
+	@Nullable
+	public final ProtocolFamily family() {
+		return family;
+	}
+
+	/**
 	 * Return {@code true} if prefer native event loop and channel factory (e.g. epoll or kqueue)
 	 *
 	 * @return {@code true} if prefer native event loop and channel factory (e.g. epoll or kqueue)
@@ -195,6 +206,7 @@ public abstract class TransportConfig {
 	Supplier<? extends SocketAddress>          bindAddress;
 	ChannelGroup                               channelGroup;
 	ChannelPipelineConfigurer                  doOnChannelInit;
+	ProtocolFamily                             family;
 	LoggingHandler                             loggingHandler;
 	LoopResources                              loopResources;
 	ChannelMetricsRecorder                     metricsRecorder;
@@ -233,6 +245,7 @@ public abstract class TransportConfig {
 		this.bindAddress = parent.bindAddress;
 		this.channelGroup = parent.channelGroup;
 		this.doOnChannelInit = parent.doOnChannelInit;
+		this.family = parent.family;
 		this.loggingHandler = parent.loggingHandler;
 		this.loopResources = parent.loopResources;
 		this.metricsRecorder = parent.metricsRecorder;
@@ -257,11 +270,11 @@ public abstract class TransportConfig {
 	/**
 	 * Return the {@link ChannelFactory} which is used to create {@link Channel} instances.
 	 *
-	 * @param isDomainSocket true if Unix Domain Socket is needed, false otherwise
+	 * @param protocolFamily the configured {@link ProtocolFamily} to run with
 	 * @return the {@link ChannelFactory} which is used to create {@link Channel} instances.
 	 */
-	protected ChannelFactory<? extends Channel> connectionFactory(boolean isDomainSocket) {
-		return el -> loopResources().onChannel(channelType(), el);
+	protected ChannelFactory<? extends Channel> connectionFactory(@Nullable ProtocolFamily protocolFamily) {
+		return el -> loopResources().onChannel(channelType(), el, protocolFamily);
 	}
 
 	/**
@@ -338,11 +351,11 @@ public abstract class TransportConfig {
 	/**
 	 * Return the {@link ServerChannelFactory} which is used to create {@link ServerChannel} instances.
 	 *
-	 * @param isDomainSocket true if Unix Domain Socket is needed, false otherwise
+	 * @param protocolFamily the configured {@link ProtocolFamily} to run with
 	 * @return the {@link ServerChannelFactory} which is used to create {@link ServerChannel} instances.
 	 */
-	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(boolean isDomainSocket) {
-		return (el, celg) -> loopResources().onServerChannel(serverChannelType(), el, celg);
+	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(@Nullable ProtocolFamily protocolFamily) {
+		return (el, celg) -> loopResources().onServerChannel(serverChannelType(), el, celg, protocolFamily);
 	}
 
 	/**

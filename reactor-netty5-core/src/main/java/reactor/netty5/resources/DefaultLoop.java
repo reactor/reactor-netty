@@ -15,6 +15,7 @@
  */
 package reactor.netty5.resources;
 
+import java.net.ProtocolFamily;
 import java.util.concurrent.ThreadFactory;
 
 import io.netty5.channel.Channel;
@@ -31,13 +32,14 @@ import reactor.util.annotation.Nullable;
 interface DefaultLoop {
 
 	@Nullable
-	<CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop);
+	<CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop,
+			@Nullable ProtocolFamily protocolFamily);
 
 	String getName();
 
 	@Nullable
 	<SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
-			EventLoopGroup childEventLoopGroup);
+			EventLoopGroup childEventLoopGroup, @Nullable ProtocolFamily protocolFamily);
 
 	EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory);
 }

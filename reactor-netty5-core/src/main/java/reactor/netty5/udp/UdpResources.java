@@ -15,6 +15,7 @@
  */
 package reactor.netty5.udp;
 
+import java.net.ProtocolFamily;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -177,10 +178,11 @@ public class UdpResources implements LoopResources {
 	}
 
 	@Override
-	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoop eventLoop) {
+	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoop eventLoop,
+			@Nullable ProtocolFamily protocolFamily) {
 		requireNonNull(channelType, "channelType");
 		requireNonNull(eventLoop, "eventLoop");
-		return defaultLoops.onChannel(channelType, eventLoop);
+		return defaultLoops.onChannel(channelType, eventLoop, protocolFamily);
 	}
 
 	@Override

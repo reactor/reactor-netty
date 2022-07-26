@@ -15,6 +15,7 @@
  */
 package reactor.netty5.resources;
 
+import java.net.ProtocolFamily;
 import java.util.concurrent.ThreadFactory;
 
 import io.netty5.channel.Channel;
@@ -24,18 +25,12 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.kqueue.KQueue;
 import io.netty5.channel.kqueue.KQueueDatagramChannel;
-import io.netty5.channel.kqueue.KQueueDomainDatagramChannel;
-import io.netty5.channel.kqueue.KQueueDomainSocketChannel;
 import io.netty5.channel.kqueue.KQueueHandler;
-import io.netty5.channel.kqueue.KQueueServerDomainSocketChannel;
 import io.netty5.channel.kqueue.KQueueServerSocketChannel;
 import io.netty5.channel.kqueue.KQueueSocketChannel;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
-import io.netty5.channel.unix.DomainDatagramChannel;
-import io.netty5.channel.unix.DomainSocketChannel;
-import io.netty5.channel.unix.ServerDomainSocketChannel;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -50,22 +45,15 @@ final class DefaultLoopKQueue implements DefaultLoop {
 	@Override
 	@Nullable
 	@SuppressWarnings("unchecked")
-	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop) {
+	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop,
+			@Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(SocketChannel.class)) {
 			return eventLoop.isCompatible(KQueueSocketChannel.class) ?
-					(CHANNEL) new KQueueSocketChannel(eventLoop) : null;
+					(CHANNEL) new KQueueSocketChannel(eventLoop, protocolFamily) : null;
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
 			return eventLoop.isCompatible(KQueueDatagramChannel.class) ?
-					(CHANNEL) new KQueueDatagramChannel(eventLoop) : null;
-		}
-		if (channelClass.equals(DomainSocketChannel.class)) {
-			return eventLoop.isCompatible(KQueueDomainSocketChannel.class) ?
-					(CHANNEL) new KQueueDomainSocketChannel(eventLoop) : null;
-		}
-		if (channelClass.equals(DomainDatagramChannel.class)) {
-			return eventLoop.isCompatible(KQueueDomainDatagramChannel.class) ?
-					(CHANNEL) new KQueueDomainDatagramChannel(eventLoop) : null;
+					(CHANNEL) new KQueueDatagramChannel(eventLoop, protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
@@ -79,14 +67,10 @@ final class DefaultLoopKQueue implements DefaultLoop {
 	@Nullable
 	@SuppressWarnings("unchecked")
 	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
-			EventLoopGroup childEventLoopGroup) {
+			EventLoopGroup childEventLoopGroup, @Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(ServerSocketChannel.class)) {
 			return eventLoop.isCompatible(KQueueServerSocketChannel.class) ?
-					(SERVERCHANNEL) new KQueueServerSocketChannel(eventLoop, childEventLoopGroup) : null;
-		}
-		if (channelClass.equals(ServerDomainSocketChannel.class)) {
-			return eventLoop.isCompatible(KQueueServerDomainSocketChannel.class) ?
-					(SERVERCHANNEL) new KQueueServerDomainSocketChannel(eventLoop, childEventLoopGroup) : null;
+					(SERVERCHANNEL) new KQueueServerSocketChannel(eventLoop, childEventLoopGroup, protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
