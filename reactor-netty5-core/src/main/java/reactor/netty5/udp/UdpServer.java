@@ -15,6 +15,7 @@
  */
 package reactor.netty5.udp;
 
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
@@ -24,7 +25,6 @@ import java.util.function.Supplier;
 
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.socket.InternetProtocolFamily;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.util.AttributeKey;
 import org.reactivestreams.Publisher;
@@ -254,10 +254,10 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources} container.
 	 *
 	 * @param loopResources a new loop resources
-	 * @param family a specific {@link InternetProtocolFamily} to run with
+	 * @param family a specific {@link ProtocolFamily} to run with
 	 * @return a new {@link UdpServer} reference
 	 */
-	public final UdpServer runOn(LoopResources loopResources, InternetProtocolFamily family) {
+	public final UdpServer runOn(LoopResources loopResources, ProtocolFamily family) {
 		Objects.requireNonNull(loopResources, "loopResources");
 		Objects.requireNonNull(family, "family");
 		UdpServer dup = super.runOn(loopResources, false);
