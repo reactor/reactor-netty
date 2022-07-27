@@ -184,7 +184,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		LOCAL_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "local.address";
 			}
 		},
@@ -194,7 +194,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "uri";
 			}
 		}
@@ -207,7 +207,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		LOCAL_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "local.address";
 			}
 		},
@@ -217,7 +217,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "uri";
 			}
 		}
@@ -230,7 +230,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		METHOD {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "method";
 			}
 		},
@@ -240,7 +240,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "uri";
 			}
 		}
@@ -253,7 +253,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		METHOD {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "method";
 			}
 		},
@@ -263,7 +263,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		STATUS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "status";
 			}
 		},
@@ -273,7 +273,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "uri";
 			}
 		}
@@ -286,7 +286,7 @@ enum HttpServerMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "uri";
 			}
 		}

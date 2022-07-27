@@ -74,7 +74,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		METHOD {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "method";
 			}
 		},
@@ -84,7 +84,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "remote.address";
 			}
 		},
@@ -94,7 +94,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		STATUS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "status";
 			}
 		},
@@ -104,7 +104,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "uri";
 			}
 		}
@@ -117,7 +117,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		METHOD {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "method";
 			}
 		},
@@ -127,7 +127,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "remote.address";
 			}
 		},
@@ -137,7 +137,7 @@ enum HttpClientMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "uri";
 			}
 		}

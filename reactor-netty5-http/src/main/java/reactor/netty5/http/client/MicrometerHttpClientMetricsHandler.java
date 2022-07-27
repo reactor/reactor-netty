@@ -149,14 +149,14 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public KeyValues getHighCardinalityKeyValues() {
-			return KeyValues.of(REACTOR_NETTY_PROTOCOL.getKeyName(), recorder.protocol(),
-					REACTOR_NETTY_STATUS.getKeyName(), status, REACTOR_NETTY_TYPE.getKeyName(), TYPE);
+			return KeyValues.of(REACTOR_NETTY_PROTOCOL.asString(), recorder.protocol(),
+					REACTOR_NETTY_STATUS.asString(), status, REACTOR_NETTY_TYPE.asString(), TYPE);
 		}
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			return KeyValues.of(METHOD.getKeyName(), method, REMOTE_ADDRESS.getKeyName(), remoteAddress,
-					STATUS.getKeyName(), status, URI.getKeyName(), path);
+			return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), remoteAddress,
+					STATUS.asString(), status, URI.asString(), path);
 		}
 
 		@Override

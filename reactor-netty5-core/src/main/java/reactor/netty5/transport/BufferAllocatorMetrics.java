@@ -50,7 +50,7 @@ final class BufferAllocatorMetrics {
 
 	void registerMetrics(String allocType, BufferAllocatorMetric metrics, BufferAllocator alloc) {
 		MapUtils.computeIfAbsent(cache, metrics.hashCode() + "", key -> {
-			Tags tags = Tags.of(ID.getKeyName(), key, TYPE.getKeyName(), allocType);
+			Tags tags = Tags.of(ID.asString(), key, TYPE.asString(), allocType);
 
 			Gauge.builder(USED_MEMORY.getName(), metrics, BufferAllocatorMetric::usedMemory)
 			     .tags(tags)

@@ -154,7 +154,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		 */
 		ID {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "id";
 			}
 		},
@@ -164,7 +164,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		 */
 		NAME {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "name";
 			}
 		},
@@ -174,7 +174,7 @@ enum ConnectionProviderMeters implements DocumentedMeter {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "remote.address";
 			}
 		}

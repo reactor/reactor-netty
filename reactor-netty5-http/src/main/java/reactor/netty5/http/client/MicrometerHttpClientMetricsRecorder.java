@@ -53,10 +53,10 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, address, method, status);
 		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
-				                   .tags(HttpClientMeters.DataReceivedTimeTags.REMOTE_ADDRESS.getKeyName(), address,
-				                         HttpClientMeters.DataReceivedTimeTags.URI.getKeyName(), uri,
-				                         HttpClientMeters.DataReceivedTimeTags.METHOD.getKeyName(), method,
-				                         HttpClientMeters.DataReceivedTimeTags.STATUS.getKeyName(), status)
+				                   .tags(HttpClientMeters.DataReceivedTimeTags.REMOTE_ADDRESS.asString(), address,
+				                         HttpClientMeters.DataReceivedTimeTags.URI.asString(), uri,
+				                         HttpClientMeters.DataReceivedTimeTags.METHOD.asString(), method,
+				                         HttpClientMeters.DataReceivedTimeTags.STATUS.asString(), status)
 				                   .register(REGISTRY)));
 		if (dataReceivedTime != null) {
 			dataReceivedTime.record(time);
@@ -69,9 +69,9 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, address, method, null);
 		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
-				                   .tags(HttpClientMeters.DataSentTimeTags.REMOTE_ADDRESS.getKeyName(), address,
-				                         HttpClientMeters.DataSentTimeTags.URI.getKeyName(), uri,
-				                         HttpClientMeters.DataSentTimeTags.METHOD.getKeyName(), method)
+				                   .tags(HttpClientMeters.DataSentTimeTags.REMOTE_ADDRESS.asString(), address,
+				                         HttpClientMeters.DataSentTimeTags.URI.asString(), uri,
+				                         HttpClientMeters.DataSentTimeTags.METHOD.asString(), method)
 				                   .register(REGISTRY)));
 		if (dataSentTime != null) {
 			dataSentTime.record(time);

@@ -57,7 +57,7 @@ enum ConnectObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_PROTOCOL {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty5.protocol";
 			}
 		},
@@ -67,7 +67,7 @@ enum ConnectObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_STATUS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty5.status";
 			}
 		},
@@ -77,7 +77,7 @@ enum ConnectObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_TYPE {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty5.type";
 			}
 		}
@@ -93,7 +93,7 @@ enum ConnectObservations implements DocumentedObservation {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "remote.address";
 			}
 		},
@@ -103,7 +103,7 @@ enum ConnectObservations implements DocumentedObservation {
 		 */
 		STATUS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "status";
 			}
 		}

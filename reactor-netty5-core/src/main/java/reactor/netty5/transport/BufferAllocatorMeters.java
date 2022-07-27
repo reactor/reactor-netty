@@ -174,7 +174,7 @@ enum BufferAllocatorMeters implements DocumentedMeter {
 		 */
 		ID {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "id";
 			}
 		},
@@ -184,7 +184,7 @@ enum BufferAllocatorMeters implements DocumentedMeter {
 		 */
 		TYPE {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "type";
 			}
 		}

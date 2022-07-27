@@ -65,7 +65,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
 				                                 .baseUnit(ChannelMeters.DATA_RECEIVED.getBaseUnit())
-				                                 .tags(REMOTE_ADDRESS.getKeyName(), address, URI.getKeyName(), uri)
+				                                 .tags(REMOTE_ADDRESS.asString(), address, URI.asString(), uri)
 				                                 .register(REGISTRY)));
 		if (dataReceived != null) {
 			dataReceived.record(bytes);
@@ -79,7 +79,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_SENT)
 				                                 .baseUnit(ChannelMeters.DATA_SENT.getBaseUnit())
-				                                 .tags(REMOTE_ADDRESS.getKeyName(), address, URI.getKeyName(), uri)
+				                                 .tags(REMOTE_ADDRESS.asString(), address, URI.asString(), uri)
 				                                 .register(REGISTRY)));
 		if (dataSent != null) {
 			dataSent.record(bytes);
@@ -92,7 +92,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		MeterKey meterKey = new MeterKey(uri, address, null, null);
 		Counter errors = MapUtils.computeIfAbsent(errorsCache, meterKey,
 				key -> filter(Counter.builder(name() + ERRORS)
-				                     .tags(REMOTE_ADDRESS.getKeyName(), address, URI.getKeyName(), uri)
+				                     .tags(REMOTE_ADDRESS.asString(), address, URI.asString(), uri)
 				                     .register(REGISTRY)));
 		if (errors != null) {
 			errors.increment();

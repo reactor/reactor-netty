@@ -53,7 +53,7 @@ enum HttpClientSpans implements DocumentedSpan {
 		 */
 		REACTOR_NETTY_PROTOCOL {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty5.protocol";
 			}
 		},
@@ -63,7 +63,7 @@ enum HttpClientSpans implements DocumentedSpan {
 		 */
 		REACTOR_NETTY_STATUS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty5.status";
 			}
 		},
@@ -73,7 +73,7 @@ enum HttpClientSpans implements DocumentedSpan {
 		 */
 		REACTOR_NETTY_TYPE {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty5.type";
 			}
 		},
@@ -83,7 +83,7 @@ enum HttpClientSpans implements DocumentedSpan {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "remote.address";
 			}
 		}

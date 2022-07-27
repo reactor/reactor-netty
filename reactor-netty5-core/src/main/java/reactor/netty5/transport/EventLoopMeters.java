@@ -53,7 +53,7 @@ enum EventLoopMeters implements DocumentedMeter {
 		 */
 		NAME {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "name";
 			}
 		}

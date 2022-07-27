@@ -125,7 +125,7 @@ public enum ChannelMeters implements DocumentedMeter {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "remote.address";
 			}
 		},
@@ -135,7 +135,7 @@ public enum ChannelMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "uri";
 			}
 		}
@@ -148,7 +148,7 @@ public enum ChannelMeters implements DocumentedMeter {
 		 */
 		LOCAL_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "local.address";
 			}
 		},
@@ -158,7 +158,7 @@ public enum ChannelMeters implements DocumentedMeter {
 		 */
 		URI {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "uri";
 			}
 		}
