@@ -174,9 +174,7 @@ final class QuicClientConnect extends QuicClient {
 			if (t instanceof BindException ||
 					// With epoll/kqueue transport it is
 					// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
-					//CHECKSTYLE:OFF
-					// "Unnecessary parentheses around expression"
-					(t instanceof IOException && t.getMessage() != null && t.getMessage().contains("bind(..)"))) { //CHECKSTYLE:ON
+					(t instanceof IOException && t.getMessage() != null && t.getMessage().contains("bind(..)"))) {
 				sink.error(ChannelBindException.fail(bindAddress, null));
 			}
 			else {

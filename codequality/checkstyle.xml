@@ -86,7 +86,6 @@
 		<module name="SimplifyBooleanExpression"/>
 		<module name="SimplifyBooleanReturn"/>
 		<module name="StringLiteralEquality"/>
-		<module name="UnnecessaryParentheses"/>
 
 		<!-- Imports -->
 		<module name="AvoidStarImport"/>

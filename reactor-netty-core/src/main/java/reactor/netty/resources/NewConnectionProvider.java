@@ -129,13 +129,11 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public void onError(Throwable t) {
-			//CHECKSTYLE:OFF
-			// "Unnecessary parentheses around expression"
 			if (bindAddress != null && (t instanceof BindException ||
 					// With epoll/kqueue transport it is
 					// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
 					(t instanceof IOException && t.getMessage() != null &&
-							t.getMessage().contains("bind(..)")))) { //CHECKSTYLE:ON
+							t.getMessage().contains("bind(..)")))) {
 				sink.error(ChannelBindException.fail(bindAddress.get(), null));
 			}
 			else {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -318,9 +318,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				}
 			}
 
-			//CHECKSTYLE:OFF
-			// "Unnecessary parentheses around expression"
-			if ((receiverDemand -= e) > 0L || (e > 0L && q.size() < QUEUE_LOW_LIMIT)) { //CHECKSTYLE:ON
+			if ((receiverDemand -= e) > 0L || (e > 0L && q.size() < QUEUE_LOW_LIMIT)) {
 				if (needRead) {
 					needRead = false;
 					channel.config()

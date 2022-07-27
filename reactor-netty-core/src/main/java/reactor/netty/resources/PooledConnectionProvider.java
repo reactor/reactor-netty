@@ -279,11 +279,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			InetSocketAddress isaTarget = (InetSocketAddress) target;
 			if (isaOrigin.getPort() == isaTarget.getPort()) {
 				InetAddress iaTarget = isaTarget.getAddress();
-				//CHECKSTYLE:OFF
-				// "Unnecessary parentheses around expression"
 				return (iaTarget != null && iaTarget.isAnyLocalAddress()) ||
 						Objects.equals(isaOrigin.getHostString(), isaTarget.getHostString());
-				//CHECKSTYLE:ON
 			}
 		}
 		return false;
@@ -431,10 +428,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					PoolBuilder.from(allocator)
 					           .destroyHandler(destroyHandler)
 					           .evictionPredicate(evictionPredicate
-					                   //CHECKSTYLE:OFF
-					                   // "Unnecessary parentheses around expression"
 					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
-					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime))) //CHECKSTYLE:ON
+					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
 					           .maxPendingAcquire(pendingAcquireMaxCount)
 					           .evictInBackground(evictionInterval);
 
