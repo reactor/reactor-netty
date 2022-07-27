@@ -1082,7 +1082,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		public void onChannelInit(ConnectionObserver observer, Channel channel, @Nullable SocketAddress remoteAddress) {
 			if (sslProvider != null) {
 				ChannelPipeline pipeline = channel.pipeline();
-				if (redirectHttpToHttps && ((protocols & h2) != h2)) {
+				if (redirectHttpToHttps && (protocols & h2) != h2) {
 					NonSslRedirectDetector nonSslRedirectDetector = new NonSslRedirectDetector(sslProvider,
 							remoteAddress,
 							SSL_DEBUG);

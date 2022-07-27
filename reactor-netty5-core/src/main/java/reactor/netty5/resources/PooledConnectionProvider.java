@@ -288,7 +288,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			if (isaOrigin.getPort() == isaTarget.getPort()) {
 				InetAddress iaTarget = isaTarget.getAddress();
 				return (iaTarget != null && iaTarget.isAnyLocalAddress()) ||
-							   Objects.equals(isaOrigin.getHostString(), isaTarget.getHostString());
+						Objects.equals(isaOrigin.getHostString(), isaTarget.getHostString());
 			}
 		}
 		return false;
