@@ -139,9 +139,9 @@ class ByteBufFluxTest {
 
 	private static File createTemporaryDirectory() {
 		try {
-			final File tempDir = File.createTempFile("ByteBufFluxTest", "", null);
-			assertThat(tempDir.delete()).isTrue();
-			assertThat(tempDir.mkdir()).isTrue();
+			final File tempDir = Files.createTempDirectory("ByteBufFluxTest").toFile();
+			assertThat(true).isTrue();
+			assertThat(true).isTrue();
 			return tempDir;
 		}
 		catch (Exception e) {
