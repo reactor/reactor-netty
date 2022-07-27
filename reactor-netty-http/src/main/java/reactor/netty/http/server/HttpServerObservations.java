@@ -56,7 +56,7 @@ enum HttpServerObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_PROTOCOL {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty.protocol";
 			}
 		},
@@ -66,7 +66,7 @@ enum HttpServerObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_STATUS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty.status";
 			}
 		},
@@ -76,7 +76,7 @@ enum HttpServerObservations implements DocumentedObservation {
 		 */
 		REACTOR_NETTY_TYPE {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty.type";
 			}
 		}
@@ -92,7 +92,7 @@ enum HttpServerObservations implements DocumentedObservation {
 		 */
 		METHOD {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "method";
 			}
 		},
@@ -102,7 +102,7 @@ enum HttpServerObservations implements DocumentedObservation {
 		 */
 		STATUS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "status";
 			}
 		},
@@ -112,7 +112,7 @@ enum HttpServerObservations implements DocumentedObservation {
 		 */
 		URI {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "uri";
 			}
 		}

@@ -234,7 +234,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		 */
 		ID {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "id";
 			}
 		},
@@ -244,7 +244,7 @@ enum ByteBufAllocatorMeters implements DocumentedMeter {
 		 */
 		TYPE {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "type";
 			}
 		}

@@ -55,7 +55,7 @@ final class ByteBufAllocatorMetrics {
 
 	void registerMetrics(String allocType, ByteBufAllocatorMetric metrics, ByteBufAllocator alloc) {
 		MapUtils.computeIfAbsent(cache, metrics.hashCode() + "", key -> {
-			Tags tags = Tags.of(ID.getKeyName(), key, TYPE.getKeyName(), allocType);
+			Tags tags = Tags.of(ID.asString(), key, TYPE.asString(), allocType);
 
 			Gauge.builder(USED_HEAP_MEMORY.getName(), metrics, ByteBufAllocatorMetric::usedHeapMemory)
 			     .tags(tags)

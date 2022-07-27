@@ -78,8 +78,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		DistributionSummary ds = MapUtils.computeIfAbsent(dataReceivedCache, address,
 				key -> filter(DistributionSummary.builder(name + DATA_RECEIVED)
 				                                 .baseUnit(ChannelMeters.DATA_RECEIVED.getBaseUnit())
-				                                 .tags(ChannelMeters.ChannelMetersTags.URI.getKeyName(), protocol,
-				                                       ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.getKeyName(), address)
+				                                 .tags(ChannelMeters.ChannelMetersTags.URI.asString(), protocol,
+				                                       ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address)
 				                                 .register(REGISTRY)));
 		if (ds != null) {
 			ds.record(bytes);
@@ -92,8 +92,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		DistributionSummary ds = MapUtils.computeIfAbsent(dataSentCache, address,
 				key -> filter(DistributionSummary.builder(name + DATA_SENT)
 				                                 .baseUnit(ChannelMeters.DATA_SENT.getBaseUnit())
-				                                 .tags(ChannelMeters.ChannelMetersTags.URI.getKeyName(), protocol,
-				                                       ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.getKeyName(), address)
+				                                 .tags(ChannelMeters.ChannelMetersTags.URI.asString(), protocol,
+				                                       ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address)
 				                                 .register(REGISTRY)));
 		if (ds != null) {
 			ds.record(bytes);
@@ -105,8 +105,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		Counter c = MapUtils.computeIfAbsent(errorsCache, address,
 				key -> filter(Counter.builder(name + ERRORS)
-				                     .tags(ChannelMeters.ChannelMetersTags.URI.getKeyName(), protocol,
-				                           ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.getKeyName(), address)
+				                     .tags(ChannelMeters.ChannelMetersTags.URI.asString(), protocol,
+				                           ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address)
 				                     .register(REGISTRY)));
 		if (c != null) {
 			c.increment();
@@ -207,8 +207,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		return MapUtils.computeIfAbsent(totalConnectionsCache, address,
 				key -> {
 					Gauge gauge = filter(Gauge.builder(name + CONNECTIONS_TOTAL, totalConnectionsAdder, LongAdder::longValue)
-					                          .tags(ChannelMeters.ConnectionsTotalMeterTags.URI.getKeyName(), protocol,
-					                                ChannelMeters.ConnectionsTotalMeterTags.LOCAL_ADDRESS.getKeyName(), address)
+					                          .tags(ChannelMeters.ConnectionsTotalMeterTags.URI.asString(), protocol,
+					                                ChannelMeters.ConnectionsTotalMeterTags.LOCAL_ADDRESS.asString(), address)
 					                          .register(REGISTRY));
 					return gauge != null ? totalConnectionsAdder : null;
 				});

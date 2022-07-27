@@ -54,7 +54,7 @@ enum ConnectSpans implements DocumentedSpan {
 		 */
 		REACTOR_NETTY_PROTOCOL {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty.protocol";
 			}
 		},
@@ -64,7 +64,7 @@ enum ConnectSpans implements DocumentedSpan {
 		 */
 		REACTOR_NETTY_STATUS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty.status";
 			}
 		},
@@ -74,7 +74,7 @@ enum ConnectSpans implements DocumentedSpan {
 		 */
 		REACTOR_NETTY_TYPE {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "reactor.netty.type";
 			}
 		},
@@ -84,7 +84,7 @@ enum ConnectSpans implements DocumentedSpan {
 		 */
 		REMOTE_ADDRESS {
 			@Override
-			public String getKeyName() {
+			public String asString() {
 				return "remote.address";
 			}
 		}
