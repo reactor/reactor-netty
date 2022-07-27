@@ -18,7 +18,7 @@ jobs:
           - os: windows-2019
             transport: native
           # macOS - https://github.com/netty/netty/issues/9689
-          - os: macos-10.15
+          - os: macos-11
             transport: native
 
     steps:
