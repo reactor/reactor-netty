@@ -119,7 +119,7 @@ ext {
 	tomcatVersion = '9.0.65'
 	boringSslVersion = '2.0.53.Final'
 	junitVersion = '5.9.0'
-	junitPlatformLauncherVersion = '1.8.2'
+	junitPlatformLauncherVersion = '1.9.0'
 	mockitoVersion = '4.6.1'
 	blockHoundVersion = '1.0.6.RELEASE'
 	bouncycastleVersion = '1.70'
