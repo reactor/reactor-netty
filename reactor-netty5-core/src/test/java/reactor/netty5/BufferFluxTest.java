@@ -185,9 +185,7 @@ class BufferFluxTest {
 
 	private static File createTemporaryDirectory() {
 		try {
-			final File tempDir = File.createTempFile("BufferFluxTest", "", null);
-			assertThat(tempDir.delete()).isTrue();
-			assertThat(tempDir.mkdir()).isTrue();
+			final File tempDir = Files.createTempDirectory("ByteBufFluxTest").toFile();
 			return tempDir;
 		}
 		catch (Exception e) {
