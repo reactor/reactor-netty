@@ -316,6 +316,11 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 						ref.slot.invalidate();
 						removeSlot(ref.slot);
 					}
+					// received GO_AWAY
+					if (ref.slot.goAwayReceived()) {
+						ref.slot.invalidate();
+						removeSlot(ref.slot);
+					}
 					// max life reached
 					else if (maxLifeReached(ref.slot)) {
 						ref.slot.connection.channel().close();
@@ -483,6 +488,17 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 							continue;
 						}
 
+						if (slot.goAwayReceived()) {
+							if (log.isDebugEnabled()) {
+								log.debug(format(slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
+							}
+							recordInteractionTimestamp();
+							slots.remove();
+							IDLE_SIZE.decrementAndGet(this);
+							slot.invalidate();
+							continue;
+						}
+
 						if (maxLifeReached(slot)) {
 							if (log.isDebugEnabled()) {
 								log.debug(format(slot.connection.channel(), "Max life time is reached, remove from pool"));
@@ -542,6 +558,24 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				else {
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Channel is closed, remove from pool"));
+					}
+					slot.invalidate();
+				}
+				continue;
+			}
+
+			// check the connection received GO_AWAY
+			if (slot.goAwayReceived()) {
+				if (slot.concurrency() > 0) {
+					if (log.isDebugEnabled()) {
+						log.debug(format(slot.connection.channel(), "Channel received GO_AWAY, {} active streams"),
+								slot.concurrency());
+					}
+					offerSlot(resources, slot);
+				}
+				else {
+					if (log.isDebugEnabled()) {
+						log.debug(format(slot.connection.channel(), "Channel received GO_AWAY, remove from pool"));
 					}
 					slot.invalidate();
 				}
@@ -971,6 +1005,11 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			int concurrency = CONCURRENCY.decrementAndGet(this);
 			idleTimestamp = pool.clock.millis();
 			return concurrency;
+		}
+
+		boolean goAwayReceived() {
+			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
+			return frameCodec != null && ((Http2FrameCodec) frameCodec.handler()).connection().goAwayReceived();
 		}
 
 		long idleTime() {

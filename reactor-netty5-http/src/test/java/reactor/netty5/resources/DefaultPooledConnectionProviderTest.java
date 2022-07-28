@@ -24,6 +24,8 @@ import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http2.Http2Connection;
+import io.netty5.handler.codec.http2.Http2FrameCodec;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslProvider;
@@ -41,9 +43,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
+import reactor.core.publisher.Sinks;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.BufferMono;
 import reactor.netty5.ConnectionObserver;
@@ -64,6 +68,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -659,5 +664,74 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			result = gauge.value();
 		}
 		return result;
+	}
+
+	@Test
+	@SuppressWarnings("FutureReturnValueIgnored")
+	void testHttp2PoolAndGoAway() {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		Sinks.Empty<Void> startSending = Sinks.empty();
+		disposableServer =
+				createServer()
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(serverCtx))
+				        .route(r -> r.get("/1", (req, res) -> res.sendString(startSending.asMono().then(Mono.just("/1"))))
+				                     .get("/2", (req, res) -> {
+				                         //"FutureReturnValueIgnored" this is deliberate
+				                         req.withConnection(conn -> conn.channel().parent().close());
+				                         startSending.tryEmitEmpty();
+				                         return res.sendString(Mono.just("/2"));
+				                     })
+				                     .get("/3", (req, res) -> res.sendString(Mono.just("/3"))))
+				        .bindNow();
+
+		ConnectionProvider provider = ConnectionProvider.create("testHttp2PoolAndGoAway", 1);
+		Sinks.Empty<Void> goAwayReceived = Sinks.empty();
+		HttpClient client =
+				createClient(provider, disposableServer.port())
+				        .protocol(HttpProtocol.H2)
+				        .secure(spec -> spec.sslContext(clientCtx))
+				        .doOnChannelInit((observer, channel, address) -> {
+				            Http2FrameCodec http2FrameCodec = channel.pipeline().get(Http2FrameCodec.class);
+
+				            http2FrameCodec.gracefulShutdownTimeoutMillis(-1);
+
+				            Http2Connection.Listener goAwayFrameListener = Mockito.mock(Http2Connection.Listener.class);
+				            Mockito.doAnswer(invocation -> {
+				                       goAwayReceived.tryEmitEmpty();
+				                       return null;
+				                   })
+				                   .when(goAwayFrameListener)
+				                   .onGoAwayReceived(Mockito.anyInt(), Mockito.anyLong(), Mockito.any());
+				            http2FrameCodec.connection().addListener(goAwayFrameListener);
+				        });
+
+		try {
+			Flux.range(1, 3)
+			    .flatMap(i -> {
+			        Mono<String> request = client.get()
+			                                     .uri("/" + i)
+			                                     .responseContent()
+			                                     .aggregate()
+			                                     .asString();
+			        if (i == 3) {
+			            return goAwayReceived.asMono().then(request);
+			        }
+			        return request;
+			    })
+			    .collectList()
+			    .as(StepVerifier::create)
+			    .expectNext(Arrays.asList("/1", "/2", "/3"))
+			    .expectComplete()
+			    .verify(Duration.ofSeconds(5));
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
 	}
 }
