@@ -340,6 +340,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				Http2StreamChannel ch = future.getNow();
 
 				if (!channel.isActive() || frameCodec == null ||
+						((Http2FrameCodec) frameCodec.handler()).connection().goAwayReceived() ||
 						!((Http2FrameCodec) frameCodec.handler()).connection().local().canOpenStream()) {
 					invalidate(this);
 					if (!retried) {
