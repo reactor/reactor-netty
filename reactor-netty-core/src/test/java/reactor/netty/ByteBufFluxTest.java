@@ -139,8 +139,7 @@ class ByteBufFluxTest {
 
 	private static File createTemporaryDirectory() {
 		try {
-			final File tempDir = Files.createTempDirectory("ByteBufFluxTest").toFile();
-			return tempDir;
+			return Files.createTempDirectory("ByteBufFluxTest").toFile();
 		}
 		catch (Exception e) {
 			throw new RuntimeException("Error creating the temporary directory", e);
