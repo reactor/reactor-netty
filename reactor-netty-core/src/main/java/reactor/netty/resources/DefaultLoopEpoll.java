@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,7 +103,7 @@ final class DefaultLoopEpoll implements DefaultLoop {
 
 	static final Logger log = Loggers.getLogger(DefaultLoopEpoll.class);
 
-	static final boolean epoll;
+	static final boolean isEpollAvailable;
 
 	static {
 		boolean epollCheck = false;
@@ -114,9 +114,9 @@ final class DefaultLoopEpoll implements DefaultLoop {
 		catch (ClassNotFoundException cnfe) {
 			// noop
 		}
-		epoll = epollCheck;
+		isEpollAvailable = epollCheck;
 		if (log.isDebugEnabled()) {
-			log.debug("Default Epoll support : " + epoll);
+			log.debug("Default Epoll support : " + isEpollAvailable);
 		}
 	}
 }

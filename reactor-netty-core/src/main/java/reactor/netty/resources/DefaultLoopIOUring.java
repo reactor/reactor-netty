@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ final class DefaultLoopIOUring implements DefaultLoop {
 
 	static final Logger log = Loggers.getLogger(DefaultLoopIOUring.class);
 
-	static final boolean ioUring;
+	static final boolean isIoUringAvailable;
 
 	static {
 		boolean ioUringCheck = false;
@@ -98,9 +98,9 @@ final class DefaultLoopIOUring implements DefaultLoop {
 		catch (ClassNotFoundException cnfe) {
 			// noop
 		}
-		ioUring = ioUringCheck;
+		isIoUringAvailable = ioUringCheck;
 		if (log.isDebugEnabled()) {
-			log.debug("Default io_uring support : " + ioUring);
+			log.debug("Default io_uring support : " + isIoUringAvailable);
 		}
 	}
 }
