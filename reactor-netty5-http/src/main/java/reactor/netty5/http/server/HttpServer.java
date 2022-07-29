@@ -582,7 +582,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 		if (proxyProtocolSupportType == ProxyProtocolSupportType.ON ||
 					proxyProtocolSupportType == ProxyProtocolSupportType.AUTO) {
-			if (!HAProxyMessageReader.hasProxyProtocol()) {
+			if (!HAProxyMessageReader.isProxyProtocolAvailable()) {
 				throw new UnsupportedOperationException(
 						"To enable proxyProtocol, you must add the dependency `io.netty:netty-codec-haproxy`" +
 								" to the class path first");

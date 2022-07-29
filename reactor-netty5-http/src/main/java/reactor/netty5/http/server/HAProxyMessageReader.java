@@ -37,7 +37,7 @@ final class HAProxyMessageReader extends ChannelHandlerAdapter {
 	private static final AttributeKey<InetSocketAddress> REMOTE_ADDRESS_FROM_PROXY_PROTOCOL =
 			AttributeKey.valueOf("remoteAddressFromProxyProtocol");
 
-	private static final boolean hasProxyProtocol;
+	private static final boolean isProxyProtocolAvailable;
 
 	static {
 		boolean proxyProtocolCheck = true;
@@ -47,16 +47,16 @@ final class HAProxyMessageReader extends ChannelHandlerAdapter {
 		catch (ClassNotFoundException cnfe) {
 			proxyProtocolCheck = false;
 		}
-		hasProxyProtocol = proxyProtocolCheck;
+		isProxyProtocolAvailable = proxyProtocolCheck;
 	}
 
-	static boolean hasProxyProtocol() {
-		return hasProxyProtocol;
+	static boolean isProxyProtocolAvailable() {
+		return isProxyProtocolAvailable;
 	}
 
 	@Nullable
 	static SocketAddress resolveRemoteAddressFromProxyProtocol(Channel channel) {
-		if (HAProxyMessageReader.hasProxyProtocol()) {
+		if (HAProxyMessageReader.isProxyProtocolAvailable()) {
 			return channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).getAndSet(null);
 		}
 

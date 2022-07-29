@@ -99,7 +99,7 @@ final class DefaultLoopEpoll implements DefaultLoop {
 
 	static final Logger log = Loggers.getLogger(DefaultLoopEpoll.class);
 
-	static final boolean epoll;
+	static final boolean isEpollAvailable;
 
 	static {
 		boolean epollCheck = false;
@@ -110,9 +110,9 @@ final class DefaultLoopEpoll implements DefaultLoop {
 		catch (ClassNotFoundException cnfe) {
 			// noop
 		}
-		epoll = epollCheck;
+		isEpollAvailable = epollCheck;
 		if (log.isDebugEnabled()) {
-			log.debug("Default Epoll support : " + epoll);
+			log.debug("Default Epoll support : " + isEpollAvailable);
 		}
 	}
 }

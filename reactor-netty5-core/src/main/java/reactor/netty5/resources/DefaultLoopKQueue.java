@@ -98,7 +98,7 @@ final class DefaultLoopKQueue implements DefaultLoop {
 
 	static final Logger log = Loggers.getLogger(DefaultLoopKQueue.class);
 
-	static final boolean kqueue;
+	static final boolean isKqueueAvailable;
 
 	static {
 		boolean kqueueCheck = false;
@@ -109,9 +109,9 @@ final class DefaultLoopKQueue implements DefaultLoop {
 		catch (ClassNotFoundException cnfe) {
 			// noop
 		}
-		kqueue = kqueueCheck;
+		isKqueueAvailable = kqueueCheck;
 		if (log.isDebugEnabled()) {
-			log.debug("Default KQueue support : " + kqueue);
+			log.debug("Default KQueue support : " + isKqueueAvailable);
 		}
 	}
 }

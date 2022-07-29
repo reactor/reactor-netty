@@ -29,10 +29,10 @@ final class DefaultLoopNativeDetector {
 	static {
 		NIO = new DefaultLoopNIO();
 
-		if (DefaultLoopEpoll.epoll) {
+		if (DefaultLoopEpoll.isEpollAvailable) {
 			INSTANCE = new DefaultLoopEpoll();
 		}
-		else if (DefaultLoopKQueue.kqueue) {
+		else if (DefaultLoopKQueue.isKqueueAvailable) {
 			INSTANCE = new DefaultLoopKQueue();
 		}
 		else {
