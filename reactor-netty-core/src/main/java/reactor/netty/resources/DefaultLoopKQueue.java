@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,7 +102,7 @@ final class DefaultLoopKQueue implements DefaultLoop {
 
 	static final Logger log = Loggers.getLogger(DefaultLoopKQueue.class);
 
-	static final boolean kqueue;
+	static final boolean isKqueueAvailable;
 
 	static {
 		boolean kqueueCheck = false;
@@ -113,9 +113,9 @@ final class DefaultLoopKQueue implements DefaultLoop {
 		catch (ClassNotFoundException cnfe) {
 			// noop
 		}
-		kqueue = kqueueCheck;
+		isKqueueAvailable = kqueueCheck;
 		if (log.isDebugEnabled()) {
-			log.debug("Default KQueue support : " + kqueue);
+			log.debug("Default KQueue support : " + isKqueueAvailable);
 		}
 	}
 }
