@@ -231,15 +231,17 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.channel.ChannelOperations#send(org.reactivestreams.Publisher, java.util.function.Predicate)',
 
 			'reactor.netty.resources.LoopResources#onChannel(java.lang.Class, io.netty.channel.EventLoopGroup)',
-			'reactor.netty.resources.LoopResources#onChannel(java.lang.Class, io.netty5.channel.EventLoop)', // new default method
+			'reactor.netty5.resources.LoopResources#onChannel(java.lang.Class, io.netty5.channel.EventLoop, java.net.ProtocolFamily)', // new default method
 			'reactor.netty.resources.LoopResources#onChannelClass(java.lang.Class, io.netty.channel.EventLoopGroup)',
-			'reactor.netty.resources.LoopResources#onServerChannel(java.lang.Class, io.netty5.channel.EventLoop, io.netty5.channel.EventLoopGroup)', // new default method
+			'reactor.netty5.resources.LoopResources#onServerChannel(java.lang.Class, io.netty5.channel.EventLoop, io.netty5.channel.EventLoopGroup, java.net.ProtocolFamily)', // new default method
 
 			'reactor.netty.tcp.TcpResources#onChannel(java.lang.Class, io.netty.channel.EventLoopGroup)',
 			'reactor.netty.tcp.TcpResources#onChannelClass(java.lang.Class, io.netty.channel.EventLoopGroup)',
 
+			'reactor.netty.udp.UdpClient#runOn(reactor.netty.resources.LoopResources, io.netty.channel.socket.InternetProtocolFamily)',
 			'reactor.netty.udp.UdpResources#onChannel(java.lang.Class, io.netty.channel.EventLoopGroup)',
 			'reactor.netty.udp.UdpResources#onChannelClass(java.lang.Class, io.netty.channel.EventLoopGroup)',
+			'reactor.netty.udp.UdpServer#runOn(reactor.netty.resources.LoopResources, io.netty.channel.socket.InternetProtocolFamily)',
 
 			// Deprecated methods are removed
 			'reactor.netty.Connection#addHandler(io.netty.channel.ChannelHandler)',
