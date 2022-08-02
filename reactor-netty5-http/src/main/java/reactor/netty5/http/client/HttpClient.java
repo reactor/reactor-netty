@@ -58,6 +58,7 @@ import reactor.netty5.internal.util.Metrics;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.tcp.SslProvider;
 import reactor.netty5.transport.ClientTransport;
+import reactor.netty5.transport.ProxyProvider;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -1164,6 +1165,14 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 			dup.configuration().sslProvider = HttpClientSecure.defaultSslProvider(config);
 		}
 		return dup;
+	}
+
+	@Override
+	public final HttpClient proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
+		Objects.requireNonNull(proxyOptions, "proxyOptions");
+		HttpClientProxyProvider.Build builder = new HttpClientProxyProvider.Build();
+		proxyOptions.accept(builder);
+		return proxyWithProxyProvider(builder.build());
 	}
 
 	/**

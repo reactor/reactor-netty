@@ -18,11 +18,9 @@ package reactor.netty5.transport;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Properties;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import io.netty5.handler.codec.http.HttpHeaders;
 import io.netty.contrib.handler.proxy.HttpProxyHandler;
 import io.netty.contrib.handler.proxy.ProxyHandler;
 import io.netty.contrib.handler.proxy.Socks5ProxyHandler;
@@ -44,11 +42,6 @@ class ProxyProviderTest {
 	private static final InetSocketAddress ADDRESS_1 = InetSocketAddress.createUnresolved("localhost", 80);
 	private static final InetSocketAddress ADDRESS_2 = InetSocketAddress.createUnresolved("example.com", 80);
 
-	@SuppressWarnings("UnnecessaryLambda")
-	private static final Consumer<HttpHeaders> HEADER_1 = list -> list.add("Authorization", "Bearer 123");
-	@SuppressWarnings("UnnecessaryLambda")
-	private static final Consumer<HttpHeaders> HEADER_2 = list -> list.add("Authorization", "Bearer 456");
-
 	private static final long CONNECT_TIMEOUT_1 = 100;
 	private static final long CONNECT_TIMEOUT_2 = 200;
 
@@ -67,12 +60,6 @@ class ProxyProviderTest {
 	}
 
 	@Test
-	void equalProxyProvidersAuthHeader() {
-		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1)).isEqualTo(createHeaderProxy(ADDRESS_1, HEADER_1));
-		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode()).isEqualTo(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode());
-	}
-
-	@Test
 	void differentAddresses() {
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1)).isNotEqualTo(createProxy(ADDRESS_2, PASSWORD_1));
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1).hashCode()).isNotEqualTo(createProxy(ADDRESS_2, PASSWORD_1).hashCode());
@@ -82,12 +69,6 @@ class ProxyProviderTest {
 	void differentPasswords() {
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1)).isNotEqualTo(createProxy(ADDRESS_1, PASSWORD_2));
 		assertThat(createProxy(ADDRESS_1, PASSWORD_1).hashCode()).isNotEqualTo(createProxy(ADDRESS_1, PASSWORD_2).hashCode());
-	}
-
-	@Test
-	void differentAuthHeaders() {
-		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1)).isNotEqualTo(createHeaderProxy(ADDRESS_1, HEADER_2));
-		assertThat(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode()).isNotEqualTo(createHeaderProxy(ADDRESS_1, HEADER_2).hashCode());
 	}
 
 	@Test
@@ -599,14 +580,6 @@ class ProxyProviderTest {
 		                    .type(ProxyProvider.Proxy.SOCKS5)
 		                    .address(address)
 		                    .nonProxyHosts(NON_PROXY_HOSTS)
-		                    .build();
-	}
-
-	private ProxyProvider createHeaderProxy(InetSocketAddress address, Consumer<HttpHeaders> authHeader) {
-		return ProxyProvider.builder()
-		                    .type(ProxyProvider.Proxy.HTTP)
-		                    .address(address)
-		                    .httpHeaders(authHeader)
 		                    .build();
 	}
 

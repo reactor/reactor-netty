@@ -59,6 +59,7 @@ dependencies {
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
 	api "io.netty:netty-buffer:$nettyByteBufVersion"
+	api "io.netty.contrib:netty-handler-proxy:$nettyContribVersion"
 	api "io.netty:netty5-codec-http:$nettyVersion"
 	api "io.netty:netty5-codec-http2:$nettyVersion"
 	api "io.netty:netty5-resolver-dns:$nettyVersion"
