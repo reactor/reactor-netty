@@ -465,18 +465,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
 				.doAfterResponseSuccess((resp, conn) -> clientCompletedRef.get().countDown());
 
-		httpClient
-				  .metrics(true, s -> "testUriTagValueFunctionNotShared_1")
-		          .post()
-		          .uri("/1")
-		          .send(body)
-		          .responseContent()
-		          .aggregate()
-		          .asString()
-		          .as(StepVerifier::create)
-		          .expectNext("Hello World!")
-		          .expectComplete()
-		          .verify(Duration.ofSeconds(30));
+		httpClient.metrics(true, s -> "testUriTagValueFunctionNotShared_1")
+				.post()
+				.uri("/1")
+				.send(body)
+				.responseContent()
+				.aggregate()
+				.asString()
+				.as(StepVerifier::create)
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 
 		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
 		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef latch await").isTrue();
@@ -604,7 +603,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		String address = formatSocketAddress(disposableServer.address());
 
 		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
-
 		httpClient
 				.metrics(true, Function.identity())
 				.post()
