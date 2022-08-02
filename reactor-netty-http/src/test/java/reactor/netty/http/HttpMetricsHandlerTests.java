@@ -24,6 +24,7 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -48,7 +49,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
-import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
@@ -710,12 +710,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		disposableServer = httpServer.noSSL()
 				.bindNow();
 
-		// the client will observe three DISCONNECT: one when a NotSSLRecordException is caught,
-		// one when DecoderException is caught, and one when the connection becomes inactive
-		CountDownLatch latch = new CountDownLatch(3);
-		AtomicReference<CountDownLatch> latchRef = new AtomicReference<>(latch);
+		// The client should get two errors: NotSSLRecordException, and DecoderException.
+		CountDownLatch latch = new CountDownLatch(2);
 		httpClient
-				.observe(observeDisconnect(latchRef))
+				.doOnChannelInit((o, c, address) -> ClientExceptionHandler.INSTANCE.register(c, latch))
 				.secure(spec -> spec.sslContext(clientCtx11))
 				.post()
 				.uri("/1")
@@ -771,14 +769,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
 		checkExpectationsBadRequest(sa.getHostString() + ":" + sa.getPort(), serverCtx != null);
-	}
-
-	private ConnectionObserver observeDisconnect(AtomicReference<CountDownLatch> latchRef) {
-		return (connection, state) -> {
-			if (state == ConnectionObserver.State.DISCONNECTING) {
-				latchRef.get().countDown();
-			}
-		};
 	}
 
 	private void checkServerConnectionsMicrometer(HttpServerRequest request) {
@@ -1255,6 +1245,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 			if (msg instanceof LastHttpContent) {
 				promise.addListener(future -> {
@@ -1338,6 +1329,27 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		@Override
 		public boolean isSharable() {
 			return true;
+		}
+	}
+
+	/**
+	 * Handler used to get notified when an exception occurs on the HttpClientMetricsHandler. This handler is placed
+	 * after the reactor.left.httpMetricsHandler.
+	 */
+	static final class ClientExceptionHandler extends ChannelDuplexHandler {
+		static final ClientExceptionHandler INSTANCE = new ClientExceptionHandler();
+		static final String HANDLER_NAME = "ExceptionHandler.handler";
+		private CountDownLatch latch;
+
+		void register(Channel channel, CountDownLatch latch) {
+			this.latch = latch;
+			channel.pipeline().addAfter(NettyPipeline.HttpMetricsHandler, HANDLER_NAME, this);
+		}
+
+		@Override
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			latch.countDown();
+			ctx.fireExceptionCaught(cause);
 		}
 	}
 }
