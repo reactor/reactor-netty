@@ -1276,10 +1276,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			if (msg instanceof LastHttpContent) {
 				latchRef.get().countDown();
 			}
-			else if (msg instanceof DefaultHttp2DataFrame && ((DefaultHttp2DataFrame) msg).isEndStream()) {
-				latchRef.get().countDown();
-			}
-
 			ctx.fireChannelRead(msg);
 		}
 
