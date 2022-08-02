@@ -180,7 +180,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
 		AtomicReference<CountDownLatch> responseSentRef = new AtomicReference<>(responseSent);
 		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
@@ -195,8 +195,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
 				.doAfterResponseSuccess((resp, conn) -> clientCompletedRef.get().countDown());
 
-		StepVerifier.create(httpClient
-						.post()
+		StepVerifier.create(httpClient.post()
 						.uri("/1")
 						.send(body)
 						.responseContent()
@@ -231,8 +230,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		responseSentRef.set(new CountDownLatch(1));
 		clientCompletedRef.set(new CountDownLatch(1));
 
-		StepVerifier.create(httpClient
-						.post()
+		StepVerifier.create(httpClient.post()
 						.uri("/2?i=1&j=2")
 						.send(body)
 						.responseContent()
@@ -255,8 +253,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-	                                  @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
+	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, id -> {
 					throw new IllegalArgumentException("Testcase injected Exception");
@@ -280,8 +277,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-	                                  @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
+	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.bindNow();
 
@@ -303,7 +299,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                             @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+	                             @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
 		AtomicReference<CountDownLatch> responseSentRef = new AtomicReference<>(responseSent);
 		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
@@ -393,7 +389,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testUriTagValueFunction(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
 		CountDownLatch clientCompleted = new CountDownLatch(1); // client received full response
 		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
@@ -408,8 +404,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.doAfterResponseSuccess((res, conn) -> clientCompleted.countDown())
 				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()));
 
-		StepVerifier.create(httpClient
-						.metrics(true, s -> "testUriTagValueResolver")
+		StepVerifier.create(httpClient.metrics(true, s -> "testUriTagValueResolver")
 						.post()
 						.uri("/1")
 						.send(body)
@@ -446,7 +441,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testUriTagValueFunctionNotSharedForClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
 		AtomicReference<CountDownLatch> responseSentRef = new AtomicReference<>(responseSent);
 		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
@@ -506,18 +501,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		responseSentRef.set(new CountDownLatch(1));
 		clientCompletedRef.set(new CountDownLatch(1));
 
-		httpClient
-				.metrics(true, s -> "testUriTagValueFunctionNotShared_2")
-		          .post()
-		          .uri("/2")
-		          .send(body)
-		          .responseContent()
-		          .aggregate()
-		          .asString()
-		          .as(StepVerifier::create)
-		          .expectNext("Hello World!")
-		          .expectComplete()
-		          .verify(Duration.ofSeconds(30));
+		httpClient.metrics(true, s -> "testUriTagValueFunctionNotShared_2")
+				.post()
+				.uri("/2")
+				.send(body)
+				.responseContent()
+				.aggregate()
+				.asString()
+				.as(StepVerifier::create)
+				.expectNext("Hello World!")
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 
 		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
 		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef await").isTrue();
@@ -531,8 +525,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testContextAwareRecorderOnClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-	                                      @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) {
+	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		ClientContextAwareRecorder recorder = ClientContextAwareRecorder.INSTANCE;
@@ -558,14 +551,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testContextAwareRecorderOnServer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-	                                      @SuppressWarnings("unused") HttpProtocol negotiatedProtocol) throws Exception {
+	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
 		ServerContextAwareRecorder recorder = ServerContextAwareRecorder.INSTANCE;
 		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
 		disposableServer =
-				customizeServerOptions(httpServer, serverCtx, serverProtocols)
-						.metrics(true, () -> recorder)
+				customizeServerOptions(httpServer, serverCtx, serverProtocols).metrics(true, () -> recorder)
 						.doOnConnection(cnx -> responseSentHandler.register(responseSent, cnx.channel().pipeline()))
 						.mapHandle((mono, conn) -> mono.contextWrite(Context.of("testContextAwareRecorder", "OK")))
 						.bindNow();
@@ -592,13 +583,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsMicrometer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx, HttpProtocol negotiatedProtocol) throws Exception {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
 		CountDownLatch serverClosed = new CountDownLatch(1); // socket closed on the server side
 		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
 		ServerCloseHandler serverCloseHandler = ServerCloseHandler.INSTANCE;
-		boolean isHttp11 = negotiatedProtocol == HttpProtocol.HTTP11;
-
+		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
 		HttpServer server = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, Function.identity())
 				.doOnConnection(cnx -> responseSentHandler.register(responseSent, cnx.channel().pipeline()));
@@ -960,23 +950,23 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	static Stream<Arguments> httpCompatibleProtocols() {
 		return Stream.of(
-				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null, HttpProtocol.HTTP11),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
-						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11), HttpProtocol.HTTP11),
+						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11)),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2), HttpProtocol.H2),
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2), HttpProtocol.H2),
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http11SslContextSpec", clientCtx11), HttpProtocol.HTTP11),
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http11SslContextSpec", clientCtx11)),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2), HttpProtocol.H2),
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11},
-						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2), HttpProtocol.H2),
-				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C}, new HttpProtocol[]{HttpProtocol.H2C}, null, null, HttpProtocol.H2C),
-				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null, HttpProtocol.HTTP11),
-				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C}, null, null, HttpProtocol.H2C),
-				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, null, null, HttpProtocol.H2C)
+						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C}, new HttpProtocol[]{HttpProtocol.H2C}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, null, null)
 		);
 	}
 
