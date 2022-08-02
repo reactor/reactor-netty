@@ -245,7 +245,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		return proxyWithProxyProvider(builder.build());
 	}
 
-	final T proxyWithProxyProvider(ProxyProvider proxy) {
+	protected final T proxyWithProxyProvider(ProxyProvider proxy) {
 		T dup = duplicate();
 		CONF conf = dup.configuration();
 		conf.proxyProvider = proxy;
