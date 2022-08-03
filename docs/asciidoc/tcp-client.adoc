@@ -323,7 +323,7 @@ include::{examplesdir}/metrics/custom/Application.java[lines=18..37]
 ====
 
 == Unix Domain Sockets
-The `TCP` client supports Unix Domain Sockets (UDS) when native transport is in use.
+The `TCP` client supports Unix Domain Sockets (UDS) for all transports (native and NIO).
 
 The following example shows how to use UDS support:
 

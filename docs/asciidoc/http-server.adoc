@@ -615,7 +615,7 @@ include::{examplesdir}/metrics/custom/Application.java[lines=18..41]
 ====
 
 == Unix Domain Sockets
-The `HTTP` server supports Unix Domain Sockets (UDS) when native transport is in use.
+The `HTTP` server supports Unix Domain Sockets (UDS) for all transports (native and NIO).
 
 The following example shows how to use UDS support:
 
