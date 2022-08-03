@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import reactor.netty5.ChannelPipelineConfigurer;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.channel.ChannelMetricsRecorder;
-import reactor.netty5.transport.logging.AdvancedByteBufFormat;
+import reactor.netty5.transport.logging.AdvancedBufferFormat;
 import reactor.netty5.resources.LoopResources;
 
 /**
@@ -49,18 +49,18 @@ class TransportTest {
 		doTestWiretap(transport.wiretap("category", LogLevel.DEBUG), LogLevel.DEBUG, BufferFormat.HEX_DUMP);
 		doTestWiretap(transport.wiretap("category", LogLevel.INFO), LogLevel.INFO, BufferFormat.HEX_DUMP);
 		doTestWiretap(
-			transport.wiretap("category", LogLevel.INFO, AdvancedByteBufFormat.HEX_DUMP),
+			transport.wiretap("category", LogLevel.INFO, AdvancedBufferFormat.HEX_DUMP),
 			LogLevel.INFO,
 			BufferFormat.HEX_DUMP);
 		doTestWiretap(
-			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.SIMPLE),
+			transport.wiretap("category", LogLevel.DEBUG, AdvancedBufferFormat.SIMPLE),
 			LogLevel.DEBUG,
 			BufferFormat.SIMPLE);
 
 		doTestWiretapForTextualLogger(
-			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL), LogLevel.DEBUG);
+			transport.wiretap("category", LogLevel.DEBUG, AdvancedBufferFormat.TEXTUAL), LogLevel.DEBUG);
 		doTestWiretapForTextualLogger(
-			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL, Charset.defaultCharset()), LogLevel.DEBUG);
+			transport.wiretap("category", LogLevel.DEBUG, AdvancedBufferFormat.TEXTUAL, Charset.defaultCharset()), LogLevel.DEBUG);
 	}
 
 	private void doTestWiretap(TestTransport transport, LogLevel expectedLevel, BufferFormat expectedFormat) {
@@ -100,7 +100,7 @@ class TransportTest {
 	static final class TestTransportConfig extends TransportConfig {
 
 		static final LoggingHandler LOGGING_HANDLER =
-			AdvancedByteBufFormat.HEX_DUMP
+			AdvancedBufferFormat.HEX_DUMP
 					.toLoggingHandler(TestTransport.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
 		TestTransportConfig(Map<ChannelOption<?>, ?> options) {

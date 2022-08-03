@@ -100,7 +100,7 @@ class ReactorNettyLoggingHandlerTest {
 	}
 
 	@Test
-	void shouldThrowUnsupportedOperationExceptionWhenByteBufFormatIsCalled() {
+	void shouldThrowUnsupportedOperationExceptionWhenBufferFormatIsCalled() {
 		assertThatExceptionOfType(UnsupportedOperationException.class)
 				.isThrownBy(() -> defaultCharsetReactorNettyLoggingHandler.bufferFormat());
 	}

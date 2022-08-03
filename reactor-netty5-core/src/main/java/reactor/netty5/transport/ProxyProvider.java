@@ -35,7 +35,7 @@ import io.netty.contrib.handler.proxy.Socks4ProxyHandler;
 import io.netty.contrib.handler.proxy.Socks5ProxyHandler;
 import io.netty5.util.internal.StringUtil;
 import reactor.netty5.NettyPipeline;
-import reactor.netty5.transport.logging.AdvancedByteBufFormat;
+import reactor.netty5.transport.logging.AdvancedBufferFormat;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -229,7 +229,7 @@ public class ProxyProvider {
 	}
 
 	static final LoggingHandler LOGGING_HANDLER =
-			AdvancedByteBufFormat.HEX_DUMP
+			AdvancedBufferFormat.HEX_DUMP
 					.toLoggingHandler("reactor.netty5.proxy", LogLevel.DEBUG, Charset.defaultCharset());
 
 	static final String HTTP_PROXY_HOST = "http.proxyHost";

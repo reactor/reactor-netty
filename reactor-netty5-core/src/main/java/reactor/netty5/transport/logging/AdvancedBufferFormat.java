@@ -25,12 +25,12 @@ import io.netty5.handler.logging.LoggingHandler;
 /**
  * Used to control the format and verbosity of logging for {@link Buffer}s and {@link ByteBufHolder}s.
  * <p>
- * Adds {@link AdvancedByteBufFormat#TEXTUAL} format to io.netty5.handler.logging.ByteBufFormat.
+ * Adds {@link AdvancedBufferFormat#TEXTUAL} format to {@link io.netty5.handler.logging.BufferFormat}.
  *
  * @author Maximilian Goeke
  * @since 1.0.0
  */
-public enum AdvancedByteBufFormat {
+public enum AdvancedBufferFormat {
 	/**
 	 * When wire logging is enabled with this format, only the events will be logged.
 	 * <p>Examples:</p>
@@ -98,7 +98,7 @@ public enum AdvancedByteBufFormat {
 	 *
 	 * @param category the logger category
 	 * @param level    the logger level
-	 * @param charset  the charset (only relevant for {@link AdvancedByteBufFormat#TEXTUAL})
+	 * @param charset  the charset (only relevant for {@link AdvancedBufferFormat#TEXTUAL})
 	 * @return a new {@link LoggingHandler} reference
 	 */
 	public LoggingHandler toLoggingHandler(String category, LogLevel level, Charset charset) {

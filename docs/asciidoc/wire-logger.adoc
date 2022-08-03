@@ -19,33 +19,33 @@ include::{examplesdir}/wiretap/Application.java[lines=18..35]
 ==== Wire Logger formatters
 Reactor Netty supports 3 different formatters:
 
-- {javadoc}/reactor/netty5/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP] - the default
+- {javadoc}/reactor/netty5/transport/logging/AdvancedBufferFormat.html#HEX_DUMP[AdvancedBufferFormat#HEX_DUMP] - the default
 
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty5/transport/logging/AdvancedByteBufFormat.java
+.{sourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java
 ----
-include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedByteBufFormat.java[lines=47..75]
-----
-====
-
-- {javadoc}/reactor/netty5/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
-
-====
-[source,java,indent=0]
-.{sourcedir}/reactor/netty5/transport/logging/AdvancedByteBufFormat.java
-----
-include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedByteBufFormat.java[lines=34..45]
+include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java[lines=47..75]
 ----
 ====
 
-- {javadoc}/reactor/netty5/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL]
+- {javadoc}/reactor/netty5/transport/logging/AdvancedBufferFormat.html#SIMPLE[AdvancedBufferFormat#SIMPLE]
 
 ====
 [source,java,indent=0]
-.{sourcedir}/reactor/netty5/transport/logging/AdvancedByteBufFormat.java
+.{sourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java
 ----
-include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedByteBufFormat.java[lines=77..93]
+include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java[lines=34..45]
+----
+====
+
+- {javadoc}/reactor/netty5/transport/logging/AdvancedBufferFormat.html#TEXTUAL[AdvancedBufferFormat#TEXTUAL]
+
+====
+[source,java,indent=0]
+.{sourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java
+----
+include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java[lines=77..93]
 ----
 ====
 
@@ -59,6 +59,6 @@ When you need to change the default formatter you can configure it as follows:
 include::{examplesdir}/wiretap/custom/Application.java[lines=18..38]
 ----
 <1> Enables the wire logging,
-{javadoc}/reactor/netty5/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
+{javadoc}/reactor/netty5/transport/logging/AdvancedBufferFormat.html#TEXTUAL[AdvancedBufferFormat#TEXTUAL] is used for
 printing the content.
 ====

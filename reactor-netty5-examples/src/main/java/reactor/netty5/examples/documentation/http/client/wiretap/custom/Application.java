@@ -17,14 +17,14 @@ package reactor.netty5.examples.documentation.http.client.wiretap.custom;
 
 import io.netty5.handler.logging.LogLevel;
 import reactor.netty5.http.client.HttpClient;
-import reactor.netty5.transport.logging.AdvancedByteBufFormat;
+import reactor.netty5.transport.logging.AdvancedBufferFormat;
 
 public class Application {
 
 	public static void main(String[] args) {
 		HttpClient client =
 				HttpClient.create()
-				          .wiretap("logger-name", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL); //<1>
+				          .wiretap("logger-name", LogLevel.DEBUG, AdvancedBufferFormat.TEXTUAL); //<1>
 
 		client.get()
 		      .uri("https://example.com/")

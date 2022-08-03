@@ -29,7 +29,7 @@ import reactor.netty5.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.resources.LoopResources;
 import reactor.netty5.transport.ClientTransportConfig;
-import reactor.netty5.transport.logging.AdvancedByteBufFormat;
+import reactor.netty5.transport.logging.AdvancedBufferFormat;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -133,7 +133,7 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new ChannelOperations<>(ch, c);
 
 	static final LoggingHandler LOGGING_HANDLER =
-			AdvancedByteBufFormat.HEX_DUMP
+			AdvancedBufferFormat.HEX_DUMP
 					.toLoggingHandler(TcpClient.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
 	/**

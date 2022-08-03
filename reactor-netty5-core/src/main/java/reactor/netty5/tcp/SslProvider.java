@@ -44,7 +44,7 @@ import io.netty5.util.AsyncMapping;
 import reactor.core.Exceptions;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.ReactorNetty;
-import reactor.netty5.transport.logging.AdvancedByteBufFormat;
+import reactor.netty5.transport.logging.AdvancedBufferFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -664,6 +664,6 @@ public final class SslProvider {
 	static final Logger log = Loggers.getLogger(SslProvider.class);
 
 	static final LoggingHandler LOGGING_HANDLER =
-			AdvancedByteBufFormat.HEX_DUMP
+			AdvancedBufferFormat.HEX_DUMP
 					.toLoggingHandler("reactor.netty5.tcp.ssl", LogLevel.DEBUG, Charset.defaultCharset());
 }

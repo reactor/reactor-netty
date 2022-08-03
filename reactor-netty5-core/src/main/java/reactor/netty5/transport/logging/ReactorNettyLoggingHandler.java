@@ -33,15 +33,15 @@ import reactor.netty5.Connection;
 import static io.netty.buffer.ByteBufUtil.appendPrettyHexDump;
 import static io.netty5.util.internal.StringUtil.NEWLINE;
 import static java.util.Objects.requireNonNull;
-import static reactor.netty5.transport.logging.AdvancedByteBufFormat.HEX_DUMP;
-import static reactor.netty5.transport.logging.AdvancedByteBufFormat.SIMPLE;
-import static reactor.netty5.transport.logging.AdvancedByteBufFormat.TEXTUAL;
+import static reactor.netty5.transport.logging.AdvancedBufferFormat.HEX_DUMP;
+import static reactor.netty5.transport.logging.AdvancedBufferFormat.SIMPLE;
+import static reactor.netty5.transport.logging.AdvancedBufferFormat.TEXTUAL;
 
 /**
  * Extends {@link LoggingHandler} in order to provide extended connection id, which in case of HTTP
  * adds the serial number of the request received on that connection.
  * <p>
- * In case of {@link AdvancedByteBufFormat#TEXTUAL} logs all events in a
+ * In case of {@link AdvancedBufferFormat#TEXTUAL} logs all events in a
  * textual representation, so it's human readable and less verbose.
  * <p>
  * Hint: Logger escapes newlines as "\n" to reduce output.
@@ -52,7 +52,7 @@ import static reactor.netty5.transport.logging.AdvancedByteBufFormat.TEXTUAL;
  */
 final class ReactorNettyLoggingHandler extends LoggingHandler {
 
-	private final AdvancedByteBufFormat byteBufFormat;
+	private final AdvancedBufferFormat bufferFormat;
 	private final Charset charset;
 	private final String name;
 
@@ -61,18 +61,18 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 	 *
 	 * @param name          the name of the class to use for the logger
 	 * @param level         the log level
-	 * @param byteBufFormat the byte buffer format
+	 * @param bufferFormat the byte buffer format
 	 */
-	ReactorNettyLoggingHandler(String name, LogLevel level, AdvancedByteBufFormat byteBufFormat) {
-		super(name, level, byteBufFormat == SIMPLE ? BufferFormat.SIMPLE : BufferFormat.HEX_DUMP);
-		this.byteBufFormat = byteBufFormat;
+	ReactorNettyLoggingHandler(String name, LogLevel level, AdvancedBufferFormat bufferFormat) {
+		super(name, level, bufferFormat == SIMPLE ? BufferFormat.SIMPLE : BufferFormat.HEX_DUMP);
+		this.bufferFormat = bufferFormat;
 		this.charset = null;
 		this.name = name;
 	}
 
 	/**
 	 * Creates a new instance with the specified logger name, level and charset.
-	 * The byte buffer format is {@link AdvancedByteBufFormat#TEXTUAL}
+	 * The byte buffer format is {@link AdvancedBufferFormat#TEXTUAL}
 	 *
 	 * @param name    the name of the class to use for the logger
 	 * @param level   the log level
@@ -80,24 +80,24 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 	 */
 	ReactorNettyLoggingHandler(final String name, final LogLevel level, final Charset charset) {
 		super(name, level);
-		this.byteBufFormat = TEXTUAL;
+		this.bufferFormat = TEXTUAL;
 		this.charset = requireNonNull(charset, "charset");
 		this.name = name;
 	}
 
 	/*
 	 * The UnsupportedOperationException is thrown to reduce confusion. ReactorNettyLoggingHandler is using
-	 * the AdvancedByteBufFormat and not ByteBufFormat.
+	 * the AdvancedBufferFormat and not BufferFormat.
 	 */
 	@Override
 	public BufferFormat bufferFormat() {
-		if (byteBufFormat == SIMPLE) {
+		if (bufferFormat == SIMPLE) {
 			return BufferFormat.SIMPLE;
 		}
-		else if (byteBufFormat == HEX_DUMP) {
+		else if (bufferFormat == HEX_DUMP) {
 			return BufferFormat.HEX_DUMP;
 		}
-		throw new UnsupportedOperationException("ReactorNettyLoggingHandler isn't using the classic ByteBufFormat.");
+		throw new UnsupportedOperationException("ReactorNettyLoggingHandler isn't using the classic BufferFormat.");
 	}
 
 	@Override
@@ -108,7 +108,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		if (!(o instanceof ReactorNettyLoggingHandler that)) {
 			return false;
 		}
-		return byteBufFormat == that.byteBufFormat &&
+		return bufferFormat == that.bufferFormat &&
 				Objects.equals(charset, that.charset) &&
 				level() == that.level() &&
 				name.equals(that.name);
@@ -116,7 +116,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(byteBufFormat, charset, level(), name);
+		return Objects.hash(bufferFormat, charset, level(), name);
 	}
 
 	@Override
@@ -211,12 +211,12 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		else {
 			int outputLength = chStr.length() + 1 + eventName.length() + 2 + 10 + 1;
 			String message = "";
-			if (byteBufFormat == HEX_DUMP) {
+			if (bufferFormat == HEX_DUMP) {
 				int rows = length / 16 + (length % 15 == 0 ? 0 : 1) + 4;
 				int hexDumpLength = 2 + rows * 80;
 				outputLength += hexDumpLength;
 			}
-			else if (byteBufFormat == TEXTUAL) {
+			else if (bufferFormat == TEXTUAL) {
 				message = msg.toString(charset);
 				outputLength += message.length() + 1;
 			}
@@ -227,11 +227,11 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 					.append(": ")
 					.append(length)
 					.append('B');
-			if (byteBufFormat == HEX_DUMP) {
+			if (bufferFormat == HEX_DUMP) {
 				buf.append(NEWLINE);
 				BufferUtil.appendPrettyHexDump(buf, msg);
 			}
-			else if (byteBufFormat == TEXTUAL) {
+			else if (bufferFormat == TEXTUAL) {
 				buf.append(' ').append(message);
 			}
 
@@ -256,9 +256,9 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		}
 		else {
 			StringBuilder buf;
-			if (byteBufFormat != TEXTUAL) {
+			if (bufferFormat != TEXTUAL) {
 				int outputLength = chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1;
-				if (byteBufFormat == HEX_DUMP) {
+				if (bufferFormat == HEX_DUMP) {
 					int rows = length / 16 + (length % 15 == 0 ? 0 : 1) + 4;
 					int hexDumpLength = 2 + rows * 80;
 					outputLength += hexDumpLength;
@@ -272,7 +272,7 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 						.append(", ")
 						.append(length)
 						.append('B');
-				if (byteBufFormat == HEX_DUMP) {
+				if (bufferFormat == HEX_DUMP) {
 					buf.append(NEWLINE);
 					appendPrettyHexDump(buf, content);
 				}
