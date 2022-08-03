@@ -40,7 +40,7 @@ import reactor.netty5.http.HttpProtocol;
 import reactor.netty5.http.server.HttpServer;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.resources.LoopResources;
-import reactor.netty5.transport.logging.AdvancedByteBufFormat;
+import reactor.netty5.transport.logging.AdvancedBufferFormat;
 import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
@@ -194,9 +194,9 @@ class ConnectionPoolTests extends BaseHttpTest {
 		HttpClient localClient1 =
 				client.port(server1.port())
 				      .wiretap("testClientWithWiretapSameConfiguration", LogLevel.DEBUG,
-				              AdvancedByteBufFormat.TEXTUAL, Charset.defaultCharset());
+				              AdvancedBufferFormat.TEXTUAL, Charset.defaultCharset());
 		HttpClient localClient2 = localClient1.wiretap("testClientWithWiretapSameConfiguration", LogLevel.DEBUG,
-				AdvancedByteBufFormat.TEXTUAL, Charset.defaultCharset());
+				AdvancedBufferFormat.TEXTUAL, Charset.defaultCharset());
 		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",
@@ -209,10 +209,10 @@ class ConnectionPoolTests extends BaseHttpTest {
 	void testDifferentClientWithWiretapSameConfiguration() {
 		HttpClient localClient1 =
 				client.port(server1.port())
-				      .wiretap("testClientWithWiretapSameConfiguration", LogLevel.DEBUG, AdvancedByteBufFormat.HEX_DUMP);
+				      .wiretap("testClientWithWiretapSameConfiguration", LogLevel.DEBUG, AdvancedBufferFormat.HEX_DUMP);
 		HttpClient localClient2 =
 				client.port(server1.port())
-				      .wiretap("testClientWithWiretapSameConfiguration", LogLevel.DEBUG, AdvancedByteBufFormat.HEX_DUMP);
+				      .wiretap("testClientWithWiretapSameConfiguration", LogLevel.DEBUG, AdvancedBufferFormat.HEX_DUMP);
 		checkResponsesAndChannelsStates(
 				"server1-ConnectionPoolTests",
 				"server1-ConnectionPoolTests",

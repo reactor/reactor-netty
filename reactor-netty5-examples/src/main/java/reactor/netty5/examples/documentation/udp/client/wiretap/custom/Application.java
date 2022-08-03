@@ -17,7 +17,7 @@ package reactor.netty5.examples.documentation.udp.client.wiretap.custom;
 
 import io.netty5.handler.logging.LogLevel;
 import reactor.netty5.Connection;
-import reactor.netty5.transport.logging.AdvancedByteBufFormat;
+import reactor.netty5.transport.logging.AdvancedBufferFormat;
 import reactor.netty5.udp.UdpClient;
 
 import java.time.Duration;
@@ -29,7 +29,7 @@ public class Application {
 				UdpClient.create()
 				         .host("example.com")
 				         .port(80)
-				         .wiretap("logger-name", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL) //<1>
+				         .wiretap("logger-name", LogLevel.DEBUG, AdvancedBufferFormat.TEXTUAL) //<1>
 				         .connectNow(Duration.ofSeconds(30));
 
 		connection.onDispose()

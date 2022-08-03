@@ -77,7 +77,7 @@ import reactor.netty5.resources.LoopResources;
 import reactor.netty5.tcp.SslProvider;
 import reactor.netty5.transport.ClientTransportConfig;
 import reactor.netty5.transport.ProxyProvider;
-import reactor.netty5.transport.logging.AdvancedByteBufFormat;
+import reactor.netty5.transport.logging.AdvancedBufferFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -715,7 +715,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	static final Logger log = Loggers.getLogger(HttpClientConfig.class);
 
 	static final LoggingHandler LOGGING_HANDLER =
-			AdvancedByteBufFormat.HEX_DUMP
+			AdvancedBufferFormat.HEX_DUMP
 					.toLoggingHandler(HttpClient.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
 	/**

@@ -32,7 +32,7 @@ import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty5.resources.LoopResources;
 import reactor.netty5.transport.TransportConfig;
-import reactor.netty5.transport.logging.AdvancedByteBufFormat;
+import reactor.netty5.transport.logging.AdvancedBufferFormat;
 import reactor.util.annotation.Nullable;
 
 import java.net.ProtocolFamily;
@@ -154,7 +154,7 @@ public final class UdpServerConfig extends TransportConfig {
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new UdpOperations(ch, c);
 
 	static final LoggingHandler LOGGING_HANDLER =
-			AdvancedByteBufFormat.HEX_DUMP
+			AdvancedBufferFormat.HEX_DUMP
 					.toLoggingHandler(UdpServer.class.getName(), LogLevel.DEBUG, Charset.defaultCharset());
 
 	static final class MicrometerUdpServerMetricsRecorder extends MicrometerChannelMetricsRecorder {

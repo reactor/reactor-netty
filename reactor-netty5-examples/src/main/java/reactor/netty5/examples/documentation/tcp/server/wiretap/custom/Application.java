@@ -18,14 +18,14 @@ package reactor.netty5.examples.documentation.tcp.server.wiretap.custom;
 import io.netty5.handler.logging.LogLevel;
 import reactor.netty5.DisposableServer;
 import reactor.netty5.tcp.TcpServer;
-import reactor.netty5.transport.logging.AdvancedByteBufFormat;
+import reactor.netty5.transport.logging.AdvancedBufferFormat;
 
 public class Application {
 
 	public static void main(String[] args) {
 		DisposableServer server =
 				TcpServer.create()
-				         .wiretap("logger-name", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL) //<1>
+				         .wiretap("logger-name", LogLevel.DEBUG, AdvancedBufferFormat.TEXTUAL) //<1>
 				         .bindNow();
 
 		server.onDispose()

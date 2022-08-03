@@ -17,9 +17,9 @@ package reactor.netty5.transport.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static reactor.netty5.transport.logging.AdvancedByteBufFormat.HEX_DUMP;
-import static reactor.netty5.transport.logging.AdvancedByteBufFormat.SIMPLE;
-import static reactor.netty5.transport.logging.AdvancedByteBufFormat.TEXTUAL;
+import static reactor.netty5.transport.logging.AdvancedBufferFormat.HEX_DUMP;
+import static reactor.netty5.transport.logging.AdvancedBufferFormat.SIMPLE;
+import static reactor.netty5.transport.logging.AdvancedBufferFormat.TEXTUAL;
 
 import java.nio.charset.Charset;
 
@@ -28,13 +28,13 @@ import org.junit.jupiter.api.Test;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 
-class AdvancedByteBufFormatTest {
+class AdvancedBufferFormatTest {
 
 	@Test
 	void createSimpleLoggingHandler() {
 		final LoggingHandler loggingHandler =
 			SIMPLE.toLoggingHandler(
-				AdvancedByteBufFormatTest.class.toString(),
+				AdvancedBufferFormatTest.class.toString(),
 				LogLevel.DEBUG,
 				Charset.defaultCharset());
 
@@ -46,7 +46,7 @@ class AdvancedByteBufFormatTest {
 	void createHexDumpLoggingHandler() {
 		final LoggingHandler loggingHandler =
 			HEX_DUMP.toLoggingHandler(
-				AdvancedByteBufFormatTest.class.toString(),
+				AdvancedBufferFormatTest.class.toString(),
 				LogLevel.DEBUG,
 				Charset.defaultCharset());
 
@@ -58,7 +58,7 @@ class AdvancedByteBufFormatTest {
 	void createTextualLoggingHandler() {
 		final LoggingHandler loggingHandler =
 			TEXTUAL.toLoggingHandler(
-				AdvancedByteBufFormatTest.class.toString(),
+				AdvancedBufferFormatTest.class.toString(),
 				LogLevel.DEBUG,
 				Charset.defaultCharset());
 
