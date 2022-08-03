@@ -500,6 +500,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
+			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
@@ -524,6 +525,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		          new Http2MultiplexHandler(new H2Codec(accessLogEnabled, accessLog, compressPredicate, cookieDecoder,
 		                  cookieEncoder, formDecoderProvider, forwardedHeaderHandler, listener, mapHandle,
 		                  metricsRecorder, minCompressionSize, opsFactory, uriTagValue)));
+
+		IdleTimeoutHandler.addIdleTimeoutHandler(p, idleTimeout);
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
@@ -975,7 +978,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
 				configureH2Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-						formDecoderProvider, forwardedHeaderHandler, http2Settings, listener, mapHandle,
+						formDecoderProvider, forwardedHeaderHandler, http2Settings, idleTimeout, listener, mapHandle,
 						metricsRecorder, minCompressionSize, opsFactory, uriTagValue, decoder.validateHeaders());
 				return;
 			}
@@ -1090,6 +1093,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
+							idleTimeout,
 							observer,
 							mapHandle,
 							metricsRecorder,
@@ -1151,6 +1155,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
+							idleTimeout,
 							observer,
 							mapHandle,
 							metricsRecorder,

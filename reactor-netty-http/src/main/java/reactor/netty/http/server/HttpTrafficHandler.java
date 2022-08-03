@@ -19,16 +19,13 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
@@ -36,22 +33,17 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.NettyPipeline;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 
@@ -482,56 +474,4 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				MULTIPART_PREFIX.length());
 	}
 
-	static final class IdleTimeoutHandler extends IdleStateHandler {
-
-		final long idleTimeout;
-
-		IdleTimeoutHandler(long idleTimeout) {
-			super(idleTimeout, 0, 0, TimeUnit.MILLISECONDS);
-			this.idleTimeout = idleTimeout;
-		}
-
-		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		protected void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) {
-			if (evt.state() == IdleState.READER_IDLE) {
-				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(),
-							"Connection was idle for [{}ms], as per configuration the connection will be closed."),
-							idleTimeout);
-				}
-				// FutureReturnValueIgnored is deliberate
-				ctx.close();
-			}
-			ctx.fireUserEventTriggered(evt);
-		}
-
-		static void addIdleTimeoutHandler(ChannelPipeline pipeline, @Nullable Duration idleTimeout) {
-			if (idleTimeout != null) {
-				String baseName = null;
-				if (pipeline.get(NettyPipeline.HttpCodec) != null) {
-					baseName = NettyPipeline.HttpCodec;
-				}
-				else if (pipeline.get(NettyPipeline.H2CUpgradeHandler) != null) {
-					baseName = NettyPipeline.H2CUpgradeHandler;
-				}
-				else {
-					ChannelHandler httpServerCodec = pipeline.get(HttpServerCodec.class);
-					if (httpServerCodec != null) {
-						baseName = pipeline.context(httpServerCodec).name();
-					}
-				}
-
-				pipeline.addBefore(baseName,
-				                   NettyPipeline.IdleTimeoutHandler,
-				                   new IdleTimeoutHandler(idleTimeout.toMillis()));
-			}
-		}
-
-		static void removeIdleTimeoutHandler(ChannelPipeline pipeline) {
-			if (pipeline.get(NettyPipeline.IdleTimeoutHandler) != null) {
-				pipeline.remove(NettyPipeline.IdleTimeoutHandler);
-			}
-		}
-	}
 }
