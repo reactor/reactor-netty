@@ -195,14 +195,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.doAfterResponseSuccess((resp, conn) -> clientCompletedRef.get().countDown());
 
 		StepVerifier.create(httpClient.post()
-						.uri("/1")
-						.send(body)
-						.responseContent()
-						.aggregate()
-						.asString())
-				.expectNext("Hello World!")
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		                              .uri("/1")
+		                              .send(body)
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectNext("Hello World!")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 
 		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
 		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef latch await").isTrue();
@@ -230,14 +230,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		clientCompletedRef.set(new CountDownLatch(1));
 
 		StepVerifier.create(httpClient.post()
-						.uri("/2?i=1&j=2")
-						.send(body)
-						.responseContent()
-						.aggregate()
-						.asString())
-				.expectNext("Hello World!")
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		                              .uri("/2?i=1&j=2")
+		                              .send(body)
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectNext("Hello World!")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 
 		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
 		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef latch await").isTrue();
@@ -252,7 +252,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsServerSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, id -> {
 					throw new IllegalArgumentException("Testcase injected Exception");
@@ -276,7 +276,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testRecordingFailsClientSide(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                  @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.bindNow();
 
@@ -298,7 +298,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testNonExistingEndpoint(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                             @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
 		AtomicReference<CountDownLatch> responseSentRef = new AtomicReference<>(responseSent);
 		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
@@ -306,11 +306,13 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		AtomicReference<CountDownLatch> requestReceivedRef = new AtomicReference<>(requestReceived);
 		RequestReceivedHandler requestReceivedHandler = RequestReceivedHandler.INSTANCE;
 
-		// the serverReceivedHandler is used to detect when the server has received the last client request content
-		// the serverCompletedHandler is used to detect when the server has sent the last response content
+		// the requestReceivedHandler is used to detect when the server has received the last client request content
+		// the responseSentHandler is used to detect when the server has sent the last response content
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
-				.doOnConnection(cnx -> responseSentHandler.register(responseSentRef, cnx.channel().pipeline()))
-				.doOnConnection(cnx -> requestReceivedHandler.register(requestReceivedRef, cnx.channel().pipeline()))
+				.doOnConnection(cnx -> {
+					responseSentHandler.register(responseSentRef, cnx.channel().pipeline());
+					requestReceivedHandler.register(requestReceivedRef, cnx.channel().pipeline());
+				})
 				.bindNow();
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
@@ -404,15 +406,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()));
 
 		StepVerifier.create(httpClient.metrics(true, s -> "testUriTagValueResolver")
-						.post()
-						.uri("/1")
-						.send(body)
-						.responseContent()
-						.aggregate()
-						.asString())
-				.expectNext("Hello World!")
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		                              .post()
+		                              .uri("/1")
+		                              .send(body)
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectNext("Hello World!")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 
 		assertThat(responseSent.await(30, TimeUnit.SECONDS)).as("responseSent latch await").isTrue();
 		assertThat(clientCompleted.await(30, TimeUnit.SECONDS)).as("clientCompleted latch await").isTrue();
@@ -466,16 +468,16 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.doAfterResponseSuccess((resp, conn) -> clientCompletedRef.get().countDown());
 
 		httpClient.metrics(true, s -> "testUriTagValueFunctionNotShared_1")
-				.post()
-				.uri("/1")
-				.send(body)
-				.responseContent()
-				.aggregate()
-				.asString()
-				.as(StepVerifier::create)
-				.expectNext("Hello World!")
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		          .post()
+		          .uri("/1")
+		          .send(body)
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
 
 		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
 		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef latch await").isTrue();
@@ -500,16 +502,16 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		clientCompletedRef.set(new CountDownLatch(1));
 
 		httpClient.metrics(true, s -> "testUriTagValueFunctionNotShared_2")
-				.post()
-				.uri("/2")
-				.send(body)
-				.responseContent()
-				.aggregate()
-				.asString()
-				.as(StepVerifier::create)
-				.expectNext("Hello World!")
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		          .post()
+		          .uri("/2")
+		          .send(body)
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
 
 		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
 		assertThat(clientCompletedRef.get().await(30, TimeUnit.SECONDS)).as("clientCompletedRef await").isTrue();
@@ -523,7 +525,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testContextAwareRecorderOnClient(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		ClientContextAwareRecorder recorder = ClientContextAwareRecorder.INSTANCE;
@@ -549,7 +551,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testContextAwareRecorderOnServer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                      @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
 		ServerContextAwareRecorder recorder = ServerContextAwareRecorder.INSTANCE;
 		ResponseSentHandler responseSentHandler = ResponseSentHandler.INSTANCE;
@@ -695,7 +697,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@Test
 	void testIssue896() throws Exception {
 		disposableServer = httpServer.noSSL()
-				.bindNow();
+		                             .bindNow();
 
 		// The client should get two errors: NotSSLRecordException, and DecoderException.
 		CountDownLatch latch = new CountDownLatch(2);
@@ -1113,7 +1115,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		static final ServerRecorder INSTANCE = new ServerRecorder();
 		static final Supplier<ServerRecorder> SUPPLIER = () -> INSTANCE;
-		private AtomicReference<Throwable> error = new AtomicReference<>();
+		private final AtomicReference<Throwable> error = new AtomicReference<>();
 		private final AtomicInteger onServerConnectionsAmount = new AtomicInteger();
 		private final AtomicReference<String> onServerConnectionsLocalAddr = new AtomicReference<>();
 		private final AtomicReference<String> onActiveConnectionsLocalAddr = new AtomicReference<>();
@@ -1235,9 +1237,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 			if (msg instanceof LastHttpContent) {
-				promise.addListener(future -> {
-					latchRef.get().countDown();
-				});
+				promise.addListener(future -> latchRef.get().countDown());
 			}
 
 			ctx.write(msg, promise);
@@ -1262,10 +1262,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		void register(AtomicReference<CountDownLatch> latchRef, ChannelPipeline pipeline) {
 			this.latchRef = latchRef;
 			pipeline.addAfter(NettyPipeline.HttpMetricsHandler, HANDLER_NAME, this);
-		}
-
-		void register(CountDownLatch latch, ChannelPipeline pipeline) {
-			register(new AtomicReference<>(latch), pipeline);
 		}
 
 		@Override
@@ -1304,7 +1300,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 
 		@Override
-		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+		public void channelInactive(ChannelHandlerContext ctx) {
 			latch.countDown();
 			ctx.fireChannelInactive();
 		}
