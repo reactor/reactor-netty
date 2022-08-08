@@ -591,10 +591,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
 		HttpServer server = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, Function.identity())
-				.doOnConnection(cnx -> responseSentHandler.register(responseSent, cnx.channel().pipeline()));
+				.doOnConnection(cnx -> {
+					serverCloseHandler.register(cnx.channel(), serverClosed, isHttp11);
+					responseSentHandler.register(responseSent, cnx.channel().pipeline());
+				});
 
-		server = isHttp11 ?
-				server.doOnChannelInit((cnxObs, ch, sockAddr) -> serverCloseHandler.register(ch, serverClosed, isHttp11)) : server;
 		disposableServer = server.bindNow();
 
 		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
@@ -622,6 +623,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		// now check the server counters
 		if (isHttp11) {
+			// the socket on the server should be closed, make sure the client socket is closed on the server side
 			assertThat(serverClosed.await(30, TimeUnit.SECONDS)).as("serverClosed latch await").isTrue();
 			checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
 			checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
@@ -629,6 +631,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		else {
 			checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
 			checkGauge(SERVER_STREAMS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+			// dispose the client connection pool, and make sure the client socket is closed on the server side
+			provider.disposeLater()
+					.block(Duration.ofSeconds(30));
+			assertThat(serverClosed.await(30, TimeUnit.SECONDS)).as("serverClosed latch await").isTrue();
 		}
 
 		// These metrics are meant only for the servers,
