@@ -17,7 +17,6 @@ package reactor.netty5;
 
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
@@ -122,7 +121,7 @@ class ReactorNettyTest {
 		}
 
 		TestChannel(Channel parent, @Nullable SocketAddress localAddress, @Nullable SocketAddress remoteAddress) {
-			super(parent, new TestEventLoop(), new ChannelMetadata(false));
+			super(parent, new TestEventLoop(), false);
 			this.localAddress = localAddress;
 			this.remoteAddress = remoteAddress;
 		}
