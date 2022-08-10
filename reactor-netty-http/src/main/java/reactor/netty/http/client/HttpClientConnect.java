@@ -55,7 +55,6 @@ import reactor.core.publisher.MonoSink;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
-import reactor.netty.channel.AbortedException;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.resources.ConnectionProvider;
@@ -270,8 +269,19 @@ class HttpClientConnect extends HttpClient {
 						.acquire(_config, observer, handler, resolver)
 						.subscribe(new ClientTransportSubscriber(sink));
 
-			}).retryWhen(Retry.max(config.retryConfig.maxRetries).filter(handler))
-			  .subscribe(actual);
+				// TODO definitely not happy about spreading the retry logic even more
+			}).retryWhen(Retry.indefinitely().filter(err -> {
+						if (err instanceof RedirectClientException) {
+							RedirectClientException re = (RedirectClientException)err;
+							if (HttpResponseStatus.SEE_OTHER.equals(re.status)) {
+								handler.method = HttpMethod.GET;
+							}
+							handler.redirect(re.location);
+							return true;
+						}
+						return false;
+			})).retryWhen(Retry.max(config.retryConfig.maxRetries).filter(handler))
+			.subscribe(actual);
 		}
 
 		private void removeIncompatibleProtocol(HttpClientConfig config, HttpProtocol protocol) {
@@ -680,14 +690,6 @@ class HttpClientConnect extends HttpClient {
 
 		@Override
 		public boolean test(Throwable throwable) {
-			if (throwable instanceof RedirectClientException) {
-				RedirectClientException re = (RedirectClientException) throwable;
-				if (HttpResponseStatus.SEE_OTHER.equals(re.status)) {
-					method = HttpMethod.GET;
-				}
-				redirect(re.location);
-				return true;
-			}
 			if (shouldRetry && canRetry(throwable)) {
 				redirect(toURI.toString());
 				return true;
