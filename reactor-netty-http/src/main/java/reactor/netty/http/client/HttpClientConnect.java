@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
@@ -269,7 +270,7 @@ class HttpClientConnect extends HttpClient {
 						.acquire(_config, observer, handler, resolver)
 						.subscribe(new ClientTransportSubscriber(sink));
 
-			}).retryWhen(Retry.indefinitely().filter(handler))
+			}).retryWhen(Retry.max(config.retryConfig.maxRetries).filter(handler))
 			  .subscribe(actual);
 		}
 
@@ -347,7 +348,7 @@ class HttpClientConnect extends HttpClient {
 					handler.previousRequestHeaders = ops.requestHeaders;
 				}
 			}
-			else if (handler.shouldRetry && AbortedException.isConnectionReset(error)) {
+			else if (handler.canRetry(error)) {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
 				if (ops != null && ops.hasSentHeaders()) {
 					// In some cases the channel close event may be delayed and thus the connection to be
@@ -468,7 +469,12 @@ class HttpClientConnect extends HttpClient {
 		volatile String             resourceUrl;
 		volatile UriEndpoint        fromURI;
 		volatile Supplier<String>[] redirectedFrom;
-		volatile boolean            shouldRetry;
+
+		final RequestRetryConfig    retryConfig;
+
+		// TODO not happy with name as it collides with config concept..
+		volatile boolean            shouldRetry = true;
+
 		volatile HttpHeaders        previousRequestHeaders;
 
 		HttpClientHandler(HttpClientConfig configuration) {
@@ -488,7 +494,7 @@ class HttpClientConnect extends HttpClient {
 					new UriEndpointFactory(configuration.remoteAddress(), configuration.isSecure(), URI_ADDRESS_MAPPER);
 
 			this.websocketClientSpec = configuration.websocketClientSpec;
-			this.shouldRetry = !configuration.retryDisabled;
+			this.retryConfig = configuration.retryConfig;
 			this.handler = configuration.body;
 
 			if (configuration.uri == null) {
@@ -682,12 +688,20 @@ class HttpClientConnect extends HttpClient {
 				redirect(re.location);
 				return true;
 			}
-			if (shouldRetry && AbortedException.isConnectionReset(throwable)) {
-				shouldRetry = false;
+			if (shouldRetry && canRetry(throwable)) {
 				redirect(toURI.toString());
 				return true;
 			}
 			return false;
+		}
+
+		/**
+		 * Signals that the request <i>can</i> be retried.
+		 */
+		boolean canRetry(final Throwable err) {
+			return shouldRetry &&
+					err instanceof IOException &&
+					retryConfig.isRetrieable((IOException)err);
 		}
 
 		@Override

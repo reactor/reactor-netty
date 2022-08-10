@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.time.Duration;
@@ -25,6 +26,7 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
@@ -49,6 +51,7 @@ import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
+import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.HttpProtocol;
@@ -644,12 +647,37 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 0.9.6
 	 */
 	public final HttpClient disableRetry(boolean disableRetry) {
-		if (disableRetry == configuration().retryDisabled) {
+		if (RequestRetryConfig.DISABLED == configuration().retryConfig) { // yes instance comparison..
 			return this;
 		}
 		HttpClient dup = duplicate();
-		dup.configuration().retryDisabled = disableRetry;
+		dup.configuration().retryConfig = RequestRetryConfig.DISABLED;
 		return dup;
+	}
+
+	public final HttpClient retryConfig(final RequestRetryConfig retryConfig) {
+		Objects.requireNonNull(retryConfig, "retryConfig");
+		HttpClient dup = duplicate();
+		dup.configuration().retryConfig = retryConfig;
+		return dup;
+	}
+
+	public static class RequestRetryConfig {
+
+		public final static RequestRetryConfig DEFAULT = new RequestRetryConfig(1, AbortedException::isConnectionReset);
+		public final static RequestRetryConfig DISABLED = new RequestRetryConfig(0, anyException -> false);
+
+		final int maxRetries;
+		final Predicate<IOException> isRetriable;
+
+		public RequestRetryConfig(final int maxRetries, final Predicate<IOException> isRetriable) {
+			this.maxRetries = maxRetries;
+			this.isRetriable = isRetriable;
+		}
+
+		boolean isRetrieable(final IOException ioe) {
+			return isRetriable.test(ioe);
+		}
 	}
 
 	/**
