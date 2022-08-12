@@ -135,6 +135,7 @@ dependencies {
 	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-tracing-integration-test:$micrometerTracingVersion"
+	testImplementation "org.reflections:reflections:$reflectionsVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"

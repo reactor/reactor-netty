@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -181,13 +182,7 @@ public final class ProxyProvider {
 		// special handler which ensures that any VoidPromise will be converted to "unvoided" promises (for support of listeners).
 		// Note: an example of a VoidPromise which does not support listeners is the MonoSendMany.SendManyInner promise.
 		if (this.type == Proxy.SOCKS4 || type == Proxy.SOCKS5) {
-			pipeline.addAfter(NettyPipeline.ProxyHandler, NettyPipeline.UnvoidHandler, new ChannelOutboundHandlerAdapter() {
-				@Override
-				@SuppressWarnings("FutureReturnValueIgnored")
-				public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-					ctx.write(msg, promise.unvoid());
-				}
-			});
+			pipeline.addAfter(NettyPipeline.ProxyHandler, NettyPipeline.UnvoidHandler, UnvoidHandler.INSTANCE);
 		}
 
 		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
@@ -540,6 +535,18 @@ public final class ProxyProvider {
 		@Override
 		public String toString() {
 			return regex;
+		}
+	}
+
+	@ChannelHandler.Sharable
+	static final class UnvoidHandler extends ChannelOutboundHandlerAdapter {
+
+		static final UnvoidHandler INSTANCE = new UnvoidHandler();
+
+		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
+		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+			ctx.write(msg, promise.unvoid());
 		}
 	}
 
