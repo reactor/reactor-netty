@@ -405,9 +405,6 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				       }
 				   });
 			}
-			// still let the exceptionCaught event flow through the pipeline to give the user
-			// a chance to do something with it
-			ctx.fireExceptionCaught(cause);
 		}
 
 		void enableAutoReadTask(Channel channel) {
