@@ -149,11 +149,16 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		protected void doShutdown(ChannelShutdownDirection direction) throws Exception {
+		protected void doShutdown(ChannelShutdownDirection direction) {
 		}
 
 		@Override
-		protected void doRead() {
+		protected void doRead(boolean wasReadPendingAlready) {
+		}
+
+		@Override
+		protected boolean doReadNow(AbstractChannel<Channel, SocketAddress, SocketAddress>.ReadSink readSink) {
+			return false;
 		}
 
 		@Override
