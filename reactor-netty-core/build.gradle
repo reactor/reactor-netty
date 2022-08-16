@@ -137,10 +137,12 @@ dependencies {
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
+	testImplementation "org.reflections:reflections:$reflectionsVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
+	testRuntimeOnly "io.micrometer:micrometer-tracing:$micrometerTracingVersion"
 
 	for (dependency in project.configurations.shaded.dependencies) {
 		compileOnly(dependency)

@@ -1,0 +1,110 @@
+[
+	{
+		"name": "reactor.netty.http.client.AbstractHttpClientMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.client.ContextAwareHttpClientMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.client.Http2StreamBridgeClientHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.client.HttpClientConfig$H2Codec",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.client.HttpClientConfig$H2OrHttp11Codec",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.client.HttpClientMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.client.HttpTrafficHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.client.MicrometerHttpClientMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.AbstractHttpServerMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.ContextAwareHttpServerMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.HAProxyMessageDetector",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.HAProxyMessageReader",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.Http2StreamBridgeServerHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.HttpServerConfig$H2ChannelMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.HttpServerConfig$H2Codec",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.HttpServerConfig$H2OrHttp11Codec",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.HttpServerConfig$Http11OrH2CleartextCodec",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.HttpServerMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.HttpTrafficHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.IdleTimeoutHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.MicrometerHttpServerMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.NonSslRedirectDetector",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.NonSslRedirectHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.SimpleCompressionHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.logging.AccessLogHandlerH1",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.logging.AccessLogHandlerH2",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty.http.server.logging.BaseAccessLogHandler",
+		"queryAllPublicMethods": true
+	}
+]
