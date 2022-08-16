@@ -1,0 +1,86 @@
+[
+	{
+		"name": "reactor.netty5.ReactorNetty$ExtractorHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.ReactorNetty$InboundIdleStateHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.ReactorNetty$OutboundIdleStateHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.AbstractChannelMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.ChannelMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.ChannelMetricsHandler$ConnectMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.ChannelMetricsHandler$TlsMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.ChannelOperationsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.ContextAwareChannelMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.ContextAwareChannelMetricsHandler$ContextAwareConnectMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.ContextAwareChannelMetricsHandler$TlsMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.MicrometerChannelMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.MicrometerChannelMetricsHandler$ConnectMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.channel.MicrometerChannelMetricsHandler$TlsMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.resources.DefaultPooledConnectionProvider$PooledConnectionAllocator$PooledConnectionInitializer",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.tcp.SniProvider$SniHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.tcp.SslProvider$SslReadHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.transport.ServerTransport$Acceptor",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.transport.ServerTransport$AcceptorInitializer",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.transport.TransportConfig$TransportChannelInitializer",
+		"queryAllPublicMethods": true
+	},
+	{
+		"name": "reactor.netty5.transport.logging.ReactorNettyLoggingHandler",
+		"queryAllPublicMethods": true
+	}
+]

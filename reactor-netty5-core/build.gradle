@@ -139,10 +139,12 @@ dependencies {
 	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
 	testImplementation "io.netty.contrib:netty-codec-extras:$nettyContribVersion"
+	testImplementation "org.reflections:reflections:$reflectionsVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
+	testRuntimeOnly "io.micrometer:micrometer-tracing:$micrometerTracingVersion"
 
 	// https://github.com/netty/netty/pull/11487
 	// https://github.com/netty/netty/issues/10317
