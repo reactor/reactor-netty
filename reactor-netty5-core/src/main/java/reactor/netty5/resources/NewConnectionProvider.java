@@ -72,7 +72,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 			if (remote != null && resolverGroup != null) {
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
 				Context currentContext = Context.of(sink.contextView());
-				if (Metrics.isMicrometerAvailable()) {
+				if (config.metricsRecorder() != null && Metrics.isMicrometerAvailable()) {
 					Object currentObservation = reactor.netty5.Metrics.currentObservation(currentContext);
 					if (currentObservation != null) {
 						currentContext = reactor.netty5.Metrics.updateContext(currentContext, currentObservation);

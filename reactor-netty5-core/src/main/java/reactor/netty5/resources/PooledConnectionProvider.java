@@ -169,7 +169,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				mono = mono.contextWrite(ctx -> ctx.put(CONTEXT_CALLER_EVENTLOOP, eventLoop));
 			}
 			Context currentContext = Context.of(sink.contextView());
-			if (Metrics.isMicrometerAvailable()) {
+			if ((poolFactory.metricsEnabled || config.metricsRecorder() != null)
+					&& Metrics.isMicrometerAvailable()) {
 				Object currentObservation = reactor.netty5.Metrics.currentObservation(currentContext);
 				if (currentObservation != null) {
 					currentContext = reactor.netty5.Metrics.updateContext(currentContext, currentObservation);
