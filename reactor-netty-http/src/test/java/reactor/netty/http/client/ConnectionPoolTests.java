@@ -115,7 +115,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 		loop.disposeLater()
 		    .block(Duration.ofSeconds(5));
 		executor.shutdownGracefully()
-				.get(5, TimeUnit.SECONDS);
+				.get(30, TimeUnit.SECONDS);
 	}
 
 	@BeforeEach
@@ -176,9 +176,9 @@ class ConnectionPoolTests extends BaseHttpTest {
 		}
 		finally {
 			group1.close()
-					.get(5, TimeUnit.SECONDS);
+					.get(30, TimeUnit.SECONDS);
 			group2.close()
-					.get(5, TimeUnit.SECONDS);
+					.get(30, TimeUnit.SECONDS);
 		}
 	}
 

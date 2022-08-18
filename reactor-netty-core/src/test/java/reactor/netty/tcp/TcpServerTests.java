@@ -811,8 +811,8 @@ class TcpServerTests {
 
 		boundServer.disposeNow();
 
-		FutureMono.from(group.close())
-		          .block(Duration.ofSeconds(30));
+		group.close()
+		          .get(30, TimeUnit.SECONDS);
 
 		assertThat(latch2.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 	}
@@ -853,8 +853,8 @@ class TcpServerTests {
 
 		assertThat(configured.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		FutureMono.from(group.close())
-		          .block(Duration.ofSeconds(30));
+		group.close()
+				.get(30, TimeUnit.SECONDS);
 
 		assertThat(disconnected.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
@@ -954,8 +954,8 @@ class TcpServerTests {
 		disposableServer.disposeNow();
 
 		// Dispose the group
-		FutureMono.from(group.close())
-				.block(Duration.ofSeconds(30));
+		group.close()
+				.get(30, TimeUnit.SECONDS);
 
 		// Dispose the event loop
 		loop.disposeLater()

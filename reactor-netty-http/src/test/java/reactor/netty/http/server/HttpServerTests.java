@@ -156,7 +156,7 @@ class HttpServerTests extends BaseHttpTest {
 	@AfterAll
 	static void cleanup() throws ExecutionException, InterruptedException, TimeoutException {
 		executor.shutdownGracefully()
-				.get(5, TimeUnit.SECONDS);
+				.get(30, TimeUnit.SECONDS);
 	}
 
 	@AfterEach
@@ -167,7 +167,7 @@ class HttpServerTests extends BaseHttpTest {
 		}
 		if (group != null) {
 			group.close()
-					.get(5, TimeUnit.SECONDS);
+					.get(30, TimeUnit.SECONDS);
 			group = null;
 		}
 	}

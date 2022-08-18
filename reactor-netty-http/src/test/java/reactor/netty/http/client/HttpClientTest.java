@@ -149,7 +149,7 @@ class HttpClientTest extends BaseHttpTest {
 	@AfterAll
 	static void cleanup() throws ExecutionException, InterruptedException, TimeoutException {
 		executor.shutdownGracefully()
-				.get(5, TimeUnit.SECONDS);
+				.get(30, TimeUnit.SECONDS);
 	}
 
 	@Test
