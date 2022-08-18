@@ -30,6 +30,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2StreamChannel;
@@ -38,7 +39,9 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty.util.concurrent.EventExecutor;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,7 +75,9 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -118,6 +123,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	static Http11SslContextSpec clientCtx11;
 	static Http2SslContextSpec clientCtx2;
 
+	private ChannelGroup group;
+	private static final EventExecutor executor = new DefaultEventExecutor();
+
+	@AfterAll
+	public static void afterClass() throws Exception {
+		executor.shutdownGracefully()
+				.get(5, TimeUnit.SECONDS);
+	}
+
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
 		Assertions.setMaxStackTraceElementsDisplayed(100);
@@ -146,10 +160,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 */
 	@BeforeEach
 	void setUp() {
+		group = new DefaultChannelGroup(executor);
 		httpServer = createServer()
 				// Register a channel group, when invoking disposeNow()
 				// it will close all remaining client sockets on the server, if any.
-				.channelGroup(new DefaultChannelGroup(new DefaultEventExecutor()))
+				.channelGroup(group)
 				.host("127.0.0.1")
 				.metrics(true, Function.identity())
 				.httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
@@ -173,12 +188,22 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	@AfterEach
-	void tearDown() throws InterruptedException {
+	void tearDown() throws InterruptedException, ExecutionException, TimeoutException {
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
 
 		// In case the ServerCloseHandler is registered on the server, make sure client socket is closed on the server side
 		assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+
+		if (disposableServer != null) {
+			disposableServer.disposeNow();
+			disposableServer = null; // avoid to dispose the server again from the BaseHttpTest.disposeServer method
+		}
+
+		if (group != null) {
+			group.close()
+					.get(5, TimeUnit.SECONDS);
+		}
 
 		Metrics.removeRegistry(registry);
 		registry.clear();
