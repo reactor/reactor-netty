@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -88,7 +89,9 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
-import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.EventExecutor;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -141,10 +144,32 @@ import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FO
 class HttpServerTests extends BaseHttpTest {
 
 	static SelfSignedCertificate ssc;
+	static final EventExecutor executor = new DefaultEventExecutor();
+
+	ChannelGroup group;
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
+	}
+
+	@AfterAll
+	static void cleanup() throws ExecutionException, InterruptedException, TimeoutException {
+		executor.shutdownGracefully()
+				.get(5, TimeUnit.SECONDS);
+	}
+
+	@AfterEach
+	void tearDown() throws ExecutionException, InterruptedException, TimeoutException {
+		if (disposableServer != null) {
+			disposableServer.disposeNow();
+			disposableServer = null; // avoid to dispose again from BaseHttpTest.disposeServer()
+		}
+		if (group != null) {
+			group.close()
+					.get(5, TimeUnit.SECONDS);
+			group = null;
+		}
 	}
 
 	@Test
@@ -1643,6 +1668,7 @@ class HttpServerTests extends BaseHttpTest {
 		CountDownLatch latch2 = new CountDownLatch(2);
 		CountDownLatch latch3 = new CountDownLatch(1);
 		LoopResources loop = LoopResources.create("testGracefulShutdown");
+		group = new DefaultChannelGroup(executor);
 		disposableServer =
 				createServer()
 				          .runOn(loop)
@@ -1652,7 +1678,7 @@ class HttpServerTests extends BaseHttpTest {
 				          })
 				          // Register a channel group, when invoking disposeNow()
 				          // the implementation will wait for the active requests to finish
-				          .channelGroup(new DefaultChannelGroup(new DefaultEventExecutor()))
+				          .channelGroup(group)
 				          .route(r -> r.get("/delay500", (req, res) -> res.sendString(Mono.just("delay500")
 				                                                          .delayElement(Duration.ofMillis(500))))
 				                       .get("/delay1000", (req, res) -> res.sendString(Mono.just("delay1000")
@@ -1781,7 +1807,8 @@ class HttpServerTests extends BaseHttpTest {
 	void testTcpConfiguration_1() throws Exception {
 		CountDownLatch latch = new CountDownLatch(10);
 		LoopResources loop = LoopResources.create("testTcpConfiguration");
-		ChannelGroup group = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+		group = new DefaultChannelGroup(executor);
+
 		doTestTcpConfiguration(
 				HttpServer.create().tcpConfiguration(tcp -> configureTcpServer(tcp, loop, group, latch)),
 				HttpClient.create().tcpConfiguration(tcp -> configureTcpClient(tcp, loop, group, latch))
@@ -1799,7 +1826,7 @@ class HttpServerTests extends BaseHttpTest {
 	void testTcpConfiguration_2() throws Exception {
 		CountDownLatch latch = new CountDownLatch(10);
 		LoopResources loop = LoopResources.create("testTcpConfiguration");
-		ChannelGroup group = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+		group = new DefaultChannelGroup(executor);
 		doTestTcpConfiguration(
 				HttpServer.from(configureTcpServer(TcpServer.create(), loop, group, latch)),
 				HttpClient.from(configureTcpClient(TcpClient.create(), loop, group, latch))
