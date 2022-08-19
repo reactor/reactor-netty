@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,15 @@ package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty.util.concurrent.EventExecutor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +50,9 @@ import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -65,6 +70,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	static ConnectionProvider provider;
 	static LoopResources loop;
 	static Supplier<ChannelMetricsRecorder> metricsRecorderSupplier;
+	static final EventExecutor executor = new DefaultEventExecutor();
 
 	HttpClient client;
 
@@ -99,7 +105,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	}
 
 	@AfterAll
-	static void tearDown() {
+	static void tearDown() throws ExecutionException, InterruptedException, TimeoutException {
 		server1.disposeNow();
 		server2.disposeNow();
 		server3.disposeNow();
@@ -108,6 +114,8 @@ class ConnectionPoolTests extends BaseHttpTest {
 		        .block(Duration.ofSeconds(5));
 		loop.disposeLater()
 		    .block(Duration.ofSeconds(5));
+		executor.shutdownGracefully()
+				.get(30, TimeUnit.SECONDS);
 	}
 
 	@BeforeEach
@@ -151,16 +159,27 @@ class ConnectionPoolTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testClientWithChannelGroup() {
-		HttpClient localClient1 =
-				client.port(server1.port())
-				      .channelGroup(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE));
-		HttpClient localClient2 = localClient1.channelGroup(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE));
-		checkResponsesAndChannelsStates(
-				"server1-ConnectionPoolTests",
-				"server1-ConnectionPoolTests",
-				localClient1,
-				localClient2);
+	void testClientWithChannelGroup() throws ExecutionException, InterruptedException, TimeoutException {
+		ChannelGroup group1 = new DefaultChannelGroup(executor);
+		ChannelGroup group2 = new DefaultChannelGroup(executor);
+
+		try {
+			HttpClient localClient1 =
+					client.port(server1.port())
+							.channelGroup(group1);
+			HttpClient localClient2 = localClient1.channelGroup(group2);
+			checkResponsesAndChannelsStates(
+					"server1-ConnectionPoolTests",
+					"server1-ConnectionPoolTests",
+					localClient1,
+					localClient2);
+		}
+		finally {
+			group1.close()
+					.get(30, TimeUnit.SECONDS);
+			group2.close()
+					.get(30, TimeUnit.SECONDS);
+		}
 	}
 
 	@Test
