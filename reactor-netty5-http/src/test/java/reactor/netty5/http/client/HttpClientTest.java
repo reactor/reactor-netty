@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -89,6 +90,8 @@ import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.dns.DnsAddressResolverGroup;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
+import io.netty5.util.concurrent.EventExecutor;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
@@ -133,10 +136,17 @@ class HttpClientTest extends BaseHttpTest {
 	static final Logger log = Loggers.getLogger(HttpClientTest.class);
 
 	static SelfSignedCertificate ssc;
+	static final EventExecutor executor = new SingleThreadEventExecutor();
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
+	}
+
+	@AfterAll
+	static void cleanup() throws ExecutionException, InterruptedException, TimeoutException {
+		executor.shutdownGracefully()
+				.asStage().get(30, TimeUnit.SECONDS);
 	}
 
 	@Test
@@ -1455,7 +1465,7 @@ class HttpClientTest extends BaseHttpTest {
 		ConnectionProvider connectionProvider =
 				ConnectionProvider.create("testChannelGroupClosesAllConnections", Integer.MAX_VALUE);
 
-		ChannelGroup group = new DefaultChannelGroup(new SingleThreadEventExecutor());
+		ChannelGroup group = new DefaultChannelGroup(executor);
 
 		CountDownLatch latch1 = new CountDownLatch(3);
 		CountDownLatch latch2 = new CountDownLatch(3);

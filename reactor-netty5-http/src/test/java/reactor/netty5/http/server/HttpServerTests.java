@@ -35,6 +35,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -51,6 +52,7 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.group.DefaultChannelGroup;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -81,6 +83,9 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
+import io.netty5.util.concurrent.EventExecutor;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -130,10 +135,32 @@ import static reactor.netty5.http.server.HttpServerFormDecoderProvider.DEFAULT_F
 class HttpServerTests extends BaseHttpTest {
 
 	static SelfSignedCertificate ssc;
+	static final EventExecutor executor = new SingleThreadEventExecutor();
+
+	ChannelGroup group;
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
+	}
+
+	@AfterAll
+	static void cleanup() throws ExecutionException, InterruptedException, TimeoutException {
+		executor.shutdownGracefully()
+				.asStage().get(30, TimeUnit.SECONDS);
+	}
+
+	@AfterEach
+	void tearDown() throws ExecutionException, InterruptedException, TimeoutException {
+		if (disposableServer != null) {
+			disposableServer.disposeNow();
+			disposableServer = null; // avoid to dispose again from BaseHttpTest.disposeServer()
+		}
+		if (group != null) {
+			group.close()
+					.asStage().get(30, TimeUnit.SECONDS);
+			group = null;
+		}
 	}
 
 	@Test
@@ -1631,6 +1658,7 @@ class HttpServerTests extends BaseHttpTest {
 		CountDownLatch latch2 = new CountDownLatch(2);
 		CountDownLatch latch3 = new CountDownLatch(1);
 		LoopResources loop = LoopResources.create("testGracefulShutdown");
+		group = new DefaultChannelGroup(executor);
 		disposableServer =
 				createServer()
 				          .runOn(loop)
@@ -1640,7 +1668,7 @@ class HttpServerTests extends BaseHttpTest {
 				          })
 				          // Register a channel group, when invoking disposeNow()
 				          // the implementation will wait for the active requests to finish
-				          .channelGroup(new DefaultChannelGroup(new SingleThreadEventExecutor()))
+				          .channelGroup(group)
 				          .route(r -> r.get("/delay500", (req, res) -> res.sendString(Mono.just("delay500")
 				                                                          .delayElement(Duration.ofMillis(500))))
 				                       .get("/delay1000", (req, res) -> res.sendString(Mono.just("delay1000")

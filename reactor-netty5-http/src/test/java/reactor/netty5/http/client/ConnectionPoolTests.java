@@ -17,13 +17,15 @@ package reactor.netty5.http.client;
 
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.resolver.DefaultAddressResolverGroup;
 import io.netty5.util.AttributeKey;
-import io.netty5.util.concurrent.GlobalEventExecutor;
+import io.netty5.util.concurrent.SingleThreadEventExecutor;
+import io.netty5.util.concurrent.EventExecutor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +50,9 @@ import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -65,6 +70,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	static ConnectionProvider provider;
 	static LoopResources loop;
 	static Supplier<ChannelMetricsRecorder> metricsRecorderSupplier;
+	static final EventExecutor executor = new SingleThreadEventExecutor();
 
 	HttpClient client;
 
@@ -99,7 +105,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	}
 
 	@AfterAll
-	static void tearDown() {
+	static void tearDown() throws ExecutionException, InterruptedException, TimeoutException {
 		server1.disposeNow();
 		server2.disposeNow();
 		server3.disposeNow();
@@ -108,6 +114,8 @@ class ConnectionPoolTests extends BaseHttpTest {
 		        .block(Duration.ofSeconds(5));
 		loop.disposeLater()
 		    .block(Duration.ofSeconds(5));
+		executor.shutdownGracefully()
+		    .asStage().get(30, TimeUnit.SECONDS);
 	}
 
 	@BeforeEach
@@ -151,16 +159,27 @@ class ConnectionPoolTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testClientWithChannelGroup() {
-		HttpClient localClient1 =
-				client.port(server1.port())
-				      .channelGroup(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE));
-		HttpClient localClient2 = localClient1.channelGroup(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE));
-		checkResponsesAndChannelsStates(
-				"server1-ConnectionPoolTests",
-				"server1-ConnectionPoolTests",
-				localClient1,
-				localClient2);
+	void testClientWithChannelGroup() throws ExecutionException, InterruptedException, TimeoutException {
+		ChannelGroup group1 = new DefaultChannelGroup(executor);
+		ChannelGroup group2 = new DefaultChannelGroup(executor);
+
+		try {
+			HttpClient localClient1 =
+					client.port(server1.port())
+							.channelGroup(group1);
+			HttpClient localClient2 = localClient1.channelGroup(group2);
+			checkResponsesAndChannelsStates(
+					"server1-ConnectionPoolTests",
+					"server1-ConnectionPoolTests",
+					localClient1,
+					localClient2);
+		}
+		finally {
+			group1.close()
+					.asStage().get(30, TimeUnit.SECONDS);
+			group2.close()
+					.asStage().get(30, TimeUnit.SECONDS);
+		}
 	}
 
 	@Test
