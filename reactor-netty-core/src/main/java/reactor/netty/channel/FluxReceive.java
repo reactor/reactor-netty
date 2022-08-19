@@ -503,12 +503,14 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			parent.onInboundCancel();
 		}
 
-		Throwable ex = inboundError;
-		if (ex != null) {
-			a.onError(ex);
-		}
-		else {
-			a.onComplete();
+		if (a != null) {
+			Throwable ex = inboundError;
+			if (ex != null) {
+				a.onError(ex);
+			}
+			else {
+				a.onComplete();
+			}
 		}
 	}
 
