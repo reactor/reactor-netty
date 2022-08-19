@@ -87,14 +87,16 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			if (eventLoop.inEventLoop()) {
 				if (state == 1) {
 					disposeAndUnsubscribeReceiver();
-				} else {
+				}
+				else {
 					unsubscribeReceiver();
 				}
 			}
 			else {
 				if (state == 1) {
 					eventLoop.execute(this::disposeAndUnsubscribeReceiver);
-				} else {
+				}
+				else {
 					eventLoop.execute(this::unsubscribeReceiver);
 				}
 			}
