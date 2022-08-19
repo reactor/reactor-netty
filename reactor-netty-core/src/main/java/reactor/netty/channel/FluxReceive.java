@@ -20,6 +20,7 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.IntConsumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -58,7 +59,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	volatile boolean   inboundDone;
 	Throwable inboundError;
 
-	volatile Disposable receiverCancel;
+	volatile IntConsumer receiverCancel;
 
 	volatile int once;
 	static final AtomicIntegerFieldUpdater<FluxReceive> ONCE =
@@ -82,12 +83,20 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		this.eventLoop = channel.eventLoop();
 		channel.config()
 		       .setAutoRead(false);
-		CANCEL.lazySet(this, () -> {
+		CANCEL.lazySet(this, (state) -> {
 			if (eventLoop.inEventLoop()) {
-				unsubscribeReceiver();
+				if (state == 1) {
+					disposeAndUnsubscribeReceiver();
+				} else {
+					unsubscribeReceiver();
+				}
 			}
 			else {
-				eventLoop.execute(this::unsubscribeReceiver);
+				if (state == 1) {
+					eventLoop.execute(this::disposeAndUnsubscribeReceiver);
+				} else {
+					eventLoop.execute(this::unsubscribeReceiver);
+				}
 			}
 		});
 	}
@@ -103,6 +112,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 	}
 
+
 	final long getPending() {
 		return receiverQueue != null ? receiverQueue.size() : 0;
 	}
@@ -113,7 +123,13 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public void dispose() {
-		cancel();
+		disposeReceiver();
+		if (eventLoop.inEventLoop()) {
+			drainReceiver();
+		}
+		else {
+			eventLoop.execute(this::drainReceiver);
+		}
 	}
 
 	@Override
@@ -186,16 +202,24 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 	}
 
-	final boolean cancelReceiver() {
-		Disposable c = receiverCancel;
+	final void cancelReceiver() {
+		IntConsumer c = receiverCancel;
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
-				c.dispose();
-				return true;
+				c.accept(0);
 			}
 		}
-		return false;
+	}
+
+	final void disposeReceiver() {
+		IntConsumer c = receiverCancel;
+		if (c != CANCELLED) {
+			c = CANCEL.getAndSet(this, CANCELLED);
+			if (c != CANCELLED) {
+				c.accept(1);
+			}
+		}
 	}
 
 	final void cleanQueue(@Nullable Queue<Object> q) {
@@ -469,6 +493,23 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 	}
 
+	final void disposeAndUnsubscribeReceiver() {
+		final CoreSubscriber<? super Object> a = receiver;
+		receiverDemand = 0L;
+		receiver = null;
+		if (isCancelled()) {
+			parent.onInboundCancel();
+		}
+
+		Throwable ex = inboundError;
+		if (ex != null) {
+			a.onError(ex);
+		}
+		else {
+			a.onComplete();
+		}
+	}
+
 	final void unsubscribeReceiver() {
 		receiverDemand = 0L;
 		receiver = null;
@@ -487,12 +528,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				'}';
 	}
 
-	static final AtomicReferenceFieldUpdater<FluxReceive, Disposable> CANCEL =
+	static final AtomicReferenceFieldUpdater<FluxReceive, IntConsumer> CANCEL =
 			AtomicReferenceFieldUpdater.newUpdater(FluxReceive.class,
-					Disposable.class,
+					IntConsumer.class,
 					"receiverCancel");
 
-	static final Disposable CANCELLED = () -> {
+	static final IntConsumer CANCELLED = (__) -> {
 	};
 
 	static final Logger log = Loggers.getLogger(FluxReceive.class);
