@@ -61,6 +61,8 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty.util.concurrent.EventExecutor;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -72,7 +74,6 @@ import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
-import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
@@ -94,10 +95,17 @@ class TcpServerTests {
 	final Logger log     = Loggers.getLogger(TcpServerTests.class);
 
 	static SelfSignedCertificate ssc;
+	static final EventExecutor executor = new DefaultEventExecutor();
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
+	}
+
+	@AfterAll
+	static void cleanup() throws Exception {
+		executor.shutdownGracefully()
+				.get(5, TimeUnit.SECONDS);
 	}
 
 	@Test
@@ -775,7 +783,7 @@ class TcpServerTests {
 
 	@Test
 	void testChannelGroupClosesAllConnections() throws Exception {
-		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
+		ChannelGroup group = new DefaultChannelGroup(executor);
 
 		CountDownLatch latch1 = new CountDownLatch(1);
 		CountDownLatch latch2 = new CountDownLatch(1);
@@ -802,8 +810,8 @@ class TcpServerTests {
 
 		boundServer.disposeNow();
 
-		FutureMono.from(group.close())
-		          .block(Duration.ofSeconds(30));
+		group.close()
+		          .get(30, TimeUnit.SECONDS);
 
 		assertThat(latch2.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 	}
@@ -814,7 +822,7 @@ class TcpServerTests {
 		CountDownLatch configured = new CountDownLatch(1);
 		CountDownLatch disconnected = new CountDownLatch(1);
 
-		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
+		ChannelGroup group = new DefaultChannelGroup(executor);
 
 		DisposableServer server =
 				TcpServer.create()
@@ -844,8 +852,8 @@ class TcpServerTests {
 
 		assertThat(configured.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		FutureMono.from(group.close())
-		          .block(Duration.ofSeconds(30));
+		group.close()
+				.get(30, TimeUnit.SECONDS);
 
 		assertThat(disconnected.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
@@ -906,6 +914,7 @@ class TcpServerTests {
 		CountDownLatch latch2 = new CountDownLatch(2);
 		CountDownLatch latch3 = new CountDownLatch(1);
 		LoopResources loop = LoopResources.create("testGracefulShutdown");
+		ChannelGroup group = new DefaultChannelGroup(executor);
 		DisposableServer disposableServer =
 				TcpServer.create()
 				         .port(0)
@@ -916,7 +925,7 @@ class TcpServerTests {
 				         })
 				         // Register a channel group, when invoking disposeNow()
 				         // the implementation will wait for the active requests to finish
-				         .channelGroup(new DefaultChannelGroup(new DefaultEventExecutor()))
+				         .channelGroup(group)
 				         .handle((in, out) -> out.sendString(Mono.just("delay1000")
 				                                                 .delayElement(Duration.ofSeconds(1))))
 				         .wiretap(true)
@@ -942,6 +951,10 @@ class TcpServerTests {
 
 		// Stop accepting incoming requests, wait at most 3s for the active requests to finish
 		disposableServer.disposeNow();
+
+		// Dispose the group
+		group.close()
+				.get(30, TimeUnit.SECONDS);
 
 		// Dispose the event loop
 		loop.disposeLater()
