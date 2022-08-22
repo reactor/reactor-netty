@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.IoHandle;
+import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
@@ -162,7 +163,7 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		protected void doWrite(ChannelOutboundBuffer in) {
+		protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
 		}
 
 		@Override
