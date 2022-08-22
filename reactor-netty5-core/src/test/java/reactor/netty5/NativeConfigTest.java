@@ -35,7 +35,7 @@ class NativeConfigTest {
 
 	@Test
 	void testChannelInboundHandler() throws Exception {
-		Set<Pojo> classes = findAllClassesUsingReflectionsLibrary("reactor.netty5", ChannelHandler.class);
+		Set<Pojo> classes = findAllClassesUsingReflection("reactor.netty5", ChannelHandler.class);
 
 		try (InputStream is = getClass()
 				.getResourceAsStream("/META-INF/native-image/io.projectreactor.netty/reactor-netty5-core/reflect-config.json")) {
@@ -47,7 +47,7 @@ class NativeConfigTest {
 		}
 	}
 
-	Set<Pojo> findAllClassesUsingReflectionsLibrary(String packageName, Class<?> subtype) {
+	Set<Pojo> findAllClassesUsingReflection(String packageName, Class<?> subtype) {
 		Reflections reflections = new Reflections(
 				new ConfigurationBuilder()
 						.forPackage(packageName)
