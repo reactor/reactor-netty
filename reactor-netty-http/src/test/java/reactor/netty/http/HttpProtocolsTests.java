@@ -18,8 +18,7 @@ package reactor.netty.http;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.classic.spi.LoggingEvent;
-import ch.qos.logback.core.Appender;
+import ch.qos.logback.core.AppenderBase;
 import ch.qos.logback.core.read.ListAppender;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -35,7 +34,6 @@ import io.netty.util.concurrent.DefaultPromise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -58,6 +56,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -339,7 +338,6 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompatibleCombinationsTest
-	@SuppressWarnings("unchecked")
 	void testAccessLog(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.handle((req, resp) -> {
@@ -352,13 +350,13 @@ class HttpProtocolsTests extends BaseHttpTest {
 				      .accessLog(true)
 				      .bindNow();
 
-		Appender<ILoggingEvent> mockedAppender = (Appender<ILoggingEvent>) Mockito.mock(Appender.class);
-		ArgumentCaptor<LoggingEvent> loggingEventArgumentCaptor = ArgumentCaptor.forClass(LoggingEvent.class);
-		Mockito.when(mockedAppender.getName()).thenReturn("MOCK");
+		AccessLogAppender accessLogAppender = new AccessLogAppender();
+		accessLogAppender.start();
 		Logger accessLogger = (Logger) LoggerFactory.getLogger("reactor.netty.http.server.AccessLog");
 		AtomicReference<String> protocol = new AtomicReference<>();
 		try {
-			accessLogger.addAppender(mockedAppender);
+			accessLogger.addAppender(accessLogAppender);
+
 			client.port(disposableServer.port())
 			      .get()
 			      .uri("/")
@@ -370,14 +368,15 @@ class HttpProtocolsTests extends BaseHttpTest {
 			      .expectNext("FOUND")
 			      .expectComplete()
 			      .verify(Duration.ofSeconds(5));
+
+			assertThat(accessLogAppender.latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(accessLogAppender.list).hasSize(1);
+			assertThat(accessLogAppender.list.get(0).getFormattedMessage()).contains("GET / HTTP/" + protocol.get() + "\" 200");
 		}
 		finally {
-			Thread.sleep(20);
-			Mockito.verify(mockedAppender, Mockito.times(1)).doAppend(loggingEventArgumentCaptor.capture());
-			assertThat(loggingEventArgumentCaptor.getAllValues()).hasSize(1);
-			LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(0);
-			assertThat(relevantLog.getFormattedMessage()).contains("GET / HTTP/" + protocol.get() + "\" 200");
-			accessLogger.detachAppender(mockedAppender);
+			accessLogger.detachAppender(accessLogAppender);
+			accessLogAppender.stop();
 		}
 	}
 
@@ -647,5 +646,16 @@ class HttpProtocolsTests extends BaseHttpTest {
 		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 
 		assertThat(goAwayReceived.await(10, TimeUnit.SECONDS)).isTrue();
+	}
+
+	static final class AccessLogAppender extends AppenderBase<ILoggingEvent> {
+
+		final CountDownLatch latch = new CountDownLatch(1);
+		final List<ILoggingEvent> list = new ArrayList<>();
+
+		protected void append(ILoggingEvent e) {
+			list.add(e);
+			latch.countDown();
+		}
 	}
 }
