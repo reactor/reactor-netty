@@ -20,7 +20,10 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
+import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty.contrib.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.contrib.handler.codec.http.multipart.HttpData;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -30,14 +33,24 @@ import reactor.netty5.BufferFlux;
 import reactor.netty5.TomcatServer;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
+import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty5.http.client.HttpClientOperations.SendForm.DEFAULT_FACTORY;
 
 /**
  * @author Violeta Georgieva
@@ -78,6 +91,58 @@ class HttpClientWithTomcatTest {
 		assertThat(response)
 				.isNotNull()
 				.contains("q=test%20d%20dq");
+	}
+
+	@Test
+	void postUploadWithMultipart() throws Exception {
+		Path file = Paths.get(getClass().getResource("/smallFile.txt").toURI());
+		try (InputStream f = Files.newInputStream(file)) {
+			doTestPostUpload((req, form) -> form.multipart(true)
+							.file("test", f)
+							.attr("attr1", "attr2")
+							.file("test2", f),
+					"test attr1 test2 ");
+		}
+	}
+
+	@Test
+	void postUploadNoMultipart() throws Exception {
+		doTestPostUpload((req, form) -> form.multipart(false).attr("attr1", "attr2"), "attr1=attr2");
+	}
+
+	@Test
+	void postUploadNoMultipartWithCustomFactory() throws Exception {
+		doTestPostUpload((req, form) -> {
+			DefaultHttpDataFactory customFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+			form.factory(customFactory)
+			    .multipart(false)
+			    .attr("attr1", "attr2");
+		}, "attr1=attr2");
+	}
+
+	@SuppressWarnings("unchecked")
+	private void doTestPostUpload(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback,
+			String expectedResponse) throws Exception {
+		HttpClient client =
+				HttpClient.create()
+				          .host("localhost")
+				          .port(getPort())
+				          .wiretap(true);
+
+		Tuple2<Integer, String> res;
+		res = client.post()
+		            .uri("/multipart")
+		            .sendForm(formCallback)
+		            .responseSingle((r, buf) -> buf.asString().map(s -> Tuples.of(r.status().code(), s)))
+		            .block(Duration.ofSeconds(30));
+
+		assertThat(res).as("response").isNotNull();
+		assertThat(res.getT1()).as("status code").isEqualTo(200);
+		assertThat(res.getT2()).as("response body reflecting request").contains(expectedResponse);
+
+		Field field = DEFAULT_FACTORY.getClass().getDeclaredField("requestFileDeleteMap");
+		field.setAccessible(true);
+		assertThat((Map<HttpRequest, List<HttpData>>) field.get(DEFAULT_FACTORY)).isEmpty();
 	}
 
 	@Test

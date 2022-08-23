@@ -42,6 +42,7 @@ import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpContent;
+import io.netty5.handler.codec.http.HttpConstants;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
@@ -55,14 +56,22 @@ import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.headers.HttpSetCookie;
+import io.netty.contrib.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.contrib.handler.codec.http.multipart.HttpDataFactory;
+import io.netty.contrib.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
+import io.netty5.handler.stream.ChunkedWriteHandler;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Operators;
 import reactor.core.publisher.Sinks;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
@@ -779,6 +788,123 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			this.response = response;
 			this.headers = headers;
 			this.cookieHolder = ClientCookies.newClientResponseHolder(headers);
+		}
+	}
+
+	static final class SendForm extends Mono<Void> {
+
+		static final HttpDataFactory DEFAULT_FACTORY = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
+
+		final HttpClientOperations                                  parent;
+		final BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback;
+		final Consumer<Flux<Long>>                                  progressCallback;
+
+		SendForm(HttpClientOperations parent,
+				BiConsumer<? super HttpClientRequest, HttpClientForm>  formCallback,
+				@Nullable Consumer<Flux<Long>> progressCallback) {
+			this.parent = parent;
+			this.formCallback = formCallback;
+			this.progressCallback = progressCallback;
+		}
+
+		@Override
+		public void subscribe(CoreSubscriber<? super Void> s) {
+			if (!parent.markSentHeaders()) {
+				Operators.error(s,
+						new IllegalStateException("headers have already been sent"));
+				return;
+			}
+			Subscription subscription = Operators.emptySubscription();
+			s.onSubscribe(subscription);
+			if (parent.channel()
+			          .executor()
+			          .inEventLoop()) {
+				_subscribe(s);
+			}
+			else {
+				parent.channel()
+				      .executor()
+				      .execute(() -> _subscribe(s));
+			}
+		}
+
+		@SuppressWarnings("FutureReturnValueIgnored")
+		void _subscribe(CoreSubscriber<? super Void> s) {
+			HttpDataFactory df = DEFAULT_FACTORY;
+
+			try {
+				HttpClientFormEncoder encoder = new HttpClientFormEncoder(df,
+						parent.nettyRequest,
+						false,
+						HttpConstants.DEFAULT_CHARSET,
+						HttpPostRequestEncoder.EncoderMode.RFC1738);
+
+				formCallback.accept(parent, encoder);
+
+				encoder = encoder.applyChanges(parent.nettyRequest);
+				df = encoder.newFactory;
+
+				if (!encoder.isMultipart()) {
+					parent.requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+				}
+
+				// Returned value is deliberately ignored
+				parent.addHandlerFirst(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
+
+				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);
+
+				HttpRequest r = encoder.finalizeRequest();
+
+				if (!chunked) {
+					HttpUtil.setTransferEncodingChunked(r, false);
+					HttpUtil.setContentLength(r, encoder.length());
+				}
+
+				Mono<Void> mono = Mono.fromCompletionStage(parent.channel()
+				                        .writeAndFlush(r).asStage());
+
+				if (encoder.isChunked()) {
+					Flux<Long> tail = encoder.progressSink.asFlux().onBackpressureLatest();
+
+					if (encoder.cleanOnTerminate) {
+						tail = tail.doOnCancel(encoder)
+						           .doAfterTerminate(encoder);
+					}
+
+					if (progressCallback != null) {
+						progressCallback.accept(tail);
+					}
+					else {
+						tail.subscribe();
+					}
+					//"FutureReturnValueIgnored" this is deliberate
+					parent.channel()
+					      .writeAndFlush(encoder);
+				}
+				else {
+					if (encoder.cleanOnTerminate) {
+						mono = mono.doOnCancel(encoder)
+						           .doAfterTerminate(encoder);
+					}
+
+					if (progressCallback != null) {
+						progressCallback.accept(mono.cast(Long.class)
+						                            .switchIfEmpty(Mono.just(encoder.length()))
+						                            .flux());
+					}
+					else {
+						mono.subscribe();
+					}
+				}
+				s.onComplete();
+
+
+			}
+			catch (Throwable e) {
+				Exceptions.throwIfJvmFatal(e);
+				df.cleanRequestHttpData(parent.nettyRequest);
+				s.onError(Exceptions.unwrap(e));
+			}
 		}
 	}
 

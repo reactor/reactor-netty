@@ -62,6 +62,7 @@ dependencies {
 	api "io.netty:netty5-codec-http:$nettyVersion"
 	api "io.netty:netty5-codec-http2:$nettyVersion"
 	api "io.netty:netty5-resolver-dns:$nettyVersion"
+	api "io.netty.contrib:netty-codec-multipart:$nettyContribVersion"
 	// MacOS binaries are not available for Netty SNAPSHOT version
 	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
 		if (osdetector.classifier == "osx-x86_64" || osdetector.classifier == "osx-aarch_64") {
@@ -137,6 +138,7 @@ dependencies {
 	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-tracing-integration-test:$micrometerTracingVersion"
 	testImplementation "io.netty.contrib:netty-codec-extras:$nettyContribVersion"
+	testImplementation "io.netty.contrib:netty-codec-multipart:$nettyContribVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
@@ -258,14 +260,6 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.server.HttpServer#tcpConfiguration(java.util.function.Function)',
 			'reactor.netty.http.server.logging.AccessLogArgProvider#zonedDateTime()',
 
-			// TODO temporary disable multipart on the client
-			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer)',
-			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer, java.util.function.Consumer)',
-
-			// TODO temporary disable multipart on the server
-			'reactor.netty.http.server.HttpServerRequest#receiveForm()',
-			'reactor.netty.http.server.HttpServerRequest#receiveForm(java.util.function.Consumer)',
-
 			// Changes related to Netty 5 package change
 			'reactor.netty.http.HttpInfos#method()',
 			'reactor.netty.http.HttpInfos#version()',
@@ -315,10 +309,6 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.client.HttpClient#cookiesWhen(java.lang.String, java.util.function.Function)',
 			'reactor.netty.http.client.HttpClientConfig#cookieEncoder()',
 			'reactor.netty.http.client.HttpClientConfig#cookieDecoder()'
-	]
-	classExcludes = [
-			// TODO temporary disable multipart on the client
-			'reactor.netty.http.client.HttpClientForm'
 	]
 }
 
