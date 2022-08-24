@@ -62,7 +62,7 @@ dependencies {
 	api "io.netty:netty5-codec-http:$nettyVersion"
 	api "io.netty:netty5-codec-http2:$nettyVersion"
 	api "io.netty:netty5-resolver-dns:$nettyVersion"
-	api "io.netty.contrib:netty-codec-multipart:$nettyContribVersion"
+	api "io.netty.contrib:netty-codec-multipart:$nettyContribMultipartVersion"
 	// MacOS binaries are not available for Netty SNAPSHOT version
 	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
 		if (osdetector.classifier == "osx-x86_64" || osdetector.classifier == "osx-aarch_64") {
@@ -138,7 +138,7 @@ dependencies {
 	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-tracing-integration-test:$micrometerTracingVersion"
 	testImplementation "io.netty.contrib:netty-codec-extras:$nettyContribVersion"
-	testImplementation "io.netty.contrib:netty-codec-multipart:$nettyContribVersion"
+	testImplementation "io.netty.contrib:netty-codec-multipart:$nettyContribMultipartVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
