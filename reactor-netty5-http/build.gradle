@@ -138,7 +138,6 @@ dependencies {
 	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-tracing-integration-test:$micrometerTracingVersion"
 	testImplementation "io.netty.contrib:netty-codec-extras:$nettyContribVersion"
-	testImplementation "io.netty.contrib:netty-codec-multipart:$nettyContribMultipartVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
@@ -279,6 +278,10 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.client.HttpClientRequest#headers(io.netty.handler.codec.http.HttpHeaders)',
 			'reactor.netty.http.client.HttpClientResponse#responseHeaders()',
 			'reactor.netty.http.client.HttpClientResponse#status()',
+			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer)',
+			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer, java.util.function.Consumer)',
+			'reactor.netty.http.server.HttpServerRequest#receiveForm()',
+			'reactor.netty.http.server.HttpServerRequest#receiveForm(java.util.function.Consumer)',
 			'reactor.netty.http.client.WebsocketClientSpec#version()',
 			'reactor.netty.http.client.WebsocketClientSpec$Builder#version(io.netty.handler.codec.http.websocketx.WebSocketVersion)',
 
@@ -309,6 +312,10 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.client.HttpClient#cookiesWhen(java.lang.String, java.util.function.Function)',
 			'reactor.netty.http.client.HttpClientConfig#cookieEncoder()',
 			'reactor.netty.http.client.HttpClientConfig#cookieDecoder()'
+	]
+	classExcludes = [
+			// Changes related to Netty 5 package change
+			'reactor.netty.http.client.HttpClientForm'
 	]
 }
 

@@ -819,11 +819,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				config.newHttpPostRequestDecoder(nettyRequest, isMultipart).flatMapMany(decoder ->
 						receiveObject() // receiveContent uses filter operator, this operator buffers, but we don't want it
 								.concatMap(object -> {
-									if (!(object instanceof HttpContent)) {
+									if (!(object instanceof HttpContent<?> objHttpContent)) {
 										return Mono.empty();
 									}
-									HttpContent httpContent = config.maxInMemorySize > -1 ?
-											(HttpContent) (((HttpContent) object).send().receive()) : (HttpContent) object;
+									HttpContent<?> httpContent = config.maxInMemorySize > -1 ?
+											objHttpContent.send().receive() : objHttpContent;
 
 									return config.maxInMemorySize == -1 ?
 											Flux.using(

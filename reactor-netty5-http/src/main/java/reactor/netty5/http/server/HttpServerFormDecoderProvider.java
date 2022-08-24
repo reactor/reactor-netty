@@ -350,8 +350,8 @@ public final class HttpServerFormDecoderProvider {
 
 		@Override
 		protected void addHttpData(InterfaceHttpData data) {
-			if (data instanceof HttpData) {
-				currentCompletedHttpData.add((HttpData) data);
+			if (data instanceof HttpData httpData) {
+				currentCompletedHttpData.add(httpData);
 			}
 		}
 
@@ -365,8 +365,8 @@ public final class HttpServerFormDecoderProvider {
 
 			if (!onlyCompleted) {
 				InterfaceHttpData partial = currentPartialHttpData();
-				if (partial instanceof HttpData) {
-					((HttpData) partial).delete();
+				if (partial instanceof HttpData partialData) {
+					partialData.delete();
 				}
 			}
 		}
@@ -375,8 +375,7 @@ public final class HttpServerFormDecoderProvider {
 		public List<HttpData> currentHttpData(boolean onlyCompleted) {
 			if (!onlyCompleted) {
 				InterfaceHttpData partial = currentPartialHttpData();
-				if (partial instanceof HttpData) {
-					HttpData partialData = (HttpData) partial;
+				if (partial instanceof HttpData partialData) {
 					currentCompletedHttpData.add(partialData.replace(partialData.content().split()));
 				}
 			}
@@ -408,8 +407,8 @@ public final class HttpServerFormDecoderProvider {
 
 		@Override
 		protected void addHttpData(InterfaceHttpData data) {
-			if (data instanceof HttpData) {
-				currentCompletedHttpData.add((HttpData) data);
+			if (data instanceof HttpData httpData) {
+				currentCompletedHttpData.add(httpData);
 			}
 		}
 
@@ -423,8 +422,8 @@ public final class HttpServerFormDecoderProvider {
 
 			if (!onlyCompleted) {
 				InterfaceHttpData partial = currentPartialHttpData();
-				if (partial instanceof HttpData) {
-					((HttpData) partial).delete();
+				if (partial instanceof HttpData partialData) {
+					partialData.delete();
 				}
 			}
 		}
@@ -433,8 +432,7 @@ public final class HttpServerFormDecoderProvider {
 		public List<HttpData> currentHttpData(boolean onlyCompleted) {
 			if (!onlyCompleted) {
 				InterfaceHttpData partial = currentPartialHttpData();
-				if (partial instanceof HttpData) {
-					HttpData partialData = (HttpData) partial;
+				if (partial instanceof HttpData partialData) {
 					currentCompletedHttpData.add(partialData.replace(partialData.content().split()));
 				}
 			}

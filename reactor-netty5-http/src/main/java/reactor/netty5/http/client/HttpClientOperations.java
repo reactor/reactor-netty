@@ -828,7 +828,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 		}
 
-		@SuppressWarnings("FutureReturnValueIgnored")
 		void _subscribe(CoreSubscriber<? super Void> s) {
 			HttpDataFactory df = DEFAULT_FACTORY;
 
@@ -848,7 +847,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					parent.requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 				}
 
-				// Returned value is deliberately ignored
 				parent.addHandlerFirst(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
 
 				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);
@@ -877,7 +875,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					else {
 						tail.subscribe();
 					}
-					//"FutureReturnValueIgnored" this is deliberate
 					parent.channel()
 					      .writeAndFlush(encoder);
 				}

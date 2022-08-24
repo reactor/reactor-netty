@@ -44,8 +44,9 @@ import reactor.util.annotation.Nullable;
  * <p>
  * This encoder will help to encode Request for a FORM as POST.
  */
+@SuppressWarnings("try")
 final class HttpClientFormEncoder extends HttpPostRequestEncoder
-		implements ChunkedInput<HttpContent>, Runnable, HttpClientForm {
+		implements ChunkedInput<HttpContent<?>>, Runnable, HttpClientForm {
 
 	final Sinks.Many<Long> progressSink;
 	final HttpRequest request;
@@ -84,8 +85,8 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpContent readChunk(BufferAllocator allocator) throws Exception {
-		HttpContent c = super.readChunk(allocator);
+	public HttpContent<?> readChunk(BufferAllocator allocator) throws Exception {
+		HttpContent<?> c = super.readChunk(allocator);
 		if (c == null) {
 			progressSink.emitComplete(Sinks.EmitFailureHandler.FAIL_FAST);
 		}

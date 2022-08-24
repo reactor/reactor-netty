@@ -2267,11 +2267,8 @@ class HttpServerTests extends BaseHttpTest {
 				                  if (msg instanceof ByteBufHolder byteBuf) {
 				                      byteBufReplay.get().add(byteBuf.content());
 				                  }
-				                  else if (msg instanceof ByteBuf byteBuf) {
-				                      byteBufReplay.get().add(byteBuf);
-				                  }
-								  else if (msg instanceof Buffer buf) {
-									  bufReplay.get().add(buf);
+				                  else if (msg instanceof Buffer buf) {
+				                      bufReplay.get().add(buf);
 				                  }
 				                  ctx.fireChannelRead(msg);
 				              }
