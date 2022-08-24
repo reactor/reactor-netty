@@ -280,8 +280,6 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.client.HttpClientResponse#status()',
 			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer)',
 			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer, java.util.function.Consumer)',
-			'reactor.netty.http.server.HttpServerRequest#receiveForm()',
-			'reactor.netty.http.server.HttpServerRequest#receiveForm(java.util.function.Consumer)',
 			'reactor.netty.http.client.WebsocketClientSpec#version()',
 			'reactor.netty.http.client.WebsocketClientSpec$Builder#version(io.netty.handler.codec.http.websocketx.WebSocketVersion)',
 
@@ -298,6 +296,8 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.server.HttpServerResponse#status()',
 			'reactor.netty.http.server.HttpServerResponse#status(io.netty.handler.codec.http.HttpResponseStatus)',
 			'reactor.netty.http.server.ServerCookies#newServerRequestHolder(io.netty.handler.codec.http.HttpHeaders, io.netty.handler.codec.http.cookie.ServerCookieDecoder)',
+			'reactor.netty.http.server.HttpServerRequest#receiveForm()',
+			'reactor.netty.http.server.HttpServerRequest#receiveForm(java.util.function.Consumer)',
 
 			'reactor.netty.http.server.logging.AccessLogHandlerFactory#create(java.util.function.Function)',
 
