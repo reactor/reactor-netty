@@ -66,15 +66,15 @@ dependencies {
 	// MacOS binaries are not available for Netty SNAPSHOT version
 	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
 		if (osdetector.classifier == "osx-x86_64" || osdetector.classifier == "osx-aarch_64") {
-			api "io.netty:netty5-resolver-dns-native-macos:$nettyVersion$os_suffix"
+			testImplementation "io.netty:netty5-resolver-dns-native-macos:$nettyVersion$os_suffix"
 		}
 		else {
-			api "io.netty:netty5-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
+			testImplementation "io.netty:netty5-resolver-dns-classes-macos:$nettyVersion"
 		}
 	}
 	else {
 		// MacOS binaries are not available for Netty SNAPSHOT version
-		api "io.netty:netty5-resolver-dns-classes-macos:$nettyVersion"
+		testImplementation "io.netty:netty5-resolver-dns-classes-macos:$nettyVersion"
 	}
 	compileOnly "io.netty.contrib:netty-codec-haproxy:$nettyContribVersion"
 	//transport resolution: typical build forces epoll but not kqueue transitively
