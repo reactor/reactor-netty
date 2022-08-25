@@ -2264,10 +2264,7 @@ class HttpServerTests extends BaseHttpTest {
 
 				              @Override
 				              public void channelRead(ChannelHandlerContext ctx, Object msg) {
-				                  if (msg instanceof ByteBufHolder byteBuf) {
-				                      byteBufReplay.get().add(byteBuf.content());
-				                  }
-				                  else if (msg instanceof Buffer buf) {
+				                  if (msg instanceof Buffer buf) {
 				                      bufReplay.get().add(buf);
 				                  }
 				                  ctx.fireChannelRead(msg);

@@ -280,6 +280,8 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.client.HttpClientResponse#status()',
 			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer)',
 			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer, java.util.function.Consumer)',
+			'reactor.netty.http.client.HttpClientForm#encoding(io.netty.handler.codec.http.multipart.HttpPostRequestEncoder$EncoderMode)',
+			'reactor.netty.http.client.HttpClientForm#factory(io.netty.handler.codec.http.multipart.HttpDataFactory)',
 			'reactor.netty.http.client.WebsocketClientSpec#version()',
 			'reactor.netty.http.client.WebsocketClientSpec$Builder#version(io.netty.handler.codec.http.websocketx.WebSocketVersion)',
 
@@ -312,10 +314,6 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.client.HttpClient#cookiesWhen(java.lang.String, java.util.function.Function)',
 			'reactor.netty.http.client.HttpClientConfig#cookieEncoder()',
 			'reactor.netty.http.client.HttpClientConfig#cookieDecoder()'
-	]
-	classExcludes = [
-			// Changes related to Netty 5 package change
-			'reactor.netty.http.client.HttpClientForm'
 	]
 }
 
