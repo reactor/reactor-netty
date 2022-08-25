@@ -15,13 +15,12 @@
  */
 package reactor.netty5;
 
+import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.IoHandle;
-import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
@@ -163,11 +162,11 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		protected void doWrite(ChannelOutboundBuffer channelOutboundBuffer, WriteHandleFactory.WriteHandle writeHandle) throws Exception {
+		protected void doWriteNow(AbstractChannel<Channel, SocketAddress, SocketAddress>.WriteSink writeSink) {
 		}
 
 		@Override
-		protected boolean doConnect(SocketAddress socketAddress, SocketAddress socketAddress1) {
+		protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData) {
 			return false;
 		}
 
