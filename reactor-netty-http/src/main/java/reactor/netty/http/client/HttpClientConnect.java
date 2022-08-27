@@ -15,7 +15,6 @@
  */
 package reactor.netty.http.client;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
@@ -67,6 +66,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.retry.Retry;
+import reactor.util.retry.RetrySpec;
 
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
@@ -208,7 +208,7 @@ class HttpClientConnect extends HttpClient {
 		public void subscribe(CoreSubscriber<? super Connection> actual) {
 			HttpClientHandler handler = new HttpClientHandler(config);
 
-			Mono.<Connection>create(sink -> {
+			final Mono<Connection> baseMono = Mono.<Connection>create(sink -> {
 				HttpClientConfig _config = config;
 
 				//append secure handler if needed
@@ -269,7 +269,6 @@ class HttpClientConnect extends HttpClient {
 						.acquire(_config, observer, handler, resolver)
 						.subscribe(new ClientTransportSubscriber(sink));
 
-				// TODO definitely not happy about spreading the retry logic even more
 			}).retryWhen(Retry.indefinitely().filter(err -> {
 						if (err instanceof RedirectClientException) {
 							RedirectClientException re = (RedirectClientException)err;
@@ -280,8 +279,13 @@ class HttpClientConnect extends HttpClient {
 							return true;
 						}
 						return false;
-			})).retryWhen(Retry.max(config.retryConfig.maxRetries).filter(handler))
-			.subscribe(actual);
+			}));
+
+			// If request retry is enabled, the handler should guarantee no request data sent
+			(config.retryDisabled
+					? baseMono
+					: baseMono.retryWhen(config.requestRetrySpec.modifyErrorFilter(handler::and))
+			).subscribe(actual);
 		}
 
 		private void removeIncompatibleProtocol(HttpClientConfig config, HttpProtocol protocol) {
@@ -358,7 +362,7 @@ class HttpClientConnect extends HttpClient {
 					handler.previousRequestHeaders = ops.requestHeaders;
 				}
 			}
-			else if (handler.canRetry(error)) {
+			else if (handler.requestRetrySpec.errorFilter.test(error)) {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
 				if (ops != null && ops.hasSentHeaders()) {
 					// In some cases the channel close event may be delayed and thus the connection to be
@@ -369,8 +373,8 @@ class HttpClientConnect extends HttpClient {
 					// Mark the connection as non-persistent here so that it is never returned to the pool and leave
 					// the channel close event to invalidate it.
 					ops.markPersistent(false);
-					// Disable retry if the headers or/and the body were sent
-					handler.shouldRetry = false;
+					// Signal to retry that headers or/and the body were sent
+					handler.requestDataSent = true;
 					if (log.isWarnEnabled()) {
 						log.warn(format(connection.channel(),
 								"The connection observed an error, the request cannot be " +
@@ -480,10 +484,14 @@ class HttpClientConnect extends HttpClient {
 		volatile UriEndpoint        fromURI;
 		volatile Supplier<String>[] redirectedFrom;
 
-		final RequestRetryConfig    retryConfig;
+		/**
+		 * A {@link RetrySpec} that is tied to request submission.  The implementation
+		 * that leverages this is supposed to guarantee that no retry will happen if
+		 * any HTTP request data is sent over the wire.
+		 */
+		final RetrySpec             requestRetrySpec;
 
-		// TODO not happy with name as it collides with config concept..
-		volatile boolean            shouldRetry = true;
+		volatile boolean            requestDataSent;
 
 		volatile HttpHeaders        previousRequestHeaders;
 
@@ -504,7 +512,7 @@ class HttpClientConnect extends HttpClient {
 					new UriEndpointFactory(configuration.remoteAddress(), configuration.isSecure(), URI_ADDRESS_MAPPER);
 
 			this.websocketClientSpec = configuration.websocketClientSpec;
-			this.retryConfig = configuration.retryConfig;
+			this.requestRetrySpec = configuration.requestRetrySpec;
 			this.handler = configuration.body;
 
 			if (configuration.uri == null) {
@@ -690,20 +698,11 @@ class HttpClientConnect extends HttpClient {
 
 		@Override
 		public boolean test(Throwable throwable) {
-			if (shouldRetry && canRetry(throwable)) {
+			if (!requestDataSent) {
 				redirect(toURI.toString());
 				return true;
 			}
 			return false;
-		}
-
-		/**
-		 * Signals that the request <i>can</i> be retried.
-		 */
-		boolean canRetry(final Throwable err) {
-			return shouldRetry &&
-					err instanceof IOException &&
-					retryConfig.isRetrieable((IOException)err);
 		}
 
 		@Override

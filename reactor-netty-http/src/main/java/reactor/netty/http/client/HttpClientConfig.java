@@ -68,6 +68,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
+import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http2SettingsSpec;
@@ -84,6 +85,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.retry.Retry;
+import reactor.util.retry.RetrySpec;
 
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.http.client.Http2ConnectionProvider.OWNER;
@@ -316,9 +318,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	Consumer<HttpClientRequest> redirectRequestConsumer;
 	Duration responseTimeout;
 
-	HttpClient.RequestRetryConfig retryConfig;
+	RetrySpec requestRetrySpec;
 
-	// TODO consolidate this with config concept
 	boolean retryDisabled;
 
 	SslProvider sslProvider;
@@ -338,7 +339,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.method = HttpMethod.GET;
 		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
 		this._protocols = h11;
-		this.retryConfig = HttpClient.RequestRetryConfig.DEFAULT;
+		this.requestRetrySpec = Retry.max(1).filter(AbortedException::isConnectionReset);
 	}
 
 	HttpClientConfig(HttpClientConfig parent) {
@@ -367,7 +368,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.redirectRequestBiConsumer = parent.redirectRequestBiConsumer;
 		this.redirectRequestConsumer = parent.redirectRequestConsumer;
 		this.responseTimeout = parent.responseTimeout;
-		this.retryConfig = parent.retryConfig;
+		this.requestRetrySpec = parent.requestRetrySpec;
 		this.retryDisabled = parent.retryDisabled;
 		this.sslProvider = parent.sslProvider;
 		this.uri = parent.uri;

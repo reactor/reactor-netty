@@ -63,6 +63,7 @@ import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.ClientTransport;
 import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
+import reactor.util.retry.RetrySpec;
 
 /**
  * An HttpClient allows building in a safe immutable way an http client that is
@@ -637,47 +638,37 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Option to disable {@code retry once} support for the outgoing requests that fail with
-	 * {@link reactor.netty.channel.AbortedException#isConnectionReset(Throwable)}.
-	 * <p>By default this is set to false in which case {@code retry once} is enabled.
+	 * Option to disable {@code request retry} established by {@link #requestRetry(RetrySpec)}.
+	 * See its doc for any default retry behavior!
+	 * <p>By default this is set to false.
 	 *
-	 * @param disableRetry true to disable {@code retry once}, false to enable it
+	 * @param disableRetry true to disable {@code request retry}, false to enable it
 	 *
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.6
 	 */
 	public final HttpClient disableRetry(boolean disableRetry) {
-		if (RequestRetryConfig.DISABLED == configuration().retryConfig) { // yes instance comparison..
+		if (disableRetry == configuration().retryDisabled) {
 			return this;
 		}
 		HttpClient dup = duplicate();
-		dup.configuration().retryConfig = RequestRetryConfig.DISABLED;
+		dup.configuration().retryDisabled = disableRetry;
 		return dup;
 	}
 
-	public final HttpClient retryConfig(final RequestRetryConfig retryConfig) {
-		Objects.requireNonNull(retryConfig, "retryConfig");
+	/**
+	 * Option to customize {@code request retry} behavior.  If any HTTP request data
+	 * (headers, body, etc.), the request will not be resubmitted regardless of this
+	 * configuration.  This can be disabled via {@link #disableRetry(boolean)}.
+	 *
+	 * <p>This defaults to {@code retry once} for outgoing requests that fail with
+	 * {@link reactor.netty.channel.AbortedException#isConnectionReset(Throwable)}.
+	 */
+	public final HttpClient requestRetry(final RetrySpec requestRetry) {
+		Objects.requireNonNull(requestRetry, "requestRetry");
 		HttpClient dup = duplicate();
-		dup.configuration().retryConfig = retryConfig;
+		dup.configuration().requestRetrySpec = requestRetry;
 		return dup;
-	}
-
-	public static class RequestRetryConfig {
-
-		public final static RequestRetryConfig DEFAULT = new RequestRetryConfig(1, AbortedException::isConnectionReset);
-		public final static RequestRetryConfig DISABLED = new RequestRetryConfig(0, anyException -> false);
-
-		final int maxRetries;
-		final Predicate<IOException> isRetriable;
-
-		public RequestRetryConfig(final int maxRetries, final Predicate<IOException> isRetriable) {
-			this.maxRetries = maxRetries;
-			this.isRetriable = isRetriable;
-		}
-
-		boolean isRetrieable(final IOException ioe) {
-			return isRetriable.test(ioe);
-		}
 	}
 
 	/**
