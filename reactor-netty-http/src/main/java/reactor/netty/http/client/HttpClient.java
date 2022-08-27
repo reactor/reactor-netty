@@ -658,8 +658,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 
 	/**
 	 * Option to customize {@code request retry} behavior.  If any HTTP request data
-	 * (headers, body, etc.), the request will not be resubmitted regardless of this
-	 * configuration.  This can be disabled via {@link #disableRetry(boolean)}.
+	 * (headers, body, etc.) is sent, the request will not be retried regardless of
+	 * this configuration.  This can be disabled via {@link #disableRetry(boolean)}.
 	 *
 	 * <p>This defaults to {@code retry once} for outgoing requests that fail with
 	 * {@link reactor.netty.channel.AbortedException#isConnectionReset(Throwable)}.
