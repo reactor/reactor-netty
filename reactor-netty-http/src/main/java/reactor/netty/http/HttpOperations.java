@@ -16,6 +16,7 @@
 package reactor.netty.http;
 
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -42,6 +43,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -52,6 +54,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -495,6 +498,81 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
 			return parent.withConnection(withConnection);
 		}
+	}
+
+	public static final class WebSocketNettyOutboundThen implements NettyOutbound {
+		final NettyOutbound source;
+		final Mono<Void> thenMono;
+		static final Runnable EMPTY_CLEANUP = () -> {
+		};
+
+		public WebSocketNettyOutboundThen(NettyOutbound source, Publisher<Void> thenPublisher) {
+			this(source, thenPublisher, EMPTY_CLEANUP);
+		}
+
+		public WebSocketNettyOutboundThen(NettyOutbound source, Publisher<Void> thenPublisher, Runnable onCleanup) {
+			this.source = source;
+			Objects.requireNonNull(onCleanup, "onCleanup");
+			Mono<Void> parentMono = source.then();
+			if (parentMono == Mono.<Void>empty()) {
+				if (onCleanup == EMPTY_CLEANUP) {
+					this.thenMono = Mono.from(thenPublisher);
+				} else {
+					this.thenMono = Mono.from(thenPublisher).doOnCancel(onCleanup).doOnError((t) -> {
+						onCleanup.run();
+					});
+				}
+			} else if (onCleanup == EMPTY_CLEANUP) {
+				this.thenMono = parentMono.thenEmpty(thenPublisher);
+			} else {
+				this.thenMono = parentMono.thenEmpty(thenPublisher).doOnCancel(onCleanup).doOnError((t) -> {
+					onCleanup.run();
+				});
+			}
+
+		}
+
+		public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput, BiFunction<? super Connection, ? super S, ?> mappedInput, Consumer<? super S> sourceCleanup) {
+			return this.then(this.source.sendUsing(sourceInput, mappedInput, sourceCleanup));
+		}
+
+		public ByteBufAllocator alloc() {
+			return this.source.alloc();
+		}
+
+		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+			return this.source.withConnection(withConnection);
+		}
+
+		public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
+			 return sendObject(Flux.from(dataStream).map(WebsocketOutbound.bytebufToWebsocketFrame));
+		}
+
+		public NettyOutbound sendObject(Publisher<?> dataStream, Predicate<Object> predicate) {
+			return this.then(this.source.sendObject(dataStream, predicate));
+		}
+
+		public NettyOutbound sendObject(Object message) {
+			return this.then(this.source.sendObject(message), () -> {
+				ReactorNetty.safeRelease(message);
+			});
+		}
+		public NettyOutbound then(Publisher<Void> other) {
+			return new WebSocketNettyOutboundThen(this, other);
+		}
+
+		public NettyOutbound then(Publisher<Void> other, Runnable onCleanup) {
+			return new WebSocketNettyOutboundThen(this, other, onCleanup);
+		}
+
+		public Mono<Void> then() {
+			return this.thenMono;
+		}
+		public NettyOutbound sendString(Publisher<? extends String> dataStream, Charset charset) {
+			return sendObject(Flux.from(dataStream)
+					.map(WebsocketOutbound.stringToWebsocketFrame));
+		}
+
 	}
 }
 

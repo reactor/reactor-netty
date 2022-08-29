@@ -277,4 +277,14 @@ final class WebsocketClientOperations extends HttpClientOperations
 	static final AtomicIntegerFieldUpdater<WebsocketClientOperations> CLOSE_SENT =
 			AtomicIntegerFieldUpdater.newUpdater(WebsocketClientOperations.class,
 					"closeSent");
+
+	@Override
+	public NettyOutbound then(Publisher<Void> other) {
+		return new WebSocketNettyOutboundThen(this, other);
+	}
+
+	@Override
+	public NettyOutbound then(Publisher<Void> other, Runnable onCleanup) {
+		return new WebSocketNettyOutboundThen(this, other, onCleanup);
+	}
 }
