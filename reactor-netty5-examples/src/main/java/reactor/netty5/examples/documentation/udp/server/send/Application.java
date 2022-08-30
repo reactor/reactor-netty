@@ -17,11 +17,11 @@ package reactor.netty5.examples.documentation.udp.server.send;
 
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.udp.UdpServer;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 public class Application {
@@ -34,7 +34,7 @@ public class Application {
 				                 in.receiveObject()
 				                   .map(o -> {
 				                       if (o instanceof DatagramPacket p) {
-				                           Buffer buf = out.alloc().copyOf("hello".getBytes(CharsetUtil.UTF_8));
+				                           Buffer buf = out.alloc().copyOf("hello".getBytes(StandardCharsets.UTF_8));
 				                           return new DatagramPacket(buf, p.sender()); //<1>
 				                       }
 				                       else {

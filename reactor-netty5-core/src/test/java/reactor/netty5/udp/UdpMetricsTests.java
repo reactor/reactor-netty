@@ -25,7 +25,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.core.tck.MeterRegistryAssert;
 import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +36,7 @@ import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -105,7 +105,7 @@ class UdpMetricsTests {
 				                   .map(o -> {
 				                       if (o instanceof DatagramPacket p) {
 				                           latch.countDown();
-				                           Buffer buf = out.alloc().copyOf("hello".getBytes(CharsetUtil.UTF_8));
+				                           Buffer buf = out.alloc().copyOf("hello".getBytes(StandardCharsets.UTF_8));
 				                           return new DatagramPacket(buf, p.sender());
 				                       }
 				                       else {
@@ -145,7 +145,7 @@ class UdpMetricsTests {
 				                   .map(o -> {
 				                       if (o instanceof DatagramPacket p) {
 				                           latch.countDown();
-				                           Buffer buf = out.alloc().copyOf("hello".getBytes(CharsetUtil.UTF_8));
+				                           Buffer buf = out.alloc().copyOf("hello".getBytes(StandardCharsets.UTF_8));
 				                           return new DatagramPacket(buf, p.sender());
 				                       }
 				                       else {

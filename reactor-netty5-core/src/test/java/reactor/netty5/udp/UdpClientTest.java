@@ -18,6 +18,7 @@ package reactor.netty5.udp;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.List;
@@ -31,7 +32,6 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DomainSocketAddress;
-import io.netty5.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
@@ -56,8 +56,8 @@ class UdpClientTest {
 				                                    .map(o -> {
 				                                            if (o instanceof DatagramPacket received) {
 				                                                Buffer buffer = received.content();
-				                                                System.out.println("Server received " + buffer.toString(CharsetUtil.UTF_8));
-				                                                Buffer buf1 = out.alloc().copyOf("echo ".getBytes(CharsetUtil.UTF_8));
+				                                                System.out.println("Server received " + buffer.toString(StandardCharsets.UTF_8));
+				                                                Buffer buf1 = out.alloc().copyOf("echo ".getBytes(StandardCharsets.UTF_8));
 				                                                CompositeBuffer buf2 = out.alloc().compose(List.of(buf1.send(), buffer.send()));
 				                                                return new DatagramPacket(buf2, received.sender());
 				                                            }
@@ -209,8 +209,8 @@ class UdpClientTest {
 					                                .map(o -> {
 					                                    if (o instanceof DatagramPacket received) {
 					                                        Buffer buffer = received.content();
-					                                        System.out.println("Server received " + buffer.toString(CharsetUtil.UTF_8));
-					                                        Buffer buf1 = out.alloc().copyOf("echo ".getBytes(CharsetUtil.UTF_8));
+					                                        System.out.println("Server received " + buffer.toString(StandardCharsets.UTF_8));
+					                                        Buffer buf1 = out.alloc().copyOf("echo ".getBytes(StandardCharsets.UTF_8));
 					                                        CompositeBuffer buf2 = out.alloc().compose(List.of(buf1.send(), buffer.send()));
 					                                        return new DatagramPacket(buf2, received.sender());
 					                                    }

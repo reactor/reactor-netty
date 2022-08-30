@@ -88,7 +88,6 @@ import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.dns.DnsAddressResolverGroup;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import io.netty5.util.concurrent.EventExecutor;
 import org.junit.jupiter.api.AfterAll;
@@ -555,7 +554,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .secure(ssl -> ssl.sslContext(sslClient))
 				          .get()
 				          .uri("/foo")
-				          .responseSingle((res, buf) -> buf.asString(CharsetUtil.UTF_8))
+				          .responseSingle((res, buf) -> buf.asString(StandardCharsets.UTF_8))
 				          .block(Duration.ofMillis(200));
 
 		assertThat(responseString).isEqualTo("hello /foo");
@@ -577,7 +576,7 @@ class HttpClientTest extends BaseHttpTest {
 		                                .secure(ssl -> ssl.sslContext(sslClient))
 		                                .get()
 		                                .uri("/foo")
-		                                .responseSingle((res, buf) -> buf.asString(CharsetUtil.UTF_8))
+		                                .responseSingle((res, buf) -> buf.asString(StandardCharsets.UTF_8))
 		                                .block();
 
 		assertThat(responseString).isEqualTo("hello /foo");

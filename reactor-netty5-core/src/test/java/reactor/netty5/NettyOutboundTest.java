@@ -47,7 +47,6 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.stream.ChunkedNioFile;
 import io.netty5.handler.stream.ChunkedWriteHandler;
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -162,7 +161,7 @@ class NettyOutboundTest {
 					@Override
 					protected void encodeAndClose(ChannelHandlerContext ctx, Buffer msg,
 							List<Object> out) {
-						clearMessages.add(msg.readCharSequence(msg.readableBytes(), CharsetUtil.UTF_8));
+						clearMessages.add(msg.readCharSequence(msg.readableBytes(), StandardCharsets.UTF_8));
 						out.add(msg.split());
 					}
 				},
@@ -255,7 +254,7 @@ class NettyOutboundTest {
 					@Override
 					protected void encodeAndClose(ChannelHandlerContext ctx, Buffer msg,
 							List<Object> out) {
-						out.add(msg.readCharSequence(msg.readableBytes(), CharsetUtil.UTF_8));
+						out.add(msg.readCharSequence(msg.readableBytes(), StandardCharsets.UTF_8));
 					}
 				},
 				//transform the ChunkedFile into Buffer chunks:
