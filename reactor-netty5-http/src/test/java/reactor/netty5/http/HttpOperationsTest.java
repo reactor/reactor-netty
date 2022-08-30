@@ -30,7 +30,7 @@ import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.cookie.Cookie;
 import io.netty.contrib.handler.codec.json.JsonObjectDecoder;
-import io.netty5.util.CharsetUtil;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.netty5.Connection;
@@ -61,8 +61,8 @@ class HttpOperationsTest {
 
 		Object[] content = new Object[3];
 		content[0] = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-		content[1] = new DefaultHttpContent(channel.bufferAllocator().copyOf(json1.getBytes(CharsetUtil.UTF_8)));
-		content[2] = new DefaultLastHttpContent(channel.bufferAllocator().copyOf(json2.getBytes(CharsetUtil.UTF_8)));
+		content[1] = new DefaultHttpContent(channel.bufferAllocator().copyOf(json1.getBytes(StandardCharsets.UTF_8)));
+		content[2] = new DefaultLastHttpContent(channel.bufferAllocator().copyOf(json2.getBytes(StandardCharsets.UTF_8)));
 
 		channel.writeInbound(content);
 
@@ -73,13 +73,13 @@ class HttpOperationsTest {
 		t = channel.readInbound();
 		assertThat(t).isInstanceOf(Buffer.class);
 		try (Buffer b = (Buffer) t) {
-			assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8)).isEqualTo("{\"some\": 1}");
+			assertThat(b.readCharSequence(b.readableBytes(), StandardCharsets.UTF_8)).isEqualTo("{\"some\": 1}");
 		}
 
 		t = channel.readInbound();
 		assertThat(t).isInstanceOf(Buffer.class);
 		try (Buffer b = (Buffer) t) {
-			assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8)).isEqualTo("{\"value\": true, \"test\": 1}");
+			assertThat(b.readCharSequence(b.readableBytes(), StandardCharsets.UTF_8)).isEqualTo("{\"value\": true, \"test\": 1}");
 		}
 
 		t = channel.readInbound();
