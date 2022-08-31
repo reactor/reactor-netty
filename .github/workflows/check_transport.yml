@@ -56,22 +56,16 @@ jobs:
           fetch-depth: 0 #needed by spotless
       - uses: actions/checkout@v3
         with:
-          # TODO temporary https://github.com/netty-contrib/codec-haproxy/pull/12
-          repository: pderop/codec-haproxy
+          repository: netty-contrib/codec-haproxy
           path: codec-haproxy
-          ref: adapt-to-netty-changes-for-charsetutil-statics
       - uses: actions/checkout@v3
         with:
-          # TODO temporary https://github.com/netty-contrib/codec-extras/pull/14
-          repository: pderop/codec-extras
+          repository: netty-contrib/codec-extras
           path: codec-extras
-          ref: adapt-to-netty-changes-for-charsetutil
       - uses: actions/checkout@v3
         with:
-          # TODO temporary https://github.com/netty-contrib/socks-proxy/pull/20
-          repository: pderop/socks-proxy
+          repository: netty-contrib/socks-proxy
           path: socks-proxy
-          ref: adapt-to-netty-changes-for-charsetutil
       - uses: gradle/wrapper-validation-action@v1
       - name: Set up JDK 17
         uses: actions/setup-java@v3
