@@ -84,11 +84,11 @@ ext {
 	}
 
 	//Metrics
-	micrometerVersion = '1.10.0-M4' //optional baseline
-	micrometerTracingVersion = '1.0.0-M7' //optional baseline
-	micrometerDocsVersion = '1.0.0-M6' //optional baseline
+	micrometerVersion = '1.10.0-SNAPSHOT' // was M4 //optional baseline
+	micrometerTracingVersion = '1.0.0-SNAPSHOT' // was M7 //optional baseline
+	micrometerDocsVersion = '1.0.0-SNAPSHOT' // was M6 //optional baseline
 
-	contextPropagationVersion = '1.0.0-M4'
+	contextPropagationVersion = '1.0.0-SNAPSHOT' // was M4
 
 	braveVersion = '5.13.10'
 
