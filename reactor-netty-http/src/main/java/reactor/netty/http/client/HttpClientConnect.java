@@ -362,7 +362,7 @@ class HttpClientConnect extends HttpClient {
 					handler.previousRequestHeaders = ops.requestHeaders;
 				}
 			}
-			else if (handler.requestRetrySpec.errorFilter.test(error)) {
+			else if (handler.shouldRetry(error)) {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
 				if (ops != null && ops.hasSentHeaders()) {
 					// In some cases the channel close event may be delayed and thus the connection to be
@@ -493,6 +493,11 @@ class HttpClientConnect extends HttpClient {
 
 		volatile boolean            requestDataSent;
 
+		/**
+		 * Tied to the configured request retry.
+		 */
+		volatile boolean            retriesExhausted;
+
 		volatile HttpHeaders        previousRequestHeaders;
 
 		HttpClientHandler(HttpClientConfig configuration) {
@@ -512,7 +517,11 @@ class HttpClientConnect extends HttpClient {
 					new UriEndpointFactory(configuration.remoteAddress(), configuration.isSecure(), URI_ADDRESS_MAPPER);
 
 			this.websocketClientSpec = configuration.websocketClientSpec;
-			this.requestRetrySpec = configuration.requestRetrySpec;
+			this.requestRetrySpec =
+					configuration.requestRetrySpec.onRetryExhaustedThrow((spec, sig) -> {
+						retriesExhausted = true;
+						return sig.failure();
+					});
 			this.handler = configuration.body;
 
 			if (configuration.uri == null) {
@@ -694,6 +703,15 @@ class HttpClientConnect extends HttpClient {
 			if (redirectedFrom != null) {
 				ops.redirectedFrom = redirectedFrom;
 			}
+		}
+
+		/**
+		 * This is a tie between the user supplied retry config and {@link HttpObserver#onUncaughtException(Connection, Throwable)}
+		 * that serves to indicate to the latter that the configured retry attempts have not been exhausted and
+		 * that the given error is retriable.
+		 */
+		boolean shouldRetry(final Throwable t) {
+			return retriesExhausted && shouldRetry(t);
 		}
 
 		@Override
