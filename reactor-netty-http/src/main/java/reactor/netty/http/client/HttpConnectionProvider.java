@@ -57,6 +57,15 @@ final class HttpConnectionProvider implements ConnectionProvider {
 	}
 
 	@Override
+	public Builder mutate() {
+		if (this.http1ConnectionProvider == null) {
+			return ConnectionProvider.super.mutate();
+		}
+
+		return this.http1ConnectionProvider.mutate();
+	}
+
+	@Override
 	public void disposeWhen(SocketAddress address) {
 		http1ConnectionProvider().disposeWhen(address);
 	}

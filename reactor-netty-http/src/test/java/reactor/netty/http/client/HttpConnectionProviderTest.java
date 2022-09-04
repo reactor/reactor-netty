@@ -92,4 +92,64 @@ class HttpConnectionProviderTest {
 				.isEqualTo(HttpResources.get().getOrCreateHttp2ConnectionProvider(HTTP2_CONNECTION_PROVIDER_FACTORY)
 						.maxConnectionsPerHost());
 	}
+
+	@Test
+	void configuredConnectionProviderShouldReturnTheOriginalConnectionProvider() {
+		ConnectionProvider provider = ConnectionProvider.create("provider");
+		try {
+			HttpClient client = HttpClient.create(provider);
+			HttpConnectionProvider configuredConnectionProvider =
+					(HttpConnectionProvider) client.configuration().connectionProvider();
+			assertThat(provider.getClass().getName())
+					.isEqualTo(configuredConnectionProvider.http1ConnectionProvider.getClass().getName());
+		}
+		finally {
+			provider.disposeLater()
+					.block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void mergeConnectionProviderUsingMutate() {
+		ConnectionProvider beforeProvider = ConnectionProvider
+				.builder("beforeProvider")
+				.maxConnections(1)
+				.disposeTimeout(Duration.ofSeconds(1L))
+				.pendingAcquireTimeout(Duration.ofSeconds(1L))
+				.maxIdleTime(Duration.ofSeconds(1L))
+				.maxLifeTime(Duration.ofSeconds(10L))
+				.lifo()
+				.build();
+		HttpClient client1 = HttpClient.create(beforeProvider);
+
+		ConnectionProvider mergedProvider = client1.configuration().connectionProvider()
+				.mutate()
+				.pendingAcquireTimeout(Duration.ofSeconds(2L))
+				.maxIdleTime(Duration.ofSeconds(2L))
+				.maxLifeTime(Duration.ofSeconds(20L))
+				.build();
+
+		assertThat(beforeProvider.maxConnections()).isEqualTo(mergedProvider.maxConnections());
+		assertThat(beforeProvider.name()).isEqualTo(mergedProvider.name());
+
+		beforeProvider.disposeLater().block(Duration.ofSeconds(5));
+		mergedProvider.disposeLater().block(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void mergeDefaultConnectionProviderUsingMutate() {
+		HttpClient client = HttpClient.create();
+
+		ConnectionProvider mergedProvider = client.configuration().connectionProvider()
+				.mutate()
+				.name("mergedProvider")
+				.pendingAcquireTimeout(Duration.ofSeconds(2L))
+				.maxIdleTime(Duration.ofSeconds(2L))
+				.maxLifeTime(Duration.ofSeconds(20L))
+				.build();
+
+		assertThat(mergedProvider.name()).isEqualTo("mergedProvider");
+
+		mergedProvider.disposeLater().block(Duration.ofSeconds(5));
+	}
 }

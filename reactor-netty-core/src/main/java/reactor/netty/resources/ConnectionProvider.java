@@ -262,9 +262,8 @@ public interface ConnectionProvider extends Disposable {
 	 * @return a builder to mutate properties of this {@link ConnectionProvider}
 	 * @since 1.0.14
 	 */
-	@Nullable
 	default Builder mutate() {
-		return null;
+		return new Builder("");
 	}
 
 	/**
