@@ -559,8 +559,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 		if (msg instanceof HttpContent) {
-			if (!(msg instanceof EmptyLastHttpContent)) {
+			if (!(msg instanceof EmptyLastHttpContent emptyLastHttpContent)) {
 				super.onInboundNext(ctx, msg);
+			}
+			else {
+				emptyLastHttpContent.close();
 			}
 			if (msg instanceof LastHttpContent) {
 				//force auto read to enable more accurate close selection now inbound is done
