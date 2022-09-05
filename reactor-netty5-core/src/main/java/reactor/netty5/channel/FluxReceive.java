@@ -21,8 +21,6 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import io.netty.buffer.ByteBufHolder;
-import io.netty5.buffer.api.Buffer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
@@ -266,15 +264,9 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				}
 
 				try {
-					if (logLeakDetection.isDebugEnabled()) {
-						if (v instanceof Buffer buffer) {
-							buffer.touch(format(channel, "Receiver " + a.getClass().getName() +
-									" will handle the message from this point"));
-						}
-						else if (v instanceof ByteBufHolder byteBufHolder) {
-							byteBufHolder.touch(format(channel, "Receiver " + a.getClass().getName() +
-									" will handle the message from this point"));
-						}
+					if (logLeakDetection.isDebugEnabled() && v instanceof Resource<?> resource) {
+						resource.touch(format(channel, "Receiver " + a.getClass().getName() +
+								" will handle the message from this point"));
 					}
 					a.onNext(v);
 				}
@@ -348,15 +340,9 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 		if (receiverFastpath && receiver != null) {
 			try {
-				if (logLeakDetection.isDebugEnabled()) {
-					if (msg instanceof Buffer buffer) {
-						buffer.touch(format(channel, "Receiver " + receiver.getClass().getName() +
-								" will handle the message from this point"));
-					}
-					else if (msg instanceof ByteBufHolder byteBufHolder) {
-						byteBufHolder.touch(format(channel, "Receiver " + receiver.getClass().getName() +
-								" will handle the message from this point"));
-					}
+				if (logLeakDetection.isDebugEnabled() && msg instanceof Resource<?> resource) {
+					resource.touch(format(channel, "Receiver " + receiver.getClass().getName() +
+							" will handle the message from this point"));
 				}
 				receiver.onNext(msg);
 			}
@@ -373,13 +359,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				q = new ArrayDeque<>();
 				receiverQueue = q;
 			}
-			if (logLeakDetection.isDebugEnabled()) {
-				if (msg instanceof Buffer buffer) {
-					buffer.touch(format(channel, "Buffered Buffer in the inbound buffer queue"));
-				}
-				else if (msg instanceof ByteBufHolder byteBufHolder) {
-					byteBufHolder.touch(format(channel, "Buffered ByteBufHolder in the inbound buffer queue"));
-				}
+			if (logLeakDetection.isDebugEnabled() && msg instanceof Resource<?> resource) {
+				resource.touch(format(channel, "Buffered 'Resource' in the inbound buffer queue"));
 			}
 			q.offer(msg);
 			drainReceiver();
