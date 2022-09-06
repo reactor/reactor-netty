@@ -33,6 +33,7 @@ import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty5.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import org.reactivestreams.Publisher;
@@ -115,6 +116,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 					                     request,
 					                     responseHeaders)
 					          .addListener(f -> {
+					              Resource.dispose(request);
 					              if (replaced.rebind(this)) {
 					                  markPersistent(false);
 					                  // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
