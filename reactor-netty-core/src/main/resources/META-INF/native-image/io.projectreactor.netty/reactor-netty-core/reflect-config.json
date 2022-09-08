@@ -1,89 +1,155 @@
 [
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.ReactorNetty$ExtractorHandler"
+		},
 		"name": "reactor.netty.ReactorNetty$ExtractorHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.ReactorNetty$InboundIdleStateHandler"
+		},
 		"name": "reactor.netty.ReactorNetty$InboundIdleStateHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.ReactorNetty$OutboundIdleStateHandler"
+		},
 		"name": "reactor.netty.ReactorNetty$OutboundIdleStateHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.AbstractChannelMetricsHandler"
+		},
 		"name": "reactor.netty.channel.AbstractChannelMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.ChannelMetricsHandler"
+		},
 		"name": "reactor.netty.channel.ChannelMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.ChannelMetricsHandler$ConnectMetricsHandler"
+		},
 		"name": "reactor.netty.channel.ChannelMetricsHandler$ConnectMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.ChannelMetricsHandler$TlsMetricsHandler"
+		},
 		"name": "reactor.netty.channel.ChannelMetricsHandler$TlsMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.ChannelOperationsHandler"
+		},
 		"name": "reactor.netty.channel.ChannelOperationsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.ContextAwareChannelMetricsHandler"
+		},
 		"name": "reactor.netty.channel.ContextAwareChannelMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.ContextAwareChannelMetricsHandler$ContextAwareConnectMetricsHandler"
+		},
 		"name": "reactor.netty.channel.ContextAwareChannelMetricsHandler$ContextAwareConnectMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.ContextAwareChannelMetricsHandler$TlsMetricsHandler"
+		},
 		"name": "reactor.netty.channel.ContextAwareChannelMetricsHandler$TlsMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.MicrometerChannelMetricsHandler"
+		},
 		"name": "reactor.netty.channel.MicrometerChannelMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.MicrometerChannelMetricsHandler$ConnectMetricsHandler"
+		},
 		"name": "reactor.netty.channel.MicrometerChannelMetricsHandler$ConnectMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.channel.MicrometerChannelMetricsHandler$TlsMetricsHandler"
+		},
 		"name": "reactor.netty.channel.MicrometerChannelMetricsHandler$TlsMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.resources.DefaultPooledConnectionProvider$PooledConnectionAllocator$PooledConnectionInitializer"
+		},
 		"name": "reactor.netty.resources.DefaultPooledConnectionProvider$PooledConnectionAllocator$PooledConnectionInitializer",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.tcp.SniProvider$SniHandler"
+		},
 		"name": "reactor.netty.tcp.SniProvider$SniHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.tcp.SslProvider$SslReadHandler"
+		},
 		"name": "reactor.netty.tcp.SslProvider$SslReadHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.transport.ProxyProvider$UnvoidHandler"
+		},
 		"name": "reactor.netty.transport.ProxyProvider$UnvoidHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.transport.ServerTransport$Acceptor"
+		},
 		"name": "reactor.netty.transport.ServerTransport$Acceptor",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.transport.ServerTransport$AcceptorInitializer"
+		},
 		"name": "reactor.netty.transport.ServerTransport$AcceptorInitializer",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.transport.TransportConfig$TransportChannelInitializer"
+		},
 		"name": "reactor.netty.transport.TransportConfig$TransportChannelInitializer",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.transport.logging.ReactorNettyLoggingHandler"
+		},
 		"name": "reactor.netty.transport.logging.ReactorNettyLoggingHandler",
 		"queryAllPublicMethods": true
 	}
