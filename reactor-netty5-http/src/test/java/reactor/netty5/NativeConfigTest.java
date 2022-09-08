@@ -34,20 +34,20 @@ import static org.reflections.scanners.Scanners.SubTypes;
 class NativeConfigTest {
 
 	@Test
-	void testChannelInboundHandler() throws Exception {
-		Set<Pojo> classes = findAllClassesUsingReflection("reactor.netty5.http", ChannelHandler.class);
+	void testChannelHandler() throws Exception {
+		Set<Config> classes = findAllClassesUsingReflection("reactor.netty5.http", ChannelHandler.class);
 
 		try (InputStream is = getClass()
 				.getResourceAsStream("/META-INF/native-image/io.projectreactor.netty/reactor-netty5-http/reflect-config.json")) {
 
 			ObjectMapper mapper = new ObjectMapper();
-			Set<Pojo> classesFromFile = new HashSet<>(Arrays.asList(mapper.readValue(is, Pojo[].class)));
+			Set<Config> classesFromFile = new HashSet<>(Arrays.asList(mapper.readValue(is, Config[].class)));
 
 			assertThat(classesFromFile).isEqualTo(classes);
 		}
 	}
 
-	Set<Pojo> findAllClassesUsingReflection(String packageName, Class<?> subtype) {
+	Set<Config> findAllClassesUsingReflection(String packageName, Class<?> subtype) {
 		Reflections reflections = new Reflections(
 				new ConfigurationBuilder()
 						.forPackage(packageName)
@@ -55,24 +55,77 @@ class NativeConfigTest {
 		return reflections.get(SubTypes.of(subtype).asClass())
 				.stream()
 				.filter(aClass -> aClass.getName().startsWith(packageName))
-				.map(aClass -> new Pojo(aClass.getName()))
+				.map(aClass -> new Config(aClass.getName()))
 				.collect(Collectors.toSet());
 	}
 
-	public static final class Pojo {
+	public static final class Condition {
+		private String typeReachable;
+
+		private Condition() {
+		}
+
+		private Condition(String typeReachable) {
+			this.typeReachable = typeReachable;
+		}
+
+		public String getTypeReachable() {
+			return typeReachable;
+		}
+
+		public void setTypeReachable(String typeReachable) {
+			this.typeReachable = typeReachable;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (!(o instanceof Condition)) {
+				return false;
+			}
+			Condition condition = (Condition) o;
+			return Objects.equals(typeReachable, condition.typeReachable);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(typeReachable);
+		}
+
+		@Override
+		public String toString() {
+			return "Condition {" +
+					"typeReachable='" + typeReachable + '\'' +
+					'}';
+		}
+	}
+
+	public static final class Config {
+		private Condition condition;
 		private String name;
 		private boolean queryAllPublicMethods;
 
-		private Pojo() {
+		private Config() {
 		}
 
-		private Pojo(String name) {
-			this(name, true);
+		private Config(String name) {
+			this(new Condition(name), name, true);
 		}
 
-		private Pojo(String name, boolean queryAllPublicMethods) {
+		private Config(Condition condition, String name, boolean queryAllPublicMethods) {
+			this.condition = condition;
 			this.name = name;
 			this.queryAllPublicMethods = queryAllPublicMethods;
+		}
+
+		public Condition getCondition() {
+			return condition;
+		}
+
+		public void setCondition(Condition condition) {
+			this.condition = condition;
 		}
 
 		public String getName() {
@@ -96,11 +149,13 @@ class NativeConfigTest {
 			if (this == o) {
 				return true;
 			}
-			if (!(o instanceof Pojo)) {
+			if (!(o instanceof Config)) {
 				return false;
 			}
-			Pojo myObject = (Pojo) o;
-			return name.equals(myObject.name);
+			Config config = (Config) o;
+			return Objects.equals(condition, config.condition) &&
+					Objects.equals(name, config.name) &&
+					queryAllPublicMethods == config.queryAllPublicMethods;
 		}
 
 		@Override
@@ -110,9 +165,10 @@ class NativeConfigTest {
 
 		@Override
 		public String toString() {
-			return "Pojo{" +
-					"name='" + name + '\'' +
-					", queryAllPublicMethods='" + queryAllPublicMethods + '\'' +
+			return "Config {" +
+					"condition=" + condition +
+					", name='" + name + '\'' +
+					", queryAllPublicMethods=" + queryAllPublicMethods +
 					'}';
 		}
 	}
