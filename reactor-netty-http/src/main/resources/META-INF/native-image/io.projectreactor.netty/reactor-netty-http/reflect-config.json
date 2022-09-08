@@ -1,109 +1,204 @@
 [
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.AbstractHttpClientMetricsHandler"
+		},
 		"name": "reactor.netty.http.client.AbstractHttpClientMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.ContextAwareHttpClientMetricsHandler"
+		},
 		"name": "reactor.netty.http.client.ContextAwareHttpClientMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http2StreamBridgeClientHandler"
+		},
 		"name": "reactor.netty.http.client.Http2StreamBridgeClientHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.HttpClientConfig$H2CleartextCodec"
+		},
+		"name": "reactor.netty.http.client.HttpClientConfig$H2CleartextCodec",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.HttpClientConfig$H2Codec"
+		},
 		"name": "reactor.netty.http.client.HttpClientConfig$H2Codec",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.HttpClientConfig$H2OrHttp11Codec"
+		},
 		"name": "reactor.netty.http.client.HttpClientConfig$H2OrHttp11Codec",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.HttpClientMetricsHandler"
+		},
 		"name": "reactor.netty.http.client.HttpClientMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.HttpTrafficHandler"
+		},
 		"name": "reactor.netty.http.client.HttpTrafficHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.MicrometerHttpClientMetricsHandler"
+		},
 		"name": "reactor.netty.http.client.MicrometerHttpClientMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.AbstractHttpServerMetricsHandler"
+		},
 		"name": "reactor.netty.http.server.AbstractHttpServerMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.ContextAwareHttpServerMetricsHandler"
+		},
 		"name": "reactor.netty.http.server.ContextAwareHttpServerMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.HAProxyMessageDetector"
+		},
 		"name": "reactor.netty.http.server.HAProxyMessageDetector",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.HAProxyMessageReader"
+		},
 		"name": "reactor.netty.http.server.HAProxyMessageReader",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.Http2StreamBridgeServerHandler"
+		},
 		"name": "reactor.netty.http.server.Http2StreamBridgeServerHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.HttpServerConfig$H2ChannelMetricsHandler"
+		},
 		"name": "reactor.netty.http.server.HttpServerConfig$H2ChannelMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.HttpServerConfig$H2CleartextCodec"
+		},
+		"name": "reactor.netty.http.server.HttpServerConfig$H2CleartextCodec",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.HttpServerConfig$H2Codec"
+		},
 		"name": "reactor.netty.http.server.HttpServerConfig$H2Codec",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.HttpServerConfig$H2OrHttp11Codec"
+		},
 		"name": "reactor.netty.http.server.HttpServerConfig$H2OrHttp11Codec",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.HttpServerConfig$Http11OrH2CleartextCodec"
+		},
 		"name": "reactor.netty.http.server.HttpServerConfig$Http11OrH2CleartextCodec",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.HttpServerMetricsHandler"
+		},
 		"name": "reactor.netty.http.server.HttpServerMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.HttpTrafficHandler"
+		},
 		"name": "reactor.netty.http.server.HttpTrafficHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.IdleTimeoutHandler"
+		},
 		"name": "reactor.netty.http.server.IdleTimeoutHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.MicrometerHttpServerMetricsHandler"
+		},
 		"name": "reactor.netty.http.server.MicrometerHttpServerMetricsHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.NonSslRedirectDetector"
+		},
 		"name": "reactor.netty.http.server.NonSslRedirectDetector",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.NonSslRedirectHandler"
+		},
 		"name": "reactor.netty.http.server.NonSslRedirectHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.SimpleCompressionHandler"
+		},
 		"name": "reactor.netty.http.server.SimpleCompressionHandler",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.logging.AccessLogHandlerH1"
+		},
 		"name": "reactor.netty.http.server.logging.AccessLogHandlerH1",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.logging.AccessLogHandlerH2"
+		},
 		"name": "reactor.netty.http.server.logging.AccessLogHandlerH2",
 		"queryAllPublicMethods": true
 	},
 	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.server.logging.BaseAccessLogHandler"
+		},
 		"name": "reactor.netty.http.server.logging.BaseAccessLogHandler",
 		"queryAllPublicMethods": true
 	}
