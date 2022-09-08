@@ -92,4 +92,38 @@ class HttpConnectionProviderTest {
 				.isEqualTo(HttpResources.get().getOrCreateHttp2ConnectionProvider(HTTP2_CONNECTION_PROVIDER_FACTORY)
 						.maxConnectionsPerHost());
 	}
+
+	@Test
+	void returnOriginalConnectionProvider() {
+		ConnectionProvider provider = HttpClient.create().configuration().connectionProvider();
+		try {
+			assertThat(provider.mutate()).isNotNull();
+		}
+		finally {
+			provider.disposeLater()
+					.block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void returnOriginalConnectionProviderUsingBuilder() {
+		ConnectionProvider provider = ConnectionProvider
+				.builder("provider")
+				.maxConnections(1)
+				.disposeTimeout(Duration.ofSeconds(1L))
+				.pendingAcquireTimeout(Duration.ofSeconds(1L))
+				.maxIdleTime(Duration.ofSeconds(1L))
+				.maxLifeTime(Duration.ofSeconds(10L))
+				.lifo()
+				.build();
+
+		try {
+			HttpClient httpClient = HttpClient.create(provider);
+			assertThat(httpClient.configuration().connectionProvider().mutate()).isNotNull();
+		}
+		finally {
+			provider.disposeLater()
+					.block(Duration.ofSeconds(5));
+		}
+	}
 }

@@ -83,7 +83,7 @@ class HttpClientConnect extends HttpClient {
 
 	HttpClientConnect(ConnectionProvider provider) {
 		this.config = new HttpClientConfig(
-				provider,
+				findHttpConnectionProvider(provider),
 				Collections.singletonMap(ChannelOption.AUTO_READ, false),
 				() -> AddressUtils.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), DEFAULT_PORT));
 	}
@@ -193,6 +193,26 @@ class HttpClientConnect extends HttpClient {
 		}
 
 		return httpClient;
+	}
+
+	private ConnectionProvider findHttpConnectionProvider(ConnectionProvider provider) {
+		if (!(provider instanceof HttpConnectionProvider)) {
+			return provider;
+		}
+
+		HttpConnectionProvider httpConnectionProvider = (HttpConnectionProvider) provider;
+
+		if (httpConnectionProvider.http1ConnectionProvider != null &&
+				httpConnectionProvider.h2ConnectionProvider.get() == null) {
+			return httpConnectionProvider.http1ConnectionProvider;
+		}
+
+		if (httpConnectionProvider.http1ConnectionProvider == null &&
+				httpConnectionProvider.h2ConnectionProvider.get() != null) {
+			return httpConnectionProvider.h2ConnectionProvider.get();
+		}
+
+		return provider;
 	}
 
 	static final class MonoHttpConnect extends Mono<Connection> {

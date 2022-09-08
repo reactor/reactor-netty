@@ -76,7 +76,7 @@ final class HttpConnectionProvider implements ConnectionProvider {
 	final AtomicReference<ConnectionProvider> h2ConnectionProvider = new AtomicReference<>();
 
 	HttpConnectionProvider() {
-		this(null);
+		this(ConnectionProvider.create("default", 1));
 	}
 
 	HttpConnectionProvider(@Nullable ConnectionProvider http1ConnectionProvider) {
