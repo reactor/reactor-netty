@@ -282,10 +282,35 @@ class HttpClientConnect extends HttpClient {
 			}));
 
 			// If request retry is enabled, the handler should guarantee no request data sent
-			(config.retryDisabled
-					? baseMono
-					: baseMono.retryWhen(config.requestRetrySpec.modifyErrorFilter(handler::and))
-			).subscribe(actual);
+			final Mono<Connection> finalMono = config.retryDisabled ? baseMono :
+					baseMono.retryWhen(new MyRetry(config.requestRetrySpec.modifyErrorFilter(handler::and), handler));
+
+			finalMono.subscribe(actual);
+		}
+
+		// TODO If (and this is a big if) this stays, then do a better job naming.  Merging this with
+		// the handler in some way wouldn't be far off from how a lot of this project is designed..
+		static class MyRetry extends Retry {
+			private final Retry delegate;
+			private final HttpClientHandler handler;
+
+			MyRetry(final Retry delegate, final HttpClientHandler handler) {
+				this.delegate = delegate;
+				this.handler  = handler;
+			}
+
+			@Override
+			public Publisher<?> generateCompanion(Flux<RetrySignal> retrySignals) {
+				return Flux.from(delegate.generateCompanion(retrySignals))
+						.map(i -> {
+							handler.retrying = true;
+							return i;
+						})
+						.onErrorMap(err -> true, err -> {
+							handler.retrying = false;
+							return err;
+						});
+			}
 		}
 
 		private void removeIncompatibleProtocol(HttpClientConfig config, HttpProtocol protocol) {
@@ -362,9 +387,9 @@ class HttpClientConnect extends HttpClient {
 					handler.previousRequestHeaders = ops.requestHeaders;
 				}
 			}
-			else if (handler.shouldRetry(error)) {
+			else if (handler.requestRetrySpec.errorFilter.test(error)) {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
-				if (ops != null && ops.hasSentHeaders()) {
+				if (ops != null) {
 					// In some cases the channel close event may be delayed and thus the connection to be
 					// returned to the pool and later the eviction functionality to remote it from the pool.
 					// In some rare cases the connection might be acquired immediately, before the channel close
@@ -373,29 +398,15 @@ class HttpClientConnect extends HttpClient {
 					// Mark the connection as non-persistent here so that it is never returned to the pool and leave
 					// the channel close event to invalidate it.
 					ops.markPersistent(false);
-					// Signal to retry that headers or/and the body were sent
-					handler.requestDataSent = true;
-					if (log.isWarnEnabled()) {
-						log.warn(format(connection.channel(),
-								"The connection observed an error, the request cannot be " +
-										"retried as the headers/body were sent"), error);
-					}
-				}
-				else {
-					if (ops != null) {
-						// In some cases the channel close event may be delayed and thus the connection to be
-						// returned to the pool and later the eviction functionality to remote it from the pool.
-						// In some rare cases the connection might be acquired immediately, before the channel close
-						// event and the eviction functionality be able to remove it from the pool, this may lead to I/O
-						// errors.
-						// Mark the connection as non-persistent here so that it is never returned to the pool and leave
-						// the channel close event to invalidate it.
-						ops.markPersistent(false);
-						ops.retrying = true;
-					}
-					if (log.isDebugEnabled()) {
-						log.debug(format(connection.channel(),
-								"The connection observed an error, the request will be retried"), error);
+
+					if (ops.hasSentHeaders()) {
+						// Signal to retry that headers or/and the body were sent
+						handler.requestDataSent = true;
+						if (log.isWarnEnabled()) {
+							log.warn(format(connection.channel(),
+									"The connection observed an error, the request cannot be " +
+											"retried as the headers/body were sent"), error);
+						}
 					}
 				}
 			}
@@ -412,7 +423,26 @@ class HttpClientConnect extends HttpClient {
 			else if (log.isWarnEnabled()) {
 				log.warn(format(connection.channel(), "The connection observed an error"), error);
 			}
+			// TODO So this is the underpinning that makes the current solution work, and I'm very concerned about it.
+			// Basically, handler.retrying is set to true/false in a custom Retry#generateCompanion, which is
+			// ultimately tied to the Mono associated with the sink.  I don't know if there are any guarantees
+			// that lambda will fire synchronously.  I could get around this by using a communication channel
+			// (blocking queue, mono, etc), but that is all kinds of icky and possibly deadlock prone.
+			//
+			// Ultimately, the retry state prior to this change was being managed inside these Observers.  With
+			// that being pushed to a customizable retry config, it's not immediately clear how to get the fact
+			// that a retry is or is not happening back to these observers.  My first attempt at solving this
+			// problem revolved around throwing a custom exception from a failed retry and using that as an indication
+			// that a retry was not happening.  However, that has some negatives as well (and I'm not sure it
+			// was going to work).
+			//
+			// Anyhow, neither feels clean.  Still trying to think of another way, but with the 30 minute increments
+			// I've been giving to this problem, I haven't come up with something that feels clean:(
 			sink.error(error);
+			HttpClientOperations ops = connection.as(HttpClientOperations.class);
+			if (ops != null) {
+				ops.retrying = handler.retrying;
+			}
 		}
 
 		@Override
@@ -493,14 +523,11 @@ class HttpClientConnect extends HttpClient {
 
 		volatile boolean            requestDataSent;
 
-		/**
-		 * Tied to the configured request retry.
-		 */
-		volatile boolean            retriesExhausted;
+		volatile boolean            retrying;
 
 		volatile HttpHeaders        previousRequestHeaders;
 
-		HttpClientHandler(HttpClientConfig configuration) {
+		HttpClientHandler(final HttpClientConfig configuration) {
 			this.method = configuration.method;
 			this.compress = configuration.acceptGzip;
 			this.followRedirectPredicate = configuration.followRedirectPredicate;
@@ -517,11 +544,7 @@ class HttpClientConnect extends HttpClient {
 					new UriEndpointFactory(configuration.remoteAddress(), configuration.isSecure(), URI_ADDRESS_MAPPER);
 
 			this.websocketClientSpec = configuration.websocketClientSpec;
-			this.requestRetrySpec =
-					configuration.requestRetrySpec.onRetryExhaustedThrow((spec, sig) -> {
-						retriesExhausted = true;
-						return sig.failure();
-					});
+			this.requestRetrySpec = configuration.requestRetrySpec;
 			this.handler = configuration.body;
 
 			if (configuration.uri == null) {
@@ -703,15 +726,6 @@ class HttpClientConnect extends HttpClient {
 			if (redirectedFrom != null) {
 				ops.redirectedFrom = redirectedFrom;
 			}
-		}
-
-		/**
-		 * This is a tie between the user supplied retry config and {@link HttpObserver#onUncaughtException(Connection, Throwable)}
-		 * that serves to indicate to the latter that the configured retry attempts have not been exhausted and
-		 * that the given error is retriable.
-		 */
-		boolean shouldRetry(final Throwable t) {
-			return retriesExhausted && shouldRetry(t);
 		}
 
 		@Override

@@ -124,7 +124,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	HttpClientOperations(HttpClientOperations replaced) {
 		super(replaced);
 		this.started = replaced.started;
-		this.retrying = replaced.retrying;
 		this.redirecting = replaced.redirecting;
 		this.redirectedFrom = replaced.redirectedFrom;
 		this.redirectRequestConsumer = replaced.redirectRequestConsumer;

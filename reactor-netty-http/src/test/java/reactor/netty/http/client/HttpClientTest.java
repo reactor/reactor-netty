@@ -1323,18 +1323,30 @@ class HttpClientTest extends BaseHttpTest {
 		                          })
 		                          .responseContent())
 		            .expectErrorMatches(t -> {
-		                error.set(t);
-		                return t.getMessage() != null &&
-		                               (t.getMessage().contains("Connection reset by peer") ||
-		                                        t.getMessage().contains("Connection reset") ||
-		                                        t.getMessage().contains("readAddress(..)") || // https://github.com/reactor/reactor-netty/issues/1673
-		                                        t.getMessage().contains("Connection prematurely closed BEFORE response"));
+			            error.set(t);
+			            // TODO Is it considered a contract change to return the retry exhausted wrapper?
+			            // I'm thinking it is, but it does seem nice to indicate a retry happened and failed
+			            // Will need reactor-netty folks to decide on this.  If I hear nothing from them
+			            // before moving out of draft, change things to preserve original behavior.
+			            final Function<String, Boolean> msgAssertion = msg ->
+					            msg.contains("Connection reset by peer") ||
+							            msg.contains("Connection reset") ||
+							            msg.contains("readAddress(..)") || // https://github.com/reactor/reactor-netty/issues/1673
+							            msg.contains("Connection prematurely closed BEFORE response");
+
+			            if (expectRetry) {
+							// TODO assert on private retries exhausted exception?
+				            final Throwable cause = t.getCause();
+				            return cause != null && msgAssertion.apply(cause.getMessage());
+			            } else {
+							return msgAssertion.apply(t.getMessage());
+			            }
 		            })
 		            .verify(Duration.ofSeconds(30));
 
 		int requestCount = 1;
 		int requestErrorCount = 1;
-		if (expectRetry && !(error.get() instanceof PrematureCloseException)) {
+		if (expectRetry && !(error.get().getCause() instanceof PrematureCloseException)) {
 			requestCount = 2;
 			requestErrorCount = 2;
 		}
