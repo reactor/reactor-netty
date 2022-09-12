@@ -31,7 +31,7 @@ plugins {
 	id "com.diffplug.spotless" version "6.10.0"
 	id 'org.asciidoctor.jvm.convert' version '3.3.2' apply false
 	id 'org.asciidoctor.jvm.pdf' version '3.3.2' apply false
-	id 'com.google.osdetector' version '1.7.0'
+	id 'com.google.osdetector' version '1.7.1'
 	id 'org.gradle.test-retry' version '1.4.1'
 	id 'io.spring.nohttp' version '0.0.10'
 	id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
