@@ -16,7 +16,7 @@
 package reactor.netty5.http.server;
 
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.cookie.Cookie;
 import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
 import reactor.netty5.http.Cookies;

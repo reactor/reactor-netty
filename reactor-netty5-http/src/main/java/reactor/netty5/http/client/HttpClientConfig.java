@@ -41,7 +41,7 @@ import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;

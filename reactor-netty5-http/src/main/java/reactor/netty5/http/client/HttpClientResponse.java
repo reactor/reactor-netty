@@ -15,7 +15,7 @@
  */
 package reactor.netty5.http.client;
 
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import reactor.core.publisher.Mono;
 

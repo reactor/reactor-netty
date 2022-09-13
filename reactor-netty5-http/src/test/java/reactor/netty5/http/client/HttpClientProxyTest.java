@@ -16,7 +16,7 @@
 package reactor.netty5.http.client;
 
 import io.netty5.channel.ChannelHandler;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.NoopAddressResolverGroup;

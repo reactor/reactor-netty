@@ -18,7 +18,7 @@ package reactor.netty5.http.client;
 import io.netty.contrib.handler.proxy.HttpProxyHandler;
 import io.netty.contrib.handler.proxy.ProxyHandler;
 import io.netty5.handler.codec.http.DefaultHttpHeaders;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import reactor.netty5.transport.ProxyProvider;
 
 import java.util.Objects;

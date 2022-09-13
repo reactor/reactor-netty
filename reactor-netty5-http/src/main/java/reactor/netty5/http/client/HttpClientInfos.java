@@ -15,7 +15,7 @@
  */
 package reactor.netty5.http.client;
 
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import reactor.netty5.http.HttpInfos;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;

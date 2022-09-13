@@ -28,7 +28,7 @@ import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
 import io.netty5.buffer.Buffer;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;

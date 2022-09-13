@@ -18,7 +18,7 @@ package reactor.netty5.http.client;
 import java.util.Objects;
 
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 
 /**
