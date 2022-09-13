@@ -18,7 +18,7 @@ package reactor.netty5.http.client;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;

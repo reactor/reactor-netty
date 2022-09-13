@@ -15,7 +15,7 @@
  */
 package reactor.netty5;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.AbstractChannel;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelShutdownDirection;

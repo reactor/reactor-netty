@@ -16,7 +16,7 @@
 package reactor.netty5.http.client;
 
 import io.netty.buffer.ByteBufHolder;
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;

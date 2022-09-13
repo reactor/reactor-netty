@@ -25,7 +25,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.embedded.EmbeddedChannel;

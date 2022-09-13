@@ -16,9 +16,9 @@
 package reactor.netty5;
 
 import io.netty5.buffer.BufferInputStream;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.CompositeBuffer;
 import io.netty5.util.Send;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.http.HttpContent;
@@ -39,7 +39,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Function;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 
 /**
  * A decorating {@link Flux} {@link NettyInbound} with various {@link Buffer} related

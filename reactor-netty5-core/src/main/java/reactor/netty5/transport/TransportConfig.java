@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.pool.BufferAllocatorMetricProvider;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.pool.BufferAllocatorMetricProvider;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.ChannelInitializer;

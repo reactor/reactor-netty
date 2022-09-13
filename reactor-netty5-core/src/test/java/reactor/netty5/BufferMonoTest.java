@@ -15,7 +15,7 @@
  */
 package reactor.netty5;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -27,7 +27,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Random;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 
 class BufferMonoTest {
 	static final Random rndm = new Random();
