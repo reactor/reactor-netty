@@ -17,7 +17,6 @@ package reactor.netty5.http.client;
 
 import io.netty.contrib.handler.proxy.HttpProxyHandler;
 import io.netty.contrib.handler.proxy.ProxyHandler;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import reactor.netty5.transport.ProxyProvider;
 
@@ -103,10 +102,10 @@ public final class HttpClientProxyProvider extends ProxyProvider {
 		@Override
 		public Build httpHeaders(Consumer<HttpHeaders> headers) {
 			if (headers != null) {
-				this.httpHeaders = () -> new DefaultHttpHeaders() {
-					{
-						headers.accept(this);
-					}
+				this.httpHeaders = () -> {
+					HttpHeaders newHeaders = HttpHeaders.newHeaders();
+					headers.accept(newHeaders);
+					return newHeaders;
 				};
 			}
 			return get();

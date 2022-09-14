@@ -19,9 +19,9 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponseStatus;
-import io.netty5.handler.codec.http2.DefaultHttp2Headers;
+import io.netty5.handler.codec.http2.headers.DefaultHttp2Headers;
 import io.netty5.handler.codec.http2.DefaultHttp2HeadersFrame;
-import io.netty5.handler.codec.http2.Http2Headers;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.codec.http2.Http2HeadersFrame;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,13 +44,13 @@ class AccessLogArgProviderH2Tests {
 	private static final Http2HeadersFrame responseHeaders;
 
 	static {
-		Http2Headers requestHttpHeaders = new DefaultHttp2Headers();
+		Http2Headers requestHttpHeaders = new DefaultHttp2Headers(2, true, true, true);
 		requestHttpHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
 		requestHttpHeaders.method(HttpMethod.GET.name());
 		requestHttpHeaders.path(URI);
 		requestHeaders = new DefaultHttp2HeadersFrame(requestHttpHeaders);
 
-		Http2Headers responseHttpHeaders = new DefaultHttp2Headers();
+		Http2Headers responseHttpHeaders = new DefaultHttp2Headers(2, true, true, true);
 		responseHttpHeaders.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
 		responseHttpHeaders.status(HttpResponseStatus.OK.codeAsText());
 		responseHeaders = new DefaultHttp2HeadersFrame(responseHttpHeaders);

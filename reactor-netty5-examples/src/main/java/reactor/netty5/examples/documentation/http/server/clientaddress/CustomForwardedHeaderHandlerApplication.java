@@ -28,9 +28,9 @@ public class CustomForwardedHeaderHandlerApplication {
 		DisposableServer server =
 				HttpServer.create()
 				          .forwarded((connectionInfo, request) -> {  // <1>
-				              String hostHeader = request.headers().get("X-Forwarded-Host");
+				              CharSequence hostHeader = request.headers().get("X-Forwarded-Host");
 				              if (hostHeader != null) {
-				                  String[] hosts = hostHeader.split(",", 2);
+				                  String[] hosts = hostHeader.toString().split(",", 2);
 				                  InetSocketAddress hostAddress = AddressUtils.createUnresolved(
 				                      hosts[hosts.length - 1].trim(),
 				                      connectionInfo.getHostAddress().getPort());

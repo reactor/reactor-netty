@@ -530,7 +530,7 @@ class HttpServerTests extends BaseHttpTest {
 		                }
 		                else if (code == 205) {
 		                    return !h.contains("Transfer-Encoding") &&
-		                           h.getInt("Content-Length").equals(0) &&
+		                           "0".equals(h.get("Content-Length").toString()) &&
 		                           "NO BODY".equals(t.getT3());
 		                }
 		                else {
@@ -554,7 +554,7 @@ class HttpServerTests extends BaseHttpTest {
 				                                                   .sendString(Flux.just("OK").hide()))
 				                       .route(req -> req.uri().startsWith("/3"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "2");
 				                                                return res.sendString(Mono.just("OK"))
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
@@ -566,7 +566,7 @@ class HttpServerTests extends BaseHttpTest {
 				                                                   .sendHeaders())
 				                       .route(req -> req.uri().startsWith("/6"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "2");
 				                                                return res.sendHeaders()
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
@@ -582,35 +582,35 @@ class HttpServerTests extends BaseHttpTest {
 				                                                   .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders())))
 				                       .route(req -> req.uri().startsWith("/9"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "2");
 				                                                return res.send()
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/10"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "0");
 				                                                return res.sendString(Mono.just("OK"))
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/11"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "0");
 				                                                return res.sendString(Flux.just("OK").hide())
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/12"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "2");
 				                                                return res.sendObject(res.alloc().copyOf("OK", Charset.defaultCharset()))
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/13"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "0");
 				                                                return res.sendObject(res.alloc().copyOf("OK", Charset.defaultCharset()))
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
@@ -643,7 +643,7 @@ class HttpServerTests extends BaseHttpTest {
 				createServer()
 				          .host("localhost")
 				          .handle((req, res) -> {
-				              res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				              res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "2");
 				              return Mono.empty()
 				                         .then()
 				                         .doFinally(s -> sentHeaders.set(res.responseHeaders()));
@@ -667,8 +667,8 @@ class HttpServerTests extends BaseHttpTest {
 		StepVerifier.create(response)
 				    .expectNextMatches(t -> {
 				        if (chunk) {
-				            String chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
-				            String cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
+				            CharSequence chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
+					        CharSequence cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
 				                return chunked != null && cl == null && "OK".equals(t.getT2());
 				            }
@@ -677,29 +677,29 @@ class HttpServerTests extends BaseHttpTest {
 				            }
 				        }
 				        else if (close) {
-				            String connClosed = t.getT1().get(HttpHeaderNames.CONNECTION);
-				            String chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
-				            String cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
+					        CharSequence connClosed = t.getT1().get(HttpHeaderNames.CONNECTION);
+					        CharSequence chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
+					        CharSequence cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
-				                return "close".equals(connClosed) && chunked == null && cl == null && "OK".equals(t.getT2());
+				                return "close".equals(connClosed.toString()) && chunked == null && cl == null && "OK".equals(t.getT2());
 				            }
 				            else {
-				                return "close".equals(connClosed) && chunked == null && cl == null && "NO BODY".equals(t.getT2());
+				                return "close".equals(connClosed.toString()) && chunked == null && cl == null && "NO BODY".equals(t.getT2());
 				            }
 				        }
 				        else {
-				            String chunkedReceived = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
-				            String clReceived = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
-				            String chunkedSent = sentHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING);
-				            String clSent = sentHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH);
+					        CharSequence chunkedReceived = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
+					        CharSequence clReceived = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
+					        CharSequence chunkedSent = sentHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING);
+					        CharSequence clSent = sentHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
 				                return chunkedReceived == null && chunkedSent == null &&
-				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
+				                       Integer.parseInt(clReceived.toString()) == Integer.parseInt(clSent.toString()) &&
 				                       "OK".equals(t.getT2());
 				            }
 				            else {
 				                return chunkedReceived == null && chunkedSent == null &&
-				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
+				                       Integer.parseInt(clReceived.toString()) == Integer.parseInt(clSent.toString()) &&
 				                       "NO BODY".equals(t.getT2());
 				            }
 				        }
@@ -1074,7 +1074,7 @@ class HttpServerTests extends BaseHttpTest {
 				                      }
 				                  }))
 				          .handle((req, res) -> res.sendString(
-				                  Mono.just(req.requestHeaders().get("test", "not found"))))
+				                  Mono.just(req.requestHeaders().get("test", "not found").toString())))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1752,7 +1752,7 @@ class HttpServerTests extends BaseHttpTest {
 				              assertThat(req.remoteAddress()).isNull();
 				              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
 				          });
-				          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
+				          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST).toString()).isEqualTo("localhost");
 				          return res.send(req.receive().transferOwnership());
 				      })
 				      .bindNow();
@@ -2329,18 +2329,18 @@ class HttpServerTests extends BaseHttpTest {
 
 		        if (maxKeepAliveRequests == -1) {
 		            return result &&
-		                    "persistent".equals(l.get(0).getT2()) &&
-		                    "persistent".equals(l.get(1).getT2());
+		                    "persistent".equals(l.get(0).getT2().toString()) &&
+		                    "persistent".equals(l.get(1).getT2().toString());
 		        }
 		        else if (maxKeepAliveRequests == 1) {
 		            return result &&
-		                    "close".equals(l.get(0).getT2()) &&
-		                    "close".equals(l.get(1).getT2());
+		                    "close".equals(l.get(0).getT2().toString()) &&
+		                    "close".equals(l.get(1).getT2().toString());
 		        }
 		        else if (maxKeepAliveRequests == 2) {
 		            return result &&
-		                    "persistent".equals(l.get(0).getT2()) &&
-		                    "close".equals(l.get(1).getT2());
+		                    "persistent".equals(l.get(0).getT2().toString()) &&
+		                    "close".equals(l.get(1).getT2().toString());
 		        }
 		        return false;
 		    })

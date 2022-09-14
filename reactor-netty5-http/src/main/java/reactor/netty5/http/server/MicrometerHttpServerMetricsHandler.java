@@ -122,7 +122,10 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		String status;
 
 		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, String path, HttpRequest request) {
-			super((carrier, key) -> Objects.requireNonNull(carrier).headers().get(key));
+			super((carrier, key) -> {
+				CharSequence value = Objects.requireNonNull(carrier).headers().get(key);
+				return value != null ?  value.toString() : null;
+			});
 			this.recorder = recorder;
 			this.method = request.method().name();
 			this.path = path;

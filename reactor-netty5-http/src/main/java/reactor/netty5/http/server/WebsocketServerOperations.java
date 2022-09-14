@@ -108,11 +108,12 @@ final class WebsocketServerOperations extends HttpServerOperations
 				}
 			}
 
+			HttpHeaders responseHeaders = replaced.responseHeaders();
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			handshakerResult =
 					handshaker.handshake(channel,
 					                     request,
-					                     replaced.responseHeaders
-					                             .remove(HttpHeaderNames.TRANSFER_ENCODING))
+									responseHeaders)
 					          .addListener(f -> {
 					              if (replaced.rebind(this)) {
 					                  markPersistent(false);

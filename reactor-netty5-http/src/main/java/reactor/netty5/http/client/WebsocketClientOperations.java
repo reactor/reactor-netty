@@ -68,12 +68,13 @@ final class WebsocketClientOperations extends HttpClientOperations
 		onCloseState = Sinks.unsafe().one();
 
 		String subprotocols = websocketClientSpec.protocols();
+		HttpHeaders replacedRequestHeaders = replaced.requestHeaders();
+		replacedRequestHeaders.remove(HttpHeaderNames.HOST);
 		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
 					websocketClientSpec.version(),
 					subprotocols != null && !subprotocols.isEmpty() ? subprotocols : null,
 					true,
-					replaced.requestHeaders()
-					        .remove(HttpHeaderNames.HOST),
+				    replacedRequestHeaders,
 					websocketClientSpec.maxFramePayloadLength());
 
 		handshaker.handshake(channel)

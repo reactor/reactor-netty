@@ -342,7 +342,7 @@ public interface HttpServerRoutes extends
 			WebsocketServerSpec websocketServerSpec) {
 		return route(condition, (req, resp) -> {
 			if (req.requestHeaders()
-			       .containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+			       .containsIgnoreCase(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)) {
 				HttpServerOperations ops = (HttpServerOperations) req;
 				return ops.withWebsocketSupport(req.uri(), websocketServerSpec, handler);
 			}

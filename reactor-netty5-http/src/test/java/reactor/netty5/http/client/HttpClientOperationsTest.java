@@ -19,7 +19,6 @@ import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
@@ -28,6 +27,8 @@ import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.contrib.handler.codec.json.JsonObjectDecoder;
 import java.nio.charset.StandardCharsets;
+
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import org.junit.jupiter.api.Test;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.NettyPipeline;
@@ -144,7 +145,7 @@ class HttpClientOperationsTest {
 		ops1.followRedirectPredicate((req, res) -> true);
 		ops1.started = true;
 		ops1.retrying = true;
-		ops1.redirecting = new RedirectClientException(new DefaultHttpHeaders().add(HttpHeaderNames.LOCATION, "/"),
+		ops1.redirecting = new RedirectClientException(HttpHeaders.newHeaders().add(HttpHeaderNames.LOCATION, "/"),
 				HttpResponseStatus.MOVED_PERMANENTLY);
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);

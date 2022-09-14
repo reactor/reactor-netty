@@ -215,7 +215,7 @@ class AccessLogTest extends BaseHttpTest {
 				.responseSingle((res, bytes) ->
 						bytes.asString()
 						     .defaultIfEmpty("")
-						     .zipWith(Mono.just(res.responseHeaders().get(ACCESS_LOG_HANDLER))))
+						     .zipWith(Mono.just(res.responseHeaders().get(ACCESS_LOG_HANDLER).toString())))
 				.block(Duration.ofSeconds(30));
 	}
 

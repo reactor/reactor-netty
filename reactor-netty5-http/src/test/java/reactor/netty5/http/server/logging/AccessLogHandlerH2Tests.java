@@ -20,9 +20,9 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.DefaultHttp2DataFrame;
-import io.netty5.handler.codec.http2.DefaultHttp2Headers;
+import io.netty5.handler.codec.http2.headers.DefaultHttp2Headers;
 import io.netty5.handler.codec.http2.DefaultHttp2HeadersFrame;
-import io.netty5.handler.codec.http2.Http2Headers;
+import io.netty5.handler.codec.http2.headers.Http2Headers;
 import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
@@ -48,13 +48,13 @@ class AccessLogHandlerH2Tests {
 							args.requestHeader(HEADER_CONNECTION_NAME));
 				}));
 
-		Http2Headers requestHeaders = new DefaultHttp2Headers();
+		Http2Headers requestHeaders = new DefaultHttp2Headers(2, true, true, true);
 		requestHeaders.method(HttpMethod.GET.name());
 		requestHeaders.path(URI);
 		requestHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
 		channel.writeInbound(new DefaultHttp2HeadersFrame(requestHeaders));
 
-		Http2Headers responseHeaders = new DefaultHttp2Headers();
+		Http2Headers responseHeaders = new DefaultHttp2Headers(1, true, true, true);
 		responseHeaders.status(HttpResponseStatus.OK.codeAsText());
 		channel.writeOutbound(new DefaultHttp2HeadersFrame(responseHeaders));
 

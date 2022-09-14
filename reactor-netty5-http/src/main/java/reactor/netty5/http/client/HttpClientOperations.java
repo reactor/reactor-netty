@@ -295,7 +295,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	public HttpClientRequest headers(HttpHeaders headers) {
 		if (!hasSentHeaders()) {
-			String host = requestHeaders.get(HttpHeaderNames.HOST);
+			CharSequence host = requestHeaders.get(HttpHeaderNames.HOST);
 			this.requestHeaders.set(headers);
 			this.requestHeaders.set(HttpHeaderNames.HOST, host);
 		}
@@ -439,7 +439,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				uri = new URI(url);
 			}
 			else {
-				String host = requestHeaders().get(HttpHeaderNames.HOST);
+				CharSequence host = requestHeaders().get(HttpHeaderNames.HOST);
 				uri = new URI((isSecure ? HttpClient.WSS_SCHEME :
 				                          HttpClient.WS_SCHEME) + "://" + host + (url.startsWith("/") ? url : "/" + url));
 			}
@@ -598,8 +598,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received response (auto-read:{}) : {}"),
 						channel().getOption(ChannelOption.AUTO_READ),
-						responseHeaders().entries()
-						                 .toString());
+						responseHeaders().toString());
 			}
 
 			if (notRedirected(response)) {
@@ -703,7 +702,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received redirect location: {}"),
 						response.headers()
-						        .entries()
 						        .toString());
 			}
 			redirecting = new RedirectClientException(response.headers(), response.status());
@@ -716,7 +714,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	protected HttpMessage newFullBodyMessage(Buffer body) {
 		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri(), body);
 
-		requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+		requestHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(body.readableBytes()));
 		requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
 		request.headers()

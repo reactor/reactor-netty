@@ -36,10 +36,8 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
-import io.netty5.handler.codec.DefaultHeaders;
 import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.DefaultHttpResponse;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
@@ -206,7 +204,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
 
 				if (HttpUtil.getContentLength(nettyResponse, -1) == -1) {
-					responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+					responseHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(body.readableBytes()));
 				}
 			}
 		}
@@ -602,8 +600,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void afterMarkSentHeaders() {
 		if (HttpResponseStatus.NOT_MODIFIED.equals(status())) {
-			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-			               .remove(HttpHeaderNames.CONTENT_LENGTH);
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+			responseHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
 		}
 		if (compressionPredicate != null && compressionPredicate.test(this, this)) {
 			compression(true);
@@ -653,9 +651,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				// of trailer fields at the end of the message, the sender SHOULD
 				// generate a Trailer header field before the message body to indicate
 				// which fields will be present in the trailers.
-				String declaredHeaderNames = responseHeaders.get(HttpHeaderNames.TRAILER);
+				CharSequence declaredHeaderNames = responseHeaders.get(HttpHeaderNames.TRAILER);
 				if (declaredHeaderNames != null) {
-					HttpHeaders trailerHeaders = new TrailerHeaders(declaredHeaderNames);
+					HttpHeaders trailerHeaders = new TrailerHeaders(declaredHeaderNames.toString());
 					try {
 						trailerHeadersConsumer.accept(trailerHeaders);
 					}
@@ -735,7 +733,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				                                         HttpResponseStatus.BAD_REQUEST,
 				ctx.bufferAllocator().allocate(0));
 		response.headers()
-		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
+		        .set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO)
 		        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 
 		Connection ops = ChannelOperations.get(ctx.channel());
@@ -928,8 +926,23 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			DISALLOWED_TRAILER_HEADER_NAMES.add("warning");
 		}
 
+		/**
+		 * Contains the headers names specified with {@link HttpHeaderNames#TRAILER}
+		 */
+		final Set<String> declaredHeaderNames;
+
 		TrailerHeaders(String declaredHeaderNames) {
-			super(true, new TrailerNameValidator(filterHeaderNames(declaredHeaderNames)));
+			super(16, true, true, true);
+			this.declaredHeaderNames = filterHeaderNames(declaredHeaderNames);
+		}
+
+		@Override
+		protected CharSequence validateKey(@Nullable CharSequence name) {
+			if (!declaredHeaderNames.contains(name.toString())) {
+				throw new IllegalArgumentException("Trailer header name [" + name +
+						"] not declared with [Trailer] header, or it is not a valid trailer header name");
+			}
+			return super.validateKey(name);
 		}
 
 		static Set<String> filterHeaderNames(String declaredHeaderNames) {
@@ -945,26 +958,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				result.add(trimmedStr);
 			}
 			return result;
-		}
-
-		static final class TrailerNameValidator implements DefaultHeaders.NameValidator<CharSequence> {
-
-			/**
-			 * Contains the headers names specified with {@link HttpHeaderNames#TRAILER}
-			 */
-			final Set<String> declaredHeaderNames;
-
-			TrailerNameValidator(Set<String> declaredHeaderNames) {
-				this.declaredHeaderNames = declaredHeaderNames;
-			}
-
-			@Override
-			public void validateName(CharSequence name) {
-				if (!declaredHeaderNames.contains(name.toString())) {
-					throw new IllegalArgumentException("Trailer header name [" + name +
-							"] not declared with [Trailer] header, or it is not a valid trailer header name");
-				}
-			}
 		}
 	}
 }

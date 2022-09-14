@@ -37,7 +37,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
@@ -332,7 +331,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.cookieDecoder = ClientCookieDecoder.STRICT;
 		this.cookieEncoder = ClientCookieEncoder.STRICT;
 		this.decoder = new HttpResponseDecoderSpec();
-		this.headers = new DefaultHttpHeaders();
+		this.headers = HttpHeaders.newHeaders();
 		this.method = HttpMethod.GET;
 		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
 		this._protocols = h11;

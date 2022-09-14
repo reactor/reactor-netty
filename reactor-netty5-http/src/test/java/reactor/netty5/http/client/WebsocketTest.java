@@ -163,7 +163,7 @@ class WebsocketTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .route(r -> r.get("/test/{param}", (req, res) -> {
-				              log.debug(req.requestHeaders().get("test"));
+				              log.debug(req.requestHeaders().get("test").toString());
 				              return res.header("content-type", "text/plain")
 				                        .sendWebsocket((in, out) ->
 				                                out.sendString(in.receive()
@@ -1246,12 +1246,12 @@ class WebsocketTest extends BaseHttpTest {
 				                              .get(perMessageDeflateEncoder) != null)
 				    );
 
-				    String header = in.headers()
+				    CharSequence header = in.headers()
 				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 				    return in.receive()
 				             .aggregate()
 				             .asString()
-				             .zipWith(Mono.just(header == null ? "null" : header));
+				             .zipWith(Mono.just(header == null ? "null" : header.toString()));
 				};
 
 		Predicate<Tuple2<String, String>> predicate = t -> "test".equals(t.getT1()) && "null".equals(t.getT2());

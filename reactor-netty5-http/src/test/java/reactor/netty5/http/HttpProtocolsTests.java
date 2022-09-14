@@ -362,7 +362,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 			      .uri("/")
 			      .responseSingle((res, bytes) -> {
 			          protocol.set(res.responseHeaders().get("x-http2-stream-id") != null ? "2.0" : "1.1");
-			          return Mono.just(res.responseHeaders().get(NettyPipeline.AccessLogHandler));
+			          return Mono.just(res.responseHeaders().get(NettyPipeline.AccessLogHandler).toString());
 			      })
 			      .as(StepVerifier::create)
 			      .expectNext("FOUND")
@@ -555,7 +555,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		      .responseSingle((res, bytes) -> bytes.asString().zipWith(res.trailerHeaders()))
 		      .as(StepVerifier::create)
 		      .expectNextMatches(t -> expectedResponse.equals(t.getT1()) &&
-		              expectedHeaderValue.equals(t.getT2().get("foo", "empty")))
+		              expectedHeaderValue.equals(t.getT2().get("foo", "empty").toString()))
 		      .expectComplete()
 		      .verify(Duration.ofSeconds(5));
 	}

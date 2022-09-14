@@ -31,7 +31,7 @@ final class RedirectClientException extends RuntimeException {
 	final HttpResponseStatus status;
 
 	RedirectClientException(HttpHeaders headers, HttpResponseStatus status) {
-		location = Objects.requireNonNull(headers.get(HttpHeaderNames.LOCATION));
+		location = Objects.requireNonNull(headers.get(HttpHeaderNames.LOCATION)).toString();
 		this.status = Objects.requireNonNull(status);
 	}
 

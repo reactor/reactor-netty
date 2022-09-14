@@ -547,7 +547,7 @@ class HttpRedirectTest extends BaseHttpTest {
 		StepVerifier
 				.create(client.get().uri(uri).response()
 						.doOnNext(response -> {
-							String location = response.responseHeaders().get(HttpHeaderNames.LOCATION);
+							CharSequence location = response.responseHeaders().get(HttpHeaderNames.LOCATION);
 							String expectedLocation = uri.replace("http://", "https://");
 
 							assertThat(response.status()).isEqualTo(HttpResponseStatus.PERMANENT_REDIRECT);

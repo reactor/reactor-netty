@@ -73,7 +73,7 @@ final class NonSslRedirectHandler extends ChannelHandlerAdapter {
 			// Don't use String#replace because of its bad performance due to regex
 			return HTTPS_PROTOCOL + uri.substring(HTTP_PROTOCOL.length());
 		}
-		String host = request.headers().get(HOST);
+		CharSequence host = request.headers().get(HOST);
 		if (host == null) {
 			return null;
 		}

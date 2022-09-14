@@ -18,7 +18,6 @@ package reactor.netty5.http.server.logging;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultHttpContent;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.DefaultHttpResponse;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
@@ -87,18 +86,18 @@ class AccessLogHandlerH1Tests {
 	}
 
 	private HttpRequest newHttpRequest() {
-		HttpHeaders requestHeaders = new DefaultHttpHeaders();
+		HttpHeaders requestHeaders = HttpHeaders.newHeaders();
 		requestHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
 		return new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, URI, requestHeaders);
 	}
 
 	private HttpResponse newHttpResponse(boolean chunked) {
-		HttpHeaders responseHeaders = new DefaultHttpHeaders();
+		HttpHeaders responseHeaders = HttpHeaders.newHeaders();
 		if (chunked) {
 			responseHeaders.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 		}
 		else {
-			responseHeaders.add(HttpHeaderNames.CONTENT_LENGTH, RESPONSE_CONTENT.length);
+			responseHeaders.add(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(RESPONSE_CONTENT.length));
 		}
 		return new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, responseHeaders);
 	}

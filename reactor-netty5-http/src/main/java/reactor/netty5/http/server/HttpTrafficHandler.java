@@ -468,9 +468,9 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	}
 
 	static boolean isMultipart(HttpResponse response) {
-		String contentType = response.headers()
+		CharSequence contentType = response.headers()
 		                             .get(HttpHeaderNames.CONTENT_TYPE);
-		return contentType != null && contentType.regionMatches(true,
+		return contentType != null && contentType.toString().regionMatches(true,
 				0,
 				MULTIPART_PREFIX,
 				0,

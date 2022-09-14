@@ -1358,7 +1358,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	static boolean isCompressing(HttpHeaders h) {
-		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true);
+		return h.containsIgnoreCase(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
 	}
 
 	static String reactorNettyVersion() {

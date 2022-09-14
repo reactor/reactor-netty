@@ -482,7 +482,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		BiPredicate<HttpServerRequest, HttpServerResponse> lengthPredicate =
 				(req, res) -> {
-					String length = res.responseHeaders()
+					CharSequence length = res.responseHeaders()
 					                   .get(HttpHeaderNames.CONTENT_LENGTH);
 
 					if (length == null) {
@@ -490,7 +490,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 					}
 
 					try {
-						return Long.parseLong(length) >= minResponseSize;
+						return Long.parseLong(length.toString()) >= minResponseSize;
 					}
 					catch (NumberFormatException nfe) {
 						return true;
