@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 import org.junit.jupiter.api.Test;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 
@@ -34,8 +35,7 @@ class HttpConnectionProviderTest {
 		ConnectionProvider provider = ConnectionProvider.create("maxConnectionsCustomConnectionProvider", 1);
 		try {
 			HttpClient client = HttpClient.create(provider);
-			HttpConnectionProvider configuredConnectionProvider =
-					(HttpConnectionProvider) client.configuration().connectionProvider();
+			HttpConnectionProvider configuredConnectionProvider = client.configuration().httpConnectionProvider();
 			assertThat(configuredConnectionProvider.maxConnections())
 					.isEqualTo(provider.maxConnections());
 			// Http2ConnectionProvider inherits the configuration from the configured provider
@@ -51,8 +51,7 @@ class HttpConnectionProviderTest {
 	@Test
 	void maxConnectionsDefaultConnectionProvider() {
 		HttpClient client = HttpClient.create();
-		HttpConnectionProvider configuredConnectionProvider =
-				(HttpConnectionProvider) client.configuration().connectionProvider();
+		HttpConnectionProvider configuredConnectionProvider = client.configuration().httpConnectionProvider();
 		assertThat(configuredConnectionProvider.maxConnections())
 				.isEqualTo(((ConnectionProvider) HttpResources.get()).maxConnections());
 		// Http2ConnectionProvider inherits the configuration from HttpResources
@@ -66,8 +65,7 @@ class HttpConnectionProviderTest {
 		ConnectionProvider provider = ConnectionProvider.create("maxConnectionsPerHostCustomConnectionProvider", 1);
 		try {
 			HttpClient client = HttpClient.create(provider);
-			HttpConnectionProvider configuredConnectionProvider =
-					(HttpConnectionProvider) client.configuration().connectionProvider();
+			HttpConnectionProvider configuredConnectionProvider = client.configuration().httpConnectionProvider();
 			assertThat(configuredConnectionProvider.maxConnectionsPerHost())
 					.isEqualTo(provider.maxConnectionsPerHost());
 			// Http2ConnectionProvider inherits the configuration from the configured provider
@@ -83,13 +81,51 @@ class HttpConnectionProviderTest {
 	@Test
 	void maxConnectionsPerHostDefaultConnectionProvider() {
 		HttpClient client = HttpClient.create();
-		HttpConnectionProvider configuredConnectionProvider =
-				(HttpConnectionProvider) client.configuration().connectionProvider();
+		HttpConnectionProvider configuredConnectionProvider = client.configuration().httpConnectionProvider();
 		assertThat(configuredConnectionProvider.maxConnectionsPerHost())
 				.isEqualTo(((ConnectionProvider) HttpResources.get()).maxConnectionsPerHost());
 		// Http2ConnectionProvider inherits the configuration from HttpResources
 		assertThat(configuredConnectionProvider.maxConnectionsPerHost())
 				.isEqualTo(HttpResources.get().getOrCreateHttp2ConnectionProvider(HTTP2_CONNECTION_PROVIDER_FACTORY)
 						.maxConnectionsPerHost());
+	}
+
+	@Test
+	void returnOriginalConnectionProvider() {
+		testReturnOriginalConnectionProvider(HttpClient.create(), null);
+	}
+
+	@Test
+	void returnOriginalConnectionProviderNewConnection() {
+		ConnectionProvider provider = ConnectionProvider.newConnection();
+		testReturnOriginalConnectionProvider(HttpClient.create(provider), provider);
+	}
+
+	@Test
+	void returnOriginalConnectionProviderUsingBuilder() {
+		ConnectionProvider provider =
+				ConnectionProvider.builder("provider")
+				                  .maxConnections(1)
+				                  .disposeTimeout(Duration.ofSeconds(1L))
+				                  .pendingAcquireTimeout(Duration.ofSeconds(1L))
+				                  .maxIdleTime(Duration.ofSeconds(1L))
+				                  .maxLifeTime(Duration.ofSeconds(10L))
+				                  .lifo()
+				                  .build();
+
+		testReturnOriginalConnectionProvider(HttpClient.create(provider), provider);
+	}
+
+	private void testReturnOriginalConnectionProvider(HttpClient httpClient, @Nullable ConnectionProvider originalProvider) {
+		ConnectionProvider provider = httpClient.configuration().connectionProvider();
+		try {
+			assertThat(provider).isSameAs(originalProvider != null ? originalProvider : HttpResources.get());
+		}
+		finally {
+			if (originalProvider != null) {
+				provider.disposeLater()
+				        .block(Duration.ofSeconds(5));
+			}
+		}
 	}
 }

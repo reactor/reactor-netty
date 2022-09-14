@@ -60,7 +60,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the {@link ConnectionProvider}
 	 */
-	public final ConnectionProvider connectionProvider() {
+	public ConnectionProvider connectionProvider() {
 		return connectionProvider;
 	}
 

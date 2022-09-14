@@ -3165,7 +3165,7 @@ class HttpClientTest extends BaseHttpTest {
 		HttpClientConfig config = client.configuration();
 
 		LoopResources loopResources1 = config.loopResources();
-		ConnectionProvider provider1 = ((HttpConnectionProvider) config.connectionProvider()).http1ConnectionProvider();
+		ConnectionProvider provider1 = config.connectionProvider();
 		AddressResolverGroup<?> resolverGroup1 = config.defaultAddressResolverGroup();
 
 		try {
@@ -3182,7 +3182,7 @@ class HttpClientTest extends BaseHttpTest {
 		HttpResources.reset();
 
 		LoopResources loopResources2 = config.loopResources();
-		ConnectionProvider provider2 = ((HttpConnectionProvider) config.connectionProvider()).http1ConnectionProvider();
+		ConnectionProvider provider2 = config.connectionProvider();
 		AddressResolverGroup<?> resolverGroup2 = config.defaultAddressResolverGroup();
 
 		assertThat(loopResources1).isNotSameAs(loopResources2);
