@@ -20,8 +20,7 @@ import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpVersion;
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import reactor.netty5.http.Cookies;
 import reactor.netty5.http.HttpOperations;
 import reactor.util.context.ContextView;
@@ -40,7 +39,6 @@ import java.util.Set;
 final class FailedHttpClientRequest implements HttpClientRequest {
 
 	final ContextView         contextView;
-	final ClientCookieDecoder cookieDecoder;
 	final HttpHeaders         headers;
 	final boolean             isWebsocket;
 	final HttpMethod          method;
@@ -50,7 +48,6 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 
 	FailedHttpClientRequest(ContextView contextView, HttpClientConfig c) {
 		this.contextView = contextView;
-		this.cookieDecoder = c.cookieDecoder;
 		this.headers = c.headers;
 		this.isWebsocket = c.websocketClientSpec != null;
 		this.method = c.method;
@@ -60,7 +57,7 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	}
 
 	@Override
-	public HttpClientRequest addCookie(Cookie cookie) {
+	public HttpClientRequest addCookie(HttpCookiePair cookie) {
 		throw new UnsupportedOperationException("Should not add Cookie");
 	}
 
@@ -70,8 +67,8 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	}
 
 	@Override
-	public Map<CharSequence, Set<Cookie>> cookies() {
-		return Cookies.newClientResponseHolder(headers, cookieDecoder)
+	public Map<CharSequence, Set<HttpCookiePair>> cookies() {
+		return Cookies.newClientResponseHolder(headers)
 		              .getCachedCookies();
 	}
 

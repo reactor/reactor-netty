@@ -74,6 +74,7 @@ import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.headers.DefaultHttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpObjectDecoder;
@@ -786,7 +787,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .bindNow();
 
 		createHttpClientForContextWithAddress()
-		        .cookie("test", c -> c.setValue("lol"))
+		        .cookie(() -> new DefaultHttpCookiePair("test", "lol"))
 		        .get()
 		        .uri("/201")
 		        .responseContent()

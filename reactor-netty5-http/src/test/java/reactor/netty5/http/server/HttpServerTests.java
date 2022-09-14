@@ -74,8 +74,6 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.HttpUtil;
-import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.ssl.SniCompletionEvent;
 import io.netty5.handler.ssl.SslContext;
@@ -1797,8 +1795,6 @@ class HttpServerTests extends BaseHttpTest {
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
 				null,
 				null,
-				ServerCookieDecoder.STRICT,
-				ServerCookieEncoder.STRICT,
 				DEFAULT_FORM_DECODER_SPEC,
 				null,
 				false);
@@ -2386,8 +2382,6 @@ class HttpServerTests extends BaseHttpTest {
 				request,
 				null,
 				null,
-				ServerCookieDecoder.STRICT,
-				ServerCookieEncoder.STRICT,
 				DEFAULT_FORM_DECODER_SPEC,
 				null,
 				false);

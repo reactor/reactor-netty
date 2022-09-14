@@ -46,7 +46,9 @@ import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
@@ -55,9 +57,7 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.handler.codec.http.cookie.Cookie;
-import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.codec.http2.HttpConversionUtil;
@@ -100,8 +100,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 	final ConnectionInfo connectionInfo;
-	final ServerCookieDecoder cookieDecoder;
-	final ServerCookieEncoder cookieEncoder;
 	final ServerCookies cookieHolder;
 	final HttpServerFormDecoderProvider formDecoderProvider;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
@@ -120,8 +118,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		super(replaced);
 		this.compressionPredicate = replaced.compressionPredicate;
 		this.connectionInfo = replaced.connectionInfo;
-		this.cookieDecoder = replaced.cookieDecoder;
-		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieHolder = replaced.cookieHolder;
 		this.currentContext = replaced.currentContext;
 		this.formDecoderProvider = replaced.formDecoderProvider;
@@ -138,20 +134,16 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			@Nullable ConnectionInfo connectionInfo,
-			ServerCookieDecoder decoder,
-			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean secured) {
-		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, formDecoderProvider,
+		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, formDecoderProvider,
 				mapHandle, true, secured);
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			@Nullable ConnectionInfo connectionInfo,
-			ServerCookieDecoder decoder,
-			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean resolvePath,
@@ -159,9 +151,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		super(c, listener);
 		this.compressionPredicate = compressionPredicate;
 		this.connectionInfo = connectionInfo;
-		this.cookieDecoder = decoder;
-		this.cookieEncoder = encoder;
-		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers(), decoder);
+		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers());
 		this.currentContext = Context.empty();
 		this.formDecoderProvider = formDecoderProvider;
 		this.mapHandle = mapHandle;
@@ -225,10 +215,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerResponse addCookie(Cookie cookie) {
+	public HttpServerResponse addCookie(HttpSetCookie setCookie) {
 		if (!hasSentHeaders()) {
-			this.responseHeaders.add(HttpHeaderNames.SET_COOKIE,
-					cookieEncoder.encode(cookie));
+			this.responseHeaders.addSetCookie(setCookie);
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -257,7 +246,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Map<CharSequence, Set<Cookie>> cookies() {
+	public Map<CharSequence, Set<HttpCookiePair>> cookies() {
 		if (cookieHolder != null) {
 			return cookieHolder.getCachedCookies();
 		}
@@ -265,7 +254,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Map<CharSequence, List<Cookie>> allCookies() {
+	public Map<CharSequence, List<HttpCookiePair>> allCookies() {
 		if (cookieHolder != null) {
 			return cookieHolder.getAllCachedCookies();
 		}
@@ -872,7 +861,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				HttpRequest nettyRequest,
 				HttpResponse nettyResponse,
 				boolean secure) {
-			super(c, listener, nettyRequest, null, null, ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT,
+			super(c, listener, nettyRequest, null, null,
 					DEFAULT_FORM_DECODER_SPEC, null, false, secure);
 			this.customResponse = nettyResponse;
 			String tempPath = "";

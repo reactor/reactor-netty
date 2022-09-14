@@ -30,14 +30,12 @@ import java.util.function.Supplier;
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.headers.DefaultHttpCookiePair;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty5.handler.codec.http.cookie.Cookie;
-import io.netty5.handler.codec.http.cookie.DefaultCookie;
 import io.netty5.handler.ssl.OpenSsl;
 import io.netty5.handler.ssl.SslContext;
 import org.reactivestreams.Publisher;
@@ -426,12 +424,12 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient cookie(Cookie cookie) {
+	public final HttpClient cookie(HttpCookiePair cookie) {
 		Objects.requireNonNull(cookie, "cookie");
-		if (!cookie.value().isEmpty()) {
+		if (cookie.value().length() > 0) {
 			HttpClient dup = duplicate();
 			HttpHeaders headers = configuration().headers.copy();
-			headers.add(HttpHeaderNames.COOKIE, dup.configuration().cookieEncoder.encode(cookie));
+			headers.addCookie(cookie);
 			dup.configuration().headers = headers;
 			return dup;
 		}
@@ -441,50 +439,13 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	/**
 	 * Apply cookies configuration.
 	 *
-	 * @param cookieBuilder the header {@link Consumer} to invoke before requesting
+	 * @param cookieBuilder the header {@link Supplier} to invoke before requesting
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient cookie(String name, Consumer<? super Cookie> cookieBuilder) {
-		Objects.requireNonNull(name, "name");
+	public final HttpClient cookie(Supplier<HttpCookiePair> cookieBuilder) {
 		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
-		Cookie cookie = new DefaultCookie(name, "");
-		cookieBuilder.accept(cookie);
-		return cookie(cookie);
-	}
-
-	/**
-	 * Configure the
-	 * {@link ClientCookieEncoder}, {@link ClientCookieDecoder} will be
-	 * chosen based on the encoder
-	 *
-	 * @param encoder the preferred ClientCookieEncoder
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient cookieCodec(ClientCookieEncoder encoder) {
-		Objects.requireNonNull(encoder, "encoder");
-		ClientCookieDecoder decoder = encoder == ClientCookieEncoder.LAX ?
-				ClientCookieDecoder.LAX : ClientCookieDecoder.STRICT;
-		return cookieCodec(encoder, decoder);
-	}
-
-	/**
-	 * Configure the
-	 * {@link ClientCookieEncoder} and {@link ClientCookieDecoder}
-	 *
-	 * @param encoder the preferred ClientCookieEncoder
-	 * @param decoder the preferred ClientCookieDecoder
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient cookieCodec(ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
-		Objects.requireNonNull(encoder, "encoder");
-		Objects.requireNonNull(decoder, "decoder");
-		HttpClient dup = duplicate();
-		dup.configuration().cookieEncoder = encoder;
-		dup.configuration().cookieDecoder = decoder;
-		return dup;
+		return cookie(cookieBuilder.get());
 	}
 
 	/**
@@ -494,16 +455,16 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient cookiesWhen(String name, Function<? super Cookie, Mono<? extends Cookie>> cookieBuilder) {
+	public final HttpClient cookiesWhen(String name, Function<? super HttpCookiePair, Mono<? extends HttpCookiePair>> cookieBuilder) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
 		HttpClient dup = duplicate();
 		dup.configuration().deferredConf(config ->
-				cookieBuilder.apply(new DefaultCookie(name, ""))
+				cookieBuilder.apply(new DefaultHttpCookiePair(name, ""))
 				             .map(c -> {
-				                 if (!c.value().isEmpty()) {
+				                 if (c.value().length() > 0) {
 				                     HttpHeaders headers = configuration().headers.copy();
-				                     headers.add(HttpHeaderNames.COOKIE, config.cookieEncoder.encode(c));
+				                     headers.addCookie(c);
 				                     config.headers = headers;
 				                 }
 				                 return config;

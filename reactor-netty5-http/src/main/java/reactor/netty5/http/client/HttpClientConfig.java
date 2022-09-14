@@ -42,8 +42,6 @@ import io.netty5.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty5.handler.codec.http2.Http2ClientUpgradeCodec;
 import io.netty5.handler.codec.http2.Http2FrameCodec;
 import io.netty5.handler.codec.http2.Http2FrameCodecBuilder;
@@ -110,30 +108,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	@Override
 	public ChannelOperations.OnSetup channelOperationsProvider() {
-		return (ch, c, msg) -> new HttpClientOperations(ch, c, cookieEncoder, cookieDecoder);
+		return (ch, c, msg) -> new HttpClientOperations(ch, c);
 	}
 
 	@Override
 	public ConnectionProvider connectionProvider() {
 		return httpConnectionProvider().http1ConnectionProvider();
-	}
-
-	/**
-	 * Return the configured {@link ClientCookieDecoder} or the default {@link ClientCookieDecoder#STRICT}.
-	 *
-	 * @return the configured {@link ClientCookieDecoder} or the default {@link ClientCookieDecoder#STRICT}
-	 */
-	public ClientCookieDecoder cookieDecoder() {
-		return cookieDecoder;
-	}
-
-	/**
-	 * Return the configured {@link ClientCookieEncoder} or the default {@link ClientCookieEncoder#STRICT}.
-	 *
-	 * @return the configured {@link ClientCookieEncoder} or the default {@link ClientCookieEncoder#STRICT}
-	 */
-	public ClientCookieEncoder cookieEncoder() {
-		return cookieEncoder;
 	}
 
 	/**
@@ -297,8 +277,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	String baseUrl;
 	BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> body;
 	Function<? super Mono<? extends Connection>, ? extends Mono<? extends Connection>> connector;
-	ClientCookieDecoder cookieDecoder;
-	ClientCookieEncoder cookieEncoder;
 	HttpResponseDecoderSpec decoder;
 	Function<Mono<HttpClientConfig>, Mono<HttpClientConfig>> deferredConf;
 	BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest;
@@ -328,8 +306,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			Supplier<? extends SocketAddress> remoteAddress) {
 		super(connectionProvider, options, remoteAddress);
 		this.acceptGzip = false;
-		this.cookieDecoder = ClientCookieDecoder.STRICT;
-		this.cookieEncoder = ClientCookieEncoder.STRICT;
 		this.decoder = new HttpResponseDecoderSpec();
 		this.headers = HttpHeaders.newHeaders();
 		this.method = HttpMethod.GET;
@@ -344,8 +320,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.baseUrl = parent.baseUrl;
 		this.body = parent.body;
 		this.connector = parent.connector;
-		this.cookieDecoder = parent.cookieDecoder;
-		this.cookieEncoder = parent.cookieEncoder;
 		this.decoder = parent.decoder;
 		this.deferredConf = parent.deferredConf;
 		this.doAfterRequest = parent.doAfterRequest;

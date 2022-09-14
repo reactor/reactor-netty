@@ -42,6 +42,7 @@ import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpMethod;
@@ -52,9 +53,6 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty5.handler.codec.http.cookie.Cookie;
 import io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.Resource;
@@ -90,8 +88,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final boolean                isSecure;
 	final HttpRequest            nettyRequest;
 	final HttpHeaders            requestHeaders;
-	final ClientCookieEncoder    cookieEncoder;
-	final ClientCookieDecoder    cookieDecoder;
 	final Sinks.One<HttpHeaders> trailerHeaders;
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
@@ -125,8 +121,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.responseState = replaced.responseState;
 		this.followRedirectPredicate = replaced.followRedirectPredicate;
 		this.requestHeaders = replaced.requestHeaders;
-		this.cookieEncoder = replaced.cookieEncoder;
-		this.cookieDecoder = replaced.cookieDecoder;
 		this.resourceUrl = replaced.resourceUrl;
 		this.path = replaced.path;
 		this.responseTimeout = replaced.responseTimeout;
@@ -134,23 +128,20 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.trailerHeaders = replaced.trailerHeaders;
 	}
 
-	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
+	HttpClientOperations(Connection c, ConnectionObserver listener) {
 		super(c, listener);
 		this.isSecure = c.channel()
 		                 .pipeline()
 		                 .get(NettyPipeline.SslHandler) != null;
 		this.nettyRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
-		this.cookieDecoder = decoder;
-		this.cookieEncoder = encoder;
 		this.trailerHeaders = Sinks.unsafe().one();
 	}
 
 	@Override
-	public HttpClientRequest addCookie(Cookie cookie) {
+	public HttpClientRequest addCookie(HttpCookiePair cookie) {
 		if (!hasSentHeaders()) {
-			this.requestHeaders.add(HttpHeaderNames.COOKIE,
-					cookieEncoder.encode(cookie));
+			this.requestHeaders.addCookie(cookie);
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -225,7 +216,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	public Map<CharSequence, Set<Cookie>> cookies() {
+	public Map<CharSequence, Set<HttpCookiePair>> cookies() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null && responseState.cookieHolder != null) {
 			return responseState.cookieHolder.getCachedCookies();
@@ -751,7 +742,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		ResponseState state = responseState;
 		if (state == null) {
 			this.responseState =
-					new ResponseState(nettyResponse, nettyResponse.headers(), cookieDecoder);
+					new ResponseState(nettyResponse, nettyResponse.headers());
 		}
 	}
 
@@ -786,10 +777,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		final HttpHeaders  headers;
 		final Cookies      cookieHolder;
 
-		ResponseState(HttpResponse response, HttpHeaders headers, ClientCookieDecoder decoder) {
+		ResponseState(HttpResponse response, HttpHeaders headers) {
 			this.response = response;
 			this.headers = headers;
-			this.cookieHolder = Cookies.newClientResponseHolder(headers, decoder);
+			this.cookieHolder = Cookies.newClientResponseHolder(headers);
 		}
 	}
 

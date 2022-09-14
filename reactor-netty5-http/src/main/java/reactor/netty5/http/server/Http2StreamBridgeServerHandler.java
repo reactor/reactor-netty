@@ -27,8 +27,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty5.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.ReferenceCountUtil;
@@ -51,8 +49,6 @@ import static reactor.netty5.ReactorNetty.format;
 final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter implements FutureContextListener<Channel, Void> {
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
-	final ServerCookieDecoder                                     cookieDecoder;
-	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final ConnectionObserver                                      listener;
@@ -70,15 +66,11 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 
 	Http2StreamBridgeServerHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
-			ServerCookieDecoder decoder,
-			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		this.compress = compress;
-		this.cookieDecoder = decoder;
-		this.cookieEncoder = encoder;
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.listener = listener;
@@ -116,8 +108,6 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 						                    secured,
 						                    remoteAddress,
 						                    forwardedHeaderHandler),
-						cookieDecoder,
-						cookieEncoder,
 						formDecoderProvider,
 						mapHandle,
 						secured);

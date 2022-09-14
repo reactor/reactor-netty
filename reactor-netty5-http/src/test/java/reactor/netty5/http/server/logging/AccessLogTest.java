@@ -20,7 +20,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty5.channel.ChannelHandler;
-import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.headers.DefaultHttpCookiePair;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -209,7 +210,7 @@ class AccessLogTest extends BaseHttpTest {
 	@Nullable
 	private Tuple2<String, String> getHttpClientResponse(String uri) {
 		return createClient(disposableServer.port())
-				.cookie(COOKIE_KEY, cookie -> cookie.setValue(COOKIE_VALUE))
+				.cookie(() -> new DefaultHttpCookiePair(COOKIE_KEY, COOKIE_VALUE))
 				.get()
 				.uri(uri)
 				.responseSingle((res, bytes) ->
@@ -228,13 +229,13 @@ class AccessLogTest extends BaseHttpTest {
 		}
 	}
 
-	static String cookieToString(@Nullable Map<CharSequence, Set<Cookie>> cookies) {
+	static String cookieToString(@Nullable Map<CharSequence, Set<HttpCookiePair>> cookies) {
 		if (cookies != null) {
-			Optional<Map.Entry<CharSequence, Set<Cookie>>> firstEntry = cookies.entrySet().stream().findFirst();
+			Optional<Map.Entry<CharSequence, Set<HttpCookiePair>>> firstEntry = cookies.entrySet().stream().findFirst();
 			if (firstEntry.isPresent()) {
 				String key = firstEntry.get().getKey().toString();
-				Optional<Cookie> firstCookie = firstEntry.get().getValue().stream().findFirst();
-				String value = firstCookie.isPresent() ? firstCookie.get().value() : "";
+				Optional<HttpCookiePair> firstCookie = firstEntry.get().getValue().stream().findFirst();
+				String value = firstCookie.isPresent() ? firstCookie.get().value().toString() : "";
 				return key + "=" + value;
 			}
 		}

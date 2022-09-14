@@ -16,7 +16,7 @@
 package reactor.netty5.http.server.logging;
 
 import io.netty5.handler.codec.http.HttpMethod;
-import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import reactor.netty5.ReactorNetty;
 import reactor.util.annotation.Nullable;
 
@@ -46,7 +46,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	boolean chunked;
 	long contentLength = -1;
 	long startTime;
-	Map<CharSequence, Set<Cookie>> cookies;
+	Map<CharSequence, Set<HttpCookiePair>> cookies;
 
 	AbstractAccessLogArgProvider(@Nullable SocketAddress remoteAddress) {
 		this.remoteAddress = remoteAddress;
@@ -100,7 +100,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	@Override
 	@Nullable
-	public Map<CharSequence, Set<Cookie>> cookies() {
+	public Map<CharSequence, Set<HttpCookiePair>> cookies() {
 		return cookies;
 	}
 
@@ -127,7 +127,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		this.cookies = null;
 	}
 
-	SELF cookies(Map<CharSequence, Set<Cookie>> cookies) {
+	SELF cookies(Map<CharSequence, Set<HttpCookiePair>> cookies) {
 		this.cookies = cookies;
 		return get();
 	}

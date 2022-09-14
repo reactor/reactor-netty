@@ -15,7 +15,7 @@
  */
 package reactor.netty5.http.server;
 
-import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import reactor.netty5.http.HttpInfos;
 
 import java.util.List;
@@ -36,5 +36,5 @@ public interface HttpServerInfos extends HttpInfos {
 	 *
 	 * @return Resolved HTTP cookies
 	 */
-	Map<CharSequence, List<Cookie>> allCookies();
+	Map<CharSequence, List<HttpCookiePair>> allCookies();
 }

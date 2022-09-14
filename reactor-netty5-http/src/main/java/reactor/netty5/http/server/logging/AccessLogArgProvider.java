@@ -15,7 +15,7 @@
  */
 package reactor.netty5.http.server.logging;
 
-import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -133,5 +133,5 @@ public interface AccessLogArgProvider {
 	 * @since 1.0.6
 	 */
 	@Nullable
-	Map<CharSequence, Set<Cookie>> cookies();
+	Map<CharSequence, Set<HttpCookiePair>> cookies();
 }
