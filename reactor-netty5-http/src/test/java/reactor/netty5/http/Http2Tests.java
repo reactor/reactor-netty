@@ -494,7 +494,7 @@ class Http2Tests extends BaseHttpTest {
 		          .wiretap(true)
 		          .get()
 		          .uri("https://example.com")
-		          .responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null").toString()))
+		          .responseSingle((res, bytes) -> Mono.just(getHeader(res.responseHeaders(), "x-http2-stream-id", "null")))
 		          .as(StepVerifier::create)
 		          .expectNextMatches(predicate)
 		          .expectComplete()

@@ -24,10 +24,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.headers.HttpSetCookie;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * Holder for Set-Cookie headers found from response headers
@@ -57,6 +58,7 @@ public class Cookies {
 	volatile     int                                state;
 	static final AtomicIntegerFieldUpdater<Cookies> STATE =
 			AtomicIntegerFieldUpdater.newUpdater(Cookies.class, "state");
+	static final Logger log = Loggers.getLogger(Cookies.class);
 
 	protected Cookies(HttpHeaders nettyHeaders) {
 		this.nettyHeaders = Objects.requireNonNull(nettyHeaders, "nettyHeaders");
@@ -77,16 +79,22 @@ public class Cookies {
 			}
 		}
 
-		Map<java.lang.CharSequence, Set<HttpCookiePair>> cookies = new HashMap<>();
+		Map<CharSequence, Set<HttpCookiePair>> cookies = new HashMap<>();
 		Iterator<HttpSetCookie> setCookieItr = nettyHeaders.getSetCookiesIterator();
+		int setCookieIndex = -1;
 		while (setCookieItr.hasNext()) {
 			try {
+				setCookieIndex++;
 				HttpSetCookie setCookie = setCookieItr.next();
-				Set<HttpCookiePair> existingCookiesOfName = (Set<HttpCookiePair>) cookies.computeIfAbsent(setCookie.name(), k -> new HashSet<>());
+				Set<HttpCookiePair> existingCookiesOfName = cookies.computeIfAbsent(setCookie.name(), k -> new HashSet<>());
 				existingCookiesOfName.add(setCookie);
 			}
-			catch (HeaderValidationException err) {
-				// ignore invalid Set-Cookie header
+			catch (IllegalArgumentException err) {
+				// Ignore invalid syntax or whatever decoding error for the current Set-Cookie header.
+				// Since we don't know which Set-Cookie header is not parsed, we log the Set-Cookie header index number.
+				if (log.isDebugEnabled()) {
+					log.debug("Ignoring invalid Set-Cookie header (header index #{}) : {}", setCookieIndex, err.toString());
+				}
 			}
 		}
 

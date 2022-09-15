@@ -528,7 +528,7 @@ class HttpServerTests extends BaseHttpTest {
 		                }
 		                else if (code == 205) {
 		                    return !h.contains("Transfer-Encoding") &&
-		                           "0".equals(h.get("Content-Length").toString()) &&
+		                           "0".equals(getHeader(h, "Content-Length")) &&
 		                           "NO BODY".equals(t.getT3());
 		                }
 		                else {
@@ -675,29 +675,29 @@ class HttpServerTests extends BaseHttpTest {
 				            }
 				        }
 				        else if (close) {
-					        CharSequence connClosed = t.getT1().get(HttpHeaderNames.CONNECTION);
-					        CharSequence chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
-					        CharSequence cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
+					        String connClosed = getHeader(t.getT1(), HttpHeaderNames.CONNECTION);
+					        String chunked = getHeader(t.getT1(), HttpHeaderNames.TRANSFER_ENCODING);
+					        String cl = getHeader(t.getT1(), HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
-				                return "close".equals(connClosed.toString()) && chunked == null && cl == null && "OK".equals(t.getT2());
+				                return "close".equals(connClosed) && chunked == null && cl == null && "OK".equals(t.getT2());
 				            }
 				            else {
-				                return "close".equals(connClosed.toString()) && chunked == null && cl == null && "NO BODY".equals(t.getT2());
+				                return "close".equals(connClosed) && chunked == null && cl == null && "NO BODY".equals(t.getT2());
 				            }
 				        }
 				        else {
-					        CharSequence chunkedReceived = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
-					        CharSequence clReceived = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
-					        CharSequence chunkedSent = sentHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING);
-					        CharSequence clSent = sentHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH);
+					        String chunkedReceived = getHeader(t.getT1(), HttpHeaderNames.TRANSFER_ENCODING);
+					        String clReceived = getHeader(t.getT1(), HttpHeaderNames.CONTENT_LENGTH);
+					        String chunkedSent = getHeader(sentHeaders.get(), HttpHeaderNames.TRANSFER_ENCODING);
+					        String clSent = getHeader(sentHeaders.get(), HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
 				                return chunkedReceived == null && chunkedSent == null &&
-				                       Integer.parseInt(clReceived.toString()) == Integer.parseInt(clSent.toString()) &&
+				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
 				                       "OK".equals(t.getT2());
 				            }
 				            else {
 				                return chunkedReceived == null && chunkedSent == null &&
-				                       Integer.parseInt(clReceived.toString()) == Integer.parseInt(clSent.toString()) &&
+				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
 				                       "NO BODY".equals(t.getT2());
 				            }
 				        }
@@ -1072,7 +1072,7 @@ class HttpServerTests extends BaseHttpTest {
 				                      }
 				                  }))
 				          .handle((req, res) -> res.sendString(
-				                  Mono.just(req.requestHeaders().get("test", "not found").toString())))
+				                  Mono.just(getHeader(req.requestHeaders(), "test", "not found"))))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1750,7 +1750,7 @@ class HttpServerTests extends BaseHttpTest {
 				              assertThat(req.remoteAddress()).isNull();
 				              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
 				          });
-				          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST).toString()).isEqualTo("localhost");
+				          assertThat(getHeader(req.requestHeaders(), HttpHeaderNames.HOST)).isEqualTo("localhost");
 				          return res.send(req.receive().transferOwnership());
 				      })
 				      .bindNow();
@@ -2315,7 +2315,7 @@ class HttpServerTests extends BaseHttpTest {
 		              .uri("/")
 		              .responseSingle((res, bytes) ->
 		                  bytes.asString()
-		                       .zipWith(Mono.just(res.responseHeaders().get(HttpHeaderNames.CONNECTION, "persistent")))))
+		                       .zipWith(Mono.just(getHeader(res.responseHeaders(), HttpHeaderNames.CONNECTION, "persistent")))))
 		    .collectList()
 		    .as(StepVerifier::create)
 		    .expectNextMatches(l -> {
@@ -2325,18 +2325,18 @@ class HttpServerTests extends BaseHttpTest {
 
 		        if (maxKeepAliveRequests == -1) {
 		            return result &&
-		                    "persistent".equals(l.get(0).getT2().toString()) &&
-		                    "persistent".equals(l.get(1).getT2().toString());
+		                    "persistent".equals(l.get(0).getT2()) &&
+		                    "persistent".equals(l.get(1).getT2());
 		        }
 		        else if (maxKeepAliveRequests == 1) {
 		            return result &&
-		                    "close".equals(l.get(0).getT2().toString()) &&
-		                    "close".equals(l.get(1).getT2().toString());
+		                    "close".equals(l.get(0).getT2()) &&
+		                    "close".equals(l.get(1).getT2());
 		        }
 		        else if (maxKeepAliveRequests == 2) {
 		            return result &&
-		                    "persistent".equals(l.get(0).getT2().toString()) &&
-		                    "close".equals(l.get(1).getT2().toString());
+		                    "persistent".equals(l.get(0).getT2()) &&
+		                    "close".equals(l.get(1).getT2());
 		        }
 		        return false;
 		    })

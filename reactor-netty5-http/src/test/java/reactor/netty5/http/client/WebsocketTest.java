@@ -161,7 +161,7 @@ class WebsocketTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .route(r -> r.get("/test/{param}", (req, res) -> {
-				              log.debug(req.requestHeaders().get("test").toString());
+				              log.debug(getHeader(req.requestHeaders(), "test"));
 				              return res.header("content-type", "text/plain")
 				                        .sendWebsocket((in, out) ->
 				                                out.sendString(in.receive()

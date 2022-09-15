@@ -90,7 +90,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 				            true))
 				    .expectNextMatches(t ->
 				            t.getT2().contains("Hoverfly") &&
-				                "FOUND".equals(t.getT2().get("Logging-Handler").toString()) &&
+				                "FOUND".equals(getHeader(t.getT2(), "Logging-Handler")) &&
 				                "test".equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -107,7 +107,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 				            true))
 				    .expectNextMatches(t ->
 				            t.getT2().contains("Hoverfly") &&
-				                "FOUND".equals(t.getT2().get("Logging-Handler").toString()) &&
+				                "FOUND".equals(getHeader(t.getT2(), "Logging-Handler")) &&
 				                "test".equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -158,7 +158,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 				            false))
 				    .expectNextMatches(t ->
 				           t.getT2().contains("Hoverfly") &&
-				                "NOT FOUND".equals(t.getT2().get("Logging-Handler").toString()) &&
+				                "NOT FOUND".equals(getHeader(t.getT2(), "Logging-Handler")) &&
 				                "test".equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));

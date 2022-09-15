@@ -505,8 +505,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .handle((req, resp) -> {
 				                  assertThat(req.requestHeaders()
 				                                .contains(HttpHeaderNames.USER_AGENT) &&
-				                                   req.requestHeaders()
-				                                      .get(HttpHeaderNames.USER_AGENT).toString()
+				                                   getHeader(req.requestHeaders(), HttpHeaderNames.USER_AGENT)
 				                                      .equals(HttpClient.USER_AGENT))
 				                      .as("" + req.requestHeaders()
 				                                  .get(HttpHeaderNames.USER_AGENT))
@@ -1169,8 +1168,7 @@ class HttpClientTest extends BaseHttpTest {
 	void withConnector() {
 		disposableServer = createServer()
 		                             .handle((req, resp) ->
-		                                 resp.sendString(Mono.just(req.requestHeaders()
-		                                                              .get("test").toString())))
+		                                 resp.sendString(Mono.just(getHeader(req.requestHeaders(), "test"))))
 		                             .bindNow();
 
 		Mono<String> content = createHttpClientForContextWithPort()

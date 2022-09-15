@@ -30,7 +30,6 @@ import java.util.function.Supplier;
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.headers.DefaultHttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
@@ -449,26 +448,24 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Apply cookies configuration emitted by the returned Mono before requesting.
+	 * Apply cookies configuration emitted by the specified Mono before requesting.
 	 *
-	 * @param cookieBuilder the cookies {@link Function} to invoke before sending
+	 * @param cookieMono the mono providing the {@link HttpCookiePair} to add before sending
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient cookiesWhen(String name, Function<? super HttpCookiePair, Mono<? extends HttpCookiePair>> cookieBuilder) {
-		Objects.requireNonNull(name, "name");
-		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
+	public final HttpClient cookiesWhen(Mono<? extends HttpCookiePair> cookieMono) {
+		Objects.requireNonNull(cookieMono, "cookieMono");
 		HttpClient dup = duplicate();
 		dup.configuration().deferredConf(config ->
-				cookieBuilder.apply(new DefaultHttpCookiePair(name, ""))
-				             .map(c -> {
-				                 if (c.value().length() > 0) {
-				                     HttpHeaders headers = configuration().headers.copy();
-				                     headers.addCookie(c);
-				                     config.headers = headers;
-				                 }
-				                 return config;
-				             }));
+				cookieMono.map(c -> {
+							if (c.value().length() > 0) {
+								HttpHeaders headers = configuration().headers.copy();
+								headers.addCookie(c);
+								config.headers = headers;
+							}
+							return config;
+						}));
 		return dup;
 	}
 
