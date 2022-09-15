@@ -55,7 +55,6 @@ import reactor.netty5.NettyOutbound;
 import reactor.netty5.channel.AbortedException;
 import reactor.netty5.http.HttpOperations;
 import reactor.netty5.http.HttpProtocol;
-import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.transport.AddressUtils;
 import reactor.netty5.transport.ProxyProvider;
 import reactor.util.Logger;
@@ -77,7 +76,7 @@ class HttpClientConnect extends HttpClient {
 
 	final HttpClientConfig config;
 
-	HttpClientConnect(ConnectionProvider provider) {
+	HttpClientConnect(HttpConnectionProvider provider) {
 		this.config = new HttpClientConfig(
 				provider,
 				Collections.singletonMap(ChannelOption.AUTO_READ, false),
@@ -194,7 +193,7 @@ class HttpClientConnect extends HttpClient {
 
 				AddressResolverGroup<?> resolver = _config.resolverInternal();
 
-				_config.connectionProvider()
+				_config.httpConnectionProvider()
 						.acquire(_config, observer, handler, resolver)
 						.subscribe(new ClientTransportSubscriber(sink));
 
