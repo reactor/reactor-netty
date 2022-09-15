@@ -867,27 +867,31 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		@Override
 		public void channelActive(ChannelHandlerContext ctx) {
-			SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
-			if (sslHandler == null) {
-				throw new IllegalStateException("Cannot determine negotiated application-level protocol.");
-			}
-			String protocol = sslHandler.applicationProtocol() != null ? sslHandler.applicationProtocol() : ApplicationProtocolNames.HTTP_1_1;
-			if (log.isDebugEnabled()) {
-				log.debug(format(ctx.channel(), "Negotiated application-level protocol [" + protocol + "]"));
-			}
-			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-				configureHttp2Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, http2Settings, observer);
-			}
-			else if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
-				configureHttp11Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, metricsRecorder, uriTagValue);
+			ChannelHandler handler = ctx.pipeline().get(NettyPipeline.SslHandler);
+			if (handler instanceof SslHandler) {
+				SslHandler sslHandler = (SslHandler) handler;
+
+				String protocol = sslHandler.applicationProtocol() != null ? sslHandler.applicationProtocol() : ApplicationProtocolNames.HTTP_1_1;
+				if (log.isDebugEnabled()) {
+					log.debug(format(ctx.channel(), "Negotiated application-level protocol [" + protocol + "]"));
+				}
+				if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
+					configureHttp2Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, http2Settings, observer);
+				}
+				else if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
+					configureHttp11Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, metricsRecorder, uriTagValue);
+				}
+				else {
+					throw new IllegalStateException("unknown protocol: " + protocol);
+				}
+
+				ctx.fireChannelActive();
+
+				ctx.channel().pipeline().remove(this);
 			}
 			else {
-				throw new IllegalStateException("unknown protocol: " + protocol);
+				throw new IllegalStateException("Cannot determine negotiated application-level protocol.");
 			}
-
-			ctx.fireChannelActive();
-
-			ctx.channel().pipeline().remove(this);
 		}
 	}
 
