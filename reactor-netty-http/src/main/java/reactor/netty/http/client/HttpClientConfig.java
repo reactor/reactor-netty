@@ -860,7 +860,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				ctx.fireChannelActive();
 
 				ctx.channel().pipeline().remove(this);
-			} else {
+			}
+			else {
 				throw new IllegalStateException("Cannot determine negotiated application-level protocol.");
 			}
 		}
