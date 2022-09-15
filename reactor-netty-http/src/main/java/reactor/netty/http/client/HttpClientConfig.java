@@ -115,6 +115,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		return (ch, c, msg) -> new HttpClientOperations(ch, c, cookieEncoder, cookieDecoder);
 	}
 
+	@Override
+	public ConnectionProvider connectionProvider() {
+		return httpConnectionProvider().http1ConnectionProvider();
+	}
+
 	/**
 	 * Return the configured {@link ClientCookieDecoder} or the default {@link ClientCookieDecoder#STRICT}.
 	 *
@@ -321,7 +326,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	Function<String, String> uriTagValue;
 	WebsocketClientSpec websocketClientSpec;
 
-	HttpClientConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
+	HttpClientConfig(HttpConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
 		super(connectionProvider, options, remoteAddress);
 		this.acceptGzip = false;
@@ -442,6 +447,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		else {
 			deferredConf = deferredConf -> deferredConf.flatMap(deferrer);
 		}
+	}
+
+	HttpConnectionProvider httpConnectionProvider() {
+		return (HttpConnectionProvider) super.connectionProvider();
 	}
 
 	void protocols(HttpProtocol... protocols) {
