@@ -163,6 +163,7 @@ class NettyOutboundTest {
 							List<Object> out) {
 						clearMessages.add(msg.readCharSequence(msg.readableBytes(), StandardCharsets.UTF_8));
 						out.add(msg.split());
+						msg.close();
 					}
 				},
 				//transform the ChunkedFile into Buffer chunks:
@@ -255,6 +256,7 @@ class NettyOutboundTest {
 					protected void encodeAndClose(ChannelHandlerContext ctx, Buffer msg,
 							List<Object> out) {
 						out.add(msg.readCharSequence(msg.readableBytes(), StandardCharsets.UTF_8));
+						msg.close();
 					}
 				},
 				//transform the ChunkedFile into Buffer chunks:
