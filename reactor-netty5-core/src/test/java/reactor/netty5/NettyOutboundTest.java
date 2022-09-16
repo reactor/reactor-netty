@@ -159,11 +159,10 @@ class NettyOutboundTest {
 				//capture the chunks unencrypted, transform as Strings:
 				new MessageToMessageEncoder<Buffer>() {
 					@Override
-					protected void encodeAndClose(ChannelHandlerContext ctx, Buffer msg,
+					protected void encode(ChannelHandlerContext ctx, Buffer msg,
 							List<Object> out) {
 						clearMessages.add(msg.readCharSequence(msg.readableBytes(), StandardCharsets.UTF_8));
 						out.add(msg.split());
-						msg.close();
 					}
 				},
 				//transform the ChunkedFile into Buffer chunks:
@@ -253,10 +252,9 @@ class NettyOutboundTest {
 				//transform the Buffer chunks into Strings:
 				new MessageToMessageEncoder<Buffer>() {
 					@Override
-					protected void encodeAndClose(ChannelHandlerContext ctx, Buffer msg,
+					protected void encode(ChannelHandlerContext ctx, Buffer msg,
 							List<Object> out) {
 						out.add(msg.readCharSequence(msg.readableBytes(), StandardCharsets.UTF_8));
-						msg.close();
 					}
 				},
 				//transform the ChunkedFile into Buffer chunks:
