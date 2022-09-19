@@ -666,7 +666,7 @@ class HttpServerTests extends BaseHttpTest {
 				    .expectNextMatches(t -> {
 				        if (chunk) {
 				            CharSequence chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
-					        CharSequence cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
+				            CharSequence cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
 				                return chunked != null && cl == null && "OK".equals(t.getT2());
 				            }
@@ -675,9 +675,9 @@ class HttpServerTests extends BaseHttpTest {
 				            }
 				        }
 				        else if (close) {
-					        String connClosed = getHeader(t.getT1(), HttpHeaderNames.CONNECTION);
-					        String chunked = getHeader(t.getT1(), HttpHeaderNames.TRANSFER_ENCODING);
-					        String cl = getHeader(t.getT1(), HttpHeaderNames.CONTENT_LENGTH);
+				            String connClosed = getHeader(t.getT1(), HttpHeaderNames.CONNECTION);
+				            String chunked = getHeader(t.getT1(), HttpHeaderNames.TRANSFER_ENCODING);
+				            String cl = getHeader(t.getT1(), HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
 				                return "close".equals(connClosed) && chunked == null && cl == null && "OK".equals(t.getT2());
 				            }
@@ -686,17 +686,19 @@ class HttpServerTests extends BaseHttpTest {
 				            }
 				        }
 				        else {
-					        String chunkedReceived = getHeader(t.getT1(), HttpHeaderNames.TRANSFER_ENCODING);
-					        String clReceived = getHeader(t.getT1(), HttpHeaderNames.CONTENT_LENGTH);
-					        String chunkedSent = getHeader(sentHeaders.get(), HttpHeaderNames.TRANSFER_ENCODING);
-					        String clSent = getHeader(sentHeaders.get(), HttpHeaderNames.CONTENT_LENGTH);
+				            String chunkedReceived = getHeader(t.getT1(), HttpHeaderNames.TRANSFER_ENCODING);
+				            String clReceived = getHeader(t.getT1(), HttpHeaderNames.CONTENT_LENGTH);
+				            String chunkedSent = getHeader(sentHeaders.get(), HttpHeaderNames.TRANSFER_ENCODING);
+				            String clSent = getHeader(sentHeaders.get(), HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
 				                return chunkedReceived == null && chunkedSent == null &&
+				                       clReceived != null && clSent != null &&
 				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
 				                       "OK".equals(t.getT2());
 				            }
 				            else {
 				                return chunkedReceived == null && chunkedSent == null &&
+				                       clReceived != null && clSent != null &&
 				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
 				                       "NO BODY".equals(t.getT2());
 				            }

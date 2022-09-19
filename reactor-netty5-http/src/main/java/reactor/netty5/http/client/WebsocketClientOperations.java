@@ -74,7 +74,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 					websocketClientSpec.version(),
 					subprotocols != null && !subprotocols.isEmpty() ? subprotocols : null,
 					true,
-				    replacedRequestHeaders,
+					replacedRequestHeaders,
 					websocketClientSpec.maxFramePayloadLength());
 
 		handshaker.handshake(channel)

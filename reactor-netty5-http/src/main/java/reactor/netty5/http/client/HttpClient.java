@@ -436,18 +436,6 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Apply cookies configuration.
-	 *
-	 * @param cookieBuilder the header {@link Supplier} to invoke before requesting
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient cookie(Supplier<HttpCookiePair> cookieBuilder) {
-		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
-		return cookie(cookieBuilder.get());
-	}
-
-	/**
 	 * Apply cookies configuration emitted by the specified Mono before requesting.
 	 *
 	 * @param cookieMono the mono providing the {@link HttpCookiePair} to add before sending

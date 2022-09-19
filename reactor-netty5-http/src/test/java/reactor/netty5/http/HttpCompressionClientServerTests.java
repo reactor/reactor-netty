@@ -170,7 +170,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
-		assertThat(resp.getT2().get("content-encoding").toString()).isEqualTo("gzip");
+		assertThat(getHeader(resp.getT2(), "content-encoding")).isEqualTo("gzip");
 
 		assertThat(new String(resp.getT1(), Charset.defaultCharset())).isNotEqualTo("reply");
 
@@ -248,7 +248,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
-		assertThat(resp.getT1().get("content-encoding").toString()).isEqualTo("gzip");
+		assertThat(getHeader(resp.getT1(), "content-encoding")).isEqualTo("gzip");
 
 		byte[] replyBuffer = resp.getT2();
 
@@ -287,7 +287,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 
 		//check the server didn't send the gzip header, only transfer-encoding
 		HttpHeaders headers = resp.getT2();
-		assertThat(headers.get("transFER-encoding").toString()).isEqualTo("chunked");
+		assertThat(getHeader(headers, "transFER-encoding")).isEqualTo("chunked");
 		assertThat(headers.get("conTENT-encoding")).isNull();
 
 		//check the server sent plain text
@@ -313,7 +313,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
-		assertThat(resp.getT2().get("content-encoding").toString()).isEqualTo("gzip");
+		assertThat(getHeader(resp.getT2(), "content-encoding")).isEqualTo("gzip");
 
 		assertThat(new String(resp.getT1(), Charset.defaultCharset())).isNotEqualTo("reply");
 
@@ -380,7 +380,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				      .bindNow(Duration.ofSeconds(10));
 		client.port(disposableServer.port())
 		      .compress(true)
-		      .headers(h -> zip.set(h.get("accept-encoding").toString()))
+		      .headers(h -> zip.set(getHeader(h, "accept-encoding")))
 		      .get()
 		      .uri("/test")
 		      .responseContent()

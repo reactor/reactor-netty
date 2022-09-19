@@ -927,7 +927,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		@Override
 		protected CharSequence validateKey(@Nullable CharSequence name) {
-			if (!declaredHeaderNames.contains(name.toString())) {
+			if (name == null || !declaredHeaderNames.contains(name.toString())) {
 				throw new IllegalArgumentException("Trailer header name [" + name +
 						"] not declared with [Trailer] header, or it is not a valid trailer header name");
 			}

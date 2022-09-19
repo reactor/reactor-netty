@@ -73,8 +73,8 @@ public final class ServerCookies extends Cookies {
 			}
 		}
 
-		Map<java.lang.CharSequence, Set<HttpCookiePair>> cookies = new HashMap<>();
-		Map<java.lang.CharSequence, List<HttpCookiePair>> allCookies = new HashMap<>();
+		Map<CharSequence, Set<HttpCookiePair>> cookies = new HashMap<>();
+		Map<CharSequence, List<HttpCookiePair>> allCookies = new HashMap<>();
 		for (HttpCookiePair cookie : nettyHeaders.getCookies()) {
 			Set<HttpCookiePair> existingCookiesOfName = cookies.computeIfAbsent(cookie.name(), k -> new HashSet<>());
 			if (existingCookiesOfName.size() == 0) {

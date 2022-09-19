@@ -61,7 +61,7 @@ class WebsocketClientOperationsTest extends BaseHttpTest {
 				          .route(routes ->
 				              routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
 				                    .get("/ws", (req, res) -> {
-				                        int token = Integer.parseInt(req.requestHeaders().get("Authorization").toString());
+				                        int token = Integer.parseInt(getHeader(req.requestHeaders(), "Authorization"));
 				                        if (token >= 400) {
 				                            return res.status(token).send();
 				                        }
@@ -95,7 +95,7 @@ class WebsocketClientOperationsTest extends BaseHttpTest {
 	void testConfigureWebSocketVersion() {
 		disposableServer = createServer()
 				.handle((in, out) -> out.sendWebsocket((i, o) ->
-						o.sendString(Mono.just(in.requestHeaders().get("sec-websocket-version").toString()))))
+						o.sendString(Mono.just(getHeader(in.requestHeaders(), "sec-websocket-version")))))
 				.bindNow();
 
 		List<String> response = createClient(disposableServer.port())

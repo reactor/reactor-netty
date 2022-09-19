@@ -154,6 +154,7 @@ public class BaseHttpTest {
 	 * @param name the name of the header to retrieve
 	 * @return the header value for the specified header name, or null if not found
 	 */
+	@Nullable
 	protected static String getHeader(HttpHeaders headers, CharSequence name) {
 		return getHeader(headers, name, null);
 	}
@@ -166,7 +167,8 @@ public class BaseHttpTest {
 	 * @param defValue the default value to return in case the header name is not found
 	 * @return the header value for the specified header name, or defValue if not found
 	 */
-	protected static String getHeader(HttpHeaders headers, CharSequence name, String defValue) {
+	@Nullable
+	protected static String getHeader(HttpHeaders headers, CharSequence name, @Nullable String defValue) {
 		CharSequence value = headers.get(name);
 		return value != null ? value.toString() : defValue;
 	}

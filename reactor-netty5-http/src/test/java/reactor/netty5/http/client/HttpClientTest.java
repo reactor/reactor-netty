@@ -505,7 +505,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .handle((req, resp) -> {
 				                  assertThat(req.requestHeaders()
 				                                .contains(HttpHeaderNames.USER_AGENT) &&
-				                                   getHeader(req.requestHeaders(), HttpHeaderNames.USER_AGENT)
+				                                   getHeader(req.requestHeaders(), HttpHeaderNames.USER_AGENT, "")
 				                                      .equals(HttpClient.USER_AGENT))
 				                      .as("" + req.requestHeaders()
 				                                  .get(HttpHeaderNames.USER_AGENT))
@@ -786,7 +786,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .bindNow();
 
 		createHttpClientForContextWithAddress()
-		        .cookie(() -> new DefaultHttpCookiePair("test", "lol"))
+		        .cookie(new DefaultHttpCookiePair("test", "lol"))
 		        .get()
 		        .uri("/201")
 		        .responseContent()
@@ -1168,7 +1168,8 @@ class HttpClientTest extends BaseHttpTest {
 	void withConnector() {
 		disposableServer = createServer()
 		                             .handle((req, resp) ->
-		                                 resp.sendString(Mono.just(getHeader(req.requestHeaders(), "test"))))
+		                                 resp.sendString(Mono.just(getHeader(req.requestHeaders(), "test",
+				                                 "header not found from server"))))
 		                             .bindNow();
 
 		Mono<String> content = createHttpClientForContextWithPort()

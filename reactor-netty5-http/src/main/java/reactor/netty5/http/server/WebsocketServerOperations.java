@@ -113,7 +113,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			handshakerResult =
 					handshaker.handshake(channel,
 					                     request,
-									responseHeaders)
+					                     responseHeaders)
 					          .addListener(f -> {
 					              if (replaced.rebind(this)) {
 					                  markPersistent(false);

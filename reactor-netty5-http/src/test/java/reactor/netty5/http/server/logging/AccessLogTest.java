@@ -48,6 +48,7 @@ class AccessLogTest extends BaseHttpTest {
 	static final String ACCESS_LOG_HANDLER = "AccessLogHandler";
 	static final Logger ROOT = (Logger) LoggerFactory.getLogger(LOG.getName());
 	static final String NOT_FOUND = "NOT FOUND";
+	static final String HEADER_NOT_FOUND = "HEADER NOT FOUND";
 	static final String FOUND = "FOUND";
 	static final String CUSTOM_FORMAT = "method={}, uri={}, cookie: {}";
 	static final String URI_1 = "/example/test";
@@ -210,13 +211,13 @@ class AccessLogTest extends BaseHttpTest {
 	@Nullable
 	private Tuple2<String, String> getHttpClientResponse(String uri) {
 		return createClient(disposableServer.port())
-				.cookie(() -> new DefaultHttpCookiePair(COOKIE_KEY, COOKIE_VALUE))
+				.cookie(new DefaultHttpCookiePair(COOKIE_KEY, COOKIE_VALUE))
 				.get()
 				.uri(uri)
 				.responseSingle((res, bytes) ->
 						bytes.asString()
 						     .defaultIfEmpty("")
-						     .zipWith(Mono.just(getHeader(res.responseHeaders(), ACCESS_LOG_HANDLER))))
+						     .zipWith(Mono.just(getHeader(res.responseHeaders(), ACCESS_LOG_HANDLER, HEADER_NOT_FOUND))))
 				.block(Duration.ofSeconds(30));
 	}
 

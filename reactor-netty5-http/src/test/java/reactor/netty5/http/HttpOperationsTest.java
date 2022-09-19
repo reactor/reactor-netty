@@ -28,10 +28,9 @@ import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty.contrib.handler.codec.json.JsonObjectDecoder;
 import java.nio.charset.StandardCharsets;
-
-import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.netty5.Connection;

@@ -98,14 +98,14 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 	void customCookieEncoderDecoder() {
 		disposableServer =
 				createServer()
-						//.cookieCodec(ServerCookieEncoder.LAX, ServerCookieDecoder.LAX)
-						.handle((req, res) -> res.addCookie(new DefaultHttpSetCookie("cookie1", "test_value"))
+				          //.cookieCodec(ServerCookieEncoder.LAX, ServerCookieDecoder.LAX)
+				          .handle((req, res) -> res.addCookie(new DefaultHttpSetCookie("cookie1", "test_value"))
 				                                   .sendString(Mono.just("test")))
 				          .bindNow();
 
 		Mono<Map<CharSequence, Set<HttpCookiePair>>> response =
 				createClient(disposableServer.port())
-				          // .cookieCodec(ClientCookieEncoder.LAX, ClientCookieDecoder.LAX) // FIXME
+				          //.cookieCodec(ClientCookieEncoder.LAX, ClientCookieDecoder.LAX)
 				          .get()
 				          .uri("/")
 				          .responseSingle((res, bytes) -> Mono.just(res.cookies()))
@@ -145,7 +145,7 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 				                                                .get("test")
 				                                                .stream()
 				                                                .map(HttpCookiePair::value)
-								                                .map(charSequence -> charSequence.toString())
+				                                                .map(charSequence -> charSequence.toString())
 				                                                .reduce("", (a, b) -> a + " " + b))))
 				        .bindNow();
 
