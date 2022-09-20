@@ -42,7 +42,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import static reactor.netty5.ReactorNetty.PREDICATE_GROUP_BOUNDARY;
-import static reactor.netty5.ReactorNetty.PREDICATE_GROUP_FLUSH;
 
 /**
  * An outbound-traffic API delegating to an underlying {@link Channel}.
@@ -237,13 +236,7 @@ public interface NettyOutbound extends Publisher<Void> {
 				    .concatMap(p -> Flux.<Buffer>from(p)
 				                        .concatWith(Mono.just(BOUNDARY.copy(0, BOUNDARY.readableBytes(), true))), 32)
 				    .doFinally(sig -> BOUNDARY.close()),
-				buf -> {
-					boolean flush = PREDICATE_GROUP_FLUSH.test(buf);
-					if (flush) {
-						buf.close();
-					}
-					return flush;
-				});
+				ReactorNetty.PREDICATE_GROUP_FLUSH);
 	}
 
 	/**
