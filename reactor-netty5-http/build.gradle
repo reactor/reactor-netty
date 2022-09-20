@@ -278,7 +278,7 @@ task japicmp(type: JapicmpTask) {
 
 			'reactor.netty.http.websocket.WebsocketInbound#headers()',
 
-			// API removed after adapation to new HttpHeaders/Cookies Netty API (#12735)
+			// API removed after adaptation to new HttpHeaders/Cookies Netty API (#12735)
 			'reactor.netty.http.Cookies#newClientResponseHolder(io.netty.handler.codec.http.HttpHeaders, io.netty.handler.codec.http.cookie.ClientCookieDecoder)',
 			'reactor.netty.http.server.ServerCookies#newServerRequestHolder(io.netty.handler.codec.http.HttpHeaders, io.netty.handler.codec.http.cookie.ServerCookieDecoder)',
 			'reactor.netty.http.client.HttpClient#cookie(java.lang.String, java.util.function.Consumer)',

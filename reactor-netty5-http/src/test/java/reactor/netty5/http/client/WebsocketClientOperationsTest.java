@@ -29,6 +29,7 @@ import reactor.test.StepVerifier;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -61,7 +62,9 @@ class WebsocketClientOperationsTest extends BaseHttpTest {
 				          .route(routes ->
 				              routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
 				                    .get("/ws", (req, res) -> {
-				                        int token = Integer.parseInt(getHeader(req.requestHeaders(), "Authorization"));
+				                        String auth = Objects.requireNonNull(getHeader(req.requestHeaders(), "Authorization"),
+							                    "Authorization header not found");
+				                        int token = Integer.parseInt(auth);
 				                        if (token >= 400) {
 				                            return res.status(token).send();
 				                        }
@@ -94,8 +97,11 @@ class WebsocketClientOperationsTest extends BaseHttpTest {
 	@Test
 	void testConfigureWebSocketVersion() {
 		disposableServer = createServer()
-				.handle((in, out) -> out.sendWebsocket((i, o) ->
-						o.sendString(Mono.just(getHeader(in.requestHeaders(), "sec-websocket-version")))))
+				.handle((in, out) -> out.sendWebsocket((i, o) -> {
+						String version = Objects.requireNonNull(getHeader(in.requestHeaders(), "sec-websocket-version"),
+							"sec-websocket-version header not found");
+						return o.sendString(Mono.just(version));
+				}))
 				.bindNow();
 
 		List<String> response = createClient(disposableServer.port())
