@@ -15,6 +15,7 @@
  */
 package reactor.netty5;
 
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.provider.Arguments;
 import reactor.netty5.http.HttpProtocol;
@@ -145,4 +146,31 @@ public class BaseHttpTest {
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})
 		);
 	}
+
+	/**
+	 * Returns the value of a header with the specified name.
+	 *
+	 * @param headers the headers to get the {@code name} from
+	 * @param name the name of the header to retrieve
+	 * @return the header value for the specified header name, or null if not found
+	 */
+	@Nullable
+	protected static String getHeader(HttpHeaders headers, CharSequence name) {
+		return getHeader(headers, name, null);
+	}
+
+	/**
+	 * Returns the value of a header with the specified name.
+	 *
+	 * @param headers the headers to get the {@code name} from
+	 * @param name the name of the header to retrieve
+	 * @param defValue the default value to return in case the header name is not found
+	 * @return the header value for the specified header name, or defValue if not found
+	 */
+	@Nullable
+	protected static String getHeader(HttpHeaders headers, CharSequence name, @Nullable String defValue) {
+		CharSequence value = headers.get(name);
+		return value != null ? value.toString() : defValue;
+	}
+
 }

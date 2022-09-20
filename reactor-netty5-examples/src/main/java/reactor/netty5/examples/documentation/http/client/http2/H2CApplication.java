@@ -15,7 +15,7 @@
  */
 package reactor.netty5.examples.documentation.http.client.http2;
 
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import reactor.core.publisher.Mono;
 import reactor.netty5.http.HttpProtocol;
 import reactor.netty5.http.client.HttpClient;

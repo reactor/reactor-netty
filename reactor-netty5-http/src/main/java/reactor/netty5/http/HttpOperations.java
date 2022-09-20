@@ -26,8 +26,9 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.CombinedChannelDuplexHandler;
@@ -229,12 +230,12 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
 				outboundHttpMessage()) && count < Integer.MAX_VALUE) {
 			outboundHttpMessage().headers()
-			                     .setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
+			                     .set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(count));
 		}
 		else if (!HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-			outboundHttpMessage().headers()
-			                     .remove(HttpHeaderNames.CONTENT_LENGTH)
-			                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
+			HttpHeaders headers = outboundHttpMessage().headers();
+			headers.remove(HttpHeaderNames.CONTENT_LENGTH);
+			headers.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
 		}
 

@@ -27,8 +27,8 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLException;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.buffer.Buffer;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
@@ -248,10 +248,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest ->
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com"),
 				(connectionInfo, request) -> {
-					String hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
+					CharSequence hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
 					if (hostHeader != null) {
 						InetSocketAddress hostAddress = AddressUtils.createUnresolved(
-								hostHeader.split(",", 2)[1].trim(),
+								hostHeader.toString().split(",", 2)[1].trim(),
 								connectionInfo.getHostAddress().getPort());
 						connectionInfo = connectionInfo.withHostAddress(hostAddress);
 					}

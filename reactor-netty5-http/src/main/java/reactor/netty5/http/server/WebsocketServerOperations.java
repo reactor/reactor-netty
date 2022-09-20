@@ -17,14 +17,14 @@ package reactor.netty5.http.server;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PingWebSocketFrame;
@@ -108,11 +108,12 @@ final class WebsocketServerOperations extends HttpServerOperations
 				}
 			}
 
+			HttpHeaders responseHeaders = replaced.responseHeaders();
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			handshakerResult =
 					handshaker.handshake(channel,
 					                     request,
-					                     replaced.responseHeaders
-					                             .remove(HttpHeaderNames.TRANSFER_ENCODING))
+					                     responseHeaders)
 					          .addListener(f -> {
 					              if (replaced.rebind(this)) {
 					                  markPersistent(false);

@@ -15,7 +15,7 @@
  */
 package reactor.netty5.http;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultHttpContent;
@@ -28,7 +28,7 @@ import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty.contrib.handler.codec.json.JsonObjectDecoder;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
@@ -187,7 +187,7 @@ class HttpOperationsTest {
 		String uri;
 
 		@Override
-		public Map<CharSequence, Set<Cookie>> cookies() {
+		public Map<CharSequence, Set<HttpCookiePair>> cookies() {
 			return null;
 		}
 

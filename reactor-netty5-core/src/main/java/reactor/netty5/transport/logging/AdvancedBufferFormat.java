@@ -18,7 +18,7 @@ package reactor.netty5.transport.logging;
 import java.nio.charset.Charset;
 
 import io.netty.buffer.ByteBufHolder;
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 

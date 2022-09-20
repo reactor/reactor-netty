@@ -57,8 +57,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -74,7 +74,8 @@ import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.DefaultHttpCookiePair;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpObjectDecoder;
 import io.netty5.handler.codec.http.HttpResponseEncoder;
@@ -122,7 +123,7 @@ import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -435,7 +436,7 @@ class HttpClientTest extends BaseHttpTest {
 				    .expectNextMatches(tuple -> {
 				            String content1 = tuple.getT1().getT1();
 				            return !content1.equals(content)
-				                   && "gzip".equals(tuple.getT1().getT2());
+				                   && "gzip".equals(tuple.getT1().getT2().toString());
 				    })
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -457,7 +458,7 @@ class HttpClientTest extends BaseHttpTest {
 				    .expectNextMatches(tuple -> {
 				            String content1 = tuple.getT1().getT1();
 				            return content1.equals(content)
-				                   && "".equals(tuple.getT1().getT2());
+				                   && "".equals(tuple.getT1().getT2().toString());
 				    })
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -479,7 +480,7 @@ class HttpClientTest extends BaseHttpTest {
 				createServer()
 				          .handle((req, res) -> res.sendString(Mono.just(req.requestHeaders()
 				                                                           .get(HttpHeaderNames.ACCEPT_ENCODING,
-				                                                                "no gzip"))))
+				                                                                "no gzip").toString())))
 				          .bindNow();
 		HttpClient client = createHttpClientForContextWithPort();
 
@@ -504,8 +505,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .handle((req, resp) -> {
 				                  assertThat(req.requestHeaders()
 				                                .contains(HttpHeaderNames.USER_AGENT) &&
-				                                   req.requestHeaders()
-				                                      .get(HttpHeaderNames.USER_AGENT)
+				                                   getHeader(req.requestHeaders(), HttpHeaderNames.USER_AGENT, "")
 				                                      .equals(HttpClient.USER_AGENT))
 				                      .as("" + req.requestHeaders()
 				                                  .get(HttpHeaderNames.USER_AGENT))
@@ -786,7 +786,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .bindNow();
 
 		createHttpClientForContextWithAddress()
-		        .cookie("test", c -> c.setValue("lol"))
+		        .cookie(new DefaultHttpCookiePair("test", "lol"))
 		        .get()
 		        .uri("/201")
 		        .responseContent()
@@ -1168,8 +1168,8 @@ class HttpClientTest extends BaseHttpTest {
 	void withConnector() {
 		disposableServer = createServer()
 		                             .handle((req, resp) ->
-		                                 resp.sendString(Mono.just(req.requestHeaders()
-		                                                              .get("test"))))
+		                                 resp.sendString(Mono.just(getHeader(req.requestHeaders(), "test",
+				                                 "header not found from server"))))
 		                             .bindNow();
 
 		Mono<String> content = createHttpClientForContextWithPort()
@@ -1207,7 +1207,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		StepVerifier.create(
 				createHttpClientForContextWithAddress()
-				        .headers(h -> h.add(HttpHeaderNames.CONTENT_LENGTH, 5))
+				        .headers(h -> h.add(HttpHeaderNames.CONTENT_LENGTH, "5"))
 				        .post()
 				        .uri("/")
 				        .send(Mono.just(preferredAllocator().copyOf("hello".getBytes(Charset.defaultCharset()))))
@@ -1661,7 +1661,7 @@ class HttpClientTest extends BaseHttpTest {
 		                  .post()
 		                  .uri("/")
 		                  .send((req, out) -> {
-		                      String header = req.requestHeaders().get("test");
+		                      CharSequence header = req.requestHeaders().get("test");
 		                      if (header != null) {
 		                          return out.sendString(Flux.just("FOUND"));
 		                      }
@@ -2857,7 +2857,7 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(Mono.just(req.requestHeaders()
-				                                                          .get(HttpHeaderNames.USER_AGENT, ""))))
+				                                                          .get(HttpHeaderNames.USER_AGENT, "").toString())))
 				        .bindNow();
 
 		HttpClient client = createClient(disposableServer.port());

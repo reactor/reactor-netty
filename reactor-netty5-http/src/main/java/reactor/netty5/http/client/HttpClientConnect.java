@@ -34,7 +34,7 @@ import java.util.function.Supplier;
 
 import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
@@ -502,18 +502,19 @@ class HttpClientConnect extends HttpClient {
 				Consumer<HttpClientRequest> consumer = null;
 				if (fromURI != null && !toURI.equals(fromURI)) {
 					if (handler instanceof RedirectSendHandler) {
-						headers.remove(HttpHeaderNames.EXPECT)
-						       .remove(HttpHeaderNames.COOKIE)
-						       .remove(HttpHeaderNames.AUTHORIZATION)
-						       .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
+						headers.remove(HttpHeaderNames.EXPECT);
+						headers.remove(HttpHeaderNames.COOKIE);
+						headers.remove(HttpHeaderNames.AUTHORIZATION);
+						headers.remove(HttpHeaderNames.PROXY_AUTHORIZATION);
 					}
 					else {
-						consumer = request ->
-						        request.requestHeaders()
-						               .remove(HttpHeaderNames.EXPECT)
-						               .remove(HttpHeaderNames.COOKIE)
-						               .remove(HttpHeaderNames.AUTHORIZATION)
-						               .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
+						consumer = request -> {
+							HttpHeaders requestHeaders = request.requestHeaders();
+							requestHeaders.remove(HttpHeaderNames.EXPECT);
+							requestHeaders.remove(HttpHeaderNames.COOKIE);
+							requestHeaders.remove(HttpHeaderNames.AUTHORIZATION);
+							requestHeaders.remove(HttpHeaderNames.PROXY_AUTHORIZATION);
+						};
 					}
 				}
 				if (this.redirectRequestConsumer != null) {

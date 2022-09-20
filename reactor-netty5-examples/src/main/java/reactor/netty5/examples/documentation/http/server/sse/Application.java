@@ -16,8 +16,8 @@
 package reactor.netty5.examples.documentation.http.server.sse;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.netty5.DisposableServer;

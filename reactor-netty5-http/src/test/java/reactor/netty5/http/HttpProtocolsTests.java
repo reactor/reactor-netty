@@ -20,7 +20,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
 import ch.qos.logback.core.read.ListAppender;
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.handler.codec.http.HttpHeaderNames;
@@ -362,7 +362,8 @@ class HttpProtocolsTests extends BaseHttpTest {
 			      .uri("/")
 			      .responseSingle((res, bytes) -> {
 			          protocol.set(res.responseHeaders().get("x-http2-stream-id") != null ? "2.0" : "1.1");
-			          return Mono.just(res.responseHeaders().get(NettyPipeline.AccessLogHandler));
+			          String header = getHeader(res.responseHeaders(), NettyPipeline.AccessLogHandler);
+			          return Mono.just(header == null ? "HEADER VALUE NOT FOUND" : header);
 			      })
 			      .as(StepVerifier::create)
 			      .expectNext("FOUND")
@@ -555,7 +556,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		      .responseSingle((res, bytes) -> bytes.asString().zipWith(res.trailerHeaders()))
 		      .as(StepVerifier::create)
 		      .expectNextMatches(t -> expectedResponse.equals(t.getT1()) &&
-		              expectedHeaderValue.equals(t.getT2().get("foo", "empty")))
+		              expectedHeaderValue.equals(t.getT2().get("foo", "empty").toString()))
 		      .expectComplete()
 		      .verify(Duration.ofSeconds(5));
 	}

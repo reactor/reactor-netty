@@ -18,21 +18,20 @@ package reactor.netty5.http;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.Cookie;
-import io.netty5.handler.codec.http.cookie.CookieDecoder;
-import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpSetCookie;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
- * Store cookies for the http channel.
+ * Holder for Set-Cookie headers found from response headers
  *
  * @since 0.6
  */
@@ -44,31 +43,25 @@ public class Cookies {
 	 * @param headers client response headers
 	 * @return a new cookies holder from client response headers
 	 */
-	public static Cookies newClientResponseHolder(HttpHeaders headers, ClientCookieDecoder decoder) {
-		return new Cookies(headers, HttpHeaderNames.SET_COOKIE, true, decoder);
+	public static Cookies newClientResponseHolder(HttpHeaders headers) {
+		return new Cookies(headers);
 	}
 
 	final static int NOT_READ = 0;
 	final static int READING  = 1;
 	final static int READ     = 2;
 
-	final HttpHeaders   nettyHeaders;
-	final CharSequence  cookiesHeaderName;
-	final boolean       isClientChannel;
-	final CookieDecoder decoder;
+	protected final HttpHeaders   nettyHeaders;
 
-	protected Map<CharSequence, Set<Cookie>> cachedCookies;
+	protected Map<CharSequence, Set<HttpCookiePair>> cachedCookies;
 
 	volatile     int                                state;
 	static final AtomicIntegerFieldUpdater<Cookies> STATE =
 			AtomicIntegerFieldUpdater.newUpdater(Cookies.class, "state");
+	static final Logger log = Loggers.getLogger(Cookies.class);
 
-	protected Cookies(HttpHeaders nettyHeaders, CharSequence cookiesHeaderName, boolean isClientChannel,
-			CookieDecoder decoder) {
+	protected Cookies(HttpHeaders nettyHeaders) {
 		this.nettyHeaders = Objects.requireNonNull(nettyHeaders, "nettyHeaders");
-		this.cookiesHeaderName = cookiesHeaderName;
-		this.isClientChannel = isClientChannel;
-		this.decoder = Objects.requireNonNull(decoder, "decoder");
 		cachedCookies = Collections.emptyMap();
 	}
 
@@ -77,7 +70,7 @@ public class Cookies {
 	 *
 	 * @return the cached map of cookies
 	 */
-	public Map<CharSequence, Set<Cookie>> getCachedCookies() {
+	public Map<CharSequence, Set<HttpCookiePair>> getCachedCookies() {
 		if (!markReadingCookies()) {
 			for (;;) {
 				if (hasReadCookies()) {
@@ -86,33 +79,28 @@ public class Cookies {
 			}
 		}
 
-		List<String> allCookieHeaders = allCookieHeaders();
-		Map<String, Set<Cookie>> cookies = new HashMap<>();
-		for (String aCookieHeader : allCookieHeaders) {
-			Set<Cookie> decode;
-			if (isClientChannel) {
-				final Cookie c = ((ClientCookieDecoder) decoder).decode(aCookieHeader);
-				if (c == null) {
-					continue;
-				}
-				Set<Cookie> existingCookiesOfName = cookies.computeIfAbsent(c.name(), k -> new HashSet<>());
-				existingCookiesOfName.add(c);
+		Map<CharSequence, Set<HttpCookiePair>> cookies = new HashMap<>();
+		Iterator<HttpSetCookie> setCookieItr = nettyHeaders.getSetCookiesIterator();
+		int setCookieIndex = -1;
+		while (setCookieItr.hasNext()) {
+			try {
+				setCookieIndex++;
+				HttpSetCookie setCookie = setCookieItr.next();
+				Set<HttpCookiePair> existingCookiesOfName = cookies.computeIfAbsent(setCookie.name(), k -> new HashSet<>());
+				existingCookiesOfName.add(setCookie);
 			}
-			else {
-				decode = ((ServerCookieDecoder) decoder).decode(aCookieHeader);
-				for (Cookie cookie : decode) {
-					Set<Cookie> existingCookiesOfName = cookies.computeIfAbsent(cookie.name(), k -> new HashSet<>());
-					existingCookiesOfName.add(cookie);
+			catch (IllegalArgumentException err) {
+				// Ignore invalid syntax or whatever decoding error for the current Set-Cookie header.
+				// Since we don't know which Set-Cookie header is not parsed, we log the Set-Cookie header index number.
+				if (log.isDebugEnabled()) {
+					log.debug("Ignoring invalid Set-Cookie header (header index #{}) : {}", setCookieIndex, err.toString());
 				}
 			}
 		}
+
 		cachedCookies = Collections.unmodifiableMap(cookies);
 		markReadCookies();
 		return cachedCookies;
-	}
-
-	protected List<String> allCookieHeaders() {
-		return nettyHeaders.getAll(cookiesHeaderName);
 	}
 
 	protected final boolean hasReadCookies() {

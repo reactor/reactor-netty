@@ -22,7 +22,7 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.group.ChannelGroup;

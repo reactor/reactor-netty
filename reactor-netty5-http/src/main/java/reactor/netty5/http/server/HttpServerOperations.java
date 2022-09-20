@@ -31,15 +31,13 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
-import io.netty5.handler.codec.DefaultHeaders;
 import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.DefaultHttpResponse;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
@@ -48,7 +46,9 @@ import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
@@ -57,9 +57,7 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.handler.codec.http.cookie.Cookie;
-import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.codec.http2.HttpConversionUtil;
@@ -86,7 +84,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpUtil.isTransferEncodingChunked;
 import static reactor.netty5.ReactorNetty.format;
 import static reactor.netty5.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
@@ -102,8 +100,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 	final ConnectionInfo connectionInfo;
-	final ServerCookieDecoder cookieDecoder;
-	final ServerCookieEncoder cookieEncoder;
 	final ServerCookies cookieHolder;
 	final HttpServerFormDecoderProvider formDecoderProvider;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
@@ -122,8 +118,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		super(replaced);
 		this.compressionPredicate = replaced.compressionPredicate;
 		this.connectionInfo = replaced.connectionInfo;
-		this.cookieDecoder = replaced.cookieDecoder;
-		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieHolder = replaced.cookieHolder;
 		this.currentContext = replaced.currentContext;
 		this.formDecoderProvider = replaced.formDecoderProvider;
@@ -140,20 +134,16 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			@Nullable ConnectionInfo connectionInfo,
-			ServerCookieDecoder decoder,
-			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean secured) {
-		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, formDecoderProvider,
+		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, formDecoderProvider,
 				mapHandle, true, secured);
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			@Nullable ConnectionInfo connectionInfo,
-			ServerCookieDecoder decoder,
-			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean resolvePath,
@@ -161,9 +151,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		super(c, listener);
 		this.compressionPredicate = compressionPredicate;
 		this.connectionInfo = connectionInfo;
-		this.cookieDecoder = decoder;
-		this.cookieEncoder = encoder;
-		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers(), decoder);
+		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers());
 		this.currentContext = Context.empty();
 		this.formDecoderProvider = formDecoderProvider;
 		this.mapHandle = mapHandle;
@@ -206,7 +194,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
 
 				if (HttpUtil.getContentLength(nettyResponse, -1) == -1) {
-					responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+					responseHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(body.readableBytes()));
 				}
 			}
 		}
@@ -227,10 +215,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerResponse addCookie(Cookie cookie) {
+	public HttpServerResponse addCookie(HttpSetCookie setCookie) {
 		if (!hasSentHeaders()) {
-			this.responseHeaders.add(HttpHeaderNames.SET_COOKIE,
-					cookieEncoder.encode(cookie));
+			this.responseHeaders.addSetCookie(setCookie);
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -259,7 +246,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Map<CharSequence, Set<Cookie>> cookies() {
+	public Map<CharSequence, Set<HttpCookiePair>> cookies() {
 		if (cookieHolder != null) {
 			return cookieHolder.getCachedCookies();
 		}
@@ -267,7 +254,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Map<CharSequence, List<Cookie>> allCookies() {
+	public Map<CharSequence, List<HttpCookiePair>> allCookies() {
 		if (cookieHolder != null) {
 			return cookieHolder.getAllCachedCookies();
 		}
@@ -602,8 +589,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void afterMarkSentHeaders() {
 		if (HttpResponseStatus.NOT_MODIFIED.equals(status())) {
-			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-			               .remove(HttpHeaderNames.CONTENT_LENGTH);
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+			responseHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
 		}
 		if (compressionPredicate != null && compressionPredicate.test(this, this)) {
 			compression(true);
@@ -653,9 +640,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				// of trailer fields at the end of the message, the sender SHOULD
 				// generate a Trailer header field before the message body to indicate
 				// which fields will be present in the trailers.
-				String declaredHeaderNames = responseHeaders.get(HttpHeaderNames.TRAILER);
+				CharSequence declaredHeaderNames = responseHeaders.get(HttpHeaderNames.TRAILER);
 				if (declaredHeaderNames != null) {
-					HttpHeaders trailerHeaders = new TrailerHeaders(declaredHeaderNames);
+					HttpHeaders trailerHeaders = new TrailerHeaders(declaredHeaderNames.toString());
 					try {
 						trailerHeadersConsumer.accept(trailerHeaders);
 					}
@@ -735,7 +722,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				                                         HttpResponseStatus.BAD_REQUEST,
 				ctx.bufferAllocator().allocate(0));
 		response.headers()
-		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
+		        .set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO)
 		        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 
 		Connection ops = ChannelOperations.get(ctx.channel());
@@ -874,7 +861,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				HttpRequest nettyRequest,
 				HttpResponse nettyResponse,
 				boolean secure) {
-			super(c, listener, nettyRequest, null, null, ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT,
+			super(c, listener, nettyRequest, null, null,
 					DEFAULT_FORM_DECODER_SPEC, null, false, secure);
 			this.customResponse = nettyResponse;
 			String tempPath = "";
@@ -928,8 +915,23 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			DISALLOWED_TRAILER_HEADER_NAMES.add("warning");
 		}
 
+		/**
+		 * Contains the headers names specified with {@link HttpHeaderNames#TRAILER}
+		 */
+		final Set<String> declaredHeaderNames;
+
 		TrailerHeaders(String declaredHeaderNames) {
-			super(true, new TrailerNameValidator(filterHeaderNames(declaredHeaderNames)));
+			super(16, true, true, true);
+			this.declaredHeaderNames = filterHeaderNames(declaredHeaderNames);
+		}
+
+		@Override
+		protected CharSequence validateKey(@Nullable CharSequence name) {
+			if (name == null || !declaredHeaderNames.contains(name.toString())) {
+				throw new IllegalArgumentException("Trailer header name [" + name +
+						"] not declared with [Trailer] header, or it is not a valid trailer header name");
+			}
+			return super.validateKey(name);
 		}
 
 		static Set<String> filterHeaderNames(String declaredHeaderNames) {
@@ -945,26 +947,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				result.add(trimmedStr);
 			}
 			return result;
-		}
-
-		static final class TrailerNameValidator implements DefaultHeaders.NameValidator<CharSequence> {
-
-			/**
-			 * Contains the headers names specified with {@link HttpHeaderNames#TRAILER}
-			 */
-			final Set<String> declaredHeaderNames;
-
-			TrailerNameValidator(Set<String> declaredHeaderNames) {
-				this.declaredHeaderNames = declaredHeaderNames;
-			}
-
-			@Override
-			public void validateName(CharSequence name) {
-				if (!declaredHeaderNames.contains(name.toString())) {
-					throw new IllegalArgumentException("Trailer header name [" + name +
-							"] not declared with [Trailer] header, or it is not a valid trailer header name");
-				}
-			}
 		}
 	}
 }

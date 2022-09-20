@@ -20,7 +20,7 @@ import java.util.Set;
 
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpVersion;
-import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 
 /**
  * An Http Reactive Channel with several accessors related to HTTP flow: headers, params,
@@ -32,11 +32,11 @@ import io.netty5.handler.codec.http.cookie.Cookie;
 public interface HttpInfos {
 
 	/**
-	 * Returns resolved HTTP cookies
+	 * Returns resolved HTTP cookies.
 	 *
 	 * @return Resolved HTTP cookies
 	 */
-	Map<CharSequence, Set<Cookie>> cookies();
+	Map<CharSequence, Set<HttpCookiePair>> cookies();
 
 	/**
 	 * Returns the decoded path portion from the {@link #uri()}

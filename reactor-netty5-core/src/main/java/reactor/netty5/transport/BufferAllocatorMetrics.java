@@ -17,8 +17,8 @@ package reactor.netty5.transport;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Tags;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.pool.BufferAllocatorMetric;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.pool.BufferAllocatorMetric;
 import reactor.netty5.internal.util.MapUtils;
 
 import java.util.concurrent.ConcurrentHashMap;

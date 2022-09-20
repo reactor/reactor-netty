@@ -15,7 +15,7 @@
  */
 package reactor.netty5.http;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
@@ -494,7 +494,7 @@ class Http2Tests extends BaseHttpTest {
 		          .wiretap(true)
 		          .get()
 		          .uri("https://example.com")
-		          .responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
+		          .responseSingle((res, bytes) -> Mono.just(getHeader(res.responseHeaders(), "x-http2-stream-id", "null")))
 		          .as(StepVerifier::create)
 		          .expectNextMatches(predicate)
 		          .expectComplete()

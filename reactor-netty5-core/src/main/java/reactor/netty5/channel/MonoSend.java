@@ -21,7 +21,7 @@ import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
 import io.netty.buffer.ByteBufHolder;
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;

@@ -48,7 +48,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
@@ -65,7 +65,7 @@ import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpObjectDecoder;
@@ -74,8 +74,6 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpServerCodec;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.HttpUtil;
-import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.ssl.SniCompletionEvent;
 import io.netty5.handler.ssl.SslContext;
@@ -123,7 +121,7 @@ import reactor.util.function.Tuple3;
 
 import javax.net.ssl.SNIHostName;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
@@ -530,7 +528,7 @@ class HttpServerTests extends BaseHttpTest {
 		                }
 		                else if (code == 205) {
 		                    return !h.contains("Transfer-Encoding") &&
-		                           h.getInt("Content-Length").equals(0) &&
+		                           "0".equals(getHeader(h, "Content-Length")) &&
 		                           "NO BODY".equals(t.getT3());
 		                }
 		                else {
@@ -554,7 +552,7 @@ class HttpServerTests extends BaseHttpTest {
 				                                                   .sendString(Flux.just("OK").hide()))
 				                       .route(req -> req.uri().startsWith("/3"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "2");
 				                                                return res.sendString(Mono.just("OK"))
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
@@ -566,7 +564,7 @@ class HttpServerTests extends BaseHttpTest {
 				                                                   .sendHeaders())
 				                       .route(req -> req.uri().startsWith("/6"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "2");
 				                                                return res.sendHeaders()
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
@@ -582,35 +580,35 @@ class HttpServerTests extends BaseHttpTest {
 				                                                   .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders())))
 				                       .route(req -> req.uri().startsWith("/9"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "2");
 				                                                return res.send()
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/10"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "0");
 				                                                return res.sendString(Mono.just("OK"))
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/11"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "0");
 				                                                return res.sendString(Flux.just("OK").hide())
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/12"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "2");
 				                                                return res.sendObject(res.alloc().copyOf("OK", Charset.defaultCharset()))
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/13"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "0");
 				                                                return res.sendObject(res.alloc().copyOf("OK", Charset.defaultCharset()))
 				                                                          .then()
 				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
@@ -643,7 +641,7 @@ class HttpServerTests extends BaseHttpTest {
 				createServer()
 				          .host("localhost")
 				          .handle((req, res) -> {
-				              res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				              res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "2");
 				              return Mono.empty()
 				                         .then()
 				                         .doFinally(s -> sentHeaders.set(res.responseHeaders()));
@@ -667,8 +665,8 @@ class HttpServerTests extends BaseHttpTest {
 		StepVerifier.create(response)
 				    .expectNextMatches(t -> {
 				        if (chunk) {
-				            String chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
-				            String cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
+				            CharSequence chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
+				            CharSequence cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
 				                return chunked != null && cl == null && "OK".equals(t.getT2());
 				            }
@@ -677,9 +675,9 @@ class HttpServerTests extends BaseHttpTest {
 				            }
 				        }
 				        else if (close) {
-				            String connClosed = t.getT1().get(HttpHeaderNames.CONNECTION);
-				            String chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
-				            String cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
+				            String connClosed = getHeader(t.getT1(), HttpHeaderNames.CONNECTION);
+				            String chunked = getHeader(t.getT1(), HttpHeaderNames.TRANSFER_ENCODING);
+				            String cl = getHeader(t.getT1(), HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
 				                return "close".equals(connClosed) && chunked == null && cl == null && "OK".equals(t.getT2());
 				            }
@@ -688,17 +686,19 @@ class HttpServerTests extends BaseHttpTest {
 				            }
 				        }
 				        else {
-				            String chunkedReceived = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
-				            String clReceived = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
-				            String chunkedSent = sentHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING);
-				            String clSent = sentHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH);
+				            String chunkedReceived = getHeader(t.getT1(), HttpHeaderNames.TRANSFER_ENCODING);
+				            String clReceived = getHeader(t.getT1(), HttpHeaderNames.CONTENT_LENGTH);
+				            String chunkedSent = getHeader(sentHeaders.get(), HttpHeaderNames.TRANSFER_ENCODING);
+				            String clSent = getHeader(sentHeaders.get(), HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
 				                return chunkedReceived == null && chunkedSent == null &&
+				                       clReceived != null && clSent != null &&
 				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
 				                       "OK".equals(t.getT2());
 				            }
 				            else {
 				                return chunkedReceived == null && chunkedSent == null &&
+				                       clReceived != null && clSent != null &&
 				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
 				                       "NO BODY".equals(t.getT2());
 				            }
@@ -1074,7 +1074,7 @@ class HttpServerTests extends BaseHttpTest {
 				                      }
 				                  }))
 				          .handle((req, res) -> res.sendString(
-				                  Mono.just(req.requestHeaders().get("test", "not found"))))
+				                  Mono.just(getHeader(req.requestHeaders(), "test", "not found"))))
 				          .bindNow();
 
 		StepVerifier.create(
@@ -1752,7 +1752,7 @@ class HttpServerTests extends BaseHttpTest {
 				              assertThat(req.remoteAddress()).isNull();
 				              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
 				          });
-				          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
+				          assertThat(getHeader(req.requestHeaders(), HttpHeaderNames.HOST)).isEqualTo("localhost");
 				          return res.send(req.receive().transferOwnership());
 				      })
 				      .bindNow();
@@ -1797,8 +1797,6 @@ class HttpServerTests extends BaseHttpTest {
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
 				null,
 				null,
-				ServerCookieDecoder.STRICT,
-				ServerCookieEncoder.STRICT,
 				DEFAULT_FORM_DECODER_SPEC,
 				null,
 				false);
@@ -2319,7 +2317,7 @@ class HttpServerTests extends BaseHttpTest {
 		              .uri("/")
 		              .responseSingle((res, bytes) ->
 		                  bytes.asString()
-		                       .zipWith(Mono.just(res.responseHeaders().get(HttpHeaderNames.CONNECTION, "persistent")))))
+		                       .zipWith(Mono.just(getHeader(res.responseHeaders(), HttpHeaderNames.CONNECTION, "persistent")))))
 		    .collectList()
 		    .as(StepVerifier::create)
 		    .expectNextMatches(l -> {
@@ -2386,8 +2384,6 @@ class HttpServerTests extends BaseHttpTest {
 				request,
 				null,
 				null,
-				ServerCookieDecoder.STRICT,
-				ServerCookieEncoder.STRICT,
 				DEFAULT_FORM_DECODER_SPEC,
 				null,
 				false);

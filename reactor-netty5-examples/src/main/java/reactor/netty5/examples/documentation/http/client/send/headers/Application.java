@@ -25,7 +25,7 @@ public class Application {
 	public static void main(String[] args) {
 		HttpClient client =
 				HttpClient.create()
-				          .headers(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, 5)); //<1>
+				          .headers(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, "5")); //<1>
 
 		client.post()
 		      .uri("https://example.com/")

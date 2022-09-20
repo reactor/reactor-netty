@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.netty5.handler.codec.http.HttpContent;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import reactor.core.publisher.Flux;
 import reactor.netty5.Connection;
 import reactor.netty5.NettyInbound;

@@ -27,8 +27,6 @@ import java.util.function.Supplier;
 
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.handler.codec.http.HttpRequest;
-import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty5.handler.ssl.JdkSslContext;
 import io.netty5.handler.ssl.OpenSsl;
 import io.netty5.handler.ssl.SslContext;
@@ -217,43 +215,6 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 		HttpServer dup = duplicate();
 		dup.configuration().minCompressionSize = minResponseSize;
-		return dup;
-	}
-
-	/**
-	 * Configure the
-	 * {@link ServerCookieEncoder}; {@link ServerCookieDecoder} will be
-	 * chosen based on the encoder
-	 *
-	 * @param encoder the preferred ServerCookieEncoder
-	 *
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer cookieCodec(ServerCookieEncoder encoder) {
-		Objects.requireNonNull(encoder, "encoder");
-		ServerCookieDecoder decoder = encoder == ServerCookieEncoder.LAX ?
-				ServerCookieDecoder.LAX : ServerCookieDecoder.STRICT;
-		HttpServer dup = duplicate();
-		dup.configuration().cookieEncoder = encoder;
-		dup.configuration().cookieDecoder = decoder;
-		return dup;
-	}
-
-	/**
-	 * Configure the
-	 * {@link ServerCookieEncoder} and {@link ServerCookieDecoder}
-	 *
-	 * @param encoder the preferred ServerCookieEncoder
-	 * @param decoder the preferred ServerCookieDecoder
-	 *
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer cookieCodec(ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
-		Objects.requireNonNull(encoder, "encoder");
-		Objects.requireNonNull(decoder, "decoder");
-		HttpServer dup = duplicate();
-		dup.configuration().cookieEncoder = encoder;
-		dup.configuration().cookieDecoder = decoder;
 		return dup;
 	}
 

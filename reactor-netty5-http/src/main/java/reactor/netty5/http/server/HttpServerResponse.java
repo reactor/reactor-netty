@@ -18,10 +18,10 @@ package reactor.netty5.http.server;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
-import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
@@ -44,7 +44,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	 *
 	 * @return this {@link HttpServerResponse}
 	 */
-	HttpServerResponse addCookie(Cookie cookie);
+	HttpServerResponse addCookie(HttpSetCookie cookie);
 
 	/**
 	 * Adds an outbound HTTP header, appending the value if the header already exist.

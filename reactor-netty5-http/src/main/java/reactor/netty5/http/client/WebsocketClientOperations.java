@@ -18,14 +18,14 @@ package reactor.netty5.http.client;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpObjectAggregator;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PingWebSocketFrame;
@@ -68,12 +68,13 @@ final class WebsocketClientOperations extends HttpClientOperations
 		onCloseState = Sinks.unsafe().one();
 
 		String subprotocols = websocketClientSpec.protocols();
+		HttpHeaders replacedRequestHeaders = replaced.requestHeaders();
+		replacedRequestHeaders.remove(HttpHeaderNames.HOST);
 		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
 					websocketClientSpec.version(),
 					subprotocols != null && !subprotocols.isEmpty() ? subprotocols : null,
 					true,
-					replaced.requestHeaders()
-					        .remove(HttpHeaderNames.HOST),
+					replacedRequestHeaders,
 					websocketClientSpec.maxFramePayloadLength());
 
 		handshaker.handshake(channel)

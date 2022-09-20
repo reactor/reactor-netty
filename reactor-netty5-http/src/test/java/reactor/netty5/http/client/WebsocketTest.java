@@ -34,8 +34,6 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CorruptedFrameException;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -163,7 +161,7 @@ class WebsocketTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				          .route(r -> r.get("/test/{param}", (req, res) -> {
-				              log.debug(req.requestHeaders().get("test"));
+				              log.debug(getHeader(req.requestHeaders(), "test", "header not found"));
 				              return res.header("content-type", "text/plain")
 				                        .sendWebsocket((in, out) ->
 				                                out.sendString(in.receive()
@@ -1246,12 +1244,12 @@ class WebsocketTest extends BaseHttpTest {
 				                              .get(perMessageDeflateEncoder) != null)
 				    );
 
-				    String header = in.headers()
+				    CharSequence header = in.headers()
 				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 				    return in.receive()
 				             .aggregate()
 				             .asString()
-				             .zipWith(Mono.just(header == null ? "null" : header));
+				             .zipWith(Mono.just(header == null ? "null" : header.toString()));
 				};
 
 		Predicate<Tuple2<String, String>> predicate = t -> "test".equals(t.getT1()) && "null".equals(t.getT2());
@@ -1279,7 +1277,7 @@ class WebsocketTest extends BaseHttpTest {
 	void websocketOperationsBadValues() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations parent = new HttpClientOperations(Connection.from(channel),
-				ConnectionObserver.emptyListener(), ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
+				ConnectionObserver.emptyListener());
 		WebsocketClientOperations ops = new WebsocketClientOperations(new URI(""),
 				WebsocketClientSpec.builder().build(), parent);
 

@@ -31,9 +31,9 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBufHolder;
-import io.netty5.buffer.api.Buffer;
-import io.netty5.buffer.api.BufferAllocator;
-import io.netty5.buffer.api.CompositeBuffer;
+import io.netty5.buffer.Buffer;
+import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
@@ -42,7 +42,8 @@ import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpObjectAggregator;
@@ -52,9 +53,6 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty5.handler.codec.http.cookie.Cookie;
 import io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.Resource;
@@ -90,8 +88,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final boolean                isSecure;
 	final HttpRequest            nettyRequest;
 	final HttpHeaders            requestHeaders;
-	final ClientCookieEncoder    cookieEncoder;
-	final ClientCookieDecoder    cookieDecoder;
 	final Sinks.One<HttpHeaders> trailerHeaders;
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
@@ -125,8 +121,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.responseState = replaced.responseState;
 		this.followRedirectPredicate = replaced.followRedirectPredicate;
 		this.requestHeaders = replaced.requestHeaders;
-		this.cookieEncoder = replaced.cookieEncoder;
-		this.cookieDecoder = replaced.cookieDecoder;
 		this.resourceUrl = replaced.resourceUrl;
 		this.path = replaced.path;
 		this.responseTimeout = replaced.responseTimeout;
@@ -134,23 +128,20 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.trailerHeaders = replaced.trailerHeaders;
 	}
 
-	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
+	HttpClientOperations(Connection c, ConnectionObserver listener) {
 		super(c, listener);
 		this.isSecure = c.channel()
 		                 .pipeline()
 		                 .get(NettyPipeline.SslHandler) != null;
 		this.nettyRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
-		this.cookieDecoder = decoder;
-		this.cookieEncoder = encoder;
 		this.trailerHeaders = Sinks.unsafe().one();
 	}
 
 	@Override
-	public HttpClientRequest addCookie(Cookie cookie) {
+	public HttpClientRequest addCookie(HttpCookiePair cookie) {
 		if (!hasSentHeaders()) {
-			this.requestHeaders.add(HttpHeaderNames.COOKIE,
-					cookieEncoder.encode(cookie));
+			this.requestHeaders.addCookie(cookie);
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -225,7 +216,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	public Map<CharSequence, Set<Cookie>> cookies() {
+	public Map<CharSequence, Set<HttpCookiePair>> cookies() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null && responseState.cookieHolder != null) {
 			return responseState.cookieHolder.getCachedCookies();
@@ -295,7 +286,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	public HttpClientRequest headers(HttpHeaders headers) {
 		if (!hasSentHeaders()) {
-			String host = requestHeaders.get(HttpHeaderNames.HOST);
+			CharSequence host = requestHeaders.get(HttpHeaderNames.HOST);
 			this.requestHeaders.set(headers);
 			this.requestHeaders.set(HttpHeaderNames.HOST, host);
 		}
@@ -439,7 +430,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				uri = new URI(url);
 			}
 			else {
-				String host = requestHeaders().get(HttpHeaderNames.HOST);
+				CharSequence host = requestHeaders().get(HttpHeaderNames.HOST);
 				uri = new URI((isSecure ? HttpClient.WSS_SCHEME :
 				                          HttpClient.WS_SCHEME) + "://" + host + (url.startsWith("/") ? url : "/" + url));
 			}
@@ -598,8 +589,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received response (auto-read:{}) : {}"),
 						channel().getOption(ChannelOption.AUTO_READ),
-						responseHeaders().entries()
-						                 .toString());
+						responseHeaders().toString());
 			}
 
 			if (notRedirected(response)) {
@@ -703,7 +693,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received redirect location: {}"),
 						response.headers()
-						        .entries()
 						        .toString());
 			}
 			redirecting = new RedirectClientException(response.headers(), response.status());
@@ -716,7 +705,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	protected HttpMessage newFullBodyMessage(Buffer body) {
 		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri(), body);
 
-		requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+		requestHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(body.readableBytes()));
 		requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
 		request.headers()
@@ -753,7 +742,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		ResponseState state = responseState;
 		if (state == null) {
 			this.responseState =
-					new ResponseState(nettyResponse, nettyResponse.headers(), cookieDecoder);
+					new ResponseState(nettyResponse, nettyResponse.headers());
 		}
 	}
 
@@ -788,10 +777,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		final HttpHeaders  headers;
 		final Cookies      cookieHolder;
 
-		ResponseState(HttpResponse response, HttpHeaders headers, ClientCookieDecoder decoder) {
+		ResponseState(HttpResponse response, HttpHeaders headers) {
 			this.response = response;
 			this.headers = headers;
-			this.cookieHolder = Cookies.newClientResponseHolder(headers, decoder);
+			this.cookieHolder = Cookies.newClientResponseHolder(headers);
 		}
 	}
 

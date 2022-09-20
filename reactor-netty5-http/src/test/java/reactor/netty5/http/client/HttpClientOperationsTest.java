@@ -15,19 +15,18 @@
  */
 package reactor.netty5.http.client;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.contrib.handler.codec.json.JsonObjectDecoder;
 import java.nio.charset.StandardCharsets;
+
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import org.junit.jupiter.api.Test;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.NettyPipeline;
@@ -44,8 +43,7 @@ class HttpClientOperationsTest {
 	void addDecoderReplaysLastHttp() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(StandardCharsets.UTF_8));
-		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
 				.addHandlerLast(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -67,8 +65,7 @@ class HttpClientOperationsTest {
 	void addNamedDecoderReplaysLastHttp() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(StandardCharsets.UTF_8));
-		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
 				.addHandlerLast("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -90,8 +87,7 @@ class HttpClientOperationsTest {
 	void addEncoderReplaysLastHttp() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(StandardCharsets.UTF_8));
-		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
 				.addHandlerLast(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -113,8 +109,7 @@ class HttpClientOperationsTest {
 	void addNamedEncoderReplaysLastHttp() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(StandardCharsets.UTF_8));
-		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
 				.addHandlerLast("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -139,12 +134,11 @@ class HttpClientOperationsTest {
 		});
 
 		HttpClientOperations ops1 = new HttpClientOperations(() -> channel,
-				ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
+				ConnectionObserver.emptyListener());
 		ops1.followRedirectPredicate((req, res) -> true);
 		ops1.started = true;
 		ops1.retrying = true;
-		ops1.redirecting = new RedirectClientException(new DefaultHttpHeaders().add(HttpHeaderNames.LOCATION, "/"),
+		ops1.redirecting = new RedirectClientException(HttpHeaders.newHeaders().add(HttpHeaderNames.LOCATION, "/"),
 				HttpResponseStatus.MOVED_PERMANENTLY);
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);
@@ -170,8 +164,7 @@ class HttpClientOperationsTest {
 	private void doTestStatus(HttpResponseStatus status) {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations ops = new HttpClientOperations(() -> channel,
-				ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
+				ConnectionObserver.emptyListener());
 		ops.setNettyResponse(new DefaultFullHttpResponse(HTTP_1_1, status, channel.bufferAllocator().allocate(0)));
 		assertThat(ops.status().reasonPhrase()).isEqualTo(status.reasonPhrase());
 	}

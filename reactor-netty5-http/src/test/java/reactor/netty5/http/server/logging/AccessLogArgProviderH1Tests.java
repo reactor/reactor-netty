@@ -15,12 +15,11 @@
  */
 package reactor.netty5.http.server.logging;
 
-import io.netty5.handler.codec.http.DefaultHttpHeaders;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.DefaultHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
@@ -47,11 +46,11 @@ class AccessLogArgProviderH1Tests {
 	private static final HttpResponse response;
 
 	static {
-		HttpHeaders requestHttpHeaders = new DefaultHttpHeaders();
+		HttpHeaders requestHttpHeaders = HttpHeaders.newHeaders();
 		requestHttpHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
 		request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, URI, requestHttpHeaders);
 
-		HttpHeaders responseHttpHeaders = new DefaultHttpHeaders();
+		HttpHeaders responseHttpHeaders = HttpHeaders.newHeaders();
 		responseHttpHeaders.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
 		response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, responseHttpHeaders);
 	}
@@ -138,7 +137,7 @@ class AccessLogArgProviderH1Tests {
 		assertThat(accessLogArgProvider.responseHeader(HttpHeaderNames.CONTENT_TYPE)).isNull();
 		accessLogArgProvider.response(response);
 		assertThat(accessLogArgProvider.responseHeader(HttpHeaderNames.CONTENT_TYPE))
-				.isEqualTo(HttpHeaderValues.APPLICATION_JSON.toString());
+				.isEqualTo(HttpHeaderValues.APPLICATION_JSON);
 	}
 
 }

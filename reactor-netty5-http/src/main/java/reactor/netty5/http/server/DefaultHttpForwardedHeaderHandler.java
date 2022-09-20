@@ -42,9 +42,9 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 
 	@Override
 	public ConnectionInfo apply(ConnectionInfo connectionInfo, HttpRequest request) {
-		String forwardedHeader = request.headers().get(FORWARDED_HEADER);
+		CharSequence forwardedHeader = request.headers().get(FORWARDED_HEADER);
 		if (forwardedHeader != null) {
-			return parseForwardedInfo(connectionInfo, forwardedHeader);
+			return parseForwardedInfo(connectionInfo, forwardedHeader.toString());
 		}
 		return parseXForwardedInfo(connectionInfo, request);
 	}
@@ -69,17 +69,17 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	}
 
 	private ConnectionInfo parseXForwardedInfo(ConnectionInfo connectionInfo, HttpRequest request) {
-		String ipHeader = request.headers().get(X_FORWARDED_IP_HEADER);
+		CharSequence ipHeader = request.headers().get(X_FORWARDED_IP_HEADER);
 		if (ipHeader != null) {
 			connectionInfo = connectionInfo.withRemoteAddress(
-					AddressUtils.parseAddress(ipHeader.split(",", 2)[0], connectionInfo.getRemoteAddress().getPort()));
+					AddressUtils.parseAddress(ipHeader.toString().split(",", 2)[0], connectionInfo.getRemoteAddress().getPort()));
 		}
-		String hostHeader = request.headers().get(X_FORWARDED_HOST_HEADER);
+		CharSequence hostHeader = request.headers().get(X_FORWARDED_HOST_HEADER);
 		if (hostHeader != null) {
-			String portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
+			CharSequence portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
 			int port = connectionInfo.getHostAddress().getPort();
-			if (portHeader != null && !portHeader.isEmpty()) {
-				String portStr = portHeader.split(",", 2)[0].trim();
+			if (portHeader != null && !portHeader.toString().isEmpty()) {
+				String portStr = portHeader.toString().split(",", 2)[0].trim();
 				if (portStr.chars().allMatch(Character::isDigit)) {
 					port = Integer.parseInt(portStr);
 				}
@@ -88,11 +88,11 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 				}
 			}
 			connectionInfo = connectionInfo.withHostAddress(
-					AddressUtils.createUnresolved(hostHeader.split(",", 2)[0].trim(), port));
+					AddressUtils.createUnresolved(hostHeader.toString().split(",", 2)[0].trim(), port));
 		}
-		String protoHeader = request.headers().get(X_FORWARDED_PROTO_HEADER);
+		CharSequence protoHeader = request.headers().get(X_FORWARDED_PROTO_HEADER);
 		if (protoHeader != null) {
-			connectionInfo = connectionInfo.withScheme(protoHeader.split(",", 2)[0].trim());
+			connectionInfo = connectionInfo.withScheme(protoHeader.toString().split(",", 2)[0].trim());
 		}
 		return connectionInfo;
 	}

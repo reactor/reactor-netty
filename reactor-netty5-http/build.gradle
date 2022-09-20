@@ -239,7 +239,6 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.server.HttpServerRequest#receiveForm(java.util.function.Consumer)',
 
 			// Changes related to Netty 5 package change
-			'reactor.netty.http.Cookies#newClientResponseHolder(io.netty.handler.codec.http.HttpHeaders, io.netty.handler.codec.http.cookie.ClientCookieDecoder)',
 			'reactor.netty.http.HttpInfos#method()',
 			'reactor.netty.http.HttpInfos#version()',
 			'reactor.netty.http.HttpResources#getOrCreateDefaultResolver()',
@@ -277,7 +276,17 @@ task japicmp(type: JapicmpTask) {
 
 			'reactor.netty.http.server.logging.AccessLogHandlerFactory#create(java.util.function.Function)',
 
-			'reactor.netty.http.websocket.WebsocketInbound#headers()'
+			'reactor.netty.http.websocket.WebsocketInbound#headers()',
+
+			// API removed after adaptation to new HttpHeaders/Cookies Netty API (#12735)
+			'reactor.netty.http.Cookies#newClientResponseHolder(io.netty.handler.codec.http.HttpHeaders, io.netty.handler.codec.http.cookie.ClientCookieDecoder)',
+			'reactor.netty.http.server.ServerCookies#newServerRequestHolder(io.netty.handler.codec.http.HttpHeaders, io.netty.handler.codec.http.cookie.ServerCookieDecoder)',
+			'reactor.netty.http.client.HttpClient#cookie(java.lang.String, java.util.function.Consumer)',
+			'reactor.netty.http.client.HttpClient#cookieCodec(io.netty.handler.codec.http.cookie.ClientCookieEncoder)',
+			'reactor.netty.http.client.HttpClient#cookieCodec(io.netty.handler.codec.http.cookie.ClientCookieEncoder, io.netty.handler.codec.http.cookie.ClientCookieDecoder)',
+			'reactor.netty.http.client.HttpClient#cookiesWhen(java.lang.String, java.util.function.Function)',
+			'reactor.netty.http.client.HttpClientConfig#cookieEncoder()',
+			'reactor.netty.http.client.HttpClientConfig#cookieDecoder()'
 	]
 	classExcludes = [
 			// TODO temporary disable multipart on the client

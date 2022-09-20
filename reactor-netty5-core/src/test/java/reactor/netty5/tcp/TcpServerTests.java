@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 import javax.net.ssl.SNIHostName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.AdaptiveReadHandleFactory;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
@@ -82,7 +82,7 @@ import reactor.netty5.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 

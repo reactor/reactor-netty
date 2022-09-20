@@ -15,8 +15,8 @@
  */
 package reactor.netty5.http.client;
 
-import io.netty5.handler.codec.http.HttpHeaders;
-import io.netty5.handler.codec.http.cookie.Cookie;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 
 import java.time.Duration;
 
@@ -34,7 +34,7 @@ public interface HttpClientRequest extends HttpClientInfos {
 	 *
 	 * @return this outbound
 	 */
-	HttpClientRequest addCookie(Cookie cookie);
+	HttpClientRequest addCookie(HttpCookiePair cookie);
 
 	/**
 	 * Add an outbound http header, appending the value if the header is already set.

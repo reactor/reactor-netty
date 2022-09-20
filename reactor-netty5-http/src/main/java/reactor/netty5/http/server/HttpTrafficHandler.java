@@ -35,8 +35,6 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpStatusClass;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty5.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
@@ -67,8 +65,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	static final HttpVersion H2 = HttpVersion.valueOf("HTTP/2.0");
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
-	final ServerCookieDecoder                                     cookieDecoder;
-	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final Duration                                                idleTimeout;
@@ -94,8 +90,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 
 	HttpTrafficHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
-			ServerCookieDecoder decoder,
-			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			@Nullable Duration idleTimeout,
@@ -106,8 +100,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
-		this.cookieEncoder = encoder;
-		this.cookieDecoder = decoder;
 		this.idleTimeout = idleTimeout;
 		this.mapHandle = mapHandle;
 		this.maxKeepAliveRequests = maxKeepAliveRequests;
@@ -193,8 +185,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							                    secure,
 							                    remoteAddress,
 							                    forwardedHeaderHandler),
-							cookieDecoder,
-							cookieEncoder,
 							formDecoderProvider,
 							mapHandle,
 							secure);
@@ -389,8 +379,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 						                    secure,
 						                    remoteAddress,
 						                    forwardedHeaderHandler),
-						cookieDecoder,
-						cookieEncoder,
 						formDecoderProvider,
 						mapHandle,
 						secure);
@@ -468,9 +456,9 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	}
 
 	static boolean isMultipart(HttpResponse response) {
-		String contentType = response.headers()
+		CharSequence contentType = response.headers()
 		                             .get(HttpHeaderNames.CONTENT_TYPE);
-		return contentType != null && contentType.regionMatches(true,
+		return contentType != null && contentType.toString().regionMatches(true,
 				0,
 				MULTIPART_PREFIX,
 				0,

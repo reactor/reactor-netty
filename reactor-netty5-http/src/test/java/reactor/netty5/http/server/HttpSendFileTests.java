@@ -39,7 +39,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 
-import io.netty5.buffer.api.Buffer;
+import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Test;
@@ -53,7 +53,7 @@ import reactor.netty5.NettyOutbound;
 import reactor.netty5.http.client.HttpClient;
 import reactor.util.annotation.Nullable;
 
-import static io.netty5.buffer.api.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class HttpSendFileTests extends BaseHttpTest {

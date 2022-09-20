@@ -18,7 +18,7 @@ package reactor.netty5.http.client;
 import java.util.Objects;
 
 import io.netty5.handler.codec.http.HttpHeaderNames;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 
 /**
@@ -31,7 +31,7 @@ final class RedirectClientException extends RuntimeException {
 	final HttpResponseStatus status;
 
 	RedirectClientException(HttpHeaders headers, HttpResponseStatus status) {
-		location = Objects.requireNonNull(headers.get(HttpHeaderNames.LOCATION));
+		location = Objects.requireNonNull(headers.get(HttpHeaderNames.LOCATION)).toString();
 		this.status = Objects.requireNonNull(status);
 	}
 

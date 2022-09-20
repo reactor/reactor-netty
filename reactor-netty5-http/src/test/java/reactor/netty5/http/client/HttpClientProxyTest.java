@@ -16,7 +16,7 @@
 package reactor.netty5.http.client;
 
 import io.netty5.channel.ChannelHandler;
-import io.netty5.handler.codec.http.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.NoopAddressResolverGroup;
@@ -90,7 +90,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 				            true))
 				    .expectNextMatches(t ->
 				            t.getT2().contains("Hoverfly") &&
-				                "FOUND".equals(t.getT2().get("Logging-Handler")) &&
+				                "FOUND".equals(getHeader(t.getT2(), "Logging-Handler")) &&
 				                "test".equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -107,7 +107,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 				            true))
 				    .expectNextMatches(t ->
 				            t.getT2().contains("Hoverfly") &&
-				                "FOUND".equals(t.getT2().get("Logging-Handler")) &&
+				                "FOUND".equals(getHeader(t.getT2(), "Logging-Handler")) &&
 				                "test".equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -158,7 +158,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 				            false))
 				    .expectNextMatches(t ->
 				           t.getT2().contains("Hoverfly") &&
-				                "NOT FOUND".equals(t.getT2().get("Logging-Handler")) &&
+				                "NOT FOUND".equals(getHeader(t.getT2(), "Logging-Handler")) &&
 				                "test".equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
