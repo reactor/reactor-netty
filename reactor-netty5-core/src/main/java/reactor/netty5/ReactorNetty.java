@@ -17,7 +17,6 @@ package reactor.netty5;
 
 import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.ZoneId;
 import java.util.List;
@@ -35,6 +34,7 @@ import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.BufferHolder;
+import io.netty5.buffer.MemoryManager;
 import io.netty5.channel.nio.AbstractNioChannel;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
@@ -999,6 +999,8 @@ public final class ReactorNetty {
 
 	static final Predicate<Object>         PREDICATE_FLUSH        = o -> false;
 
+	static final Buffer                    BOUNDARY               = MemoryManager.unsafeWrap(new byte[0]).makeReadOnly();
+
 	static final char CHANNEL_ID_PREFIX = '[';
 	static final String CHANNEL_ID_SUFFIX_1 = "] ";
 	static final char CHANNEL_ID_SUFFIX_2 = ' ';
@@ -1006,8 +1008,8 @@ public final class ReactorNetty {
 	static final int ORIGINAL_CHANNEL_ID_PREFIX_LENGTH = ORIGINAL_CHANNEL_ID_PREFIX.length();
 	static final char TRACE_ID_PREFIX = '(';
 
-	public static final String PREDICATE_GROUP_BOUNDARY = "ReactorNettyBoundary";
-	public static final Predicate<Buffer> PREDICATE_GROUP_FLUSH =
-			b -> PREDICATE_GROUP_BOUNDARY.equals(b.toString(StandardCharsets.UTF_8));
+	@SuppressWarnings("ReferenceEquality")
+	//Design to use reference comparison here
+	public static final Predicate<Buffer> PREDICATE_GROUP_FLUSH = b -> b == BOUNDARY;
 
 }
