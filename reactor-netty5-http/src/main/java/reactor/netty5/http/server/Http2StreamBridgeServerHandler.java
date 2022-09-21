@@ -29,7 +29,7 @@ import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty5.handler.ssl.SslHandler;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureContextListener;
 import reactor.core.publisher.Mono;
@@ -125,7 +125,7 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 				HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
 						"since response has been sent already: {}"), msg);
 			}
-			ReferenceCountUtil.release(msg);
+			Resource.dispose(msg);
 			ctx.read();
 			return;
 		}
