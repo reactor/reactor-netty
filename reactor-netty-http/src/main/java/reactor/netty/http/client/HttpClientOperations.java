@@ -772,13 +772,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (!channel().isActive()) {
 			return Mono.error(AbortedException.beforeSend());
 		}
-		if (markSentHeaderAndBody()) {
-			HttpMessage request = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
-			return FutureMono.deferFuture(() -> channel().writeAndFlush(request));
-		}
-		else {
-			return Mono.empty();
-		}
+		return FutureMono.deferFuture(() -> markSentHeaderAndBody() ?
+				channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)) :
+				channel().newSucceededFuture());
 	}
 
 	final void setNettyResponse(HttpResponse nettyResponse) {
