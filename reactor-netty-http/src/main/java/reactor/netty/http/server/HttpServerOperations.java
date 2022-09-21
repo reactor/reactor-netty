@@ -32,6 +32,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -654,7 +655,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			f = channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER));
 		}
 		else if (markSentBody()) {
-			LastHttpContent lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
+			HttpHeaders trailerHeaders = null;
 			// https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
 			// A trailer allows the sender to include additional fields at the end
 			// of a chunked message in order to supply metadata that might be
@@ -670,22 +671,21 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				// which fields will be present in the trailers.
 				String declaredHeaderNames = responseHeaders.get(HttpHeaderNames.TRAILER);
 				if (declaredHeaderNames != null) {
-					HttpHeaders trailerHeaders = new TrailerHeaders(declaredHeaderNames);
+					trailerHeaders = new TrailerHeaders(declaredHeaderNames);
 					try {
 						trailerHeadersConsumer.accept(trailerHeaders);
 					}
 					catch (IllegalArgumentException e) {
 						// A sender MUST NOT generate a trailer when header names are
 						// HttpServerOperations.TrailerHeaders.DISALLOWED_TRAILER_HEADER_NAMES
-						log.error(format(channel(), "Cannot apply trailer headers [{0}]"), declaredHeaderNames, e);
-					}
-					if (!trailerHeaders.isEmpty()) {
-						lastHttpContent = new DefaultLastHttpContent();
-						lastHttpContent.trailingHeaders().set(trailerHeaders);
+						log.error(format(channel(), "Cannot apply trailer headers [{}]"), declaredHeaderNames, e);
 					}
 				}
 			}
-			f = channel().writeAndFlush(lastHttpContent);
+
+			f = channel().writeAndFlush(trailerHeaders != null && !trailerHeaders.isEmpty() ?
+					new DefaultLastHttpContent(Unpooled.buffer(0), trailerHeaders) :
+					LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 		else {
 			discard();
