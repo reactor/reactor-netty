@@ -59,6 +59,8 @@ class AccessLogHandlerH1Tests {
 		channel.writeOutbound(newHttpResponse(false));
 
 		channel.writeOutbound(new DefaultLastHttpContent(channel.bufferAllocator().allocate(0)));
+
+		assertThat(channel.finishAndReleaseAll()).isTrue();
 	}
 
 	@Test

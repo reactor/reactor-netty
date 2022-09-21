@@ -61,6 +61,8 @@ class AccessLogHandlerH2Tests {
 		Buffer buffer = channel.bufferAllocator().allocate(RESPONSE_CONTENT.length);
 		buffer.writeBytes(RESPONSE_CONTENT).makeReadOnly();
 		channel.writeOutbound(new DefaultHttp2DataFrame(buffer.send(), true));
+
+		assertThat(channel.finishAndReleaseAll()).isTrue();
 	}
 
 	private void assertAccessLogArgProvider(AccessLogArgProvider args, SocketAddress remoteAddress) {
