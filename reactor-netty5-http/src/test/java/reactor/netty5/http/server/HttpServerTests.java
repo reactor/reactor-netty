@@ -1850,8 +1850,10 @@ class HttpServerTests extends BaseHttpTest {
 				null,
 				false);
 		ops.status(status);
-		HttpMessage response = ops.newFullBodyMessage(channel.bufferAllocator().allocate(0));
-		assertThat(((FullHttpResponse) response).status().reasonPhrase()).isEqualTo(status.reasonPhrase());
+		try (Buffer buffer = channel.bufferAllocator().allocate(0)) {
+			HttpMessage response = ops.newFullBodyMessage(buffer);
+			assertThat(((FullHttpResponse) response).status().reasonPhrase()).isEqualTo(status.reasonPhrase());
+		}
 		channel.close();
 	}
 
