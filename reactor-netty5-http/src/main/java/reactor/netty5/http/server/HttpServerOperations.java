@@ -417,13 +417,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public Mono<Void> send() {
-		if (markSentHeaderAndBody()) {
-			HttpMessage response = newFullBodyMessage(channel().bufferAllocator().allocate(0));
-			return Mono.fromCompletionStage(() -> channel().writeAndFlush(response).asStage());
-		}
-		else {
-			return Mono.empty();
-		}
+		return Mono.fromCompletionStage(() -> markSentHeaderAndBody() ?
+				channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage() :
+				channel().newSucceededFuture().asStage());
 	}
 
 	@Override
