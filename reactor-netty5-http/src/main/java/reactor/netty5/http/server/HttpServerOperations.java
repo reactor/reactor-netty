@@ -626,7 +626,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			f = channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0)));
 		}
 		else if (markSentBody()) {
-			LastHttpContent<?> lastHttpContent = new EmptyLastHttpContent(channel().bufferAllocator());
+			HttpHeaders trailerHeaders = null;
 			// https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
 			// A trailer allows the sender to include additional fields at the end
 			// of a chunked message in order to supply metadata that might be
@@ -642,22 +642,21 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				// which fields will be present in the trailers.
 				CharSequence declaredHeaderNames = responseHeaders.get(HttpHeaderNames.TRAILER);
 				if (declaredHeaderNames != null) {
-					HttpHeaders trailerHeaders = new TrailerHeaders(declaredHeaderNames.toString());
+					trailerHeaders = new TrailerHeaders(declaredHeaderNames.toString());
 					try {
 						trailerHeadersConsumer.accept(trailerHeaders);
 					}
 					catch (IllegalArgumentException e) {
 						// A sender MUST NOT generate a trailer when header names are
 						// HttpServerOperations.TrailerHeaders.DISALLOWED_TRAILER_HEADER_NAMES
-						log.error(format(channel(), "Cannot apply trailer headers [{0}]"), declaredHeaderNames, e);
-					}
-					if (!trailerHeaders.isEmpty()) {
-						lastHttpContent = new DefaultLastHttpContent(channel().bufferAllocator().allocate(0));
-						lastHttpContent.trailingHeaders().set(trailerHeaders);
+						log.error(format(channel(), "Cannot apply trailer headers [{}]"), declaredHeaderNames, e);
 					}
 				}
 			}
-			f = channel().writeAndFlush(lastHttpContent);
+
+			f = channel().writeAndFlush(trailerHeaders != null && !trailerHeaders.isEmpty() ?
+					new DefaultLastHttpContent(channel().bufferAllocator().allocate(0), trailerHeaders) :
+					new EmptyLastHttpContent(channel().bufferAllocator()));
 		}
 		else {
 			discard();
