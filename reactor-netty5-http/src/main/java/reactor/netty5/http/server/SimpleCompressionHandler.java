@@ -37,8 +37,7 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		return super.write(ctx, msg);
 	}
 
-	@Override
-	protected void decodeAndClose(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
+	void decode(ChannelHandlerContext ctx, HttpRequest msg, boolean release) throws Exception {
 		HttpRequest request = msg;
 		if (msg instanceof FullHttpRequest fullHttpRequest &&
 				(!fullHttpRequest.isAccessible() || fullHttpRequest.payload().readableBytes() == 0)) {
@@ -48,7 +47,15 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 			// 2. fireChannelRead(...) is invoked at the end of super.decodeAndClose(...) which will end up
 			// in io.netty5.channel.DefaultChannelPipeline.onUnhandledInboundMessage which closes the msg.
 			request = new DefaultHttpRequest(msg.protocolVersion(), msg.method(), msg.uri(), msg.headers());
+			if (release && fullHttpRequest.isAccessible()) {
+				fullHttpRequest.close();
+			}
 		}
 		super.decodeAndClose(ctx, request);
+	}
+
+	@Override
+	protected void decodeAndClose(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
+		decode(ctx, msg, true);
 	}
 }
