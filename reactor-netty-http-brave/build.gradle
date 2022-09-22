@@ -103,7 +103,7 @@ task japicmp(type: JapicmpTask) {
 	onlyIf { "$compatibleVersion" != "SKIP" }
 
 	oldClasspath.from(files("${buildDir}/baselineLibs/reactor-netty-http-brave-${compatibleVersion}.jar"))
-	newClasspath.from(files(jar.archiveFile, project(':reactor-netty-core').jar))
+	newClasspath.from(files(jar.archiveFile))
 	// these onlyXxx parameters result in a report that is slightly too noisy, but better than
 	// onlyBinaryIncompatibleModified = true which masks source-incompatible-only changes
 	onlyBinaryIncompatibleModified = false
