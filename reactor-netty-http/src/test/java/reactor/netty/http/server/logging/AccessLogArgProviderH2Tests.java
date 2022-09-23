@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,8 @@ import java.net.InetSocketAddress;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
-import static reactor.netty.http.server.logging.LoggingTests.HEADER_CONNECTION_NAME;
-import static reactor.netty.http.server.logging.LoggingTests.HEADER_CONNECTION_VALUE;
+import static reactor.netty.http.server.logging.LoggingTests.HEADER_TEST_NAME;
+import static reactor.netty.http.server.logging.LoggingTests.HEADER_TEST_VALUE;
 import static reactor.netty.http.server.logging.LoggingTests.URI;
 
 
@@ -45,7 +45,7 @@ class AccessLogArgProviderH2Tests {
 
 	static {
 		Http2Headers requestHttpHeaders = new DefaultHttp2Headers();
-		requestHttpHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
+		requestHttpHeaders.add(HEADER_TEST_NAME, HEADER_TEST_VALUE);
 		requestHttpHeaders.method(HttpMethod.GET.name());
 		requestHttpHeaders.path(URI);
 		requestHeaders = new DefaultHttp2HeadersFrame(requestHttpHeaders);
@@ -94,10 +94,10 @@ class AccessLogArgProviderH2Tests {
 	@Test
 	void requestHeader() {
 		assertThatNullPointerException().isThrownBy(() -> accessLogArgProvider.requestHeader(null));
-		assertThat(accessLogArgProvider.requestHeader(HEADER_CONNECTION_NAME)).isNull();
+		assertThat(accessLogArgProvider.requestHeader(HEADER_TEST_NAME)).isNull();
 		accessLogArgProvider.requestHeaders(requestHeaders);
-		assertThat(accessLogArgProvider.requestHeader(HEADER_CONNECTION_NAME))
-				.isEqualTo(HEADER_CONNECTION_VALUE);
+		assertThat(accessLogArgProvider.requestHeader(HEADER_TEST_NAME))
+				.isEqualTo(HEADER_TEST_VALUE);
 	}
 
 	@Test
