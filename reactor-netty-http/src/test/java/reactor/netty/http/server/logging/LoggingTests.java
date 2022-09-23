@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ class LoggingTests {
 
 	static final CharSequence HEADER_CONNECTION_NAME = HttpHeaderNames.CONNECTION;
 	static final String HEADER_CONNECTION_VALUE = "keep-alive";
+	static final CharSequence HEADER_TEST_NAME = "test";
+	static final String HEADER_TEST_VALUE = "test";
 	static final String URI = "/hello";
 	static final byte[] RESPONSE_CONTENT = "Hello".getBytes(StandardCharsets.UTF_8);
 
