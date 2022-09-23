@@ -28,6 +28,8 @@ class LoggingTests {
 
 	static final CharSequence HEADER_CONNECTION_NAME = HttpHeaderNames.CONNECTION;
 	static final String HEADER_CONNECTION_VALUE = "keep-alive";
+	static final CharSequence HEADER_TEST_NAME = "test";
+	static final String HEADER_TEST_VALUE = "test";
 	static final String URI = "/hello";
 	static final byte[] RESPONSE_CONTENT = "Hello".getBytes(StandardCharsets.UTF_8);
 

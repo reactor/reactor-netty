@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Test;
 import java.net.SocketAddress;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static reactor.netty5.http.server.logging.LoggingTests.HEADER_CONNECTION_NAME;
-import static reactor.netty5.http.server.logging.LoggingTests.HEADER_CONNECTION_VALUE;
+import static reactor.netty5.http.server.logging.LoggingTests.HEADER_TEST_NAME;
+import static reactor.netty5.http.server.logging.LoggingTests.HEADER_TEST_VALUE;
 import static reactor.netty5.http.server.logging.LoggingTests.RESPONSE_CONTENT;
 import static reactor.netty5.http.server.logging.LoggingTests.URI;
 
@@ -44,14 +44,14 @@ class AccessLogHandlerH2Tests {
 		channel.pipeline().addLast(new AccessLogHandlerH2(
 				args -> {
 					assertAccessLogArgProvider(args, channel.remoteAddress());
-					return AccessLog.create("{}={}", HEADER_CONNECTION_NAME,
-							args.requestHeader(HEADER_CONNECTION_NAME));
+					return AccessLog.create("{}={}", HEADER_TEST_NAME,
+							args.requestHeader(HEADER_TEST_NAME));
 				}));
 
 		Http2Headers requestHeaders = new DefaultHttp2Headers(2, true, true, true);
 		requestHeaders.method(HttpMethod.GET.name());
 		requestHeaders.path(URI);
-		requestHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
+		requestHeaders.add(HEADER_TEST_NAME, HEADER_TEST_VALUE);
 		channel.writeInbound(new DefaultHttp2HeadersFrame(requestHeaders));
 
 		Http2Headers responseHeaders = new DefaultHttp2Headers(1, true, true, true);
@@ -72,7 +72,7 @@ class AccessLogHandlerH2Tests {
 		assertThat(args.protocol()).isEqualTo(AccessLogArgProviderH2.H2_PROTOCOL_NAME);
 		assertThat(args.status()).isEqualTo(HttpResponseStatus.OK.codeAsText());
 		assertThat(args.contentLength()).isEqualTo(RESPONSE_CONTENT.length);
-		assertThat(args.requestHeader(HEADER_CONNECTION_NAME)).isEqualTo(HEADER_CONNECTION_VALUE);
+		assertThat(args.requestHeader(HEADER_TEST_NAME)).isEqualTo(HEADER_TEST_VALUE);
 	}
 
 }

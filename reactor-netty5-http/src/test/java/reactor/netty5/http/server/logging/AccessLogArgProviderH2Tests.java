@@ -30,8 +30,8 @@ import java.net.InetSocketAddress;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
-import static reactor.netty5.http.server.logging.LoggingTests.HEADER_CONNECTION_NAME;
-import static reactor.netty5.http.server.logging.LoggingTests.HEADER_CONNECTION_VALUE;
+import static reactor.netty5.http.server.logging.LoggingTests.HEADER_TEST_NAME;
+import static reactor.netty5.http.server.logging.LoggingTests.HEADER_TEST_VALUE;
 import static reactor.netty5.http.server.logging.LoggingTests.URI;
 
 
@@ -45,7 +45,7 @@ class AccessLogArgProviderH2Tests {
 
 	static {
 		Http2Headers requestHttpHeaders = new DefaultHttp2Headers(2, true, true, true);
-		requestHttpHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
+		requestHttpHeaders.add(HEADER_TEST_NAME, HEADER_TEST_VALUE);
 		requestHttpHeaders.method(HttpMethod.GET.name());
 		requestHttpHeaders.path(URI);
 		requestHeaders = new DefaultHttp2HeadersFrame(requestHttpHeaders);
@@ -94,10 +94,10 @@ class AccessLogArgProviderH2Tests {
 	@Test
 	void requestHeader() {
 		assertThatNullPointerException().isThrownBy(() -> accessLogArgProvider.requestHeader(null));
-		assertThat(accessLogArgProvider.requestHeader(HEADER_CONNECTION_NAME)).isNull();
+		assertThat(accessLogArgProvider.requestHeader(HEADER_TEST_NAME)).isNull();
 		accessLogArgProvider.requestHeaders(requestHeaders);
-		assertThat(accessLogArgProvider.requestHeader(HEADER_CONNECTION_NAME))
-				.isEqualTo(HEADER_CONNECTION_VALUE);
+		assertThat(accessLogArgProvider.requestHeader(HEADER_TEST_NAME))
+				.isEqualTo(HEADER_TEST_VALUE);
 	}
 
 	@Test
