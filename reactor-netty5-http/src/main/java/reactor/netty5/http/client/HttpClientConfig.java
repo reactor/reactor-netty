@@ -41,6 +41,8 @@ import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
+import io.netty5.handler.codec.http.HttpObject;
+import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http2.Http2ClientUpgradeCodec;
@@ -81,6 +83,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
+import static io.netty5.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static reactor.netty5.ReactorNetty.format;
 import static reactor.netty5.http.client.Http2ConnectionProvider.OWNER;
 
@@ -607,8 +610,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(http2FrameCodec,
 				new H2CleartextCodec(http2FrameCodec, opsFactory, acceptGzip, metricsRecorder, uriTagValue));
 
-		HttpClientUpgradeHandler<?> upgradeHandler =
-				new HttpClientUpgradeHandler<DefaultHttpContent>(httpClientCodec, upgradeCodec, decoder.h2cMaxContentLength());
+		ReactorNettyHttpClientUpgradeHandler upgradeHandler = new ReactorNettyHttpClientUpgradeHandler(
+				http2FrameCodec, httpClientCodec, upgradeCodec, decoder.h2cMaxContentLength());
 
 		p.addBefore(NettyPipeline.ReactiveBridge, null, httpClientCodec)
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2CUpgradeHandler, upgradeHandler)
@@ -997,6 +1000,39 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			if (doOnResponseError != null && ops.responseState != null &&
 					!(error instanceof RedirectClientException)) {
 				doOnResponseError.accept(connection.as(HttpClientOperations.class), error);
+			}
+		}
+	}
+
+	static final class ReactorNettyHttpClientUpgradeHandler extends HttpClientUpgradeHandler<DefaultHttpContent> {
+
+		final Http2FrameCodec http2FrameCodec;
+
+		boolean decoded;
+
+		ReactorNettyHttpClientUpgradeHandler(
+				Http2FrameCodec http2FrameCodec,
+				SourceCodec sourceCodec,
+				UpgradeCodec upgradeCodec,
+				int maxContentLength) {
+			super(sourceCodec, upgradeCodec, maxContentLength);
+			this.http2FrameCodec = http2FrameCodec;
+		}
+
+		@Override
+		protected void decode(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+			decoded = true;
+			if (msg instanceof HttpResponse httpResponse && !SWITCHING_PROTOCOLS.equals(httpResponse.status())) {
+				http2FrameCodec.encoder().close();
+			}
+			super.decode(ctx, msg);
+		}
+
+		@Override
+		public void handlerRemoved(ChannelHandlerContext ctx) {
+			if (!decoded) {
+				// Exception may happen before decoding the server response
+				http2FrameCodec.encoder().close();
 			}
 		}
 	}
