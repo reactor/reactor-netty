@@ -921,12 +921,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 
 		@Override
-		protected CharSequence validateKey(@Nullable CharSequence name) {
+		protected CharSequence validateKey(@Nullable CharSequence name, boolean forAdd) {
 			if (name == null || !declaredHeaderNames.contains(name.toString())) {
 				throw new IllegalArgumentException("Trailer header name [" + name +
 						"] not declared with [Trailer] header, or it is not a valid trailer header name");
 			}
-			return super.validateKey(name);
+			return super.validateKey(name, forAdd);
 		}
 
 		static Set<String> filterHeaderNames(String declaredHeaderNames) {
