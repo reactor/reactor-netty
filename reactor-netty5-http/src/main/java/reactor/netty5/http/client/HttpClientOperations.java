@@ -38,6 +38,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
+import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpResponse;
@@ -650,7 +651,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				// Whether there are subscribers or the subscriber cancels is not of interest
 				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
 				// FAIL_ZERO_SUBSCRIBER
-				trailerHeaders.tryEmitValue(((LastHttpContent) msg).trailingHeaders());
+				trailerHeaders.tryEmitValue(((LastHttpContent<?>) msg).trailingHeaders());
 			}
 
 			//force auto read to enable more accurate close selection now inbound is done
@@ -746,7 +747,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
-			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
+			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator<DefaultHttpContent>(8192));
 			removeHandler(NettyPipeline.HttpMetricsHandler);
 
 			if (websocketClientSpec.compress()) {

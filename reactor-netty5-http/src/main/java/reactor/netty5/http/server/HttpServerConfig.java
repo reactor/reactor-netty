@@ -23,6 +23,7 @@ import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty.contrib.handler.codec.haproxy.HAProxyMessageDecoder;
+import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpServerCodec;
@@ -549,7 +550,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader);
 		CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler = new CleartextHttp2ServerUpgradeHandler(
 				httpServerCodec,
-				new HttpServerUpgradeHandler(httpServerCodec, upgrader, decoder.h2cMaxContentLength()),
+				new HttpServerUpgradeHandler<DefaultHttpContent>(httpServerCodec, upgrader, decoder.h2cMaxContentLength()),
 				http2ServerHandler);
 
 		p.addBefore(NettyPipeline.ReactiveBridge,
