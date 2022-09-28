@@ -413,7 +413,7 @@ public abstract class TransportConfig {
 						BufferAllocator alloc = channel.bufferAllocator();
 						if (alloc instanceof BufferAllocatorMetricProvider bufferAllocatorMetricProvider) {
 							BufferAllocatorMetrics.INSTANCE.registerMetrics(alloc.getAllocationType().toString(),
-									bufferAllocatorMetricProvider.metric(), alloc);
+									bufferAllocatorMetricProvider.metric());
 						}
 
 						MicrometerEventLoopMeterRegistrar.INSTANCE.registerMetrics(channel.executor());

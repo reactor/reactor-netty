@@ -618,8 +618,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	static final Logger log = Loggers.getLogger(ChannelOperations.class);
 
-	static final Object TERMINATED_OPS = new Object();
-
 	static final OnSetup EMPTY_SETUP = (c, l, msg) -> null;
 
 	@SuppressWarnings("rawtypes")
