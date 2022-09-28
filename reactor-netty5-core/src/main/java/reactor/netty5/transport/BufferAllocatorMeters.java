@@ -20,7 +20,7 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.docs.DocumentedMeter;
 
 /**
- * {@link io.netty5.buffer.api.BufferAllocator} meters.
+ * {@link io.netty5.buffer.BufferAllocator} meters.
  *
  * @author Violeta Georgieva
  * @since 1.1.0
