@@ -30,6 +30,7 @@ import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.resources.LoopResources;
 import reactor.netty5.transport.ClientTransportConfig;
 import reactor.netty5.transport.logging.AdvancedBufferFormat;
+import reactor.util.annotation.Nullable;
 
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
@@ -100,7 +101,7 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 	}
 
 	@Override
-	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(ProtocolFamily protocolFamily) {
+	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(@Nullable ProtocolFamily protocolFamily) {
 		throw new UnsupportedOperationException();
 	}
 
