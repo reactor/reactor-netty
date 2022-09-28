@@ -847,9 +847,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		@Override
 		public void channelActive(ChannelHandlerContext ctx) {
 			ChannelHandler handler = ctx.pipeline().get(NettyPipeline.SslHandler);
-			if (handler instanceof SslHandler) {
-				SslHandler sslHandler = (SslHandler) handler;
-
+			if (handler instanceof SslHandler sslHandler) {
 				String protocol = sslHandler.applicationProtocol() != null ? sslHandler.applicationProtocol() : ApplicationProtocolNames.HTTP_1_1;
 				if (log.isDebugEnabled()) {
 					log.debug(format(ctx.channel(), "Negotiated application-level protocol [" + protocol + "]"));
