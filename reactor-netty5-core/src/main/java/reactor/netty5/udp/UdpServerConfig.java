@@ -147,7 +147,7 @@ public final class UdpServerConfig extends TransportConfig {
 	}
 
 	@Override
-	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(ProtocolFamily protocolFamily) {
+	protected ServerChannelFactory<? extends ServerChannel> serverConnectionFactory(@Nullable ProtocolFamily protocolFamily) {
 		throw new UnsupportedOperationException();
 	}
 
