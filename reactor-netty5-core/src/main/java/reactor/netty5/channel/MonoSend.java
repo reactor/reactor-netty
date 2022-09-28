@@ -51,11 +51,6 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 				"reactiveBridge is not installed");
 	}
 
-	@SuppressWarnings("unchecked")
-	static <O> ToIntFunction<O> defaultSizeOf() {
-		return (ToIntFunction) SIZE_OF;
-	}
-
 	static final int                    MAX_SIZE    = 128;
 
 	static final int                    REFILL_SIZE = MAX_SIZE / 2;

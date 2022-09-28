@@ -492,7 +492,7 @@ class HttpClientConnect extends HttpClient {
 				ch.listener().onStateChange(ch, HttpClientState.REQUEST_PREPARED);
 				if (websocketClientSpec != null) {
 					Mono<Void> result =
-							Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketClientSpec, compress));
+							Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketClientSpec));
 					if (handler != null) {
 						result = result.thenEmpty(Mono.fromRunnable(() -> Flux.concat(handler.apply(ch, ch))));
 					}

@@ -17,7 +17,6 @@ package reactor.netty5.transport;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Tags;
-import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.pool.BufferAllocatorMetric;
 import reactor.netty5.internal.util.MapUtils;
 
@@ -48,7 +47,7 @@ final class BufferAllocatorMetrics {
 	private BufferAllocatorMetrics() {
 	}
 
-	void registerMetrics(String allocType, BufferAllocatorMetric metrics, BufferAllocator alloc) {
+	void registerMetrics(String allocType, BufferAllocatorMetric metrics) {
 		MapUtils.computeIfAbsent(cache, metrics.hashCode() + "", key -> {
 			Tags tags = Tags.of(ID.asString(), key, TYPE.asString(), allocType);
 
