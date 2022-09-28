@@ -929,12 +929,7 @@ class HttpServerTests extends BaseHttpTest {
 				(req, res) -> res.header("Content-Length", "0")
 				                 .send(Flux.just(data, data1, data2))
 				                 .then()
-				                 .doOnCancel(() -> {
-				                     data.close();
-				                     data1.close();
-				                     data2.close();
-				                     latch.countDown();
-				                 }),
+				                 .doOnCancel(latch::countDown),
 				(req, out) -> {
 					req.addHeader("Connection", "close");
 					return out;
