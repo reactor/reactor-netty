@@ -37,6 +37,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
@@ -606,7 +607,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(http2FrameCodec,
 				new H2CleartextCodec(http2FrameCodec, opsFactory, acceptGzip, metricsRecorder, uriTagValue));
 
-		HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(httpClientCodec, upgradeCodec, decoder.h2cMaxContentLength());
+		HttpClientUpgradeHandler<?> upgradeHandler =
+				new HttpClientUpgradeHandler<DefaultHttpContent>(httpClientCodec, upgradeCodec, decoder.h2cMaxContentLength());
 
 		p.addBefore(NettyPipeline.ReactiveBridge, null, httpClientCodec)
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2CUpgradeHandler, upgradeHandler)
