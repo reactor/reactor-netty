@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Objects;
+import java.util.function.Function;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static java.util.Objects.requireNonNull;
@@ -135,7 +136,7 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 								buffer.extendWith(allocator.copyOf(s.getBytes(charset)).send());
 							}
 							return buffer;
-						})));
+						})), BufferFlux.bufferExtractorFunction);
 	}
 
 	/**
@@ -154,21 +155,21 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 		source.subscribe(actual);
 	}
 
-	BufferMono(Mono<?> source) {
-		super(source.map(BufferFlux.bufferExtractor));
+	BufferMono(Mono<?> source, Function<Object, Buffer> bufferExtractor) {
+		super(source.map(bufferExtractor));
 	}
 
-	static BufferMono maybeFuse(Mono<?> source) {
+	static BufferMono maybeFuse(Mono<?> source, Function<Object, Buffer> bufferExtractor) {
 		if (source instanceof Fuseable) {
-			return new BufferMonoFuseable(source);
+			return new BufferMonoFuseable(source, bufferExtractor);
 		}
-		return new BufferMono(source);
+		return new BufferMono(source, bufferExtractor);
 	}
 
 	static final class BufferMonoFuseable extends BufferMono implements Fuseable {
 
-		BufferMonoFuseable(Mono<?> source) {
-			super(source);
+		BufferMonoFuseable(Mono<?> source, Function<Object, Buffer> bufferExtractor) {
+			super(source, bufferExtractor);
 		}
 	}
 }

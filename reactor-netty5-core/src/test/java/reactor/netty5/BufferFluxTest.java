@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty5.BufferFlux.bufferExtractorFunction;
 
 class BufferFluxTest {
 	private static final Random rndm = new Random();
@@ -63,7 +64,7 @@ class BufferFluxTest {
 		try (Buffer buffer1 = preferredAllocator().copyOf(bytes);
 		     Buffer buffer2 = preferredAllocator().copyOf(bytes)) {
 			BufferFlux mono = new BufferFlux(Flux.just(buffer1.skipReadableBytes(5), buffer2.skipReadableBytes(5)),
-					preferredAllocator());
+					preferredAllocator(), bufferExtractorFunction);
 			StepVerifier.create(mono.asByteArray().collectList())
 					.expectNextMatches(byteArrayList ->
 						byteArrayList.size() == 2 && Arrays.equals(expected, byteArrayList.get(0)) &&
@@ -81,7 +82,7 @@ class BufferFluxTest {
 		try (Buffer buffer1 = preferredAllocator().copyOf(bytes);
 		     Buffer buffer2 = preferredAllocator().copyOf(bytes)) {
 			BufferFlux mono = new BufferFlux(Flux.just(buffer1.skipReadableBytes(5), buffer2.skipReadableBytes(5)),
-					preferredAllocator());
+					preferredAllocator(), bufferExtractorFunction);
 			StepVerifier.create(mono.asByteBuffer().collectList())
 					.expectNextMatches(byteArrayList -> {
 						if (byteArrayList.size() == 2) {

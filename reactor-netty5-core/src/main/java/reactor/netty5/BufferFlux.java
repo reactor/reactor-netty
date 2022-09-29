@@ -21,8 +21,6 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.CompositeBuffer;
 import io.netty5.util.Send;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.handler.codec.http.HttpContent;
-import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.Fuseable;
@@ -69,7 +67,21 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	 */
 	public static BufferFlux fromInbound(Publisher<?> source, BufferAllocator allocator) {
 		Objects.requireNonNull(allocator, "allocator");
-		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, bufferExtractor)), allocator);
+		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, bufferExtractorFunction)),
+				allocator, bufferExtractorFunction);
+	}
+
+	/**
+	 * Decorate as {@link BufferFlux}
+	 *
+	 * @param source publisher to decorate
+	 * @param allocator the channel {@link BufferAllocator}
+	 * @param bufferExtractor a function that extracts a {@link Buffer} from the given {@link Object}
+	 * @return a {@link BufferFlux}
+	 */
+	public static BufferFlux fromInbound(Publisher<?> source, BufferAllocator allocator, Function<Object, Buffer> bufferExtractor) {
+		Objects.requireNonNull(allocator, "allocator");
+		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, bufferExtractor)), allocator, bufferExtractor);
 	}
 
 	/**
@@ -94,7 +106,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 		Objects.requireNonNull(allocator, "allocator");
 		Objects.requireNonNull(charset, "charset");
 		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, s -> allocator.copyOf(s.getBytes(charset)))),
-				allocator);
+				allocator, bufferExtractorFunction);
 	}
 
 	/**
@@ -172,7 +184,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 							return fc;
 						},
 						ReactorNetty.fileCloser),
-				allocator);
+				allocator, bufferExtractorFunction);
 	}
 
 	/**
@@ -264,7 +276,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 							})
 							.doFinally(signalType -> output.close());
 				})
-				.as(BufferMono::maybeFuse);
+				.as(objectMono -> BufferMono.maybeFuse(objectMono, bufferExtractor));
 	}
 
 	/**
@@ -279,16 +291,18 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	}
 
 	final BufferAllocator alloc;
+	final Function<Object, Buffer> bufferExtractor;
 
-	BufferFlux(Flux<Buffer> source, BufferAllocator allocator) {
+	BufferFlux(Flux<Buffer> source, BufferAllocator allocator, Function<Object, Buffer> bufferExtractor) {
 		super(source);
 		this.alloc = allocator;
+		this.bufferExtractor = bufferExtractor;
 	}
 
 	static final class BufferFluxFuseable extends BufferFlux implements Fuseable {
 
-		BufferFluxFuseable(Flux<Buffer> source, BufferAllocator allocator) {
-			super(source, allocator);
+		BufferFluxFuseable(Flux<Buffer> source, BufferAllocator allocator, Function<Object, Buffer> bufferExtractor) {
+			super(source, allocator, bufferExtractor);
 		}
 	}
 
@@ -297,28 +311,22 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 		source.subscribe(s);
 	}
 
-	static BufferFlux maybeFuse(Flux<Buffer> source, BufferAllocator allocator) {
+	static BufferFlux maybeFuse(Flux<Buffer> source, BufferAllocator allocator, Function<Object, Buffer> bufferExtractor) {
 		if (source instanceof Fuseable) {
-			return new BufferFlux.BufferFluxFuseable(source, allocator);
+			return new BufferFlux.BufferFluxFuseable(source, allocator, bufferExtractor);
 		}
-		return new BufferFlux(source, allocator);
+		return new BufferFlux(source, allocator, bufferExtractor);
 	}
 
 	/**
 	 * A channel object to {@link Buffer} transformer
 	 */
-	static final Function<Object, Buffer> bufferExtractor = o -> {
+	static final Function<Object, Buffer> bufferExtractorFunction = o -> {
 		if (o instanceof Buffer buffer) {
 			return buffer;
 		}
 		if (o instanceof DatagramPacket envelope) {
 			return envelope.content();
-		}
-		if (o instanceof HttpContent<?> httpContent) {
-			return httpContent.payload();
-		}
-		if (o instanceof WebSocketFrame frame) {
-			return frame.binaryData();
 		}
 		if (o instanceof byte[] bytes) {
 			return preferredAllocator().copyOf(bytes);
