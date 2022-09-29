@@ -20,7 +20,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
-import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.Buffer;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
@@ -70,10 +69,6 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 	static final ToIntFunction<Buffer> SIZE_OF_BB  = Buffer::readableBytes;
 
 	static final ToIntFunction<Object>  SIZE_OF     = msg -> {
-		if (msg instanceof ByteBufHolder byteBufHolder) {
-			return byteBufHolder.content()
-			                            .readableBytes();
-		}
 		if (msg instanceof Buffer buffer) {
 			return buffer.readableBytes();
 		}

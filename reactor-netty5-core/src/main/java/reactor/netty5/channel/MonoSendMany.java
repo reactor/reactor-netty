@@ -29,7 +29,6 @@ import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
-import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.Buffer;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
@@ -283,7 +282,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						int readableBytes = parent.sizeOf.applyAsInt(encodedMessage);
 
 
-						if (readableBytes == 0 && !(encodedMessage instanceof ByteBufHolder)) {
+						if (readableBytes == 0) {
 							Resource.dispose(encodedMessage);
 							nextRequest++;
 							continue;

@@ -33,9 +33,6 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.Appender;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.DefaultByteBufHolder;
-import io.netty.buffer.Unpooled;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
@@ -74,14 +71,6 @@ class ReactorNettyLoggingHandlerTest {
 		final Buffer buffer = preferredAllocator().copyOf("TEST".getBytes(Charset.defaultCharset()));
 
 		sendMessage(buffer, "[embedded, L:embedded - R:embedded] READ: 4B TEST");
-	}
-
-	@Test
-	void shouldLogByteBufHolder() {
-		final ByteBufHolder byteBufHolder =
-			new DefaultByteBufHolder(Unpooled.copiedBuffer("TEST", Charset.defaultCharset()));
-
-		sendMessage(byteBufHolder, "[embedded, L:embedded - R:embedded] READ: 4B TEST");
 	}
 
 	@Test
