@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -79,6 +80,24 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 		catch (Throwable err) {
 			exceptionCaught(ctx, err);
 		}
+	}
+
+	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
+	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+		if (evt instanceof SslCloseCompletionEvent) {
+			SslCloseCompletionEvent sslCloseCompletionEvent = (SslCloseCompletionEvent) evt;
+
+			// When a close_notify is received, the SSLHandler fires an SslCloseCompletionEvent.SUCCESS event,
+			// so if the event is success and if the channel is still active (not closing for example),
+			// then immediately close the channel.
+			// see https://www.rfc-editor.org/rfc/rfc5246#section-7.2.1, which states that when receiving a close_notify,
+			// then the connection must be closed down immediately.
+			if (sslCloseCompletionEvent.isSuccess() && ctx.channel().isActive()) {
+				ctx.close();
+			}
+		}
+		ctx.fireUserEventTriggered(evt);
 	}
 
 	@Override
