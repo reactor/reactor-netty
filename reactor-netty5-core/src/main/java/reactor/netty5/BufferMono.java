@@ -32,7 +32,6 @@ import java.util.Objects;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static java.util.Objects.requireNonNull;
-import static reactor.netty5.BufferFlux.bufferExtractorFunction;
 
 /**
  * A decorating {@link Mono} {@link NettyInbound} with various {@link Buffer} related
@@ -156,7 +155,7 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 	}
 
 	BufferMono(Mono<?> source) {
-		super(source.map(bufferExtractorFunction));
+		super(source.map(BufferFlux.bufferExtractorFunction));
 	}
 
 	static BufferMono maybeFuse(Mono<?> source) {
