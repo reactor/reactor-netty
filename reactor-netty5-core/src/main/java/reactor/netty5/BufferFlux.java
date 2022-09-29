@@ -66,9 +66,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	 * @return a {@link BufferFlux}
 	 */
 	public static BufferFlux fromInbound(Publisher<?> source, BufferAllocator allocator) {
-		Objects.requireNonNull(allocator, "allocator");
-		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, bufferExtractorFunction)),
-				allocator, bufferExtractorFunction);
+		return fromInbound(source, allocator, bufferExtractorFunction);
 	}
 
 	/**
@@ -81,7 +79,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	 */
 	public static BufferFlux fromInbound(Publisher<?> source, BufferAllocator allocator, Function<Object, Buffer> bufferExtractor) {
 		Objects.requireNonNull(allocator, "allocator");
-		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, bufferExtractor)), allocator, bufferExtractor);
+		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, bufferExtractor)), allocator);
 	}
 
 	/**
@@ -106,7 +104,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 		Objects.requireNonNull(allocator, "allocator");
 		Objects.requireNonNull(charset, "charset");
 		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, s -> allocator.copyOf(s.getBytes(charset)))),
-				allocator, bufferExtractorFunction);
+				allocator);
 	}
 
 	/**
@@ -184,7 +182,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 							return fc;
 						},
 						ReactorNetty.fileCloser),
-				allocator, bufferExtractorFunction);
+				allocator);
 	}
 
 	/**
@@ -276,7 +274,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 							})
 							.doFinally(signalType -> output.close());
 				})
-				.as(objectMono -> BufferMono.maybeFuse(objectMono, bufferExtractor));
+				.as(BufferMono::maybeFuse);
 	}
 
 	/**
@@ -291,18 +289,16 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	}
 
 	final BufferAllocator alloc;
-	final Function<Object, Buffer> bufferExtractor;
 
-	BufferFlux(Flux<Buffer> source, BufferAllocator allocator, Function<Object, Buffer> bufferExtractor) {
+	BufferFlux(Flux<Buffer> source, BufferAllocator allocator) {
 		super(source);
 		this.alloc = allocator;
-		this.bufferExtractor = bufferExtractor;
 	}
 
 	static final class BufferFluxFuseable extends BufferFlux implements Fuseable {
 
-		BufferFluxFuseable(Flux<Buffer> source, BufferAllocator allocator, Function<Object, Buffer> bufferExtractor) {
-			super(source, allocator, bufferExtractor);
+		BufferFluxFuseable(Flux<Buffer> source, BufferAllocator allocator) {
+			super(source, allocator);
 		}
 	}
 
@@ -311,11 +307,11 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 		source.subscribe(s);
 	}
 
-	static BufferFlux maybeFuse(Flux<Buffer> source, BufferAllocator allocator, Function<Object, Buffer> bufferExtractor) {
+	static BufferFlux maybeFuse(Flux<Buffer> source, BufferAllocator allocator) {
 		if (source instanceof Fuseable) {
-			return new BufferFlux.BufferFluxFuseable(source, allocator, bufferExtractor);
+			return new BufferFlux.BufferFluxFuseable(source, allocator);
 		}
-		return new BufferFlux(source, allocator, bufferExtractor);
+		return new BufferFlux(source, allocator);
 	}
 
 	/**

@@ -29,10 +29,10 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Objects;
-import java.util.function.Function;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static java.util.Objects.requireNonNull;
+import static reactor.netty5.BufferFlux.bufferExtractorFunction;
 
 /**
  * A decorating {@link Mono} {@link NettyInbound} with various {@link Buffer} related
@@ -136,7 +136,7 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 								buffer.extendWith(allocator.copyOf(s.getBytes(charset)).send());
 							}
 							return buffer;
-						})), BufferFlux.bufferExtractorFunction);
+						})));
 	}
 
 	/**
@@ -155,21 +155,21 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 		source.subscribe(actual);
 	}
 
-	BufferMono(Mono<?> source, Function<Object, Buffer> bufferExtractor) {
-		super(source.map(bufferExtractor));
+	BufferMono(Mono<?> source) {
+		super(source.map(bufferExtractorFunction));
 	}
 
-	static BufferMono maybeFuse(Mono<?> source, Function<Object, Buffer> bufferExtractor) {
+	static BufferMono maybeFuse(Mono<?> source) {
 		if (source instanceof Fuseable) {
-			return new BufferMonoFuseable(source, bufferExtractor);
+			return new BufferMonoFuseable(source);
 		}
-		return new BufferMono(source, bufferExtractor);
+		return new BufferMono(source);
 	}
 
 	static final class BufferMonoFuseable extends BufferMono implements Fuseable {
 
-		BufferMonoFuseable(Mono<?> source, Function<Object, Buffer> bufferExtractor) {
-			super(source, bufferExtractor);
+		BufferMonoFuseable(Mono<?> source) {
+			super(source);
 		}
 	}
 }

@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.Random;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
-import static reactor.netty5.BufferFlux.bufferExtractorFunction;
 
 class BufferMonoTest {
 	static final Random rndm = new Random();
@@ -39,7 +38,7 @@ class BufferMonoTest {
 		rndm.nextBytes(bytes);
 		byte[] expected = Arrays.copyOfRange(bytes, 5, bytes.length);
 		try (Buffer buffer = preferredAllocator().copyOf(bytes)) {
-			BufferMono mono = new BufferMono(Mono.just(buffer.skipReadableBytes(5)), bufferExtractorFunction);
+			BufferMono mono = new BufferMono(Mono.just(buffer.skipReadableBytes(5)));
 			StepVerifier.create(mono.asByteArray())
 					.expectNextMatches(byteArray -> Arrays.equals(expected, byteArray))
 					.expectComplete()
@@ -53,7 +52,7 @@ class BufferMonoTest {
 		rndm.nextBytes(bytes);
 		byte[] expected = Arrays.copyOfRange(bytes, 5, bytes.length);
 		try (Buffer buffer = preferredAllocator().copyOf(bytes)) {
-			BufferMono mono = new BufferMono(Mono.just(buffer.skipReadableBytes(5)), bufferExtractorFunction);
+			BufferMono mono = new BufferMono(Mono.just(buffer.skipReadableBytes(5)));
 			StepVerifier.create(mono.asByteBuffer())
 					.expectNextMatches(byteArray -> {
 						byte[] bArray = new byte[byteArray.remaining()];
