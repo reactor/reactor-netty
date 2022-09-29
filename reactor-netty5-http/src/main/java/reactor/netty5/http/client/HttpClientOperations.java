@@ -30,7 +30,6 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.CompositeBuffer;
@@ -42,6 +41,7 @@ import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpResponse;
+import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
@@ -665,8 +665,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 		if (!started) {
 			if (log.isDebugEnabled()) {
-				if (msg instanceof ByteBufHolder byteBufHolder) {
-					msg = byteBufHolder.content();
+				if (msg instanceof HttpContent<?> httpContent) {
+					msg = httpContent.payload();
 				}
 				log.debug(format(channel(), "HttpClientOperations received an incorrect chunk {} " +
 								"(previously used connection?)"),
