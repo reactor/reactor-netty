@@ -309,7 +309,8 @@ class HttpServerTests extends BaseHttpTest {
 				                         x.addHandlerFirst(new HttpClientCodec()))
 				                   .receiveObject()
 				                   .ofType(HttpContent.class)
-				                   .as(BufferFlux::fromInbound)
+				                   .as(httpContentFlux ->
+				                       BufferFlux.fromInbound(httpContentFlux, preferredAllocator(), o -> ((HttpContent<?>) o).payload()))
 				                   .asString()
 				                   .log()
 				                   .map(Integer::parseInt)

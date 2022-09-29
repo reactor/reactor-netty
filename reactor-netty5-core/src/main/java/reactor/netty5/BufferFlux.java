@@ -21,8 +21,6 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.CompositeBuffer;
 import io.netty5.util.Send;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.handler.codec.http.HttpContent;
-import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.Fuseable;
@@ -68,6 +66,18 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	 * @return a {@link BufferFlux}
 	 */
 	public static BufferFlux fromInbound(Publisher<?> source, BufferAllocator allocator) {
+		return fromInbound(source, allocator, bufferExtractorFunction);
+	}
+
+	/**
+	 * Decorate as {@link BufferFlux}
+	 *
+	 * @param source publisher to decorate
+	 * @param allocator the channel {@link BufferAllocator}
+	 * @param bufferExtractor a function that extracts a {@link Buffer} from the given {@link Object}
+	 * @return a {@link BufferFlux}
+	 */
+	public static BufferFlux fromInbound(Publisher<?> source, BufferAllocator allocator, Function<Object, Buffer> bufferExtractor) {
 		Objects.requireNonNull(allocator, "allocator");
 		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, bufferExtractor)), allocator);
 	}
@@ -307,18 +317,12 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	/**
 	 * A channel object to {@link Buffer} transformer
 	 */
-	static final Function<Object, Buffer> bufferExtractor = o -> {
+	static final Function<Object, Buffer> bufferExtractorFunction = o -> {
 		if (o instanceof Buffer buffer) {
 			return buffer;
 		}
 		if (o instanceof DatagramPacket envelope) {
 			return envelope.content();
-		}
-		if (o instanceof HttpContent<?> httpContent) {
-			return httpContent.payload();
-		}
-		if (o instanceof WebSocketFrame frame) {
-			return frame.binaryData();
 		}
 		if (o instanceof byte[] bytes) {
 			return preferredAllocator().copyOf(bytes);

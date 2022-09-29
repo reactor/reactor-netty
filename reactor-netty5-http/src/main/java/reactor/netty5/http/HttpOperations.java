@@ -23,12 +23,14 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.CombinedChannelDuplexHandler;
@@ -43,6 +45,7 @@ import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.LastHttpContent;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
+import reactor.netty5.BufferFlux;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.NettyInbound;
@@ -55,6 +58,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static reactor.netty5.ReactorNetty.format;
 import static reactor.netty5.ReactorNetty.toPrettyHexDump;
 
@@ -99,6 +103,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	public String requestId() {
 		return asShortText();
+	}
+
+	@Override
+	public BufferFlux receive() {
+		return BufferFlux.fromInbound(receiveObject(), alloc(), bufferExtractorFunction);
 	}
 
 	@Override
@@ -433,6 +442,25 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				}
 			}
 	);
+
+	/**
+	 * A channel object to {@link Buffer} transformer
+	 */
+	static final Function<Object, Buffer> bufferExtractorFunction = o -> {
+		if (o instanceof Buffer buffer) {
+			return buffer;
+		}
+		if (o instanceof HttpContent<?> httpContent) {
+			return httpContent.payload();
+		}
+		if (o instanceof WebSocketFrame frame) {
+			return frame.binaryData();
+		}
+		if (o instanceof byte[] bytes) {
+			return preferredAllocator().copyOf(bytes);
+		}
+		throw new IllegalArgumentException("Object " + o + " of type " + o.getClass() + " " + "cannot be converted to Buffer");
+	};
 
 	static final Logger log = Loggers.getLogger(HttpOperations.class);
 

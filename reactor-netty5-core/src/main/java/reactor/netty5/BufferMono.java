@@ -155,7 +155,7 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 	}
 
 	BufferMono(Mono<?> source) {
-		super(source.map(BufferFlux.bufferExtractor));
+		super(source.map(BufferFlux.bufferExtractorFunction));
 	}
 
 	static BufferMono maybeFuse(Mono<?> source) {
