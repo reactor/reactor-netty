@@ -31,10 +31,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
@@ -262,17 +258,12 @@ public final class ReactorNetty {
 	}
 
 	/**
-	 * Pretty hex dump will be returned when the object is {@link Buffer} or {@link ByteBufHolder}
+	 * Pretty hex dump will be returned when the object is {@link Buffer}
 	 */
 	public static String toPrettyHexDump(Object msg) {
 		Objects.requireNonNull(msg, "msg");
 		String result;
-		if (msg instanceof ByteBufHolder byteBufHolder &&
-				!Objects.equals(Unpooled.EMPTY_BUFFER, byteBufHolder.content())) {
-			ByteBuf buffer = byteBufHolder.content();
-			result = "\n" + ByteBufUtil.prettyHexDump(buffer);
-		}
-		else if (msg instanceof Buffer buffer) {
+		if (msg instanceof Buffer buffer) {
 			int length = buffer.readableBytes();
 			int rows = length / 16 + ((length & 15) == 0 ? 0 : 1) + 4;
 			StringBuilder buf = new StringBuilder(rows * 80);

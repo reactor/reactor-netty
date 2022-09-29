@@ -17,13 +17,12 @@ package reactor.netty5.transport.logging;
 
 import java.nio.charset.Charset;
 
-import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 
 /**
- * Used to control the format and verbosity of logging for {@link Buffer}s and {@link ByteBufHolder}s.
+ * Used to control the format and verbosity of logging for {@link Buffer}s.
  * <p>
  * Adds {@link AdvancedBufferFormat#TEXTUAL} format to {@link io.netty5.handler.logging.BufferFormat}.
  *

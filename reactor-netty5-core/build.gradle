@@ -57,7 +57,6 @@ dependencies {
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	api "io.netty:netty-buffer:$nettyByteBufVersion"
 	api "io.netty:netty5-handler:$nettyVersion"
 	api "io.netty.contrib:netty-handler-proxy:$nettyContribVersion"
 	api "io.netty:netty5-resolver-dns:$nettyVersion"

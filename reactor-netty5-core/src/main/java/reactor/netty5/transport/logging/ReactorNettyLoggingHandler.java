@@ -18,8 +18,6 @@ package reactor.netty5.transport.logging;
 import java.nio.charset.Charset;
 import java.util.Objects;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
@@ -30,7 +28,6 @@ import io.netty5.handler.logging.LoggingHandler;
 import reactor.netty5.ChannelOperationsId;
 import reactor.netty5.Connection;
 
-import static io.netty.buffer.ByteBufUtil.appendPrettyHexDump;
 import static io.netty5.util.internal.StringUtil.NEWLINE;
 import static java.util.Objects.requireNonNull;
 import static reactor.netty5.transport.logging.AdvancedBufferFormat.HEX_DUMP;
@@ -134,9 +131,6 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 		if (arg instanceof Buffer buffer) {
 			return formatBuffer(ctx, eventName, buffer);
 		}
-		else if (arg instanceof ByteBufHolder byteBufHolder) {
-			return formatByteBufHolder(ctx, eventName, byteBufHolder);
-		}
 		else {
 			return formatSimple(ctx, eventName, arg);
 		}
@@ -233,61 +227,6 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 			}
 			else if (bufferFormat == TEXTUAL) {
 				buf.append(' ').append(message);
-			}
-
-			return buf.toString();
-		}
-	}
-
-	private String formatByteBufHolder(ChannelHandlerContext ctx, String eventName, ByteBufHolder msg) {
-		String chStr = channelString(ctx.channel());
-		String msgStr = msg.toString();
-		ByteBuf content = msg.content();
-		int length = content.readableBytes();
-		if (length == 0) {
-			return new StringBuilder(chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 4)
-					.append(chStr)
-					.append(' ')
-					.append(eventName)
-					.append(", ")
-					.append(msgStr)
-					.append(", 0B")
-					.toString();
-		}
-		else {
-			StringBuilder buf;
-			if (bufferFormat != TEXTUAL) {
-				int outputLength = chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1;
-				if (bufferFormat == HEX_DUMP) {
-					int rows = length / 16 + (length % 15 == 0 ? 0 : 1) + 4;
-					int hexDumpLength = 2 + rows * 80;
-					outputLength += hexDumpLength;
-				}
-				buf = new StringBuilder(outputLength)
-						.append(chStr)
-						.append(' ')
-						.append(eventName)
-						.append(": ")
-						.append(msgStr)
-						.append(", ")
-						.append(length)
-						.append('B');
-				if (bufferFormat == HEX_DUMP) {
-					buf.append(NEWLINE);
-					appendPrettyHexDump(buf, content);
-				}
-			}
-			else {
-				String message = content.toString(charset);
-				int outputLength = chStr.length() + 1 + eventName.length() + 2 + 10 + 2 + message.length();
-				buf = new StringBuilder(outputLength)
-						.append(chStr)
-						.append(' ')
-						.append(eventName)
-						.append(": ")
-						.append(length)
-						.append("B ")
-						.append(message);
 			}
 
 			return buf.toString();
