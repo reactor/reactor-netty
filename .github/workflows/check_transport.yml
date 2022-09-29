@@ -76,13 +76,13 @@ jobs:
           distribution: 'temurin'
           java-version: 17
       - name: Build codec-haproxy
-        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5-SNAPSHOT"
+        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5"
         working-directory: ./codec-haproxy
       - name: Build codec-extras
-        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5-SNAPSHOT"
+        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5"
         working-directory: ./codec-extras
       - name: Build socks-proxy
-        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5-SNAPSHOT"
+        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5"
         working-directory: ./socks-proxy
       - name: Build with Gradle
         run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -PspotlessFrom=origin/netty5
