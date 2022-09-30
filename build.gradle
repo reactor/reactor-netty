@@ -105,7 +105,7 @@ ext {
 		nettyVersion = forceNettyVersion
 		println "Netty version defined from command line: ${forceNettyVersion}"
 	}
-	nettyContribVersion = '5.0.0.Alpha2-SNAPSHOT'
+	nettyContribVersion = '5.0.0.Alpha2'
 	//nettyIoUringVersion = '0.0.15.Final'
 	//nettyQuicVersion = '0.0.30.Final'
 
