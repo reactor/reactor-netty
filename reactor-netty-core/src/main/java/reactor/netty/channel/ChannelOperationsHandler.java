@@ -94,6 +94,9 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			// see https://www.rfc-editor.org/rfc/rfc5246#section-7.2.1, which states that when receiving a close_notify,
 			// then the connection must be closed down immediately.
 			if (sslCloseCompletionEvent.isSuccess() && ctx.channel().isActive()) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(ctx.channel(), "Received a TLS close_notify, closing the channel now."));
+				}
 				ctx.close();
 			}
 		}
