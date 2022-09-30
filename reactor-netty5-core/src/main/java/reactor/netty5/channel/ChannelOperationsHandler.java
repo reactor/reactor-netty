@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.DecoderResultProvider;
+import io.netty5.handler.ssl.SslCloseCompletionEvent;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.NettyOutbound;
@@ -75,6 +76,23 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 		}
 		catch (Throwable err) {
 			channelExceptionCaught(ctx, err);
+		}
+	}
+
+	@Override
+	public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+		if (evt instanceof SslCloseCompletionEvent sslCloseCompletionEvent) {
+			// When a close_notify is received, the SSLHandler fires an SslCloseCompletionEvent.SUCCESS event,
+			// so if the event is success and if the channel is still active (not closing for example),
+			// then immediately close the channel.
+			// see https://www.rfc-editor.org/rfc/rfc5246#section-7.2.1, which states that when receiving a close_notify,
+			// then the connection must be closed down immediately.
+			if (sslCloseCompletionEvent.isSuccess() && ctx.channel().isActive()) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(ctx.channel(), "Received a TLS close_notify, closing the channel now."));
+				}
+				ctx.close();
+			}
 		}
 	}
 
