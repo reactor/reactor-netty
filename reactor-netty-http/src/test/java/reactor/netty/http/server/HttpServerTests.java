@@ -55,6 +55,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.DefaultChannelGroup;
@@ -77,12 +79,15 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.ssl.SniCompletionEvent;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AttributeKey;
@@ -147,6 +152,57 @@ class HttpServerTests extends BaseHttpTest {
 	static final EventExecutor executor = new DefaultEventExecutor();
 
 	ChannelGroup group;
+
+	/**
+	 * Server Handler used to send a TLS close_notify after the server last response has been flushed.
+	 * The close_notify is sent without closing the connection.
+	 */
+	final static class SendCloseNotifyAfterLastResponseHandler extends ChannelOutboundHandlerAdapter {
+		final static String NAME = "handler.send_close_notify_after_response";
+		final CountDownLatch latch;
+
+		SendCloseNotifyAfterLastResponseHandler(CountDownLatch latch) {
+			this.latch = latch;
+		}
+
+		static void register(Connection cnx, CountDownLatch latch) {
+			SendCloseNotifyAfterLastResponseHandler handler = new SendCloseNotifyAfterLastResponseHandler(latch);
+			cnx.channel().pipeline().addBefore(NettyPipeline.HttpTrafficHandler, NAME, handler);
+		}
+
+		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
+		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+			if (msg instanceof LastHttpContent) {
+				SslHandler sslHandler = ctx.channel().pipeline().get(SslHandler.class);
+				Objects.requireNonNull(sslHandler, "sslHandler not found from pipeline");
+				// closeOutbound sends a close_notify but don't close the connection.
+				promise.addListener(future -> sslHandler.closeOutbound().addListener(f -> latch.countDown()));
+			}
+			ctx.write(msg, promise);
+		}
+	}
+
+	/**
+	 * Handler used by secured servers which don't want to close client connection when receiving a client close_notify ack.
+	 * The handler is placed just before the ReactiveBridge (ChannelOperationsHandler), and will block
+	 * any received SslCloseCompletionEvent events. Hence, ChannelOperationsHandler won't get the close_notify ack,
+	 * and won't close the channel.
+	 */
+	final static class IgnoreCloseNotifyHandler extends ChannelInboundHandlerAdapter {
+		final static String NAME = "handler.ignore_close_notify";
+
+		static void register(Connection cnx) {
+			cnx.channel().pipeline().addBefore(NettyPipeline.ReactiveBridge, NAME, new IgnoreCloseNotifyHandler());
+		}
+
+		@Override
+		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+			if (!(evt instanceof SslCloseCompletionEvent) || !((SslCloseCompletionEvent) evt).isSuccess()) {
+				ctx.fireUserEventTriggered(evt);
+			}
+		}
+	}
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
@@ -2936,5 +2992,182 @@ class HttpServerTests extends BaseHttpTest {
 		    .blockLast(Duration.ofSeconds(10));
 
 		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+	}
+
+	/**
+	 * The test simulates a situation where a connection is idle and available in the client connection pool,
+	 * and then the client receives a close_notify, but the server has not yet closed the connection.
+	 * In this case, the connection should be closed immediately and removed from the pool, in order to avoid
+	 * any "SslClosedEngineException: SSLEngine closed already exception" the next time the connection will be
+	 * acquired and written.
+	 * So, in the test, a secured server responds to a first client request, and when the response is flushed, it sends a
+	 * close_notify to the client without closing the connection.
+	 * The first client should get its response OK, but when receiving the close_notify, it should immediately
+	 * close the connection, which should not re-enter into the pool again.
+	 * The next client request will work because the previous connection should have been closed.
+	 */
+	@Test
+	void test2498_close_notify_after_response_two_clients() throws Exception {
+		SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+				.build();
+
+		// Ensure that the server has sent the close_notify, and the client connection is closed after the 1st response.
+		CountDownLatch latch = new CountDownLatch(2);
+
+		disposableServer = createServer()
+				.secure(spec -> spec.sslContext(serverCtx))
+				.doOnConnection(cnx -> {
+					// will send a close_notify after the last response is sent, but won't close the connection
+					SendCloseNotifyAfterLastResponseHandler.register(cnx, latch);
+					// avoid closing the connection when the server receives the close_notify ack from the client
+					IgnoreCloseNotifyHandler.register(cnx);
+				})
+				.handle((req, res) -> {
+					return res.sendString(Mono.just("test"));
+				})
+				.bindNow();
+
+		// create the client
+		SslContext clientCtx = SslContextBuilder.forClient()
+				.trustManager(InsecureTrustManagerFactory.INSTANCE)
+				.build();
+
+		HttpClient client =  createClient(disposableServer::address)
+				.secure(spec -> spec.sslContext(clientCtx));
+
+		// send a first request
+		String resp = client
+				.doOnConnected(cnx -> cnx.channel().closeFuture().addListener(l -> latch.countDown()))
+				.get()
+				.uri("/")
+				.responseContent()
+				.aggregate()
+				.asString()
+				.block(Duration.ofSeconds(30));
+
+		assertThat(resp).isEqualTo("test");
+
+		// double check if close_notify was sent by server and if the client channel has been closed
+		assertThat(latch.await(40, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		// send a new request, which should succeed because at reception of previous close_notify we should have
+		// immediately closed the connection, else, if the connection is reused here, we would then get a
+		// "SslClosedEngineException: SSLEngine closed already" exception
+
+		String resp2 = client
+				.get()
+				.uri("/")
+				.responseContent()
+				.aggregate()
+				.asString()
+				.block(Duration.ofSeconds(30));
+		assertThat(resp2).isEqualTo("test");
+	}
+
+	/**
+	 * The test simulates a situation where the client has fully written its request to a connection,
+	 * but while waiting for the response, then a close_notify is received, and the server has not
+	 * closed the connection.
+	 *
+	 * The client should then be aborted with a PrematureCloseException.
+	 */
+	@Test
+	void test2498_close_notify_on_request() throws Exception {
+		SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+				.build();
+
+		CountDownLatch latch = new CountDownLatch(1);
+
+		disposableServer = createServer()
+				.secure(spec -> spec.sslContext(serverCtx))
+				// avoid closing the connection when the server receives the close_notify ack from the client
+				.doOnConnection(IgnoreCloseNotifyHandler::register)
+				.handle((req, res) -> {
+					req.receive()
+							.aggregate()
+							.subscribe(request -> req.withConnection(c -> {
+								SslHandler sslHandler = c.channel().pipeline().get(SslHandler.class);
+								Objects.requireNonNull(sslHandler, "sslHandler not found from pipeline");
+								// send a close_notify but do not close the connection
+								sslHandler.closeOutbound().addListener(future -> latch.countDown());
+							}));
+					return Mono.never();
+				})
+				.bindNow();
+
+		// create the client, which should be aborted since the server responds with a close_notify
+		Flux<String> postFlux = Flux.just("content1", "content2", "content3", "content4")
+				.delayElements(Duration.ofMillis(10));
+
+		SslContext clientCtx = SslContextBuilder.forClient()
+				.trustManager(InsecureTrustManagerFactory.INSTANCE)
+				.build();
+
+		createClient(disposableServer::address)
+				.secure(spec -> spec.sslContext(clientCtx))
+				.post()
+				.send(ByteBufFlux.fromString(postFlux))
+				.uri("/")
+				.responseContent()
+				.aggregate()
+				.as(StepVerifier::create)
+				.expectErrorMatches(t -> t instanceof PrematureCloseException || t instanceof AbortedException)
+				.verify(Duration.ofSeconds(40));
+
+		// double check if the server has sent its close_notify
+		assertThat(latch.await(40, TimeUnit.SECONDS)).as("latch await").isTrue();
+	}
+
+	/**
+	 * The test simulates a situation where the client is receiving a close_notify while
+	 * writing request body parts to the connection.
+	 * The server immediately sends a close_notify when the client is connecting.
+	 * the client request is not consumed and the client connection is not closed.
+	 * While writing the request body parts, the client should be aborted with a
+	 * PrematureCloseException or an AbortedException, but not with an
+	 * "SslClosedEngineException: SSLEngine closed already" exception.
+	 */
+	@Test
+	void test2498_close_notify_on_connect() throws Exception {
+		SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+				.build();
+
+		CountDownLatch latch = new CountDownLatch(1);
+
+		disposableServer = createServer()
+				.secure(spec -> spec.sslContext(serverCtx))
+				.doOnConnection(cnx -> {
+					// avoid closing the client connection when receiving the close_notify ack from client
+					IgnoreCloseNotifyHandler.register(cnx);
+					// sends a close_notify immediately, without closing the connection
+					SslHandler sslHandler = cnx.channel().pipeline().get(SslHandler.class);
+					Objects.requireNonNull(sslHandler, "sslHandler not found from pipeline");
+					sslHandler.closeOutbound().addListener(future -> latch.countDown());
+				})
+				.handle((req, res) -> Mono.never())
+				.bindNow();
+
+		// create the client, which should be aborted since the server responds with a close_notify
+		Flux<String> postFlux = Flux.range(0, 100)
+				.map(count -> "content" + count)
+				.delayElements(Duration.ofMillis(100));
+
+		SslContext clientCtx = SslContextBuilder.forClient()
+				.trustManager(InsecureTrustManagerFactory.INSTANCE)
+				.build();
+
+		createClient(disposableServer::address)
+				.secure(spec -> spec.sslContext(clientCtx))
+				.post()
+				.send(ByteBufFlux.fromString(postFlux))
+				.uri("/")
+				.responseContent()
+				.aggregate()
+				.as(StepVerifier::create)
+				.expectErrorMatches(t -> t instanceof PrematureCloseException || t instanceof AbortedException)
+				.verify(Duration.ofSeconds(40));
+
+		// double check if the server has sent its close_notify
+		assertThat(latch.await(40, TimeUnit.SECONDS)).as("latch await").isTrue();
 	}
 }
