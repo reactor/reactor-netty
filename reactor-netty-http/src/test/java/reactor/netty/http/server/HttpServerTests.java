@@ -185,8 +185,8 @@ class HttpServerTests extends BaseHttpTest {
 
 	/**
 	 * Handler used by secured servers which don't want to close client connection when receiving a client close_notify ack.
-	 * The handler is placed just before the ReactiveBrigde (HttpOperationsHandler), and will block
-	 * any received SslCloseCompletionEvent events. Hence, HttpOperationsHandler won't get the close_notify ack,
+	 * The handler is placed just before the ReactiveBridge (ChannelOperationsHandler), and will block
+	 * any received SslCloseCompletionEvent events. Hence, ChannelOperationsHandler won't get the close_notify ack,
 	 * and won't close the channel.
 	 */
 	final static class IgnoreCloseNotifyHandler extends ChannelInboundHandlerAdapter {
@@ -197,7 +197,7 @@ class HttpServerTests extends BaseHttpTest {
 		}
 
 		@Override
-		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 			if (!(evt instanceof SslCloseCompletionEvent) || !((SslCloseCompletionEvent) evt).isSuccess()) {
 				ctx.fireUserEventTriggered(evt);
 			}

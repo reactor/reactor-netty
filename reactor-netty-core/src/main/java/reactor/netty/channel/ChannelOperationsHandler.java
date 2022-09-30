@@ -84,7 +84,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
-	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 		if (evt instanceof SslCloseCompletionEvent) {
 			SslCloseCompletionEvent sslCloseCompletionEvent = (SslCloseCompletionEvent) evt;
 
@@ -100,7 +100,6 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 				ctx.close();
 			}
 		}
-		ctx.fireUserEventTriggered(evt);
 	}
 
 	@Override
