@@ -66,6 +66,7 @@ import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpMethod;
@@ -2256,7 +2257,6 @@ class HttpServerTests extends BaseHttpTest {
 			Function<HttpClient, HttpClient> clientCustomizer,
 			boolean connectionClose, boolean throwException) throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
-		AtomicReference<List<ByteBuf>> byteBufReplay = new AtomicReference<>(new ArrayList<>());
 		AtomicReference<List<Buffer>> bufReplay = new AtomicReference<>(new ArrayList<>());
 		HttpServer server = serverCustomizer.apply(createServer());
 		disposableServer =
@@ -2298,7 +2298,6 @@ class HttpServerTests extends BaseHttpTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		Mono.delay(Duration.ofMillis(500))
 		    .block();
-		assertThat(byteBufReplay.get()).allMatch(buf -> buf.refCnt() == 0);
 		assertThat(bufReplay.get()).allMatch(buf -> !buf.isAccessible());
 	}
 

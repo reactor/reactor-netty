@@ -16,8 +16,8 @@
 package reactor.netty5.http.server;
 
 import io.netty.contrib.handler.codec.http.multipart.HttpData;
-import io.netty5.buffer.api.CompositeBuffer;
-import io.netty5.buffer.api.DefaultBufferAllocators;
+import io.netty5.buffer.CompositeBuffer;
+import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.params.ParameterizedTest;
