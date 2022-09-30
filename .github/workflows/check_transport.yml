@@ -15,6 +15,13 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 17
+      - uses: actions/checkout@v3
+        with:
+          repository: netty-contrib/codec-multipart
+          path: codec-multipart
+      - name: Build codec-multipart
+        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5"
+        working-directory: ./codec-multipart
       - name: spotless (license header)
         if: always()
         run: ./gradlew clean spotlessCheck -PspotlessFrom=origin/${{ github.base_ref }}
@@ -54,8 +61,8 @@ jobs:
           #  transport: native
     steps:
       - uses: actions/checkout@v3
-#        with:
-#          path: reactor-netty
+        with:
+          path: reactor-netty
 #          fetch-depth: 0 #needed by spotless
 #      - uses: actions/checkout@v3
 #        with:
@@ -88,9 +95,9 @@ jobs:
 #      - name: Build socks-proxy
 #        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5"
 #        working-directory: ./socks-proxy
+      - name: Build codec-multipart
+        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5"
+        working-directory: ./codec-multipart
       - name: Build with Gradle
         run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -x spotlessCheck
-#        working-directory: ./reactor-netty
-      - name: Build codec-multipart
-        run: ./mvnw install -DskipTests=true
-        working-directory: ./codec-multipart
+        working-directory: ./reactor-netty
