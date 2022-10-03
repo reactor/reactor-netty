@@ -33,7 +33,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty5.buffer.Buffer;
-import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
