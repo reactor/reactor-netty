@@ -30,7 +30,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Holder for Set-Cookie headers found from response headers
+ * Holder for Set-Cookie headers found in response headers
  *
  * @author Violeta Georgieva
  * @since 2.0.0
