@@ -107,7 +107,7 @@ ext {
 	}
 	nettyContribVersion = '5.0.0.Alpha2'
 	//nettyIoUringVersion = '0.0.15.Final'
-	//nettyQuicVersion = '0.0.30.Final'
+	//nettyQuicVersion = '0.0.33.Final'
 
 	// Testing
 	jacksonDatabindVersion = '2.13.4'
