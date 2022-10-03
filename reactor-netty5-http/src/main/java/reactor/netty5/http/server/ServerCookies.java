@@ -29,7 +29,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Holder for Cookie headers found from request headers
+ * Holder for Cookie headers found in request headers
  *
  * @author Violeta Georgieva
  * @since 1.0.8
