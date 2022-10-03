@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 
 /**
- * Base holder for Set-Cookie/Cookie headers found from response headers/request headers
+ * Base holder for Set-Cookie/Cookie headers found in response headers/request headers
  *
  * @since 0.6
  */
