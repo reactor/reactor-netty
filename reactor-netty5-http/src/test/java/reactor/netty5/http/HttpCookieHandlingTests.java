@@ -24,6 +24,7 @@ import java.util.function.Function;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.headers.DefaultHttpSetCookie;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
+import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty5.BaseHttpTest;
@@ -48,7 +49,7 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 				                             .log("server received"))))
 				          .bindNow();
 
-		Mono<Map<CharSequence, Set<HttpCookiePair>>> cookieResponse =
+		Mono<Map<CharSequence, Set<HttpSetCookie>>> cookieResponse =
 				createClient(disposableServer.port())
 				          .get()
 				          .uri("/test")
@@ -75,7 +76,7 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 				                                         .log("server received"))))
 				          .bindNow();
 
-		Mono<Map<CharSequence, Set<HttpCookiePair>>> cookieResponse =
+		Mono<Map<CharSequence, Set<HttpSetCookie>>> cookieResponse =
 				createClient(disposableServer.port())
 				          .get()
 				          .uri("/test")
@@ -86,7 +87,7 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 		StepVerifier.create(cookieResponse)
 				    .expectNextMatches(l -> {
 				        // Suppressed "CollectionUndefinedEquality", the CharSequence is String
-				        Set<HttpCookiePair> cookies = l.get("cookie1");
+				        Set<HttpSetCookie> cookies = l.get("cookie1");
 				        return cookies.stream().anyMatch(e -> e.value().toString().equals("test_value"));
 				    })
 				    .expectComplete()
@@ -103,7 +104,7 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 				                                   .sendString(Mono.just("test")))
 				          .bindNow();
 
-		Mono<Map<CharSequence, Set<HttpCookiePair>>> response =
+		Mono<Map<CharSequence, Set<HttpSetCookie>>> response =
 				createClient(disposableServer.port())
 				          //.cookieCodec(ClientCookieEncoder.LAX, ClientCookieDecoder.LAX)
 				          .get()
@@ -115,7 +116,7 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 		StepVerifier.create(response)
 		            .expectNextMatches(map -> {
 		                // Suppressed "CollectionUndefinedEquality", the CharSequence is String
-		                Set<HttpCookiePair> cookies = map.get("cookie1");
+		                Set<HttpSetCookie> cookies = map.get("cookie1");
 		                return cookies.stream().anyMatch(e -> e.value().toString().equals("test_value"));
 		            })
 		            .expectComplete()

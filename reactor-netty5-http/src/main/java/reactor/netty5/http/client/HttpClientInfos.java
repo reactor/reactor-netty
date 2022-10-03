@@ -16,9 +16,13 @@
 package reactor.netty5.http.client;
 
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import reactor.netty5.http.HttpInfos;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
+
+import java.util.Map;
+import java.util.Set;
 
 /**
  * An Http Reactive Channel with several accessors related to HTTP flow: resource URL,
@@ -27,6 +31,13 @@ import reactor.util.context.ContextView;
  * @since 0.9.3
  */
 public interface HttpClientInfos extends HttpInfos {
+
+	/**
+	 * Returns resolved HTTP cookies.
+	 *
+	 * @return Resolved HTTP cookies
+	 */
+	Map<CharSequence, Set<HttpSetCookie>> cookies();
 
 	/**
 	 * Return the current {@link ContextView} associated with the Mono/Flux exposed

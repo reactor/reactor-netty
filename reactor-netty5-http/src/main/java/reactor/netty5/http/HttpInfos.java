@@ -15,12 +15,8 @@
  */
 package reactor.netty5.http;
 
-import java.util.Map;
-import java.util.Set;
-
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpVersion;
-import io.netty5.handler.codec.http.headers.HttpCookiePair;
 
 /**
  * An Http Reactive Channel with several accessors related to HTTP flow: headers, params,
@@ -30,13 +26,6 @@ import io.netty5.handler.codec.http.headers.HttpCookiePair;
  * @since 0.5
  */
 public interface HttpInfos {
-
-	/**
-	 * Returns resolved HTTP cookies.
-	 *
-	 * @return Resolved HTTP cookies
-	 */
-	Map<CharSequence, Set<HttpCookiePair>> cookies();
 
 	/**
 	 * Returns the decoded path portion from the {@link #uri()}

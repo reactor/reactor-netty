@@ -20,6 +20,7 @@ import reactor.netty5.http.HttpInfos;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * An Http Reactive Channel with several accessors related to HTTP flow: headers, params,
@@ -29,6 +30,13 @@ import java.util.Map;
  * @since 1.0.8
  */
 public interface HttpServerInfos extends HttpInfos {
+
+	/**
+	 * Returns resolved HTTP cookies.
+	 *
+	 * @return Resolved HTTP cookies
+	 */
+	Map<CharSequence, Set<HttpCookiePair>> cookies();
 
 	/**
 	 * Returns resolved HTTP cookies. As opposed to {@link #cookies()}, this
