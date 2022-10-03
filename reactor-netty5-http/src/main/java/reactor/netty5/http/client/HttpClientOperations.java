@@ -54,6 +54,7 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.Resource;
@@ -69,7 +70,6 @@ import reactor.netty5.NettyOutbound;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.channel.AbortedException;
 import reactor.netty5.channel.ChannelOperations;
-import reactor.netty5.http.Cookies;
 import reactor.netty5.http.HttpOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -217,7 +217,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	public Map<CharSequence, Set<HttpCookiePair>> cookies() {
+	public Map<CharSequence, Set<HttpSetCookie>> cookies() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null && responseState.cookieHolder != null) {
 			return responseState.cookieHolder.getCachedCookies();
@@ -770,14 +770,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	static final class ResponseState {
 
-		final HttpResponse response;
-		final HttpHeaders  headers;
-		final Cookies      cookieHolder;
+		final HttpResponse  response;
+		final HttpHeaders   headers;
+		final ClientCookies cookieHolder;
 
 		ResponseState(HttpResponse response, HttpHeaders headers) {
 			this.response = response;
 			this.headers = headers;
-			this.cookieHolder = Cookies.newClientResponseHolder(headers);
+			this.cookieHolder = ClientCookies.newClientResponseHolder(headers);
 		}
 	}
 

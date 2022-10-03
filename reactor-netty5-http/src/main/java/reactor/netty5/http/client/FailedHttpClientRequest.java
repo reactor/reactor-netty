@@ -21,7 +21,7 @@ import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
-import reactor.netty5.http.Cookies;
+import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import reactor.netty5.http.HttpOperations;
 import reactor.util.context.ContextView;
 
@@ -67,8 +67,8 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	}
 
 	@Override
-	public Map<CharSequence, Set<HttpCookiePair>> cookies() {
-		return Cookies.newClientResponseHolder(headers)
+	public Map<CharSequence, Set<HttpSetCookie>> cookies() {
+		return ClientCookies.newClientResponseHolder(headers)
 		              .getCachedCookies();
 	}
 

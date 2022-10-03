@@ -28,15 +28,11 @@ import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
-import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty.contrib.handler.codec.json.JsonObjectDecoder;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.netty5.Connection;
-
-import java.util.Map;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -185,11 +181,6 @@ class HttpOperationsTest {
 
 	static final class TestHttpInfos implements HttpInfos {
 		String uri;
-
-		@Override
-		public Map<CharSequence, Set<HttpCookiePair>> cookies() {
-			return null;
-		}
 
 		@Override
 		public boolean isKeepAlive() {

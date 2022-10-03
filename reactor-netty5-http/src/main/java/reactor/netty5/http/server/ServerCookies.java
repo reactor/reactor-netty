@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -33,7 +34,7 @@ import java.util.Set;
  * @author Violeta Georgieva
  * @since 1.0.8
  */
-public final class ServerCookies extends Cookies {
+public final class ServerCookies extends Cookies<HttpCookiePair> {
 
 	/**
 	 * Return a new cookies holder from server request headers.
@@ -45,11 +46,15 @@ public final class ServerCookies extends Cookies {
 		return new ServerCookies(headers);
 	}
 
+	final HttpHeaders   nettyHeaders;
+
 	Map<CharSequence, List<HttpCookiePair>> allCachedCookies;
+	Map<CharSequence, Set<HttpCookiePair>> cachedCookies;
 
 	ServerCookies(HttpHeaders nettyHeaders) {
-		super(nettyHeaders);
-		allCachedCookies = Collections.emptyMap();
+		this.allCachedCookies = Collections.emptyMap();
+		this.cachedCookies = Collections.emptyMap();
+		this.nettyHeaders = Objects.requireNonNull(nettyHeaders, "nettyHeaders");
 	}
 
 	@Override

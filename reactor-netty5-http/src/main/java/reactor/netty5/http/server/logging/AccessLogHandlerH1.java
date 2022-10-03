@@ -26,7 +26,7 @@ import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.util.concurrent.Future;
 import reactor.netty5.channel.ChannelOperations;
-import reactor.netty5.http.HttpInfos;
+import reactor.netty5.http.server.HttpServerInfos;
 import reactor.util.annotation.Nullable;
 
 import java.util.function.Function;
@@ -74,7 +74,7 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 			}
 
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
-			if (ops instanceof HttpInfos httpInfos) {
+			if (ops instanceof HttpServerInfos httpInfos) {
 				accessLogArgProvider.cookies(httpInfos.cookies());
 			}
 		}
