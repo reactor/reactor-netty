@@ -18,7 +18,6 @@ package reactor.netty5;
 import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.buffer.CompositeBuffer;
 import io.netty5.util.Send;
 import io.netty5.channel.socket.DatagramPacket;
 import org.reactivestreams.Publisher;
@@ -35,6 +34,7 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
@@ -255,24 +255,28 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	@SuppressWarnings("rawtypes")
 	public final BufferMono aggregate() {
 		return Mono.defer(() -> {
-					CompositeBuffer output = CompositeBuffer.compose(alloc);
+					AtomicReference<Buffer> refOutput = new AtomicReference<>();
 					return map(Buffer::send)
 							.collectList()
 							.doOnDiscard(Send.class, Send::close)
 							.handle((list, sink) -> {
+								Buffer output = null;
 								if (!list.isEmpty()) {
-									for (Send<Buffer> send : list) {
-										output.extendWith(send);
-									}
+									output = alloc.compose(list);
+									refOutput.set(output);
 								}
-								if (output.readableBytes() > 0) {
+								if (output != null && output.readableBytes() > 0) {
 									sink.next(output);
 								}
 								else {
 									sink.complete();
 								}
 							})
-							.doFinally(signalType -> output.close());
+							.doFinally(signalType -> {
+								if (refOutput.get() != null) {
+									refOutput.get().close();
+								}
+							});
 				})
 				.as(BufferMono::maybeFuse);
 	}

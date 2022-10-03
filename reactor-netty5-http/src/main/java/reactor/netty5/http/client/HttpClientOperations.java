@@ -20,7 +20,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.ClosedChannelException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -32,7 +34,6 @@ import java.util.function.Supplier;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.buffer.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
@@ -57,6 +58,7 @@ import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.Resource;
+import io.netty5.util.Send;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -378,7 +380,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
 
-			BufferAllocator alloc = channel().bufferAllocator();
 			return new PostHeadersNettyOutbound(Flux.from(source)
 			                .collectList()
 			                .doOnDiscard(Buffer.class, Buffer::close)
@@ -395,13 +396,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						                output = list.get(0);
 					                }
 					                else {
-						                CompositeBuffer agg = alloc.compose();
-
+						                List<Send<Buffer>> sendBufferList = new ArrayList<>(list.size());
 						                for (Buffer component : list) {
-							                agg.extendWith(component.send());
+							                sendBufferList.add(component.send());
 						                }
 
-						                output = agg;
+						                output = channel().bufferAllocator().compose(sendBufferList);
 					                }
 
 					                if (output.readableBytes() > 0) {

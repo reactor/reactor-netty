@@ -18,7 +18,7 @@ package reactor.netty5;
 import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.buffer.CompositeBuffer;
+import io.netty5.util.Send;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.Fuseable;
@@ -28,6 +28,8 @@ import reactor.core.publisher.MonoOperator;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
@@ -130,11 +132,11 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 						source,
 						s -> allocator.copyOf(s.getBytes(charset)),
 						l -> {
-							CompositeBuffer buffer = CompositeBuffer.compose(allocator);
+							List<Send<Buffer>> sendBufferList = new ArrayList<>(l.size());
 							for (String s : l) {
-								buffer.extendWith(allocator.copyOf(s.getBytes(charset)).send());
+								sendBufferList.add(allocator.copyOf(s.getBytes(charset)).send());
 							}
-							return buffer;
+							return allocator.compose(sendBufferList);
 						})));
 	}
 
