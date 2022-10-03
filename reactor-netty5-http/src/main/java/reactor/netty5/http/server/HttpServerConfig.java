@@ -747,10 +747,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		public void handlerAdded(ChannelHandlerContext ctx) {
 			ChannelPipeline pipeline = ctx.pipeline();
 			if (addHttp2FrameCodec) {
-				pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodec);
+				pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodecBuilder.build());
 			}
 
-			pipeline.addAfter(ctx.pipeline().context(upgrader.http2FrameCodec).name(),
+			pipeline.addAfter(ctx.pipeline().context(Http2FrameCodec.class).name(),
 					NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(upgrader));
 
 			pipeline.remove(this);
@@ -850,7 +850,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-		final Http2FrameCodec                                         http2FrameCodec;
+		final Http2FrameCodecBuilder                                  http2FrameCodecBuilder;
 		final ConnectionObserver                                      listener;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 		                                                              mapHandle;
@@ -879,7 +879,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.compressPredicate = compressPredicate;
 			this.formDecoderProvider = formDecoderProvider;
 			this.forwardedHeaderHandler = forwardedHeaderHandler;
-			Http2FrameCodecBuilder http2FrameCodecBuilder =
+			this.http2FrameCodecBuilder =
 					Http2FrameCodecBuilder.forServer()
 					                      .validateHeaders(validate)
 					                      .initialSettings(http2Settings);
@@ -889,7 +889,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 						LogLevel.DEBUG,
 						"reactor.netty5.http.server.h2"));
 			}
-			this.http2FrameCodec = http2FrameCodecBuilder.build();
 			this.listener = listener;
 			this.mapHandle = mapHandle;
 			this.metricsRecorder = metricsRecorder;
@@ -913,7 +912,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		@Nullable
 		public HttpServerUpgradeHandler.UpgradeCodec newUpgradeCodec(CharSequence protocol) {
 			if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-				return new Http2ServerUpgradeCodec(http2FrameCodec, new H2CleartextCodec(this, false, false));
+				return new Http2ServerUpgradeCodec(http2FrameCodecBuilder.build(), new H2CleartextCodec(this, false, false));
 			}
 			else {
 				return null;

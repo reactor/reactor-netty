@@ -25,7 +25,7 @@ import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
-import io.netty5.handler.codec.http.HttpRequest;
+import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -85,7 +85,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			removeHandler(NettyPipeline.AccessLogHandler);
 			removeHandler(NettyPipeline.HttpMetricsHandler);
 
-			HttpRequest request = new DefaultFullHttpRequest(replaced.version(), replaced.method(), replaced.uri(),
+			FullHttpRequest request = new DefaultFullHttpRequest(replaced.version(), replaced.method(), replaced.uri(),
 					channel.bufferAllocator().allocate(0));
 
 			request.headers()
@@ -115,6 +115,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 					                     request,
 					                     responseHeaders)
 					          .addListener(f -> {
+					              request.close();
 					              if (replaced.rebind(this)) {
 					                  markPersistent(false);
 					                  // This change is needed after the Netty change https://github.com/netty/netty/pull/11966

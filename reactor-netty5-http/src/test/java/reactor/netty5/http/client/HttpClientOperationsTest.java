@@ -165,7 +165,10 @@ class HttpClientOperationsTest {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations ops = new HttpClientOperations(() -> channel,
 				ConnectionObserver.emptyListener());
-		ops.setNettyResponse(new DefaultFullHttpResponse(HTTP_1_1, status, channel.bufferAllocator().allocate(0)));
-		assertThat(ops.status().reasonPhrase()).isEqualTo(status.reasonPhrase());
+		try (DefaultFullHttpResponse response =
+				new DefaultFullHttpResponse(HTTP_1_1, status, channel.bufferAllocator().allocate(0))) {
+			ops.setNettyResponse(response);
+			assertThat(ops.status().reasonPhrase()).isEqualTo(status.reasonPhrase());
+		}
 	}
 }

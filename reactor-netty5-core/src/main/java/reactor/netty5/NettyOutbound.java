@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -40,8 +39,6 @@ import org.reactivestreams.Subscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import static reactor.netty5.ReactorNetty.PREDICATE_GROUP_BOUNDARY;
 
 /**
  * An outbound-traffic API delegating to an underlying {@link Channel}.
@@ -230,12 +227,10 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * any error during write
 	 */
 	default NettyOutbound sendGroups(Publisher<? extends Publisher<? extends Buffer>> dataStreams) {
-		Buffer BOUNDARY = alloc().copyOf(PREDICATE_GROUP_BOUNDARY.getBytes(StandardCharsets.UTF_8)).makeReadOnly();
 		return send(
 				Flux.from(dataStreams)
 				    .concatMap(p -> Flux.<Buffer>from(p)
-				                        .concatWith(Mono.just(BOUNDARY.copy(0, BOUNDARY.readableBytes(), true))), 32)
-				    .doFinally(sig -> BOUNDARY.close()),
+				                        .concatWith(Mono.just(ReactorNetty.BOUNDARY)), 32),
 				ReactorNetty.PREDICATE_GROUP_FLUSH);
 	}
 

@@ -637,13 +637,16 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received last HTTP packet"));
 			}
-			if (!(msg instanceof EmptyLastHttpContent)) {
+			if (!(msg instanceof EmptyLastHttpContent emptyLastHttpContent)) {
 				if (redirecting != null) {
 					Resource.dispose(msg);
 				}
 				else {
 					super.onInboundNext(ctx, msg);
 				}
+			}
+			else {
+				emptyLastHttpContent.close();
 			}
 
 			if (redirecting == null) {

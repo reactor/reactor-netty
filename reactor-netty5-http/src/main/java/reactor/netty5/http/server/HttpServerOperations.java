@@ -520,8 +520,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		                  .get(NettyPipeline.CompressionHandler) == null) {
 			SimpleCompressionHandler handler = new SimpleCompressionHandler();
 			try {
-				// decodeAndClose(...) is needed only to initialize the acceptEncodingQueue
-				handler.decodeAndClose(channel().pipeline().context(NettyPipeline.ReactiveBridge), nettyRequest);
+				// decode(...) is needed only to initialize the acceptEncodingQueue
+				handler.decode(channel().pipeline().context(NettyPipeline.ReactiveBridge), nettyRequest, false);
 
 				addHandlerFirst(NettyPipeline.CompressionHandler, handler);
 			}
@@ -559,8 +559,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 		if (msg instanceof HttpContent) {
-			if (!(msg instanceof EmptyLastHttpContent)) {
+			if (!(msg instanceof EmptyLastHttpContent emptyLastHttpContent)) {
 				super.onInboundNext(ctx, msg);
+			}
+			else {
+				emptyLastHttpContent.close();
 			}
 			if (msg instanceof LastHttpContent) {
 				//force auto read to enable more accurate close selection now inbound is done
