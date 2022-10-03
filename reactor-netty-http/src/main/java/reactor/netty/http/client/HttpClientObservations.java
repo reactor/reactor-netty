@@ -16,7 +16,7 @@
 package reactor.netty.http.client;
 
 import io.micrometer.common.docs.KeyName;
-import io.micrometer.observation.docs.DocumentedObservation;
+import io.micrometer.observation.docs.ObservationDocumentation;
 
 /**
  * {@link HttpClient} observations.
@@ -24,7 +24,7 @@ import io.micrometer.observation.docs.DocumentedObservation;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum HttpClientObservations implements DocumentedObservation {
+enum HttpClientObservations implements ObservationDocumentation {
 
 	/**
 	 * Response metric.

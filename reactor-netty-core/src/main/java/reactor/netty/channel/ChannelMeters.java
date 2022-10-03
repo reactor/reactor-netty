@@ -17,7 +17,7 @@ package reactor.netty.channel;
 
 import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.docs.DocumentedMeter;
+import io.micrometer.core.instrument.docs.MeterDocumentation;
 
 /**
  * Channel meters.
@@ -26,7 +26,7 @@ import io.micrometer.core.instrument.docs.DocumentedMeter;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-public enum ChannelMeters implements DocumentedMeter {
+public enum ChannelMeters implements MeterDocumentation {
 
 	/**
 	 * The number of all opened connections on the server.

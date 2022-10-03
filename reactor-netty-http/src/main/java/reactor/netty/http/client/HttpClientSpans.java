@@ -16,7 +16,7 @@
 package reactor.netty.http.client;
 
 import io.micrometer.common.docs.KeyName;
-import io.micrometer.tracing.docs.DocumentedSpan;
+import io.micrometer.tracing.docs.SpanDocumentation;
 
 /**
  * {@link HttpClient} spans.
@@ -24,7 +24,7 @@ import io.micrometer.tracing.docs.DocumentedSpan;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum HttpClientSpans implements DocumentedSpan {
+enum HttpClientSpans implements SpanDocumentation {
 
 	/**
 	 * Response Span.

@@ -17,7 +17,7 @@ package reactor.netty.http.client;
 
 import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.docs.DocumentedMeter;
+import io.micrometer.core.instrument.docs.MeterDocumentation;
 
 /**
  * {@link HttpClient} meters.
@@ -25,7 +25,7 @@ import io.micrometer.core.instrument.docs.DocumentedMeter;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum HttpClientMeters implements DocumentedMeter {
+enum HttpClientMeters implements MeterDocumentation {
 
 	/**
 	 * Time spent in consuming incoming data on the client.

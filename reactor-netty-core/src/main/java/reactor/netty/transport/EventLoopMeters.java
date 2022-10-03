@@ -17,7 +17,7 @@ package reactor.netty.transport;
 
 import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.docs.DocumentedMeter;
+import io.micrometer.core.instrument.docs.MeterDocumentation;
 
 /**
  * {@link io.netty.channel.EventLoop} meters.
@@ -25,7 +25,7 @@ import io.micrometer.core.instrument.docs.DocumentedMeter;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum EventLoopMeters implements DocumentedMeter {
+enum EventLoopMeters implements MeterDocumentation {
 
 	/**
 	 * Event loop pending scheduled tasks.

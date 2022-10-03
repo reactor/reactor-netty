@@ -17,7 +17,7 @@ package reactor.netty.http.client;
 
 import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.docs.DocumentedMeter;
+import io.micrometer.core.instrument.docs.MeterDocumentation;
 
 /**
  * HTTP/2 {@link reactor.netty.resources.ConnectionProvider} meters.
@@ -25,7 +25,7 @@ import io.micrometer.core.instrument.docs.DocumentedMeter;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum Http2ConnectionProviderMeters implements DocumentedMeter {
+enum Http2ConnectionProviderMeters implements MeterDocumentation {
 
 	/**
 	 * The number of the connections in the connection pool that have been successfully acquired and are in active use.
