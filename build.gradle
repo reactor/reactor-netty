@@ -90,7 +90,7 @@ ext {
 
 	contextPropagationVersion = '1.0.0-M5'
 
-	braveVersion = '5.14.0'
+	braveVersion = '5.14.1'
 
 	jsr305Version = '3.0.2'
 
