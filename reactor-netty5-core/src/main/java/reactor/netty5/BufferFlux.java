@@ -34,8 +34,9 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 
@@ -252,32 +253,8 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	 *
 	 * @return {@link BufferMono} of aggregated {@link Buffer}
 	 */
-	@SuppressWarnings("rawtypes")
 	public final BufferMono aggregate() {
-		return Mono.defer(() -> {
-					AtomicReference<Buffer> refOutput = new AtomicReference<>();
-					return map(Buffer::send)
-							.collectList()
-							.doOnDiscard(Send.class, Send::close)
-							.handle((list, sink) -> {
-								Buffer output = null;
-								if (!list.isEmpty()) {
-									output = alloc.compose(list);
-									refOutput.set(output);
-								}
-								if (output != null && output.readableBytes() > 0) {
-									sink.next(output);
-								}
-								else {
-									sink.complete();
-								}
-							})
-							.doFinally(signalType -> {
-								if (refOutput.get() != null) {
-									refOutput.get().close();
-								}
-							});
-				})
+		return Mono.defer(new DeferredAggregate(this, alloc))
 				.as(BufferMono::maybeFuse);
 	}
 
@@ -335,4 +312,46 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	};
 
 	static final int MAX_CHUNK_SIZE = 1024 * 512; //500k
+
+	static final class DeferredAggregate implements Supplier<Mono<Buffer>> {
+
+		volatile Buffer compositeBuffer;
+		static final AtomicReferenceFieldUpdater<DeferredAggregate, Buffer> COMPOSITE_BUFFER =
+				AtomicReferenceFieldUpdater.newUpdater(DeferredAggregate.class, Buffer.class, "compositeBuffer");
+
+		final BufferAllocator alloc;
+		final Flux<Buffer> source;
+
+		DeferredAggregate(Flux<Buffer> source, BufferAllocator alloc) {
+			this.alloc = alloc;
+			this.source = source;
+		}
+
+		@Override
+		@SuppressWarnings("rawtypes")
+		public Mono<Buffer> get() {
+			return source.map(Buffer::send)
+					.collectList()
+					.doOnDiscard(Send.class, Send::close)
+					.<Buffer>handle((list, sink) -> {
+						Buffer output = null;
+						if (!list.isEmpty()) {
+							output = alloc.compose(list);
+							COMPOSITE_BUFFER.set(this, output);
+						}
+						if (output != null && output.readableBytes() > 0) {
+							sink.next(output);
+						}
+						else {
+							sink.complete();
+						}
+					})
+					.doFinally(signalType -> {
+						Buffer buffer = COMPOSITE_BUFFER.get(this);
+						if (buffer != null) {
+							buffer.close();
+						}
+					});
+		}
+	}
 }
