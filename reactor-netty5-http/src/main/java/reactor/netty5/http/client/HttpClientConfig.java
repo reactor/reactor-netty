@@ -72,6 +72,8 @@ import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.http.Http2SettingsSpec;
 import reactor.netty5.http.HttpProtocol;
 import reactor.netty5.http.HttpResources;
+import reactor.netty5.http.logging.HttpMessageLogFactory;
+import reactor.netty5.http.logging.ReactorNettyHttpMessageLogFactory;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.resources.LoopResources;
 import reactor.netty5.tcp.SslProvider;
@@ -112,7 +114,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	@Override
 	public ChannelOperations.OnSetup channelOperationsProvider() {
-		return (ch, c, msg) -> new HttpClientOperations(ch, c);
+		return (ch, c, msg) -> new HttpClientOperations(ch, c, httpMessageLogFactory);
 	}
 
 	@Override
@@ -293,6 +295,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 	HttpHeaders headers;
 	Http2SettingsSpec http2Settings;
+	HttpMessageLogFactory httpMessageLogFactory;
 	HttpMethod method;
 	HttpProtocol[] protocols;
 	int _protocols;
@@ -312,6 +315,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.acceptGzip = false;
 		this.decoder = new HttpResponseDecoderSpec();
 		this.headers = HttpHeaders.newHeaders();
+		this.httpMessageLogFactory = ReactorNettyHttpMessageLogFactory.INSTANCE;
 		this.method = HttpMethod.GET;
 		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
 		this._protocols = h11;
@@ -336,6 +340,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.followRedirectPredicate = parent.followRedirectPredicate;
 		this.headers = parent.headers;
 		this.http2Settings = parent.http2Settings;
+		this.httpMessageLogFactory = parent.httpMessageLogFactory;
 		this.method = parent.method;
 		this.protocols = parent.protocols;
 		this._protocols = parent._protocols;

@@ -52,6 +52,7 @@ import reactor.netty5.BaseHttpTest;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.channel.AbortedException;
+import reactor.netty5.http.logging.ReactorNettyHttpMessageLogFactory;
 import reactor.netty5.http.server.WebsocketServerSpec;
 import reactor.netty5.http.websocket.WebsocketInbound;
 import reactor.netty5.http.websocket.WebsocketOutbound;
@@ -1277,7 +1278,7 @@ class WebsocketTest extends BaseHttpTest {
 	void websocketOperationsBadValues() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations parent = new HttpClientOperations(Connection.from(channel),
-				ConnectionObserver.emptyListener());
+				ConnectionObserver.emptyListener(), ReactorNettyHttpMessageLogFactory.INSTANCE);
 		WebsocketClientOperations ops = new WebsocketClientOperations(new URI(""),
 				WebsocketClientSpec.builder().build(), parent);
 

@@ -25,6 +25,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultHttpContent;
+import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
@@ -35,6 +36,8 @@ import io.netty5.util.concurrent.FutureContextListener;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
+import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
+import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.util.annotation.Nullable;
 
 import static reactor.netty5.ReactorNetty.format;
@@ -51,6 +54,7 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	final HttpMessageLogFactory                                   httpMessageLogFactory;
 	final ConnectionObserver                                      listener;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 	                                                              mapHandle;
@@ -68,11 +72,13 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		this.compress = compress;
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
+		this.httpMessageLogFactory = httpMessageLogFactory;
 		this.listener = listener;
 		this.mapHandle = mapHandle;
 	}
@@ -109,12 +115,13 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 						                    remoteAddress,
 						                    forwardedHeaderHandler),
 						formDecoderProvider,
+						httpMessageLogFactory,
 						mapHandle,
 						secured);
 			}
 			catch (RuntimeException e) {
 				pendingResponse = false;
-				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg);
+				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory);
 				return;
 			}
 			ops.bind();
@@ -122,8 +129,10 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 		}
 		else if (!pendingResponse) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
-						"since response has been sent already: {}"), msg);
+				HttpServerOperations.log.debug(
+						format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
+						msg instanceof HttpObject ?
+								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
 			}
 			Resource.dispose(msg);
 			ctx.read();

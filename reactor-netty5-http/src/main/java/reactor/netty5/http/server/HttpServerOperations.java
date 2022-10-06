@@ -46,6 +46,7 @@ import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.headers.DefaultHttpHeaders;
@@ -77,6 +78,8 @@ import reactor.netty5.NettyPipeline;
 import reactor.netty5.channel.AbortedException;
 import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.http.HttpOperations;
+import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
+import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.netty5.http.websocket.WebsocketInbound;
 import reactor.netty5.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
@@ -135,20 +138,22 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			@Nullable ConnectionInfo connectionInfo,
 			HttpServerFormDecoderProvider formDecoderProvider,
+			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean secured) {
 		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, formDecoderProvider,
-				mapHandle, true, secured);
+				httpMessageLogFactory, mapHandle, true, secured);
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			@Nullable ConnectionInfo connectionInfo,
 			HttpServerFormDecoderProvider formDecoderProvider,
+			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean resolvePath,
 			boolean secured) {
-		super(c, listener);
+		super(c, listener, httpMessageLogFactory);
 		this.compressionPredicate = compressionPredicate;
 		this.connectionInfo = connectionInfo;
 		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers());
@@ -705,12 +710,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ConnectionObserver listener,
 			boolean secure,
 			Throwable t,
-			Object msg) {
+			Object msg,
+			HttpMessageLogFactory httpMessageLogFactory) {
 
 		Throwable cause = t.getCause() != null ? t.getCause() : t;
 
 		if (log.isWarnEnabled()) {
-			log.warn(format(ctx.channel(), "Decoding failed: " + msg + " : "), cause);
+			log.warn(format(ctx.channel(), "Decoding failed: {}"),
+					msg instanceof HttpObject ?
+							httpMessageLogFactory.warn(HttpMessageArgProviderFactory.create(msg)) : msg);
 		}
 
 		Resource.dispose(msg);
@@ -727,7 +735,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (ops == null) {
 			Connection conn = Connection.from(ctx.channel());
 			if (msg instanceof HttpRequest request) {
-				ops = new FailedHttpServerRequest(conn, listener, request, response, secure);
+				ops = new FailedHttpServerRequest(conn, listener, request, response, httpMessageLogFactory, secure);
 				ops.bind();
 			}
 			else {
@@ -858,9 +866,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ConnectionObserver listener,
 				HttpRequest nettyRequest,
 				HttpResponse nettyResponse,
+				HttpMessageLogFactory httpMessageLogFactory,
 				boolean secure) {
 			super(c, listener, nettyRequest, null, null,
-					DEFAULT_FORM_DECODER_SPEC, null, false, secure);
+					DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, null, false, secure);
 			this.customResponse = nettyResponse;
 			String tempPath = "";
 			try {

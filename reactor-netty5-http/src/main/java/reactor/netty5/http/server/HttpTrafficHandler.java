@@ -29,6 +29,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.DecoderResultProvider;
 import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
@@ -43,6 +44,8 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
+import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
+import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 
@@ -51,7 +54,6 @@ import static io.netty5.handler.codec.http.HttpUtil.isKeepAlive;
 import static io.netty5.handler.codec.http.HttpUtil.isTransferEncodingChunked;
 import static io.netty5.handler.codec.http.HttpUtil.setKeepAlive;
 import static reactor.netty5.ReactorNetty.format;
-import static reactor.netty5.ReactorNetty.toPrettyHexDump;
 import static reactor.netty5.channel.ChannelOperations.get;
 
 /**
@@ -67,6 +69,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	final HttpMessageLogFactory                                   httpMessageLogFactory;
 	final Duration                                                idleTimeout;
 	final ConnectionObserver                                      listener;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -92,6 +95,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
@@ -100,6 +104,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
+		this.httpMessageLogFactory = httpMessageLogFactory;
 		this.idleTimeout = idleTimeout;
 		this.mapHandle = mapHandle;
 		this.maxKeepAliveRequests = maxKeepAliveRequests;
@@ -186,6 +191,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							                    remoteAddress,
 							                    forwardedHeaderHandler),
 							formDecoderProvider,
+							httpMessageLogFactory,
 							mapHandle,
 							secure);
 				}
@@ -213,8 +219,10 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			}
 			else {
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
-							"since response has been sent already: {}"), msg);
+					HttpServerOperations.log.debug(
+							format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
+							msg instanceof HttpObject ?
+									httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
 				}
 				Resource.dispose(msg);
 			}
@@ -255,7 +263,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 
 	void sendDecodingFailures(Throwable t, Object msg) {
 		persistentConnection = false;
-		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg);
+		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory);
 	}
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
@@ -333,8 +341,10 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		}
 		if (persistentConnection && pendingResponses == 0) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
-						"since response has been sent already: {}"), toPrettyHexDump(msg));
+				HttpServerOperations.log.debug(
+						format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
+						msg instanceof HttpObject ?
+								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
 			}
 			Resource.dispose(msg);
 			return ctx.newSucceededFuture();
@@ -380,6 +390,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 						                    remoteAddress,
 						                    forwardedHeaderHandler),
 						formDecoderProvider,
+						httpMessageLogFactory,
 						mapHandle,
 						secure);
 				ops.bind();

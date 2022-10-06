@@ -72,13 +72,14 @@ import reactor.netty5.NettyPipeline;
 import reactor.netty5.channel.AbortedException;
 import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.http.HttpOperations;
+import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
+import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
 import static reactor.netty5.ReactorNetty.format;
-import static reactor.netty5.ReactorNetty.toPrettyHexDump;
 
 /**
  * @author Stephane Maldini
@@ -130,8 +131,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.trailerHeaders = replaced.trailerHeaders;
 	}
 
-	HttpClientOperations(Connection c, ConnectionObserver listener) {
-		super(c, listener);
+	HttpClientOperations(Connection c, ConnectionObserver listener, HttpMessageLogFactory httpMessageLogFactory) {
+		super(c, listener, httpMessageLogFactory);
 		this.isSecure = c.channel()
 		                 .pipeline()
 		                 .get(NettyPipeline.SslHandler) != null;
@@ -411,7 +412,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				                }
 				                for (Buffer bb : list) {
 				                	if (log.isDebugEnabled()) {
-				                		log.debug(format(channel(), "Ignoring accumulated buffer on http GET {}"), toPrettyHexDump(bb));
+				                		log.debug(format(channel(), "Ignoring accumulated buffer on http GET {}"), bb);
 					                }
 				                	bb.close();
 				                }
@@ -568,8 +569,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (started) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(channel(), "HttpClientOperations cannot proceed more than one response {}"),
-							response.headers()
-							        .toString());
+							httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
 				}
 				Resource.dispose(msg);
 				return;
@@ -589,7 +589,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received response (auto-read:{}) : {}"),
 						channel().getOption(ChannelOption.AUTO_READ),
-						responseHeaders().toString());
+						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
 			}
 
 			if (notRedirected(response)) {

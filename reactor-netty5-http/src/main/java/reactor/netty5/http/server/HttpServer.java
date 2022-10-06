@@ -26,6 +26,8 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import io.netty5.channel.group.ChannelGroup;
+import io.netty5.handler.codec.DecoderException;
+import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.ssl.JdkSslContext;
 import io.netty5.handler.ssl.OpenSsl;
@@ -38,6 +40,8 @@ import reactor.netty5.ConnectionObserver;
 import reactor.netty5.channel.ChannelMetricsRecorder;
 import reactor.netty5.http.Http2SettingsSpec;
 import reactor.netty5.http.HttpProtocol;
+import reactor.netty5.http.logging.HttpMessageLogFactory;
+import reactor.netty5.http.logging.ReactorNettyHttpMessageLogFactory;
 import reactor.netty5.http.server.logging.AccessLog;
 import reactor.netty5.http.server.logging.AccessLogArgProvider;
 import reactor.netty5.http.server.logging.AccessLogFactory;
@@ -319,6 +323,28 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 		HttpServer dup = duplicate();
 		dup.configuration().formDecoderProvider = formDecoderProvider;
+		return dup;
+	}
+
+	/**
+	 * When {@link HttpMessage} is about to be logged the configured factory will be used for
+	 * generating a sanitized log message.
+	 * <p>
+	 * Default to {@link ReactorNettyHttpMessageLogFactory}:
+	 * <ul>
+	 *     <li>hides the query from the uri</li>
+	 *     <li>hides the headers values</li>
+	 *     <li>only {@link DecoderException} message is presented</li>
+	 * </ul>
+	 *
+	 * @param httpMessageLogFactory the factory for generating the log message
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.24
+	 */
+	public final HttpServer httpMessageLogFactory(HttpMessageLogFactory httpMessageLogFactory) {
+		Objects.requireNonNull(httpMessageLogFactory, "httpMessageLogFactory");
+		HttpServer dup = duplicate();
+		dup.configuration().httpMessageLogFactory = httpMessageLogFactory;
 		return dup;
 	}
 

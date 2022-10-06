@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty5.util.Resource;
@@ -54,13 +55,14 @@ import reactor.netty5.NettyPipeline;
 import reactor.netty5.ReactorNetty;
 import reactor.netty5.channel.AbortedException;
 import reactor.netty5.channel.ChannelOperations;
+import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
+import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static reactor.netty5.ReactorNetty.format;
-import static reactor.netty5.ReactorNetty.toPrettyHexDump;
 
 /**
  * An HTTP ready {@link ChannelOperations} with state management for status and headers
@@ -77,13 +79,17 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	static final int HEADERS_SENT = 1;
 	static final int BODY_SENT    = 2;
 
+	final HttpMessageLogFactory httpMessageLogFactory;
+
 	protected HttpOperations(HttpOperations<INBOUND, OUTBOUND> replaced) {
 		super(replaced);
+		this.httpMessageLogFactory = replaced.httpMessageLogFactory;
 		this.statusAndHeadersSent = replaced.statusAndHeadersSent;
 	}
 
-	protected HttpOperations(Connection connection, ConnectionObserver listener) {
+	protected HttpOperations(Connection connection, ConnectionObserver listener, HttpMessageLogFactory httpMessageLogFactory) {
 		super(connection, listener);
+		this.httpMessageLogFactory = httpMessageLogFactory;
 	}
 
 	/**
@@ -130,7 +136,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
 								if (log.isDebugEnabled()) {
 									log.debug(format(channel(), "Dropped HTTP content, " +
-											"since response has Content-Length: 0 {}"), toPrettyHexDump(msg));
+											"since response has Content-Length: 0 {}"), msg);
 								}
 								msg.close();
 								return Mono.fromCompletionStage(
@@ -166,7 +172,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
 					if (log.isDebugEnabled()) {
 						log.debug(format(channel(), "Dropped HTTP content, " +
-								"since response has Content-Length: 0 {}"), toPrettyHexDump(b));
+								"since response has Content-Length: 0 {}"), b);
 					}
 					b.close();
 					return channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage();
@@ -224,6 +230,17 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		});
 	}
 
+	@Override
+	protected String asDebugLogMessage(Object o) {
+		return o instanceof HttpObject ?
+				httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(o)) :
+				o.toString();
+	}
+
+	protected HttpMessageLogFactory httpMessageLogFactory() {
+		return httpMessageLogFactory;
+	}
+
 	protected abstract void beforeMarkSentHeaders();
 
 	protected abstract void afterMarkSentHeaders();
@@ -258,10 +275,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	public String toString() {
 		if (isWebsocket()) {
-			return "ws{uri=" + uri() + ", connection=" + connection() + "}";
+			return "ws{uri=" + fullPath() + ", connection=" + connection() + "}";
 		}
 
-		return method().name() + "{uri=" + uri() + ", connection=" + connection() + "}";
+		return method().name() + "{uri=" + fullPath() + ", connection=" + connection() + "}";
 	}
 
 	@Override

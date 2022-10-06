@@ -30,6 +30,7 @@ import io.netty5.handler.codec.http.headers.HttpHeaders;
 import org.junit.jupiter.api.Test;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.NettyPipeline;
+import reactor.netty5.http.logging.ReactorNettyHttpMessageLogFactory;
 
 import static io.netty5.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +44,7 @@ class HttpClientOperationsTest {
 	void addDecoderReplaysLastHttp() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(StandardCharsets.UTF_8));
-		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(), ReactorNettyHttpMessageLogFactory.INSTANCE)
 				.addHandlerLast(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -65,7 +66,7 @@ class HttpClientOperationsTest {
 	void addNamedDecoderReplaysLastHttp() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(StandardCharsets.UTF_8));
-		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(), ReactorNettyHttpMessageLogFactory.INSTANCE)
 				.addHandlerLast("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -87,7 +88,7 @@ class HttpClientOperationsTest {
 	void addEncoderReplaysLastHttp() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(StandardCharsets.UTF_8));
-		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(), ReactorNettyHttpMessageLogFactory.INSTANCE)
 				.addHandlerLast(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -109,7 +110,7 @@ class HttpClientOperationsTest {
 	void addNamedEncoderReplaysLastHttp() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Buffer buf = channel.bufferAllocator().copyOf("{\"foo\":1}".getBytes(StandardCharsets.UTF_8));
-		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(), ReactorNettyHttpMessageLogFactory.INSTANCE)
 				.addHandlerLast("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -134,7 +135,7 @@ class HttpClientOperationsTest {
 		});
 
 		HttpClientOperations ops1 = new HttpClientOperations(() -> channel,
-				ConnectionObserver.emptyListener());
+				ConnectionObserver.emptyListener(), ReactorNettyHttpMessageLogFactory.INSTANCE);
 		ops1.followRedirectPredicate((req, res) -> true);
 		ops1.started = true;
 		ops1.retrying = true;
@@ -164,7 +165,7 @@ class HttpClientOperationsTest {
 	private void doTestStatus(HttpResponseStatus status) {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations ops = new HttpClientOperations(() -> channel,
-				ConnectionObserver.emptyListener());
+				ConnectionObserver.emptyListener(), ReactorNettyHttpMessageLogFactory.INSTANCE);
 		try (DefaultFullHttpResponse response =
 				new DefaultFullHttpResponse(HTTP_1_1, status, channel.bufferAllocator().allocate(0))) {
 			ops.setNettyResponse(response);
