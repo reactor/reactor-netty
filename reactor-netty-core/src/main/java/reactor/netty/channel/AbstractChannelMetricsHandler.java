@@ -54,7 +54,9 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
 			}
 			catch (RuntimeException e) {
-				log.warn("Exception caught while recording metrics.", e);
+				if (log.isWarnEnabled()) {
+					log.warn("Exception caught while recording metrics.", e);
+				}
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
@@ -68,7 +70,9 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 				recorder().recordServerConnectionClosed(ctx.channel().localAddress());
 			}
 			catch (RuntimeException e) {
-				log.warn("Exception caught while recording metrics.", e);
+				if (log.isWarnEnabled()) {
+					log.warn("Exception caught while recording metrics.", e);
+				}
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
@@ -111,7 +115,9 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 			}
 		}
 		catch (RuntimeException e) {
-			log.warn("Exception caught while recording metrics.", e);
+			if (log.isWarnEnabled()) {
+				log.warn("Exception caught while recording metrics.", e);
+			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
@@ -137,7 +143,9 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 			}
 		}
 		catch (RuntimeException e) {
-			log.warn("Exception caught while recording metrics.", e);
+			if (log.isWarnEnabled()) {
+				log.warn("Exception caught while recording metrics.", e);
+			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
@@ -151,7 +159,9 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 			recordException(ctx, remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress());
 		}
 		catch (RuntimeException e) {
-			log.warn("Exception caught while recording metrics.", e);
+			if (log.isWarnEnabled()) {
+				log.warn("Exception caught while recording metrics.", e);
+			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 

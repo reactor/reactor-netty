@@ -388,7 +388,9 @@ public abstract class TransportConfig {
 						MicrometerEventLoopMeterRegistrar.INSTANCE.registerMetrics(channel.eventLoop());
 					}
 					catch (RuntimeException e) {
-						log.warn("Exception caught while recording metrics.", e);
+						if (log.isWarnEnabled()) {
+							log.warn("Exception caught while recording metrics.", e);
+						}
 						// Allow request-response exchange to continue, unaffected by metrics problem
 					}
 				}
