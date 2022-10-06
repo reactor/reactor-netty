@@ -30,6 +30,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
+import java.util.function.Supplier;
 
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.ERROR;
@@ -79,7 +80,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 	// ConnectMetricsHandler is Observation.Context and ChannelOutboundHandler in order to reduce allocations,
 	// this is invoked on every connection establishment
 	// This handler is not shared and as such it is different object per connection.
-	static final class ConnectMetricsHandler extends Observation.Context implements ReactorNettyHandlerContext, ChannelOutboundHandler {
+	static final class ConnectMetricsHandler extends Observation.Context
+			implements ReactorNettyHandlerContext, ChannelOutboundHandler, Supplier<Observation.Context> {
 		static final String CONTEXTUAL_NAME = "connect";
 		static final String TYPE = "client";
 
@@ -91,6 +93,11 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		ConnectMetricsHandler(MicrometerChannelMetricsRecorder recorder) {
 			this.recorder = recorder;
+		}
+
+		@Override
+		public Observation.Context get() {
+			return this;
 		}
 
 		@Override
@@ -204,7 +211,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 	}
 
-	static final class TlsMetricsHandler extends Observation.Context implements ReactorNettyHandlerContext, ChannelInboundHandler {
+	static final class TlsMetricsHandler extends Observation.Context
+			implements ReactorNettyHandlerContext, ChannelInboundHandler, Supplier<Observation.Context> {
 		static final String CONTEXTUAL_NAME = "tls handshake";
 		static final String TYPE_CLIENT = "client";
 		static final String TYPE_SERVER = "server";
@@ -279,6 +287,11 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		@SuppressWarnings("deprecation")
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 			ctx.fireExceptionCaught(cause);
+		}
+
+		@Override
+		public Observation.Context get() {
+			return this;
 		}
 
 		@Override

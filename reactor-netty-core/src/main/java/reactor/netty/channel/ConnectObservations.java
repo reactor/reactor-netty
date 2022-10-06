@@ -16,7 +16,7 @@
 package reactor.netty.channel;
 
 import io.micrometer.common.docs.KeyName;
-import io.micrometer.observation.docs.DocumentedObservation;
+import io.micrometer.observation.docs.ObservationDocumentation;
 
 /**
  * Connect observations.
@@ -25,7 +25,7 @@ import io.micrometer.observation.docs.DocumentedObservation;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum ConnectObservations implements DocumentedObservation {
+enum ConnectObservations implements ObservationDocumentation {
 
 	/**
 	 * Connect metric.

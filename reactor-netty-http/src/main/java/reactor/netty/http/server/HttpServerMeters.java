@@ -17,7 +17,7 @@ package reactor.netty.http.server;
 
 import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.docs.DocumentedMeter;
+import io.micrometer.core.instrument.docs.MeterDocumentation;
 
 /**
  * {@link HttpServer} meters.
@@ -25,7 +25,7 @@ import io.micrometer.core.instrument.docs.DocumentedMeter;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum HttpServerMeters implements DocumentedMeter {
+enum HttpServerMeters implements MeterDocumentation {
 
 	/**
 	 * The number of http connections, on the server, currently processing requests.

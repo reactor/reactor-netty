@@ -16,7 +16,7 @@
 package reactor.netty.tcp;
 
 import io.micrometer.common.docs.KeyName;
-import io.micrometer.observation.docs.DocumentedObservation;
+import io.micrometer.observation.docs.ObservationDocumentation;
 
 /**
  * TLS handshake observations.
@@ -24,7 +24,7 @@ import io.micrometer.observation.docs.DocumentedObservation;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum TlsHandshakeObservations implements DocumentedObservation {
+enum TlsHandshakeObservations implements ObservationDocumentation {
 
 	/**
 	 * TLS handshake metric.
