@@ -73,7 +73,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
 			}
 			catch (RuntimeException e) {
-				log.warn("Exception caught while recording metrics.", e);
+				if (log.isWarnEnabled()) {
+					log.warn("Exception caught while recording metrics.", e);
+				}
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
@@ -87,7 +89,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 				recorder().recordServerConnectionClosed(ctx.channel().localAddress());
 			}
 			catch (RuntimeException e) {
-				log.warn("Exception caught while recording metrics.", e);
+				if (log.isWarnEnabled()) {
+					log.warn("Exception caught while recording metrics.", e);
+				}
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
@@ -124,7 +128,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 												ops.method().name(), ops.status().codeAsText().toString());
 									}
 									catch (RuntimeException e) {
-										log.warn("Exception caught while recording metrics.", e);
+										if (log.isWarnEnabled()) {
+											log.warn("Exception caught while recording metrics.", e);
+										}
 										// Allow request-response exchange to continue, unaffected by metrics problem
 									}
 									// ops.hostAddress() == null when request decoding failed, in this case
@@ -139,7 +145,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 											}
 										}
 										catch (RuntimeException e) {
-											log.warn("Exception caught while recording metrics.", e);
+											if (log.isWarnEnabled()) {
+												log.warn("Exception caught while recording metrics.", e);
+											}
 											// Allow request-response exchange to continue, unaffected by metrics problem
 										}
 									}
@@ -150,7 +158,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 			}
 		}
 		catch (RuntimeException e) {
-			log.warn("Exception caught while recording metrics.", e);
+			if (log.isWarnEnabled()) {
+				log.warn("Exception caught while recording metrics.", e);
+			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 		return ctx.write(msg);
@@ -184,7 +194,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 			}
 		}
 		catch (RuntimeException e) {
-			log.warn("Exception caught while recording metrics.", e);
+			if (log.isWarnEnabled()) {
+				log.warn("Exception caught while recording metrics.", e);
+			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
@@ -201,7 +213,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 			}
 		}
 		catch (RuntimeException e) {
-			log.warn("Exception caught while recording metrics.", e);
+			if (log.isWarnEnabled()) {
+				log.warn("Exception caught while recording metrics.", e);
+			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 

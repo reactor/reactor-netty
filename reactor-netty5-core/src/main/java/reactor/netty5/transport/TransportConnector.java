@@ -210,15 +210,19 @@ public final class TransportConnector {
 			}
 			try {
 				if (!channel.isOptionSupported(e.getKey())) {
-					log.warn(format(channel, "Unknown channel option '{}' for channel '{}'"), e.getKey(), channel);
+					if (log.isWarnEnabled()) {
+						log.warn(format(channel, "Unknown channel option '{}' for channel '{}'"), e.getKey(), channel);
+					}
 				}
 				else {
 					channel.setOption((ChannelOption<Object>) e.getKey(), e.getValue());
 				}
 			}
 			catch (Throwable t) {
-				log.warn(format(channel, "Failed to set channel option '{}' with value '{}' for channel '{}'"),
-						e.getKey(), e.getValue(), channel, t);
+				if (log.isWarnEnabled()) {
+					log.warn(format(channel, "Failed to set channel option '{}' with value '{}' for channel '{}'"),
+							e.getKey(), e.getValue(), channel, t);
+				}
 			}
 		}
 	}

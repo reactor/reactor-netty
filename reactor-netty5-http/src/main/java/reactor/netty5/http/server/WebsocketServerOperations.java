@@ -121,7 +121,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 					                  // This change is needed after the Netty change https://github.com/netty/netty/pull/11966
 					                  channel.read();
 					              }
-					              else {
+					              else if (log.isDebugEnabled()) {
 					                  log.debug(format(channel, "Cannot bind WebsocketServerOperations after the handshake."));
 					              }
 					          });

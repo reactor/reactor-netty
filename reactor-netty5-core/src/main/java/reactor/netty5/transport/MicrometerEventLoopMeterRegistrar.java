@@ -60,7 +60,9 @@ final class MicrometerEventLoopMeterRegistrar {
 				});
 			}
 			catch (InterruptedException e) {
-				log.warn("Thread interrupted while registering metrics", e);
+				if (log.isWarnEnabled()) {
+					log.warn("Thread interrupted while registering metrics", e);
+				}
 			}
 		}
 	}
