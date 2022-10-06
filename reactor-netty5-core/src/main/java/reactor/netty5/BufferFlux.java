@@ -18,7 +18,6 @@ package reactor.netty5;
 import io.netty5.buffer.BufferInputStream;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.buffer.CompositeBuffer;
 import io.netty5.util.Send;
 import io.netty5.channel.socket.DatagramPacket;
 import org.reactivestreams.Publisher;
@@ -35,7 +34,9 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 
@@ -252,28 +253,8 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	 *
 	 * @return {@link BufferMono} of aggregated {@link Buffer}
 	 */
-	@SuppressWarnings("rawtypes")
 	public final BufferMono aggregate() {
-		return Mono.defer(() -> {
-					CompositeBuffer output = CompositeBuffer.compose(alloc);
-					return map(Buffer::send)
-							.collectList()
-							.doOnDiscard(Send.class, Send::close)
-							.handle((list, sink) -> {
-								if (!list.isEmpty()) {
-									for (Send<Buffer> send : list) {
-										output.extendWith(send);
-									}
-								}
-								if (output.readableBytes() > 0) {
-									sink.next(output);
-								}
-								else {
-									sink.complete();
-								}
-							})
-							.doFinally(signalType -> output.close());
-				})
+		return Mono.defer(new DeferredAggregate(this, alloc))
 				.as(BufferMono::maybeFuse);
 	}
 
@@ -331,4 +312,46 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	};
 
 	static final int MAX_CHUNK_SIZE = 1024 * 512; //500k
+
+	static final class DeferredAggregate implements Supplier<Mono<Buffer>> {
+
+		volatile Buffer compositeBuffer;
+		static final AtomicReferenceFieldUpdater<DeferredAggregate, Buffer> COMPOSITE_BUFFER =
+				AtomicReferenceFieldUpdater.newUpdater(DeferredAggregate.class, Buffer.class, "compositeBuffer");
+
+		final BufferAllocator alloc;
+		final Flux<Buffer> source;
+
+		DeferredAggregate(Flux<Buffer> source, BufferAllocator alloc) {
+			this.alloc = alloc;
+			this.source = source;
+		}
+
+		@Override
+		@SuppressWarnings("rawtypes")
+		public Mono<Buffer> get() {
+			return source.map(Buffer::send)
+					.collectList()
+					.doOnDiscard(Send.class, Send::close)
+					.<Buffer>handle((list, sink) -> {
+						Buffer output = null;
+						if (!list.isEmpty()) {
+							output = alloc.compose(list);
+							this.compositeBuffer = output;
+						}
+						if (output != null && output.readableBytes() > 0) {
+							sink.next(output);
+						}
+						else {
+							sink.complete();
+						}
+					})
+					.doFinally(signalType -> {
+						Buffer buffer = this.compositeBuffer;
+						if (buffer != null) {
+							buffer.close();
+						}
+					});
+		}
+	}
 }
