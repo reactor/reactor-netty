@@ -389,7 +389,7 @@ public abstract class TransportConfig {
 					}
 					catch (RuntimeException e) {
 						if (log.isWarnEnabled()) {
-							log.warn("Exception caught while recording metrics.", e);
+							log.warn(format(channel, "Exception caught while recording metrics."), e);
 						}
 						// Allow request-response exchange to continue, unaffected by metrics problem
 					}
