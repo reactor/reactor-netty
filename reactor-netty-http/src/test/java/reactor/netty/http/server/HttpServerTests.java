@@ -123,6 +123,7 @@ import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.PrematureCloseException;
+import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
@@ -1993,6 +1994,7 @@ class HttpServerTests extends BaseHttpTest {
 				ServerCookieDecoder.STRICT,
 				ServerCookieEncoder.STRICT,
 				DEFAULT_FORM_DECODER_SPEC,
+				ReactorNettyHttpMessageLogFactory.INSTANCE,
 				null,
 				false);
 		ops.status(status);
@@ -2900,6 +2902,7 @@ class HttpServerTests extends BaseHttpTest {
 				ServerCookieDecoder.STRICT,
 				ServerCookieEncoder.STRICT,
 				DEFAULT_FORM_DECODER_SPEC,
+				ReactorNettyHttpMessageLogFactory.INSTANCE,
 				null,
 				false);
 		assertThat(ops.isFormUrlencoded()).isEqualTo(expectation);

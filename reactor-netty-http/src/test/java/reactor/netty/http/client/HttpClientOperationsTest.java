@@ -32,6 +32,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
+import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
 
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,7 +47,7 @@ class HttpClientOperationsTest {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
+				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT, ReactorNettyHttpMessageLogFactory.INSTANCE)
 				.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -69,7 +70,7 @@ class HttpClientOperationsTest {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
+				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT, ReactorNettyHttpMessageLogFactory.INSTANCE)
 				.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -92,7 +93,7 @@ class HttpClientOperationsTest {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
+				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT, ReactorNettyHttpMessageLogFactory.INSTANCE)
 				.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -115,7 +116,7 @@ class HttpClientOperationsTest {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
+				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT, ReactorNettyHttpMessageLogFactory.INSTANCE)
 				.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
@@ -141,7 +142,7 @@ class HttpClientOperationsTest {
 
 		HttpClientOperations ops1 = new HttpClientOperations(() -> channel,
 				ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
+				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT, ReactorNettyHttpMessageLogFactory.INSTANCE);
 		ops1.followRedirectPredicate((req, res) -> true);
 		ops1.started = true;
 		ops1.retrying = true;
@@ -172,7 +173,7 @@ class HttpClientOperationsTest {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations ops = new HttpClientOperations(() -> channel,
 				ConnectionObserver.emptyListener(),
-				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
+				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT, ReactorNettyHttpMessageLogFactory.INSTANCE);
 		ops.setNettyResponse(new DefaultFullHttpResponse(HTTP_1_1, status, Unpooled.EMPTY_BUFFER));
 		assertThat(ops.status().reasonPhrase()).isEqualTo(status.reasonPhrase());
 	}

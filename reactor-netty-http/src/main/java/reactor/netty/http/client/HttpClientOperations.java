@@ -33,7 +33,6 @@ import java.util.function.Supplier;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -83,6 +82,8 @@ import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
+import reactor.netty.http.logging.HttpMessageArgProviderFactory;
+import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -144,8 +145,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.trailerHeaders = replaced.trailerHeaders;
 	}
 
-	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
-		super(c, listener);
+	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder,
+			ClientCookieDecoder decoder, HttpMessageLogFactory httpMessageLogFactory) {
+		super(c, listener, httpMessageLogFactory);
 		this.isSecure = c.channel()
 		                 .pipeline()
 		                 .get(NettyPipeline.SslHandler) != null;
@@ -446,7 +448,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				                }
 				                for (ByteBuf bb : list) {
 				                	if (log.isDebugEnabled()) {
-				                		log.debug(format(channel(), "Ignoring accumulated bytebuf on http GET {}"), ByteBufUtil.prettyHexDump(bb));
+						                log.debug(format(channel(), "Ignoring accumulated bytebuf on http GET {}"), bb);
 					                }
 				                	bb.release();
 				                }
@@ -607,8 +609,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (started) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(channel(), "HttpClientOperations cannot proceed more than one response {}"),
-							response.headers()
-							        .toString());
+							httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
 				}
 				ReferenceCountUtil.release(msg);
 				return;
@@ -627,10 +628,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received response (auto-read:{}) : {}"),
-						channel().config()
-						         .isAutoRead(),
-						responseHeaders().entries()
-						                 .toString());
+						channel().config().isAutoRead(),
+						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
 			}
 
 			if (notRedirected(response)) {
