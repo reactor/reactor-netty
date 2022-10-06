@@ -30,6 +30,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static reactor.netty5.Metrics.OBSERVATION_KEY;
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
@@ -120,7 +121,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	}
 
 	static final class ResponseTimeHandlerContext extends RequestReplySenderContext<HttpRequest, HttpResponse>
-			implements ReactorNettyHandlerContext {
+			implements ReactorNettyHandlerContext, Supplier<Observation.Context> {
 		static final String TYPE = "client";
 
 		final String method;
@@ -140,6 +141,11 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 			put(HttpClientRequest.class, request);
 			setCarrier(request);
 			setContextualName(this.method);
+		}
+
+		@Override
+		public Observation.Context get() {
+			return this;
 		}
 
 		@Override

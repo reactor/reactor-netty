@@ -16,7 +16,7 @@
 package reactor.netty5.channel;
 
 import io.micrometer.common.docs.KeyName;
-import io.micrometer.tracing.docs.DocumentedSpan;
+import io.micrometer.tracing.docs.SpanDocumentation;
 
 /**
  * Connect spans.
@@ -25,7 +25,7 @@ import io.micrometer.tracing.docs.DocumentedSpan;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum ConnectSpans implements DocumentedSpan {
+enum ConnectSpans implements SpanDocumentation {
 
 	/**
 	 * Connect Span.

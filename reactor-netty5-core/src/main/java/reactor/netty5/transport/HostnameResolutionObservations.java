@@ -16,7 +16,7 @@
 package reactor.netty5.transport;
 
 import io.micrometer.common.docs.KeyName;
-import io.micrometer.observation.docs.DocumentedObservation;
+import io.micrometer.observation.docs.ObservationDocumentation;
 
 /**
  * Hostname resolution observations.
@@ -24,7 +24,7 @@ import io.micrometer.observation.docs.DocumentedObservation;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum HostnameResolutionObservations implements DocumentedObservation {
+enum HostnameResolutionObservations implements ObservationDocumentation {
 
 	/**
 	 * Hostname resolution metric.

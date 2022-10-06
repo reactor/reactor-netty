@@ -16,7 +16,7 @@
 package reactor.netty5.transport;
 
 import io.micrometer.common.docs.KeyName;
-import io.micrometer.tracing.docs.DocumentedSpan;
+import io.micrometer.tracing.docs.SpanDocumentation;
 
 /**
  * Hostname resolution spans.
@@ -24,7 +24,7 @@ import io.micrometer.tracing.docs.DocumentedSpan;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum HostnameResolutionSpans implements DocumentedSpan {
+enum HostnameResolutionSpans implements SpanDocumentation {
 
 	/**
 	 * Hostname Resolution Span.

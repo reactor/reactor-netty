@@ -17,7 +17,7 @@ package reactor.netty5.transport;
 
 import io.micrometer.common.docs.KeyName;
 import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.docs.DocumentedMeter;
+import io.micrometer.core.instrument.docs.MeterDocumentation;
 
 /**
  * {@link io.netty5.buffer.BufferAllocator} meters.
@@ -25,7 +25,7 @@ import io.micrometer.core.instrument.docs.DocumentedMeter;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum BufferAllocatorMeters implements DocumentedMeter {
+enum BufferAllocatorMeters implements MeterDocumentation {
 
 	/**
 	 * The actual bytes consumed by in-use buffers allocated from the buffer pools.

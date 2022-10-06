@@ -16,7 +16,7 @@
 package reactor.netty5.http.server;
 
 import io.micrometer.common.docs.KeyName;
-import io.micrometer.observation.docs.DocumentedObservation;
+import io.micrometer.observation.docs.ObservationDocumentation;
 
 /**
  * {@link HttpServer} observations.
@@ -24,7 +24,7 @@ import io.micrometer.observation.docs.DocumentedObservation;
  * @author Violeta Georgieva
  * @since 1.1.0
  */
-enum HttpServerObservations implements DocumentedObservation {
+enum HttpServerObservations implements ObservationDocumentation {
 
 	/**
 	 * Response metric.

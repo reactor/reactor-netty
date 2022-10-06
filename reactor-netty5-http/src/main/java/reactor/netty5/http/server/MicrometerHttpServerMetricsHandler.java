@@ -27,6 +27,7 @@ import reactor.util.annotation.Nullable;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty5.Metrics.RESPONSE_TIME;
@@ -111,7 +112,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	}
 
 	static final class ResponseTimeHandlerContext extends RequestReplyReceiverContext<HttpRequest, HttpResponse>
-			implements ReactorNettyHandlerContext {
+			implements ReactorNettyHandlerContext, Supplier<Observation.Context> {
 		static final String TYPE = "server";
 
 		final String method;
@@ -132,6 +133,11 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 			put(HttpServerRequest.class, request);
 			setCarrier(request);
 			setContextualName(this.method);
+		}
+
+		@Override
+		public Observation.Context get() {
+			return this;
 		}
 
 		@Override

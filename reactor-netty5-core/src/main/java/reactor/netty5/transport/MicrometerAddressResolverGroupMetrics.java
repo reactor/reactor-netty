@@ -70,7 +70,8 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		return new MicrometerDelegatingAddressResolver<>((MicrometerChannelMetricsRecorder) recorder, resolverGroup.getResolver(executor));
 	}
 
-	static final class FutureHandlerContext extends Observation.Context implements ReactorNettyHandlerContext {
+	static final class FutureHandlerContext extends Observation.Context
+			implements ReactorNettyHandlerContext, Supplier<Observation.Context> {
 		static final String CONTEXTUAL_NAME = "hostname resolution";
 		static final String TYPE = "client";
 
@@ -83,6 +84,11 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		FutureHandlerContext(MicrometerChannelMetricsRecorder recorder, String remoteAddress) {
 			this.recorder = recorder;
 			this.remoteAddress = remoteAddress;
+		}
+
+		@Override
+		public Observation.Context get() {
+			return this;
 		}
 
 		@Override
