@@ -348,8 +348,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					Double.parseDouble(System.getProperty(ReactorNetty.POOL_GET_PERMITS_SAMPLING_RATE, "0"));
 			if (getPermitsSamplingRate > 1d) {
 				DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE = 0;
-				log.warn("Invalid configuration [" + ReactorNetty.POOL_GET_PERMITS_SAMPLING_RATE + "=" + getPermitsSamplingRate +
-						"], the value must be between 0d and 1d (percentage). SamplingAllocationStrategy in not enabled.");
+				if (log.isWarnEnabled()) {
+					log.warn("Invalid configuration [" + ReactorNetty.POOL_GET_PERMITS_SAMPLING_RATE + "=" + getPermitsSamplingRate +
+							"], the value must be between 0d and 1d (percentage). SamplingAllocationStrategy in not enabled.");
+				}
 			}
 			else {
 				DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE = getPermitsSamplingRate;
@@ -362,8 +364,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					Double.parseDouble(System.getProperty(ReactorNetty.POOL_RETURN_PERMITS_SAMPLING_RATE, "0"));
 			if (returnPermitsSamplingRate > 1d) {
 				DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE = 0;
-				log.warn("Invalid configuration [" + ReactorNetty.POOL_RETURN_PERMITS_SAMPLING_RATE + "=" + returnPermitsSamplingRate +
-						"], the value must be between 0d and 1d (percentage). SamplingAllocationStrategy is enabled.");
+				if (log.isWarnEnabled()) {
+					log.warn("Invalid configuration [" + ReactorNetty.POOL_RETURN_PERMITS_SAMPLING_RATE + "=" + returnPermitsSamplingRate +
+							"], the value must be between 0d and 1d (percentage). SamplingAllocationStrategy is enabled.");
+				}
 			}
 			else {
 				DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE = returnPermitsSamplingRate;

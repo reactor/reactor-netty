@@ -95,14 +95,18 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 						recordWrite(address);
 					}
 					catch (RuntimeException e) {
-						log.warn("Exception caught while recording metrics.", e);
+						if (log.isWarnEnabled()) {
+							log.warn("Exception caught while recording metrics.", e);
+						}
 						// Allow request-response exchange to continue, unaffected by metrics problem
 					}
 				});
 			}
 		}
 		catch (RuntimeException e) {
-			log.warn("Exception caught while recording metrics.", e);
+			if (log.isWarnEnabled()) {
+				log.warn("Exception caught while recording metrics.", e);
+			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
@@ -127,7 +131,9 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 			}
 		}
 		catch (RuntimeException e) {
-			log.warn("Exception caught while recording metrics.", e);
+			if (log.isWarnEnabled()) {
+				log.warn("Exception caught while recording metrics.", e);
+			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
@@ -140,7 +146,9 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 			recordException(ctx);
 		}
 		catch (RuntimeException e) {
-			log.warn("Exception caught while recording metrics.", e);
+			if (log.isWarnEnabled()) {
+				log.warn("Exception caught while recording metrics.", e);
+			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 

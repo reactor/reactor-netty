@@ -400,7 +400,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				   .eventLoop()
 				   .schedule(enableAutoReadTask, 1, TimeUnit.SECONDS)
 				   .addListener(future -> {
-				       if (!future.isSuccess()) {
+				       if (!future.isSuccess() && log.isDebugEnabled()) {
 				           log.debug(format(ctx.channel(), "Cannot enable auto-read"), future.cause());
 				       }
 				   });
@@ -419,7 +419,9 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 		static void forceClose(Channel child, Throwable t) {
 			child.unsafe().closeForcibly();
-			log.warn(format(child, "Failed to register an accepted channel: {}"), child, t);
+			if (log.isWarnEnabled()) {
+				log.warn(format(child, "Failed to register an accepted channel: {}"), child, t);
+			}
 		}
 	}
 
