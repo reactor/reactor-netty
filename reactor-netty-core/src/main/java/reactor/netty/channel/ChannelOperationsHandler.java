@@ -32,7 +32,6 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static reactor.netty.ReactorNetty.format;
-import static reactor.netty.ReactorNetty.toPrettyHexDump;
 
 /**
  * Netty {@link io.netty.channel.ChannelDuplexHandler} implementation that bridge data
@@ -118,13 +117,11 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 					if (msg instanceof DecoderResultProvider) {
 						DecoderResult decoderResult = ((DecoderResultProvider) msg).decoderResult();
 						if (decoderResult.isFailure()) {
-							log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "),
-									decoderResult.cause());
+							log.debug(format(ctx.channel(), "Decoding failed."), decoderResult.cause());
 						}
 					}
 
-					log.debug(format(ctx.channel(), "No ChannelOperation attached. Dropping: {}"),
-							toPrettyHexDump(msg));
+					log.debug(format(ctx.channel(), "No ChannelOperation attached."));
 				}
 				ReferenceCountUtil.release(msg);
 			}

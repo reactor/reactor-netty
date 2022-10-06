@@ -535,6 +535,17 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 	}
 
+	/**
+	 * Transforms the object to a string for debug logs.
+	 *
+	 * @param o the object to be transformed
+	 * @return the string to be logged
+	 * @since 1.0.24
+	 */
+	protected String asDebugLogMessage(Object o) {
+		return o.toString();
+	}
+
 	@Override
 	public boolean isPersistent() {
 		return connection.isPersistent();

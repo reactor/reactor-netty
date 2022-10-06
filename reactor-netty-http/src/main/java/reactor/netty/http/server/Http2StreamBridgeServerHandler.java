@@ -27,6 +27,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
@@ -37,6 +38,8 @@ import io.netty.util.ReferenceCountUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.http.logging.HttpMessageArgProviderFactory;
+import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
@@ -55,6 +58,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	final HttpMessageLogFactory                                   httpMessageLogFactory;
 	final ConnectionObserver                                      listener;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 	                                                              mapHandle;
@@ -74,6 +78,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle) {
 		this.compress = compress;
@@ -81,6 +86,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 		this.cookieEncoder = encoder;
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
+		this.httpMessageLogFactory = httpMessageLogFactory;
 		this.listener = listener;
 		this.mapHandle = mapHandle;
 	}
@@ -120,12 +126,13 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 						cookieDecoder,
 						cookieEncoder,
 						formDecoderProvider,
+						httpMessageLogFactory,
 						mapHandle,
 						secured);
 			}
 			catch (RuntimeException e) {
 				pendingResponse = false;
-				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg);
+				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory);
 				return;
 			}
 			ops.bind();
@@ -133,8 +140,10 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 		}
 		else if (!pendingResponse) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
-						"since response has been sent already: {}"), msg);
+				HttpServerOperations.log.debug(
+						format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
+						msg instanceof HttpObject ?
+								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
 			}
 			ReferenceCountUtil.release(msg);
 			ctx.read();

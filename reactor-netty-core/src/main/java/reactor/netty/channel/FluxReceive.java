@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -203,7 +203,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			Object o;
 			while ((o = q.poll()) != null) {
 				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "{}: dropping frame {}"), this, o);
+					log.debug(format(channel, "{}: dropping frame {}"), this, parent.asDebugLogMessage(o));
 				}
 				ReferenceCountUtil.release(o);
 			}
@@ -343,7 +343,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	final void onInboundNext(Object msg) {
 		if (inboundDone || isCancelled()) {
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "{}: dropping frame {}"), this, msg);
+				log.debug(format(channel, "{}: dropping frame {}"), this, parent.asDebugLogMessage(msg));
 			}
 			ReferenceCountUtil.release(msg);
 			return;

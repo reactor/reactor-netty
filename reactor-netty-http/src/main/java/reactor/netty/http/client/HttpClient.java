@@ -28,9 +28,11 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
@@ -52,6 +54,8 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.logging.HttpMessageLogFactory;
+import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.internal.util.Metrics;
@@ -1069,6 +1073,28 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		}
 		HttpClient dup = duplicate();
 		dup.configuration().http2Settings = settings;
+		return dup;
+	}
+
+	/**
+	 * When {@link HttpMessage} is about to be logged the configured factory will be used for
+	 * generating a sanitized log message.
+	 * <p>
+	 * Default to {@link ReactorNettyHttpMessageLogFactory}:
+	 * <ul>
+	 *     <li>hides the query from the uri</li>
+	 *     <li>hides the headers values</li>
+	 *     <li>only {@link DecoderException} message is presented</li>
+	 * </ul>
+	 *
+	 * @param httpMessageLogFactory the factory for generating the log message
+	 * @return a new {@link HttpClient}
+	 * @since 1.0.24
+	 */
+	public final HttpClient httpMessageLogFactory(HttpMessageLogFactory httpMessageLogFactory) {
+		Objects.requireNonNull(httpMessageLogFactory, "httpMessageLogFactory");
+		HttpClient dup = duplicate();
+		dup.configuration().httpMessageLogFactory = httpMessageLogFactory;
 		return dup;
 	}
 

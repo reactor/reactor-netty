@@ -30,6 +30,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -44,6 +45,8 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.http.logging.HttpMessageArgProviderFactory;
+import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 
@@ -52,7 +55,6 @@ import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
 import static io.netty.handler.codec.http.HttpUtil.isTransferEncodingChunked;
 import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
 import static reactor.netty.ReactorNetty.format;
-import static reactor.netty.ReactorNetty.toPrettyHexDump;
 
 /**
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra
@@ -70,6 +72,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	final HttpMessageLogFactory                                   httpMessageLogFactory;
 	final Duration                                                idleTimeout;
 	final ConnectionObserver                                      listener;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -97,6 +100,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
@@ -107,6 +111,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		this.compress = compress;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
+		this.httpMessageLogFactory = httpMessageLogFactory;
 		this.idleTimeout = idleTimeout;
 		this.mapHandle = mapHandle;
 		this.maxKeepAliveRequests = maxKeepAliveRequests;
@@ -201,6 +206,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							cookieDecoder,
 							cookieEncoder,
 							formDecoderProvider,
+							httpMessageLogFactory,
 							mapHandle,
 							secure);
 				}
@@ -228,8 +234,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			}
 			else {
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
-							"since response has been sent already: {}"), msg);
+					HttpServerOperations.log.debug(
+							format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
+							msg instanceof HttpObject ?
+									httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
 				}
 				ReferenceCountUtil.release(msg);
 			}
@@ -260,7 +268,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	void sendDecodingFailures(Throwable t, Object msg) {
 		persistentConnection = false;
-		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg);
+		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory);
 	}
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
@@ -343,8 +351,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		}
 		if (persistentConnection && pendingResponses == 0) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
-						"since response has been sent already: {}"), toPrettyHexDump(msg));
+				HttpServerOperations.log.debug(
+						format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
+						msg instanceof HttpObject ?
+								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
 			}
 			ReferenceCountUtil.release(msg);
 			promise.setSuccess();
@@ -389,6 +399,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						cookieDecoder,
 						cookieEncoder,
 						formDecoderProvider,
+						httpMessageLogFactory,
 						mapHandle,
 						secure);
 				ops.bind();
