@@ -120,8 +120,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 								return Mono.error(e);
 							}
 							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
-								log.debug(format(channel(), "Dropped HTTP content, " +
-										"since response has Content-Length: 0 {}"), toPrettyHexDump(msg));
+								if (log.isDebugEnabled()) {
+									log.debug(format(channel(), "Dropped HTTP content, " +
+											"since response has Content-Length: 0 {}"), toPrettyHexDump(msg));
+								}
 								msg.release();
 								return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
 							}
@@ -154,8 +156,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					throw e;
 				}
 				if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
-					log.debug(format(channel(), "Dropped HTTP content, " +
-							"since response has Content-Length: 0 {}"), toPrettyHexDump(b));
+					if (log.isDebugEnabled()) {
+						log.debug(format(channel(), "Dropped HTTP content, " +
+								"since response has Content-Length: 0 {}"), toPrettyHexDump(b));
+					}
 					b.release();
 					return channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER));
 				}

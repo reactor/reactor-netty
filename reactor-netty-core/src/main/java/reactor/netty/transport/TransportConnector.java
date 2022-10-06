@@ -169,12 +169,16 @@ public final class TransportConnector {
 			}
 			try {
 				if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
-					log.warn(format(channel, "Unknown channel option '{}' for channel '{}'"), e.getKey(), channel);
+					if (log.isWarnEnabled()) {
+						log.warn(format(channel, "Unknown channel option '{}' for channel '{}'"), e.getKey(), channel);
+					}
 				}
 			}
 			catch (Throwable t) {
-				log.warn(format(channel, "Failed to set channel option '{}' with value '{}' for channel '{}'"),
-						e.getKey(), e.getValue(), channel, t);
+				if (log.isWarnEnabled()) {
+					log.warn(format(channel, "Failed to set channel option '{}' with value '{}' for channel '{}'"),
+							e.getKey(), e.getValue(), channel, t);
+				}
 			}
 		}
 	}
