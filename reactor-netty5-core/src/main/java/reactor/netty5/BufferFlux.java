@@ -337,7 +337,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 						Buffer output = null;
 						if (!list.isEmpty()) {
 							output = alloc.compose(list);
-							COMPOSITE_BUFFER.set(this, output);
+							this.compositeBuffer = output;
 						}
 						if (output != null && output.readableBytes() > 0) {
 							sink.next(output);
@@ -347,7 +347,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 						}
 					})
 					.doFinally(signalType -> {
-						Buffer buffer = COMPOSITE_BUFFER.get(this);
+						Buffer buffer = this.compositeBuffer;
 						if (buffer != null) {
 							buffer.close();
 						}
