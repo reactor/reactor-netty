@@ -28,6 +28,8 @@ import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 
+import static reactor.netty.ReactorNetty.format;
+
 /**
  * Base {@link ChannelHandler} for collecting metrics on protocol level.
  *
@@ -55,7 +57,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 			}
 			catch (RuntimeException e) {
 				if (log.isWarnEnabled()) {
-					log.warn("Exception caught while recording metrics.", e);
+					log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 				}
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
@@ -71,7 +73,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 			}
 			catch (RuntimeException e) {
 				if (log.isWarnEnabled()) {
-					log.warn("Exception caught while recording metrics.", e);
+					log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 				}
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
@@ -116,7 +118,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 		}
 		catch (RuntimeException e) {
 			if (log.isWarnEnabled()) {
-				log.warn("Exception caught while recording metrics.", e);
+				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
@@ -144,7 +146,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 		}
 		catch (RuntimeException e) {
 			if (log.isWarnEnabled()) {
-				log.warn("Exception caught while recording metrics.", e);
+				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
@@ -160,7 +162,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 		}
 		catch (RuntimeException e) {
 			if (log.isWarnEnabled()) {
-				log.warn("Exception caught while recording metrics.", e);
+				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
 			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
