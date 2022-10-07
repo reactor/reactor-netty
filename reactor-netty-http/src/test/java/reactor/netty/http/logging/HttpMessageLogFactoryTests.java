@@ -61,6 +61,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.util.internal.StringUtil.NEWLINE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -100,7 +101,7 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(HttpResponseArgProvider.class);
 		TestHttpMessageLogFactory customFactory = new TestHttpMessageLogFactory();
 		String result = customFactory.error(argProvider);
-		assertThat(result).isEqualTo("HTTP/1.1 200 OK\n" +
+		assertThat(result).isEqualTo("HTTP/1.1 200 OK" + NEWLINE +
 				"java.lang.IllegalArgumentException: Deliberate");
 	}
 
@@ -114,10 +115,10 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		ExtendedReactorNettyHttpMessageLogFactory customFactory = new ExtendedReactorNettyHttpMessageLogFactory();
 		String result = customFactory.common(argProvider);
 		assertThat(result).isEqualTo(
-				"FULL_REQUEST(decodeResult: Success, version: HTTP/1.1, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))\n" +
-						"GET /test?test=test HTTP/1.1\n" +
-						"header: prefix-test\n" +
-						"test: test\n" +
+				"FULL_REQUEST(decodeResult: Success, version: HTTP/1.1, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))" + NEWLINE +
+						"GET /test?test=test HTTP/1.1" + NEWLINE +
+						"header: prefix-test" + NEWLINE +
+						"test: test" + NEWLINE +
 						"trailing-header: prefix-test");
 	}
 
@@ -133,10 +134,10 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		String result = customFactory.common(argProvider);
 		assertThat(result).isEqualTo(
 				"FULL_REQUEST(decodeResult: Failure(java.lang.IllegalArgumentException), version: HTTP/1.1," +
-						" content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))\n" +
-						"GET /test?test=test HTTP/1.1\n" +
-						"header: prefix-test\n" +
-						"test: test\n" +
+						" content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))" + NEWLINE +
+						"GET /test?test=test HTTP/1.1" + NEWLINE +
+						"header: prefix-test" + NEWLINE +
+						"test: test" + NEWLINE +
 						"trailing-header: prefix-test");
 	}
 
@@ -148,9 +149,9 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(FullHttpRequestArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"FULL_REQUEST(decodeResult: success, version: HTTP/1.1, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))\n" +
-						"GET /test?<filtered> HTTP/1.1\n" +
-						"header: <filtered>\n" +
+				"FULL_REQUEST(decodeResult: success, version: HTTP/1.1, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))" + NEWLINE +
+						"GET /test?<filtered> HTTP/1.1" + NEWLINE +
+						"header: <filtered>" + NEWLINE +
 						"trailing-header: <filtered>");
 	}
 
@@ -164,9 +165,9 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
 				"FULL_REQUEST(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate)," +
-						" version: HTTP/1.1, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))\n" +
-						"GET /test?<filtered> HTTP/1.1\n" +
-						"header: <filtered>\n" +
+						" version: HTTP/1.1, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))" + NEWLINE +
+						"GET /test?<filtered> HTTP/1.1" + NEWLINE +
+						"header: <filtered>" + NEWLINE +
 						"trailing-header: <filtered>");
 	}
 
@@ -178,9 +179,9 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(FullHttpResponseArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"FULL_RESPONSE(decodeResult: success, version: HTTP/1.1, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))\n" +
-						"HTTP/1.1 200 OK\n" +
-						"header: <filtered>\n" +
+				"FULL_RESPONSE(decodeResult: success, version: HTTP/1.1, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))" + NEWLINE +
+						"HTTP/1.1 200 OK" + NEWLINE +
+						"header: <filtered>" + NEWLINE +
 						"trailing-header: <filtered>");
 	}
 
@@ -194,9 +195,9 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
 				"FULL_RESPONSE(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate)," +
-						" version: HTTP/1.1, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))\n" +
-						"HTTP/1.1 200 OK\n" +
-						"header: <filtered>\n" +
+						" version: HTTP/1.1, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))" + NEWLINE +
+						"HTTP/1.1 200 OK" + NEWLINE +
+						"header: <filtered>" + NEWLINE +
 						"trailing-header: <filtered>");
 	}
 
@@ -207,8 +208,8 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(HttpRequestArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"REQUEST(decodeResult: success, version: HTTP/1.1)\n" +
-						"GET /test?<filtered> HTTP/1.1\n" +
+				"REQUEST(decodeResult: success, version: HTTP/1.1)" + NEWLINE +
+						"GET /test?<filtered> HTTP/1.1" + NEWLINE +
 						"header: <filtered>");
 	}
 
@@ -220,8 +221,8 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(HttpRequestArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"REQUEST(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1)\n" +
-						"GET /test?<filtered> HTTP/1.1\n" +
+				"REQUEST(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1)" + NEWLINE +
+						"GET /test?<filtered> HTTP/1.1" + NEWLINE +
 						"header: <filtered>");
 	}
 
@@ -232,8 +233,8 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(HttpResponseArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"RESPONSE(decodeResult: success, version: HTTP/1.1)\n" +
-						"HTTP/1.1 200 OK\n" +
+				"RESPONSE(decodeResult: success, version: HTTP/1.1)" + NEWLINE +
+						"HTTP/1.1 200 OK" + NEWLINE +
 						"header: <filtered>");
 	}
 
@@ -245,8 +246,8 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(HttpResponseArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"RESPONSE(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1)\n" +
-						"HTTP/1.1 200 OK\n" +
+				"RESPONSE(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1)" + NEWLINE +
+						"HTTP/1.1 200 OK" + NEWLINE +
 						"header: <filtered>");
 	}
 
@@ -279,7 +280,7 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(LastHttpContentArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"LAST_CONTENT(decodeResult: success, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))\n" +
+				"LAST_CONTENT(decodeResult: success, content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))" + NEWLINE +
 						"trailing-header: <filtered>");
 	}
 
@@ -292,7 +293,7 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
 				"LAST_CONTENT(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate)," +
-						" content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))\n" +
+						" content: UnpooledHeapByteBuf(ridx: 0, widx: 4, cap: 4/4))" + NEWLINE +
 						"trailing-header: <filtered>");
 	}
 
@@ -348,12 +349,12 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 	static Stream<Arguments> httpMessageLogFactories() {
 		return Stream.of(
 				Arguments.of(ReactorNettyHttpMessageLogFactory.INSTANCE,
-						"RESPONSE(decodeResult: success, version: HTTP/1.1)\n" +
-								"HTTP/1.1 200 OK\n" +
+						"RESPONSE(decodeResult: success, version: HTTP/1.1)" + NEWLINE +
+								"HTTP/1.1 200 OK" + NEWLINE +
 								"content-length: <filtered>"),
 				Arguments.of(new ExtendedReactorNettyHttpMessageLogFactory(),
-						"RESPONSE(decodeResult: Success, version: HTTP/1.1)\n" +
-								"HTTP/1.1 200 OK\n" +
+						"RESPONSE(decodeResult: Success, version: HTTP/1.1)" + NEWLINE +
+								"HTTP/1.1 200 OK" + NEWLINE +
 								"content-length: prefix-0"),
 				Arguments.of(new TestHttpMessageLogFactory(), "HTTP/1.1 200 OK"));
 	}
@@ -424,7 +425,7 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		@Override
 		public String error(HttpMessageArgProvider arg) {
 			return arg.httpMessageType() == HttpMessageType.RESPONSE ?
-					arg.protocol() + " " + arg.status() + '\n' + arg.decoderResult().cause() :
+					arg.protocol() + " " + arg.status() + NEWLINE + arg.decoderResult().cause() :
 					null;
 		}
 	}
