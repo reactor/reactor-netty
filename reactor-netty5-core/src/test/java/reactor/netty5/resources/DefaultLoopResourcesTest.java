@@ -24,6 +24,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.epoll.Epoll;
 import io.netty5.channel.kqueue.KQueue;
 import io.netty5.channel.nio.NioHandler;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -206,6 +207,9 @@ class DefaultLoopResourcesTest {
 		assertThat(Epoll.isAvailable()).isTrue();
 	}
 
+	// Temporary disable the check for KQueue as there is issue with MacOS natives
+	// More information https://github.com/netty/netty/pull/12865
+	@Disabled
 	@Test
 	@EnabledOnOs(OS.MAC)
 	void testKQueueIsAvailable() {
