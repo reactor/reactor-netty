@@ -59,6 +59,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.util.internal.StringUtil.NEWLINE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -96,7 +97,7 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(HttpResponseArgProvider.class);
 		TestHttpMessageLogFactory customFactory = new TestHttpMessageLogFactory();
 		String result = customFactory.error(argProvider);
-		assertThat(result).isEqualTo("HTTP/1.1 200 OK\n" +
+		assertThat(result).isEqualTo("HTTP/1.1 200 OK" + NEWLINE +
 				"java.lang.IllegalArgumentException: Deliberate");
 	}
 
@@ -110,12 +111,11 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 			ExtendedReactorNettyHttpMessageLogFactory customFactory = new ExtendedReactorNettyHttpMessageLogFactory();
 			String result = customFactory.common(argProvider);
 			assertThat(result).isEqualTo(
-					"""
-							FULL_REQUEST(decodeResult: Success, version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])
-							GET /test?test=test HTTP/1.1
-							test: test
-							header: prefix-test
-							trailing-header: prefix-test""");
+					"FULL_REQUEST(decodeResult: Success, version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])" + NEWLINE +
+							"GET /test?test=test HTTP/1.1" + NEWLINE +
+							"test: test" + NEWLINE +
+							"header: prefix-test" + NEWLINE +
+							"trailing-header: prefix-test");
 		}
 	}
 
@@ -130,12 +130,11 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 			ExtendedReactorNettyHttpMessageLogFactory customFactory = new ExtendedReactorNettyHttpMessageLogFactory();
 			String result = customFactory.common(argProvider);
 			assertThat(result).isEqualTo(
-					"""
-							FULL_REQUEST(decodeResult: Failure(java.lang.IllegalArgumentException), version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])
-							GET /test?test=test HTTP/1.1
-							test: test
-							header: prefix-test
-							trailing-header: prefix-test""");
+					"FULL_REQUEST(decodeResult: Failure(java.lang.IllegalArgumentException), version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])" + NEWLINE +
+							"GET /test?test=test HTTP/1.1" + NEWLINE +
+							"test: test" + NEWLINE +
+							"header: prefix-test" + NEWLINE +
+							"trailing-header: prefix-test");
 		}
 	}
 
@@ -147,11 +146,10 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 			assertThat(argProvider).isInstanceOf(FullHttpRequestArgProvider.class);
 			String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 			assertThat(result).isEqualTo(
-					"""
-							FULL_REQUEST(decodeResult: success, version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])
-							GET /test?<filtered> HTTP/1.1
-							header: <filtered>
-							trailing-header: <filtered>""");
+					"FULL_REQUEST(decodeResult: success, version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])" + NEWLINE +
+							"GET /test?<filtered> HTTP/1.1" + NEWLINE +
+							"header: <filtered>" + NEWLINE +
+							"trailing-header: <filtered>");
 		}
 	}
 
@@ -164,11 +162,10 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 			assertThat(argProvider).isInstanceOf(FullHttpRequestArgProvider.class);
 			String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 			assertThat(result).isEqualTo(
-					"""
-							FULL_REQUEST(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])
-							GET /test?<filtered> HTTP/1.1
-							header: <filtered>
-							trailing-header: <filtered>""");
+					"FULL_REQUEST(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])" + NEWLINE +
+							"GET /test?<filtered> HTTP/1.1" + NEWLINE +
+							"header: <filtered>" + NEWLINE +
+							"trailing-header: <filtered>");
 		}
 	}
 
@@ -180,11 +177,10 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 			assertThat(argProvider).isInstanceOf(FullHttpResponseArgProvider.class);
 			String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 			assertThat(result).isEqualTo(
-					"""
-							FULL_RESPONSE(decodeResult: success, version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])
-							HTTP/1.1 200 OK
-							header: <filtered>
-							trailing-header: <filtered>""");
+					"FULL_RESPONSE(decodeResult: success, version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])" + NEWLINE +
+							"HTTP/1.1 200 OK" + NEWLINE +
+							"header: <filtered>" + NEWLINE +
+							"trailing-header: <filtered>");
 		}
 	}
 
@@ -197,11 +193,10 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 			assertThat(argProvider).isInstanceOf(FullHttpResponseArgProvider.class);
 			String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 			assertThat(result).isEqualTo(
-					"""
-							FULL_RESPONSE(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])
-							HTTP/1.1 200 OK
-							header: <filtered>
-							trailing-header: <filtered>""");
+					"FULL_RESPONSE(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1, content: Buffer[roff:0, woff:4, cap:4])" + NEWLINE +
+							"HTTP/1.1 200 OK" + NEWLINE +
+							"header: <filtered>" + NEWLINE +
+							"trailing-header: <filtered>");
 		}
 	}
 
@@ -212,10 +207,9 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(HttpRequestArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"""
-						REQUEST(decodeResult: success, version: HTTP/1.1)
-						GET /test?<filtered> HTTP/1.1
-						header: <filtered>""");
+				"REQUEST(decodeResult: success, version: HTTP/1.1)" + NEWLINE +
+						"GET /test?<filtered> HTTP/1.1" + NEWLINE +
+						"header: <filtered>");
 	}
 
 	@Test
@@ -226,10 +220,9 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(HttpRequestArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"""
-						REQUEST(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1)
-						GET /test?<filtered> HTTP/1.1
-						header: <filtered>""");
+				"REQUEST(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1)" + NEWLINE +
+						"GET /test?<filtered> HTTP/1.1" + NEWLINE +
+						"header: <filtered>");
 	}
 
 	@Test
@@ -239,10 +232,9 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(HttpResponseArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"""
-						RESPONSE(decodeResult: success, version: HTTP/1.1)
-						HTTP/1.1 200 OK
-						header: <filtered>""");
+				"RESPONSE(decodeResult: success, version: HTTP/1.1)" + NEWLINE +
+						"HTTP/1.1 200 OK" + NEWLINE +
+						"header: <filtered>");
 	}
 
 	@Test
@@ -253,10 +245,9 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		assertThat(argProvider).isInstanceOf(HttpResponseArgProvider.class);
 		String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 		assertThat(result).isEqualTo(
-				"""
-						RESPONSE(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1)
-						HTTP/1.1 200 OK
-						header: <filtered>""");
+				"RESPONSE(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate), version: HTTP/1.1)" + NEWLINE +
+						"HTTP/1.1 200 OK" + NEWLINE +
+						"header: <filtered>");
 	}
 
 	@Test
@@ -290,7 +281,7 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 			assertThat(argProvider).isInstanceOf(LastHttpContentArgProvider.class);
 			String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 			assertThat(result).isEqualTo(
-					"LAST_CONTENT(decodeResult: success, content: Buffer[roff:0, woff:4, cap:4])\n" +
+					"LAST_CONTENT(decodeResult: success, content: Buffer[roff:0, woff:4, cap:4])" + NEWLINE +
 							"trailing-header: <filtered>");
 		}
 	}
@@ -304,7 +295,7 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 			String result = ReactorNettyHttpMessageLogFactory.INSTANCE.common(argProvider);
 			assertThat(result).isEqualTo(
 					"LAST_CONTENT(decodeResult: failure(java.lang.IllegalArgumentException: Deliberate)," +
-							" content: Buffer[roff:0, woff:4, cap:4])\n" +
+							" content: Buffer[roff:0, woff:4, cap:4])" + NEWLINE +
 							"trailing-header: <filtered>");
 		}
 	}
@@ -363,15 +354,13 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 	static Stream<Arguments> httpMessageLogFactories() {
 		return Stream.of(
 				Arguments.of(ReactorNettyHttpMessageLogFactory.INSTANCE,
-						"""
-								RESPONSE(decodeResult: success, version: HTTP/1.1)
-								HTTP/1.1 200 OK
-								content-length: <filtered>"""),
+						"RESPONSE(decodeResult: success, version: HTTP/1.1)" + NEWLINE +
+								"HTTP/1.1 200 OK" + NEWLINE +
+								"content-length: <filtered>"),
 				Arguments.of(new ExtendedReactorNettyHttpMessageLogFactory(),
-						"""
-								RESPONSE(decodeResult: Success, version: HTTP/1.1)
-								HTTP/1.1 200 OK
-								content-length: prefix-0"""),
+						"RESPONSE(decodeResult: Success, version: HTTP/1.1)" + NEWLINE +
+								"HTTP/1.1 200 OK" + NEWLINE +
+								"content-length: prefix-0"),
 				Arguments.of(new TestHttpMessageLogFactory(), "HTTP/1.1 200 OK"));
 	}
 
@@ -441,7 +430,7 @@ class HttpMessageLogFactoryTests extends BaseHttpTest {
 		@Override
 		public String error(HttpMessageArgProvider arg) {
 			return arg.httpMessageType() == HttpMessageType.RESPONSE ?
-					arg.protocol() + " " + arg.status() + '\n' + arg.decoderResult().cause() :
+					arg.protocol() + " " + arg.status() + NEWLINE + arg.decoderResult().cause() :
 					null;
 		}
 	}
