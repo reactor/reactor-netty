@@ -30,7 +30,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.BufferHolder;
@@ -255,28 +254,6 @@ public final class ReactorNetty {
 		else {
 			return msg;
 		}
-	}
-
-	/**
-	 * Pretty hex dump will be returned when the object is {@link Buffer}.
-	 *
-	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as the functionality is not used anymore.
-	 */
-	@Deprecated
-	public static String toPrettyHexDump(Object msg) {
-		Objects.requireNonNull(msg, "msg");
-		String result;
-		if (msg instanceof Buffer buffer) {
-			int length = buffer.readableBytes();
-			int rows = length / 16 + ((length & 15) == 0 ? 0 : 1) + 4;
-			StringBuilder buf = new StringBuilder(rows * 80);
-			BufferUtil.appendPrettyHexDump(buf, buffer, buffer.readerOffset(), length);
-			result = "\n" + buf;
-		}
-		else {
-			result = msg.toString();
-		}
-		return result;
 	}
 
 	/**
