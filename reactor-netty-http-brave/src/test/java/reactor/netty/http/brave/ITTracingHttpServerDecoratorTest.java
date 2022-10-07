@@ -153,6 +153,6 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 
 		this.get("/request_line_too_long");
 
-		assertThat(testSpanHandler.takeRemoteSpanWithErrorTag(SERVER, "413").tags()).containsEntry("error", "413");
+		assertThat(testSpanHandler.takeRemoteSpanWithErrorTag(SERVER, "414").tags()).containsEntry("error", "414");
 	}
 }
