@@ -261,8 +261,11 @@ public final class ReactorNetty {
 	}
 
 	/**
-	 * Pretty hex dump will be returned when the object is {@link ByteBuf} or {@link ByteBufHolder}
+	 * Pretty hex dump will be returned when the object is {@link ByteBuf} or {@link ByteBufHolder}.
+	 *
+	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as the functionality is not used anymore.
 	 */
+	@Deprecated
 	public static String toPrettyHexDump(Object msg) {
 		Objects.requireNonNull(msg, "msg");
 		String result;
