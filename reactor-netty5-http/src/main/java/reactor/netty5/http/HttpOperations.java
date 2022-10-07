@@ -124,27 +124,27 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		}
 		if (source instanceof Mono) {
 			return new PostHeadersNettyOutbound(((Mono<Buffer>) source)
-					.flatMap(msg -> {
-						if (markSentHeaderAndBody(msg)) {
+					.flatMap(b -> {
+						if (markSentHeaderAndBody(b)) {
 							try {
 								afterMarkSentHeaders();
 							}
 							catch (RuntimeException e) {
-								Resource.dispose(msg);
+								b.close();
 								return Mono.error(e);
 							}
 							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
 								if (log.isDebugEnabled()) {
 									log.debug(format(channel(), "Dropped HTTP content, " +
-											"since response has Content-Length: 0 {}"), msg);
+											"since response has Content-Length: 0 {}"), b);
 								}
-								msg.close();
+								b.close();
 								return Mono.fromCompletionStage(
 										channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage());
 							}
-							return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(msg)).asStage());
+							return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(b)).asStage());
 						}
-						return Mono.fromCompletionStage(channel().writeAndFlush(msg).asStage());
+						return Mono.fromCompletionStage(channel().writeAndFlush(b).asStage());
 					})
 					.doOnDiscard(Buffer.class, Buffer::close), this, null);
 		}

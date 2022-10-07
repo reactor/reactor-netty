@@ -695,8 +695,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (isFollowRedirect() && followRedirectPredicate.test(this, this)) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received redirect location: {}"),
-						response.headers()
-						        .toString());
+						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
 			}
 			redirecting = new RedirectClientException(response.headers(), response.status());
 			return false;
