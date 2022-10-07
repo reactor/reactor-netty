@@ -126,7 +126,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 * Return the configured {@link ClientCookieDecoder} or the default {@link ClientCookieDecoder#STRICT}.
 	 *
 	 * @return the configured {@link ClientCookieDecoder} or the default {@link ClientCookieDecoder#STRICT}
+	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 supports only strict validation.
 	 */
+	@Deprecated
 	public ClientCookieDecoder cookieDecoder() {
 		return cookieDecoder;
 	}
@@ -135,7 +137,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 * Return the configured {@link ClientCookieEncoder} or the default {@link ClientCookieEncoder#STRICT}.
 	 *
 	 * @return the configured {@link ClientCookieEncoder} or the default {@link ClientCookieEncoder#STRICT}
+	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 supports only strict validation.
 	 */
+	@Deprecated
 	public ClientCookieEncoder cookieEncoder() {
 		return cookieEncoder;
 	}

@@ -105,7 +105,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * Return the configured {@link ServerCookieDecoder} or the default {@link ServerCookieDecoder#STRICT}.
 	 *
 	 * @return the configured {@link ServerCookieDecoder} or the default {@link ServerCookieDecoder#STRICT}
+	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 supports only strict validation.
 	 */
+	@Deprecated
 	public ServerCookieDecoder cookieDecoder() {
 		return cookieDecoder;
 	}
@@ -114,7 +116,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * Return the configured {@link ServerCookieEncoder} or the default {@link ServerCookieEncoder#STRICT}.
 	 *
 	 * @return the configured {@link ServerCookieEncoder} or the default {@link ServerCookieEncoder#STRICT}
+	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 supports only strict validation.
 	 */
+	@Deprecated
 	public ServerCookieEncoder cookieEncoder() {
 		return cookieEncoder;
 	}
