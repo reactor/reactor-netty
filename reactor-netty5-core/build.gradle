@@ -276,6 +276,7 @@ task japicmp(type: JapicmpTask) {
 			// Deprecated methods are removed
 			'reactor.netty.Connection#addHandler(io.netty.channel.ChannelHandler)',
 			'reactor.netty.Connection#addHandler(java.lang.String, io.netty.channel.ChannelHandler)',
+			'reactor.netty.ReactorNetty#toPrettyHexDump(java.lang.Object)',
 
 			'reactor.netty.tcp.SslProvider$SslContextSpec#sslContext(io.netty.handler.ssl.SslContextBuilder)',
 			'reactor.netty.tcp.SslProvider#getDefaultConfigurationType()',
