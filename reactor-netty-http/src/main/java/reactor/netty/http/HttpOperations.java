@@ -116,26 +116,26 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		}
 		if (source instanceof Mono) {
 			return new PostHeadersNettyOutbound(((Mono<ByteBuf>) source)
-					.flatMap(msg -> {
-						if (markSentHeaderAndBody(msg)) {
+					.flatMap(b -> {
+						if (markSentHeaderAndBody(b)) {
 							try {
 								afterMarkSentHeaders();
 							}
 							catch (RuntimeException e) {
-								ReferenceCountUtil.release(msg);
+								ReferenceCountUtil.release(b);
 								return Mono.error(e);
 							}
 							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
 								if (log.isDebugEnabled()) {
 									log.debug(format(channel(), "Dropped HTTP content, " +
-											"since response has Content-Length: 0 {}"), msg);
+											"since response has Content-Length: 0 {}"), b);
 								}
-								msg.release();
+								b.release();
 								return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
 							}
-							return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(msg)));
+							return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(b)));
 						}
-						return FutureMono.from(channel().writeAndFlush(msg));
+						return FutureMono.from(channel().writeAndFlush(b));
 					})
 					.doOnDiscard(ByteBuf.class, ByteBuf::release), this, null);
 		}
