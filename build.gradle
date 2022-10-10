@@ -112,7 +112,7 @@ ext {
 	assertJVersion = '3.23.1'
 	awaitilityVersion = '4.2.0'
 	hoverflyJavaVersion = '0.14.3'
-	tomcatVersion = '9.0.67'
+	tomcatVersion = '9.0.68'
 	boringSslVersion = '2.0.54.Final'
 	junitVersion = '5.9.1'
 	junitPlatformLauncherVersion = '1.9.1'
