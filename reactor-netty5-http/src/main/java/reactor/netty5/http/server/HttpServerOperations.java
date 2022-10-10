@@ -36,7 +36,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
-import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.DefaultHttpResponse;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
@@ -58,6 +57,8 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.TooLongHttpHeaderException;
+import io.netty5.handler.codec.http.TooLongHttpLineException;
 import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
@@ -723,9 +724,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		Resource.dispose(msg);
 
-		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-				cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE :
-				                                         HttpResponseStatus.BAD_REQUEST,
+		final HttpResponseStatus status;
+		if (cause instanceof TooLongHttpLineException) {
+			status = HttpResponseStatus.REQUEST_URI_TOO_LONG;
+		}
+		else if (cause instanceof TooLongHttpHeaderException) {
+			status = HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE;
+		}
+		else {
+			status = HttpResponseStatus.BAD_REQUEST;
+		}
+		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status,
 				ctx.bufferAllocator().allocate(0));
 		response.headers()
 		        .set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO)

@@ -764,7 +764,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		          .uri("/max_header_size")
 		          .responseSingle((res, bufferMono) -> Mono.just(res.status().code()))
 		          .as(StepVerifier::create)
-		          .expectNext(413)
+		          .expectNext(431)
 		          .expectComplete()
 		          .verify(Duration.ofSeconds(30));
 
@@ -879,7 +879,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	private void checkExpectationsBadRequest(String serverAddress, boolean checkTls) {
 		String uri = "/max_header_size";
-		String[] timerTags1 = new String[] {URI, uri, METHOD, "GET", STATUS, "413"};
+		String[] timerTags1 = new String[] {URI, uri, METHOD, "GET", STATUS, "431"};
 		String[] summaryTags1 = new String[] {URI, uri};
 
 		checkTimer(SERVER_RESPONSE_TIME, timerTags1, 1);
@@ -887,7 +887,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, 1, 0);
 		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
 
-		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "413"};
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "431"};
 		String[] timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET"};
 		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
 		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};

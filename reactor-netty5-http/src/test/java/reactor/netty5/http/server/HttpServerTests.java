@@ -909,7 +909,29 @@ class HttpServerTests extends BaseHttpTest {
 				          .responseSingle((res, bufferMono) -> Mono.just(res.status()));
 
 		StepVerifier.create(status)
-		            .expectNextMatches(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE::equals)
+		            .expectNextMatches(HttpResponseStatus.REQUEST_URI_TOO_LONG::equals)
+		            .expectComplete()
+		            .verify();
+	}
+
+	@Test
+	void httpServerRequestHeadersTooLong() {
+		HttpServer httpServer = HttpServer.create()
+				          .port(0)
+				          .httpRequestDecoder(c -> c.maxHeaderSize(20));
+		disposableServer =
+				httpServer.handle((req, res) -> res.sendString(Mono.just("Should not be reached")))
+				          .bindNow();
+
+		Mono<HttpResponseStatus> status =
+				createClient(disposableServer.port())
+				          .headers(h -> h.set("content-type", "somethingtooolooong"))
+				          .get()
+				          .uri("/path")
+				          .responseSingle((res, byteBufMono) -> Mono.just(res.status()));
+
+		StepVerifier.create(status)
+		            .expectNextMatches(HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE::equals)
 		            .expectComplete()
 		            .verify();
 	}
