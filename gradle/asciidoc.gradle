@@ -77,21 +77,11 @@ configurations {
 }
 
 dependencies {
-	adoc "io.micrometer:micrometer-docs-generator-spans:$micrometerDocsVersion"
-	adoc "io.micrometer:micrometer-docs-generator-metrics:$micrometerDocsVersion"
+	adoc "io.micrometer:micrometer-docs-generator:$micrometerDocsVersion"
 }
 
-task generateObservabilityDocs(dependsOn: ["generateObservabilityMetricsDocs", "generateObservabilitySpansDocs"]) {
-}
-
-task generateObservabilityMetricsDocs(type: JavaExec) {
-	mainClass = "io.micrometer.docs.metrics.DocsFromSources"
-	classpath configurations.adoc
-	args project.rootDir.getAbsolutePath(), ".*", project.rootProject.buildDir.getAbsolutePath()
-}
-
-task generateObservabilitySpansDocs(type: JavaExec) {
-	mainClass = "io.micrometer.docs.spans.DocsFromSources"
+task generateObservabilityDocs(type: JavaExec) {
+	mainClass = "io.micrometer.docs.DocsGeneratorCommand"
 	classpath configurations.adoc
 	args project.rootDir.getAbsolutePath(), ".*", project.rootProject.buildDir.getAbsolutePath()
 }
