@@ -561,7 +561,9 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param cookieBuilder the header {@link Consumer} to invoke before requesting
 	 *
 	 * @return a new {@link HttpClient}
+	 * @deprecated as of 1.1.0. Use {@link #cookie(Cookie)} for configuring cookies. This will be removed in 2.0.0.
 	 */
+	@Deprecated
 	public final HttpClient cookie(String name, Consumer<? super Cookie> cookieBuilder) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
@@ -578,7 +580,9 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param encoder the preferred ClientCookieEncoder
 	 *
 	 * @return a new {@link HttpClient}
+	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 supports only strict validation.
 	 */
+	@Deprecated
 	public final HttpClient cookieCodec(ClientCookieEncoder encoder) {
 		Objects.requireNonNull(encoder, "encoder");
 		ClientCookieDecoder decoder = encoder == ClientCookieEncoder.LAX ?
@@ -594,7 +598,9 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param decoder the preferred ClientCookieDecoder
 	 *
 	 * @return a new {@link HttpClient}
+	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 supports only strict validation.
 	 */
+	@Deprecated
 	public final HttpClient cookieCodec(ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
 		Objects.requireNonNull(encoder, "encoder");
 		Objects.requireNonNull(decoder, "decoder");

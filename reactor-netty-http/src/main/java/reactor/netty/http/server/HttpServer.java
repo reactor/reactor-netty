@@ -339,7 +339,9 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @param encoder the preferred ServerCookieEncoder
 	 *
 	 * @return a new {@link HttpServer}
+	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 supports only strict validation.
 	 */
+	@Deprecated
 	public final HttpServer cookieCodec(ServerCookieEncoder encoder) {
 		Objects.requireNonNull(encoder, "encoder");
 		ServerCookieDecoder decoder = encoder == ServerCookieEncoder.LAX ?
@@ -358,7 +360,9 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @param decoder the preferred ServerCookieDecoder
 	 *
 	 * @return a new {@link HttpServer}
+	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 supports only strict validation.
 	 */
+	@Deprecated
 	public final HttpServer cookieCodec(ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		Objects.requireNonNull(encoder, "encoder");
 		Objects.requireNonNull(decoder, "decoder");
