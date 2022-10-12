@@ -769,7 +769,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("CollectionUndefinedEquality")
+	@SuppressWarnings({"CollectionUndefinedEquality", "deprecation"})
 	void testCookie() {
 		disposableServer =
 				createServer()

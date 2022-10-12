@@ -207,6 +207,7 @@ class AccessLogTest extends BaseHttpTest {
 	}
 
 	@Nullable
+	@SuppressWarnings("deprecation")
 	private Tuple2<String, String> getHttpClientResponse(String uri) {
 		return createClient(disposableServer.port())
 				.cookie(COOKIE_KEY, cookie -> cookie.setValue(COOKIE_VALUE))

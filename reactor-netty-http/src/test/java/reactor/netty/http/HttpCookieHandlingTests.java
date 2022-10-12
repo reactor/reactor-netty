@@ -96,7 +96,7 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("CollectionUndefinedEquality")
+	@SuppressWarnings({"CollectionUndefinedEquality", "deprecation"})
 	void customCookieEncoderDecoder() {
 		disposableServer =
 				createServer()
