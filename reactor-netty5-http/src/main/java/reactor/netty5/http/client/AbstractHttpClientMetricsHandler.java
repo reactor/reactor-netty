@@ -64,7 +64,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	final Function<String, String> uriTagValue;
 
-	byte flags;
+	int flags;
 
 	final static int REQUEST_SENT = 0x01;
 
@@ -88,7 +88,6 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
-	@SuppressWarnings("NarrowingCompoundAssignment")
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		try {
 			if (msg instanceof HttpRequest request) {
@@ -135,7 +134,6 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
-	@SuppressWarnings("NarrowingCompoundAssignment")
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		try {
 			if (msg instanceof HttpResponse response) {
