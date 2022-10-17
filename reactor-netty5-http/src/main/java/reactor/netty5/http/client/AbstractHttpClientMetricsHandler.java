@@ -88,6 +88,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
+	@SuppressWarnings("NarrowingCompoundAssignment")
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		try {
 			if (msg instanceof HttpRequest request) {
@@ -134,6 +135,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
+	@SuppressWarnings("NarrowingCompoundAssignment")
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		try {
 			if (msg instanceof HttpResponse response) {
