@@ -144,34 +144,6 @@ class ClientTransportTest {
 	}
 
 	@Test
-	void testCreateClientWithHttpProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-
-		TestClientTransport transport = createTestTransportForProxy()
-				.proxyWithSystemProperties(properties);
-
-		TestClientTransportConfig config = transport.configuration();
-		assertThat(config.proxyProvider()).isNotNull();
-		assertThat(config.proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
-		assertThat(config.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
-	}
-
-	@Test
-	void testCreateClientWithHttpsProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-
-		TestClientTransport transport = createTestTransportForProxy()
-				.proxyWithSystemProperties(properties);
-
-		TestClientTransportConfig config = transport.configuration();
-		assertThat(config.proxyProvider()).isNotNull();
-		assertThat(config.proxyProvider().getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
-		assertThat(config.resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
-	}
-
-	@Test
 	void testCreateClientWithSock5Proxy() {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");

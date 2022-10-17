@@ -26,8 +26,8 @@ import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.LineBasedFrameDecoder;
-import io.netty5.handler.codec.http.HttpServerCodec;
-import io.netty5.handler.codec.http.websocketx.Utf8FrameValidator;
+import io.netty5.handler.codec.string.StringDecoder;
+import io.netty5.handler.codec.string.StringEncoder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.Disposable;
@@ -53,6 +53,7 @@ class ConnectionTest {
 	EmbeddedChannel channel;
 	ChannelHandler decoder;
 	ChannelHandler encoder;
+	ChannelHandler httpServerCodecMock;
 	ChannelHandler httpTrafficHandlerMock;
 	ChannelHandler reactiveBridgeMock;
 	Connection testContext;
@@ -63,6 +64,7 @@ class ConnectionTest {
 		channel = new EmbeddedChannel();
 		decoder = new LineBasedFrameDecoder(12);
 		encoder = new LineBasedFrameDecoder(12);
+		httpServerCodecMock = new ChannelHandlerAdapter(){};
 		httpTrafficHandlerMock = new ChannelHandlerAdapter(){};
 		reactiveBridgeMock = new ChannelHandlerAdapter(){};
 		testContext = () -> channel;
@@ -96,7 +98,7 @@ class ConnectionTest {
 	@Test
 	void addByteDecoderWhenNoRight() {
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
+		       .addLast(NettyPipeline.HttpCodec, httpServerCodecMock);
 
 		testContext.addHandlerLast(DECODER_NAME, decoder)
 		           .addHandlerFirst(DECODER_EXTRACT_NAME, NettyPipeline.inboundHandler(ADD_EXTRACTOR));
@@ -116,7 +118,7 @@ class ConnectionTest {
 	@Test
 	void addByteDecoderWhenFullReactorPipeline() {
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
+		       .addLast(NettyPipeline.HttpCodec, httpServerCodecMock)
 		       .addLast(NettyPipeline.HttpTrafficHandler, httpTrafficHandlerMock)
 		       .addLast(NettyPipeline.ReactiveBridge, reactiveBridgeMock);
 
@@ -154,7 +156,7 @@ class ConnectionTest {
 	@Test
 	void addNonByteDecoderWhenNoRight() {
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
+		       .addLast(NettyPipeline.HttpCodec, httpServerCodecMock);
 
 		testContext.addHandlerLast(DECODER_NAME, decoder);
 
@@ -171,7 +173,7 @@ class ConnectionTest {
 	@Test
 	void addNonByteDecoderWhenFullReactorPipeline() {
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
+		       .addLast(NettyPipeline.HttpCodec, httpServerCodecMock)
 		       .addLast(NettyPipeline.HttpTrafficHandler, httpTrafficHandlerMock)
 		       .addLast(NettyPipeline.ReactiveBridge, reactiveBridgeMock);
 
@@ -188,7 +190,7 @@ class ConnectionTest {
 		ChannelHandler decoder2 = new LineBasedFrameDecoder(13);
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
+		       .addLast(NettyPipeline.HttpCodec, httpServerCodecMock)
 		       .addLast(NettyPipeline.HttpTrafficHandler, httpTrafficHandlerMock)
 		       .addLast(NettyPipeline.ReactiveBridge, reactiveBridgeMock);
 
@@ -217,7 +219,7 @@ class ConnectionTest {
 	@Test
 	void addByteEncoderWhenNoRight() {
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
+		       .addLast(NettyPipeline.HttpCodec, httpServerCodecMock);
 
 		testContext.addHandlerFirst(ENCODER_NAME, encoder);
 
@@ -234,7 +236,7 @@ class ConnectionTest {
 	@Test
 	void addByteEncoderWhenFullReactorPipeline() {
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
+		       .addLast(NettyPipeline.HttpCodec, httpServerCodecMock)
 		       .addLast(NettyPipeline.HttpTrafficHandler, httpTrafficHandlerMock)
 		       .addLast(NettyPipeline.ReactiveBridge, reactiveBridgeMock);
 		ChannelHandler encoder = new LineBasedFrameDecoder(12);
@@ -260,7 +262,7 @@ class ConnectionTest {
 	@Test
 	void addNonByteEncoderWhenNoRight() {
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
+		       .addLast(NettyPipeline.HttpCodec, httpServerCodecMock);
 
 		testContext.addHandlerFirst(ENCODER_NAME, encoder);
 
@@ -277,7 +279,7 @@ class ConnectionTest {
 	@Test
 	void addNonByteEncoderWhenFullReactorPipeline() {
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
+		       .addLast(NettyPipeline.HttpCodec, httpServerCodecMock)
 		       .addLast(NettyPipeline.HttpTrafficHandler, httpTrafficHandlerMock)
 		       .addLast(NettyPipeline.ReactiveBridge, reactiveBridgeMock);
 
@@ -294,7 +296,7 @@ class ConnectionTest {
 		ChannelHandler encoder2 = new LineBasedFrameDecoder(13);
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
+		       .addLast(NettyPipeline.HttpCodec, httpServerCodecMock)
 		       .addLast(NettyPipeline.HttpTrafficHandler, httpTrafficHandlerMock)
 		       .addLast(NettyPipeline.ReactiveBridge, reactiveBridgeMock);
 
@@ -328,7 +330,7 @@ class ConnectionTest {
 		};
 
 		c.markPersistent(false)
-		 .addHandlerFirst("byteEncoder", new Utf8FrameValidator())
+		 .addHandlerFirst("byteEncoder", new StringEncoder())
 		 .addHandlerFirst(ENCODER_NAME, encoder);
 
 		assertThat(c.isPersistent()).isFalse();
@@ -357,7 +359,7 @@ class ConnectionTest {
 		};
 
 		c.markPersistent(false)
-		 .addHandlerLast("byteDecoder", new Utf8FrameValidator())
+		 .addHandlerLast("byteDecoder", new StringDecoder())
 		 .addHandlerLast(DECODER_NAME, decoder);
 
 		assertThat(c.isPersistent()).isFalse();
@@ -367,23 +369,23 @@ class ConnectionTest {
 	@Test
 	void addDecoderSkipsIfExist() {
 		channel.pipeline()
-		       .addFirst(DECODER_NAME, new Utf8FrameValidator());
+		       .addFirst(DECODER_NAME, new StringDecoder());
 
 		testContext.addHandlerFirst(DECODER_NAME, decoder);
 
 		assertThat(channel.pipeline().names()).containsExactly(DECODER_NAME);
-		assertThat(channel.pipeline().get(DECODER_NAME)).isInstanceOf(Utf8FrameValidator.class);
+		assertThat(channel.pipeline().get(DECODER_NAME)).isInstanceOf(StringDecoder.class);
 	}
 
 	@Test
 	void addEncoderSkipsIfExist() {
 		channel.pipeline()
-		       .addFirst(ENCODER_NAME, new Utf8FrameValidator());
+		       .addFirst(ENCODER_NAME, new StringEncoder());
 
 		testContext.addHandlerFirst(ENCODER_NAME, new LineBasedFrameDecoder(10));
 
 		assertThat(channel.pipeline().names()).containsExactly(ENCODER_NAME);
-		assertThat(channel.pipeline().get(ENCODER_NAME)).isInstanceOf(Utf8FrameValidator.class);
+		assertThat(channel.pipeline().get(ENCODER_NAME)).isInstanceOf(StringEncoder.class);
 	}
 
 	@Test

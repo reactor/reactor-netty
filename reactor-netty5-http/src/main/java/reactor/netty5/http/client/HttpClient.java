@@ -20,6 +20,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -1139,14 +1140,6 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		return dup;
 	}
 
-	@Override
-	public final HttpClient proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
-		Objects.requireNonNull(proxyOptions, "proxyOptions");
-		HttpClientProxyProvider.Build builder = new HttpClientProxyProvider.Build();
-		proxyOptions.accept(builder);
-		return proxyWithProxyProvider(builder.build());
-	}
-
 	/**
 	 * HTTP PUT to connect the {@link HttpClient}.
 	 *
@@ -1327,6 +1320,19 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	@Override
 	public final HttpClient wiretap(boolean enable) {
 		return super.wiretap(enable);
+	}
+
+	@Override
+	protected ProxyProvider proxyProviderFrom(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
+		HttpClientProxyProvider.Build builder = new HttpClientProxyProvider.Build();
+		proxyOptions.accept(builder);
+		return builder.build();
+	}
+
+	@Override
+	protected ProxyProvider proxyProviderFrom(Properties properties) {
+		ProxyProvider provider = HttpClientProxyProvider.createFrom(properties);
+		return provider != null ? provider : super.proxyProviderFrom(properties);
 	}
 
 	static boolean isCompressing(HttpHeaders h) {

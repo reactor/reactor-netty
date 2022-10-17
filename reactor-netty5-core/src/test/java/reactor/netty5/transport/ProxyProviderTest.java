@@ -21,14 +21,12 @@ import java.util.Properties;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import io.netty.contrib.handler.proxy.HttpProxyHandler;
 import io.netty.contrib.handler.proxy.ProxyHandler;
 import io.netty.contrib.handler.proxy.Socks5ProxyHandler;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.catchThrowable;
 
 class ProxyProviderTest {
 
@@ -44,8 +42,6 @@ class ProxyProviderTest {
 
 	private static final long CONNECT_TIMEOUT_1 = 100;
 	private static final long CONNECT_TIMEOUT_2 = 200;
-
-	private static final String DEFAULT_NON_PROXY_HOSTS_TRANSFORMED_TO_REGEX = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern(ProxyProvider.DEFAULT_NON_PROXY_HOSTS).toString();
 
 	@Test
 	void equalProxyProviders() {
@@ -200,218 +196,6 @@ class ProxyProviderTest {
 	}
 
 	@Test
-	void proxyFromSystemProperties_proxyProviderIsNotNullWhenHttpHostSet() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
-		assertThat(provider.getAddress().get().getHostString()).isEqualTo("host");
-	}
-
-	@Test
-	void proxyFromSystemProperties_port80SetByDefaultForHttpProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getPort()).isEqualTo(80);
-	}
-
-	@Test
-	void proxyFromSystemProperties_parseHttpPortFromSystemProperties() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTP_PROXY_PORT, "8080");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getPort()).isEqualTo(8080);
-	}
-
-	@Test
-	void proxyFromSystemProperties_proxySettingsIsNotNullWhenHttpSHostSet() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
-		assertThat(provider.getAddress().get().getHostString()).isEqualTo("host");
-	}
-
-	@Test
-	void proxyFromSystemProperties_port443SetByDefaultForHttpProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getPort()).isEqualTo(443);
-	}
-
-	@Test
-	void proxyFromSystemProperties_parseHttpsPortFromSystemProperties() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_PORT, "8443");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getPort()).isEqualTo(8443);
-	}
-
-	@Test
-	void proxyFromSystemProperties_defaultNonHttpHostsSetForHttpProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(DEFAULT_NON_PROXY_HOSTS_TRANSFORMED_TO_REGEX);
-	}
-
-	@Test
-	void proxyFromSystemProperties_defaultNonHttpHostsSetForHttpsProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(DEFAULT_NON_PROXY_HOSTS_TRANSFORMED_TO_REGEX);
-	}
-
-	@Test
-	void proxyFromSystemProperties_httpsProxyOverHttpProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "https");
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "http");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getHostString()).isEqualTo("https");
-	}
-
-	@Test
-	void proxyFromSystemProperties_customNonProxyHostsSetForHttpProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "non-host");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo("\\Qnon-host\\E");
-	}
-
-	@Test
-	void proxyFromSystemProperties_customNonProxyHostsSetForHttpsProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "non-host");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo("\\Qnon-host\\E");
-	}
-
-	@Test
-	void proxyFromSystemProperties_customNonProxyHostsWithWildcardSetForHttpProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "*.non-host");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(".*\\Q.non-host\\E");
-	}
-
-	@Test
-	void proxyFromSystemProperties_customNonProxyHostsWithWildcardSetForHttpsProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTP_NON_PROXY_HOSTS, "*.non-host");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-
-		assertThat(provider).isNotNull();
-		assertThat(provider.getNonProxyHostsPredicate().toString()).isEqualTo(".*\\Q.non-host\\E");
-	}
-
-	@Test
-	void proxyFromSystemProperties_basicAuthSetFromHttpProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTP_PROXY_USER, "user");
-		properties.setProperty(ProxyProvider.HTTP_PROXY_PASSWORD, "password");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-		assertThat(provider).isNotNull();
-
-		ProxyHandler handler = provider.newProxyHandler();
-		assertThat(handler.getClass()).isEqualTo(HttpProxyHandler.class);
-
-		HttpProxyHandler httpHandler = (HttpProxyHandler) handler;
-		assertThat(httpHandler.username()).isEqualTo("user");
-		assertThat(httpHandler.password()).isEqualTo("password");
-	}
-
-	@Test
-	void proxyFromSystemProperties_basicAuthSetFromHttpsProxy() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_USER, "user");
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_PASSWORD, "password");
-
-		ProxyProvider provider = ProxyProvider.createFrom(properties);
-		assertThat(provider).isNotNull();
-
-		ProxyHandler handler = provider.newProxyHandler();
-		assertThat(handler.getClass()).isEqualTo(HttpProxyHandler.class);
-
-		HttpProxyHandler httpHandler = (HttpProxyHandler) handler;
-		assertThat(httpHandler.username()).isEqualTo("user");
-		assertThat(httpHandler.password()).isEqualTo("password");
-	}
-
-	@Test
-	void proxyFromSystemProperties_npeWhenHttpProxyUsernameIsSetButNotPassword() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTP_PROXY_USER, "user");
-
-		Throwable throwable = catchThrowable(() -> ProxyProvider.createFrom(properties));
-		assertThat(throwable)
-				.isInstanceOf(NullPointerException.class)
-				.hasMessage("Proxy username is set via 'http.proxyUser', but 'http.proxyPassword' is not set.");
-	}
-
-	@Test
-	void proxyFromSystemProperties_npeWhenHttpsProxyUsernameIsSetButNotPassword() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_USER, "user");
-
-		Throwable throwable = catchThrowable(() -> ProxyProvider.createFrom(properties));
-		assertThat(throwable)
-				.isInstanceOf(NullPointerException.class)
-				.hasMessage("Proxy username is set via 'https.proxyUser', but 'https.proxyPassword' is not set.");
-	}
-
-	@Test
 	void proxyFromSystemProperties_socksProxy5SetWhenSocksSystemPropertySet() {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
@@ -489,28 +273,6 @@ class ProxyProviderTest {
 	}
 
 	@Test
-	void proxyFromSystemProperties_errorWhenHttpPortIsEmptyString() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTP_PROXY_PORT, "");
-
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> ProxyProvider.createFrom(properties))
-				.withMessage("expected system property http.proxyPort to be a number but got empty string");
-	}
-
-	@Test
-	void proxyFromSystemProperties_errorWhenHttpsPortIsEmptyString() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_PORT, "");
-
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> ProxyProvider.createFrom(properties))
-				.withMessage("expected system property https.proxyPort to be a number but got empty string");
-	}
-
-	@Test
 	void proxyFromSystemProperties_errorWhenSocksPortIsEmptyString() {
 		Properties properties = new Properties();
 		properties.setProperty(ProxyProvider.SOCKS_PROXY_HOST, "host");
@@ -519,28 +281,6 @@ class ProxyProviderTest {
 		assertThatIllegalArgumentException()
 				.isThrownBy(() -> ProxyProvider.createFrom(properties))
 				.withMessage("expected system property socksProxyPort to be a number but got empty string");
-	}
-
-	@Test
-	void proxyFromSystemProperties_errorWhenHttpPortIsNotANumber() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTP_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTP_PROXY_PORT, "8080Hello");
-
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> ProxyProvider.createFrom(properties))
-				.withMessage("expected system property http.proxyPort to be a number but got 8080Hello");
-	}
-
-	@Test
-	void proxyFromSystemProperties_errorWhenHttpsPortIsNotANumber() {
-		Properties properties = new Properties();
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_HOST, "host");
-		properties.setProperty(ProxyProvider.HTTPS_PROXY_PORT, "8080Hello");
-
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> ProxyProvider.createFrom(properties))
-				.withMessage("expected system property https.proxyPort to be a number but got 8080Hello");
 	}
 
 	@Test

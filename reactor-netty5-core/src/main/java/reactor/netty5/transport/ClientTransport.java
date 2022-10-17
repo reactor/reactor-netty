@@ -29,6 +29,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.resources.LoopResources;
+import reactor.util.annotation.Nullable;
 
 /**
  * A generic client {@link Transport} that will {@link #connect()} to a remote address and provide a {@link Connection}
@@ -240,12 +241,10 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 */
 	public T proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
 		Objects.requireNonNull(proxyOptions, "proxyOptions");
-		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder();
-		proxyOptions.accept(builder);
-		return proxyWithProxyProvider(builder.build());
+		return proxyWithProxyProvider(proxyProviderFrom(proxyOptions));
 	}
 
-	protected final T proxyWithProxyProvider(ProxyProvider proxy) {
+	final T proxyWithProxyProvider(ProxyProvider proxy) {
 		T dup = duplicate();
 		CONF conf = dup.configuration();
 		conf.proxyProvider = proxy;
@@ -285,8 +284,19 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @return a new {@link ClientTransport} reference
 	 */
 	final T proxyWithSystemProperties(Properties properties) {
-		ProxyProvider proxy = ProxyProvider.createFrom(properties);
+		ProxyProvider proxy = proxyProviderFrom(properties);
 		return proxy == null ? noProxy() : proxyWithProxyProvider(proxy);
+	}
+
+	protected ProxyProvider proxyProviderFrom(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
+		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder();
+		proxyOptions.accept(builder);
+		return builder.build();
+	}
+
+	@Nullable
+	protected ProxyProvider proxyProviderFrom(Properties properties) {
+		return ProxyProvider.createFrom(properties);
 	}
 
 	/**
