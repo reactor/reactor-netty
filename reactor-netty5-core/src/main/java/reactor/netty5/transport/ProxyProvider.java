@@ -29,7 +29,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
-import io.netty.contrib.handler.proxy.HttpProxyHandler;
 import io.netty.contrib.handler.proxy.ProxyHandler;
 import io.netty.contrib.handler.proxy.Socks4ProxyHandler;
 import io.netty.contrib.handler.proxy.Socks5ProxyHandler;
@@ -125,11 +124,6 @@ public class ProxyProvider {
 
 		final ProxyHandler proxyHandler;
 		switch (this.type) {
-			case HTTP:
-				proxyHandler = b ?
-						new HttpProxyHandler(proxyAddr, username, password) :
-						new HttpProxyHandler(proxyAddr);
-				break;
 			case SOCKS4:
 				proxyHandler = Objects.nonNull(username) ? new Socks4ProxyHandler(proxyAddr, username) :
 						new Socks4ProxyHandler(proxyAddr);
@@ -232,17 +226,6 @@ public class ProxyProvider {
 			AdvancedBufferFormat.HEX_DUMP
 					.toLoggingHandler("reactor.netty5.proxy", LogLevel.DEBUG, Charset.defaultCharset());
 
-	static final String HTTP_PROXY_HOST = "http.proxyHost";
-	static final String HTTP_PROXY_PORT = "http.proxyPort";
-	static final String HTTP_PROXY_USER = "http.proxyUser";
-	static final String HTTP_PROXY_PASSWORD = "http.proxyPassword";
-	static final String HTTPS_PROXY_HOST = "https.proxyHost";
-	static final String HTTPS_PROXY_PORT = "https.proxyPort";
-	static final String HTTPS_PROXY_USER = "https.proxyUser";
-	static final String HTTPS_PROXY_PASSWORD = "https.proxyPassword";
-	static final String HTTP_NON_PROXY_HOSTS = "http.nonProxyHosts";
-	static final String DEFAULT_NON_PROXY_HOSTS = "localhost|127.*|[::1]";
-
 	static final String SOCKS_PROXY_HOST = "socksProxyHost";
 	static final String SOCKS_PROXY_PORT = "socksProxyPort";
 	static final String SOCKS_VERSION = "socksProxyVersion";
@@ -255,64 +238,11 @@ public class ProxyProvider {
 	static ProxyProvider createFrom(Properties properties) {
 		Objects.requireNonNull(properties, "properties");
 
-		if (properties.containsKey(HTTP_PROXY_HOST) || properties.containsKey(HTTPS_PROXY_HOST)) {
-			return createHttpProxyFrom(properties);
-		}
 		if (properties.containsKey(SOCKS_PROXY_HOST)) {
 			return createSocksProxyFrom(properties);
 		}
 
 		return null;
-	}
-
-	/*
-		assumes properties has either http.proxyHost or https.proxyHost
-	 */
-	static ProxyProvider createHttpProxyFrom(Properties properties) {
-		String hostProperty;
-		String portProperty;
-		String userProperty;
-		String passwordProperty;
-		String defaultPort;
-		if (properties.containsKey(HTTPS_PROXY_HOST)) {
-			hostProperty = HTTPS_PROXY_HOST;
-			portProperty = HTTPS_PROXY_PORT;
-			userProperty = HTTPS_PROXY_USER;
-			passwordProperty = HTTPS_PROXY_PASSWORD;
-			defaultPort = "443";
-		}
-		else {
-			hostProperty = HTTP_PROXY_HOST;
-			portProperty = HTTP_PROXY_PORT;
-			userProperty = HTTP_PROXY_USER;
-			passwordProperty = HTTP_PROXY_PASSWORD;
-			defaultPort = "80";
-		}
-
-		String hostname = Objects.requireNonNull(properties.getProperty(hostProperty), hostProperty);
-		int port = parsePort(properties.getProperty(portProperty, defaultPort), portProperty);
-
-		String nonProxyHosts = properties.getProperty(HTTP_NON_PROXY_HOSTS, DEFAULT_NON_PROXY_HOSTS);
-		RegexShouldProxyPredicate transformedNonProxyHosts = RegexShouldProxyPredicate.fromWildcardedPattern(nonProxyHosts);
-
-		Build proxy = new Build()
-				.type(Proxy.HTTP)
-				.host(hostname)
-				.port(port)
-				.nonProxyHostsPredicate(transformedNonProxyHosts);
-
-		if (properties.containsKey(userProperty)) {
-			proxy = proxy.username(properties.getProperty(userProperty));
-
-			if (properties.containsKey(passwordProperty)) {
-				proxy = proxy.password(u -> properties.getProperty(passwordProperty));
-			}
-			else {
-				throw new NullPointerException("Proxy username is set via '" + userProperty + "', but '" + passwordProperty + "' is not set.");
-			}
-		}
-
-		return proxy.build();
 	}
 
 	static ProxyProvider createSocksProxyFrom(Properties properties) {
@@ -341,7 +271,7 @@ public class ProxyProvider {
 		return proxy.build();
 	}
 
-	static int parsePort(String port, String propertyName) {
+	protected static int parsePort(String port, String propertyName) {
 		Objects.requireNonNull(port, "port");
 		Objects.requireNonNull(propertyName, "propertyName");
 
@@ -447,7 +377,7 @@ public class ProxyProvider {
 		}
 	}
 
-	static final class RegexShouldProxyPredicate implements Predicate<SocketAddress> {
+	protected static final class RegexShouldProxyPredicate implements Predicate<SocketAddress> {
 
 		public static final RegexShouldProxyPredicate DEFAULT_NON_PROXY = RegexShouldProxyPredicate.fromWildcardedPattern("localhost|127.*|[::1]|0.0.0.0|[::0]");
 
