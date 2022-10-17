@@ -64,6 +64,12 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	final Function<String, String> uriTagValue;
 
+	byte flags;
+
+	final static int REQUEST_SENT = 0x01;
+
+	final static int RESPONSE_RECEIVED = 0x02;
+
 	protected AbstractHttpClientMetricsHandler(@Nullable Function<String, String> uriTagValue) {
 		this.uriTagValue = uriTagValue;
 	}
@@ -78,6 +84,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		this.path = copy.path;
 		this.status = copy.status;
 		this.uriTagValue = copy.uriTagValue;
+		this.flags = copy.flags;
 	}
 
 	@Override
@@ -95,6 +102,17 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 						.addListener(future -> {
 							try {
 								recordWrite(address);
+								// Indicate that we have fully flushed the request. The channelRead method will reset
+								// only if the REQUEST_SENT flag is set
+								flags |= REQUEST_SENT;
+
+								// Under heavy load, it may happen that the netty Selector is processing OP_WRITES, then OP_READ operations.
+								// So, since netty5 write listeners are executed asynchronously, it may happen that the channelRead method
+								// has already been called before our write listener in case we have already received the response.
+								// So, we need to reset class fields in case we detect that the channelRead has been called before our write listener.
+								if ((flags & RESPONSE_RECEIVED) == RESPONSE_RECEIVED) {
+									reset();
+								}
 							}
 							catch (RuntimeException e) {
 								if (log.isWarnEnabled()) {
@@ -128,7 +146,15 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 			if (msg instanceof LastHttpContent) {
 				recordRead(ctx.channel().remoteAddress());
-				reset();
+				// Set flag used to indicate that we have received the full response.
+				flags |= RESPONSE_RECEIVED;
+
+				// Under heavy load, it may happen that the netty Selector is processing OP_WRITES, then OP_READ operations.
+				// So, since netty5 write listeners are executed asynchronously, it may happen that channelRead is called before
+				// the write listener is called. So, only reset class fields if the write listener has been called.
+				if ((flags & REQUEST_SENT) == REQUEST_SENT) {
+					reset();
+				}
 			}
 		}
 		catch (RuntimeException e) {
@@ -214,6 +240,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		dataSent = 0;
 		dataReceivedTime = 0;
 		dataSentTime = 0;
+		flags = 0x0;
 	}
 
 	protected void startRead(HttpResponse msg) {
