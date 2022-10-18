@@ -64,7 +64,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	final Function<String, String> uriTagValue;
 
-	byte flags;
+	int flags;
 
 	final static int REQUEST_SENT = 0x01;
 
