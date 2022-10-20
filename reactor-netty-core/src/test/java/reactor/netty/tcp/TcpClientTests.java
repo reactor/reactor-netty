@@ -61,7 +61,6 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
@@ -73,7 +72,6 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.NameResolverProvider;
 import reactor.test.StepVerifier;
-import reactor.test.subscriber.TestSubscriber;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.retry.Retry;
@@ -258,11 +256,9 @@ public class TcpClientTests {
 	}
 
 	@Test
-	void tcpConnectionInboundAndOutboundCompletesOnDispose() throws InterruptedException {
-		final CountDownLatch latch = new CountDownLatch(100);
-		final TestSubscriber<Object> outboundSubscriber = TestSubscriber.create();
-		final TestSubscriber<Object> inboundSubscriber = TestSubscriber.create();
-		final Sinks.Empty<Void> awaiter = Sinks.empty();
+	void tcpConnectionInboundAndOutboundCompletesOnDispose() throws Exception {
+		final CountDownLatch latch1 = new CountDownLatch(100);
+		final CountDownLatch latch2 = new CountDownLatch(2);
 
 		Connection client =
 				TcpClient.create()
@@ -270,30 +266,31 @@ public class TcpClientTests {
 				         .port(echoServerPort)
 				         .doOnConnected(c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024)))
 				         .handle((in, out) -> {
-					         out.sendString(Flux.interval(Duration.ofMillis(10))
-					                            .map(i -> "Hello World!" + i + "\n")
-					                            .subscribeOn(Schedulers.parallel()))
-					            .then()
-					            .subscribe(outboundSubscriber);
+				             out.sendString(Flux.interval(Duration.ofMillis(10))
+				                                .map(i -> "Hello World!" + i + "\n")
+				                                .subscribeOn(Schedulers.parallel()))
+				                .then()
+				                .doOnTerminate(latch2::countDown)
+				                .subscribe();
 
-					         in.receive()
-					           .asString()
-					           .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
-					           .doOnNext(s -> latch.countDown())
-					           .then()
-					           .subscribe(inboundSubscriber);
+				             in.receive()
+				               .asString()
+				               .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+				               .doOnNext(s -> latch1.countDown())
+				               .then()
+				               .doOnTerminate(latch2::countDown)
+				               .subscribe();
 
-							 return awaiter.asMono();
+				             return out.neverComplete();
 				         })
 				         .wiretap(true)
 				         .connectNow(Duration.ofSeconds(15));
 
-		assertThat(latch.await(15, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch1.await(15, TimeUnit.SECONDS)).isTrue();
 
 		client.disposeNow();
 
-		assertThat(inboundSubscriber.isTerminatedComplete()).isTrue();
-		assertThat(outboundSubscriber.isTerminatedComplete()).isTrue();
+		assertThat(latch2.await(15, TimeUnit.SECONDS)).isTrue();
 	}
 
 	@Test
