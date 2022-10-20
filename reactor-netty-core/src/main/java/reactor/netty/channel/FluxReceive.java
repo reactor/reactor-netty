@@ -105,15 +105,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public void cancel() {
-		cancelReceiver();
-		if (eventLoop.inEventLoop()) {
-			drainReceiver();
-		}
-		else {
-			eventLoop.execute(this::drainReceiver);
-		}
+		doCancel(0);
 	}
-
 
 	final long getPending() {
 		return receiverQueue != null ? receiverQueue.size() : 0;
@@ -125,13 +118,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public void dispose() {
-		disposeReceiver();
-		if (eventLoop.inEventLoop()) {
-			drainReceiver();
-		}
-		else {
-			eventLoop.execute(this::drainReceiver);
-		}
+		doCancel(1);
 	}
 
 	@Override
@@ -204,23 +191,23 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 	}
 
-	final void cancelReceiver() {
+	final void cancelReceiver(int cancelCode) {
 		IntConsumer c = receiverCancel;
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
-				c.accept(0);
+				c.accept(cancelCode);
 			}
 		}
 	}
 
-	final void disposeReceiver() {
-		IntConsumer c = receiverCancel;
-		if (c != CANCELLED) {
-			c = CANCEL.getAndSet(this, CANCELLED);
-			if (c != CANCELLED) {
-				c.accept(1);
-			}
+	final void doCancel(int cancelCode) {
+		cancelReceiver(cancelCode);
+		if (eventLoop.inEventLoop()) {
+			drainReceiver();
+		}
+		else {
+			eventLoop.execute(this::drainReceiver);
 		}
 	}
 
