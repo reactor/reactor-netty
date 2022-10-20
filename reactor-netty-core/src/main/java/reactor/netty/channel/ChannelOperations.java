@@ -370,7 +370,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * Always discard content regardless whether there is a receiver.
 	 */
 	public final void discard() {
-		inbound.cancel();
+		inbound.dispose();
 	}
 
 	/**
