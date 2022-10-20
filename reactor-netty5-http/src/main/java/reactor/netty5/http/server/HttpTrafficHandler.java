@@ -137,12 +137,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		if (msg instanceof HttpRequest request) {
 			IdleTimeoutHandler.removeIdleTimeoutHandler(ctx.pipeline());
 
-			if (H2.equals(request.protocolVersion())) {
-				sendDecodingFailures(new IllegalStateException(
-						"Unexpected request [" + request.method() + " " + request.uri() + " HTTP/2.0]"), msg);
-				return;
-			}
-
 			if (persistentConnection) {
 				pendingResponses += 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {
@@ -159,6 +153,13 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 				Resource.dispose(msg);
 				return;
 			}
+
+			if (H2.equals(request.protocolVersion())) {
+				sendDecodingFailures(new IllegalStateException(
+						"Unexpected request [" + request.method() + " " + request.uri() + " HTTP/2.0]"), msg);
+				return;
+			}
+
 			if (pendingResponses > 1) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug(format(ctx.channel(), "Buffering pipelined HTTP request, " +
@@ -280,6 +281,9 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		// modify message on way out to add headers if needed
 		if (msg instanceof HttpResponse response) {
+			if (pendingResponses == 0) {
+				return responseAlreadySent(msg);
+			}
 			nonInformationalResponse = !isInformational(response);
 			// Assume the response writer knows if they can persist or not and sets isKeepAlive on the response
 			boolean maxKeepAliveRequestsReached = maxKeepAliveRequests != -1 && HttpServerOperations.requestsCounter(ctx.channel()) == maxKeepAliveRequests;
@@ -340,16 +344,20 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			return future;
 		}
 		if (persistentConnection && pendingResponses == 0) {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(
-						format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
-						msg instanceof HttpObject ?
-								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
-			}
-			Resource.dispose(msg);
-			return ctx.newSucceededFuture();
+			return responseAlreadySent(msg);
 		}
 		return ctx.write(msg);
+	}
+
+	Future<Void> responseAlreadySent(Object msg) {
+		if (HttpServerOperations.log.isDebugEnabled()) {
+			HttpServerOperations.log.debug(
+					format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
+					msg instanceof HttpObject ?
+							httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)) : msg);
+		}
+		Resource.dispose(msg);
+		return ctx.newSucceededFuture();
 	}
 
 	@Override
