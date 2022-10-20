@@ -1573,17 +1573,17 @@ class HttpServerTests extends BaseHttpTest {
 				          .bindNow();
 
 		doTestDecodingFailureLastHttpContent("PUT /1 HTTP/1.1\r\nHost: a.example.com\r\n" +
-				"Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n", "400 Bad Request", "connection: close");
+				"Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n", 1, "400 Bad Request", "connection: close");
 
 		assertThat(error.get()).isNull();
 
 		doTestDecodingFailureLastHttpContent("PUT /2 HTTP/1.1\r\nHost: a.example.com\r\n" +
-				"Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n", "200 OK");
+				"Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n", 2, "200 OK");
 
 		assertThat(error.get()).isNull();
 	}
 
-	private void doTestDecodingFailureLastHttpContent(String message, String... expectations) throws Exception {
+	private void doTestDecodingFailureLastHttpContent(String message, int expectedSize, String... expectations) throws Exception {
 		TcpClient tcpClient =
 				TcpClient.create()
 				         .port(disposableServer.port())
@@ -1596,11 +1596,11 @@ class HttpServerTests extends BaseHttpTest {
 		          .closeFuture()
 		          .addListener(f -> latch.countDown());
 
-		AtomicReference<String> result = new AtomicReference<>();
+		AtomicReference<List<String>> result = new AtomicReference<>(new ArrayList<>());
 		connection.inbound()
 		          .receive()
 		          .asString()
-		          .doOnNext(result::set)
+		          .doOnNext(s -> result.get().add(s))
 		          .subscribe();
 
 		connection.outbound()
@@ -1609,7 +1609,8 @@ class HttpServerTests extends BaseHttpTest {
 		          .subscribe();
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
-		assertThat(result.get()).contains(expectations);
+		assertThat(result.get()).hasSize(expectedSize);
+		assertThat(result.get().get(0)).contains(expectations);
 		assertThat(connection.channel().isActive()).isFalse();
 	}
 

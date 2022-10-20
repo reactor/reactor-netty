@@ -61,6 +61,7 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
@@ -72,6 +73,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.NameResolverProvider;
 import reactor.test.StepVerifier;
+import reactor.test.subscriber.TestSubscriber;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.retry.Retry;
@@ -253,6 +255,45 @@ public class TcpClientTests {
 
 		assertThat(strings).hasSize(messages);
 		client.disposeNow();
+	}
+
+	@Test
+	void tcpConnectionInboundAndOutboundCompletesOnDispose() throws InterruptedException {
+		final CountDownLatch latch = new CountDownLatch(100);
+		final TestSubscriber<Object> outboundSubscriber = TestSubscriber.create();
+		final TestSubscriber<Object> inboundSubscriber = TestSubscriber.create();
+		final Sinks.Empty<Void> awaiter = Sinks.empty();
+
+		Connection client =
+				TcpClient.create()
+				         .host("localhost")
+				         .port(echoServerPort)
+				         .doOnConnected(c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024)))
+				         .handle((in, out) -> {
+					         out.sendString(Flux.interval(Duration.ofMillis(10))
+					                            .map(i -> "Hello World!" + i + "\n")
+					                            .subscribeOn(Schedulers.parallel()))
+					            .then()
+					            .subscribe(outboundSubscriber);
+
+					         in.receive()
+					           .asString()
+					           .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+					           .doOnNext(s -> latch.countDown())
+					           .then()
+					           .subscribe(inboundSubscriber);
+
+							 return awaiter.asMono();
+				         })
+				         .wiretap(true)
+				         .connectNow(Duration.ofSeconds(15));
+
+		assertThat(latch.await(15, TimeUnit.SECONDS)).isTrue();
+
+		client.disposeNow();
+
+		assertThat(inboundSubscriber.isTerminatedComplete()).isTrue();
+		assertThat(outboundSubscriber.isTerminatedComplete()).isTrue();
 	}
 
 	@Test
