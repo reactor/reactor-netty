@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import io.netty.contrib.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpRequest;
@@ -302,6 +303,12 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	@Override
 	public void run() {
 		cleanFiles();
+		// Clean list of all InterfaceHttpData from body part
+		for (InterfaceHttpData bodyAttribute : getBodyListAttributes()) {
+			if (bodyAttribute.isAccessible()) {
+				bodyAttribute.close();
+			}
+		}
 	}
 
 	final HttpClientFormEncoder applyChanges(HttpRequest request) {
