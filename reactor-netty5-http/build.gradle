@@ -278,8 +278,6 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.client.HttpClientRequest#headers(io.netty.handler.codec.http.HttpHeaders)',
 			'reactor.netty.http.client.HttpClientResponse#responseHeaders()',
 			'reactor.netty.http.client.HttpClientResponse#status()',
-			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer)',
-			'reactor.netty.http.client.HttpClient$RequestSender#sendForm(java.util.function.BiConsumer, java.util.function.Consumer)',
 			'reactor.netty.http.client.HttpClientForm#encoding(io.netty.handler.codec.http.multipart.HttpPostRequestEncoder$EncoderMode)',
 			'reactor.netty.http.client.HttpClientForm#factory(io.netty.handler.codec.http.multipart.HttpDataFactory)',
 			'reactor.netty.http.client.WebsocketClientSpec#version()',
