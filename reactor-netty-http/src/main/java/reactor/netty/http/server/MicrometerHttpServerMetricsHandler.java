@@ -24,6 +24,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Function;
@@ -31,8 +32,10 @@ import java.util.function.Supplier;
 
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
-import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
-import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.REACTOR_NETTY_STATUS;
+import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.HTTP_SCHEME;
+import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.HTTP_STATUS_CODE;
+import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.NET_HOST_NAME;
+import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.NET_HOST_PORT;
 import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.REACTOR_NETTY_TYPE;
 import static reactor.netty.http.server.HttpServerObservations.ResponseTimeLowCardinalityTags.METHOD;
 import static reactor.netty.http.server.HttpServerObservations.ResponseTimeLowCardinalityTags.STATUS;
@@ -94,7 +97,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	protected void startRead(HttpServerOperations ops, String path, String method) {
 		super.startRead(ops, path, method);
 
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops.nettyRequest);
+		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops);
 		responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 	}
 
@@ -104,32 +107,45 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		super.startWrite(ops, path, method, status);
 
 		if (responseTimeObservation == null) {
-			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops.nettyRequest);
+			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops);
 			responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		}
-		responseTimeHandlerContext.setResponse(ops.nettyResponse); // TODO: Is this OK?
+		responseTimeHandlerContext.setResponse(ops.nettyResponse);
 		responseTimeHandlerContext.status = status;
 	}
 
+	/**
+	 * Requirements for HTTP servers
+	 * <p>https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#span
+	 * <p>https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#common-attributes
+	 * <p>https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#http-server
+	 */
 	static final class ResponseTimeHandlerContext extends RequestReplyReceiverContext<HttpRequest, HttpResponse>
 			implements ReactorNettyHandlerContext, Supplier<Observation.Context> {
 		static final String TYPE = "server";
 
 		final String method;
+		final String netHostName;
+		final String netHostPort;
 		final String path;
 		final MicrometerHttpServerMetricsRecorder recorder;
+		final String scheme;
 
 		// status might not be known beforehand
 		String status;
 
-		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, String path, HttpRequest request) {
+		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, String path, HttpServerOperations ops) {
 			super((carrier, key) -> Objects.requireNonNull(carrier).headers().get(key));
 			this.recorder = recorder;
+			HttpRequest request = ops.nettyRequest;
 			this.method = request.method().name();
+			InetSocketAddress hostAddress = ops.hostAddress();
+			this.netHostName = hostAddress != null ? hostAddress.getHostString() : "";
+			this.netHostPort = hostAddress != null ? hostAddress.getPort() + "" : "";
 			this.path = path;
-			put(HttpServerRequest.class, request);
+			this.scheme = ops.scheme;
 			setCarrier(request);
-			setContextualName(this.method);
+			setContextualName(this.method + '_' + this.path.substring(1));
 		}
 
 		@Override
@@ -144,19 +160,14 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 		@Override
 		public KeyValues getHighCardinalityKeyValues() {
-			return KeyValues.of(REACTOR_NETTY_PROTOCOL.asString(), recorder.protocol(),
-					REACTOR_NETTY_STATUS.asString(), status, REACTOR_NETTY_TYPE.asString(), TYPE);
+			return KeyValues.of(REACTOR_NETTY_TYPE.asString(), TYPE,
+					HTTP_SCHEME.asString(), scheme, HTTP_STATUS_CODE.asString(), status,
+					NET_HOST_NAME.asString(), netHostName, NET_HOST_PORT.asString(), netHostPort);
 		}
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
 			return KeyValues.of(METHOD.asString(), method, STATUS.asString(), status, URI.asString(), path);
-		}
-
-		@Override
-		public void setResponse(HttpResponse response) {
-			super.setResponse(response);
-			put(HttpServerResponse.class, response);
 		}
 	}
 }

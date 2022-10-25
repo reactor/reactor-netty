@@ -21,7 +21,6 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Random;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -109,10 +108,10 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 			Http2SslContextSpec serverCtxHttp = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 			disposableServer =
 					HttpServer.create()
-					          .metrics(true, Function.identity())
+					          .metrics(true, s -> s.replace("1", "{id}"))
 					          .secure(spec -> spec.sslContext(serverCtxHttp))
 					          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2)
-					          .route(r -> r.post("/post", (req, res) -> res.send(req.receive().retain())))
+					          .route(r -> r.post("/post/{id}", (req, res) -> res.send(req.receive().retain())))
 					          .bindNow();
 
 			HttpClient client;
@@ -144,10 +143,36 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 
 			SpansAssert.assertThat(bb.getFinishedSpans().stream().filter(f -> f.getTraceId().equals(current.context().traceId()))
 			           .collect(Collectors.toList()))
-			           .hasASpanWithName("hostname resolution")
-			           .hasASpanWithName("connect")
-			           .hasASpanWithName("tls handshake")
-			           .hasASpanWithName("POST");
+			           .hasASpanWithName("hostname resolution",
+			                   spanAssert -> spanAssert.hasTagWithKey("net.peer.name")
+			                                           .hasTagWithKey("net.peer.port")
+			                                           .hasTagWithKey("reactor.netty.protocol")
+			                                           .hasTagWithKey("reactor.netty.status")
+			                                           .hasTagWithKey("reactor.netty.type"))
+			           .hasASpanWithName("connect",
+			                   spanAssert -> spanAssert.hasTagWithKey("net.peer.name")
+			                                           .hasTagWithKey("net.peer.port")
+			                                           .hasTagWithKey("reactor.netty.protocol")
+			                                           .hasTagWithKey("reactor.netty.status")
+			                                           .hasTagWithKey("reactor.netty.type"))
+			           .hasASpanWithName("tls handshake",
+			                   spanAssert -> spanAssert.hasTagWithKey("net.peer.name")
+			                                           .hasTagWithKey("net.peer.port")
+			                                           .hasTagWithKey("reactor.netty.protocol")
+			                                           .hasTagWithKey("reactor.netty.status")
+			                                           .hasTagWithKey("reactor.netty.type"))
+			           .hasASpanWithName("http POST",
+			                   spanAssert -> spanAssert.hasTagWithKey("http.status_code")
+			                                           .hasTagWithKey("http.url")
+			                                           .hasTagWithKey("net.peer.name")
+			                                           .hasTagWithKey("net.peer.port")
+			                                           .hasTagWithKey("reactor.netty.type"))
+			           .hasASpanWithName("POST_post/{id}",
+			                   spanAssert -> spanAssert.hasTagWithKey("http.scheme")
+			                                           .hasTagWithKey("http.status_code")
+			                                           .hasTagWithKey("net.host.name")
+			                                           .hasTagWithKey("net.host.port")
+			                                           .hasTagWithKey("reactor.netty.type"));
 		};
 	}
 
@@ -171,13 +196,13 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 		HttpClient localClient =
 				client.port(disposableServer.port())
 				      .host("localhost")
-				      .metrics(true, Function.identity());
+				      .metrics(true, s -> s.replace("1", "{id}"));
 
 		List<byte[]> responses =
 				Flux.range(0, 2)
 				    .flatMap(i ->
 				        localClient.post()
-				                   .uri("/post")
+				                   .uri("/post/1")
 				                   .send(Mono.just(Unpooled.wrappedBuffer(content)))
 				                   .responseSingle((res, byteBuf) -> byteBuf.asByteArray()))
 				    .collectList()
