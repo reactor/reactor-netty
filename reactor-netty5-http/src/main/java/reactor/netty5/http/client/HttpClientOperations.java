@@ -64,6 +64,7 @@ import io.netty5.handler.stream.ChunkedWriteHandler;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
+import io.netty5.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -858,6 +859,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					HttpUtil.setContentLength(r, encoder.length());
 				}
 
+				Future<Void> f = parent.channel().writeAndFlush(r);
+
 				if (encoder.isChunked()) {
 					Flux<Long> tail = encoder.progressSink.asFlux().onBackpressureLatest();
 
@@ -876,8 +879,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					      .writeAndFlush(encoder);
 				}
 				else {
-					Mono<Void> mono = Mono.fromCompletionStage(parent.channel()
-							.writeAndFlush(r).asStage());
+					Mono<Void> mono = Mono.fromCompletionStage(f.asStage());
 
 					if (encoder.cleanOnTerminate) {
 						mono = mono.doOnCancel(encoder)
