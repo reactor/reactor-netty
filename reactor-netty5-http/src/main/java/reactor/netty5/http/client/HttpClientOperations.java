@@ -858,9 +858,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					HttpUtil.setContentLength(r, encoder.length());
 				}
 
-				Mono<Void> mono = Mono.fromCompletionStage(parent.channel()
-				                        .writeAndFlush(r).asStage());
-
 				if (encoder.isChunked()) {
 					Flux<Long> tail = encoder.progressSink.asFlux().onBackpressureLatest();
 
@@ -879,6 +876,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					      .writeAndFlush(encoder);
 				}
 				else {
+					Mono<Void> mono = Mono.fromCompletionStage(parent.channel()
+							.writeAndFlush(r).asStage());
+
 					if (encoder.cleanOnTerminate) {
 						mono = mono.doOnCancel(encoder)
 						           .doAfterTerminate(encoder);
