@@ -32,7 +32,6 @@ import io.netty.handler.codec.http.multipart.DiskFileUpload;
 import io.netty.handler.codec.http.multipart.FileUpload;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
-import io.netty.handler.codec.http.multipart.MemoryFileUpload;
 import io.netty.handler.stream.ChunkedInput;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Sinks;
@@ -190,7 +189,8 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 			if (contentType == null) {
 				scontentType = DEFAULT_BINARY_CONTENT_TYPE;
 			}
-			MemoryFileUpload fileUpload = new MemoryFileUpload(name,
+			FileUpload fileUpload = newFactory.createFileUpload(request,
+					name,
 					filename,
 					scontentType,
 					DEFAULT_TRANSFER_ENCODING,
@@ -283,8 +283,13 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 				scontentType = DEFAULT_TEXT_CONTENT_TYPE;
 			}
 
-			MemoryFileUpload fileUpload =
-					new MemoryFileUpload(name, "", scontentType, null, newCharset, -1);
+			FileUpload fileUpload = newFactory.createFileUpload(request,
+					name,
+					"",
+					scontentType,
+					null,
+					newCharset,
+					-1);
 			fileUpload.setMaxSize(-1);
 			fileUpload.setContent(stream);
 			addBodyHttpData(fileUpload);
