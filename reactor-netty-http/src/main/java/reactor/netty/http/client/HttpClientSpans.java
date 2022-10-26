@@ -49,22 +49,42 @@ enum HttpClientSpans implements SpanDocumentation {
 	enum ResponseTimeHighCardinalityTags implements KeyName {
 
 		/**
-		 * Reactor Netty protocol (always http).
+		 * Status code.
 		 */
-		REACTOR_NETTY_PROTOCOL {
+		HTTP_STATUS_CODE {
 			@Override
 			public String asString() {
-				return "reactor.netty.protocol";
+				return "http.status_code";
 			}
 		},
 
 		/**
-		 * Reactor Netty status.
+		 * URL.
 		 */
-		REACTOR_NETTY_STATUS {
+		HTTP_URL {
 			@Override
 			public String asString() {
-				return "reactor.netty.status";
+				return "http.url";
+			}
+		},
+
+		/**
+		 * Net peer name.
+		 */
+		NET_PEER_NAME {
+			@Override
+			public String asString() {
+				return "net.peer.name";
+			}
+		},
+
+		/**
+		 * Net peer port.
+		 */
+		NET_PEER_PORT {
+			@Override
+			public String asString() {
+				return "net.peer.port";
 			}
 		},
 
@@ -75,16 +95,6 @@ enum HttpClientSpans implements SpanDocumentation {
 			@Override
 			public String asString() {
 				return "reactor.netty.type";
-			}
-		},
-
-		/**
-		 * Remote address.
-		 */
-		REMOTE_ADDRESS {
-			@Override
-			public String asString() {
-				return "remote.address";
 			}
 		}
 	}

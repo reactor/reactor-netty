@@ -23,7 +23,6 @@ import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.PropagatingReceiverTracingObservationHandler;
 import io.micrometer.tracing.propagation.Propagator;
 import io.netty.handler.codec.http.HttpRequest;
-import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 
 /**
@@ -55,8 +54,6 @@ public final class ReactorNettyPropagatingReceiverTracingObservationHandler
 
 	@Override
 	public boolean supportsContext(Observation.Context context) {
-		return context instanceof ReactorNettyHandlerContext &&
-				super.supportsContext(context) &&
-				context.get(HttpServerRequest.class) != null;
+		return context instanceof ReactorNettyHandlerContext && super.supportsContext(context);
 	}
 }

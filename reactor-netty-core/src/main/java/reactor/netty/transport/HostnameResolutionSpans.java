@@ -49,6 +49,26 @@ enum HostnameResolutionSpans implements SpanDocumentation {
 	enum HostnameResolutionTimeHighCardinalityTags implements KeyName {
 
 		/**
+		 * Net peer name.
+		 */
+		NET_PEER_NAME {
+			@Override
+			public String asString() {
+				return "net.peer.name";
+			}
+		},
+
+		/**
+		 * Net peer port.
+		 */
+		NET_PEER_PORT {
+			@Override
+			public String asString() {
+				return "net.peer.port";
+			}
+		},
+
+		/**
 		 * Reactor Netty protocol (tcp/http etc.).
 		 */
 		REACTOR_NETTY_PROTOCOL {
@@ -75,16 +95,6 @@ enum HostnameResolutionSpans implements SpanDocumentation {
 			@Override
 			public String asString() {
 				return "reactor.netty.type";
-			}
-		},
-
-		/**
-		 * Remote address.
-		 */
-		REMOTE_ADDRESS {
-			@Override
-			public String asString() {
-				return "remote.address";
 			}
 		}
 	}

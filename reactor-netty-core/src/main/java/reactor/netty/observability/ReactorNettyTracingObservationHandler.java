@@ -21,8 +21,6 @@ import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.DefaultTracingObservationHandler;
 
-import static reactor.netty.Metrics.REMOTE_ADDRESS;
-
 /**
  * Abstraction over all Reactor Netty handlers.
  *
@@ -41,18 +39,11 @@ public final class ReactorNettyTracingObservationHandler extends DefaultTracingO
 		for (KeyValue tag : context.getHighCardinalityKeyValues()) {
 			span.tag(tag.getKey(), tag.getValue());
 		}
-		for (KeyValue tag : context.getLowCardinalityKeyValues()) {
-			if (tag.getKey().equals(REMOTE_ADDRESS)) {
-				span.tag(tag.getKey(), tag.getValue());
-				break;
-			}
-		}
 	}
 
 	@Override
 	public String getSpanName(Observation.Context context) {
-		String name = context.getContextualName();
-		return name != null ? name : super.getSpanName(context);
+		return context.getContextualName();
 	}
 
 	@Override
