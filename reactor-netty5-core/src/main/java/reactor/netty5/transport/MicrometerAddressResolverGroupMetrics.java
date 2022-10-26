@@ -27,6 +27,7 @@ import reactor.netty5.internal.util.MapUtils;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
 import reactor.util.context.ContextView;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.Objects;
@@ -39,7 +40,8 @@ import static reactor.netty5.Metrics.ERROR;
 import static reactor.netty5.Metrics.OBSERVATION_KEY;
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty5.Metrics.SUCCESS;
-import static reactor.netty5.Metrics.formatSocketAddress;
+import static reactor.netty5.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.NET_PEER_NAME;
+import static reactor.netty5.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.NET_PEER_PORT;
 import static reactor.netty5.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
 import static reactor.netty5.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.REACTOR_NETTY_STATUS;
 import static reactor.netty5.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.REACTOR_NETTY_TYPE;
@@ -75,15 +77,23 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		static final String CONTEXTUAL_NAME = "hostname resolution";
 		static final String TYPE = "client";
 
-		final String remoteAddress;
+		final String netPeerName;
+		final String netPeerPort;
 		final MicrometerChannelMetricsRecorder recorder;
 
 		// status is not known beforehand
 		String status;
 
-		FutureHandlerContext(MicrometerChannelMetricsRecorder recorder, String remoteAddress) {
+		FutureHandlerContext(MicrometerChannelMetricsRecorder recorder, SocketAddress remoteAddress) {
 			this.recorder = recorder;
-			this.remoteAddress = remoteAddress;
+			if (remoteAddress instanceof InetSocketAddress address) {
+				this.netPeerName = address.getHostString();
+				this.netPeerPort = address.getPort() + "";
+			}
+			else {
+				this.netPeerName = remoteAddress.toString();
+				this.netPeerPort = "";
+			}
 		}
 
 		@Override
@@ -93,7 +103,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 
 		@Override
 		public Timer getTimer() {
-			return recorder.getResolveAddressTimer(getName(), remoteAddress, status);
+			return recorder.getResolveAddressTimer(getName(), netPeerName + ':' + netPeerPort, status);
 		}
 
 		@Override
@@ -103,13 +113,14 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 
 		@Override
 		public KeyValues getHighCardinalityKeyValues() {
-			return KeyValues.of(REACTOR_NETTY_PROTOCOL.asString(), recorder.protocol(),
+			return KeyValues.of(NET_PEER_NAME.asString(), netPeerName, NET_PEER_PORT.asString(), netPeerPort,
+					REACTOR_NETTY_PROTOCOL.asString(), recorder.protocol(),
 					REACTOR_NETTY_STATUS.asString(), status, REACTOR_NETTY_TYPE.asString(), TYPE);
 		}
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			return KeyValues.of(REMOTE_ADDRESS.asString(), remoteAddress, STATUS.asString(), status);
+			return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ':' + netPeerPort, STATUS.asString(), status);
 		}
 	}
 
@@ -133,8 +144,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// 3. There is no connection, so we cannot hold the context information in the Channel
 			//
 			// Move the implementation from the recorder here
-			String remoteAddress = formatSocketAddress(address);
-			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, remoteAddress);
+			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, address);
 			Observation sample = Observation.createNotStarted(name + ADDRESS_RESOLVER, handlerContext, OBSERVATION_REGISTRY);
 			if (contextView.hasKey(OBSERVATION_KEY)) {
 				sample.parentObservation(contextView.get(OBSERVATION_KEY));
@@ -155,8 +165,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 			// 3. There is no connection, so we cannot hold the context information in the Channel
 			//
 			// Move the implementation from the recorder here
-			String remoteAddress = formatSocketAddress(address);
-			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, remoteAddress);
+			FutureHandlerContext handlerContext = new FutureHandlerContext((MicrometerChannelMetricsRecorder) recorder, address);
 			Observation observation = Observation.start(name + ADDRESS_RESOLVER, handlerContext, OBSERVATION_REGISTRY);
 			return resolver.get()
 			               .addListener(future -> {

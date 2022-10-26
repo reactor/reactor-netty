@@ -27,6 +27,7 @@ import reactor.netty5.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.function.Supplier;
 
@@ -36,7 +37,8 @@ import static reactor.netty5.Metrics.OBSERVATION_KEY;
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty5.Metrics.SUCCESS;
 import static reactor.netty5.Metrics.TLS_HANDSHAKE_TIME;
-import static reactor.netty5.Metrics.formatSocketAddress;
+import static reactor.netty5.channel.ConnectObservations.ConnectTimeHighCardinalityTags.NET_PEER_NAME;
+import static reactor.netty5.channel.ConnectObservations.ConnectTimeHighCardinalityTags.NET_PEER_PORT;
 import static reactor.netty5.channel.ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
 import static reactor.netty5.channel.ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_STATUS;
 import static reactor.netty5.channel.ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_TYPE;
@@ -86,7 +88,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		final MicrometerChannelMetricsRecorder recorder;
 
 		// remote address and status are not known beforehand
-		String remoteAddress;
+		String netPeerName;
+		String netPeerPort;
 		String status;
 
 		ConnectMetricsHandler(MicrometerChannelMetricsRecorder recorder) {
@@ -100,7 +103,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public Timer getTimer() {
-			return recorder.getConnectTimer(getName(), remoteAddress, status);
+			return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, status);
 		}
 
 		@Override
@@ -111,7 +114,14 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			// 2. The recorder does not have knowledge about connection establishment lifecycle
 			//
 			// Move the implementation from the recorder here
-			this.remoteAddress = formatSocketAddress(remoteAddress);
+			if (remoteAddress instanceof InetSocketAddress address) {
+				this.netPeerName = address.getHostString();
+				this.netPeerPort = address.getPort() + "";
+			}
+			else {
+				this.netPeerName = remoteAddress.toString();
+				this.netPeerPort = "";
+			}
 			Observation observation = Observation.createNotStarted(recorder.name() + CONNECT_TIME, this, OBSERVATION_REGISTRY);
 			if (ctx.channel().hasAttr(CONTEXT_VIEW)) {
 				ContextView contextView = ctx.channel().attr(CONTEXT_VIEW).get();
@@ -137,13 +147,14 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public KeyValues getHighCardinalityKeyValues() {
-			return KeyValues.of(REACTOR_NETTY_PROTOCOL.asString(), recorder.protocol(),
+			return KeyValues.of(NET_PEER_NAME.asString(), netPeerName, NET_PEER_PORT.asString(), netPeerPort,
+					REACTOR_NETTY_PROTOCOL.asString(), recorder.protocol(),
 					REACTOR_NETTY_STATUS.asString(), status, REACTOR_NETTY_TYPE.asString(), TYPE);
 		}
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			return KeyValues.of(REMOTE_ADDRESS.asString(), remoteAddress, STATUS.asString(), status);
+			return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort, STATUS.asString(), status);
 		}
 	}
 
@@ -158,7 +169,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		Observation observation;
 
 		// remote address and status are not known beforehand
-		String remoteAddress;
+		String netPeerName;
+		String netPeerPort;
 		String status;
 
 		TlsMetricsHandler(MicrometerChannelMetricsRecorder recorder, boolean onServer) {
@@ -169,7 +181,15 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		@Override
 		@SuppressWarnings("try")
 		public void channelActive(ChannelHandlerContext ctx) {
-			this.remoteAddress = formatSocketAddress(ctx.channel().remoteAddress());
+			SocketAddress remoteAddress = ctx.channel().remoteAddress();
+			if (remoteAddress instanceof InetSocketAddress address) {
+				this.netPeerName = address.getHostString();
+				this.netPeerPort = address.getPort() + "";
+			}
+			else {
+				this.netPeerName = remoteAddress.toString();
+				this.netPeerPort = "";
+			}
 			observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
 			if (ctx.channel().hasAttr(CONTEXT_VIEW)) {
 				ContextView contextView = ctx.channel().attr(CONTEXT_VIEW).get();
@@ -201,18 +221,19 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public KeyValues getHighCardinalityKeyValues() {
-			return KeyValues.of(REACTOR_NETTY_PROTOCOL.asString(), recorder.protocol(),
+			return KeyValues.of(NET_PEER_NAME.asString(), netPeerName, NET_PEER_PORT.asString(), netPeerPort,
+					REACTOR_NETTY_PROTOCOL.asString(), recorder.protocol(),
 					REACTOR_NETTY_STATUS.asString(), status, REACTOR_NETTY_TYPE.asString(), type);
 		}
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			return KeyValues.of(REMOTE_ADDRESS.asString(), remoteAddress, STATUS.asString(), status);
+			return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ':' + netPeerPort, STATUS.asString(), status);
 		}
 
 		@Override
 		public Timer getTimer() {
-			return recorder.getTlsHandshakeTimer(getName(), remoteAddress, status);
+			return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, status);
 		}
 	}
 }

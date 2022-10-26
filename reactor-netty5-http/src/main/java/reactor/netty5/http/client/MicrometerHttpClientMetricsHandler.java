@@ -26,6 +26,7 @@ import reactor.netty5.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
@@ -35,9 +36,10 @@ import java.util.function.Supplier;
 import static reactor.netty5.Metrics.OBSERVATION_KEY;
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty5.Metrics.RESPONSE_TIME;
-import static reactor.netty5.Metrics.formatSocketAddress;
-import static reactor.netty5.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
-import static reactor.netty5.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.REACTOR_NETTY_STATUS;
+import static reactor.netty5.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.HTTP_STATUS_CODE;
+import static reactor.netty5.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.HTTP_URL;
+import static reactor.netty5.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.NET_PEER_NAME;
+import static reactor.netty5.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.NET_PEER_PORT;
 import static reactor.netty5.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.REACTOR_NETTY_TYPE;
 import static reactor.netty5.http.client.HttpClientObservations.ResponseTimeLowCardinalityTags.METHOD;
 import static reactor.netty5.http.client.HttpClientObservations.ResponseTimeLowCardinalityTags.REMOTE_ADDRESS;
@@ -87,7 +89,6 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		// 2. The recorder does not have knowledge about request lifecycle
 		//
 		// Move the implementation from the recorder here
-		responseTimeHandlerContext.status = status;
 		responseTimeObservation.stop();
 	}
 
@@ -104,11 +105,11 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		super.startRead(msg);
 
 		responseTimeHandlerContext.setResponse(msg);
+		responseTimeHandlerContext.status = status;
 	}
 
 	// writing the request
 	@Override
-	@SuppressWarnings("try")
 	protected void startWrite(HttpRequest msg, Channel channel, @Nullable ContextView contextView) {
 		super.startWrite(msg, channel, contextView);
 
@@ -120,13 +121,22 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		responseTimeObservation.start();
 	}
 
+	/**
+	 * Requirements for HTTP clients
+	 * <p>https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#name
+	 * The contextual name must be in the format 'HTTP &lt;method&gt;'
+	 * <p>https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#common-attributes
+	 * <p>https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#http-client
+	 */
 	static final class ResponseTimeHandlerContext extends RequestReplySenderContext<HttpRequest, HttpResponse>
 			implements ReactorNettyHandlerContext, Supplier<Observation.Context> {
+		static final String HTTP_PREFIX = "http ";
 		static final String TYPE = "client";
 
 		final String method;
+		final String netPeerName;
+		final String netPeerPort;
 		final String path;
-		final String remoteAddress;
 		final MicrometerHttpClientMetricsRecorder recorder;
 
 		// status might not be known beforehand
@@ -136,11 +146,17 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 			super((carrier, key, value) -> Objects.requireNonNull(carrier).headers().set(key, value));
 			this.recorder = recorder;
 			this.method = request.method().name();
+			if (remoteAddress instanceof InetSocketAddress address) {
+				this.netPeerName = address.getHostString();
+				this.netPeerPort = address.getPort() + "";
+			}
+			else {
+				this.netPeerName = remoteAddress.toString();
+				this.netPeerPort = "";
+			}
 			this.path = path;
-			this.remoteAddress = formatSocketAddress(remoteAddress);
-			put(HttpClientRequest.class, request);
 			setCarrier(request);
-			setContextualName(this.method);
+			setContextualName(HTTP_PREFIX + this.method);
 		}
 
 		@Override
@@ -150,25 +166,20 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public Timer getTimer() {
-			return recorder.getResponseTimeTimer(getName(), remoteAddress, path, method, status);
+			return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, path, method, status);
 		}
 
 		@Override
 		public KeyValues getHighCardinalityKeyValues() {
-			return KeyValues.of(REACTOR_NETTY_PROTOCOL.asString(), recorder.protocol(),
-					REACTOR_NETTY_STATUS.asString(), status, REACTOR_NETTY_TYPE.asString(), TYPE);
+			return KeyValues.of(REACTOR_NETTY_TYPE.asString(), TYPE,
+					HTTP_URL.asString(), path, HTTP_STATUS_CODE.asString(), status,
+					NET_PEER_NAME.asString(), netPeerName, NET_PEER_PORT.asString(), netPeerPort);
 		}
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), remoteAddress,
+			return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
 					STATUS.asString(), status, URI.asString(), path);
-		}
-
-		@Override
-		public void setResponse(HttpResponse response) {
-			put(HttpClientResponse.class, response);
-			super.setResponse(response);
 		}
 	}
 }

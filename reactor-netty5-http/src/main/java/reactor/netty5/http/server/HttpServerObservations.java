@@ -52,22 +52,42 @@ enum HttpServerObservations implements ObservationDocumentation {
 	enum ResponseTimeHighCardinalityTags implements KeyName {
 
 		/**
-		 * Reactor Netty protocol (always http).
+		 * HTTP scheme.
 		 */
-		REACTOR_NETTY_PROTOCOL {
+		HTTP_SCHEME {
 			@Override
 			public String asString() {
-				return "reactor.netty5.protocol";
+				return "http.scheme";
 			}
 		},
 
 		/**
-		 * Reactor Netty status.
+		 * Status code.
 		 */
-		REACTOR_NETTY_STATUS {
+		HTTP_STATUS_CODE {
 			@Override
 			public String asString() {
-				return "reactor.netty5.status";
+				return "http.status_code";
+			}
+		},
+
+		/**
+		 * Net host name.
+		 */
+		NET_HOST_NAME {
+			@Override
+			public String asString() {
+				return "net.host.name";
+			}
+		},
+
+		/**
+		 * Net host port.
+		 */
+		NET_HOST_PORT {
+			@Override
+			public String asString() {
+				return "net.host.port";
 			}
 		},
 

@@ -23,10 +23,7 @@ import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.handler.PropagatingReceiverTracingObservationHandler;
 import io.micrometer.tracing.propagation.Propagator;
 import io.netty5.handler.codec.http.HttpRequest;
-import reactor.netty5.http.client.HttpClientRequest;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
-
-import static reactor.netty5.Metrics.REMOTE_ADDRESS;
 
 /**
  * Reactor Netty specific {@link PropagatingReceiverTracingObservationHandler}.
@@ -53,18 +50,10 @@ public final class ReactorNettyPropagatingReceiverTracingObservationHandler
 		for (KeyValue tag : context.getHighCardinalityKeyValues()) {
 			span.tag(tag.getKey(), tag.getValue());
 		}
-		for (KeyValue tag : context.getLowCardinalityKeyValues()) {
-			if (tag.getKey().equals(REMOTE_ADDRESS)) {
-				span.tag(tag.getKey(), tag.getValue());
-				break;
-			}
-		}
 	}
 
 	@Override
 	public boolean supportsContext(Observation.Context context) {
-		return context instanceof ReactorNettyHandlerContext &&
-				super.supportsContext(context) &&
-				context.get(HttpClientRequest.class) != null;
+		return context instanceof ReactorNettyHandlerContext && super.supportsContext(context);
 	}
 }
