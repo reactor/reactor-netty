@@ -293,6 +293,35 @@ include::{examplesdir}/metrics/custom/Application.java[lines=18..35]
 <1> Enables TCP server metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
 ====
 
+== Tracing
+The TCP server supports built-in integration with https://micrometer.io/docs/tracing[`Micrometer Tracing`].
+
+The following table provides information for the TCP server spans:
+
+[width="100%",options="header"]
+|=======
+| contextual name | description
+| tls handshake | Information and time spent for TLS handshake.
+See <<observability-spans-tls-handshake-span>>
+|=======
+
+The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
+See the https://micrometer.io/docs/tracing#_micrometer_tracing_brave_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup if needed.
+
+====
+[source,java,indent=0]
+.{examplesdir}/tracing/Application.java
+----
+include::{examplesdir}/tracing/Application.java[lines=18..81]
+----
+<1> Initialises Brave, Zipkin and the Observation registry.
+<2> Enables the built-in integration with Micrometer
+====
+
+The result in `Zipkin`:
+
+image::images/tcp-server-tracing.png[]
+
 == Unix Domain Sockets
 The `TCP` server supports Unix Domain Sockets (UDS) when native transport is in use.
 
