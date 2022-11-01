@@ -17,6 +17,7 @@ package reactor.netty.resources;
 
 import org.junit.jupiter.api.Test;
 import reactor.core.Disposable;
+import reactor.netty.Connection;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -24,6 +25,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +36,7 @@ class ConnectionProviderTest {
 	static final String TEST_STRING = "";
 	static final Supplier<ConnectionProvider.MeterRegistrar> TEST_SUPPLIER = () -> (a, b, c, d) -> {};
 	static final BiFunction<Runnable, Duration, Disposable> TEST_BI_FUNCTION = (r, duration) -> () -> {};
+	static final BiPredicate<Connection, ConnectionProvider.ConnectionMetadata> TEST_BI_PREDICATE = (conn, meta) -> true;
 
 	@Test
 	void testBuilderCopyConstructor() throws IllegalAccessException {
@@ -79,6 +82,9 @@ class ConnectionProviderTest {
 		}
 		else if (BiFunction.class == clazz) {
 			field.set(builder, TEST_BI_FUNCTION);
+		}
+		else if (BiPredicate.class == clazz) {
+			field.set(builder, TEST_BI_PREDICATE);
 		}
 		else {
 			throw new IllegalArgumentException("Unknown field type " + clazz);
