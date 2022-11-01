@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -278,6 +279,48 @@ public interface ConnectionProvider extends Disposable {
 		return null;
 	}
 
+	interface ConnectionMetadata {
+
+		/**
+		 * Returns the number of times the connection has been acquired from the pool. Returns 1 the first time the
+		 * connection is allocated.
+		 *
+		 * @return the number of times the connection has been acquired
+		 */
+		int acquireCount();
+
+		/**
+		 * Returns the time in ms that the connection has been idle.
+		 *
+		 * @return connection idle time in ms
+		 */
+		long idleTime();
+
+		/**
+		 * Returns the age of the connection in ms.
+		 *
+		 * @return connection age in ms
+		 */
+		long lifeTime();
+
+		/**
+		 * Returns a timestamp that denotes the order in which the connection was last released, to millisecond
+		 * precision.
+		 *
+		 * @return the connection last release timestamp, or zero if currently acquired
+		 */
+		long releaseTimestamp();
+
+		/**
+		 * Returns a timestamp that denotes the order in which the connection was created/allocated, to millisecond
+		 * precision.
+		 *
+		 * @return the connection creation timestamp
+		 */
+		long allocationTimestamp();
+
+	}
+
 	interface AllocationStrategy<A extends AllocationStrategy<A>> {
 
 		/**
@@ -476,6 +519,7 @@ public interface ConnectionProvider extends Disposable {
 		Supplier<? extends ConnectionProvider.MeterRegistrar> registrar;
 		BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
 		AllocationStrategy<?> allocationStrategy;
+		BiPredicate<Connection, ConnectionMetadata> evictionPredicate;
 
 		/**
 		 * Returns {@link ConnectionPoolSpec} new instance with default properties.
@@ -501,6 +545,7 @@ public interface ConnectionProvider extends Disposable {
 			this.registrar = copy.registrar;
 			this.pendingAcquireTimer = copy.pendingAcquireTimer;
 			this.allocationStrategy = copy.allocationStrategy;
+			this.evictionPredicate = copy.evictionPredicate;
 		}
 
 		/**
@@ -583,6 +628,24 @@ public interface ConnectionProvider extends Disposable {
 		 */
 		public final SPEC maxLifeTime(Duration maxLifeTime) {
 			this.maxLifeTime = Objects.requireNonNull(maxLifeTime);
+			return get();
+		}
+
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} custom eviction predicate.
+		 * <p>Unless a custom eviction predicate is specified, the connection is evicted when not active or not persistent,
+		 * If {@link #maxLifeTime(Duration)} and/or {@link #maxIdleTime(Duration)} settings are configured,
+		 * they are also taken into account.
+		 * <p>Otherwise only the custom eviction predicate is invoked.
+		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
+		 * A TCP connection is always closed and never returned to the pool.
+		 *
+		 * @param evictionPredicate The predicate function that evaluates whether a connection should be evicted
+		 * @return {@literal this}
+		 * @throws NullPointerException if evictionPredicate is null
+		 */
+		public final SPEC evictionPredicate(BiPredicate<Connection, ConnectionMetadata> evictionPredicate) {
+			this.evictionPredicate = Objects.requireNonNull(evictionPredicate);
 			return get();
 		}
 

@@ -376,6 +376,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final Duration disposeTimeout;
 		final BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer;
 		final AllocationStrategy<?> allocationStrategy;
+		final BiPredicate<Connection, ConnectionMetadata> evictionPredicate;
 
 		PoolFactory(ConnectionPoolSpec<?> conf, Duration disposeTimeout) {
 			this(conf, disposeTimeout, null);
@@ -397,6 +398,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			this.disposeTimeout = disposeTimeout;
 			this.pendingAcquireTimer = conf.pendingAcquireTimer;
 			this.allocationStrategy = conf.allocationStrategy;
+			this.evictionPredicate = conf.evictionPredicate;
 		}
 
 		public InstrumentedPool<T> newPool(
@@ -415,27 +417,34 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				Publisher<T> allocator,
 				@Nullable reactor.pool.AllocationStrategy allocationStrategy, // this is not used but kept for backwards compatibility
 				Function<T, Publisher<Void>> destroyHandler,
-				BiPredicate<T, PooledRefMetadata> evictionPredicate,
+				BiPredicate<T, PooledRefMetadata> defaultEvictionPredicate,
 				Function<PoolConfig<T>, InstrumentedPool<T>> poolFactory) {
 			if (disposeTimeout != null) {
-				return newPoolInternal(allocator, destroyHandler, evictionPredicate)
+				return newPoolInternal(allocator, destroyHandler, defaultEvictionPredicate)
 						.build(poolFactory.andThen(InstrumentedPoolDecorators::gracefulShutdown));
 			}
-			return newPoolInternal(allocator, destroyHandler, evictionPredicate).build(poolFactory);
+			return newPoolInternal(allocator, destroyHandler, defaultEvictionPredicate).build(poolFactory);
 		}
 
 		PoolBuilder<T, PoolConfig<T>> newPoolInternal(
 				Publisher<T> allocator,
 				Function<T, Publisher<Void>> destroyHandler,
-				BiPredicate<T, PooledRefMetadata> evictionPredicate) {
+				BiPredicate<T, PooledRefMetadata> defaultEvictionPredicate) {
 			PoolBuilder<T, PoolConfig<T>> poolBuilder =
 					PoolBuilder.from(allocator)
 					           .destroyHandler(destroyHandler)
-					           .evictionPredicate(evictionPredicate
-					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
-					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
 					           .maxPendingAcquire(pendingAcquireMaxCount)
 					           .evictInBackground(evictionInterval);
+
+			if (this.evictionPredicate != null) {
+				poolBuilder = poolBuilder.evictionPredicate(
+						(poolable, meta) -> this.evictionPredicate.test(poolable, new PooledConnectionMetadata(meta)));
+			}
+			else {
+				poolBuilder = poolBuilder.evictionPredicate(defaultEvictionPredicate.or((poolable, meta) ->
+						(maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
+								|| (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)));
+			}
 
 			if (DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_GET_PERMITS_SAMPLING_RATE <= 1d
 					&& DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE > 0d && DEFAULT_POOL_RETURN_PERMITS_SAMPLING_RATE <= 1d) {
@@ -536,6 +545,40 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			public void returnPermits(int returned) {
 				delegate.returnPermits(returned);
 			}
+		}
+	}
+
+	static final class PooledConnectionMetadata implements ConnectionMetadata {
+
+		final PooledRefMetadata delegate;
+
+		PooledConnectionMetadata(PooledRefMetadata delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public int acquireCount() {
+			return delegate.acquireCount();
+		}
+
+		@Override
+		public long idleTime() {
+			return delegate.idleTime();
+		}
+
+		@Override
+		public long lifeTime() {
+			return delegate.lifeTime();
+		}
+
+		@Override
+		public long releaseTimestamp() {
+			return delegate.releaseTimestamp();
+		}
+
+		@Override
+		public long allocationTimestamp() {
+			return delegate.allocationTimestamp();
 		}
 	}
 
