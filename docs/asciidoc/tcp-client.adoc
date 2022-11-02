@@ -330,15 +330,15 @@ The following table provides information for the TCP client spans:
 |=======
 | contextual name | description
 | hostname resolution | Information and time spent for resolving the address.
-See <<observability-spans-hostname-resolution-span>>
+See <<observability-spans-hostname-resolution-span>>.
 | connect | Information and time spent for connecting to the remote address.
-See <<observability-spans-connect-span>>
+See <<observability-spans-connect-span>>.
 | tls handshake | Information and time spent for TLS handshake.
-See <<observability-spans-tls-handshake-span>>
+See <<observability-spans-tls-handshake-span>>.
 |=======
 
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
-See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup if needed.
+See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup.
 
 ====
 [source,java,indent=0]
@@ -346,11 +346,11 @@ See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_set
 ----
 include::{examplesdir}/tracing/Application.java[lines=18..81]
 ----
-<1> Initialises Brave, Zipkin and the Observation registry.
-<2> Enables the built-in integration with Micrometer
+<1> Initializes Brave, Zipkin, and the Observation registry.
+<2> Enables the built-in integration with Micrometer.
 ====
 
-The result in `Zipkin`:
+The result in `Zipkin` looks like:
 
 image::images/tcp-client-tracing.png[]
 

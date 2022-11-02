@@ -626,11 +626,11 @@ The following table provides information for the HTTP server spans:
 |=======
 | contextual name | description
 | <HTTP METHOD>_<URI> | Information and total time for the request/response.
-See <<observability-spans-http-server-response-span>>
+See <<observability-spans-http-server-response-span>>.
 |=======
 
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
-See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup if needed.
+See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup.
 
 ====
 [source,java,indent=0]
@@ -638,12 +638,12 @@ See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_set
 ----
 include::{examplesdir}/tracing/Application.java[lines=18..91]
 ----
-<1> Initialises Brave, Zipkin and the Observation registry.
-<2> Templated URIs will be used as an URI tag value when possible
-<3> Enables the built-in integration with Micrometer
+<1> Initializes Brave, Zipkin, and the Observation registry.
+<2> Templated URIs are used as an URI tag value when possible.
+<3> Enables the built-in integration with Micrometer.
 ====
 
-The result in `Zipkin`:
+The result in `Zipkin` looks like:
 
 image::images/http-server-tracing.png[]
 
