@@ -306,7 +306,7 @@ See <<observability-spans-tls-handshake-span>>
 |=======
 
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
-See the https://micrometer.io/docs/tracing#_micrometer_tracing_brave_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup if needed.
+See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup if needed.
 
 ====
 [source,java,indent=0]
