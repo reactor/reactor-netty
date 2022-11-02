@@ -625,7 +625,7 @@ The following table provides information for the HTTP server spans:
 [width="100%",options="header"]
 |=======
 | contextual name | description
-| <HTTP METHOD>_<URI> | Information and total time for the request/response.
+| <HTTP METHOD>_<URI> | Information and total time for the request.
 See <<observability-spans-http-server-response-span>>.
 |=======
 

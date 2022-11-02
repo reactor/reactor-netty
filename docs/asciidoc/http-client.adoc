@@ -443,7 +443,7 @@ The following table provides information for the HTTP client spans:
 [width="100%",options="header"]
 |=======
 | contextual name | description
-| HTTP <HTTP METHOD> | Information and total time for the request/response.
+| HTTP <HTTP METHOD> | Information and total time for the request.
 See <<observability-spans-http-client-response-span>>.
 | hostname resolution | Information and time spent for resolving the address.
 See <<observability-spans-hostname-resolution-span>>.
