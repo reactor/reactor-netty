@@ -290,6 +290,7 @@ public class TcpClientTests {
 	}
 
 	@Test
+	@Disabled
 	void tcpClientHandlesLineFeedDataFixedPool() throws InterruptedException {
 		Consumer<? super Connection> channelInit = c -> c.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024));
 

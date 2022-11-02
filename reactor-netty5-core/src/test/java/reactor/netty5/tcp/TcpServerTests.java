@@ -65,6 +65,7 @@ import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import io.netty5.util.concurrent.EventExecutor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.reactivestreams.Publisher;
@@ -909,6 +910,7 @@ class TcpServerTests {
 	}
 
 	@Test
+	@Disabled
 	void testGracefulShutdown() throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(2);
 		CountDownLatch latch2 = new CountDownLatch(2);
