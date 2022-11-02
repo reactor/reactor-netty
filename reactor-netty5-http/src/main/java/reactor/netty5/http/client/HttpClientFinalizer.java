@@ -17,7 +17,9 @@ package reactor.netty5.http.client;
 
 import java.net.URI;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.netty5.buffer.Buffer;
@@ -31,6 +33,7 @@ import reactor.netty5.BufferMono;
 import reactor.netty5.Connection;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.channel.ChannelOperations;
+import reactor.util.annotation.Nullable;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 
@@ -134,6 +137,15 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 	public HttpClientFinalizer send(Publisher<? extends Buffer> requestBody) {
 		Objects.requireNonNull(requestBody, "requestBody");
 		return send((req, out) -> out.send(requestBody));
+	}
+
+	@Override
+	public HttpClientFinalizer sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback, @Nullable Consumer<Flux<Long>> progress) {
+		Objects.requireNonNull(formCallback, "formCallback");
+		return send((req, out) -> {
+			HttpClientOperations ops = (HttpClientOperations) out;
+			return new HttpClientOperations.SendForm(ops, formCallback, progress);
+		});
 	}
 
 	@Override

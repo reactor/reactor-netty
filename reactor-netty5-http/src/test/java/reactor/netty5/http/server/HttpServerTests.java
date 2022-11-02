@@ -45,6 +45,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
@@ -65,6 +66,7 @@ import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpMethod;
@@ -1984,6 +1986,319 @@ class HttpServerTests extends BaseHttpTest {
 
 		assertThat(hostname.get()).isNotNull();
 		assertThat(hostname.get()).isEqualTo("test.com");
+	}
+
+	@Test
+	void testIssue1286_HTTP11() throws Exception {
+		doTestIssue1286(Function.identity(), Function.identity(), false, false);
+	}
+
+	@Test
+	void testIssue1286_H2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C),
+				client -> client.protocol(HttpProtocol.H2C),
+				false, false);
+	}
+
+	@Test
+	void testIssue1286_ServerHTTP11AndH2CClientH2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11),
+				client -> client.protocol(HttpProtocol.H2C),
+				false, false);
+	}
+
+	@Test
+	void testIssue1286_ServerHTTP11AndH2CClientHTTP11AndH2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				                .httpRequestDecoder(spec -> spec.h2cMaxContentLength(256)),
+				client -> client.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11),
+				false, false);
+	}
+
+	@Test
+	void testIssue1286_H2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				false, false);
+	}
+
+	@Test
+	void testIssue1286_ServerHTTP11AndH2ClientH2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				false, false);
+	}
+
+	@Test
+	void testIssue1286_ServerHTTP11AndH2ClientHTTP11AndH2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(clientCtx)),
+				false, false);
+	}
+
+	@Test
+	void testIssue1286ErrorResponse_HTTP11() throws Exception {
+		doTestIssue1286(Function.identity(), Function.identity(), false, true);
+	}
+
+	@Test
+	void testIssue1286ErrorResponse_H2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C),
+				client -> client.protocol(HttpProtocol.H2C),
+				false, true);
+	}
+
+	@Test
+	void testIssue1286ErrorResponse_ServerHTTP11AndH2CAndClientH2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11),
+				client -> client.protocol(HttpProtocol.H2C),
+				false, true);
+	}
+
+	@Test
+	void testIssue1286ErrorResponse_ServerHTTP11AndH2CClientHTTP11AndH2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				                .httpRequestDecoder(spec -> spec.h2cMaxContentLength(256)),
+				client -> client.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11),
+				false, true);
+	}
+
+	@Test
+	void testIssue1286ErrorResponse_H2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				false, true);
+	}
+
+	@Test
+	void testIssue1286ErrorResponse_ServerHTTP11AndH2ClientH2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				false, true);
+	}
+
+	@Test
+	void testIssue1286ErrorResponse_ServerHTTP11AndH2ClientHTTP11AndH2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(clientCtx)),
+				false, true);
+	}
+
+	@Test
+	void testIssue1286ConnectionClose_HTTP11() throws Exception {
+		doTestIssue1286(Function.identity(), Function.identity(), true, false);
+	}
+
+	@Test
+	void testIssue1286ConnectionClose_H2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C),
+				client -> client.protocol(HttpProtocol.H2C),
+				true, false);
+	}
+
+	@Test
+	void testIssue1286ConnectionClose_ServerHTTP11AndH2CClientH2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11),
+				client -> client.protocol(HttpProtocol.H2C),
+				true, false);
+	}
+
+	@Test
+	void testIssue1286ConnectionClose_ServerHTTP11AndH2CClientHTTP11AndH2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				                .httpRequestDecoder(spec -> spec.h2cMaxContentLength(256)),
+				client -> client.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11),
+				true, false);
+	}
+
+	@Test
+	void testIssue1286ConnectionClose_H2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				true, false);
+	}
+
+	@Test
+	void testIssue1286ConnectionClose_ServerHTTP11AndH2ClientH2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				true, false);
+	}
+
+	@Test
+	void testIssue1286ConnectionClose_ServerHTTP11AndH2ClientHTTP11AndH2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(clientCtx)),
+				true, false);
+	}
+
+	@Test
+	void testIssue1286ConnectionCloseErrorResponse_HTTP11() throws Exception {
+		doTestIssue1286(Function.identity(), Function.identity(), true, true);
+	}
+
+	@Test
+	void testIssue1286ConnectionCloseErrorResponse_H2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C),
+				client -> client.protocol(HttpProtocol.H2C),
+				true, true);
+	}
+
+	@Test
+	void testIssue1286ConnectionCloseErrorResponse_ServerHTTP11AndH2CClientH2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11),
+				client -> client.protocol(HttpProtocol.H2C),
+				true, true);
+	}
+
+	@Test
+	void testIssue1286ConnectionCloseErrorResponse_ServerHTTP11AndH2CClientHTTP11AndH2C() throws Exception {
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				                .httpRequestDecoder(spec -> spec.h2cMaxContentLength(256)),
+				client -> client.protocol(HttpProtocol.H2C, HttpProtocol.HTTP11),
+				true, true);
+	}
+
+	@Test
+	void testIssue1286ConnectionCloseErrorResponse_H2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				true, true);
+	}
+
+	@Test
+	void testIssue1286ConnectionCloseErrorResponse_ServerHTTP11AndH2ClientH2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)),
+				true, true);
+	}
+
+	@Test
+	void testIssue1286ConnectionCloseErrorResponse_ServerHTTP11AndH2ClientHTTP11AndH2() throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestIssue1286(
+				server -> server.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(HttpProtocol.H2, HttpProtocol.HTTP11).secure(spec -> spec.sslContext(clientCtx)),
+				true, true);
+	}
+
+	private void doTestIssue1286(
+			Function<HttpServer, HttpServer> serverCustomizer,
+			Function<HttpClient, HttpClient> clientCustomizer,
+			boolean connectionClose, boolean throwException) throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		AtomicReference<List<Buffer>> bufReplay = new AtomicReference<>(new ArrayList<>());
+		HttpServer server = serverCustomizer.apply(createServer());
+		disposableServer =
+				server.doOnConnection(conn -> conn.addHandlerLast(new ChannelHandlerAdapter() {
+
+				              @Override
+				              public void channelRead(ChannelHandlerContext ctx, Object msg) {
+				                  if (msg instanceof Buffer buf) {
+				                      bufReplay.get().add(buf);
+				                  }
+				                  ctx.fireChannelRead(msg);
+				              }
+				      }))
+				      .handle((req, res) -> {
+				          res.withConnection(conn -> conn.onTerminate()
+				                                         .subscribe(null, t -> latch.countDown(), latch::countDown));
+				          if (throwException) {
+				              return Mono.delay(Duration.ofMillis(100))
+				                         .flatMap(l -> Mono.error(new RuntimeException("testIssue1286")));
+				          }
+				          return res.sendString(Mono.delay(Duration.ofMillis(100))
+				                                    .flatMap(l -> Mono.just("OK")));
+				      })
+				      .bindNow();
+
+		HttpClient client = clientCustomizer.apply(createClient(disposableServer.port()));
+
+		if (connectionClose) {
+			client = client.headers(h -> h.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE));
+		}
+
+		client.post()
+		      .uri("/")
+		      .sendForm((req, form) -> form.attr("testIssue1286", "testIssue1286"))
+		      .responseContent()
+		      .aggregate()
+		      .subscribe();
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		Mono.delay(Duration.ofMillis(500))
+		    .block();
+		assertThat(bufReplay.get()).allMatch(buf -> !buf.isAccessible());
 	}
 
 	@Test
