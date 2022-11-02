@@ -93,6 +93,7 @@ import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import io.netty5.util.concurrent.EventExecutor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -2882,6 +2883,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	@Disabled
 	void testCustomHandlerAddedOnChannelConnectedAlwaysAvailable() {
 		doTestCustomHandlerAddedOnCallbackAlwaysAvailable(
 				client -> client.doOnConnected(conn -> conn.addHandlerLast("custom", new ChannelHandlerAdapter(){})));

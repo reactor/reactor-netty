@@ -537,6 +537,7 @@ class TcpServerTests {
 	}
 
 	@Test
+	@Disabled
 	void tcpServerCanEncodeAndDecodeJSON() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();
 		Function<Pojo, Buffer> jsonEncoder = pojo -> {
@@ -664,6 +665,7 @@ class TcpServerTests {
 	}
 
 	@Test
+	@Disabled
 	void retryStrategiesWhenServerFails() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();
 		Function<List<Pojo>, Buffer> jsonEncoder = pojo -> {
@@ -740,6 +742,7 @@ class TcpServerTests {
 	}
 
 	@Test
+	@Disabled
 	void testEchoWithLineBasedFrameDecoder() throws Exception {
 		CountDownLatch latch = new CountDownLatch(2);
 		DisposableServer server =

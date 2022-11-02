@@ -26,6 +26,7 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.DefaultAddressResolverGroup;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -86,6 +87,7 @@ class BlockingConnectionTest {
 	};
 
 	@Test
+	@Disabled
 	void simpleServerFromAsyncServer() {
 		DisposableServer simpleServer =
 				TcpServer.create()

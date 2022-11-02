@@ -38,6 +38,7 @@ import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -674,11 +675,13 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
+	@Disabled
 	void testBuffersForRedirectWithContentShouldBeReleased() {
 		doTestBuffersForRedirectWithContentShouldBeReleased("Redirect response content!");
 	}
 
 	@Test
+	@Disabled
 	void testBuffersForRedirectWithLargeContentShouldBeReleased() {
 		doTestBuffersForRedirectWithContentShouldBeReleased(StringUtils.repeat("a", 10000));
 	}
