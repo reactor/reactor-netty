@@ -38,6 +38,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.netty5.FutureMono;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.ReactorNetty;
 import reactor.netty5.http.websocket.WebsocketInbound;
@@ -222,7 +223,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 		if (CLOSE_SENT.get(this) == 0) {
 			//commented for now as we assume the close is always scheduled (deferFuture runs)
 			//onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(frame));
-			return Mono.fromCompletionStage(() -> {
+			return FutureMono.deferFuture(() -> {
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 					discard();
 					// EmitResult is ignored as CLOSE_SENT guarantees that there will be only one emission
@@ -231,11 +232,10 @@ final class WebsocketClientOperations extends HttpClientOperations
 					// FAIL_ZERO_SUBSCRIBER
 					onCloseState.tryEmitValue(new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
 					return channel().writeAndFlush(frame)
-					                .addListener(channel(), ChannelFutureListeners.CLOSE)
-					                .asStage();
+					                .addListener(channel(), ChannelFutureListeners.CLOSE);
 				}
 				frame.close();
-				return channel().newSucceededFuture().asStage();
+				return channel().newSucceededFuture();
 			}).doOnCancel(() -> ReactorNetty.safeRelease(frame));
 		}
 		frame.close();

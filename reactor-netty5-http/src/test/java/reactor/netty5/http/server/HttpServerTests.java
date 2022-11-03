@@ -105,6 +105,7 @@ import reactor.netty5.ChannelBindException;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.DisposableServer;
+import reactor.netty5.FutureMono;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.channel.AbortedException;
@@ -827,7 +828,7 @@ class HttpServerTests extends BaseHttpTest {
 		            .expectError(IOException.class)
 		            .verify(Duration.ofSeconds(30));
 
-		Mono.fromCompletionStage(ch.get().closeFuture().asStage()).block(Duration.ofSeconds(30));
+		FutureMono.from(ch.get().closeFuture()).block(Duration.ofSeconds(30));
 	}
 
 	@Test

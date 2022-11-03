@@ -42,6 +42,7 @@ import reactor.core.Scannable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.netty5.Connection;
+import reactor.netty5.FutureMono;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.internal.shaded.reactor.pool.InstrumentedPool;
 import reactor.netty5.internal.shaded.reactor.pool.PoolAcquirePendingLimitException;
@@ -744,7 +745,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				if (!connection.channel().isActive()) {
 					return Mono.empty();
 				}
-				return Mono.fromCompletionStage(connection.channel().close().asStage());
+				return FutureMono.from(connection.channel().close());
 			};
 
 	static final class Borrower extends AtomicBoolean implements Scannable, Subscription, Runnable {

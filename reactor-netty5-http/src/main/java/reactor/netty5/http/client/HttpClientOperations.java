@@ -76,6 +76,7 @@ import reactor.core.publisher.Operators;
 import reactor.core.publisher.Sinks;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
+import reactor.netty5.FutureMono;
 import reactor.netty5.NettyInbound;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.NettyPipeline;
@@ -396,8 +397,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			                .flatMap(list -> {
 				                if (markSentHeaderAndBody(list.toArray())) {
 					                if (list.isEmpty()) {
-						                return Mono.fromCompletionStage(
-							                    channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage());
+						                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))));
 					                }
 
 					                Buffer output;
@@ -415,10 +415,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					                }
 
 					                if (output.readableBytes() > 0) {
-						                return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(output)).asStage());
+						                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(output)));
 					                }
 					                output.close();
-					                return Mono.fromCompletionStage(channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage());
+					                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))));
 				                }
 				                for (Buffer bb : list) {
 				                	if (log.isDebugEnabled()) {
@@ -741,9 +741,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (!channel().isActive()) {
 			return Mono.error(AbortedException.beforeSend());
 		}
-		return Mono.fromCompletionStage(() -> markSentHeaderAndBody() ?
-				channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage() :
-				channel().newSucceededFuture().asStage());
+		return FutureMono.deferFuture(() -> markSentHeaderAndBody() ?
+				channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))) :
+				channel().newSucceededFuture());
 	}
 
 	final void setNettyResponse(HttpResponse nettyResponse) {
@@ -879,7 +879,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					      .writeAndFlush(encoder);
 				}
 				else {
-					Mono<Void> mono = Mono.fromCompletionStage(f.asStage());
+					Mono<Void> mono = FutureMono.from(f);
 
 					if (encoder.cleanOnTerminate) {
 						mono = mono.doOnCancel(encoder)

@@ -41,6 +41,7 @@ import reactor.netty5.BufferFlux;
 import reactor.netty5.ChannelOperationsId;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
+import reactor.netty5.FutureMono;
 import reactor.netty5.NettyInbound;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.NettyPipeline;
@@ -287,8 +288,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono<?> mono) {
-			return then(mono.flatMap(m -> Mono.fromCompletionStage(channel().writeAndFlush(m).asStage()))
-			                                 .doOnDiscard(Buffer.class, Buffer::close));
+			return then(mono.flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
+			                .doOnDiscard(Buffer.class, Buffer::close));
 		}
 		return then(MonoSendMany.bufferSource(dataStream, channel(), predicate));
 	}
@@ -300,8 +301,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono<?> mono) {
-			return then(mono.flatMap(m -> Mono.fromCompletionStage(channel().writeAndFlush(m).asStage()))
-			                                  .doOnDiscard(Resource.class, Resource::dispose));
+			return then(mono.flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
+			                .doOnDiscard(Resource.class, Resource::dispose));
 		}
 		return then(MonoSendMany.objectSource(dataStream, channel(), predicate));
 	}
@@ -312,8 +313,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			ReactorNetty.safeRelease(message);
 			return then(Mono.error(AbortedException.beforeSend()));
 		}
-		return then(Mono.fromCompletionStage(() -> connection.channel()
-		                                                     .writeAndFlush(message).asStage()),
+		return then(FutureMono.deferFuture(() -> connection.channel()
+		                                                   .writeAndFlush(message)),
 				() -> ReactorNetty.safeRelease(message));
 	}
 
@@ -327,8 +328,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 		return then(Mono.using(
 				sourceInput,
-				s -> Mono.fromCompletionStage(connection.channel()
-				                                        .writeAndFlush(mappedInput.apply(this, s)).asStage()),
+				s -> FutureMono.from(connection.channel()
+				                               .writeAndFlush(mappedInput.apply(this, s))),
 				sourceCleanup)
 		);
 	}

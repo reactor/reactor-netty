@@ -25,6 +25,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
+import reactor.netty5.FutureMono;
 import reactor.netty5.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -66,12 +67,12 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 			future = datagramChannel.joinGroup(multicastAddress);
 		}
 
-		return Mono.fromCompletionStage(future.asStage())
-		           .doOnSuccess(v -> {
-		               if (log.isInfoEnabled()) {
-		                   log.info(format(datagramChannel, "JOIN {}"), multicastAddress);
-		               }
-		           });
+		return FutureMono.from(future)
+		                 .doOnSuccess(v -> {
+		                     if (log.isInfoEnabled()) {
+		                         log.info(format(datagramChannel, "JOIN {}"), multicastAddress);
+		                     }
+		                 });
 	}
 
 	/**
@@ -98,12 +99,12 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 			future = datagramChannel.leaveGroup(multicastAddress);
 		}
 
-		return Mono.fromCompletionStage(future.asStage())
-		           .doOnSuccess(v -> {
-		               if (log.isInfoEnabled()) {
-		                   log.info(format(datagramChannel, "JOIN {}"), multicastAddress);
-		               }
-		           });
+		return FutureMono.from(future)
+		                 .doOnSuccess(v -> {
+		                     if (log.isInfoEnabled()) {
+		                         log.info(format(datagramChannel, "JOIN {}"), multicastAddress);
+		                     }
+		                 });
 	}
 
 	static final Logger log = Loggers.getLogger(UdpOperations.class);
