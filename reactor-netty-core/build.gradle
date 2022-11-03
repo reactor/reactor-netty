@@ -142,7 +142,6 @@ dependencies {
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
-	testRuntimeOnly "io.micrometer:micrometer-tracing:$micrometerTracingVersion"
 
 	for (dependency in project.configurations.shaded.dependencies) {
 		compileOnly(dependency)

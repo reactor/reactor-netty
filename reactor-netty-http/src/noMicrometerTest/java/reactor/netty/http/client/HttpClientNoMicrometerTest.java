@@ -37,6 +37,7 @@ import reactor.netty.resources.ConnectionProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Simon Baslé
@@ -55,6 +56,12 @@ class HttpClientNoMicrometerTest {
 	@Test
 	void smokeTestNoMicrometer() {
 		assertThat(Metrics.isMicrometerAvailable()).as("isMicrometerAvailable").isFalse();
+	}
+
+	@Test
+	void smokeTestNoContextPropagation() {
+		assertThatExceptionOfType(ClassNotFoundException.class)
+				.isThrownBy(() -> Class.forName("io.micrometer.context.ContextRegistry"));
 	}
 
 	@Test
