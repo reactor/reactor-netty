@@ -102,6 +102,7 @@ import reactor.netty5.BaseHttpTest;
 import reactor.netty5.BufferFlux;
 import reactor.netty5.BufferMono;
 import reactor.netty5.Connection;
+import reactor.netty5.FutureMono;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.SocketUtils;
 import reactor.netty5.http.Http11SslContextSpec;
@@ -1488,7 +1489,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
 
-		Mono.whenDelayError(Mono.fromCompletionStage(group.close().asStage()), connectionProvider.disposeLater())
+		Mono.whenDelayError(FutureMono.from(group.close()), connectionProvider.disposeLater())
 		    .block(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();

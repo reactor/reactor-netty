@@ -76,6 +76,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
+import reactor.netty5.FutureMono;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.channel.AbortedException;
@@ -378,11 +379,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		//       No need to notify the upstream handlers - just log.
 		//       If decoding a response, just throw an error.
 		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
-			return Mono.fromCompletionStage(() -> {
+			return FutureMono.deferFuture(() -> {
 						if (!hasSentHeaders()) {
-							return channel().writeAndFlush(CONTINUE).asStage();
+							return channel().writeAndFlush(CONTINUE);
 						}
-						return channel().newSucceededFuture().asStage();
+						return channel().newSucceededFuture();
 					})
 
 			                 .thenMany(super.receiveObject());
@@ -439,9 +440,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public Mono<Void> send() {
-		return Mono.fromCompletionStage(() -> markSentHeaderAndBody() ?
-				channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))).asStage() :
-				channel().newSucceededFuture().asStage());
+		return FutureMono.deferFuture(() -> markSentHeaderAndBody() ?
+				channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))) :
+				channel().newSucceededFuture());
 	}
 
 	@Override
@@ -850,13 +851,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (markSentHeaders()) {
 			WebsocketServerOperations ops = new WebsocketServerOperations(url, websocketServerSpec, this);
 
-			return Mono.fromCompletionStage(ops.handshakerResult.asStage())
-			           .doOnEach(signal -> {
-			               if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
-			                   websocketHandler.apply(ops, ops)
-			                                   .subscribe(new WebsocketSubscriber(ops, Context.of(signal.getContextView())));
-			               }
-			           });
+			return FutureMono.from(ops.handshakerResult)
+			                 .doOnEach(signal -> {
+			                     if (!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
+			                         websocketHandler.apply(ops, ops)
+			                                         .subscribe(new WebsocketSubscriber(ops, Context.of(signal.getContextView())));
+			                     }
+			                 });
 		}
 		else {
 			log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));

@@ -40,6 +40,7 @@ import reactor.core.publisher.Operators;
 import reactor.core.publisher.Sinks;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
+import reactor.netty5.FutureMono;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.transport.TransportConfig;
@@ -565,7 +566,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 					if (!pooledConnection.channel.isActive()) {
 						return Mono.empty();
 					}
-					return Mono.fromCompletionStage(pooledConnection.channel.close().asStage());
+					return FutureMono.from(pooledConnection.channel.close());
 				};
 	}
 }

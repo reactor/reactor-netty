@@ -333,8 +333,8 @@ class NettyOutboundTest {
 			Consumer<? super S> sourceCleanup) {
 		return Mono.using(
 				sourceInput,
-				s -> Mono.fromCompletionStage(c.channel()
-				                               .writeAndFlush(mappedInput.apply(c, s)).asStage()),
+				s -> FutureMono.from(c.channel()
+				                      .writeAndFlush(mappedInput.apply(c, s))),
 				sourceCleanup
 		);
 	}
