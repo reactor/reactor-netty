@@ -86,6 +86,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static reactor.netty5.Metrics.CONNECTIONS_ACTIVE;
 import static reactor.netty5.Metrics.CONNECTIONS_TOTAL;
 import static reactor.netty5.Metrics.CONNECT_TIME;
@@ -776,6 +777,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
 		checkExpectationsBadRequest(sa.getHostString() + ":" + sa.getPort(), serverCtx != null);
+	}
+
+	@Test
+	void smokeTestNoContextPropagation() {
+		assertThatExceptionOfType(ClassNotFoundException.class)
+				.isThrownBy(() -> Class.forName("io.micrometer.context.ContextRegistry"));
 	}
 
 	private void checkServerConnectionsMicrometer(HttpServerRequest request) {

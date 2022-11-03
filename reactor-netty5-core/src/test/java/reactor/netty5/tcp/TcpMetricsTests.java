@@ -16,6 +16,7 @@
 package reactor.netty5.tcp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
 import static reactor.netty5.Metrics.CONNECTIONS_TOTAL;
 import static reactor.netty5.Metrics.CONNECT_TIME;
@@ -220,6 +221,12 @@ class TcpMetricsTests {
 
 		assertThat(recorder.onDataReceivedContextView).isTrue();
 		assertThat(recorder.onDataSentContextView).isTrue();
+	}
+
+	@Test
+	void smokeTestNoContextPropagation() {
+		assertThatExceptionOfType(ClassNotFoundException.class)
+				.isThrownBy(() -> Class.forName("io.micrometer.context.ContextRegistry"));
 	}
 
 	private void checkExpectationsPositive() {

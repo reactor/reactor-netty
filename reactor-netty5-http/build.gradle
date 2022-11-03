@@ -136,7 +136,9 @@ dependencies {
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
-	testImplementation "io.micrometer:micrometer-tracing-integration-test:$micrometerTracingVersion"
+	testImplementation("io.micrometer:micrometer-tracing-integration-test:$micrometerTracingVersion") {
+		exclude module: "context-propagation"
+	}
 	testImplementation "io.netty.contrib:netty-codec-extras:$nettyContribVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
 
