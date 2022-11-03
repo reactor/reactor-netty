@@ -614,6 +614,36 @@ include::{examplesdir}/metrics/custom/Application.java[lines=18..41]
 <1> Enables HTTP server metrics and provides {javadoc}/reactor/netty5/http/server/HttpServerMetricsRecorder.html[`HttpServerMetricsRecorder`] implementation.
 ====
 
+== Tracing
+The HTTP server supports built-in integration with https://micrometer.io/docs/tracing[`Micrometer Tracing`].
+
+The following table provides information for the HTTP server spans:
+
+[width="100%",options="header"]
+|=======
+| contextual name | description
+| <HTTP METHOD>_<URI> | Information and total time for the request.
+See <<observability-spans-http-server-response-span>>.
+|=======
+
+The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
+See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup.
+
+====
+[source,java,indent=0]
+.{examplesdir}/tracing/Application.java
+----
+include::{examplesdir}/tracing/Application.java[lines=18..91]
+----
+<1> Initializes Brave, Zipkin, and the Observation registry.
+<2> Templated URIs are used as an URI tag value when possible.
+<3> Enables the built-in integration with Micrometer.
+====
+
+The result in `Zipkin` looks like:
+
+image::images/http-server-tracing.png[]
+
 == Unix Domain Sockets
 The `HTTP` server supports Unix Domain Sockets (UDS) for all transports (native and NIO).
 

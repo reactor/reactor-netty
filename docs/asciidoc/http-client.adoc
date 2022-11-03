@@ -432,6 +432,42 @@ include::{examplesdir}/metrics/custom/Application.java[lines=18..35]
 <1> Enables HTTP client metrics and provides {javadoc}/reactor/netty5/http/client/HttpClientMetricsRecorder.html[`HttpClientMetricsRecorder`] implementation.
 ====
 
+== Tracing
+The HTTP client supports built-in integration with https://micrometer.io/docs/tracing[`Micrometer Tracing`].
+
+The following table provides information for the HTTP client spans:
+
+[width="100%",options="header"]
+|=======
+| contextual name | description
+| HTTP <HTTP METHOD> | Information and total time for the request.
+See <<observability-spans-http-client-response-span>>.
+| hostname resolution | Information and time spent for resolving the address.
+See <<observability-spans-hostname-resolution-span>>.
+| connect | Information and time spent for connecting to the remote address.
+See <<observability-spans-connect-span>>.
+| tls handshake | Information and time spent for TLS handshake.
+See <<observability-spans-tls-handshake-span>>.
+|=======
+
+The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
+See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup.
+
+====
+[source,java,indent=0]
+.{examplesdir}/tracing/Application.java
+----
+include::{examplesdir}/tracing/Application.java[lines=18..90]
+----
+<1> Initializes Brave, Zipkin, and the Observation registry.
+<2> Templated URIs are used as an URI tag value when possible.
+<3> Enables the built-in integration with Micrometer.
+====
+
+The result in `Zipkin` looks like:
+
+image::images/http-client-tracing.png[]
+
 == Unix Domain Sockets
 The `HTTP` client supports Unix Domain Sockets (UDS) for all transports (native and NIO).
 

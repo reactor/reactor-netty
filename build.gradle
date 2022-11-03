@@ -91,6 +91,10 @@ ext {
 	// Used only in tests
 	contextPropagationVersion = '1.0.0-RC1' //optional baseline
 
+	// Used only in examples
+	braveVersion = '5.14.1'
+	zipkinSenderVersion = '2.16.3'
+
 	jsr305Version = '3.0.2'
 
 	// Logging
