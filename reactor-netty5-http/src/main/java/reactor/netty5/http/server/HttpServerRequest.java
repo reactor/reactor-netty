@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import io.netty.contrib.handler.codec.http.multipart.Attribute;
+import io.netty.contrib.handler.codec.http.multipart.FileUpload;
 import io.netty.contrib.handler.codec.http.multipart.HttpData;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
@@ -101,8 +103,6 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * with value {@code application/x-www-form-urlencoded} or {@code multipart/form-data},
 	 * a {@link Flux#error(Throwable)} will be returned.
 	 * <p>Uses HTTP form decoder configuration specified on server level or the default one if nothing is configured.
-	 * <p>{@link HttpData#retain()} disables auto memory release on each {@link HttpData} published,
-	 * retaining in order to prevent premature recycling when {@link HttpData} is accumulated downstream.
 	 *
 	 * @return a {@link Flux} of {@link HttpData} containing received {@link Attribute}/{@link FileUpload}
 	 * @since 1.0.11
@@ -116,8 +116,6 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * When the request is not {@code POST} or does not have {@code Content-Type}
 	 * with value {@code application/x-www-form-urlencoded} or {@code multipart/form-data},
 	 * a {@link Flux#error(Throwable)} will be returned.
-	 * <p>{@link HttpData#retain()} disables auto memory release on each {@link HttpData} published,
-	 * retaining in order to prevent premature recycling when {@link HttpData} is accumulated downstream.
 	 *
 	 * @param formDecoderBuilder {@link HttpServerFormDecoderProvider.Builder} for HTTP form decoder configuration
 	 * @return a {@link Flux} of {@link HttpData} containing received {@link Attribute}/{@link FileUpload}
