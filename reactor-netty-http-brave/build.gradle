@@ -15,7 +15,6 @@ import me.champeau.gradle.japicmp.JapicmpTask
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'io.spring.javadoc'
 apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
 apply plugin: 'biz.aQute.bnd.builder'
