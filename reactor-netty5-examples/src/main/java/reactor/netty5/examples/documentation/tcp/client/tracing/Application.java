@@ -42,7 +42,7 @@ public class Application {
 				TcpClient.create()
 				         .host("example.com")
 				         .port(80)
-				         .metrics(true) //<1>
+				         .metrics(true) //<2>
 				         .connectNow();
 
 		connection.onDispose()
