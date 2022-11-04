@@ -25,7 +25,7 @@ Reactor Netty supports 3 different formatters:
 [source,java,indent=0]
 .{sourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java
 ----
-include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java[lines=47..75]
+include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java[lines=46..74]
 ----
 ====
 
@@ -35,7 +35,7 @@ include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFor
 [source,java,indent=0]
 .{sourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java
 ----
-include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java[lines=34..45]
+include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java[lines=33..44]
 ----
 ====
 
@@ -45,7 +45,7 @@ include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFor
 [source,java,indent=0]
 .{sourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java
 ----
-include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java[lines=77..93]
+include::{formattersourcedir}/reactor/netty5/transport/logging/AdvancedBufferFormat.java[lines=76..92]
 ----
 ====
 
