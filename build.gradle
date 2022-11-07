@@ -84,12 +84,12 @@ ext {
 	}
 
 	//Metrics
-	micrometerVersion = '1.10.0-SNAPSHOT' //optional baseline
-	micrometerTracingVersion = '1.0.0-SNAPSHOT' //optional baseline
-	micrometerDocsVersion = '1.0.0-SNAPSHOT' //optional baseline
+	micrometerVersion = '1.10.0' //optional baseline
+	micrometerTracingVersion = '1.0.0' //optional baseline
+	micrometerDocsVersion = '1.0.0' //optional baseline
 
 	// Used only in tests
-	contextPropagationVersion = '1.0.0-SNAPSHOT' //optional baseline
+	contextPropagationVersion = '1.0.0' //optional baseline
 
 	braveVersion = '5.14.1'
 	zipkinSenderVersion = '2.16.3'
