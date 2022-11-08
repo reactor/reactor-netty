@@ -21,11 +21,6 @@ buildscript {
 		mavenCentral()
 		maven { url "https://plugins.gradle.org/m2/" }
 		maven { url "https://repo.spring.io/plugins-release" }
-		jcenter() {
-			content {
-				includeGroup("org.ysb33r.gradle")
-			}
-		}
 	}
 	dependencies {
 		classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.29.2' //applied in individual submodules
