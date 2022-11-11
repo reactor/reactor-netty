@@ -50,8 +50,8 @@ jobs:
           - os: windows-2019
             transport: native
           # macOS - https://github.com/netty/netty/issues/9689
-          #- os: macos-11
-          #  transport: native
+          - os: macos-11
+            transport: native
     steps:
       - uses: actions/checkout@v3
 #        with:
