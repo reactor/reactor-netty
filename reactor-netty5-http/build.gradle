@@ -84,7 +84,7 @@ dependencies {
 		//so that the main code compiles
 		compileOnly "io.netty:netty5-transport-classes-epoll:$nettyVersion"
 		compileOnly "io.netty:netty5-transport-classes-kqueue:$nettyVersion"
-		//compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		compileOnly "io.netty:netty5-transport-classes-io_uring:$nettyVersion"
 		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 		if (forceTransport == "native") {
 			if (osdetector.os == "osx") {
@@ -94,9 +94,9 @@ dependencies {
 				testRuntimeOnly "io.netty:netty5-transport-native-epoll:$nettyVersion$os_suffix"
 			}
 		}
-		//else if (forceTransport == "io_uring" && osdetector.os == "linux") {
-		//	testRuntimeOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
-		//}
+		else if (forceTransport == "io_uring" && osdetector.os == "linux") {
+			testRuntimeOnly "io.netty:netty5-transport-native-io_uring:$nettyVersion$os_suffix"
+		}
 		else if (forceTransport != "nio") {
 			throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
 		}
@@ -105,7 +105,7 @@ dependencies {
 		//classic build to be distributed
 		api "io.netty:netty5-transport-native-epoll:$nettyVersion:linux-x86_64"
 		compileOnly "io.netty:netty5-transport-classes-kqueue:$nettyVersion"
-		//compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+		compileOnly "io.netty:netty5-transport-classes-io_uring:$nettyVersion"
 	}
 
 	//Metrics
