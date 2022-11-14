@@ -41,8 +41,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -76,6 +76,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty5.Metrics.ACTIVE_CONNECTIONS;
@@ -403,11 +404,12 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		}
 	}
 
-	@ParameterizedTest(name = "{displayName}({argumentsWithNames})")
-	@ValueSource(booleans = {false, true})
-	void testPoolGracefulShutdown(boolean enableGracefulShutdown) {
+	@ParameterizedTest
+	@MethodSource("gracefulShutdownCombinations")
+	void testPoolGracefulShutdown(boolean enableGracefulShutdown, boolean isHttp2) {
 		disposableServer =
 				createServer()
+				        .protocol(isHttp2 ? HttpProtocol.H2C : HttpProtocol.HTTP11)
 				        .handle((req, res) -> res.sendString(Mono.just("testPoolGracefulShutdown")
 				                                                 .delayElement(Duration.ofMillis(50))))
 				        .bindNow();
@@ -415,6 +417,10 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		ConnectionProvider.Builder providerBuilder =
 				ConnectionProvider.builder("testPoolGracefulShutdown")
 				                  .maxConnections(1);
+		if (isHttp2) {
+			providerBuilder.allocationStrategy(
+					Http2AllocationStrategy.builder().maxConnections(1).maxConcurrentStreams(1).build());
+		}
 		if (enableGracefulShutdown) {
 			providerBuilder.disposeTimeout(Duration.ofMillis(200));
 		}
@@ -422,7 +428,8 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 		HttpClient client =
 				createClient(provider, disposableServer.port())
-				        .doOnDisconnected(conn -> {
+				        .protocol(isHttp2 ? HttpProtocol.H2C : HttpProtocol.HTTP11)
+				        .doAfterResponseSuccess((res, conn) -> {
 				            if (!provider.isDisposed()) {
 				                provider.dispose();
 				            }
@@ -462,6 +469,15 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			assertThat(onNext).isEqualTo(1);
 			assertThat(onError).isEqualTo(1);
 		}
+	}
+
+	static Stream<Arguments> gracefulShutdownCombinations() {
+		return Stream.of(
+				Arguments.of(false, false),
+				Arguments.of(false, true),
+				Arguments.of(true, false),
+				Arguments.of(true, true)
+		);
 	}
 
 	@ParameterizedTest
