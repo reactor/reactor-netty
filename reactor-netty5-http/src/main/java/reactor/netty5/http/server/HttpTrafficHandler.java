@@ -155,8 +155,10 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			}
 
 			if (H2.equals(request.protocolVersion())) {
-				sendDecodingFailures(new IllegalStateException(
-						"Unexpected request [" + request.method() + " " + request.uri() + " HTTP/2.0]"), msg);
+				IllegalStateException e = new IllegalStateException(
+						"Unexpected request [" + request.method() + " " + request.uri() + " HTTP/2.0]");
+				request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
+				sendDecodingFailures(e, msg);
 				return;
 			}
 
@@ -197,6 +199,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							secure);
 				}
 				catch (RuntimeException e) {
+					request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
 					sendDecodingFailures(e, msg);
 					return;
 				}

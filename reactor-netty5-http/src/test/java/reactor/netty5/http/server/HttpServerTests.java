@@ -67,6 +67,7 @@ import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpMethod;
@@ -1683,9 +1684,31 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testIssue1001() throws Exception {
+		AtomicReference<Throwable> err = new AtomicReference<>();
 		disposableServer =
 				createServer()
 				          .host("localhost")
+				          .doOnChannelInit((obs, ch, addr) ->
+				              ch.pipeline().addBefore(NettyPipeline.HttpTrafficHandler, "", new ChannelHandlerAdapter() {
+
+				                  HttpRequest request;
+
+				                  @Override
+				                  public void channelRead(ChannelHandlerContext ctx, Object msg) {
+				                      if (msg instanceof HttpRequest) {
+				                          request = (HttpRequest) msg;
+				                      }
+				                      ctx.fireChannelRead(msg);
+				                  }
+
+					              @Override
+				                  public io.netty5.util.concurrent.Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+				                      if (msg instanceof HttpResponse && request != null && request.decoderResult().isFailure()) {
+				                          err.set(request.decoderResult().cause());
+				                      }
+				                      return ctx.write(msg);
+				                  }
+				              }))
 				          .handle((req, res) -> res.sendString(Mono.just("testIssue1001")))
 				          .bindNow();
 
@@ -1717,6 +1740,9 @@ class HttpServerTests extends BaseHttpTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(result.get()).contains("400", "connection: close");
 		assertThat(connection.channel().isActive()).isFalse();
+
+		assertThat(err.get()).isNotNull()
+				.isInstanceOf(URISyntaxException.class);
 
 		StepVerifier.create(
 		        createClient(disposableServer::address)
