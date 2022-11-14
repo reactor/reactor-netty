@@ -52,6 +52,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
@@ -75,6 +76,7 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
@@ -1698,10 +1700,34 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("FutureReturnValueIgnored")
 	void testIssue1001() throws Exception {
+		AtomicReference<Throwable> err = new AtomicReference<>();
 		disposableServer =
 				createServer()
 				          .host("localhost")
+				          .doOnChannelInit((obs, ch, addr) ->
+				              ch.pipeline().addBefore(NettyPipeline.HttpTrafficHandler, "", new ChannelDuplexHandler() {
+
+				                  HttpRequest request;
+
+				                  @Override
+				                  public void channelRead(ChannelHandlerContext ctx, Object msg) {
+				                      if (msg instanceof HttpRequest) {
+				                          request = (HttpRequest) msg;
+				                      }
+				                      ctx.fireChannelRead(msg);
+				                  }
+
+				                  @Override
+				                  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+				                      if (msg instanceof HttpResponse && request != null && request.decoderResult().isFailure()) {
+				                          err.set(request.decoderResult().cause());
+				                      }
+				                      //"FutureReturnValueIgnored" this is deliberate
+				                      ctx.write(msg, promise);
+				                  }
+				              }))
 				          .handle((req, res) -> res.sendString(Mono.just("testIssue1001")))
 				          .bindNow();
 
@@ -1733,6 +1759,9 @@ class HttpServerTests extends BaseHttpTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(result.get()).contains("400", "connection: close");
 		assertThat(connection.channel().isActive()).isFalse();
+
+		assertThat(err.get()).isNotNull()
+				.isInstanceOf(URISyntaxException.class);
 
 		StepVerifier.create(
 		        createClient(disposableServer::address)
