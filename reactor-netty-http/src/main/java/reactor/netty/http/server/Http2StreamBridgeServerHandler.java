@@ -26,6 +26,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
@@ -132,6 +133,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			}
 			catch (RuntimeException e) {
 				pendingResponse = false;
+				request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
 				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory);
 				return;
 			}
