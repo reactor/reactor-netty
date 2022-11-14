@@ -333,7 +333,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		@Override
 		public void operationComplete(Future<Http2StreamChannel> future) {
 			Channel channel = pooledRef.poolable().channel();
-			ChannelHandlerContext frameCodec = ((Http2Pool.Http2PooledRef) pooledRef).slot.http2FrameCodecCtx();
+			Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(pooledRef);
+			ChannelHandlerContext frameCodec = http2PooledRef.slot.http2FrameCodecCtx();
 			if (future.isSuccess()) {
 				Http2StreamChannel ch = future.getNow();
 
@@ -379,8 +380,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		boolean isH2cUpgrade() {
 			Channel channel = pooledRef.poolable().channel();
-			if (((Http2Pool.Http2PooledRef) pooledRef).slot.h2cUpgradeHandlerCtx() != null &&
-					((Http2Pool.Http2PooledRef) pooledRef).slot.http2MultiplexHandlerCtx() == null) {
+			Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(pooledRef);
+			if (http2PooledRef.slot.h2cUpgradeHandlerCtx() != null &&
+					http2PooledRef.slot.http2MultiplexHandlerCtx() == null) {
 				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 				if (ops != null) {
 					sink.success(ops);
@@ -392,7 +394,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		boolean notHttp2() {
 			Channel channel = pooledRef.poolable().channel();
-			String applicationProtocol = ((Http2Pool.Http2PooledRef) pooledRef).slot.applicationProtocol;
+			Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(pooledRef);
+			String applicationProtocol = http2PooledRef.slot.applicationProtocol;
 			if (applicationProtocol != null) {
 				if (ApplicationProtocolNames.HTTP_1_1.equals(applicationProtocol)) {
 					// No information for the negotiated application-level protocol,
@@ -412,8 +415,8 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 					return true;
 				}
 			}
-			else if (((Http2Pool.Http2PooledRef) pooledRef).slot.h2cUpgradeHandlerCtx() == null &&
-					((Http2Pool.Http2PooledRef) pooledRef).slot.http2MultiplexHandlerCtx() == null) {
+			else if (http2PooledRef.slot.h2cUpgradeHandlerCtx() == null &&
+					http2PooledRef.slot.http2MultiplexHandlerCtx() == null) {
 				// It is not H2. There are no handlers for H2C upgrade/H2C prior-knowledge,
 				// continue as an HTTP/1.1 request and remove the connection from this pool.
 				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
@@ -424,6 +427,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				}
 			}
 			return false;
+		}
+
+		static Http2Pool.Http2PooledRef http2PooledRef(PooledRef<Connection> pooledRef) {
+			return pooledRef instanceof Http2Pool.Http2PooledRef ?
+					(Http2Pool.Http2PooledRef) pooledRef :
+					(Http2Pool.Http2PooledRef) pooledRef.metadata();
 		}
 
 		static final AttributeKey<Http2StreamChannelBootstrap> HTTP2_STREAM_CHANNEL_BOOTSTRAP =
