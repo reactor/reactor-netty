@@ -65,16 +65,16 @@ import static reactor.netty5.ReactorNetty.format;
  * The connection is removed from the pool when:
  * <ul>
  *     <li>The connection is closed.</li>
- *     <li>The connection has reached its life time and there are no active streams.</li>
- *     <li>The connection has reached its idle time and there are no active streams.</li>
+ *     <li>The eviction predicate evaluates to true and there are no active streams.</li>
  *     <li>When the client is in one of the two modes: 1) H2 and HTTP/1.1 or 2) H2C and HTTP/1.1,
  *     and the negotiated protocol is HTTP/1.1.</li>
  * </ul>
  * <p>
  * The connection is filtered out when:
  * <ul>
- *     <li>The connection has reached its life time and there are active streams. In this case, the connection stays
- *     in the pool, but it is not used. Once there are no active streams, the connection is removed from the pool.</li>
+ *     <li>The connection's eviction predicate evaluates to true and there are active streams. In this case, the
+ *     connection stays in the pool, but it is not used. Once there are no active streams, the connection is removed
+ *     from the pool.</li>
  *     <li>The connection has reached its max active streams configuration. In this case, the connection stays
  *     in the pool, but it is not used. Once the number of the active streams is below max active streams configuration,
  *     the connection can be used again.</li>
@@ -94,9 +94,6 @@ import static reactor.netty5.ReactorNetty.format;
  * Configurations that are not applicable
  * <ul>
  *     <li>{@link PoolConfig#destroyHandler()} - the destroy handler cannot be used as the destruction is more complex.</li>
- *     <li>{@link PoolConfig#evictionPredicate()} - the eviction predicate cannot be used as more complex
- *     checks have to be done. Also the pool uses filtering for the connections (a connection might not be able
- *     to be used but is required to stay in the pool).</li>
  *     <li>{@link PoolConfig#metricsRecorder()} - no pool instrumentation.</li>
  *     <li>{@link PoolConfig#releaseHandler()} - release functionality works as invalidate.</li>
  *     <li>{@link PoolConfig#reuseIdleResourcesInLruOrder()} - FIFO is used when checking the connections.</li>
@@ -156,8 +153,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 
 	final Clock clock;
 	final Long maxConcurrentStreams;
-	final long maxIdleTime;
-	final long maxLifeTime;
 	final int minConnections;
 	final PoolConfig<Connection> poolConfig;
 
@@ -165,21 +160,17 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 
 	Disposable evictionTask;
 
-	Http2Pool(PoolConfig<Connection> poolConfig, @Nullable ConnectionProvider.AllocationStrategy<?> allocationStrategy,
-			long maxIdleTime, long maxLifeTime) {
+	Http2Pool(PoolConfig<Connection> poolConfig, @Nullable ConnectionProvider.AllocationStrategy<?> allocationStrategy) {
 		this.clock = poolConfig.clock();
 		this.connections = new ConcurrentLinkedQueue<>();
 		this.lastInteractionTimestamp = clock.millis();
 		this.maxConcurrentStreams = allocationStrategy instanceof Http2AllocationStrategy http2AllocationStrategy ?
 				http2AllocationStrategy.maxConcurrentStreams() : -1L;
-		this.maxIdleTime = maxIdleTime;
-		this.maxLifeTime = maxLifeTime;
 		this.minConnections = allocationStrategy == null ? 0 : allocationStrategy.permitMinimum();
 		this.pending = new ConcurrentLinkedDeque<>();
 		this.poolConfig = poolConfig;
 
 		recordInteractionTimestamp();
-
 		scheduleEviction();
 	}
 
@@ -322,8 +313,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 						ref.slot.invalidate();
 						removeSlot(ref.slot);
 					}
-					// max life reached
-					else if (maxLifeReached(ref.slot)) {
+					// eviction predicate evaluates to true
+					else if (testEvictionPredicate(ref.slot)) {
 						ref.slot.connection.channel().close();
 						ref.slot.invalidate();
 						removeSlot(ref.slot);
@@ -500,27 +491,16 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 							continue;
 						}
 
-						if (maxLifeReached(slot)) {
+						if (testEvictionPredicate(slot)) {
 							if (log.isDebugEnabled()) {
-								log.debug(format(slot.connection.channel(), "Max life time is reached, remove from pool"));
+								log.debug(format(slot.connection.channel(), "Eviction predicate was true, remove from pool"));
 							}
 							slot.connection.channel().close();
 							recordInteractionTimestamp();
 							slots.remove();
 							IDLE_SIZE.decrementAndGet(this);
 							slot.invalidate();
-							continue;
 						}
-					}
-					if (maxIdleReached(slot)) {
-						if (log.isDebugEnabled()) {
-							log.debug(format(slot.connection.channel(), "Idle time is reached, remove from pool"));
-						}
-						slot.connection.channel().close();
-						recordInteractionTimestamp();
-						slots.remove();
-						IDLE_SIZE.decrementAndGet(this);
-						slot.invalidate();
 					}
 				}
 			}
@@ -583,28 +563,18 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				continue;
 			}
 
-			// check whether the connection's idle time has been reached
-			if (maxIdleReached(slot)) {
-				if (log.isDebugEnabled()) {
-					log.debug(format(slot.connection.channel(), "Idle time is reached, remove from pool"));
-				}
-				slot.connection.channel().close();
-				slot.invalidate();
-				continue;
-			}
-
-			// check whether the connection's max lifetime has been reached
-			if (maxLifeReached(slot)) {
+			// check whether the eviction predicate for the connection evaluates to true
+			if (testEvictionPredicate(slot)) {
 				if (slot.concurrency() > 0) {
 					if (log.isDebugEnabled()) {
-						log.debug(format(slot.connection.channel(), "Max life time is reached, {} active streams"),
+						log.debug(format(slot.connection.channel(), "Eviction predicate was true, {} active streams"),
 								slot.concurrency());
 					}
 					offerSlot(resources, slot);
 				}
 				else {
 					if (log.isDebugEnabled()) {
-						log.debug(format(slot.connection.channel(), "Max life time is reached, remove from pool"));
+						log.debug(format(slot.connection.channel(), "Eviction predicate was true, remove from pool"));
 					}
 					slot.connection.channel().close();
 					slot.invalidate();
@@ -627,12 +597,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		return null;
 	}
 
-	boolean maxIdleReached(Slot slot) {
-		return maxIdleTime != -1 && slot.idleTime() >= maxIdleTime;
-	}
-
-	boolean maxLifeReached(Slot slot) {
-		return maxLifeTime != -1 && slot.lifeTime() >= maxLifeTime;
+	boolean testEvictionPredicate(Slot slot) {
+		return poolConfig.evictionPredicate().test(slot.connection, slot);
 	}
 
 	void pendingAcquireLimitReached(Borrower borrower, int maxPending) {
@@ -933,7 +899,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 	}
 
-	static final class Slot extends AtomicBoolean {
+	static final class Slot extends AtomicBoolean implements PooledRefMetadata {
 
 		volatile int concurrency;
 		static final AtomicIntegerFieldUpdater<Slot> CONCURRENCY =
@@ -1013,14 +979,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			return frameCodec != null && ((Http2FrameCodec) frameCodec.handler()).connection().goAwayReceived();
 		}
 
-		long idleTime() {
-			if (concurrency() > 0) {
-				return 0L;
-			}
-			long idleTime = idleTimestamp != 0 ? idleTimestamp : creationTimestamp;
-			return pool.clock.millis() - idleTime;
-		}
-
 		@Nullable
 		ChannelHandlerContext http2FrameCodecCtx() {
 			ChannelHandlerContext ctx = http2FrameCodecCtx;
@@ -1068,8 +1026,34 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			}
 		}
 
-		long lifeTime() {
+		@Override
+		public long idleTime() {
+			if (concurrency() > 0) {
+				return 0L;
+			}
+			long idleTime = idleTimestamp != 0 ? idleTimestamp : creationTimestamp;
+			return pool.clock.millis() - idleTime;
+		}
+
+		@Override
+		public int acquireCount() {
+			return 1;
+		}
+
+		@Override
+		public long lifeTime() {
 			return pool.clock.millis() - creationTimestamp;
 		}
+
+		@Override
+		public long releaseTimestamp() {
+			return 0;
+		}
+
+		@Override
+		public long allocationTimestamp() {
+			return creationTimestamp;
+		}
+
 	}
 }

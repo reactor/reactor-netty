@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -57,7 +58,7 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, -1));
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		try {
 			List<PooledRef<Connection>> acquired = new ArrayList<>();
@@ -103,7 +104,7 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, -1));
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		try {
 			List<PooledRef<Connection>> acquired = new ArrayList<>();
@@ -149,7 +150,7 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, -1));
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection = null;
 		try {
@@ -229,7 +230,7 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 2);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, -1));
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection = null;
 		try {
@@ -326,7 +327,7 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, -1));
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection = null;
 		try {
@@ -383,7 +384,7 @@ class Http2PoolTest {
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1)
 				           .evictInBackground(Duration.ofSeconds(5));
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, -1));
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection = null;
 		try {
@@ -457,8 +458,9 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1)
-				           .evictInBackground(Duration.ofSeconds(5));
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, 10, -1));
+				           .evictInBackground(Duration.ofSeconds(5))
+				           .evictionPredicate((conn, meta) -> meta.idleTime() >= 10);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection1 = null;
 		Connection connection2 = null;
@@ -531,8 +533,9 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1)
-				           .evictInBackground(Duration.ofSeconds(5));
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, 10));
+				           .evictInBackground(Duration.ofSeconds(5))
+				           .evictionPredicate((conn, meta) -> meta.lifeTime() >= 10);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection1 = null;
 		Connection connection2 = null;
@@ -601,6 +604,88 @@ class Http2PoolTest {
 	}
 
 	@Test
+	void evictInBackgroundEvictionPredicate() {
+		Channel channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
+		AtomicReference<Channel> channelRef = new AtomicReference<>(channel);
+		final AtomicBoolean shouldEvict = new AtomicBoolean(false);
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> Connection.from(channelRef.get())))
+						.idleResourceReuseLruOrder()
+						.maxPendingAcquireUnbounded()
+						.sizeBetween(0, 1)
+						.evictInBackground(Duration.ofSeconds(5))
+						.evictionPredicate((conn, metadata) -> shouldEvict.get());
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		Connection connection1 = null;
+		Connection connection2 = null;
+		try {
+			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
+			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
+
+			assertThat(acquired1).isNotNull();
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+
+			connection1 = acquired1.get(0).poolable();
+			ChannelId id1 = connection1.channel().id();
+
+			shouldEvict.set(true);
+
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+
+			channel.executor().execute(() -> acquired1.get(0).invalidate().block());
+
+			http2Pool.evictInBackground();
+
+			assertThat(http2Pool.activeStreams()).isEqualTo(0);
+			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+
+			shouldEvict.set(false);
+
+			channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
+			channelRef.set(channel);
+
+			List<PooledRef<Connection>> acquired2 = new ArrayList<>();
+			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired2::add));
+
+			assertThat(acquired2).isNotNull();
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+
+			connection2 = acquired2.get(0).poolable();
+			ChannelId id2 = connection2.channel().id();
+
+			assertThat(id1).isNotEqualTo(id2);
+
+			channel.executor().execute(() -> acquired2.get(0).invalidate().block());
+
+			shouldEvict.set(true);
+
+			http2Pool.evictInBackground();
+
+			assertThat(http2Pool.activeStreams()).isEqualTo(0);
+			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+		}
+		finally {
+			if (connection1 != null) {
+				((EmbeddedChannel) connection1.channel()).finishAndReleaseAll();
+				connection1.dispose();
+			}
+			if (connection2 != null) {
+				((EmbeddedChannel) connection2.channel()).finishAndReleaseAll();
+				connection2.dispose();
+			}
+		}
+	}
+
+	@Test
 	void maxIdleTime() throws Exception {
 		Channel channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
 		AtomicReference<Channel> channelRef = new AtomicReference<>(channel);
@@ -608,8 +693,9 @@ class Http2PoolTest {
 				PoolBuilder.from(Mono.fromSupplier(() -> Connection.from(channelRef.get())))
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
-				           .sizeBetween(0, 1);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, 10, -1));
+				           .sizeBetween(0, 1)
+				           .evictionPredicate((conn, meta) -> meta.idleTime() >= 10);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection1 = null;
 		Connection connection2 = null;
@@ -671,8 +757,9 @@ class Http2PoolTest {
 				PoolBuilder.from(Mono.just(Connection.from(channel)))
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
-				           .sizeBetween(0, 1);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, 10, -1));
+				           .sizeBetween(0, 1)
+				           .evictionPredicate((conn, meta) -> meta.idleTime() >= 10);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection1 = null;
 		Connection connection2 = null;
@@ -732,8 +819,9 @@ class Http2PoolTest {
 				PoolBuilder.from(Mono.fromSupplier(() -> Connection.from(channelRef.get())))
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
-				           .sizeBetween(0, 1);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, 10));
+				           .sizeBetween(0, 1)
+				           .evictionPredicate((conn, meta) -> meta.lifeTime() >= 10);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection1 = null;
 		Connection connection2 = null;
@@ -796,6 +884,81 @@ class Http2PoolTest {
 	}
 
 	@Test
+	void evictionPredicate() {
+		Channel channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
+		AtomicReference<Channel> channelRef = new AtomicReference<>(channel);
+		final AtomicBoolean shouldEvict = new AtomicBoolean(false);
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> Connection.from(channelRef.get())))
+						.idleResourceReuseLruOrder()
+						.maxPendingAcquireUnbounded()
+						.sizeBetween(0, 1)
+						.evictionPredicate((conn, metadata) -> shouldEvict.get());
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		Connection connection1 = null;
+		Connection connection2 = null;
+		try {
+			List<PooledRef<Connection>> acquired1 = new ArrayList<>();
+			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired1::add));
+
+			assertThat(acquired1).isNotNull();
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+
+			connection1 = acquired1.get(0).poolable();
+			ChannelId id1 = connection1.channel().id();
+
+			shouldEvict.set(true);
+
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+
+			channel.executor().execute(() -> acquired1.get(0).invalidate().block());
+
+			assertThat(http2Pool.activeStreams()).isEqualTo(0);
+			assertThat(http2Pool.connections.size()).isEqualTo(0);
+			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+
+			shouldEvict.set(false);
+
+			channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
+			channelRef.set(channel);
+
+			List<PooledRef<Connection>> acquired2 = new ArrayList<>();
+			channel.executor().execute(() -> http2Pool.acquire().subscribe(acquired2::add));
+
+			assertThat(acquired2).isNotNull();
+			assertThat(http2Pool.activeStreams()).isEqualTo(1);
+			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+
+			connection2 = acquired2.get(0).poolable();
+			ChannelId id2 = connection2.channel().id();
+
+			assertThat(id1).isNotEqualTo(id2);
+
+			channel.executor().execute(() -> acquired2.get(0).invalidate().block());
+
+			assertThat(http2Pool.activeStreams()).isEqualTo(0);
+			assertThat(http2Pool.connections.size()).isEqualTo(1);
+			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+		}
+		finally {
+			if (connection1 != null) {
+				((EmbeddedChannel) connection1.channel()).finishAndReleaseAll();
+				connection1.dispose();
+			}
+			if (connection2 != null) {
+				((EmbeddedChannel) connection2.channel()).finishAndReleaseAll();
+				connection2.dispose();
+			}
+		}
+	}
+
+	@Test
 	void maxLifeTimeMaxConnectionsNotReached() throws Exception {
 		Channel channel = new EmbeddedChannel(new TestChannelId(), Http2FrameCodecBuilder.forClient().build());
 		AtomicReference<Channel> channelRef = new AtomicReference<>(channel);
@@ -803,8 +966,9 @@ class Http2PoolTest {
 				PoolBuilder.from(Mono.fromSupplier(() -> Connection.from(channelRef.get())))
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
-				           .sizeBetween(0, 2);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, 50));
+				           .sizeBetween(0, 2)
+				           .evictionPredicate((conn, meta) -> meta.lifeTime() >= 50);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection1 = null;
 		Connection connection2 = null;
@@ -889,11 +1053,12 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
-				           .sizeBetween(0, 1);
+				           .sizeBetween(0, 1)
+				           .evictionPredicate((conn, meta) -> meta.lifeTime() >= 10);
 		if (pendingAcquireTimer != null) {
 			poolBuilder = poolBuilder.pendingAcquireTimer(pendingAcquireTimer);
 		}
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, 10));
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		Connection connection = null;
 		try {
@@ -949,7 +1114,7 @@ class Http2PoolTest {
 				.maxConnections(3)
 				.minConnections(1)
 				.build();
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy, -1, -1));
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
 
 		List<PooledRef<Connection>> acquired = new ArrayList<>();
 		try {
@@ -996,7 +1161,7 @@ class Http2PoolTest {
 				.maxConnections(3)
 				.minConnections(1)
 				.build();
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy, -1, -1));
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
 
 		List<PooledRef<Connection>> acquired = new ArrayList<>();
 		try {
@@ -1048,7 +1213,7 @@ class Http2PoolTest {
 				           .idleResourceReuseLruOrder()
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null, -1, -1));
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
 		try {
 			List<PooledRef<Connection>> acquired = new ArrayList<>();
