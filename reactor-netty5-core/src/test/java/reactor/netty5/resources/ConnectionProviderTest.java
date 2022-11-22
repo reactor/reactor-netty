@@ -17,7 +17,7 @@ package reactor.netty5.resources;
 
 import org.junit.jupiter.api.Test;
 import reactor.core.Disposable;
-import reactor.netty.Connection;
+import reactor.netty5.Connection;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
