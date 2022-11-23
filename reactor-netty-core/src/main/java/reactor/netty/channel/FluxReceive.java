@@ -183,10 +183,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "{}: Ignoring additional inbound receiver subscriber."), this);
+					log.debug(format(channel, "{}: Rejecting additional inbound receiver subscriber."), this);
 				}
 
-				StringBuilder msg = new StringBuilder("Ignoring additional inbound receiver subscriber.");
+				StringBuilder msg = new StringBuilder("Rejecting additional inbound receiver subscriber.");
 				msg.append(" Current flux state=[");
 				msg.append("terminated=").append(inboundDone);
 				msg.append(",cancelled=").append(isCancelled());
