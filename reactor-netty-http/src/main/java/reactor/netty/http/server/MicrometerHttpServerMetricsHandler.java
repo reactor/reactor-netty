@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import reactor.netty.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -32,6 +33,9 @@ import java.util.function.Supplier;
 
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
+import static reactor.netty.Metrics.UNKNOWN;
+import static reactor.netty.Metrics.updateChannelContext;
+import static reactor.netty.ReactorNetty.setChannelContext;
 import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.HTTP_SCHEME;
 import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.HTTP_STATUS_CODE;
 import static reactor.netty.http.server.HttpServerObservations.ResponseTimeHighCardinalityTags.NET_HOST_NAME;
@@ -52,6 +56,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 	ResponseTimeHandlerContext responseTimeHandlerContext;
 	Observation responseTimeObservation;
+	ContextView parentContextView;
 
 	MicrometerHttpServerMetricsHandler(MicrometerHttpServerMetricsRecorder recorder,
 			@Nullable Function<String, String> uriTagValue) {
@@ -67,6 +72,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 		this.responseTimeHandlerContext = copy.responseTimeHandlerContext;
 		this.responseTimeObservation = copy.responseTimeObservation;
+		this.parentContextView = copy.parentContextView;
 	}
 
 	@Override
@@ -89,8 +95,11 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		// Move the implementation from the recorder here
 		responseTimeObservation.stop();
 
+		setChannelContext(ops.channel(), parentContextView);
+
 		responseTimeHandlerContext = null;
 		responseTimeObservation = null;
+		parentContextView = null;
 	}
 
 	@Override
@@ -98,7 +107,9 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		super.startRead(ops, path, method);
 
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops);
-		responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
+		responseTimeObservation = Observation.createNotStarted(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
+		parentContextView = updateChannelContext(ops.channel(), responseTimeObservation);
+		responseTimeObservation.start();
 	}
 
 	// response
@@ -108,7 +119,9 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 		if (responseTimeObservation == null) {
 			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops);
-			responseTimeObservation = Observation.start(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
+			responseTimeObservation = Observation.createNotStarted(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
+			parentContextView = updateChannelContext(ops.channel(), responseTimeObservation);
+			responseTimeObservation.start();
 		}
 		responseTimeHandlerContext.setResponse(ops.nettyResponse);
 		responseTimeHandlerContext.status = status;
@@ -132,7 +145,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		final String scheme;
 
 		// status might not be known beforehand
-		String status;
+		String status = UNKNOWN;
 
 		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, String path, HttpServerOperations ops) {
 			super((carrier, key) -> Objects.requireNonNull(carrier).headers().get(key));

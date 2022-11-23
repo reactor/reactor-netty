@@ -42,6 +42,10 @@ sourceSets {
 		compileClasspath += sourceSets.main.output
 		runtimeClasspath += sourceSets.main.output
 	}
+	contextPropagationTest {
+		compileClasspath += sourceSets.main.output
+		runtimeClasspath += sourceSets.main.output
+	}
 }
 
 configurations {
@@ -50,6 +54,8 @@ configurations {
 		exclude group: 'io.micrometer'
 	}
 	noMicrometerTestRuntimeOnly.extendsFrom(runtimeOnly)
+	contextPropagationTestImplementation.extendsFrom(implementation)
+	contextPropagationTestRuntimeOnly.extendsFrom(runtimeOnly)
 }
 
 dependencies {
@@ -155,6 +161,14 @@ dependencies {
 	noMicrometerTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	noMicrometerTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	noMicrometerTestRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
+
+	contextPropagationTestImplementation "io.projectreactor:reactor-test:$testAddonVersion"
+	contextPropagationTestImplementation "org.assertj:assertj-core:$assertJVersion"
+	contextPropagationTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	contextPropagationTestImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
+	contextPropagationTestImplementation "ch.qos.logback:logback-classic:$logbackVersion"
+	contextPropagationTestImplementation "io.micrometer:context-propagation:$contextPropagationVersion"
+	contextPropagationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
 
 jar {
@@ -236,5 +250,12 @@ task noMicrometerTest(type: Test) {
 }
 
 tasks.check.dependsOn(noMicrometerTest)
+
+task contextPropagationTest(type: Test) {
+	testClassesDirs = sourceSets.contextPropagationTest.output.classesDirs
+	classpath = sourceSets.contextPropagationTest.runtimeClasspath
+}
+
+tasks.check.dependsOn(contextPropagationTest)
 
 description = "HTTP functionality for the Reactor Netty library"

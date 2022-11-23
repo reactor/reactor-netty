@@ -40,6 +40,7 @@ import static reactor.netty.Metrics.ERROR;
 import static reactor.netty.Metrics.OBSERVATION_KEY;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.SUCCESS;
+import static reactor.netty.Metrics.UNKNOWN;
 import static reactor.netty.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.NET_PEER_NAME;
 import static reactor.netty.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.NET_PEER_PORT;
 import static reactor.netty.transport.HostnameResolutionObservations.HostnameResolutionTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
@@ -82,7 +83,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		final MicrometerChannelMetricsRecorder recorder;
 
 		// status is not known beforehand
-		String status;
+		String status = UNKNOWN;
 
 		FutureHandlerContext(MicrometerChannelMetricsRecorder recorder, SocketAddress remoteAddress) {
 			this.recorder = recorder;
