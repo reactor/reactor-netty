@@ -127,7 +127,7 @@ class QuicStreamOperations extends ChannelOperations<QuicInbound, QuicOutbound> 
 	@Override
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
-			log.debug(format(channel(), "Cancelling inbound stream. Sending WRITE_FIN."));
+			log.debug(format(channel(), "Quic inbound stream cancelled. Sending WRITE_FIN."));
 		}
 
 		sendFinNow(f -> terminate());

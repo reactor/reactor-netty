@@ -188,7 +188,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	@Override
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
-			log.debug(format(channel(), "Cancelling Websocket inbound. Closing Websocket"));
+			log.debug(format(channel(), "Websocket server inbound cancelled. Closing Websocket"));
 		}
 		sendCloseNow(new CloseWebSocketFrame(), WebSocketCloseStatus.ABNORMAL_CLOSURE, f -> terminate());
 	}
