@@ -275,6 +275,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			return;
 		}
 		//"FutureReturnValueIgnored" this is deliberate
+		if (log.isDebugEnabled()) {
+			log.debug(format(channel(), "Cancelling inbound stream, closing channel."));
+		}
 		channel().close();
 	}
 
