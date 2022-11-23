@@ -172,7 +172,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			s.onSubscribe(this);
 		}
 		else {
-			if (inboundDone && getPending() == 0) {
+			long pending = getPending();
+			if (inboundDone && pending == 0) {
 				if (inboundError != null) {
 					Operators.error(s, inboundError);
 					return;
@@ -182,11 +183,19 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "{}: Only one connection receive subscriber allowed."), this);
+					log.debug(format(channel, "{}: Ignoring additional inbound receiver subscriber."), this);
 				}
-				Operators.error(s,
-						new IllegalStateException(
-								"Only one connection receive subscriber allowed."));
+
+				StringBuilder msg = new StringBuilder("Ignoring additional inbound receiver subscriber.");
+				msg.append(" Current flux state=[");
+				msg.append("terminated=").append(inboundDone);
+				msg.append(",cancelled=").append(isCancelled());
+				msg.append(",pending=").append(pending);
+				msg.append(",error=").append(inboundError != null);
+				msg.append("].");
+				IllegalStateException ex = inboundError == null ? new IllegalStateException(msg.toString()) :
+						new IllegalStateException(msg.toString(), inboundError);
+				Operators.error(s, ex);
 			}
 		}
 	}
