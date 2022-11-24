@@ -106,6 +106,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
@@ -3224,5 +3225,47 @@ class HttpServerTests extends BaseHttpTest {
 
 		// double check if the server has sent its close_notify
 		assertThat(latch.await(40, TimeUnit.SECONDS)).as("latch await").isTrue();
+	}
+
+	@Test
+	void testHttpServerCancelled() {
+		AtomicReference<Subscription> subscription = new AtomicReference<>();
+
+		disposableServer = createServer()
+				.wiretap(true)
+				.handle((req, res) -> {
+					res.chunkedTransfer(false);
+					return req.receive()
+							.doOnSubscribe(s -> {
+								System.out.println("Server: doOnSubscribe");
+								subscription.set(s);
+							})
+							.doOnNext(b -> {
+								int msg = Integer.parseInt(b.toString(Charset.defaultCharset()));
+								System.out.println("Server: received buffer: " + msg);
+								if (msg == 2) {
+									System.out.println("Server: cancelling subscription");
+									subscription.get().cancel();
+								}
+							})
+							.log("server")
+							.then(res.status(200).send());
+				})
+				.bindNow();
+
+		Flux<ByteBuf> data = Flux.range(0, 3)
+				.map(n -> Unpooled.wrappedBuffer(Integer.toString(n).getBytes(Charset.defaultCharset())))
+				.delayElements(Duration.ofMillis(10));
+
+		createClient(disposableServer::address)
+				.wiretap(true)
+				.post()
+				.send(data)
+				.uri("/")
+				.responseContent()
+				.aggregate()
+				.as(StepVerifier::create)
+				.expectErrorMatches(t -> t instanceof IOException && t.getMessage().equals("Connection reset by peer"))
+				.verify(Duration.ofSeconds(40));
 	}
 }
