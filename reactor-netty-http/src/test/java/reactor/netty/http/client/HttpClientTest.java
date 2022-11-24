@@ -3100,13 +3100,14 @@ class HttpClientTest extends BaseHttpTest {
 	 */
 	@Test
 	void testHttpClientCancelled() throws InterruptedException {
-		CountDownLatch requestReceived = new CountDownLatch(1);
 		CountDownLatch serverClosed = new CountDownLatch(1);
+		Sinks.Empty<Void> empty = Sinks.empty();
+
 		disposableServer =
 				createServer()
 						.wiretap(true)
 						.handle((in, out) -> {
-							requestReceived.countDown();
+							empty.tryEmitEmpty();
 							in.withConnection(connection -> connection.onDispose(() -> {
 								serverClosed.countDown();
 							}));
@@ -3132,18 +3133,7 @@ class HttpClientTest extends BaseHttpTest {
 		// just when the server has received the request.
 		// Since the second mono completes with an empty value, the client should
 		// be cancelled, and the server socket should be closed.
-		StepVerifier.create(Flux.zip(client, Mono.create(s -> {
-							try {
-								assertThat(requestReceived.await(30, TimeUnit.SECONDS))
-										.as("latchServerReceivedRequest await").isTrue();
-							}
-							catch (InterruptedException e) {
-								log.warn("latchServerReceivedRequest wait interrupted");
-								return;
-							}
-							log.debug("completing mono with empty result");
-							s.success();
-						}))
+		StepVerifier.create(Flux.zip(client, empty.asMono())
 						.log("fluxzip"))
 				.expectNextCount(0)
 				.expectComplete()
