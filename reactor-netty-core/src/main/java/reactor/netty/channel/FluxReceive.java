@@ -172,8 +172,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			s.onSubscribe(this);
 		}
 		else {
-			long pending = getPending();
-			if (inboundDone && pending == 0) {
+			if (inboundDone && getPending() == 0) {
 				if (inboundError != null) {
 					Operators.error(s, inboundError);
 					return;
@@ -186,15 +185,9 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					log.debug(format(channel, "{}: Rejecting additional inbound receiver subscriber."), this);
 				}
 
-				StringBuilder msg = new StringBuilder("Rejecting additional inbound receiver subscriber.");
-				msg.append(" Current flux state=[");
-				msg.append("terminated=").append(inboundDone);
-				msg.append(",cancelled=").append(isCancelled());
-				msg.append(",pending=").append(pending);
-				msg.append(",error=").append(inboundError != null);
-				msg.append("].");
-				IllegalStateException ex = inboundError == null ? new IllegalStateException(msg.toString()) :
-						new IllegalStateException(msg.toString(), inboundError);
+				String msg = "Rejecting additional inbound receiver subscriber. State=" + toString(false);
+				IllegalStateException ex = inboundError == null ? new IllegalStateException(msg) :
+						new IllegalStateException(msg, inboundError);
 				Operators.error(s, ex);
 			}
 		}
@@ -520,12 +513,16 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public String toString() {
-		return "FluxReceive{" +
-				"pending=" + getPending() +
+		return toString(true);
+	}
+
+	final String toString(boolean logErrorMessage) {
+		return '[' +
+				"terminated=" + inboundDone +
 				", cancelled=" + isCancelled() +
-				", inboundDone=" + inboundDone +
-				", inboundError=" + inboundError +
-				'}';
+				", pending=" + getPending() +
+				", error=" + (logErrorMessage ? inboundError : (inboundError != null)) +
+				']';
 	}
 
 	static final AtomicReferenceFieldUpdater<FluxReceive, IntConsumer> CANCEL =
