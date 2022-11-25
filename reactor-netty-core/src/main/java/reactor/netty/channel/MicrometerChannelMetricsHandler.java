@@ -152,8 +152,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 			       observation.stop();
 
-			           ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
-			           parentContextView = null;
+			       ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
+			       parentContextView = null;
 			   });
 		}
 
