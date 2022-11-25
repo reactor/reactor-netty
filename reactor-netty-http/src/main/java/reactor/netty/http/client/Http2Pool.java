@@ -65,6 +65,7 @@ import static reactor.netty.ReactorNetty.format;
  * The connection is removed from the pool when:
  * <ul>
  *     <li>The connection is closed.</li>
+ *     <li>GO_AWAY is received and there are no active streams.</li>
  *     <li>The eviction predicate evaluates to true and there are no active streams.</li>
  *     <li>When the client is in one of the two modes: 1) H2 and HTTP/1.1 or 2) H2C and HTTP/1.1,
  *     and the negotiated protocol is HTTP/1.1.</li>
@@ -72,7 +73,7 @@ import static reactor.netty.ReactorNetty.format;
  * <p>
  * The connection is filtered out when:
  * <ul>
- *     <li>The connection's eviction predicate evaluates to true and there are active streams. In this case, the
+ *     <li>The connection's eviction predicate evaluates to true or GO_AWAY is received, and there are active streams. In this case, the
  *     connection stays in the pool, but it is not used. Once there are no active streams, the connection is removed
  *     from the pool.</li>
  *     <li>The connection has reached its max active streams configuration. In this case, the connection stays
