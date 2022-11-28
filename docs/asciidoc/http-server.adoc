@@ -647,6 +647,24 @@ The result in `Zipkin` looks like:
 
 image::images/http-server-tracing.png[]
 
+=== Access Current Observation
+Project Micrometer provides https://micrometer.io/docs/contextPropagation[`a library`] that assists with context propagation across
+different types of context mechanisms such as `ThreadLocal`, `Reactor Context` and others.
+
+The following example shows how to use this library in a custom `ChannelHandler`:
+
+====
+[source,java,indent=0]
+.{examplesdir}/tracing/custom/Application.java
+----
+include::{examplesdir}/tracing/custom/Application.java[lines=18..85]
+----
+<1> Initializes Brave, Zipkin, and the Observation registry.
+<2> Templated URIs are used as an URI tag value when possible.
+<3> Enables the built-in integration with Micrometer.
+<4> Custom `ChannelHandler` that uses context propagation library.
+====
+
 == Unix Domain Sockets
 The `HTTP` server supports Unix Domain Sockets (UDS) when native transport is in use.
 

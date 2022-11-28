@@ -60,6 +60,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.ReactorNetty.getChannelContext;
+import static reactor.netty.ReactorNetty.setChannelContext;
 import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 import static reactor.netty.http.client.HttpClientState.UPGRADE_REJECTED;
 
@@ -303,6 +305,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				return;
 			}
 
+			if (getChannelContext(channel) != null) {
+				setChannelContext(channel, null);
+			}
 			http2StreamChannelBootstrap(channel).open().addListener(this);
 		}
 
@@ -359,6 +364,9 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				}
 				else {
 					Http2ConnectionProvider.registerClose(ch, this);
+					if (!currentContext().isEmpty()) {
+						setChannelContext(ch, currentContext());
+					}
 					HttpClientConfig.addStreamHandlers(ch, obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
 							opsFactory, acceptGzip, metricsRecorder, -1, uriTagValue);
 

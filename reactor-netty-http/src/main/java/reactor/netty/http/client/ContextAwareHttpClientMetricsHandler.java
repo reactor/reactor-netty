@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import reactor.util.annotation.Nullable;
 
@@ -71,8 +72,9 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 	}
 
 	@Override
-	protected void recordRead(SocketAddress address) {
+	protected void recordRead(Channel channel) {
 		if (contextView != null) {
+			SocketAddress address = channel.remoteAddress();
 			recorder.recordDataReceivedTime(contextView, address,
 					path, method, status,
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
@@ -84,7 +86,7 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 			recorder.recordDataReceived(contextView, address, path, dataReceived);
 		}
 		else {
-			super.recordRead(address);
+			super.recordRead(channel);
 		}
 	}
 }
