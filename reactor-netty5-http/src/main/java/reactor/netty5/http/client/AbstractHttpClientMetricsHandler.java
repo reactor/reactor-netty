@@ -145,7 +145,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 			dataReceived += extractProcessedDataFromBuffer(msg);
 
 			if (msg instanceof LastHttpContent) {
-				recordRead(ctx.channel().remoteAddress());
+				recordRead(ctx.channel());
 				// Set flag used to indicate that we have received the full response.
 				flags |= RESPONSE_RECEIVED;
 
@@ -191,7 +191,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 			contextView = ops.currentContextView();
 		}
 
-		startWrite(request, ctx.channel(), contextView);
+		startWrite(request, ctx.channel());
 	}
 
 	private long extractProcessedDataFromBuffer(Object msg) {
@@ -211,7 +211,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 				path != null ? path : resolveUri(ctx));
 	}
 
-	protected void recordRead(SocketAddress address) {
+	protected void recordRead(Channel channel) {
+		SocketAddress address = channel.remoteAddress();
 		recorder().recordDataReceivedTime(address,
 				path, method, status,
 				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
@@ -247,7 +248,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		dataReceivedTime = System.nanoTime();
 	}
 
-	protected void startWrite(HttpRequest msg, Channel channel, @Nullable ContextView contextView) {
+	protected void startWrite(HttpRequest msg, Channel channel) {
 		dataSentTime = System.nanoTime();
 	}
 

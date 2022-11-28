@@ -55,6 +55,8 @@ import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
 import static reactor.netty5.ReactorNetty.format;
+import static reactor.netty5.ReactorNetty.getChannelContext;
+import static reactor.netty5.ReactorNetty.setChannelContext;
 
 /**
  * A default implementation for pooled {@link ConnectionProvider}.
@@ -168,6 +170,10 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			pooledConnection.pooledRef = pooledRef;
 
 			Channel c = pooledConnection.channel;
+
+			if (!currentContext.isEmpty()) {
+				setChannelContext(c, currentContext);
+			}
 
 			if (c.executor().inEventLoop()) {
 				run();
@@ -410,6 +416,10 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 				ConnectionObserver obs = channel.attr(OWNER)
 				                                .getAndSet(ConnectionObserver.emptyListener());
+
+				if (getChannelContext(channel) != null) {
+					setChannelContext(channel, null);
+				}
 
 				if (pooledRef == null) {
 					return;

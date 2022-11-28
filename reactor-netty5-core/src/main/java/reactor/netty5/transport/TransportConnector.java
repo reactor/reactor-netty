@@ -52,6 +52,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static reactor.netty5.ReactorNetty.format;
+import static reactor.netty5.ReactorNetty.setChannelContext;
 
 /**
  * {@link TransportConnector} is a helper class that creates, initializes and registers the channel.
@@ -350,6 +351,10 @@ public final class TransportConnector {
 			AddressResolver<SocketAddress> resolver =
 					(AddressResolver<SocketAddress>) resolverGroup.getResolver(channel.executor());
 
+			if (!contextView.isEmpty()) {
+				setChannelContext(channel, contextView);
+			}
+
 			Supplier<? extends SocketAddress> bindAddress = config.bindAddress();
 			if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
 				MonoChannelPromise monoChannelPromise = new MonoChannelPromise(channel);
@@ -365,8 +370,6 @@ public final class TransportConnector {
 
 			Future<List<SocketAddress>> resolveFuture;
 			if (resolver instanceof MicrometerAddressResolverGroupMetrics.MicrometerDelegatingAddressResolver) {
-				channel.attr(CONTEXT_VIEW).compareAndSet(null, contextView);
-
 				resolveFuture = ((MicrometerAddressResolverGroupMetrics.MicrometerDelegatingAddressResolver<SocketAddress>) resolver)
 						.resolveAll(remoteAddress, contextView);
 			}
@@ -525,8 +528,6 @@ public final class TransportConnector {
 	}
 
 	static final Logger log = Loggers.getLogger(TransportConnector.class);
-
-	static final AttributeKey<ContextView> CONTEXT_VIEW = AttributeKey.valueOf("$CONTEXT_VIEW");
 
 	static final Predicate<Throwable> RETRY_PREDICATE = t -> t instanceof RetryConnectException;
 }

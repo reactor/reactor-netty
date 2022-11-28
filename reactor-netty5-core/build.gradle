@@ -113,6 +113,7 @@ dependencies {
 	//Metrics
 	compileOnly "io.micrometer:micrometer-core:$micrometerVersion"
 	compileOnly "io.micrometer:micrometer-tracing:$micrometerTracingVersion"
+	compileOnly "io.micrometer:context-propagation:$contextPropagationVersion"
 
 	// Logging
 	compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
@@ -154,14 +155,18 @@ dependencies {
 	for (dependency in project.configurations.shaded.dependencies) {
 		compileOnly(dependency)
 		testImplementation(dependency)
+		contextPropagationTestImplementation(dependency)
 	}
 
 	jarFileTestImplementation "org.assertj:assertj-core:$assertJVersion"
 	jarFileTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	jarFileTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 
+	contextPropagationTestImplementation "io.projectreactor:reactor-test:$testAddonVersion"
 	contextPropagationTestImplementation "org.assertj:assertj-core:$assertJVersion"
 	contextPropagationTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	contextPropagationTestImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
+	contextPropagationTestImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	contextPropagationTestImplementation "io.micrometer:micrometer-core:$micrometerVersion"
 	contextPropagationTestImplementation "io.micrometer:context-propagation:$contextPropagationVersion"
 	contextPropagationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"

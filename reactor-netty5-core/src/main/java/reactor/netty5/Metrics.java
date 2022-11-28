@@ -20,6 +20,8 @@ import io.micrometer.core.instrument.observation.DefaultMeterObservationHandler;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.ObservationRegistry;
+import io.netty5.channel.Channel;
+import io.netty5.util.AttributeKey;
 import reactor.netty5.observability.ReactorNettyTimerObservationHandler;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
@@ -272,6 +274,8 @@ public class Metrics {
 
 	public static final String ERROR = "ERROR";
 
+	public static final String UNKNOWN = "UNKNOWN";
+
 	@Nullable
 	public static Observation currentObservation(ContextView contextView) {
 		if (contextView.hasKey(OBSERVATION_KEY)) {
@@ -295,5 +299,33 @@ public class Metrics {
 
 	public static Context updateContext(Context context, Object observation) {
 		return context.hasKey(OBSERVATION_KEY) ? context : context.put(OBSERVATION_KEY, observation);
+	}
+
+	static final AttributeKey<ContextView> CONTEXT_VIEW = AttributeKey.valueOf("$CONTEXT_VIEW");
+
+	/**
+	 * Updates the {@link ContextView} in the channel attributes with this {@link Observation}.
+	 * When there is already {@link Observation} in the {@link ContextView}, then is will be set as a parent
+	 * to this {@link Observation}.
+	 *
+	 * @param channel the channel
+	 * @param observation the {@link Observation}
+	 * @return the previous {@link Observation} when exists otherwise {@code null}
+	 * @since 1.1.1
+	 */
+	@Nullable
+	public static ContextView updateChannelContext(Channel channel, Observation observation) {
+		ContextView parentContextView = channel.attr(CONTEXT_VIEW).get();
+		if (parentContextView != null) {
+			Observation parentObservation = parentContextView.getOrDefault(OBSERVATION_KEY, null);
+			if (parentObservation != null) {
+				observation.parentObservation(parentObservation);
+			}
+			channel.attr(CONTEXT_VIEW).set(Context.of(parentContextView).put(OBSERVATION_KEY, observation));
+		}
+		else {
+			channel.attr(CONTEXT_VIEW).set(Context.of(OBSERVATION_KEY, observation));
+		}
+		return parentContextView;
 	}
 }

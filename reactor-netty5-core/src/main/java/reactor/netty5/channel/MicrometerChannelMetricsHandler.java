@@ -21,8 +21,8 @@ import io.micrometer.observation.Observation;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.ssl.SslHandler;
-import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.Future;
+import reactor.netty5.ReactorNetty;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
@@ -33,10 +33,11 @@ import java.util.function.Supplier;
 
 import static reactor.netty5.Metrics.CONNECT_TIME;
 import static reactor.netty5.Metrics.ERROR;
-import static reactor.netty5.Metrics.OBSERVATION_KEY;
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty5.Metrics.SUCCESS;
 import static reactor.netty5.Metrics.TLS_HANDSHAKE_TIME;
+import static reactor.netty5.Metrics.UNKNOWN;
+import static reactor.netty5.Metrics.updateChannelContext;
 import static reactor.netty5.channel.ConnectObservations.ConnectTimeHighCardinalityTags.NET_PEER_NAME;
 import static reactor.netty5.channel.ConnectObservations.ConnectTimeHighCardinalityTags.NET_PEER_PORT;
 import static reactor.netty5.channel.ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
@@ -54,7 +55,6 @@ import static reactor.netty5.channel.ConnectObservations.ConnectTimeLowCardinali
  * @since 1.1.0
  */
 public final class MicrometerChannelMetricsHandler extends AbstractChannelMetricsHandler {
-	static final AttributeKey<ContextView> CONTEXT_VIEW = AttributeKey.valueOf("$CONTEXT_VIEW");
 
 	final MicrometerChannelMetricsRecorder recorder;
 
@@ -90,7 +90,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		// remote address and status are not known beforehand
 		String netPeerName;
 		String netPeerPort;
-		String status;
+		String status = UNKNOWN;
+		ContextView parentContextView;
 
 		ConnectMetricsHandler(MicrometerChannelMetricsRecorder recorder) {
 			this.recorder = recorder;
@@ -123,12 +124,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 				this.netPeerPort = "";
 			}
 			Observation observation = Observation.createNotStarted(recorder.name() + CONNECT_TIME, this, OBSERVATION_REGISTRY);
-			if (ctx.channel().hasAttr(CONTEXT_VIEW)) {
-				ContextView contextView = ctx.channel().attr(CONTEXT_VIEW).get();
-				if (contextView.hasKey(OBSERVATION_KEY)) {
-					observation.parentObservation(contextView.get(OBSERVATION_KEY));
-				}
-			}
+			parentContextView = updateChannelContext(ctx.channel(), observation);
 			observation.start();
 			return ctx.connect(remoteAddress, localAddress)
 			          .addListener(future -> {
@@ -136,8 +132,11 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 			              status = future.isSuccess() ? SUCCESS : ERROR;
 
-			              observation.stop();
-			});
+			       observation.stop();
+
+			       ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
+			       parentContextView = null;
+			   });
 		}
 
 		@Override
@@ -171,7 +170,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		// remote address and status are not known beforehand
 		String netPeerName;
 		String netPeerPort;
-		String status;
+		String status = UNKNOWN;
+		ContextView parentContextView;
 
 		TlsMetricsHandler(MicrometerChannelMetricsRecorder recorder, boolean onServer) {
 			this.recorder = recorder;
@@ -191,12 +191,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 				this.netPeerPort = "";
 			}
 			observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
-			if (ctx.channel().hasAttr(CONTEXT_VIEW)) {
-				ContextView contextView = ctx.channel().attr(CONTEXT_VIEW).get();
-				if (contextView.hasKey(OBSERVATION_KEY)) {
-					observation.parentObservation(contextView.get(OBSERVATION_KEY));
-				}
-			}
+			parentContextView = updateChannelContext(ctx.channel(), observation);
 			observation.start();
 			ctx.pipeline().get(SslHandler.class)
 					.handshakeFuture()
@@ -204,6 +199,9 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 						ctx.pipeline().remove(this);
 						status = f.isSuccess() ? SUCCESS : ERROR;
 						observation.stop();
+
+						ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
+						parentContextView = null;
 					});
 
 			ctx.fireChannelActive();
