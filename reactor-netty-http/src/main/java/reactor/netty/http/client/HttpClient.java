@@ -62,6 +62,8 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.ClientTransport;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
@@ -1158,6 +1160,9 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * For example instead of using the actual uri {@code "/users/1"} as uri tag value, templated uri
 	 * {@code "/users/{id}"} can be used.
 	 * <p><strong>Note:</strong>
+	 * It is strongly recommended to provide template-like form for the URIs. Without a conversion to a template-like form,
+	 * each distinct URI leads to the creation of a distinct tag, which takes a lot of memory for the metrics.
+	 * <p><strong>Note:</strong>
 	 * It is strongly recommended applications to configure an upper limit for the number of the URI tags.
 	 * For example:
 	 * <pre class="code">
@@ -1179,6 +1184,12 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 				throw new UnsupportedOperationException(
 						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
 								" to the class path first");
+			}
+			if (uriTagValue == Function.<String>identity()) {
+				log.debug("Metrics are enabled with [uriTagValue=Function#identity]. " +
+						"It is strongly recommended to provide template-like form for the URIs. " +
+						"Without a conversion to a template-like form, each distinct URI leads " +
+						"to the creation of a distinct tag, which takes a lot of memory for the metrics.");
 			}
 			HttpClient dup = duplicate();
 			dup.configuration().metricsRecorder(() -> configuration().defaultMetricsRecorder());
@@ -1581,6 +1592,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		                                           .getImplementationVersion())
 		               .orElse("dev");
 	}
+
+	static final Logger log = Loggers.getLogger(HttpClient.class);
 
 	static final String HTTP_SCHEME = "http";
 
