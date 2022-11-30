@@ -55,6 +55,8 @@ import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.ReactorNetty.getChannelContext;
+import static reactor.netty.ReactorNetty.setChannelContext;
 
 /**
  * A default implementation for pooled {@link ConnectionProvider}.
@@ -166,6 +168,10 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			pooledConnection.pooledRef = pooledRef;
 
 			Channel c = pooledConnection.channel;
+
+			if (!currentContext.isEmpty()) {
+				setChannelContext(c, currentContext);
+			}
 
 			if (c.eventLoop().inEventLoop()) {
 				run();
@@ -412,6 +418,10 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				ConnectionObserver obs = channel.attr(OWNER)
 				                                .getAndSet(ConnectionObserver.emptyListener());
 
+				if (getChannelContext(channel) != null) {
+					setChannelContext(channel, null);
+				}
+
 				if (pooledRef == null) {
 					return;
 				}
@@ -502,11 +512,11 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				EventLoop callerEventLoop = sink.contextView().hasKey(CONTEXT_CALLER_EVENTLOOP) ?
 						sink.contextView().get(CONTEXT_CALLER_EVENTLOOP) : null;
 				if (callerEventLoop != null) {
-					TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop)
+					TransportConnector.connect(config, remoteAddress, resolver, initializer, callerEventLoop, sink.contextView())
 							.subscribe(initializer);
 				}
 				else {
-					TransportConnector.connect(config, remoteAddress, resolver, initializer).subscribe(initializer);
+					TransportConnector.connect(config, remoteAddress, resolver, initializer, sink.contextView()).subscribe(initializer);
 				}
 			});
 		}

@@ -87,6 +87,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.ReactorNetty.setChannelContext;
 import static reactor.netty.http.client.Http2ConnectionProvider.OWNER;
 
 /**
@@ -824,6 +825,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		protected void initChannel(Channel ch) {
 			if (observer != null && opsFactory != null && owner != null) {
 				Http2ConnectionProvider.registerClose(ch, owner);
+				if (!owner.currentContext().isEmpty()) {
+					setChannelContext(ch, owner.currentContext());
+				}
 				addStreamHandlers(ch, observer.then(new StreamConnectionObserver(owner.currentContext())), opsFactory,
 						acceptGzip, metricsRecorder, responseTimeoutMillis, uriTagValue);
 			}
