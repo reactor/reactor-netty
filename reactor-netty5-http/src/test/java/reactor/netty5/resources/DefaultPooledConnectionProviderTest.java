@@ -661,13 +661,11 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		@Override
 		public void operationComplete(Channel channel, Future<? extends Void> future) {
 			if (closeCount.getAndDecrement() > 0) {
-				//"FutureReturnValueIgnored" this is deliberate
 				channel.close();
 				parent.trySuccess(null);
 			}
 			else {
 				parent.trySuccess(null);
-				//"FutureReturnValueIgnored" this is deliberate
 				channel.close();
 			}
 		}
@@ -683,7 +681,6 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void testHttp2PoolAndGoAway() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -697,7 +694,6 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				        .secure(spec -> spec.sslContext(serverCtx))
 				        .route(r -> r.get("/1", (req, res) -> res.sendString(startSending.asMono().then(Mono.just("/1"))))
 				                     .get("/2", (req, res) -> {
-				                         //"FutureReturnValueIgnored" this is deliberate
 				                         req.withConnection(conn -> conn.channel().parent().close());
 				                         startSending.tryEmitEmpty();
 				                         return res.sendString(Mono.just("/2"));

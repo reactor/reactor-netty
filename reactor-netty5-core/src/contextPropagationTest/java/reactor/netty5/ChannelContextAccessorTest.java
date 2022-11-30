@@ -39,7 +39,6 @@ class ChannelContextAccessorTest {
 
 	@ParameterizedTest
 	@MethodSource("data")
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void test(Context context, String expectation) {
 		registry.registerThreadLocalAccessor(new TestThreadLocalAccessor());
 
@@ -56,7 +55,6 @@ class ChannelContextAccessorTest {
 			assertThat(TestThreadLocalHolder.value()).isEqualTo(expectation);
 		}
 		finally {
-			//"FutureReturnValueIgnored" this is deliberate
 			channel.close();
 			registry.removeThreadLocalAccessor(TestThreadLocalAccessor.KEY);
 		}

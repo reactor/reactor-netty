@@ -23,8 +23,13 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Mono;
+import reactor.netty5.channel.ChannelOperations;
+import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.tcp.TcpClient;
 import reactor.netty5.tcp.TcpServer;
 import reactor.test.StepVerifier;
@@ -34,16 +39,25 @@ import java.time.Duration;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty5.ReactorNetty.getChannelContext;
 
 class ContextPropagationTest {
+	static final ConnectionProvider provider = ConnectionProvider.create("testContextPropagation", 1);
+
+	@AfterAll
+	static void disposePool() {
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
+	}
 
 	@Test
 	void testObservationKey() {
 		assertThat(Metrics.OBSERVATION_KEY).isEqualTo(ObservationThreadLocalAccessor.KEY);
 	}
 
-	@Test
-	void testContextPropagation() {
+	@ParameterizedTest
+	@MethodSource("tcpClientCombinations")
+	void testContextPropagation(TcpClient client) {
 		DisposableServer disposableServer =
 				TcpServer.create()
 				         .wiretap(true)
@@ -56,12 +70,11 @@ class ContextPropagationTest {
 			TestThreadLocalHolder.value("First");
 
 			Connection connection =
-					TcpClient.create()
-					         .port(disposableServer.port())
-					         .wiretap(true)
-					         .connect()
-					         .contextWrite(ctx -> ContextSnapshot.captureAll(registry).updateContext(ctx))
-					         .block();
+					client.port(disposableServer.port())
+					      .wiretap(true)
+					      .connect()
+					      .contextWrite(ctx -> ContextSnapshot.captureAll(registry).updateContext(ctx))
+					      .block();
 
 			assertThat(connection).isNotNull();
 
@@ -81,9 +94,18 @@ class ContextPropagationTest {
 			          .verify(Duration.ofSeconds(5));
 		}
 		finally {
+			TestThreadLocalHolder.reset();
 			registry.removeThreadLocalAccessor(TestThreadLocalAccessor.KEY);
 			disposableServer.disposeNow();
 		}
+	}
+
+	static Object[] tcpClientCombinations() {
+		return new Object[] {
+				TcpClient.create(),
+				TcpClient.newConnection(),
+				TcpClient.create(provider)
+		};
 	}
 
 	static final class TestChannelOutboundHandler extends ChannelHandlerAdapter {
@@ -98,17 +120,28 @@ class ContextPropagationTest {
 		@Override
 		@SuppressWarnings("try")
 		public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-			TestThreadLocalHolder.value("Second");
-			if (msg instanceof Buffer buffer) {
-				Buffer buffer1;
-				try (ContextSnapshot.Scope scope = ContextSnapshot.captureFrom(ctx.channel()).setThreadLocals()) {
-					buffer1 = ctx.bufferAllocator().copyOf(TestThreadLocalHolder.value(), Charset.defaultCharset());
+			try {
+				ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+				if (ops != null && ops.currentContext() == getChannelContext(ctx.channel())) {
+					TestThreadLocalHolder.value("Second");
 				}
-				Buffer buffer2 = ctx.bufferAllocator().copyOf(TestThreadLocalHolder.value(), Charset.defaultCharset());
-				return ctx.write(ctx.bufferAllocator().compose(List.of(buffer.send(), buffer1.send(), buffer2.send())));
+				else {
+					TestThreadLocalHolder.value("Error");
+				}
+				if (msg instanceof Buffer buffer) {
+					Buffer buffer1;
+					try (ContextSnapshot.Scope scope = ContextSnapshot.captureFrom(ctx.channel()).setThreadLocals()) {
+						buffer1 = ctx.bufferAllocator().copyOf(TestThreadLocalHolder.value(), Charset.defaultCharset());
+					}
+					Buffer buffer2 = ctx.bufferAllocator().copyOf(TestThreadLocalHolder.value(), Charset.defaultCharset());
+					return ctx.write(ctx.bufferAllocator().compose(List.of(buffer.send(), buffer1.send(), buffer2.send())));
+				}
+				else {
+					return ctx.write(msg);
+				}
 			}
-			else {
-				return ctx.write(msg);
+			finally {
+				TestThreadLocalHolder.reset();
 			}
 		}
 	}

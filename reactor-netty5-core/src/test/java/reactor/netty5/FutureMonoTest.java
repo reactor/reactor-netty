@@ -52,7 +52,6 @@ class FutureMonoTest {
 	}
 
 	// return value of setFailure not needed
-	@SuppressWarnings("FutureReturnValueIgnored")
 	@Test
 	void testImmediateFutureMonoLater() {
 		ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
@@ -76,7 +75,6 @@ class FutureMonoTest {
 	}
 
 	// return value of setFailure not needed
-	@SuppressWarnings("FutureReturnValueIgnored")
 	@Test
 	void testDeferredFutureMonoLater() {
 		ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;

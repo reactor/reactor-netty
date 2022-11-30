@@ -34,6 +34,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Mono;
+import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.http.Http11SslContextSpec;
 import reactor.netty5.http.Http2SslContextSpec;
 import reactor.netty5.http.HttpProtocol;
@@ -98,6 +99,7 @@ class ContextPropagationTest {
 			sendRequest(localClient, "TestSecondSecond");
 		}
 		finally {
+			TestThreadLocalHolder.reset();
 			registry.removeThreadLocalAccessor(TestThreadLocalAccessor.KEY);
 			disposableServer.disposeNow();
 		}
@@ -169,26 +171,34 @@ class ContextPropagationTest {
 
 		@Override
 		public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-			if (ctx.channel() instanceof Http2StreamChannel && getChannelContext(ctx.channel().parent()) != null) {
-				TestThreadLocalHolder.value("Error");
-			}
-			else {
-				TestThreadLocalHolder.value("Second");
-			}
-			if (msg instanceof FullHttpRequest originalRequest) {
-				Buffer buffer1;
-				try (ContextSnapshot.Scope scope = ContextSnapshot.captureFrom(ctx.channel()).setThreadLocals()) {
-					buffer1 = ctx.bufferAllocator().copyOf(TestThreadLocalHolder.value(), Charset.defaultCharset());
+			try {
+				ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+				String threadLocalValue;
+				if (ctx.channel() instanceof Http2StreamChannel) {
+					threadLocalValue = getChannelContext(ctx.channel().parent()) != null ? "Error" : "Second";
 				}
-				Buffer buffer2 = ctx.bufferAllocator().copyOf(TestThreadLocalHolder.value(), Charset.defaultCharset());
-				Buffer composite = ctx.bufferAllocator().compose(List.of(originalRequest.payload().send(), buffer1.send(), buffer2.send()));
-				FullHttpRequest request = new DefaultFullHttpRequest(originalRequest.protocolVersion(), originalRequest.method(),
-						originalRequest.uri(), composite, originalRequest.headers().copy(), HttpHeaders.emptyHeaders());
-				request.headers().set(HttpHeaderNames.CONTENT_LENGTH, composite.readableBytes() + "");
-				return ctx.write(request);
+				else {
+					threadLocalValue = ops != null && ops.currentContext() == getChannelContext(ctx.channel()) ? "Second" : "Error";
+				}
+				TestThreadLocalHolder.value(threadLocalValue);
+				if (msg instanceof FullHttpRequest originalRequest) {
+					Buffer buffer1;
+					try (ContextSnapshot.Scope scope = ContextSnapshot.captureFrom(ctx.channel()).setThreadLocals()) {
+						buffer1 = ctx.bufferAllocator().copyOf(TestThreadLocalHolder.value(), Charset.defaultCharset());
+					}
+					Buffer buffer2 = ctx.bufferAllocator().copyOf(TestThreadLocalHolder.value(), Charset.defaultCharset());
+					Buffer composite = ctx.bufferAllocator().compose(List.of(originalRequest.payload().send(), buffer1.send(), buffer2.send()));
+					FullHttpRequest request = new DefaultFullHttpRequest(originalRequest.protocolVersion(), originalRequest.method(),
+							originalRequest.uri(), composite, originalRequest.headers().copy(), HttpHeaders.emptyHeaders());
+					request.headers().set(HttpHeaderNames.CONTENT_LENGTH, composite.readableBytes() + "");
+					return ctx.write(request);
+				}
+				else {
+					return ctx.write(msg);
+				}
 			}
-			else {
-				return ctx.write(msg);
+			finally {
+				TestThreadLocalHolder.reset();
 			}
 		}
 	}

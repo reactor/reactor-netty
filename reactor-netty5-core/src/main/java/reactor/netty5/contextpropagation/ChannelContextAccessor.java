@@ -34,7 +34,7 @@ import static reactor.netty5.ReactorNetty.setChannelContext;
  * which is an optional dependency.
  *
  * @author Violeta Georgieva
- * @since 1.1.1
+ * @since 1.0.26
  */
 public final class ChannelContextAccessor implements ContextAccessor<Channel, Channel> {
 
