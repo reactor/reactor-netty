@@ -24,8 +24,13 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Mono;
+import reactor.netty.channel.ChannelOperations;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
@@ -34,16 +39,25 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty.ReactorNetty.getChannelContext;
 
 class ContextPropagationTest {
+	static final ConnectionProvider provider = ConnectionProvider.create("testContextPropagation", 1);
+
+	@AfterAll
+	static void disposePool() {
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
+	}
 
 	@Test
 	void testObservationKey() {
 		assertThat(Metrics.OBSERVATION_KEY).isEqualTo(ObservationThreadLocalAccessor.KEY);
 	}
 
-	@Test
-	void testContextPropagation() {
+	@ParameterizedTest
+	@MethodSource("tcpClientCombinations")
+	void testContextPropagation(TcpClient client) {
 		DisposableServer disposableServer =
 				TcpServer.create()
 				         .wiretap(true)
@@ -56,12 +70,11 @@ class ContextPropagationTest {
 			TestThreadLocalHolder.value("First");
 
 			Connection connection =
-					TcpClient.create()
-					         .port(disposableServer.port())
-					         .wiretap(true)
-					         .connect()
-					         .contextWrite(ctx -> ContextSnapshot.captureAll(registry).updateContext(ctx))
-					         .block();
+					client.port(disposableServer.port())
+					      .wiretap(true)
+					      .connect()
+					      .contextWrite(ctx -> ContextSnapshot.captureAll(registry).updateContext(ctx))
+					      .block();
 
 			assertThat(connection).isNotNull();
 
@@ -81,9 +94,18 @@ class ContextPropagationTest {
 			          .verify(Duration.ofSeconds(5));
 		}
 		finally {
+			TestThreadLocalHolder.reset();
 			registry.removeThreadLocalAccessor(TestThreadLocalAccessor.KEY);
 			disposableServer.disposeNow();
 		}
+	}
+
+	static Object[] tcpClientCombinations() {
+		return new Object[] {
+				TcpClient.create(),
+				TcpClient.newConnection(),
+				TcpClient.create(provider)
+		};
 	}
 
 	static final class TestChannelOutboundHandler extends ChannelOutboundHandlerAdapter {
@@ -98,20 +120,31 @@ class ContextPropagationTest {
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-			TestThreadLocalHolder.value("Second");
-			if (msg instanceof ByteBuf) {
-				ByteBuf buffer1;
-				try (ContextSnapshot.Scope scope = ContextSnapshot.captureFrom(ctx.channel()).setThreadLocals()) {
-					buffer1 = Unpooled.wrappedBuffer(TestThreadLocalHolder.value().getBytes(Charset.defaultCharset()));
+			try {
+				ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+				if (ops != null && ops.currentContext() == getChannelContext(ctx.channel())) {
+					TestThreadLocalHolder.value("Second");
 				}
-				ByteBuf buffer2 = Unpooled.wrappedBuffer(TestThreadLocalHolder.value().getBytes(Charset.defaultCharset()));
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(ctx.alloc().compositeBuffer()
-						.addComponents(true, (ByteBuf) msg, buffer1, buffer2), promise);
+				else {
+					TestThreadLocalHolder.value("Error");
+				}
+				if (msg instanceof ByteBuf) {
+					ByteBuf buffer1;
+					try (ContextSnapshot.Scope scope = ContextSnapshot.captureFrom(ctx.channel()).setThreadLocals()) {
+						buffer1 = Unpooled.wrappedBuffer(TestThreadLocalHolder.value().getBytes(Charset.defaultCharset()));
+					}
+					ByteBuf buffer2 = Unpooled.wrappedBuffer(TestThreadLocalHolder.value().getBytes(Charset.defaultCharset()));
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.write(ctx.alloc().compositeBuffer()
+							.addComponents(true, (ByteBuf) msg, buffer1, buffer2), promise);
+				}
+				else {
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.write(msg, promise);
+				}
 			}
-			else {
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(msg, promise);
+			finally {
+				TestThreadLocalHolder.reset();
 			}
 		}
 	}

@@ -33,6 +33,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Mono;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
@@ -96,6 +97,7 @@ class ContextPropagationTest {
 			sendRequest(localClient, "TestSecondSecond");
 		}
 		finally {
+			TestThreadLocalHolder.reset();
 			registry.removeThreadLocalAccessor(TestThreadLocalAccessor.KEY);
 			disposableServer.disposeNow();
 		}
@@ -168,29 +170,37 @@ class ContextPropagationTest {
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-			if (ctx.channel() instanceof Http2StreamChannel && getChannelContext(ctx.channel().parent()) != null) {
-				TestThreadLocalHolder.value("Error");
-			}
-			else {
-				TestThreadLocalHolder.value("Second");
-			}
-			if (msg instanceof FullHttpRequest) {
-				ByteBuf buffer1;
-				try (ContextSnapshot.Scope scope = ContextSnapshot.captureFrom(ctx.channel()).setThreadLocals()) {
-					buffer1 = Unpooled.wrappedBuffer(TestThreadLocalHolder.value().getBytes(Charset.defaultCharset()));
+			try {
+				ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+				String threadLocalValue;
+				if (ctx.channel() instanceof Http2StreamChannel) {
+					threadLocalValue = getChannelContext(ctx.channel().parent()) != null ? "Error" : "Second";
 				}
-				ByteBuf buffer2 = Unpooled.wrappedBuffer(TestThreadLocalHolder.value().getBytes(Charset.defaultCharset()));
-				FullHttpRequest originalRequest = (FullHttpRequest) msg;
-				ByteBuf composite = ctx.alloc().compositeBuffer()
-						.addComponents(true, originalRequest.content(), buffer1, buffer2);
-				FullHttpRequest request = originalRequest.replace(composite);
-				request.headers().set(HttpHeaderNames.CONTENT_LENGTH, composite.readableBytes());
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(request, promise);
+				else {
+					threadLocalValue = ops != null && ops.currentContext() == getChannelContext(ctx.channel()) ? "Second" : "Error";
+				}
+				TestThreadLocalHolder.value(threadLocalValue);
+				if (msg instanceof FullHttpRequest) {
+					ByteBuf buffer1;
+					try (ContextSnapshot.Scope scope = ContextSnapshot.captureFrom(ctx.channel()).setThreadLocals()) {
+						buffer1 = Unpooled.wrappedBuffer(TestThreadLocalHolder.value().getBytes(Charset.defaultCharset()));
+					}
+					ByteBuf buffer2 = Unpooled.wrappedBuffer(TestThreadLocalHolder.value().getBytes(Charset.defaultCharset()));
+					FullHttpRequest originalRequest = (FullHttpRequest) msg;
+					ByteBuf composite = ctx.alloc().compositeBuffer()
+							.addComponents(true, originalRequest.content(), buffer1, buffer2);
+					FullHttpRequest request = originalRequest.replace(composite);
+					request.headers().set(HttpHeaderNames.CONTENT_LENGTH, composite.readableBytes());
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.write(request, promise);
+				}
+				else {
+					//"FutureReturnValueIgnored" this is deliberate
+					ctx.write(msg, promise);
+				}
 			}
-			else {
-				//"FutureReturnValueIgnored" this is deliberate
-				ctx.write(msg, promise);
+			finally {
+				TestThreadLocalHolder.reset();
 			}
 		}
 	}

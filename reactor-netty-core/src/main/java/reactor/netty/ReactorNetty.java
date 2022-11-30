@@ -289,7 +289,7 @@ public final class ReactorNetty {
 	 *
 	 * @param channel the channel
 	 * @return {@link ContextView} from the channel attributes when exists otherwise returns {@code null}
-	 * @since 1.1.1
+	 * @since 1.0.26
 	 */
 	@Nullable
 	public static ContextView getChannelContext(Channel channel) {
@@ -297,12 +297,12 @@ public final class ReactorNetty {
 	}
 
 	/**
-	 * Adds {@link ContextView} from the channel attributes. When {@code null} is provided, the channel
+	 * Adds {@link ContextView} to the channel attributes. When {@code null} is provided, the channel
 	 * attribute's value will be deleted.
 	 *
 	 * @param channel the channel
 	 * @param contextView {@link ContextView} that will be added to the channel attributes
-	 * @since 1.1.1
+	 * @since 1.0.26
 	 */
 	public static void setChannelContext(Channel channel, @Nullable ContextView contextView) {
 		channel.attr(CONTEXT_VIEW).set(contextView);

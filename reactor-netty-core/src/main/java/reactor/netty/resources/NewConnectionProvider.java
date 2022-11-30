@@ -67,10 +67,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 				remote = Objects.requireNonNull(remoteAddress.get(), "Remote Address supplier returned null");
 			}
 
-			ConnectionObserver connectionObserver = new NewConnectionObserver(sink, observer);
-			DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
 			if (remote != null && resolverGroup != null) {
-				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
 				Context currentContext = Context.of(sink.contextView());
 				if (config.metricsRecorder() != null && Metrics.isMicrometerAvailable()) {
 					Object currentObservation = reactor.netty.Metrics.currentObservation(currentContext);
@@ -78,6 +75,9 @@ final class NewConnectionProvider implements ConnectionProvider {
 						currentContext = reactor.netty.Metrics.updateContext(currentContext, currentObservation);
 					}
 				}
+				ConnectionObserver connectionObserver = new NewConnectionObserver(sink, currentContext, observer);
+				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
+				DisposableConnect disposableConnect = new DisposableConnect(sink, currentContext, config.bindAddress());
 				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, currentContext)
 				                  .subscribe(disposableConnect);
 			}
@@ -91,7 +91,9 @@ final class NewConnectionProvider implements ConnectionProvider {
 						local = AddressUtils.createResolved(localInet.getHostName(), localInet.getPort());
 					}
 				}
+				ConnectionObserver connectionObserver = new NewConnectionObserver(sink, observer);
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, null, true);
+				DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
 				TransportConnector.bind(config, channelInitializer, local, local instanceof DomainSocketAddress)
 				                  .subscribe(disposableConnect);
 			}
@@ -116,8 +118,12 @@ final class NewConnectionProvider implements ConnectionProvider {
 		Subscription subscription;
 
 		DisposableConnect(MonoSink<Connection> sink, @Nullable Supplier<? extends SocketAddress> bindAddress) {
+			this(sink, Context.of(sink.contextView()), bindAddress);
+		}
+
+		DisposableConnect(MonoSink<Connection> sink, Context currentContext, @Nullable Supplier<? extends SocketAddress> bindAddress) {
 			this.sink = sink;
-			this.currentContext = Context.of(sink.contextView());
+			this.currentContext = currentContext;
 			this.bindAddress = bindAddress;
 		}
 
@@ -173,8 +179,12 @@ final class NewConnectionProvider implements ConnectionProvider {
 		final ConnectionObserver   obs;
 
 		NewConnectionObserver(MonoSink<Connection> sink, ConnectionObserver obs) {
+			this(sink, Context.of(sink.contextView()), obs);
+		}
+
+		NewConnectionObserver(MonoSink<Connection> sink, Context currentContext, ConnectionObserver obs) {
 			this.sink = sink;
-			this.currentContext = Context.of(sink.contextView());
+			this.currentContext = currentContext;
 			this.obs = obs;
 		}
 
