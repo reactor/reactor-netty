@@ -93,12 +93,14 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 	@Override
 	public <V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver) {
 		return _connect().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp.receive()))
-		                                          .doFinally(s -> discard(resp)));
+		                                          .doFinally(s -> discard(resp))
+		                                          .contextWrite(resp.currentContextView()));
 	}
 
 	@Override
 	public <V> Flux<V> responseConnection(BiFunction<? super HttpClientResponse, ? super Connection, ? extends Publisher<V>> receiver) {
-		return _connect().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp)));
+		return _connect().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp))
+		                                          .contextWrite(resp.currentContextView()));
 	}
 
 	@Override
@@ -117,7 +119,8 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 	@Override
 	public <V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver) {
 		return _connect().flatMap(resp -> receiver.apply(resp, resp.receive().aggregate())
-		                                          .doFinally(s -> discard(resp)));
+		                                          .doFinally(s -> discard(resp))
+		                                          .contextWrite(resp.currentContextView()));
 	}
 
 	// RequestSender methods

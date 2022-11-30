@@ -95,6 +95,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -1167,7 +1169,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void withConnector() {
+	void withConnector_1() {
 		disposableServer = createServer()
 		                             .handle((req, resp) ->
 		                                 resp.sendString(Mono.just(req.requestHeaders()
@@ -1192,6 +1194,65 @@ class HttpClientTest extends BaseHttpTest {
 		StepVerifier.create(content)
 		            .expectNext("success")
 		            .verifyComplete();
+	}
+
+	@ParameterizedTest
+	@MethodSource("dataWithConnector_2")
+	void withConnector_2(boolean withConnector, String expectation) {
+		disposableServer =
+				createServer().handle((req, resp) -> resp.sendString(Mono.just(req.requestHeaders().get("test"))))
+				              .bindNow();
+
+		HttpClient client = createHttpClientForContextWithPort();
+		if (withConnector) {
+			client = client.mapConnect(c -> c.contextWrite(Context.of("test", "Second")));
+		}
+		HttpClient.ResponseReceiver<?> responseReceiver =
+				client.post()
+				      .uri("/")
+				      .send((req, out) -> Mono.deferContextual(ctx -> {
+				          req.requestHeaders().set("test", ctx.getOrDefault("test", "Fail"));
+				          return Mono.empty();
+				      }));
+
+		doWithConnector_2(
+				responseReceiver.responseConnection((res, conn) -> Mono.deferContextual(ctx ->
+				                    conn.inbound()
+				                        .receive()
+				                        .aggregate()
+				                        .asString()
+				                        .flatMap(s -> Mono.just(s + ctx.getOrDefault("test", "Fail")))))
+				                .contextWrite(Context.of("test", "First")),
+				expectation);
+
+		doWithConnector_2(
+				responseReceiver.response((res, bytes) -> Mono.deferContextual(ctx ->
+				                    bytes.aggregate()
+				                         .asString()
+				                         .flatMap(s -> Mono.just(s + ctx.getOrDefault("test", "Fail")))))
+				                .contextWrite(Context.of("test", "First")),
+				expectation);
+
+		doWithConnector_2(
+				responseReceiver.responseSingle((res, bytes) -> Mono.deferContextual(ctx ->
+				                    bytes.asString()
+				                         .flatMap(s -> Mono.just(s + ctx.getOrDefault("test", "Fail")))))
+				                .contextWrite(Context.of("test", "First")),
+				expectation);
+	}
+
+	static Object[][] dataWithConnector_2() {
+		return new Object[][]{
+				{true, "SecondSecond"},
+				{false, "FirstFirst"}
+		};
+	}
+
+	private void doWithConnector_2(Publisher<String> content, String expectation) {
+		StepVerifier.create(content)
+		            .expectNext(expectation)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(5));
 	}
 
 	@Test
