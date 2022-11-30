@@ -70,7 +70,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 			DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
 			if (remote != null && resolverGroup != null) {
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, remote, false);
-				TransportConnector.connect(config, remote, resolverGroup, channelInitializer)
+				TransportConnector.connect(config, remote, resolverGroup, channelInitializer, sink.contextView())
 				                  .subscribe(disposableConnect);
 			}
 			else {

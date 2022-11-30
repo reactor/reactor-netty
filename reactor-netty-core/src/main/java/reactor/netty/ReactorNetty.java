@@ -62,6 +62,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import static java.util.Objects.requireNonNull;
 
@@ -278,6 +279,30 @@ public final class ReactorNetty {
 			result = msg.toString();
 		}
 		return result;
+	}
+
+	/**
+	 * Returns {@link ContextView} from the channel attributes when exists otherwise returns {@code null}.
+	 *
+	 * @param channel the channel
+	 * @return {@link ContextView} from the channel attributes when exists otherwise returns {@code null}
+	 * @since 1.0.26
+	 */
+	@Nullable
+	public static ContextView getChannelContext(Channel channel) {
+		return channel.attr(CONTEXT_VIEW).get();
+	}
+
+	/**
+	 * Adds {@link ContextView} to the channel attributes. When {@code null} is provided, the channel
+	 * attribute's value will be deleted.
+	 *
+	 * @param channel the channel
+	 * @param contextView {@link ContextView} that will be added to the channel attributes
+	 * @since 1.0.26
+	 */
+	public static void setChannelContext(Channel channel, @Nullable ContextView contextView) {
+		channel.attr(CONTEXT_VIEW).set(contextView);
 	}
 
 	/**
@@ -982,6 +1007,8 @@ public final class ReactorNetty {
 	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.valueOf("$PERSISTENT_CHANNEL");
 
 	static final AttributeKey<Connection> CONNECTION = AttributeKey.valueOf("$CONNECTION");
+
+	static final AttributeKey<ContextView> CONTEXT_VIEW = AttributeKey.valueOf("$CONTEXT_VIEW");
 
 	static final Consumer<? super FileChannel> fileCloser = fc -> {
 		try {
