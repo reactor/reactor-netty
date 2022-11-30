@@ -1207,6 +1207,7 @@ class HttpClientTest extends BaseHttpTest {
 		if (withConnector) {
 			client = client.mapConnect(c -> c.contextWrite(Context.of("test", "Second")));
 		}
+
 		HttpClient.ResponseReceiver<?> responseReceiver =
 				client.post()
 				      .uri("/")
