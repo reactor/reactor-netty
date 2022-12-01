@@ -65,11 +65,12 @@ class ContextPropagationTest {
 				         .bindNow();
 
 		ContextRegistry registry = ContextRegistry.getInstance();
+		Connection connection = null;
 		try {
 			registry.registerThreadLocalAccessor(new TestThreadLocalAccessor());
 			TestThreadLocalHolder.value("First");
 
-			Connection connection =
+			connection =
 					client.port(disposableServer.port())
 					      .wiretap(true)
 					      .connect()
@@ -94,6 +95,9 @@ class ContextPropagationTest {
 			          .verify(Duration.ofSeconds(5));
 		}
 		finally {
+			if (connection != null) {
+				connection.disposeNow();
+			}
 			TestThreadLocalHolder.reset();
 			registry.removeThreadLocalAccessor(TestThreadLocalAccessor.KEY);
 			disposableServer.disposeNow();
