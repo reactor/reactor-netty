@@ -24,7 +24,7 @@
 		</encoder>
 	</appender>
 
-	<logger name="reactor.netty" level="DEBUG" />
+	<logger name="reactor.netty5" level="DEBUG" />
 
 	<root level="info">
 		<appender-ref ref="stdout"/>
