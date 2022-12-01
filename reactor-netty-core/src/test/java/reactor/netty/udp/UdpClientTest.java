@@ -32,14 +32,18 @@ import io.netty.channel.unix.DomainDatagramPacket;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.netty.Connection;
+import reactor.netty.LogTracker;
 import reactor.netty.resources.LoopResources;
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static reactor.netty.udp.UdpClientConfig.UdpClientOperations;
 
 class UdpClientTest {
 
@@ -275,6 +279,75 @@ class UdpClientTest {
 			if (client2 != null) {
 				client2.disposeNow();
 			}
+		}
+	}
+
+	/**
+	 * When an Udp client inbound receiver is cancelled while reading, a log message should be displayed and
+	 * the client channel should be closed.
+	 */
+	@Test
+	void testUdpClientCancelled() throws InterruptedException {
+		LoopResources resources = LoopResources.create("testUdpClientCancelled");
+		Connection server = null;
+		Connection client = null;
+
+		try (LogTracker logTracker = new LogTracker(UdpClient.class, UdpClientOperations.INBOUND_CANCEL_LOG)) {
+			Sinks.Empty<Void> empty = Sinks.empty();
+			CountDownLatch cancelled = new CountDownLatch(1);
+			CountDownLatch clientClosed = new CountDownLatch(1);
+
+			server = UdpServer.create()
+					.port(0)
+					.runOn(resources)
+					.wiretap(true)
+					.handle((in, out) -> in.receive()
+							.asString()
+							.log("server")
+							.doOnNext(s -> empty.tryEmitEmpty())
+							.then(Mono.never()))
+					.bind()
+					.block(Duration.ofSeconds(30));
+
+			InetSocketAddress address = (InetSocketAddress) server.address();
+			client = UdpClient.create()
+					.port(address.getPort())
+					.runOn(resources)
+					.handle((in, out) -> {
+						in.withConnection(cnx -> cnx.onDispose(clientClosed::countDown));
+
+						out.sendString(Mono.just("Hello !"))
+								.then()
+								.subscribe();
+
+						Mono<Void> receive = in.receive()
+								.asString()
+								.log("receive")
+								.doOnCancel(() -> cancelled.countDown())
+								.then();
+
+						// When the empty mono is cancelled, the Flux.zip operator will cancel other publisher parameters,
+						return Flux.zip(receive, empty.asMono())
+								.log("zip")
+								.then();
+					})
+					.wiretap(true)
+					.connect()
+					.block(Duration.ofSeconds(30));
+
+			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
+			assertThat(clientClosed.await(30, TimeUnit.SECONDS)).as("clientClosed await").isTrue();
+			assertThat(logTracker.latch.await(30, TimeUnit.SECONDS)).isTrue();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+			if (client != null) {
+				client.disposeNow();
+			}
+			resources.disposeLater()
+					.block(Duration.ofSeconds(30));
 		}
 	}
 

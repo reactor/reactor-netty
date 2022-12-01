@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
+import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
@@ -39,6 +41,8 @@ import java.net.SocketAddress;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.function.Supplier;
+
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * Encapsulate all necessary configuration for UDP client transport. The public API is read-only.
@@ -120,7 +124,7 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 		return MicrometerUdpClientMetricsRecorder.INSTANCE;
 	}
 
-	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new UdpOperations(ch, c);
+	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new UdpClientOperations(ch, c);
 
 	static final LoggingHandler LOGGING_HANDLER =
 			AdvancedByteBufFormat.HEX_DUMP
@@ -132,6 +136,28 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 
 		MicrometerUdpClientMetricsRecorder() {
 			super(reactor.netty.Metrics.UDP_CLIENT_PREFIX, "udp");
+		}
+	}
+
+	static final class UdpClientOperations extends UdpOperations {
+
+		final static String INBOUND_CANCEL_LOG = "Udp client inbound stream cancelled, closing channel.";
+
+		UdpClientOperations(Connection connection, ConnectionObserver listener) {
+			super(connection, listener);
+		}
+
+		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
+		protected void onInboundCancel() {
+			if (isInboundDisposed()) {
+				return;
+			}
+			if (UdpClient.log.isDebugEnabled()) {
+				UdpClient.log.debug(format(channel(), INBOUND_CANCEL_LOG));
+			}
+			//"FutureReturnValueIgnored" this is deliberate
+			channel().close();
 		}
 	}
 }

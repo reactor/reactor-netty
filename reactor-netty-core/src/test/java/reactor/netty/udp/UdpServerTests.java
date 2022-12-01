@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,13 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -43,9 +45,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
+import reactor.netty.LogTracker;
 import reactor.netty.SocketUtils;
 import reactor.netty.resources.LoopResources;
 import reactor.test.StepVerifier;
@@ -315,6 +319,63 @@ class UdpServerTests {
 		finally {
 			loop.disposeLater()
 			    .block(Duration.ofSeconds(30));
+		}
+	}
+
+	/**
+	 * Incoming messages should be dropped by a cancelled server.
+	 */
+	@Test
+	void testUdpServerCancelled() throws InterruptedException {
+		LoopResources resources = LoopResources.create("testUdpServerCancelled");
+		Connection server = null;
+		Connection client = null;
+
+		try (LogTracker logTracker = new LogTracker(LogTracker.LOG_FLUXRECEIVE, LogTracker.MSG_FLUXRECEIVE_DROPPED)) {
+			AtomicReference<List<String>> serverMsg = new AtomicReference<>();
+
+			server = UdpServer.create()
+					.port(0)
+					.runOn(resources)
+					.wiretap(true)
+					.handle((in, out) -> in.receive()
+							.asString()
+							.log("server")
+							.takeUntil(s -> s.endsWith("CANCEL"))
+							.collectList()
+							.doOnNext(serverMsg::set)
+							.then(Mono.never()))
+					.bind()
+					.block(Duration.ofSeconds(30));
+
+			InetSocketAddress address = (InetSocketAddress) server.address();
+			client = UdpClient.create()
+					.port(address.getPort())
+					.runOn(resources)
+					// the third DROPPED message should be dropped by FluxReceive on the server
+					.handle((in, out) -> out.sendString(Mono.just("HELLO"))
+							.then(out.sendString(Mono.just("CANCEL")))
+							.then(out.sendString(Mono.just("DROPPED"))))
+					.wiretap(true)
+					.connect()
+					.block(Duration.ofSeconds(30));
+
+			assertThat(logTracker.latch.await(30, TimeUnit.SECONDS)).isTrue();
+			List<String> serverMessages = serverMsg.get();
+			assertThat(serverMessages).isNotNull();
+			assertThat(serverMessages.size()).isEqualTo(2);
+			assertThat(serverMessages.get(0)).isEqualTo("HELLO");
+			assertThat(serverMessages.get(1)).isEqualTo("CANCEL");
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+			if (client != null) {
+				client.disposeNow();
+			}
+			resources.disposeLater()
+					.block(Duration.ofSeconds(30));
 		}
 	}
 }
