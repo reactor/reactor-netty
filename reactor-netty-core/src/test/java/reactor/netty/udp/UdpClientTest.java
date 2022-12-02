@@ -323,13 +323,13 @@ class UdpClientTest {
 						Mono<Void> receive = in.receive()
 								.asString()
 								.log("receive")
-								.doOnCancel(() -> cancelled.countDown())
+								.doOnCancel(cancelled::countDown)
 								.then();
 
 						// When the empty mono is cancelled, the Flux.zip operator will cancel other publisher parameters,
 						return Flux.zip(receive, empty.asMono())
 								.log("zip")
-								.then();
+								.then(Mono.never());
 					})
 					.wiretap(true)
 					.connect()
