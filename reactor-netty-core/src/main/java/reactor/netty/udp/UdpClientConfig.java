@@ -157,7 +157,7 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 				UdpClient.log.debug(format(channel(), INBOUND_CANCEL_LOG));
 			}
 			//"FutureReturnValueIgnored" this is deliberate
-			channel().close();
+			connection().dispose();
 		}
 	}
 }
