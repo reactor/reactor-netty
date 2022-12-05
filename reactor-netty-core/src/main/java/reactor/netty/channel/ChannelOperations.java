@@ -408,7 +408,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * React on inbound cancel (receive() subscriber cancelled)
 	 */
 	protected void onInboundCancel() {
-
+		if (log.isDebugEnabled()) {
+			log.debug(format(channel(), "[{}] Inbound stream cancelled."), formatName());
+		}
 	}
 
 
