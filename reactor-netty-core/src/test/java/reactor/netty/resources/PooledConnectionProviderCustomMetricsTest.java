@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import io.netty.resolver.DefaultAddressResolverGroup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.transport.ClientTransportConfig;
@@ -69,36 +70,47 @@ class PooledConnectionProviderCustomMetricsTest {
 
 	@Test
 	void customRegistrarIsUsed() {
-		AtomicBoolean used = new AtomicBoolean();
+		AtomicBoolean registered = new AtomicBoolean();
+		AtomicBoolean deRegistered = new AtomicBoolean();
 
-		triggerAcquisition(true, () -> (a, b, c, d) -> used.set(true));
-		assertThat(used.get()).isTrue();
+		triggerAcquisition(true, () -> new MeterRegistrarImpl(registered, deRegistered, null));
+		assertThat(registered.get()).isTrue();
+		assertThat(deRegistered.get()).isFalse();
+
+		pool.dispose();
+		assertThat(deRegistered.get()).isTrue();
 	}
 
 	@Test
 	void connectionPoolMaxMetrics() {
-		AtomicInteger maxAllocSize = new AtomicInteger();
-		AtomicInteger maxPendingAcquireSize = new AtomicInteger();
-		triggerAcquisition(true, () -> (a, b, c, d) -> {
-			maxAllocSize.set(d.maxAllocatedSize());
-			maxPendingAcquireSize.set(d.maxPendingAcquireSize());
-		});
-		assertThat(maxAllocSize.get()).isEqualTo(MAX_ALLOC_SIZE);
-		assertThat(maxPendingAcquireSize.get()).isEqualTo(MAX_PENDING_ACQUIRE_SIZE);
+		AtomicInteger customMetric = new AtomicInteger();
+
+		triggerAcquisition(true, () -> new MeterRegistrarImpl(null, null, customMetric));
+		assertThat(customMetric.get()).isEqualTo(MAX_ALLOC_SIZE);
 	}
 
 	@Test
 	void customRegistrarSupplierNotInvokedWhenMetricsDisabled() {
-		AtomicBoolean used = new AtomicBoolean();
+		AtomicBoolean registered = new AtomicBoolean();
 
-		triggerAcquisition(false, () -> {
-			used.set(true);
-			return null;
-		});
-		assertThat(used.get()).isFalse();
+		triggerAcquisition(false, () -> new MeterRegistrarImpl(registered, null, null));
+		assertThat(registered.get()).isFalse();
 	}
 
-	private void triggerAcquisition(boolean metricsEnabled, Supplier<ConnectionProvider.MeterRegistrar> registrarSupplier) {
+	@Test
+	void disposeWhenMetricsDeregistered() {
+		AtomicBoolean registered = new AtomicBoolean();
+		AtomicBoolean deRegistered = new AtomicBoolean();
+
+		Connection conn = triggerAcquisition(true, () -> new MeterRegistrarImpl(registered, deRegistered, null));
+		assertThat(registered.get()).isTrue();
+		assertThat(deRegistered.get()).isFalse();
+
+		pool.disposeWhen(remoteAddress.get());
+		assertThat(deRegistered.get()).isTrue();
+	}
+
+	private Connection triggerAcquisition(boolean metricsEnabled, Supplier<ConnectionProvider.MeterRegistrar> registrarSupplier) {
 		pool = ConnectionProvider.builder("test")
 		                         .metrics(metricsEnabled, registrarSupplier)
 		                         .maxConnections(MAX_ALLOC_SIZE)
@@ -108,15 +120,45 @@ class PooledConnectionProviderCustomMetricsTest {
 		ClientTransportConfigImpl config =
 				new ClientTransportConfigImpl(group, pool, Collections.emptyMap(), remoteAddress);
 
+		Connection conn = null;
 		try {
-			pool.acquire(config, ConnectionObserver.emptyListener(), remoteAddress, config.resolverInternal())
+			conn = pool.acquire(config, ConnectionObserver.emptyListener(), remoteAddress, config.resolverInternal())
 			    .block(Duration.ofSeconds(10L));
 			fail("Exception is expected");
 		}
 		catch (Exception expected) {
 			// ignore
 		}
+		return conn;
 	}
+
+	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
+		AtomicBoolean registered;
+		AtomicBoolean deRegistered;
+		AtomicInteger customMetric;
+
+		MeterRegistrarImpl(AtomicBoolean registered, AtomicBoolean deRegistered, AtomicInteger customMetric) {
+			this.registered = registered;
+			this.deRegistered = deRegistered;
+			this.customMetric = customMetric;
+		}
+		@Override
+		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics) {
+			if (registered != null) {
+				registered.set(true);
+			}
+			if (customMetric != null) {
+				customMetric.set(metrics.maxAllocatedSize());
+			}
+		}
+
+		@Override
+		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
+			if (deRegistered != null) {
+				deRegistered.set(true);
+			}
+		}
+	};
 
 	static final class ClientTransportConfigImpl extends ClientTransportConfig<ClientTransportConfigImpl> {
 

@@ -190,15 +190,34 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			                    .stream()
 			                    .map(e -> {
 			                        Pool<T> pool = e.getValue();
-			                        if (pool instanceof GracefulShutdownInstrumentedPool) {
+				                    SocketAddress remoteAddress = e.getKey().holder;
+				                    String id = e.getKey().hashCode() + "";
+				                    PoolFactory<T> poolFactory = poolFactory(remoteAddress);
+				                    if (pool instanceof GracefulShutdownInstrumentedPool) {
 			                            return ((GracefulShutdownInstrumentedPool<T>) pool)
 			                                    .disposeGracefully(disposeTimeout)
 			                                    .onErrorResume(t -> {
 			                                        log.error("Connection pool for [{}] didn't shut down gracefully", e.getKey(), t);
-			                                        return Mono.empty();
+			                                        return Mono.fromRunnable(() -> {
+				                                        if (poolFactory.registrar != null) {
+					                                        poolFactory.registrar.get().deRegisterMetrics(name, id, remoteAddress);
+				                                        }
+				                                        else if (Metrics.isMicrometerAvailable()) {
+					                                        deRegisterDefaultMetrics(id, remoteAddress);
+				                                        }
+			                                        });
 			                                    });
 			                        }
-			                        return pool.disposeLater();
+			                        return pool.disposeLater().then(
+											Mono.<Void>fromRunnable(() -> {
+												if (poolFactory.registrar != null) {
+													poolFactory.registrar.get().deRegisterMetrics(name, id, remoteAddress);
+												}
+												else if (Metrics.isMicrometerAvailable()) {
+													deRegisterDefaultMetrics(id, remoteAddress);
+												}
+											})
+			                        );
 			                    })
 			                    .collect(Collectors.toList());
 			if (pools.isEmpty()) {
@@ -223,7 +242,18 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				if (log.isDebugEnabled()) {
 					log.debug("ConnectionProvider[name={}]: Disposing pool for [{}]", name, e.getKey().fqdn);
 				}
-				e.getValue().dispose();
+				String id = e.getKey().hashCode() + "";
+				PoolFactory<T> poolFactory = poolFactory(address);
+				e.getValue().disposeLater().then(
+						Mono.<Void>fromRunnable(() -> {
+							if (poolFactory.registrar != null) {
+								poolFactory.registrar.get().deRegisterMetrics(name, id, address);
+							}
+							else if (Metrics.isMicrometerAvailable()) {
+								deRegisterDefaultMetrics(id, address);
+							}
+						})
+				).subscribe();
 			}
 		});
 	}
@@ -279,6 +309,10 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 	protected void registerDefaultMetrics(String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
 		MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE.registerMetrics(name, id, remoteAddress, metrics);
+	}
+
+	protected void deRegisterDefaultMetrics(String id, SocketAddress remoteAddress) {
+		MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE.deRegisterMetrics(name, id, remoteAddress);
 	}
 
 	final boolean compareAddresses(SocketAddress origin, SocketAddress target) {

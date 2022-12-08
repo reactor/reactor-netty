@@ -817,5 +817,7 @@ public interface ConnectionProvider extends Disposable {
 
 		void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics);
 
+		void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress);
+
 	}
 }
