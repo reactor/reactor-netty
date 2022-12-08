@@ -80,6 +80,8 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static reactor.netty.ConnectionObserver.State.ACQUIRED;
+import static reactor.netty.ConnectionObserver.State.CONNECTED;
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.IDLE_CONNECTIONS;
@@ -673,8 +675,9 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		HttpClient client =
 				createClient(provider, disposableServer.port())
 				        .protocol(isHttp2 ? HttpProtocol.H2C : HttpProtocol.HTTP11)
-				        .doOnConnected(conn -> {
-				            if (!(conn.channel() instanceof Http2StreamChannel)) {
+				        .observe((conn, state) -> {
+				            if (!(conn.channel() instanceof Http2StreamChannel) &&
+				                    (state == CONNECTED || state == ACQUIRED)) {
 				                conn.channel()
 				                    .closeFuture()
 				                    .addListener(future -> latch.countDown());
