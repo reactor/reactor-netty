@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,10 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpInfos;
+import reactor.netty.http.server.HttpServerRequest;
 import reactor.util.annotation.Nullable;
 
+import java.net.SocketAddress;
 import java.util.function.Function;
 
 /**
@@ -81,6 +83,13 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops instanceof HttpInfos) {
 				accessLogArgProvider.cookies(((HttpInfos) ops).cookies());
+			}
+
+			if (ops instanceof HttpServerRequest) {
+				SocketAddress remoteAddress = ((HttpServerRequest) ops).remoteAddress();
+				if (remoteAddress != null) {
+					accessLogArgProvider.remoteAddress(remoteAddress);
+				}
 			}
 		}
 		if (msg instanceof LastHttpContent) {

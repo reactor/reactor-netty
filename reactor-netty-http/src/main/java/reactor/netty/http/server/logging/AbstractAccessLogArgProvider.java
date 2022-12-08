@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 			DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z");
 	static final String MISSING = "-";
 
-	final SocketAddress remoteAddress;
+	SocketAddress remoteAddress;
 	final String user = MISSING;
 	String zonedDateTime;
 	ZonedDateTime accessDateTime;
@@ -135,6 +135,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		this.contentLength = -1;
 		this.startTime = 0;
 		this.cookies = null;
+		this.remoteAddress = null;
 	}
 
 	SELF cookies(Map<CharSequence, Set<Cookie>> cookies) {
@@ -154,6 +155,11 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 			}
 			this.contentLength += contentLength;
 		}
+		return get();
+	}
+
+	SELF remoteAddress(SocketAddress remoteAddress) {
+		this.remoteAddress = remoteAddress;
 		return get();
 	}
 

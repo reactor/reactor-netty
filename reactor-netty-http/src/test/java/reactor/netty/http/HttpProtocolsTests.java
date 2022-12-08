@@ -381,6 +381,49 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompatibleCombinationsTest
+	void testAccessLogWithForwardedHeader(HttpServer server, HttpClient client) throws Exception {
+		disposableServer =
+				server.forwarded(true)
+						.handle((req, resp) -> {
+							resp.withConnection(conn -> {
+								ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
+								resp.header(NettyPipeline.AccessLogHandler, handler != null ? "FOUND" : "NOT FOUND");
+							});
+							return resp.send();
+						})
+						.accessLog(true)
+						.bindNow();
+
+		AccessLogAppender accessLogAppender = new AccessLogAppender();
+		accessLogAppender.start();
+		Logger accessLogger = (Logger) LoggerFactory.getLogger("reactor.netty.http.server.AccessLog");
+		try {
+			accessLogger.addAppender(accessLogAppender);
+
+			client.port(disposableServer.port())
+					.doOnRequest((req, cnx) -> req.addHeader("Forwarded", "for=192.0.2.60;proto=http;by=203.0.113.43"))
+					.get()
+					.uri("/")
+					.responseSingle((res, bytes) -> {
+						return Mono.just(res.responseHeaders().get(NettyPipeline.AccessLogHandler));
+					})
+					.as(StepVerifier::create)
+					.expectNext("FOUND")
+					.expectComplete()
+					.verify(Duration.ofSeconds(5));
+
+			assertThat(accessLogAppender.latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(accessLogAppender.list).hasSize(1);
+			assertThat(accessLogAppender.list.get(0).getFormattedMessage()).startsWith("192.0.2.60 - -");
+		}
+		finally {
+			accessLogger.detachAppender(accessLogAppender);
+			accessLogAppender.stop();
+		}
+	}
+
+	@ParameterizedCompatibleCombinationsTest
 	void testResponseTimeout(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.handle((req, res) -> res.sendString(Mono.just("testProtocolVariationsResponseTimeout")))
