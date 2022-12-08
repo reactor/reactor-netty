@@ -39,8 +39,8 @@ The following listing shows the available configurations:
 |=======
 | Configuration name | Description
 | `disposeInactivePoolsInBackground` | When this option is enabled, connection pools are regularly checked in the background,
-and those that are empty and been inactive for a specified time become eligible for disposal. By default, this background
-disposal of inactive pools is disabled.
+and those that are *empty* and been inactive for a specified time become eligible for disposal. Connection pool is considered
+*empty* when there are no active connections, idle connections and pending acquisitions. By default, this background disposal of inactive pools is disabled.
 | `disposeTimeout` | When `ConnectionProvider#dispose()` or `ConnectionProvider#disposeLater()` is called,
 trigger a graceful shutdown for the connection pools, with this grace period timeout.
 From there on, all calls for acquiring a connection will fail fast with an exception.
