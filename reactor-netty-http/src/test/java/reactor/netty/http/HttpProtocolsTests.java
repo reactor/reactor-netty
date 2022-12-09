@@ -47,6 +47,7 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientConfig;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerConfig;
+import reactor.netty.http.server.logging.AccessLog;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
@@ -55,6 +56,8 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +67,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -382,16 +386,19 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 	@ParameterizedCompatibleCombinationsTest
 	void testAccessLogWithForwardedHeader(HttpServer server, HttpClient client) throws Exception {
+		Function<SocketAddress, String> applyAddress = addr ->
+				addr instanceof InetSocketAddress ? ((InetSocketAddress) addr).getHostString() : "-";
+
 		disposableServer =
-				server.forwarded(true)
-						.handle((req, resp) -> {
+				server.handle((req, resp) -> {
 							resp.withConnection(conn -> {
 								ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
 								resp.header(NettyPipeline.AccessLogHandler, handler != null ? "FOUND" : "NOT FOUND");
 							});
 							return resp.send();
 						})
-						.accessLog(true)
+						.forwarded(true)
+						.accessLog(true, args -> AccessLog.create("{}", applyAddress.apply(args.forwardedAddress())))
 						.bindNow();
 
 		AccessLogAppender accessLogAppender = new AccessLogAppender();
@@ -404,9 +411,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 					.doOnRequest((req, cnx) -> req.addHeader("Forwarded", "for=192.0.2.60;proto=http;by=203.0.113.43"))
 					.get()
 					.uri("/")
-					.responseSingle((res, bytes) -> {
-						return Mono.just(res.responseHeaders().get(NettyPipeline.AccessLogHandler));
-					})
+					.responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get(NettyPipeline.AccessLogHandler)))
 					.as(StepVerifier::create)
 					.expectNext("FOUND")
 					.expectComplete()
@@ -415,7 +420,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 			assertThat(accessLogAppender.latch.await(5, TimeUnit.SECONDS)).isTrue();
 
 			assertThat(accessLogAppender.list).hasSize(1);
-			assertThat(accessLogAppender.list.get(0).getFormattedMessage()).startsWith("192.0.2.60 - -");
+			assertThat(accessLogAppender.list.get(0).getFormattedMessage()).isEqualTo("192.0.2.60");
 		}
 		finally {
 			accessLogger.detachAppender(accessLogAppender);

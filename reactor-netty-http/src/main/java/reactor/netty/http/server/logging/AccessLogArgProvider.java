@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.net.SocketAddress;
 import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 /**
  * A provider of the args required for access log.
@@ -57,6 +58,30 @@ public interface AccessLogArgProvider {
 	 */
 	@Nullable
 	SocketAddress remoteAddress();
+
+	/**
+	 * Returns the forwarded remote client address. This method will behave like the following:
+	 * <ul>
+	 * <li>if the {@link reactor.netty.http.server.HttpServer#forwarded(boolean)}
+	 * method has been called with true, then remote address will be swapped by the
+	 * {@code Forwarded} (or {@code X-Forwarded-*}) header if (and only if) the header
+	 * is present and contains an IP address, else it will return the same address
+	 * returned by the #remoteAddress() method.</li>
+	 * <li> if the {@link reactor.netty.http.server.HttpServer#forwarded(BiFunction)}
+	 * has been called, then this method will return the remote address specified
+	 * by the BiFunction passed to the HttpServer's forwarded method.</li>
+	 * <li> if none of the above two methods has been called, then this method returns
+	 * {@link #remoteAddress()}.</li>
+	 * </li>
+	 * </ul>
+	 *
+	 * @since 1.0.27
+	 * @return the peer's address
+	 * @see reactor.netty.http.server.HttpServer#forwarded(boolean)
+	 * @see reactor.netty.http.server.HttpServer#forwarded(BiFunction)
+	 */
+	@Nullable
+	SocketAddress forwardedAddress();
 
 	/**
 	 * Returns the name of this method, (e.g. "GET").

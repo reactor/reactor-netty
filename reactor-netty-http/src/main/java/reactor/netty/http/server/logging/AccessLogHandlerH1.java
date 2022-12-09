@@ -86,9 +86,9 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 			}
 
 			if (ops instanceof HttpServerRequest) {
-				SocketAddress remoteAddress = ((HttpServerRequest) ops).remoteAddress();
-				if (remoteAddress != null) {
-					accessLogArgProvider.remoteAddress(remoteAddress);
+				SocketAddress forwardedAddress = ((HttpServerRequest) ops).remoteAddress();
+				if (forwardedAddress != null) {
+					accessLogArgProvider.forwardedAddress(forwardedAddress);
 				}
 			}
 		}

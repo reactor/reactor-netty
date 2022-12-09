@@ -37,8 +37,9 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 			DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z");
 	static final String MISSING = "-";
 
-	SocketAddress remoteAddress;
+	final SocketAddress remoteAddress;
 	final String user = MISSING;
+	SocketAddress forwardedAddress;
 	String zonedDateTime;
 	ZonedDateTime accessDateTime;
 	CharSequence method;
@@ -70,6 +71,12 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	@Nullable
 	public SocketAddress remoteAddress() {
 		return remoteAddress;
+	}
+
+	@Override
+	@Nullable
+	public SocketAddress forwardedAddress() {
+		return forwardedAddress == null ? remoteAddress : forwardedAddress;
 	}
 
 	@Override
@@ -135,7 +142,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		this.contentLength = -1;
 		this.startTime = 0;
 		this.cookies = null;
-		this.remoteAddress = null;
+		this.forwardedAddress = null;
 	}
 
 	SELF cookies(Map<CharSequence, Set<Cookie>> cookies) {
@@ -158,8 +165,8 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		return get();
 	}
 
-	SELF remoteAddress(SocketAddress remoteAddress) {
-		this.remoteAddress = remoteAddress;
+	SELF forwardedAddress(SocketAddress forwardedAddress) {
+		this.forwardedAddress = forwardedAddress;
 		return get();
 	}
 
