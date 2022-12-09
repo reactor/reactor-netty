@@ -34,10 +34,10 @@ import io.netty.resolver.DefaultAddressResolverGroup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.transport.ClientTransportConfig;
+import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -102,7 +102,7 @@ class PooledConnectionProviderCustomMetricsTest {
 		AtomicBoolean registered = new AtomicBoolean();
 		AtomicBoolean deRegistered = new AtomicBoolean();
 
-		Connection conn = triggerAcquisition(true, () -> new MeterRegistrarImpl(registered, deRegistered, null));
+		triggerAcquisition(true, () -> new MeterRegistrarImpl(registered, deRegistered, null));
 		assertThat(registered.get()).isTrue();
 		assertThat(deRegistered.get()).isFalse();
 
@@ -110,7 +110,7 @@ class PooledConnectionProviderCustomMetricsTest {
 		assertThat(deRegistered.get()).isTrue();
 	}
 
-	private Connection triggerAcquisition(boolean metricsEnabled, Supplier<ConnectionProvider.MeterRegistrar> registrarSupplier) {
+	private void triggerAcquisition(boolean metricsEnabled, Supplier<ConnectionProvider.MeterRegistrar> registrarSupplier) {
 		pool = ConnectionProvider.builder("test")
 		                         .metrics(metricsEnabled, registrarSupplier)
 		                         .maxConnections(MAX_ALLOC_SIZE)
@@ -120,16 +120,14 @@ class PooledConnectionProviderCustomMetricsTest {
 		ClientTransportConfigImpl config =
 				new ClientTransportConfigImpl(group, pool, Collections.emptyMap(), remoteAddress);
 
-		Connection conn = null;
 		try {
-			conn = pool.acquire(config, ConnectionObserver.emptyListener(), remoteAddress, config.resolverInternal())
+			pool.acquire(config, ConnectionObserver.emptyListener(), remoteAddress, config.resolverInternal())
 			    .block(Duration.ofSeconds(10L));
 			fail("Exception is expected");
 		}
 		catch (Exception expected) {
 			// ignore
 		}
-		return conn;
 	}
 
 	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
@@ -137,7 +135,10 @@ class PooledConnectionProviderCustomMetricsTest {
 		AtomicBoolean deRegistered;
 		AtomicInteger customMetric;
 
-		MeterRegistrarImpl(AtomicBoolean registered, AtomicBoolean deRegistered, AtomicInteger customMetric) {
+		MeterRegistrarImpl(
+				@Nullable AtomicBoolean registered,
+				@Nullable AtomicBoolean deRegistered,
+				@Nullable AtomicInteger customMetric) {
 			this.registered = registered;
 			this.deRegistered = deRegistered;
 			this.customMetric = customMetric;
@@ -158,7 +159,7 @@ class PooledConnectionProviderCustomMetricsTest {
 				deRegistered.set(true);
 			}
 		}
-	};
+	}
 
 	static final class ClientTransportConfigImpl extends ClientTransportConfig<ClientTransportConfigImpl> {
 

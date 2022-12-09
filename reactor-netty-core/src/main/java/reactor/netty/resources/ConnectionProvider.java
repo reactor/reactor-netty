@@ -817,7 +817,17 @@ public interface ConnectionProvider extends Disposable {
 
 		void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics);
 
-		void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress);
+		/**
+		 * Invoked when a connection pool is disposed.
+		 *
+		 * @param poolName the pool name
+		 * @param id the pool id
+		 * @param remoteAddress the remote address
+		 * @since 1.0.26
+		 */
+		default void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
+
+		}
 
 	}
 }
