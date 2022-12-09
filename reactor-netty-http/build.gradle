@@ -233,6 +233,9 @@ task japicmp(type: JapicmpTask) {
 	includeSynthetic = true
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
+	methodExcludes = [
+			'reactor.netty.http.server.logging.AccessLogArgProvider#forwardedAddress()'
+	]
 }
 
 tasks.japicmp.dependsOn(downloadBaseline)
