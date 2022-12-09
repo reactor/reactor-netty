@@ -61,9 +61,12 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.CancelReceiverHandler;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
+import reactor.netty.LogTracker;
 import reactor.netty.NettyOutbound;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
@@ -1445,5 +1448,61 @@ public class TcpClientTests {
 		}
 
 		assertThat(resolver.get()).isNull();
+	}
+
+	@Test
+	void testTcpClientCancelled() throws InterruptedException {
+		DisposableServer server = null;
+		Connection client = null;
+
+		try (LogTracker lt = new LogTracker(ChannelOperations.class, "Inbound stream cancelled.")) {
+			Sinks.Empty<Void> empty = Sinks.empty();
+			CountDownLatch cancelled = new CountDownLatch(1);
+			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(empty::tryEmitEmpty);
+
+			server = TcpServer.create()
+					.port(0)
+					.wiretap(true)
+					.handle((req, res) -> res.sendString(req.receive()
+									.asString()
+									.log("server.receive"))
+							.then(Mono.never()))
+					.bindNow();
+
+			client = TcpClient.create()
+					.wiretap(true)
+					.host("localhost")
+					.port(server.port())
+					.doOnConnected(c -> c.addHandlerFirst(cancelReceiver))
+					.handle((in, out) -> {
+						Mono<Void> receive = in
+								.receive()
+								.asString()
+								.log("client.receive")
+								.doOnCancel(cancelled::countDown)
+								.then();
+
+						out.sendString(Mono.just("REQUEST"))
+								.then()
+								.subscribe();
+
+						return Flux.zip(receive, empty.asMono())
+								.log("zip")
+								.then(Mono.never());
+					})
+					.connectNow();
+
+			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
+			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+			if (client != null) {
+				client.disposeNow();
+			}
+		}
 	}
 }
