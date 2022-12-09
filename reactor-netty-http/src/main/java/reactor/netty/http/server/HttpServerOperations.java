@@ -567,6 +567,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public ConnectionInfo connectionInfo() {
+		return connectionInfo;
+	}
+
+	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
 			try {

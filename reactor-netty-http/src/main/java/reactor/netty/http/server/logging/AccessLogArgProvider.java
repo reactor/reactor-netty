@@ -16,6 +16,7 @@
 package reactor.netty.http.server.logging;
 
 import io.netty.handler.codec.http.cookie.Cookie;
+import reactor.netty.http.server.ConnectionInfo;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -60,28 +61,17 @@ public interface AccessLogArgProvider {
 	SocketAddress remoteAddress();
 
 	/**
-	 * Returns the forwarded remote client address. This method will behave like the following:
-	 * <ul>
-	 * <li>if the {@link reactor.netty.http.server.HttpServer#forwarded(boolean)}
-	 * method has been called with true, then remote address will be swapped by the
-	 * {@code Forwarded} (or {@code X-Forwarded-*}) header if (and only if) the header
-	 * is present and contains an IP address, else it will return the same address
-	 * returned by the #remoteAddress() method.</li>
-	 * <li> if the {@link reactor.netty.http.server.HttpServer#forwarded(BiFunction)}
-	 * has been called, then this method will return the remote address specified
-	 * by the BiFunction passed to the HttpServer's forwarded method.</li>
-	 * <li> if none of the above two methods has been called, then this method returns
-	 * {@link #remoteAddress()}.</li>
-	 * </li>
-	 * </ul>
+	 * Returns the information about the current connection.
+	 * <p> Note that the {@link ConnectionInfo#getRemoteAddress()} will return the forwarded
+	 * remote client address if the server is configured in forwarded mode.
 	 *
 	 * @since 1.0.27
-	 * @return the peer's address
-	 * @see reactor.netty.http.server.HttpServer#forwarded(boolean)
+	 * @return the connection info
+	 * @see reactor.netty.http.server.HttpServer#forwarded(BiFunction)
 	 * @see reactor.netty.http.server.HttpServer#forwarded(BiFunction)
 	 */
 	@Nullable
-	SocketAddress forwardedAddress();
+	ConnectionInfo connectionInfo();
 
 	/**
 	 * Returns the name of this method, (e.g. "GET").

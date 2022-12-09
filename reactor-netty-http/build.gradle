@@ -234,7 +234,8 @@ task japicmp(type: JapicmpTask) {
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 	methodExcludes = [
-			'reactor.netty.http.server.logging.AccessLogArgProvider#forwardedAddress()'
+			'reactor.netty.http.server.logging.AccessLogArgProvider#connectionInfo()',
+			'reactor.netty.http.server.HttpServerInfos#connectionInfo()'
 	]
 }
 

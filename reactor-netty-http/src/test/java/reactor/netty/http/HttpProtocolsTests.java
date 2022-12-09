@@ -398,7 +398,8 @@ class HttpProtocolsTests extends BaseHttpTest {
 							return resp.send();
 						})
 						.forwarded(true)
-						.accessLog(true, args -> AccessLog.create("{}", applyAddress.apply(args.forwardedAddress())))
+						.accessLog(true, args -> AccessLog.create("{}",
+								applyAddress.apply(args.connectionInfo().getRemoteAddress())))
 						.bindNow();
 
 		AccessLogAppender accessLogAppender = new AccessLogAppender();

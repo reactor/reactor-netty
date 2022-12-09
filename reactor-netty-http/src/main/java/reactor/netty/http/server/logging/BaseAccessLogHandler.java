@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
 package reactor.netty.http.server.logging;
 
 import io.netty.channel.ChannelDuplexHandler;
+import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.server.ConnectionInfo;
+import reactor.netty.http.server.HttpServerInfos;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;
@@ -46,6 +49,19 @@ class BaseAccessLogHandler extends ChannelDuplexHandler {
 
 	static String applyAddress(@Nullable SocketAddress socketAddress) {
 		return socketAddress instanceof InetSocketAddress ? ((InetSocketAddress) socketAddress).getHostString() : MISSING;
+	}
+
+	@SuppressWarnings("rawtypes")
+	final void applyServerResponseDefaults(AbstractAccessLogArgProvider accessLogArgs, @Nullable ChannelOperations<?, ?> ops) {
+		/**
+		 * configure the connection provider, if found from the channel operations.
+		 */
+		if (ops instanceof HttpServerInfos) {
+			ConnectionInfo connectionInfo = ((HttpServerInfos) ops).connectionInfo();
+			if (connectionInfo != null) {
+				accessLogArgs.connectionInfo(connectionInfo);
+			}
+		}
 	}
 
 }

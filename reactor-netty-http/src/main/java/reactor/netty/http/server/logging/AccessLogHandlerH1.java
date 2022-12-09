@@ -27,10 +27,8 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpInfos;
-import reactor.netty.http.server.HttpServerRequest;
 import reactor.util.annotation.Nullable;
 
-import java.net.SocketAddress;
 import java.util.function.Function;
 
 /**
@@ -85,12 +83,7 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 				accessLogArgProvider.cookies(((HttpInfos) ops).cookies());
 			}
 
-			if (ops instanceof HttpServerRequest) {
-				SocketAddress forwardedAddress = ((HttpServerRequest) ops).remoteAddress();
-				if (forwardedAddress != null) {
-					accessLogArgProvider.forwardedAddress(forwardedAddress);
-				}
-			}
+			super.applyServerResponseDefaults(accessLogArgProvider, ops);
 		}
 		if (msg instanceof LastHttpContent) {
 			accessLogArgProvider.increaseContentLength(((LastHttpContent) msg).content().readableBytes());
