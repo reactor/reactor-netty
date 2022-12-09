@@ -122,6 +122,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	HttpHeaders previousRequestHeaders;
 	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
 
+	final static String INBOUND_CANCEL_LOG = "Http client inbound stream cancelled, closing channel.";
+
 	HttpClientOperations(HttpClientOperations replaced) {
 		super(replaced);
 		this.started = replaced.started;
@@ -276,7 +278,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		//"FutureReturnValueIgnored" this is deliberate
 		if (log.isDebugEnabled()) {
-			log.debug(format(channel(), "Http client inbound stream cancelled, closing channel."));
+			log.debug(format(channel(), INBOUND_CANCEL_LOG));
 		}
 		channel().close();
 	}

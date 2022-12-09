@@ -102,8 +102,10 @@ import reactor.core.publisher.Sinks;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
+import reactor.netty.CancelReceiverHandler;
 import reactor.netty.Connection;
 import reactor.netty.FutureMono;
+import reactor.netty.LogTracker;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.Http11SslContextSpec;
@@ -3092,56 +3094,52 @@ class HttpClientTest extends BaseHttpTest {
 		doTestSharedNameResolver(HttpClient.newConnection(), false);
 	}
 
-	/**
-	 * Does a FluxZip(client, mono) where the mono succeeds with an empty value.
-	 * The second mono succeeds when the server has just received the request.
-	 * Since the second mono does not produce a value, the client should be cancelled and the socket
-	 * should be closed.
-	 */
 	@Test
 	void testHttpClientCancelled() throws InterruptedException {
-		CountDownLatch serverClosed = new CountDownLatch(1);
-		Sinks.Empty<Void> empty = Sinks.empty();
+		try (LogTracker lt = new LogTracker(HttpClientOperations.class, HttpClientOperations.INBOUND_CANCEL_LOG)) {
+			CountDownLatch serverClosed = new CountDownLatch(1);
+			Sinks.Empty<Void> empty = Sinks.empty();
+			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(empty::tryEmitEmpty, 1);
 
-		disposableServer =
-				createServer()
-						.wiretap(true)
-						.handle((in, out) -> {
-							empty.tryEmitEmpty();
-							in.withConnection(connection -> connection.onDispose(() -> {
-								serverClosed.countDown();
-							}));
-							return Mono.never();
-						})
-						.bindNow();
+			disposableServer = createServer()
+					.handle((in, out) -> {
+						in.withConnection(connection -> connection.onDispose(serverClosed::countDown));
+						return in.receive()
+								.asString()
+								.log("server.receive")
+								.then(out.sendString(Mono.just("data")).neverComplete());
+					})
+					.bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.create("testHttpClientZipEmpty", 1);
-		HttpClient httpClient = createHttpClientForContextWithPort(pool);
-		CountDownLatch clientCancelled = new CountDownLatch(1);
+			ConnectionProvider pool = ConnectionProvider.create("testHttpClientCancelled", 1);
+			HttpClient httpClient = createHttpClientForContextWithPort(pool);
+			CountDownLatch clientCancelled = new CountDownLatch(1);
 
-		// Creates a client that should be cancelled by the Flix.zip (see below)
-		Mono<String> client = httpClient
-				.wiretap(true)
-				.get()
-				.responseContent()
-				.aggregate()
-				.asString()
-				.log("client")
-				.doOnCancel(clientCancelled::countDown);
+			// Creates a client that should be cancelled by the Flix.zip (see below)
+			Mono<String> client = httpClient
+					.doOnRequest((req, conn) -> conn.addHandlerFirst(cancelReceiver))
+					.get()
+					.responseContent()
+					.aggregate()
+					.asString()
+					.log("client")
+					.doOnCancel(clientCancelled::countDown);
 
-		// Zip client and a second mono which completes with an empty value
-		// just when the server has received the request.
-		// Since the second mono completes with an empty value, the client should
-		// be cancelled, and the server socket should be closed.
-		StepVerifier.create(Flux.zip(client, empty.asMono())
-						.log("fluxzip"))
-				.expectNextCount(0)
-				.expectComplete()
-				.verify(Duration.ofSeconds(10));
+			// Zip client with a mono which completes with an empty value when the server receives the request.
+			// The client should then be cancelled with a log message.
+			StepVerifier.create(Flux.zip(client, empty.asMono())
+							.log("zip"))
+					.expectNextCount(0)
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
 
-		assertThat(clientCancelled.await(30, TimeUnit.SECONDS)).as("latchClient await").isTrue();
-		assertThat(serverClosed.await(30, TimeUnit.SECONDS)).as("latchServerClosed await").isTrue();
-		pool.dispose();
+			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+			assertThat(clientCancelled.await(30, TimeUnit.SECONDS)).as("latchClient await").isTrue();
+			assertThat(serverClosed.await(30, TimeUnit.SECONDS)).as("latchServerClosed await").isTrue();
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
+			pool.disposeLater()
+					.block(Duration.ofSeconds(30));
+		}
 	}
 
 	private void doTestSharedNameResolver(HttpClient client, boolean sharedClient) throws InterruptedException {
