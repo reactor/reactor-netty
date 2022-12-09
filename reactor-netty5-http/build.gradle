@@ -137,6 +137,7 @@ dependencies {
 	testImplementation "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
 	testImplementation "io.projectreactor:reactor-test:$testAddonVersion"
 	testImplementation "org.assertj:assertj-core:$assertJVersion"
+	testImplementation "org.awaitility:awaitility:$awaitilityVersion"
 	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
