@@ -55,6 +55,7 @@ class QuicStreamOperations extends ChannelOperations<QuicInbound, QuicOutbound> 
 	volatile int finSent;
 
 	static final Logger log = Loggers.getLogger(QuicStreamOperations.class);
+	static final String INBOUND_CANCEL_LOG = "Quic inbound stream cancelled, sending WRITE_FIN.";
 
 	QuicStreamOperations(Connection connection, ConnectionObserver listener) {
 		super(connection, listener);
@@ -127,7 +128,7 @@ class QuicStreamOperations extends ChannelOperations<QuicInbound, QuicOutbound> 
 	@Override
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
-			log.debug(format(channel(), "Quic inbound stream cancelled. Sending WRITE_FIN."));
+			log.debug(format(channel(), INBOUND_CANCEL_LOG));
 		}
 
 		sendFinNow(f -> terminate());

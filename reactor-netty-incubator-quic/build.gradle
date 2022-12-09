@@ -37,6 +37,10 @@ dependencies {
 
 	api "io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion$os_suffix"
 
+	testImplementation(testFixtures(project(':reactor-netty-core'))) {
+		exclude module: "reactor-netty-core"
+	}
+
 	// Testing
 
 	// JSR-305 annotations
