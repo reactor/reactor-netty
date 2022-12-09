@@ -293,7 +293,8 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 			provider.disposeLater()
 					.block(Duration.ofSeconds(30));
 		}
-		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, "http2.testConnectionPoolPendingAcquireSize")).isEqualTo(0);
+		// deRegistered
+		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, "http2.testConnectionPoolPendingAcquireSize")).isEqualTo(-1);
 	}
 
 	private double getGaugeValue(String gaugeName, String poolName) {
