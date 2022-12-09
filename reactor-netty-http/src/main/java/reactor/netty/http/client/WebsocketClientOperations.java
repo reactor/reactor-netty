@@ -60,6 +60,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 	volatile int closeSent;
 
+	final static String INBOUND_CANCEL_LOG = "WebSocket client inbound stream cancelled, closing channel.";
+
 	WebsocketClientOperations(URI currentURI,
 			WebsocketClientSpec websocketClientSpec,
 			HttpClientOperations replaced) {
@@ -165,7 +167,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 	@Override
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
-			log.debug(format(channel(), "WebSocket client inbound stream cancelled. Closing Websocket"));
+			log.debug(format(channel(), INBOUND_CANCEL_LOG));
 		}
 		sendCloseNow(new CloseWebSocketFrame(), WebSocketCloseStatus.ABNORMAL_CLOSURE);
 	}
