@@ -32,8 +32,13 @@ import io.netty.channel.unix.DomainDatagramPacket;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.netty.CancelReceiverHandler;
 import reactor.netty.Connection;
+import reactor.netty.LogTracker;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.LoopResources;
 import reactor.test.StepVerifier;
 
@@ -275,6 +280,78 @@ class UdpClientTest {
 			if (client2 != null) {
 				client2.disposeNow();
 			}
+		}
+	}
+
+	@Test
+	void testUdpClientCancelled() throws InterruptedException {
+		LoopResources resources = LoopResources.create("testUdpClientCancelled");
+		Connection server = null;
+		Connection client = null;
+
+		try (LogTracker lt = new LogTracker(ChannelOperations.class, "Inbound stream cancelled.")) {
+			Sinks.Empty<Void> empty = Sinks.empty();
+			CountDownLatch cancelled = new CountDownLatch(1);
+			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(empty::tryEmitEmpty);
+
+			server = UdpServer.create()
+					.port(0)
+					.wiretap(true)
+					.runOn(resources)
+					.handle((in, out) -> in.receiveObject()
+							.log("server.receiveObject")
+							.map(o -> {
+								if (o instanceof DatagramPacket) {
+									DatagramPacket received = (DatagramPacket) o;
+									ByteBuf pong = Unpooled.copiedBuffer("pong", CharsetUtil.UTF_8);
+									return new DatagramPacket(pong, received.sender());
+								}
+								else {
+									return Mono.error(new Exception());
+								}
+							})
+							.flatMap(out::sendObject))
+					.bind()
+					.block(Duration.ofSeconds(30));
+			assertThat(server).isNotNull();
+
+			InetSocketAddress address = (InetSocketAddress) server.address();
+			client = UdpClient.create()
+					.port(address.getPort())
+					.wiretap(true)
+					.runOn(resources)
+					.doOnConnected(conn -> conn.addHandlerFirst(cancelReceiver))
+					.handle((in, out) -> {
+						Mono<Void> receive = in.receive()
+								.asString()
+								.log("client.receive")
+								.doOnCancel(cancelled::countDown)
+								.then();
+
+						out.sendString(Mono.just("ping"))
+								.then()
+								.subscribe();
+
+						return Flux.zip(receive, empty.asMono())
+								.log("zip")
+								.then(Mono.never());
+					})
+					.connect()
+					.block(Duration.ofSeconds(30));
+
+			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
+			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+			if (client != null) {
+				client.disposeNow();
+			}
+			resources.disposeLater()
+					.block(Duration.ofSeconds(30));
 		}
 	}
 
