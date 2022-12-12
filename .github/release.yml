@@ -19,6 +19,7 @@ changelog:
     - title: ":book: Documentation, Tests and Build"
       labels:
         - "type/documentation"
+        - "type/test"
         - "type/chores"
     - title: ":up: Dependency Upgrades"
       labels:
