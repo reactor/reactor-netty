@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,20 +127,12 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 */
 	Flux<HttpData> receiveForm(Consumer<HttpServerFormDecoderProvider.Builder> formDecoderBuilder);
 
-	/**
-	 * Returns the address of the host peer or {@code null} in case of Unix Domain Sockets.
-	 *
-	 * @return the host's address
-	 */
 	@Nullable
+	@Override
 	InetSocketAddress hostAddress();
 
-	/**
-	 * Returns the address of the remote peer or {@code null} in case of Unix Domain Sockets.
-	 *
-	 * @return the peer's address
-	 */
 	@Nullable
+	@Override
 	InetSocketAddress remoteAddress();
 
 	/**
@@ -149,12 +141,5 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * @return inbound {@link HttpHeaders}
 	 */
 	HttpHeaders requestHeaders();
-
-	/**
-	 * Returns the current protocol scheme
-	 *
-	 * @return the protocol scheme
-	 */
-	String scheme();
 
 }

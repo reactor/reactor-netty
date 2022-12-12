@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package reactor.netty.http.server.logging;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.netty.ReactorNetty;
+import reactor.netty.http.server.ConnectionInformation;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -39,6 +40,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	final SocketAddress remoteAddress;
 	final String user = MISSING;
+	ConnectionInformation connectionInfo;
 	String zonedDateTime;
 	ZonedDateTime accessDateTime;
 	CharSequence method;
@@ -68,8 +70,15 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	@Override
 	@Nullable
+	@SuppressWarnings("deprecation")
 	public SocketAddress remoteAddress() {
 		return remoteAddress;
+	}
+
+	@Override
+	@Nullable
+	public ConnectionInformation connectionInformation() {
+		return connectionInfo;
 	}
 
 	@Override
@@ -135,6 +144,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		this.contentLength = -1;
 		this.startTime = 0;
 		this.cookies = null;
+		this.connectionInfo = null;
 	}
 
 	SELF cookies(Map<CharSequence, Set<Cookie>> cookies) {
@@ -154,6 +164,11 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 			}
 			this.contentLength += contentLength;
 		}
+		return get();
+	}
+
+	SELF connectionInformation(ConnectionInformation connectionInfo) {
+		this.connectionInfo = connectionInfo;
 		return get();
 	}
 

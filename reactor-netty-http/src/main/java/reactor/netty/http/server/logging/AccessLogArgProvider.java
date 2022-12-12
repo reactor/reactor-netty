@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,14 @@
 package reactor.netty.http.server.logging;
 
 import io.netty.handler.codec.http.cookie.Cookie;
+import reactor.netty.http.server.ConnectionInformation;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 /**
  * A provider of the args required for access log.
@@ -54,9 +56,24 @@ public interface AccessLogArgProvider {
 	 * Returns the address of the remote peer or {@code null} in case of Unix Domain Sockets.
 	 *
 	 * @return the peer's address
+	 * @deprecated as of 1.0.26. Use {@link ConnectionInformation#connectionRemoteAddress()}
+	 *
 	 */
 	@Nullable
+	@Deprecated
 	SocketAddress remoteAddress();
+
+	/**
+	 * Returns the information about the current connection.
+	 * <p> Note that the {@link ConnectionInformation#remoteAddress()} will return the forwarded
+	 * remote client address if the server is configured in forwarded mode.
+	 *
+	 * @since 1.0.26
+	 * @return the connection info
+	 * @see reactor.netty.http.server.HttpServer#forwarded(BiFunction)
+	 */
+	@Nullable
+	ConnectionInformation connectionInformation();
 
 	/**
 	 * Returns the name of this method, (e.g. "GET").
