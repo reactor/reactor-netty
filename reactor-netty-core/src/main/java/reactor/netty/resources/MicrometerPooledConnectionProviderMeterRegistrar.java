@@ -18,6 +18,7 @@ package reactor.netty.resources;
 import java.net.SocketAddress;
 
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tags;
 import reactor.netty.Metrics;
 import reactor.pool.InstrumentedPool;
@@ -75,5 +76,17 @@ final class MicrometerPooledConnectionProviderMeterRegistrar {
 		Gauge.builder(MAX_PENDING_CONNECTIONS.getName(), metrics, InstrumentedPool.PoolMetrics::getMaxPendingAcquireSize)
 		     .tags(tags)
 		     .register(REGISTRY);
+	}
+
+	void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
+		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
+		Tags tags = Tags.of(ID.asString(), id, REMOTE_ADDRESS.asString(), addressAsString, NAME.asString(), poolName);
+
+		REGISTRY.remove(new Meter.Id(TOTAL_CONNECTIONS.getName(), tags, null, null, Meter.Type.GAUGE));
+		REGISTRY.remove(new Meter.Id(ACTIVE_CONNECTIONS.getName(), tags, null, null, Meter.Type.GAUGE));
+		REGISTRY.remove(new Meter.Id(IDLE_CONNECTIONS.getName(), tags, null, null, Meter.Type.GAUGE));
+		REGISTRY.remove(new Meter.Id(PENDING_CONNECTIONS.getName(), tags, null, null, Meter.Type.GAUGE));
+		REGISTRY.remove(new Meter.Id(MAX_CONNECTIONS.getName(), tags, null, null, Meter.Type.GAUGE));
+		REGISTRY.remove(new Meter.Id(MAX_PENDING_CONNECTIONS.getName(), tags, null, null, Meter.Type.GAUGE));
 	}
 }

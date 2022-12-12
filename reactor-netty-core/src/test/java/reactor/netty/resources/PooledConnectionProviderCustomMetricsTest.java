@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.transport.ClientTransportConfig;
+import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -69,33 +70,44 @@ class PooledConnectionProviderCustomMetricsTest {
 
 	@Test
 	void customRegistrarIsUsed() {
-		AtomicBoolean used = new AtomicBoolean();
+		AtomicBoolean registered = new AtomicBoolean();
+		AtomicBoolean deRegistered = new AtomicBoolean();
 
-		triggerAcquisition(true, () -> (a, b, c, d) -> used.set(true));
-		assertThat(used.get()).isTrue();
+		triggerAcquisition(true, () -> new MeterRegistrarImpl(registered, deRegistered, null));
+		assertThat(registered.get()).isTrue();
+		assertThat(deRegistered.get()).isFalse();
+
+		pool.dispose();
+		assertThat(deRegistered.get()).isTrue();
 	}
 
 	@Test
 	void connectionPoolMaxMetrics() {
-		AtomicInteger maxAllocSize = new AtomicInteger();
-		AtomicInteger maxPendingAcquireSize = new AtomicInteger();
-		triggerAcquisition(true, () -> (a, b, c, d) -> {
-			maxAllocSize.set(d.maxAllocatedSize());
-			maxPendingAcquireSize.set(d.maxPendingAcquireSize());
-		});
-		assertThat(maxAllocSize.get()).isEqualTo(MAX_ALLOC_SIZE);
-		assertThat(maxPendingAcquireSize.get()).isEqualTo(MAX_PENDING_ACQUIRE_SIZE);
+		AtomicInteger customMetric = new AtomicInteger();
+
+		triggerAcquisition(true, () -> new MeterRegistrarImpl(null, null, customMetric));
+		assertThat(customMetric.get()).isEqualTo(MAX_ALLOC_SIZE);
 	}
 
 	@Test
 	void customRegistrarSupplierNotInvokedWhenMetricsDisabled() {
-		AtomicBoolean used = new AtomicBoolean();
+		AtomicBoolean registered = new AtomicBoolean();
 
-		triggerAcquisition(false, () -> {
-			used.set(true);
-			return null;
-		});
-		assertThat(used.get()).isFalse();
+		triggerAcquisition(false, () -> new MeterRegistrarImpl(registered, null, null));
+		assertThat(registered.get()).isFalse();
+	}
+
+	@Test
+	void disposeWhenMetricsDeregistered() {
+		AtomicBoolean registered = new AtomicBoolean();
+		AtomicBoolean deRegistered = new AtomicBoolean();
+
+		triggerAcquisition(true, () -> new MeterRegistrarImpl(registered, deRegistered, null));
+		assertThat(registered.get()).isTrue();
+		assertThat(deRegistered.get()).isFalse();
+
+		pool.disposeWhen(remoteAddress.get());
+		assertThat(deRegistered.get()).isTrue();
 	}
 
 	private void triggerAcquisition(boolean metricsEnabled, Supplier<ConnectionProvider.MeterRegistrar> registrarSupplier) {
@@ -115,6 +127,37 @@ class PooledConnectionProviderCustomMetricsTest {
 		}
 		catch (Exception expected) {
 			// ignore
+		}
+	}
+
+	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
+		AtomicBoolean registered;
+		AtomicBoolean deRegistered;
+		AtomicInteger customMetric;
+
+		MeterRegistrarImpl(
+				@Nullable AtomicBoolean registered,
+				@Nullable AtomicBoolean deRegistered,
+				@Nullable AtomicInteger customMetric) {
+			this.registered = registered;
+			this.deRegistered = deRegistered;
+			this.customMetric = customMetric;
+		}
+		@Override
+		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics) {
+			if (registered != null) {
+				registered.set(true);
+			}
+			if (customMetric != null) {
+				customMetric.set(metrics.maxAllocatedSize());
+			}
+		}
+
+		@Override
+		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
+			if (deRegistered != null) {
+				deRegistered.set(true);
+			}
 		}
 	}
 
