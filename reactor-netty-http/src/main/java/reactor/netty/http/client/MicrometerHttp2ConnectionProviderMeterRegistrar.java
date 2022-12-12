@@ -16,6 +16,7 @@
 package reactor.netty.http.client;
 
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tags;
 import reactor.netty.Metrics;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
@@ -69,5 +70,14 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 		     .description(PENDING_STREAMS_DESCRIPTION)
 		     .tags(tags)
 		     .register(REGISTRY);
+	}
+
+	void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
+		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
+		Tags tags = Tags.of(ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName);
+		REGISTRY.remove(new Meter.Id(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tags, null, null, Meter.Type.GAUGE));
+		REGISTRY.remove(new Meter.Id(CONNECTION_PROVIDER_PREFIX + ACTIVE_STREAMS, tags, null, null, Meter.Type.GAUGE));
+		REGISTRY.remove(new Meter.Id(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tags, null, null, Meter.Type.GAUGE));
+		REGISTRY.remove(new Meter.Id(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, tags, null, null, Meter.Type.GAUGE));
 	}
 }
