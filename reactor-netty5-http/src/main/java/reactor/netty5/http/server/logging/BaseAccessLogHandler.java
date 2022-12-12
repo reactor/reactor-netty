@@ -16,6 +16,7 @@
 package reactor.netty5.http.server.logging;
 
 import io.netty5.channel.ChannelHandlerAdapter;
+import reactor.netty5.http.server.HttpServerInfos;
 import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;
@@ -33,6 +34,7 @@ class BaseAccessLogHandler extends ChannelHandlerAdapter {
 	static final String DEFAULT_LOG_FORMAT =
 			"{} - {} [{}] \"{} {} {}\" {} {} {}";
 
+	@SuppressWarnings("deprecation")
 	static final Function<AccessLogArgProvider, AccessLog> DEFAULT_ACCESS_LOG =
 			args -> AccessLog.create(DEFAULT_LOG_FORMAT, applyAddress(args.remoteAddress()), args.user(),
 					args.accessDateTime().format(DATE_TIME_FORMATTER), args.method(), args.uri(), args.protocol(), args.status(),
@@ -46,6 +48,11 @@ class BaseAccessLogHandler extends ChannelHandlerAdapter {
 
 	static String applyAddress(@Nullable SocketAddress socketAddress) {
 		return socketAddress instanceof InetSocketAddress inetSocketAddress ? inetSocketAddress.getHostString() : MISSING;
+	}
+
+	final <T extends AbstractAccessLogArgProvider<T>> void applyServerInfos(AbstractAccessLogArgProvider<T> accessLogArgs, HttpServerInfos serverInfos) {
+		accessLogArgs.cookies(serverInfos.cookies());
+		accessLogArgs.connectionInformation(serverInfos);
 	}
 
 }

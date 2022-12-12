@@ -18,6 +18,7 @@ package reactor.netty5.http.server.logging;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import reactor.netty5.ReactorNetty;
+import reactor.netty5.http.server.ConnectionInformation;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -39,6 +40,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	final SocketAddress remoteAddress;
 	final String user = MISSING;
+	ConnectionInformation connectionInfo;
 	ZonedDateTime accessDateTime;
 	CharSequence method;
 	CharSequence uri;
@@ -60,8 +62,15 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	@Override
 	@Nullable
+	@SuppressWarnings("deprecation")
 	public SocketAddress remoteAddress() {
 		return remoteAddress;
+	}
+
+	@Override
+	@Nullable
+	public ConnectionInformation connectionInformation() {
+		return connectionInfo;
 	}
 
 	@Override
@@ -125,6 +134,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		this.contentLength = -1;
 		this.startTime = 0;
 		this.cookies = null;
+		this.connectionInfo = null;
 	}
 
 	SELF cookies(Map<CharSequence, Set<HttpCookiePair>> cookies) {
@@ -144,6 +154,11 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 			}
 			this.contentLength += contentLength;
 		}
+		return get();
+	}
+
+	SELF connectionInformation(ConnectionInformation connectionInfo) {
+		this.connectionInfo = connectionInfo;
 		return get();
 	}
 

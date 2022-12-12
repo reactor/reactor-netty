@@ -47,6 +47,7 @@ import reactor.netty5.http.client.HttpClient;
 import reactor.netty5.http.client.HttpClientConfig;
 import reactor.netty5.http.server.HttpServer;
 import reactor.netty5.http.server.HttpServerConfig;
+import reactor.netty5.http.server.logging.AccessLog;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
@@ -55,6 +56,8 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +67,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -374,6 +378,58 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 			assertThat(accessLogAppender.list).hasSize(1);
 			assertThat(accessLogAppender.list.get(0).getFormattedMessage()).contains("GET / HTTP/" + protocol.get() + "\" 200");
+		}
+		finally {
+			accessLogger.detachAppender(accessLogAppender);
+			accessLogAppender.stop();
+		}
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testAccessLogWithForwardedHeader(HttpServer server, HttpClient client) throws Exception {
+		Function<SocketAddress, String> applyAddress = addr ->
+				addr instanceof InetSocketAddress ? ((InetSocketAddress) addr).getHostString() : "-";
+
+		disposableServer =
+				server.handle((req, resp) -> {
+							resp.withConnection(conn -> {
+								ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
+								resp.header(NettyPipeline.AccessLogHandler, handler != null ? "FOUND" : "NOT FOUND");
+							});
+							return resp.send();
+						})
+						.forwarded(true)
+						.accessLog(true, args -> AccessLog.create(
+								"{} {} {}",
+								applyAddress.apply(args.connectionInformation().remoteAddress()),
+								applyAddress.apply(args.connectionInformation().hostAddress()),
+								args.connectionInformation().scheme()))
+						.bindNow();
+
+		AccessLogAppender accessLogAppender = new AccessLogAppender();
+		accessLogAppender.start();
+		Logger accessLogger = (Logger) LoggerFactory.getLogger("reactor.netty5.http.server.AccessLog");
+		try {
+			accessLogger.addAppender(accessLogAppender);
+
+			client.port(disposableServer.port())
+					.doOnRequest((req, cnx) -> req.addHeader("Forwarded",
+							"for=192.0.2.60;proto=http;host=203.0.113.43"))
+					.get()
+					.uri("/")
+					.responseSingle((res, bytes) -> {
+						String header = getHeader(res.responseHeaders(), NettyPipeline.AccessLogHandler);
+						return Mono.just(header == null ? "HEADER VALUE NOT FOUND" : header);
+					})
+					.as(StepVerifier::create)
+					.expectNext("FOUND")
+					.expectComplete()
+					.verify(Duration.ofSeconds(5));
+
+			assertThat(accessLogAppender.latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(accessLogAppender.list).hasSize(1);
+			assertThat(accessLogAppender.list.get(0).getFormattedMessage()).isEqualTo("192.0.2.60 203.0.113.43 http");
 		}
 		finally {
 			accessLogger.detachAppender(accessLogAppender);

@@ -104,6 +104,7 @@ class AccessLogHandlerH1Tests {
 		return new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, responseHeaders);
 	}
 
+	@SuppressWarnings("deprecation")
 	private void assertAccessLogArgProvider(AccessLogArgProvider args, SocketAddress remoteAddress, boolean chunked) {
 		assertThat(args.remoteAddress()).isEqualTo(remoteAddress);
 		assertThat(args.user()).isEqualTo(AbstractAccessLogArgProvider.MISSING);

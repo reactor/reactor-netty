@@ -75,7 +75,7 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops instanceof HttpServerInfos httpInfos) {
-				accessLogArgProvider.cookies(httpInfos.cookies());
+				super.applyServerInfos(accessLogArgProvider, httpInfos);
 			}
 		}
 		if (msg instanceof LastHttpContent<?> lastHttpContent) {

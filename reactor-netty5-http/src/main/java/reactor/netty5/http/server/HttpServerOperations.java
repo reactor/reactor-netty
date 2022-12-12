@@ -17,6 +17,7 @@ package reactor.netty5.http.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -406,6 +407,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	@Nullable
+	public SocketAddress connectionHostAddress() {
+		return channel().localAddress();
+	}
+
+	@Override
+	@Nullable
 	public InetSocketAddress remoteAddress() {
 		if (connectionInfo != null) {
 			return this.connectionInfo.getRemoteAddress();
@@ -413,6 +420,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else {
 			return null;
 		}
+	}
+
+	@Override
+	@Nullable
+	public SocketAddress connectionRemoteAddress() {
+		return channel().remoteAddress();
 	}
 
 	@Override
@@ -431,6 +444,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else {
 			return scheme;
 		}
+	}
+
+	@Override
+	public String connectionScheme() {
+		return scheme;
 	}
 
 	@Override

@@ -257,6 +257,9 @@ task japicmp(type: JapicmpTask) {
 			'reactor.netty.http.HttpDecoderSpec#DEFAULT_MAX_CHUNK_SIZE'
 	]
 	methodExcludes = [
+			'reactor.netty.http.server.logging.AccessLogArgProvider#connectionInformation()',
+			'reactor.netty.http.server.HttpServerRequest#scheme()',
+	
 			'reactor.netty.http.HttpOperations#send(org.reactivestreams.Publisher)',
 
 			'reactor.netty.http.client.HttpClient$ResponseReceiver#responseContent()',

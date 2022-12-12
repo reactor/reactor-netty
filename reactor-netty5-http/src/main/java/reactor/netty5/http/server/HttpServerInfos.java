@@ -29,7 +29,7 @@ import java.util.Set;
  * @author Violeta Georgieva
  * @since 1.0.8
  */
-public interface HttpServerInfos extends HttpInfos {
+public interface HttpServerInfos extends HttpInfos, ConnectionInformation {
 
 	/**
 	 * Returns resolved HTTP cookies.
