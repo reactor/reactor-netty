@@ -29,6 +29,7 @@ import static reactor.netty.http.server.logging.AbstractAccessLogArgProvider.MIS
 class BaseAccessLogHandlerTests {
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void accessLog() {
 		BaseAccessLogHandler handler = new BaseAccessLogHandler(null);
 		assertThat(handler.accessLog).isEqualTo(BaseAccessLogHandler.DEFAULT_ACCESS_LOG);

@@ -28,7 +28,7 @@ import java.util.Map;
  * @author Violeta Georgieva
  * @since 1.0.8
  */
-public interface HttpServerInfos extends HttpInfos {
+public interface HttpServerInfos extends HttpInfos, ConnectionInformation {
 
 	/**
 	 * Returns resolved HTTP cookies. As opposed to {@link #cookies()}, this
@@ -37,12 +37,4 @@ public interface HttpServerInfos extends HttpInfos {
 	 * @return Resolved HTTP cookies
 	 */
 	Map<CharSequence, List<Cookie>> allCookies();
-
-	/**
-	 * Returns information about the current connection.
-	 *
-	 * @return The information about the current connection
-	 * @since 1.0.27
-	 */
-	ConnectionInfo connectionInfo();
 }

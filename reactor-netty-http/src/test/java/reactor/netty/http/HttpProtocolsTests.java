@@ -398,8 +398,11 @@ class HttpProtocolsTests extends BaseHttpTest {
 							return resp.send();
 						})
 						.forwarded(true)
-						.accessLog(true, args -> AccessLog.create("{}",
-								applyAddress.apply(args.connectionInfo().getRemoteAddress())))
+						.accessLog(true, args -> AccessLog.create(
+								"{} {} {}",
+								applyAddress.apply(args.connectionInformation().remoteAddress()),
+								applyAddress.apply(args.connectionInformation().hostAddress()),
+								args.connectionInformation().scheme()))
 						.bindNow();
 
 		AccessLogAppender accessLogAppender = new AccessLogAppender();
@@ -409,7 +412,8 @@ class HttpProtocolsTests extends BaseHttpTest {
 			accessLogger.addAppender(accessLogAppender);
 
 			client.port(disposableServer.port())
-					.doOnRequest((req, cnx) -> req.addHeader("Forwarded", "for=192.0.2.60;proto=http;by=203.0.113.43"))
+					.doOnRequest((req, cnx) -> req.addHeader("Forwarded",
+							"for=192.0.2.60;proto=http;host=203.0.113.43"))
 					.get()
 					.uri("/")
 					.responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get(NettyPipeline.AccessLogHandler)))
@@ -421,7 +425,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 			assertThat(accessLogAppender.latch.await(5, TimeUnit.SECONDS)).isTrue();
 
 			assertThat(accessLogAppender.list).hasSize(1);
-			assertThat(accessLogAppender.list.get(0).getFormattedMessage()).isEqualTo("192.0.2.60");
+			assertThat(accessLogAppender.list.get(0).getFormattedMessage()).isEqualTo("192.0.2.60 203.0.113.43 http");
 		}
 		finally {
 			accessLogger.detachAppender(accessLogAppender);

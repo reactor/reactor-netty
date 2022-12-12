@@ -18,7 +18,7 @@ package reactor.netty.http.server.logging;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.netty.ReactorNetty;
-import reactor.netty.http.server.ConnectionInfo;
+import reactor.netty.http.server.ConnectionInformation;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -40,7 +40,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	final SocketAddress remoteAddress;
 	final String user = MISSING;
-	ConnectionInfo connectionInfo;
+	ConnectionInformation connectionInfo;
 	String zonedDateTime;
 	ZonedDateTime accessDateTime;
 	CharSequence method;
@@ -70,13 +70,14 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	@Override
 	@Nullable
+	@SuppressWarnings("deprecation")
 	public SocketAddress remoteAddress() {
 		return remoteAddress;
 	}
 
 	@Override
 	@Nullable
-	public ConnectionInfo connectionInfo() {
+	public ConnectionInformation connectionInformation() {
 		return connectionInfo;
 	}
 
@@ -166,7 +167,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 		return get();
 	}
 
-	SELF connectionInfo(ConnectionInfo connectionInfo) {
+	SELF connectionInformation(ConnectionInformation connectionInfo) {
 		this.connectionInfo = connectionInfo;
 		return get();
 	}

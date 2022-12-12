@@ -16,8 +16,6 @@
 package reactor.netty.http.server.logging;
 
 import io.netty.channel.ChannelDuplexHandler;
-import reactor.netty.channel.ChannelOperations;
-import reactor.netty.http.server.ConnectionInfo;
 import reactor.netty.http.server.HttpServerInfos;
 import reactor.util.annotation.Nullable;
 
@@ -51,17 +49,9 @@ class BaseAccessLogHandler extends ChannelDuplexHandler {
 		return socketAddress instanceof InetSocketAddress ? ((InetSocketAddress) socketAddress).getHostString() : MISSING;
 	}
 
-	@SuppressWarnings("rawtypes")
-	final void applyServerResponseDefaults(AbstractAccessLogArgProvider accessLogArgs, @Nullable ChannelOperations<?, ?> ops) {
-		/**
-		 * configure the connection provider, if found from the channel operations.
-		 */
-		if (ops instanceof HttpServerInfos) {
-			ConnectionInfo connectionInfo = ((HttpServerInfos) ops).connectionInfo();
-			if (connectionInfo != null) {
-				accessLogArgs.connectionInfo(connectionInfo);
-			}
-		}
+	final <T extends AbstractAccessLogArgProvider<T>> void applyServerInfos(AbstractAccessLogArgProvider<T> accessLogArgs, HttpServerInfos serverInfos) {
+		accessLogArgs.cookies(serverInfos.cookies());
+		accessLogArgs.connectionInformation(serverInfos);
 	}
 
 }

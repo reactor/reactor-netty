@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -133,6 +133,7 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * @return the host's address
 	 */
 	@Nullable
+	@Override
 	InetSocketAddress hostAddress();
 
 	/**
@@ -141,6 +142,7 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * @return the peer's address
 	 */
 	@Nullable
+	@Override
 	InetSocketAddress remoteAddress();
 
 	/**
@@ -149,12 +151,5 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * @return inbound {@link HttpHeaders}
 	 */
 	HttpHeaders requestHeaders();
-
-	/**
-	 * Returns the current protocol scheme
-	 *
-	 * @return the protocol scheme
-	 */
-	String scheme();
 
 }

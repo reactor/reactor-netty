@@ -17,6 +17,7 @@ package reactor.netty.http.server.logging;
 
 import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.netty.http.server.ConnectionInfo;
+import reactor.netty.http.server.ConnectionInformation;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -56,8 +57,11 @@ public interface AccessLogArgProvider {
 	 * Returns the address of the remote peer or {@code null} in case of Unix Domain Sockets.
 	 *
 	 * @return the peer's address
+	 * @deprecated Use {@link ConnectionInformation#connectionRemoteAddress()}
+	 *
 	 */
 	@Nullable
+	@Deprecated
 	SocketAddress remoteAddress();
 
 	/**
@@ -65,13 +69,13 @@ public interface AccessLogArgProvider {
 	 * <p> Note that the {@link ConnectionInfo#getRemoteAddress()} will return the forwarded
 	 * remote client address if the server is configured in forwarded mode.
 	 *
-	 * @since 1.0.27
+	 * @since 1.0.26
 	 * @return the connection info
 	 * @see reactor.netty.http.server.HttpServer#forwarded(BiFunction)
 	 * @see reactor.netty.http.server.HttpServer#forwarded(BiFunction)
 	 */
 	@Nullable
-	ConnectionInfo connectionInfo();
+	ConnectionInformation connectionInformation();
 
 	/**
 	 * Returns the name of this method, (e.g. "GET").
