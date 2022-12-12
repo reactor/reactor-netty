@@ -127,20 +127,10 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 */
 	Flux<HttpData> receiveForm(Consumer<HttpServerFormDecoderProvider.Builder> formDecoderBuilder);
 
-	/**
-	 * Returns the address of the host peer or {@code null} in case of Unix Domain Sockets.
-	 *
-	 * @return the host's address
-	 */
 	@Nullable
 	@Override
 	InetSocketAddress hostAddress();
 
-	/**
-	 * Returns the address of the remote peer or {@code null} in case of Unix Domain Sockets.
-	 *
-	 * @return the peer's address
-	 */
 	@Nullable
 	@Override
 	InetSocketAddress remoteAddress();
