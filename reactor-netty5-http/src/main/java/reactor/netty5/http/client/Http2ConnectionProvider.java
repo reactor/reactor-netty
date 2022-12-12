@@ -131,6 +131,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				.registerMetrics(name(), id, remoteAddress, metrics);
 	}
 
+	@Override
+	protected void deRegisterDefaultMetrics(String id, SocketAddress remoteAddress) {
+		MicrometerHttp2ConnectionProviderMeterRegistrar.INSTANCE
+				.deRegisterMetrics(name(), id, remoteAddress);
+	}
+
 	static void invalidate(@Nullable ConnectionObserver owner) {
 		if (owner instanceof DisposableAcquire da) {
 			da.pooledRef
