@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import static reactor.netty.http.server.logging.AbstractAccessLogArgProvider.MIS
 class BaseAccessLogHandlerTests {
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void accessLog() {
 		BaseAccessLogHandler handler = new BaseAccessLogHandler(null);
 		assertThat(handler.accessLog).isEqualTo(BaseAccessLogHandler.DEFAULT_ACCESS_LOG);

@@ -240,6 +240,10 @@ task japicmp(type: JapicmpTask) {
 	includeSynthetic = true
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
+	methodExcludes = [
+			'reactor.netty.http.server.logging.AccessLogArgProvider#connectionInformation()',
+			'reactor.netty.http.server.HttpServerRequest#scheme()'
+	]
 }
 
 tasks.japicmp.dependsOn(downloadBaseline)
