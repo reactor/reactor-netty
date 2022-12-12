@@ -810,11 +810,17 @@ public interface ConnectionProvider extends Disposable {
 
 	/**
 	 * A strategy to register which metrics are collected in a particular connection pool.
-	 *
-	 * Default implementation of this interface is {@link MicrometerPooledConnectionProviderMeterRegistrar}
 	 */
 	interface MeterRegistrar {
 
+		/**
+		 * Invoked when a connection pool is created.
+		 *
+		 * @param poolName the pool name
+		 * @param id the pool id
+		 * @param remoteAddress the remote address
+		 * @param metrics the pool metrics
+		 */
 		void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics);
 
 		/**
