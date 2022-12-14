@@ -2718,12 +2718,13 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	private void doTestEvictInBackground(int expectation, boolean evict) throws Exception {
-		AtomicReference<ConnectionPoolMetrics> m = new AtomicReference<>();
+		TestMeterRegistrar registrar = new TestMeterRegistrar();
+
 		ConnectionProvider.Builder builder =
 				ConnectionProvider.builder("testEvictInBackground")
 				                  .maxConnections(1)
 				                  .maxIdleTime(Duration.ofMillis(20))
-				                  .metrics(true, () -> (poolName, id, remoteAddress, metrics) -> m.set(metrics));
+				                  .metrics(true, () -> registrar);
 
 		if (evict) {
 			builder.evictInBackground(Duration.ofMillis(50));
@@ -2743,8 +2744,8 @@ class HttpClientTest extends BaseHttpTest {
 
 		Thread.sleep(200);
 
-		assertThat(m.get()).isNotNull();
-		assertThat(m.get().idleSize()).isEqualTo(expectation);
+		assertThat(registrar.m.get()).isNotNull();
+		assertThat(registrar.m.get().idleSize()).isEqualTo(expectation);
 	}
 
 	@Test
@@ -3184,6 +3185,20 @@ class HttpClientTest extends BaseHttpTest {
 		finally {
 			serverLoop.disposeLater()
 			          .block(Duration.ofSeconds(5));
+		}
+	}
+
+	static final class TestMeterRegistrar implements ConnectionProvider.MeterRegistrar {
+
+		AtomicReference<ConnectionPoolMetrics> m = new AtomicReference<>();
+
+		@Override
+		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics) {
+			m.set(metrics);
+		}
+
+		@Override
+		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
 		}
 	}
 }

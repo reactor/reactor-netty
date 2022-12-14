@@ -21,6 +21,7 @@ import reactor.netty5.Connection;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
@@ -34,7 +35,7 @@ class ConnectionProviderTest {
 
 	static final TestAllocationStrategy TEST_ALLOCATION_STRATEGY = new TestAllocationStrategy();
 	static final String TEST_STRING = "";
-	static final Supplier<ConnectionProvider.MeterRegistrar> TEST_SUPPLIER = () -> (a, b, c, d) -> {};
+	static final Supplier<ConnectionProvider.MeterRegistrar> TEST_SUPPLIER = TestMeterRegistrar::new;
 	static final BiFunction<Runnable, Duration, Disposable> TEST_BI_FUNCTION = (r, duration) -> () -> {};
 	static final BiPredicate<Connection, ConnectionProvider.ConnectionMetadata> TEST_BI_PREDICATE = (conn, meta) -> true;
 
@@ -125,6 +126,17 @@ class ConnectionProviderTest {
 
 		@Override
 		public void returnPermits(int returned) {
+		}
+	}
+
+	static final class TestMeterRegistrar implements ConnectionProvider.MeterRegistrar {
+
+		@Override
+		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics) {
+		}
+
+		@Override
+		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
 		}
 	}
 }

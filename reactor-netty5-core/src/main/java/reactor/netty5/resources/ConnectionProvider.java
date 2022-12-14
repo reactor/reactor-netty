@@ -830,7 +830,6 @@ public interface ConnectionProvider extends Disposable {
 		 * @param remoteAddress the remote address
 		 * @since 1.0.26
 		 */
-		default void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
-		}
+		void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress);
 	}
 }
