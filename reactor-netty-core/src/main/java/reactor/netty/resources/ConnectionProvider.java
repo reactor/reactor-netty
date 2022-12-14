@@ -180,9 +180,9 @@ public interface ConnectionProvider extends Disposable {
 	 */
 	static ConnectionProvider create(String name, int maxConnections, boolean metricsEnabled) {
 		return builder(name).maxConnections(maxConnections)
-				.pendingAcquireTimeout(Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT))
-				.metrics(metricsEnabled)
-				.build();
+		                    .pendingAcquireTimeout(Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT))
+		                    .metrics(metricsEnabled)
+		                    .build();
 	}
 
 	/**
@@ -318,7 +318,6 @@ public interface ConnectionProvider extends Disposable {
 		 * @return the connection creation timestamp
 		 */
 		long allocationTimestamp();
-
 	}
 
 	interface AllocationStrategy<A extends AllocationStrategy<A>> {
@@ -832,8 +831,6 @@ public interface ConnectionProvider extends Disposable {
 		 * @since 1.0.26
 		 */
 		default void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
-
 		}
-
 	}
 }

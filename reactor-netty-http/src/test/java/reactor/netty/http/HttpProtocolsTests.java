@@ -391,19 +391,19 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 		disposableServer =
 				server.handle((req, resp) -> {
-							resp.withConnection(conn -> {
-								ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
-								resp.header(NettyPipeline.AccessLogHandler, handler != null ? "FOUND" : "NOT FOUND");
-							});
-							return resp.send();
-						})
-						.forwarded(true)
-						.accessLog(true, args -> AccessLog.create(
-								"{} {} {}",
-								applyAddress.apply(args.connectionInformation().remoteAddress()),
-								applyAddress.apply(args.connectionInformation().hostAddress()),
-								args.connectionInformation().scheme()))
-						.bindNow();
+				          resp.withConnection(conn -> {
+				              ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
+				              resp.header(NettyPipeline.AccessLogHandler, handler != null ? "FOUND" : "NOT FOUND");
+				          });
+				          return resp.send();
+				      })
+				      .forwarded(true)
+				      .accessLog(true, args -> AccessLog.create(
+				          "{} {} {}",
+				          applyAddress.apply(args.connectionInformation().remoteAddress()),
+				          applyAddress.apply(args.connectionInformation().hostAddress()),
+				          args.connectionInformation().scheme()))
+				      .bindNow();
 
 		AccessLogAppender accessLogAppender = new AccessLogAppender();
 		accessLogAppender.start();
@@ -412,15 +412,15 @@ class HttpProtocolsTests extends BaseHttpTest {
 			accessLogger.addAppender(accessLogAppender);
 
 			client.port(disposableServer.port())
-					.doOnRequest((req, cnx) -> req.addHeader("Forwarded",
-							"for=192.0.2.60;proto=http;host=203.0.113.43"))
-					.get()
-					.uri("/")
-					.responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get(NettyPipeline.AccessLogHandler)))
-					.as(StepVerifier::create)
-					.expectNext("FOUND")
-					.expectComplete()
-					.verify(Duration.ofSeconds(5));
+			      .doOnRequest((req, cnx) -> req.addHeader("Forwarded",
+			              "for=192.0.2.60;proto=http;host=203.0.113.43"))
+			      .get()
+			      .uri("/")
+			      .responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get(NettyPipeline.AccessLogHandler)))
+			      .as(StepVerifier::create)
+			      .expectNext("FOUND")
+			      .expectComplete()
+			      .verify(Duration.ofSeconds(5));
 
 			assertThat(accessLogAppender.latch.await(5, TimeUnit.SECONDS)).isTrue();
 
@@ -622,22 +622,20 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 		disposableServer =
 				server.idleTimeout(Duration.ofSeconds(60))
-						.route(routes ->
-								routes.post("/echo", (req, res) -> res.send(req.receive().retain())))
-						.bindNow();
+				      .route(routes ->
+				              routes.post("/echo", (req, res) -> res.send(req.receive().retain())))
+				      .bindNow();
 
-		StepVerifier.create(
-						client.port(disposableServer.port())
-								.post()
-								.uri("/echo")
-								.send(ByteBufFlux.fromString(Mono.just("Hello world!")))
-								.responseContent()
-								.aggregate()
-								.asString()
-								.timeout(Duration.ofSeconds(10))
-				)
-				.expectNext("Hello world!")
-				.verifyComplete();
+		StepVerifier.create(client.port(disposableServer.port())
+		                          .post()
+		                          .uri("/echo")
+		                          .send(ByteBufFlux.fromString(Mono.just("Hello world!")))
+		                          .responseContent()
+		                          .aggregate()
+		                          .asString()
+		                          .timeout(Duration.ofSeconds(10)))
+		            .expectNext("Hello world!")
+		            .verifyComplete();
 
 		try {
 			// Wait till all logs are flushed
@@ -648,8 +646,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		}
 
 		// ensure no WARN with error
-		assertThat(listAppender.list)
-				.noneMatch(event -> event.getLevel() == Level.WARN);
+		assertThat(listAppender.list).noneMatch(event -> event.getLevel() == Level.WARN);
 	}
 
 	@ParameterizedCompatibleCombinationsTest
