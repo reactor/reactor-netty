@@ -180,5 +180,9 @@ class HttpClientNoMicrometerTest {
 		                            ConnectionPoolMetrics metrics) {
 
 		}
+
+		@Override
+		public void deRegisterMetrics(String s, String s1, SocketAddress socketAddress) {
+		}
 	}
 }
