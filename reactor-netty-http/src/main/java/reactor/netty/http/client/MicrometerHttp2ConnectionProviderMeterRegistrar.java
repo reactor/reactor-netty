@@ -75,6 +75,7 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 	void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
 		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
 		Tags tags = Tags.of(ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName);
+
 		REGISTRY.remove(new Meter.Id(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tags, null, null, Meter.Type.GAUGE));
 		REGISTRY.remove(new Meter.Id(CONNECTION_PROVIDER_PREFIX + ACTIVE_STREAMS, tags, null, null, Meter.Type.GAUGE));
 		REGISTRY.remove(new Meter.Id(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tags, null, null, Meter.Type.GAUGE));

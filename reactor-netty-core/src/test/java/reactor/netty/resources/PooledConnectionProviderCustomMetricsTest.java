@@ -143,6 +143,7 @@ class PooledConnectionProviderCustomMetricsTest {
 			this.deRegistered = deRegistered;
 			this.customMetric = customMetric;
 		}
+
 		@Override
 		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics) {
 			if (registered != null) {

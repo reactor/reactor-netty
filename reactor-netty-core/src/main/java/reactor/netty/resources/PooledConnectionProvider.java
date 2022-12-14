@@ -180,33 +180,33 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			                    .stream()
 			                    .map(e -> {
 			                        Pool<T> pool = e.getValue();
-				                    SocketAddress remoteAddress = e.getKey().holder;
-				                    String id = e.getKey().hashCode() + "";
-				                    PoolFactory<T> poolFactory = poolFactory(remoteAddress);
-				                    if (pool instanceof GracefulShutdownInstrumentedPool) {
+			                        SocketAddress remoteAddress = e.getKey().holder;
+			                        String id = e.getKey().hashCode() + "";
+			                        PoolFactory<T> poolFactory = poolFactory(remoteAddress);
+			                        if (pool instanceof GracefulShutdownInstrumentedPool) {
 			                            return ((GracefulShutdownInstrumentedPool<T>) pool)
 			                                    .disposeGracefully(disposeTimeout)
 			                                    .onErrorResume(t -> {
 			                                        log.error("Connection pool for [{}] didn't shut down gracefully", e.getKey(), t);
 			                                        return Mono.fromRunnable(() -> {
-				                                        if (poolFactory.registrar != null) {
-					                                        poolFactory.registrar.get().deRegisterMetrics(name, id, remoteAddress);
-				                                        }
-				                                        else if (Metrics.isInstrumentationAvailable()) {
-					                                        deRegisterDefaultMetrics(id, remoteAddress);
-				                                        }
+			                                            if (poolFactory.registrar != null) {
+			                                                poolFactory.registrar.get().deRegisterMetrics(name, id, remoteAddress);
+			                                            }
+			                                            else if (Metrics.isInstrumentationAvailable()) {
+			                                                deRegisterDefaultMetrics(id, remoteAddress);
+			                                            }
 			                                        });
 			                                    });
 			                        }
 			                        return pool.disposeLater().then(
-											Mono.<Void>fromRunnable(() -> {
-												if (poolFactory.registrar != null) {
-													poolFactory.registrar.get().deRegisterMetrics(name, id, remoteAddress);
-												}
-												else if (Metrics.isInstrumentationAvailable()) {
-													deRegisterDefaultMetrics(id, remoteAddress);
-												}
-											})
+			                                Mono.<Void>fromRunnable(() -> {
+			                                    if (poolFactory.registrar != null) {
+			                                        poolFactory.registrar.get().deRegisterMetrics(name, id, remoteAddress);
+			                                    }
+			                                    else if (Metrics.isInstrumentationAvailable()) {
+			                                        deRegisterDefaultMetrics(id, remoteAddress);
+			                                    }
+			                                })
 			                        );
 			                    })
 			                    .collect(Collectors.toList());
