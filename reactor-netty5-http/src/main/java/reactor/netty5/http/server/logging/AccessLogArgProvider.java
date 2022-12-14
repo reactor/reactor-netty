@@ -47,7 +47,6 @@ public interface AccessLogArgProvider {
 	 *
 	 * @return the peer's address
 	 * @deprecated as of 1.0.26. Use {@link ConnectionInformation#connectionRemoteAddress()}
-	 *
 	 */
 	@Nullable
 	@Deprecated

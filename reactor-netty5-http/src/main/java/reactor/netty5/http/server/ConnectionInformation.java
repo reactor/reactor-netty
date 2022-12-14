@@ -20,7 +20,7 @@ import reactor.util.annotation.Nullable;
 import java.net.SocketAddress;
 
 /**
- * Resolve informations about the connection from which an http request is received.
+ * Resolve information about the connection from which an http request is received.
  *
  * @since 1.0.26
  */
@@ -28,7 +28,7 @@ public interface ConnectionInformation {
 
 	/**
 	 * Returns the address of the host which received the request, possibly {@code null} in case of Unix Domain Sockets.
-	 * The returned address is the merged informations from all proxies.
+	 * The returned address is the merged information from all proxies.
 	 *
 	 * @return the address merged from all proxies of the host which received the request
 	 */
@@ -45,7 +45,7 @@ public interface ConnectionInformation {
 
 	/**
 	 * Returns the address of the client that initiated the request, possibly {@code null} in case of Unix Domain Sockets.
-	 * The returned address is the merged informations from all proxies.
+	 * The returned address is the merged information from all proxies.
 	 *
 	 * @return the address merged from all proxies of the client that initiated the request
 	 */
@@ -62,7 +62,7 @@ public interface ConnectionInformation {
 
 	/**
 	 * Returns the current protocol scheme.
-	 * The returned address is the merged informations from all proxies.
+	 * The returned address is the merged information from all proxies.
 	 *
 	 * @return the protocol scheme merged from all proxies
 	 */
