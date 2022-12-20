@@ -108,6 +108,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
@@ -3096,7 +3097,14 @@ class HttpClientTest extends BaseHttpTest {
 
 	@Test
 	void testHttpClientCancelled() throws InterruptedException {
-		try (LogTracker lt = new LogTracker(HttpClientOperations.class, HttpClientOperations.INBOUND_CANCEL_LOG)) {
+		// logged by the server when last http packet is sent and channel is terminated
+		String serverCancelledLog = "[HttpServer] Channel inbound receiver cancelled (operation cancelled).";
+		// logged by client when cancelled while receiving response
+		String clientCancelledLog = HttpClientOperations.INBOUND_CANCEL_LOG;
+
+		ConnectionProvider pool = ConnectionProvider.create("testHttpClientCancelled", 1);
+		try (LogTracker lt = new LogTracker(ChannelOperations.class, serverCancelledLog);
+		     LogTracker lt2 = new LogTracker(HttpClientOperations.class, clientCancelledLog)) {
 			CountDownLatch serverClosed = new CountDownLatch(1);
 			Sinks.Empty<Void> empty = Sinks.empty();
 			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(empty::tryEmitEmpty, 1);
@@ -3111,7 +3119,6 @@ class HttpClientTest extends BaseHttpTest {
 					})
 					.bindNow();
 
-			ConnectionProvider pool = ConnectionProvider.create("testHttpClientCancelled", 1);
 			HttpClient httpClient = createHttpClientForContextWithPort(pool);
 			CountDownLatch clientCancelled = new CountDownLatch(1);
 
@@ -3136,7 +3143,10 @@ class HttpClientTest extends BaseHttpTest {
 			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
 			assertThat(clientCancelled.await(30, TimeUnit.SECONDS)).as("latchClient await").isTrue();
 			assertThat(serverClosed.await(30, TimeUnit.SECONDS)).as("latchServerClosed await").isTrue();
-			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTracker await").isTrue();
+			assertThat(lt2.latch.await(30, TimeUnit.SECONDS)).as("logTracker2 await").isTrue();
+		}
+		finally {
 			pool.disposeLater()
 					.block(Duration.ofSeconds(30));
 		}

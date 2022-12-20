@@ -3246,9 +3246,14 @@ class HttpServerTests extends BaseHttpTest {
 	@Test
 	@SuppressWarnings("deprecation")
 	void testHttpServerCancelled() throws InterruptedException {
-		CountDownLatch serverInboundReleased = new CountDownLatch(1);
+		// logged by server when cancelled while reading http request body
+		String serverCancelLog = "[HttpServer] Channel inbound receiver cancelled (operation cancelled).";
+		// logged by client when cancelled after having received the whole response from the server
+		String clientCancelLog = "Http client inbound receiver cancelled, closing channel.";
 
-		try (LogTracker lt = new LogTracker(ChannelOperations.class, "Inbound stream cancelled.")) {
+		try (LogTracker lt = new LogTracker(ChannelOperations.class, serverCancelLog);
+		     LogTracker lt2 = new LogTracker("reactor.netty.http.client.HttpClientOperations", clientCancelLog)) {
+			CountDownLatch serverInboundReleased = new CountDownLatch(1);
 			AtomicReference<Subscription> subscription = new AtomicReference<>();
 			disposableServer = createServer()
 					.handle((req, res) -> {
@@ -3295,7 +3300,56 @@ class HttpServerTests extends BaseHttpTest {
 					.verify(Duration.ofSeconds(30));
 
 			assertThat(serverInboundReleased.await(30, TimeUnit.SECONDS)).as("serverInboundReleased await").isTrue();
-			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTrack await").isTrue();
+			assertThat(lt2.latch.await(30, TimeUnit.SECONDS)).as("logTrack2 await").isTrue();
+		}
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	void testHttpServerCancelledOnClientClose() throws InterruptedException {
+		// logged by client when disposing the connection before send the 2nd request data chunk
+		String clientCancelLog = "Http client inbound receiver cancelled, closing channel.";
+		// logged by server when cancelled while reading request body (because connection has been closed by client)
+		String serverCancelLog = "[HttpServer] Channel inbound receiver cancelled (channel disconnected).";
+
+		try (LogTracker lt = new LogTracker(ChannelOperations.class, serverCancelLog);
+		     LogTracker lt2 = new LogTracker("reactor.netty.http.client.HttpClientOperations", clientCancelLog)) {
+			disposableServer = createServer()
+					.handle((req, res) -> {
+						return req.receive()
+								.aggregate()
+								.asString()
+								.log("server.receive")
+								.then(res.status(200).sendString(Mono.just("OK")).neverComplete());
+					})
+					.bindNow();
+
+			AtomicReference<Connection> clientConn = new AtomicReference<>();
+			AtomicInteger counter = new AtomicInteger();
+			CountDownLatch clientClosed = new CountDownLatch(1);
+
+			createClient(disposableServer::address)
+					.wiretap(true)
+					.doOnRequest((req, conn) -> {
+						clientConn.set(conn);
+						conn.onDispose(() -> clientClosed.countDown());
+					})
+					.post()
+					.send(ByteBufFlux.fromString(Flux.just("foo", "bar"))
+							.doOnNext(byteBuf -> {
+								if (counter.incrementAndGet() == 2) {
+									log.warn("Client: disposing connection before sending 2nd chunk");
+									clientConn.get().dispose();
+								}
+							}))
+					.uri("/")
+					.responseSingle((rsp, buf) -> Mono.just(rsp))
+					.subscribe();
+
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTracker await").isTrue();
+			assertThat(lt2.latch.await(30, TimeUnit.SECONDS)).as("logTracker2 await").isTrue();
+			assertThat(clientClosed.await(30, TimeUnit.SECONDS)).as("clientClosed await").isTrue();
 		}
 	}
 }
