@@ -65,6 +65,7 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.CancelReceiverHandler;
 import reactor.netty.Connection;
+import reactor.netty.DisposableChannel;
 import reactor.netty.DisposableServer;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyOutbound;
@@ -1455,7 +1456,11 @@ public class TcpClientTests {
 		DisposableServer server = null;
 		Connection client = null;
 
-		try (LogTracker lt = new LogTracker(ChannelOperations.class, "Inbound stream cancelled.")) {
+		try (LogTracker lt = new LogTracker(ChannelOperations.class,
+				// logged by client on cancel
+				"Channel inbound receiver cancelled (operation cancelled).",
+				// logged by server when client disconnects
+				"Channel inbound receiver cancelled (channel disconnected).")) {
 			Sinks.Empty<Void> empty = Sinks.empty();
 			CountDownLatch cancelled = new CountDownLatch(1);
 			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(empty::tryEmitEmpty);
@@ -1494,7 +1499,66 @@ public class TcpClientTests {
 
 			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
 			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+
+			client.disposeNow();
+			client = null;
 			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+			if (client != null) {
+				client.disposeNow();
+			}
+		}
+	}
+
+	@Test
+	void testTcpClientCancelledByServerClose() throws InterruptedException {
+		DisposableServer server = null;
+		Connection client = null;
+
+		try (LogTracker lt = new LogTracker(ChannelOperations.class,
+				// logged by server when closing the client connection
+				"Channel inbound receiver cancelled (subscription disposed).",
+				// logged by client, when the connection is closed by the server
+				"Channel inbound receiver cancelled (channel disconnected).")) {
+			CountDownLatch cancelled = new CountDownLatch(1);
+
+			server = TcpServer.create()
+					.port(0)
+					.wiretap(true)
+					.handle((req, res) -> req.receive()
+							.asString()
+							.doOnNext(s -> req.withConnection(DisposableChannel::dispose))
+							.then())
+					.bindNow();
+
+			client = TcpClient.create()
+					.wiretap(true)
+					.host("localhost")
+					.port(server.port())
+					.handle((in, out) -> {
+						Mono<Void> receive = in
+								.receive()
+								.asString()
+								.log("client.receive")
+								.doOnCancel(cancelled::countDown)
+								.then();
+
+						out.sendString(Mono.just("REQUEST"))
+								.then()
+								.subscribe();
+
+						return receive
+								.log("receive")
+								.then(Mono.never());
+					})
+					.connectNow();
+
+			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTracker await").isTrue();
 		}
 		finally {
 			if (server != null) {

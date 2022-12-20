@@ -332,7 +332,7 @@ class UdpServerTests {
 		Connection server = null;
 		Connection client = null;
 
-		try (LogTracker lt = new LogTracker(ChannelOperations.class, "Inbound stream cancelled.")) {
+		try (LogTracker lt = new LogTracker(ChannelOperations.class, "Channel inbound receiver cancelled (operation cancelled).")) {
 			Sinks.Empty<Void> empty = Sinks.empty();
 			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(() -> empty.tryEmitEmpty());
 			CountDownLatch cancelled = new CountDownLatch(1);

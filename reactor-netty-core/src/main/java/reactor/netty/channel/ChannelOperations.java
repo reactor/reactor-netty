@@ -409,7 +409,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
-			log.debug(format(channel(), "[{}] Inbound stream cancelled."), formatName());
+			String info = isDisposed() ?
+					(!channel().isActive() ? "channel disconnected" : "subscription disposed") :
+					"operation cancelled";
+			log.debug(format(channel(), "[{}] Channel inbound receiver cancelled ({})."), formatName(), info);
 		}
 	}
 

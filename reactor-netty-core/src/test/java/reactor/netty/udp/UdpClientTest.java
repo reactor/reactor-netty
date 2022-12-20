@@ -289,7 +289,9 @@ class UdpClientTest {
 		Connection server = null;
 		Connection client = null;
 
-		try (LogTracker lt = new LogTracker(ChannelOperations.class, "Inbound stream cancelled.")) {
+		try (LogTracker lt = new LogTracker(ChannelOperations.class,
+				"Channel inbound receiver cancelled (operation cancelled).",
+				"Channel inbound receiver cancelled (subscription disposed).")) {
 			Sinks.Empty<Void> empty = Sinks.empty();
 			CountDownLatch cancelled = new CountDownLatch(1);
 			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(empty::tryEmitEmpty);
@@ -340,8 +342,11 @@ class UdpClientTest {
 					.block(Duration.ofSeconds(30));
 
 			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
-			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
 			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+
+			server.disposeNow();
+			server = null;
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
 		}
 		finally {
 			if (server != null) {

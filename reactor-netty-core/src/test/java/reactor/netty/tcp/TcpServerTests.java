@@ -1181,7 +1181,11 @@ class TcpServerTests {
 		AtomicReference<List<String>> serverMsg = new AtomicReference<>(new ArrayList<>());
 		Connection client = null;
 
-		try (LogTracker lt = new LogTracker(ChannelOperations.class, "Inbound stream cancelled.")) {
+		try (LogTracker lt = new LogTracker(ChannelOperations.class,
+				// logged by server when cancelling inbound receiver
+				"Channel inbound receiver cancelled (operation cancelled).",
+				// logged by client when it is disposed
+				"Channel inbound receiver cancelled (subscription disposed).")) {
 			Sinks.Empty<Void> empty = Sinks.empty();
 			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(() -> empty.tryEmitEmpty());
 			CountDownLatch cancelled = new CountDownLatch(1);
@@ -1209,9 +1213,12 @@ class TcpServerTests {
 							.then(Mono.never()))
 					.connectNow();
 
-			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTrack").isTrue();
 			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled").isTrue();
 			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+
+			client.disposeNow();
+			client = null;
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTrack").isTrue();
 		}
 		finally {
 			if (server != null) {
