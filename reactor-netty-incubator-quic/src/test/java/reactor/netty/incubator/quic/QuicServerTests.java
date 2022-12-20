@@ -479,7 +479,7 @@ class QuicServerTests extends BaseQuicTests {
 						return in.receive()
 								.asString()
 								.log("server.receive")
-								.doOnSubscribe(s -> subscription.set(s))
+								.doOnSubscribe(subscription::set)
 								.doOnNext(s -> serverMsg.get().add(s))
 								.then(Mono.never());
 					})
@@ -487,10 +487,8 @@ class QuicServerTests extends BaseQuicTests {
 
 			client = createClient(server::address).connectNow();
 
-			client.createStream(QuicStreamType.UNIDIRECTIONAL, (in, out) -> {
-						return out.sendString(Mono.just("PING"))
-								.neverComplete();
-					})
+			client.createStream(QuicStreamType.BIDIRECTIONAL, (in, out) -> out.sendString(Mono.just("PING"))
+					.neverComplete())
 					.subscribe();
 
 			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
