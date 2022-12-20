@@ -122,7 +122,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	HttpHeaders previousRequestHeaders;
 	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
 
-	final static String INBOUND_CANCEL_LOG = "Http client inbound stream cancelled, closing channel.";
+	final static String INBOUND_CANCEL_LOG = "Http client inbound receiver cancelled, closing channel.";
 
 	HttpClientOperations(HttpClientOperations replaced) {
 		super(replaced);
