@@ -20,6 +20,7 @@ import ch.qos.logback.core.AppenderBase;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Stream;
 
 /**
  * Helper class used to track the occurrence of a given string from a given Logger.
@@ -30,12 +31,15 @@ public class LogTracker extends AppenderBase<ILoggingEvent> implements AutoClose
 
 	public final CountDownLatch latch;
 	private final ch.qos.logback.classic.Logger logger;
-	private final String message;
+	private final String[] messages;
 
-	public LogTracker(Class<?> loggerName, String message) {
+	public LogTracker(Class<?> className, String... messages) {
+		this(className.getName(), messages);
+	}
+	public LogTracker(String loggerName, String... messages) {
 		this.logger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(loggerName);
-		this.message = message;
-		this.latch = new CountDownLatch(1);
+		this.messages = messages;
+		this.latch = new CountDownLatch(messages.length);
 
 		start();
 		this.logger.addAppender(this);
@@ -43,7 +47,7 @@ public class LogTracker extends AppenderBase<ILoggingEvent> implements AutoClose
 
 	@Override
 	protected void append(ILoggingEvent eventObject) {
-		if (eventObject.getFormattedMessage().contains(message)) {
+		if (Stream.of(messages).anyMatch(msg -> eventObject.getFormattedMessage().contains(msg))) {
 			latch.countDown();
 		}
 	}
