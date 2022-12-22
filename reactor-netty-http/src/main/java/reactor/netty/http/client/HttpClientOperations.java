@@ -538,6 +538,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	protected boolean isContentAlwaysEmpty() {
+		return false;
+	}
+
+	@Override
 	protected void onHeadersSent() {
 		channel().read();
 		if (channel().parent() != null) {

@@ -211,7 +211,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		if (!HttpMethod.HEAD.equals(method())) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
-			if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
+			int code = status().code();
+			if (!(HttpResponseStatus.NOT_MODIFIED.code() == code ||
+					HttpResponseStatus.NO_CONTENT.code() == code)) {
 
 				if (HttpUtil.getContentLength(nettyResponse, -1) == -1) {
 					responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
@@ -637,10 +639,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void afterMarkSentHeaders() {
-		if (HttpResponseStatus.NOT_MODIFIED.equals(status())) {
-			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-			               .remove(HttpHeaderNames.CONTENT_LENGTH);
-		}
 		if (compressionPredicate != null && compressionPredicate.test(this, this)) {
 			compression(true);
 		}
@@ -649,6 +647,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void beforeMarkSentHeaders() {
 		//noop
+	}
+
+	@Override
+	protected boolean isContentAlwaysEmpty() {
+		int code = status().code();
+		return HttpResponseStatus.NOT_MODIFIED.code() == code ||
+				HttpResponseStatus.NO_CONTENT.code() == code ||
+				HttpResponseStatus.RESET_CONTENT.code() == code;
 	}
 
 	@Override
