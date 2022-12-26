@@ -350,7 +350,7 @@ class HttpClientConnect extends HttpClient {
 				HttpClientOperations ops = connection.as(HttpClientOperations.class);
 				if (ops != null && ops.hasSentHeaders()) {
 					// In some cases the channel close event may be delayed and thus the connection to be
-					// returned to the pool and later the eviction functionality to remote it from the pool.
+					// returned to the pool and later the eviction functionality to remove it from the pool.
 					// In some rare cases the connection might be acquired immediately, before the channel close
 					// event and the eviction functionality be able to remove it from the pool, this may lead to I/O
 					// errors.
@@ -368,7 +368,7 @@ class HttpClientConnect extends HttpClient {
 				else {
 					if (ops != null) {
 						// In some cases the channel close event may be delayed and thus the connection to be
-						// returned to the pool and later the eviction functionality to remote it from the pool.
+						// returned to the pool and later the eviction functionality to remove it from the pool.
 						// In some rare cases the connection might be acquired immediately, before the channel close
 						// event and the eviction functionality be able to remove it from the pool, this may lead to I/O
 						// errors.
