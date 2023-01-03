@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -201,7 +201,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		if (!HttpMethod.HEAD.equals(method())) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
-			if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
+			int code = status().code();
+			if (!(HttpResponseStatus.NOT_MODIFIED.code() == code ||
+					HttpResponseStatus.NO_CONTENT.code() == code)) {
 
 				if (HttpUtil.getContentLength(nettyResponse, -1) == -1) {
 					responseHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(body.readableBytes()));
@@ -628,10 +630,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void afterMarkSentHeaders() {
-		if (HttpResponseStatus.NOT_MODIFIED.equals(status())) {
-			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
-			responseHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
-		}
 		if (compressionPredicate != null && compressionPredicate.test(this, this)) {
 			compression(true);
 		}
@@ -640,6 +638,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void beforeMarkSentHeaders() {
 		//noop
+	}
+
+	@Override
+	protected boolean isContentAlwaysEmpty() {
+		int code = status().code();
+		return HttpResponseStatus.NOT_MODIFIED.code() == code ||
+				HttpResponseStatus.NO_CONTENT.code() == code ||
+				HttpResponseStatus.RESET_CONTENT.code() == code;
 	}
 
 	@Override
