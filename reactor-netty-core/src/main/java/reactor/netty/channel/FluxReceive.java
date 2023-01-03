@@ -182,10 +182,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "{}: Rejecting additional inbound receiver subscriber."), this);
+					log.debug(format(channel, "{}: Rejecting additional inbound receiver."), this);
 				}
 
-				String msg = "Rejecting additional inbound receiver subscriber. State=" + toString(false);
+				String msg = "Rejecting additional inbound receiver. State=" + toString(false);
 				IllegalStateException ex = inboundError == null ? new IllegalStateException(msg) :
 						new IllegalStateException(msg, inboundError);
 				Operators.error(s, ex);
