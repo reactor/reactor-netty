@@ -182,7 +182,7 @@ You can find more about `Netty` channel options at the following links:
 include::wire-logger.adoc[]
 
 [[server-tcp-level-configurations-event-loop-group]]
-=== Using an Event Loop Group
+=== Event Loop Group
 
 By default, the `TCP` server uses an "`Event Loop Group,`" where the number of the worker threads equals the number of
 processors available to the runtime on initialization (but with a minimum value of 4). When you need a different configuration,
@@ -195,7 +195,7 @@ The default configuration for the `Event Loop Group` is the following:
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=85..114]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=86..120]
 ----
 ====
 
