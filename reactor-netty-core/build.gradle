@@ -232,6 +232,11 @@ task japicmp(type: JapicmpTask) {
 	includeSynthetic = true
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
+
+	methodExcludes = [
+	        'reactor.netty.transport.NameResolverProvider#resolveCache()',
+			'reactor.netty.transport.NameResolverProvider$NameResolverSpec#resolveCache(io.netty.resolver.dns.DnsCache)'
+	]
 }
 
 tasks.japicmp.dependsOn(downloadBaseline)
