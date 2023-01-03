@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -466,7 +466,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	 */
 	static boolean isSelfDefinedMessageLength(HttpResponse response) {
 		return isContentLengthSet(response) || isTransferEncodingChunked(response) || isMultipart(
-				response) || isInformational(response) || isNotModified(response);
+				response) || isInformational(response) || isNotModified(response) || isNoContent(response);
 	}
 
 	static boolean isInformational(HttpResponse response) {
@@ -474,8 +474,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		               .codeClass() == HttpStatusClass.INFORMATIONAL;
 	}
 
+	static boolean isNoContent(HttpResponse response) {
+		return HttpResponseStatus.NO_CONTENT.code() == response.status().code();
+	}
+
 	static boolean isNotModified(HttpResponse response) {
-		return HttpResponseStatus.NOT_MODIFIED.equals(response.status());
+		return HttpResponseStatus.NOT_MODIFIED.code() == response.status().code();
 	}
 
 	static boolean isMultipart(HttpResponse response) {

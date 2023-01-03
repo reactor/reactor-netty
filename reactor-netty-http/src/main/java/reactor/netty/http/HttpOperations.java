@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,10 +125,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 								ReferenceCountUtil.release(b);
 								return Mono.error(e);
 							}
-							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
+							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0 ||
+									isContentAlwaysEmpty()) {
 								if (log.isDebugEnabled()) {
-									log.debug(format(channel(), "Dropped HTTP content, " +
-											"since response has Content-Length: 0 {}"), b);
+									log.debug(format(channel(), "Dropped HTTP content, since response has " +
+											"1. [Content-Length: 0] or 2. there must be no content: {}"), b);
 								}
 								b.release();
 								return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
@@ -200,6 +201,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 						msg = outboundHttpMessage();
 					}
 				}
+				else if (isContentAlwaysEmpty()) {
+					markSentBody();
+					msg = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
+				}
 				else {
 					msg = outboundHttpMessage();
 				}
@@ -235,6 +240,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	protected abstract void beforeMarkSentHeaders();
 
 	protected abstract void afterMarkSentHeaders();
+
+	protected abstract boolean isContentAlwaysEmpty();
 
 	protected abstract void onHeadersSent();
 
