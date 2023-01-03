@@ -24,6 +24,7 @@ import io.netty5.resolver.DefaultHostsFileEntriesResolver;
 import io.netty5.resolver.HostsFileEntriesResolver;
 import io.netty5.resolver.ResolvedAddressTypes;
 import io.netty5.resolver.dns.DnsAddressResolverGroup;
+import io.netty5.resolver.dns.DnsCache;
 import io.netty5.resolver.dns.DnsNameResolver;
 import io.netty5.resolver.dns.DnsNameResolverBuilder;
 import io.netty5.resolver.dns.DnsQueryLifecycleObserverFactory;
@@ -178,6 +179,15 @@ public final class NameResolverProvider {
 		 * @return {@code this}
 		 */
 		NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes);
+
+		/**
+		 * Sets the resolve cache to use for DNS resolution
+		 *
+		 * @param resolveCache the resolution DNS cache
+		 * @return {@code this}
+		 * @since 1.0.27
+		 */
+		NameResolverSpec resolveCache(DnsCache resolveCache);
 
 		/**
 		 * Set a new local address supplier that supply the address to bind to.
@@ -400,6 +410,17 @@ public final class NameResolverProvider {
 	}
 
 	/**
+	 * Returns the configured DNS resolver cache or null
+	 *
+	 * @return the configured DNS resolver cache or null
+	 * @since 1.0.27
+	 */
+	@Nullable
+	public DnsCache resolveCache() {
+		return resolveCache;
+	}
+
+	/**
 	 * Returns the configured supplier of local address to bind to or null.
 	 *
 	 * @return the configured supplier of local address to bind to or null
@@ -444,6 +465,7 @@ public final class NameResolverProvider {
 				Objects.equals(loopResources, that.loopResources) &&
 				queryTimeout.equals(that.queryTimeout) &&
 				resolvedAddressTypes == that.resolvedAddressTypes &&
+				Objects.equals(resolveCache, that.resolveCache) &&
 				Objects.equals(bindAddressSupplier, that.bindAddressSupplier) &&
 				// searchDomains is List so Objects.equals is OK
 				Objects.equals(searchDomains, that.searchDomains);
@@ -453,8 +475,8 @@ public final class NameResolverProvider {
 	public int hashCode() {
 		return Objects.hash(cacheMaxTimeToLive, cacheMinTimeToLive, cacheNegativeTimeToLive, completeOncePreferredResolved,
 				disableRecursionDesired, disableOptionalRecord, loggingFactory, loopResources, maxPayloadSize,
-				maxQueriesPerResolve, ndots, preferNative, queryTimeout, resolvedAddressTypes, bindAddressSupplier, roundRobinSelection,
-				searchDomains);
+				maxQueriesPerResolve, ndots, preferNative, queryTimeout, resolvedAddressTypes, resolveCache,
+				bindAddressSupplier, roundRobinSelection, searchDomains);
 	}
 
 	/**
@@ -497,6 +519,9 @@ public final class NameResolverProvider {
 		if (resolvedAddressTypes != null) {
 			builder.resolvedAddressTypes(resolvedAddressTypes);
 		}
+		if (resolveCache != null) {
+			builder.resolveCache(resolveCache);
+		}
 		if (bindAddressSupplier != null) {
 			// There is no check for bindAddressSupplier.get() == null
 			// This is deliberate, when null value is provided Netty will use the default behaviour
@@ -523,6 +548,7 @@ public final class NameResolverProvider {
 	final boolean preferNative;
 	final Duration queryTimeout;
 	final ResolvedAddressTypes resolvedAddressTypes;
+	final DnsCache resolveCache;
 	final Supplier<? extends SocketAddress> bindAddressSupplier;
 	final boolean roundRobinSelection;
 	final Iterable<String> searchDomains;
@@ -543,6 +569,7 @@ public final class NameResolverProvider {
 		this.preferNative = build.preferNative;
 		this.queryTimeout = build.queryTimeout;
 		this.resolvedAddressTypes = build.resolvedAddressTypes;
+		this.resolveCache = build.resolveCache;
 		this.bindAddressSupplier = build.bindAddressSupplier;
 		this.roundRobinSelection = build.roundRobinSelection;
 		this.searchDomains = build.searchDomains;
@@ -573,6 +600,7 @@ public final class NameResolverProvider {
 		boolean preferNative = LoopResources.DEFAULT_NATIVE;
 		Duration queryTimeout = DEFAULT_QUERY_TIMEOUT;
 		ResolvedAddressTypes resolvedAddressTypes;
+		DnsCache resolveCache;
 		Supplier<? extends SocketAddress> bindAddressSupplier;
 		boolean roundRobinSelection;
 		Iterable<String> searchDomains;
@@ -655,6 +683,12 @@ public final class NameResolverProvider {
 		@Override
 		public NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes) {
 			this.resolvedAddressTypes = Objects.requireNonNull(resolvedAddressTypes);
+			return this;
+		}
+
+		@Override
+		public NameResolverSpec resolveCache(DnsCache resolveCache) {
+			this.resolveCache = Objects.requireNonNull(resolveCache);
 			return this;
 		}
 

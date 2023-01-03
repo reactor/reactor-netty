@@ -15,8 +15,12 @@
  */
 package reactor.netty5.transport;
 
+import io.netty5.channel.EventLoop;
+import io.netty5.handler.codec.dns.DnsRecord;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.resolver.ResolvedAddressTypes;
+import io.netty5.resolver.dns.DnsCache;
+import io.netty5.resolver.dns.DnsCacheEntry;
 import io.netty5.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty5.resolver.dns.macos.MacOSDnsServerAddressStreamProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +30,7 @@ import org.junit.jupiter.api.condition.OS;
 import reactor.netty5.resources.LoopResources;
 import reactor.netty5.tcp.TcpResources;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -225,6 +230,21 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	void resolveCache() {
+		assertThat(builder.build().resolveCache()).isNull();
+		TestDnsCache resolveCache = new TestDnsCache();
+		builder.resolveCache(resolveCache);
+		assertThat(builder.build().resolveCache()).isEqualTo(resolveCache);
+	}
+
+	@Test
+	void resolveCacheBadValues() {
+		assertThat(builder.build().resolveCache()).isNull();
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.resolveCache(null));
+	}
+
+	@Test
 	void bindAddressSupplier() {
 		assertThat(builder.build().bindAddressSupplier()).isNull();
 		Supplier<SocketAddress> addressSupplier = () -> new InetSocketAddress("localhost", 9527);
@@ -295,4 +315,32 @@ class NameResolverProviderTest {
 		assertThat(DnsServerAddressStreamProviders.platformDefault())
 				.isInstanceOf(MacOSDnsServerAddressStreamProvider.class);
 	}
+
+	private static class TestDnsCache implements DnsCache {
+
+		@Override
+		public void clear() {
+		}
+
+		@Override
+		public boolean clear(String hostname) {
+			return false;
+		}
+
+		@Override
+		public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+			return null;
+		}
+
+		@Override
+		public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl, EventLoop loop) {
+			return null;
+		}
+
+		@Override
+		public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+			return null;
+		}
+	}
+
 }
