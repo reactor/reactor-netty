@@ -20,7 +20,7 @@ changelog:
       labels:
         - "type/documentation"
         - "type/test"
-        - "type/chores"
+        - "type/chore"
     - title: ":up: Dependency Upgrades"
       labels:
         - "type/dependency-upgrade"
