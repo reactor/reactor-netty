@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,6 +89,11 @@ public final class ReactorNetty {
 	public static final String IO_WORKER_COUNT = "reactor.netty5.ioWorkerCount";
 	/**
 	 * Default selector thread count, fallback to -1 (no selector thread)
+	 * <p><strong>Note:</strong> In most use cases using a worker thread also as a selector thread works well.
+	 * A possible use case for specifying a separate selector thread might be when the worker threads are too busy
+	 * and connections cannot be accepted fast enough.
+	 * <p><strong>Note:</strong> Although more than 1 can be configured as a selector thread count, in reality
+	 * only 1 thread will be used as a selector thread.
 	 */
 	public static final String IO_SELECT_COUNT = "reactor.netty5.ioSelectCount";
 	/**

@@ -186,7 +186,7 @@ The following listing shows the default configuration for the "`Event Loop Group
 [source,java,indent=0]
 .{sourcedir}/reactor/netty5/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty5/ReactorNetty.java[lines=84..114]
+include::{sourcedir}/reactor/netty5/ReactorNetty.java[lines=85..119]
 ----
 ====
 
