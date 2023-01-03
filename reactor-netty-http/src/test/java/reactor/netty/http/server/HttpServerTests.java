@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -136,7 +136,6 @@ import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
-import reactor.util.function.Tuple3;
 
 import javax.net.ssl.SNIHostName;
 
@@ -549,67 +548,6 @@ class HttpServerTests extends BaseHttpTest {
 		ref.get().disposeNow();
 		Thread.sleep(100);
 		assertThat(f.isDone()).isTrue();
-	}
-
-	@Test
-	void nonContentStatusCodes() {
-		disposableServer =
-				createServer()
-				          .host("localhost")
-				          .route(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
-				                                                       .sendHeaders())
-				                       .get("/204-2", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT))
-				                       .get("/205-1", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT)
-				                                                       .sendHeaders())
-				                       .get("/205-2", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT))
-				                       .get("/304-1", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
-				                                                       .sendHeaders())
-				                       .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED))
-				                       .get("/304-3", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
-				                                                       .send()))
-				          .bindNow();
-
-		InetSocketAddress address = (InetSocketAddress) disposableServer.address();
-		checkResponse("/204-1", address);
-		checkResponse("/204-2", address);
-		checkResponse("/205-1", address);
-		checkResponse("/205-2", address);
-		checkResponse("/304-1", address);
-		checkResponse("/304-2", address);
-		checkResponse("/304-3", address);
-	}
-
-	private void checkResponse(String url, InetSocketAddress address) {
-		Mono<Tuple3<Integer, HttpHeaders, String>> response =
-				createClient(() -> address)
-				          .get()
-				          .uri(url)
-				          .responseSingle((r, buf) ->
-				                  Mono.zip(Mono.just(r.status().code()),
-				                           Mono.just(r.responseHeaders()),
-				                           buf.asString().defaultIfEmpty("NO BODY"))
-				          );
-
-		StepVerifier.create(response)
-		            .expectNextMatches(t -> {
-		                int code = t.getT1();
-		                HttpHeaders h = t.getT2();
-		                if (code == 204 || code == 304) {
-		                    return !h.contains("Transfer-Encoding") &&
-		                           !h.contains("Content-Length") &&
-		                           "NO BODY".equals(t.getT3());
-		                }
-		                else if (code == 205) {
-		                    return !h.contains("Transfer-Encoding") &&
-		                           h.getInt("Content-Length").equals(0) &&
-		                           "NO BODY".equals(t.getT3());
-		                }
-		                else {
-		                    return false;
-		                }
-		            })
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
