@@ -91,7 +91,7 @@ If you want to raise an issue, please follow the recommendations below:
 * If you want to raise a security vulnerability, please review our [Security Policy](https://github.com/reactor/reactor-netty/security/policy) for more details.
 
 ## Contributing
-See our [Contributing Guide](https://github.com/reactor/.github/blob/main/CONTRIBUTING.md) for information about contributing to Reactor Netty.
+See our [Contributing Guide](https://github.com/reactor/.github/blob/main/CONTRIBUTING.md) for information about contributing to `Reactor Netty`.
 
 ## Building from Source
 You don't need to build from source to use `Reactor Netty` (binaries in
@@ -120,4 +120,4 @@ https://projectreactor.io/docs/netty/release/api/
 * https://violetagg.github.io/reactor-netty-workshop/
 
 ## License
-Reactor Netty is Open Source Software released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+`Reactor Netty` is Open Source Software released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
