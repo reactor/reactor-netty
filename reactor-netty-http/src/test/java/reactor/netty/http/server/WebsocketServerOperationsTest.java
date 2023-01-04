@@ -17,8 +17,9 @@ package reactor.netty.http.server;
 
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import org.junit.jupiter.api.Test;
-import org.reactivestreams.Subscription;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.LogTracker;
@@ -44,9 +45,9 @@ class WebsocketServerOperationsTest extends BaseHttpTest {
 			AtomicReference<WebSocketCloseStatus> serverCloseStatus = new AtomicReference<>();
 			CountDownLatch closeLatch = new CountDownLatch(2);
 			CountDownLatch cancelled = new CountDownLatch(1);
-			AtomicReference<Subscription> subscription = new AtomicReference<>();
 			AtomicReference<List<String>> serverMsg = new AtomicReference<>(new ArrayList<>());
-			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(() -> subscription.get().cancel());
+			Sinks.Empty<Void> empty = Sinks.empty();
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(() -> empty.tryEmitEmpty());
 
 			disposableServer = createServer()
 					.handle((in, out) -> out.sendWebsocket((i, o) -> {
@@ -60,13 +61,15 @@ class WebsocketServerOperationsTest extends BaseHttpTest {
 								})
 								.subscribe();
 
-						return o.sendString(i.receive()
-										.asString()
-										.log("server.receive")
-										.doOnSubscribe(s -> subscription.set(s))
-										.doOnCancel(cancelled::countDown)
-										.doOnNext(s -> serverMsg.get().add(s)))
-								.neverComplete();
+						Mono<Void> receive = i.receive()
+								.asString()
+								.log("server.receive")
+								.doOnCancel(cancelled::countDown)
+								.doOnNext(s -> serverMsg.get().add(s))
+								.then();
+
+						return Flux.zip(receive, empty.asMono())
+								.then(Mono.never());
 					}))
 					.bindNow();
 
@@ -82,12 +85,7 @@ class WebsocketServerOperationsTest extends BaseHttpTest {
 								})
 								.subscribe();
 
-						in.receive()
-								.log("client.receive")
-								.subscribe();
-
-						return out
-								.sendString(Mono.just("PING"))
+						return out.sendString(Mono.just("PING"))
 								.neverComplete();
 					})
 					.log("client")
