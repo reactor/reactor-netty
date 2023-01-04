@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
-import reactor.netty.CancelReceiverHandler;
+import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.DisposableChannel;
 import reactor.netty.LogTracker;
 import reactor.netty.http.server.HttpServer;
@@ -156,7 +156,7 @@ class WebsocketClientOperationsTest extends BaseHttpTest {
 			CountDownLatch closeLatch = new CountDownLatch(2);
 			AtomicReference<WebSocketCloseStatus> clientCloseStatus = new AtomicReference<>();
 			AtomicReference<WebSocketCloseStatus> serverCloseStatus = new AtomicReference<>();
-			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(empty::tryEmitEmpty);
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(empty::tryEmitEmpty);
 
 			disposableServer = createServer()
 					.handle((in, out) -> {

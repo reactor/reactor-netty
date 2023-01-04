@@ -102,7 +102,7 @@ import reactor.core.publisher.Sinks;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
-import reactor.netty.CancelReceiverHandler;
+import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.Connection;
 import reactor.netty.FutureMono;
 import reactor.netty.LogTracker;
@@ -3107,7 +3107,7 @@ class HttpClientTest extends BaseHttpTest {
 		     LogTracker lt2 = new LogTracker(HttpClientOperations.class, clientCancelledLog)) {
 			CountDownLatch serverClosed = new CountDownLatch(1);
 			Sinks.Empty<Void> empty = Sinks.empty();
-			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(empty::tryEmitEmpty, 1);
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(empty::tryEmitEmpty, 1);
 
 			disposableServer = createServer()
 					.handle((in, out) -> {

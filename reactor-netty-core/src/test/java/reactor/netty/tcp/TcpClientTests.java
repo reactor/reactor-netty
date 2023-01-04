@@ -63,7 +63,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
-import reactor.netty.CancelReceiverHandler;
+import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.Connection;
 import reactor.netty.DisposableChannel;
 import reactor.netty.DisposableServer;
@@ -1463,7 +1463,7 @@ public class TcpClientTests {
 				"Channel inbound receiver cancelled (channel disconnected).")) {
 			Sinks.Empty<Void> empty = Sinks.empty();
 			CountDownLatch cancelled = new CountDownLatch(1);
-			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(empty::tryEmitEmpty);
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(empty::tryEmitEmpty);
 
 			server = TcpServer.create()
 					.port(0)

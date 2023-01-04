@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.CancelReceiverHandler;
+import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyPipeline;
 
@@ -471,7 +471,7 @@ class QuicServerTests extends BaseQuicTests {
 		try (LogTracker lg = new LogTracker(QuicStreamOperations.class, QuicStreamOperations.INBOUND_CANCEL_LOG)) {
 			AtomicReference<Subscription> subscription = new AtomicReference<>();
 			AtomicReference<List<String>> serverMsg = new AtomicReference<>(new ArrayList<>());
-			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(() -> subscription.get().cancel());
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(() -> subscription.get().cancel());
 
 			server = createServer()
 					.handleStream((in, out) -> {

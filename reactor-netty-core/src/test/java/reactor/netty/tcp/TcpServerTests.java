@@ -72,7 +72,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
-import reactor.netty.CancelReceiverHandler;
+import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -1187,7 +1187,7 @@ class TcpServerTests {
 				// logged by client when it is disposed
 				"Channel inbound receiver cancelled (subscription disposed).")) {
 			Sinks.Empty<Void> empty = Sinks.empty();
-			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(() -> empty.tryEmitEmpty());
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(() -> empty.tryEmitEmpty());
 			CountDownLatch cancelled = new CountDownLatch(1);
 
 			server = TcpServer.create()

@@ -36,11 +36,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author Pierre De Rop
  * @since 1.0.27
  */
-public final class CancelReceiverHandler extends ChannelInboundHandlerAdapter {
+public final class CancelReceiverHandlerTest extends ChannelInboundHandlerAdapter {
 	/**
 	 * Our Logger.
 	 */
-	static final Logger log = Loggers.getLogger(CancelReceiverHandler.class);
+	static final Logger log = Loggers.getLogger(CancelReceiverHandlerTest.class);
 
 	/**
 	 * Cancel action to execute when the first message buffer is received.
@@ -62,7 +62,7 @@ public final class CancelReceiverHandler extends ChannelInboundHandlerAdapter {
 	 *
 	 * @param cancelAction The task to execute when the first content of a message is received
 	 */
-	public CancelReceiverHandler(Runnable cancelAction) {
+	public CancelReceiverHandlerTest(Runnable cancelAction) {
 		this(cancelAction, 1);
 	}
 
@@ -74,7 +74,7 @@ public final class CancelReceiverHandler extends ChannelInboundHandlerAdapter {
 	 *                             The {@link #awaitAllReleased(long)} method will return once all incoming
 	 *                             message buffers are all released.
 	 */
-	public CancelReceiverHandler(Runnable cancelAction, int expectedReleaseCount) {
+	public CancelReceiverHandlerTest(Runnable cancelAction, int expectedReleaseCount) {
 		this.cancelAction = cancelAction;
 		this.expectedReleaseCount = new CountDownLatch(expectedReleaseCount);
 	}

@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.CancelReceiverHandler;
+import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.LogTracker;
 
 import java.util.ArrayList;
@@ -46,7 +46,7 @@ class WebsocketServerOperationsTest extends BaseHttpTest {
 			CountDownLatch cancelled = new CountDownLatch(1);
 			AtomicReference<Subscription> subscription = new AtomicReference<>();
 			AtomicReference<List<String>> serverMsg = new AtomicReference<>(new ArrayList<>());
-			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(() -> subscription.get().cancel());
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(() -> subscription.get().cancel());
 
 			disposableServer = createServer()
 					.handle((in, out) -> out.sendWebsocket((i, o) -> {

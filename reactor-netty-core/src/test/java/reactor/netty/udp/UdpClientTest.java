@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
-import reactor.netty.CancelReceiverHandler;
+import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.Connection;
 import reactor.netty.LogTracker;
 import reactor.netty.channel.ChannelOperations;
@@ -294,7 +294,7 @@ class UdpClientTest {
 				"Channel inbound receiver cancelled (subscription disposed).")) {
 			Sinks.Empty<Void> empty = Sinks.empty();
 			CountDownLatch cancelled = new CountDownLatch(1);
-			CancelReceiverHandler cancelReceiver = new CancelReceiverHandler(empty::tryEmitEmpty);
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(empty::tryEmitEmpty);
 
 			server = UdpServer.create()
 					.port(0)
