@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Pierre De Rop
- * @since 1.0.26
+ * @since 1.0.27
  */
 class WebsocketServerOperationsTest extends BaseHttpTest {
 
