@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,11 +180,13 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "{}: Only one connection receive subscriber allowed."), this);
+					log.debug(format(channel, "{}: Rejecting additional inbound receiver."), this);
 				}
-				Operators.error(s,
-						new IllegalStateException(
-								"Only one connection receive subscriber allowed."));
+
+				String msg = "Rejecting additional inbound receiver. State=" + toString(false);
+				IllegalStateException ex = inboundError == null ? new IllegalStateException(msg) :
+						new IllegalStateException(msg, inboundError);
+				Operators.error(s, ex);
 			}
 		}
 	}
@@ -489,12 +491,16 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public String toString() {
-		return "FluxReceive{" +
-				"pending=" + getPending() +
+		return toString(true);
+	}
+
+	final String toString(boolean logErrorMessage) {
+		return '[' +
+				"terminated=" + inboundDone +
 				", cancelled=" + isCancelled() +
-				", inboundDone=" + inboundDone +
-				", inboundError=" + inboundError +
-				'}';
+				", pending=" + getPending() +
+				", error=" + (logErrorMessage ? inboundError : (inboundError != null)) +
+				']';
 	}
 
 	static final AtomicReferenceFieldUpdater<FluxReceive, IntConsumer> CANCEL =

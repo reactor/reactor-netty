@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -71,13 +72,17 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.netty5.CancelReceiverHandlerTest;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.DisposableServer;
+import reactor.netty5.LogTracker;
 import reactor.netty5.NettyInbound;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.SocketUtils;
+import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -1161,5 +1166,62 @@ class TcpServerTests {
 
 		conn.disposeNow();
 		server.disposeNow();
+	}
+
+	@Test
+	void testTcpServerCancelled() throws InterruptedException {
+		DisposableServer server = null;
+		AtomicReference<List<String>> serverMsg = new AtomicReference<>(new ArrayList<>());
+		Connection client = null;
+
+		try (LogTracker lt = new LogTracker(ChannelOperations.class,
+				// logged by server when cancelling inbound receiver
+				"Channel inbound receiver cancelled (operation cancelled).",
+				// logged by client when it is disposed
+				"Channel inbound receiver cancelled (subscription disposed).")) {
+			Sinks.Empty<Void> empty = Sinks.empty();
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(() -> empty.tryEmitEmpty());
+			CountDownLatch cancelled = new CountDownLatch(1);
+
+			server = TcpServer.create()
+					.port(0)
+					.wiretap(true)
+					.doOnConnection(c -> c.addHandlerFirst(cancelReceiver))
+					.handle((in, out) -> {
+						Mono<Void> receive = in.receive()
+								.asString()
+								.log("server.receive")
+								.doOnCancel(cancelled::countDown)
+								.then();
+						return Flux.zip(receive, empty.asMono())
+								.then(Mono.never());
+					})
+					.bindNow();
+
+			client = TcpClient.create()
+					.wiretap(true)
+					.host("localhost")
+					.port(server.port())
+					.handle((in, out) -> out.sendString(Mono.just("PING"))
+							.then(Mono.never()))
+					.connectNow();
+
+			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled").isTrue();
+			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+
+			client.disposeNow();
+			client = null;
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTrack").isTrue();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+			if (client != null) {
+				client.disposeNow();
+			}
+			List<String> serverMessages = serverMsg.get();
+			assertThat(serverMessages.size()).isEqualTo(0);
+		}
 	}
 }

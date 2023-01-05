@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,9 +55,13 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty5.CancelReceiverHandlerTest;
 import reactor.netty5.Connection;
+import reactor.netty5.DisposableChannel;
 import reactor.netty5.DisposableServer;
+import reactor.netty5.LogTracker;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.SocketUtils;
 import reactor.netty5.channel.AbortedException;
@@ -1232,5 +1236,124 @@ public class TcpClientTests {
 		}
 
 		assertThat(resolver.get()).isNull();
+	}
+
+	@Test
+	void testTcpClientCancelled() throws InterruptedException {
+		DisposableServer server = null;
+		Connection client = null;
+
+		try (LogTracker lt = new LogTracker(ChannelOperations.class,
+				// logged by client on cancel
+				"Channel inbound receiver cancelled (operation cancelled).",
+				// logged by server when client disconnects
+				"Channel inbound receiver cancelled (channel disconnected).")) {
+			Sinks.Empty<Void> empty = Sinks.empty();
+			CountDownLatch cancelled = new CountDownLatch(1);
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(empty::tryEmitEmpty);
+
+			server = TcpServer.create()
+					.port(0)
+					.wiretap(true)
+					.handle((req, res) -> res.sendString(req.receive()
+									.asString()
+									.log("server.receive"))
+							.then(Mono.never()))
+					.bindNow();
+
+			client = TcpClient.create()
+					.wiretap(true)
+					.host("localhost")
+					.port(server.port())
+					.doOnConnected(c -> c.addHandlerFirst(cancelReceiver))
+					.handle((in, out) -> {
+						Mono<Void> receive = in
+								.receive()
+								.asString()
+								.log("client.receive")
+								.doOnCancel(cancelled::countDown)
+								.then();
+
+						out.sendString(Mono.just("REQUEST"))
+								.then()
+								.subscribe();
+
+						return Flux.zip(receive, empty.asMono())
+								.log("zip")
+								.then(Mono.never());
+					})
+					.connectNow();
+
+			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
+			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+
+			client.disposeNow();
+			client = null;
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+			if (client != null) {
+				client.disposeNow();
+			}
+		}
+	}
+
+	@Test
+	void testTcpClientCancelledByServerClose() throws InterruptedException {
+		DisposableServer server = null;
+		Connection client = null;
+
+		try (LogTracker lt = new LogTracker(ChannelOperations.class,
+				// logged by server when closing the client connection
+				"Channel inbound receiver cancelled (subscription disposed).",
+				// logged by client, when the connection is closed by the server
+				"Channel inbound receiver cancelled (channel disconnected).")) {
+			CountDownLatch cancelled = new CountDownLatch(1);
+
+			server = TcpServer.create()
+					.port(0)
+					.wiretap(true)
+					.handle((req, res) -> req.receive()
+							.asString()
+							.doOnNext(s -> req.withConnection(DisposableChannel::dispose))
+							.then())
+					.bindNow();
+
+			client = TcpClient.create()
+					.wiretap(true)
+					.host("localhost")
+					.port(server.port())
+					.handle((in, out) -> {
+						Mono<Void> receive = in
+								.receive()
+								.asString()
+								.log("client.receive")
+								.doOnCancel(cancelled::countDown)
+								.then();
+
+						out.sendString(Mono.just("REQUEST"))
+								.then()
+								.subscribe();
+
+						return receive
+								.log("receive")
+								.then(Mono.never());
+					})
+					.connectNow();
+
+			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTracker await").isTrue();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+			if (client != null) {
+				client.disposeNow();
+			}
+		}
 	}
 }

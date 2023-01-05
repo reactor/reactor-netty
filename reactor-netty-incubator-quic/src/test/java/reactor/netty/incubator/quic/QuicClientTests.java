@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,9 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.netty.CancelReceiverHandlerTest;
+import reactor.netty.LogTracker;
 import reactor.test.StepVerifier;
 
 import java.net.InetSocketAddress;
@@ -369,5 +372,50 @@ class QuicClientTests extends BaseQuicTests {
 		assertThat(remoteCreated).isTrue();
 		assertThat(error.get()).isInstanceOf(UnsupportedOperationException.class)
 				.hasMessage("Writes on non-local created streams that are unidirectional are not supported");
+	}
+
+	@Test
+	void testQuicClientCancelled() throws InterruptedException {
+		Sinks.Empty<Void> empty = Sinks.empty();
+		CountDownLatch cancelled = new CountDownLatch(1);
+		CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(empty::tryEmitEmpty);
+		CountDownLatch closed = new CountDownLatch(2);
+
+		try (LogTracker lg = new LogTracker(QuicStreamOperations.class, QuicStreamOperations.INBOUND_CANCEL_LOG)) {
+			server =
+					createServer()
+							.handleStream((in, out) -> {
+								in.withConnection(conn -> conn.onDispose(closed::countDown));
+								return out.sendString(in.receive()
+												.asString()
+												.log("server.receive"))
+										.then();
+							})
+							.bindNow();
+
+			client = createClient(server::address).connectNow();
+			client.createStream(QuicStreamType.BIDIRECTIONAL, (in, out) -> {
+						in.withConnection(conn -> {
+							conn.addHandlerFirst(cancelReceiver);
+							conn.onDispose(closed::countDown);
+						});
+						out.sendString(Mono.just("PING")).then().subscribe();
+						Mono<Void> receive = in.receive()
+								.asString()
+								.log("client.receive")
+								.doOnCancel(cancelled::countDown)
+								.then();
+						return Flux.zip(receive, empty.asMono())
+								.log("zip")
+								.then();
+					})
+					.log("client")
+					.subscribe();
+
+			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled await").isTrue();
+			assertThat(closed.await(30, TimeUnit.SECONDS)).as("closed await").isTrue();
+			assertThat(lg.latch.await(30, TimeUnit.SECONDS)).isTrue();
+			assertThat(cancelReceiver.awaitAllReleased(30)).as("clientInboundReleased").isTrue();
+		}
 	}
 }

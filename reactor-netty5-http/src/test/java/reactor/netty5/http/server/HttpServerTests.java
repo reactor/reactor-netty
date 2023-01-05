@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -50,6 +51,7 @@ import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
 import io.netty5.buffer.Buffer;
+import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
@@ -86,8 +88,10 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import io.netty5.util.concurrent.EventExecutor;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -97,6 +101,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
@@ -107,9 +112,11 @@ import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.DisposableServer;
 import reactor.netty5.FutureMono;
+import reactor.netty5.LogTracker;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.channel.AbortedException;
+import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.http.Http11SslContextSpec;
 import reactor.netty5.http.Http2SslContextSpec;
 import reactor.netty5.http.HttpProtocol;
@@ -122,6 +129,8 @@ import reactor.netty5.resources.LoopResources;
 import reactor.netty5.tcp.SslProvider;
 import reactor.netty5.tcp.TcpClient;
 import reactor.test.StepVerifier;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
@@ -141,6 +150,7 @@ class HttpServerTests extends BaseHttpTest {
 
 	static SelfSignedCertificate ssc;
 	static final EventExecutor executor = new SingleThreadEventExecutor();
+	static final Logger log = Loggers.getLogger(HttpServerTests.class);
 
 	ChannelGroup group;
 
@@ -3009,5 +3019,123 @@ class HttpServerTests extends BaseHttpTest {
 
 		// double check if the server has sent its close_notify
 		assertThat(latch.await(40, TimeUnit.SECONDS)).as("latch await").isTrue();
+	}
+
+	/**
+	 * This scenario tests the following (HTTP chunk transfer encoding is used):
+	 *
+	 * <ul>
+	 * <li>server is configured with a line based decoder in order to parse request body chunks that contains some newlines.</li>
+	 * <li>client sends one single chunk: DATA1\nDATA2\n</li>
+	 * <li> server will cancel inbound receiver on DATA1, and will respond 400 bad request.
+	 * <li>DATA2 is expected to be discarded and released</li>
+	 * </ul>
+	 */
+	@Test
+	@SuppressWarnings("deprecation")
+	void testHttpServerCancelled() throws InterruptedException {
+		// logged by server when cancelled while reading http request body
+		String serverCancelLog = "[HttpServer] Channel inbound receiver cancelled (operation cancelled).";
+		// logged by client when cancelled after having received the whole response from the server
+		String clientCancelLog = "Http client inbound receiver cancelled, closing channel.";
+
+		try (LogTracker lt = new LogTracker(ChannelOperations.class, serverCancelLog);
+		     LogTracker lt2 = new LogTracker("reactor.netty5.http.client.HttpClientOperations", clientCancelLog)) {
+			CountDownLatch serverInboundReleased = new CountDownLatch(1);
+			AtomicReference<Subscription> subscription = new AtomicReference<>();
+			disposableServer = createServer()
+					.handle((req, res) -> {
+						req.withConnection(conn -> {
+							conn.addHandlerFirst(new LineBasedFrameDecoder(128));
+							conn.addHandlerLast(new ChannelHandlerAdapter() {
+								@Override
+								public void channelRead(ChannelHandlerContext ctx, @NotNull Object msg) {
+									ctx.fireChannelRead(msg);
+									// At this point, the message has been handled and must have been released.
+									if (msg instanceof Resource<?> buf && !buf.isAccessible()) {
+										serverInboundReleased.countDown();
+										log.debug("Server handled received message, which is now released");
+									}
+								}
+							});
+						});
+						return req.receive()
+								.asString()
+								.log("server.receive")
+								.doOnSubscribe(subscription::set)
+								.doOnNext(n -> {
+									subscription.get().cancel();
+									res.status(400).send().subscribe();
+								})
+								.then(Mono.never());
+					})
+					.bindNow();
+
+			Buffer data = DefaultBufferAllocators.preferredAllocator()
+					.copyOf("DATA1\nDATA2\n", StandardCharsets.UTF_8);
+
+			createClient(disposableServer::address)
+					.wiretap(true)
+					.post()
+					.send(Flux.just(data))
+					.uri("/")
+					.responseSingle((rsp, buf) -> Mono.just(rsp))
+					.as(StepVerifier::create)
+					.expectNextMatches(r -> r.status().code() == 400 && "0".equals(r.responseHeaders().get("Content-Length")))
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+
+			assertThat(serverInboundReleased.await(30, TimeUnit.SECONDS)).as("serverInboundReleased await").isTrue();
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTrack await").isTrue();
+			assertThat(lt2.latch.await(30, TimeUnit.SECONDS)).as("logTrack2 await").isTrue();
+		}
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	void testHttpServerCancelledOnClientClose() throws InterruptedException {
+		// logged by client when disposing the connection before send the 2nd request data chunk
+		String clientCancelLog = "Http client inbound receiver cancelled, closing channel.";
+		// logged by server when cancelled while reading request body (because connection has been closed by client)
+		String serverCancelLog = "[HttpServer] Channel inbound receiver cancelled (channel disconnected).";
+
+		try (LogTracker lt = new LogTracker(ChannelOperations.class, serverCancelLog);
+		     LogTracker lt2 = new LogTracker("reactor.netty5.http.client.HttpClientOperations", clientCancelLog)) {
+			disposableServer = createServer()
+					.handle((req, res) -> {
+						return req.receive()
+								.aggregate()
+								.asString()
+								.log("server.receive")
+								.then(res.status(200).sendString(Mono.just("OK")).neverComplete());
+					})
+					.bindNow();
+
+			AtomicReference<Connection> clientConn = new AtomicReference<>();
+			AtomicInteger counter = new AtomicInteger();
+			CountDownLatch clientClosed = new CountDownLatch(1);
+
+			createClient(disposableServer::address)
+					.wiretap(true)
+					.doOnRequest((req, conn) -> {
+						clientConn.set(conn);
+						conn.onDispose(() -> clientClosed.countDown());
+					})
+					.post()
+					.send(BufferFlux.fromString(Flux.just("foo", "bar"))
+							.doOnNext(byteBuf -> {
+								if (counter.incrementAndGet() == 2) {
+									log.warn("Client: disposing connection before sending 2nd chunk");
+									clientConn.get().dispose();
+								}
+							}))
+					.uri("/")
+					.responseSingle((rsp, buf) -> Mono.just(rsp))
+					.subscribe();
+
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTracker await").isTrue();
+			assertThat(lt2.latch.await(30, TimeUnit.SECONDS)).as("logTracker2 await").isTrue();
+			assertThat(clientClosed.await(30, TimeUnit.SECONDS)).as("clientClosed await").isTrue();
+		}
 	}
 }

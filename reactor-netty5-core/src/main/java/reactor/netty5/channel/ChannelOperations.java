@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -413,7 +413,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * React on inbound cancel (receive() subscriber cancelled)
 	 */
 	protected void onInboundCancel() {
-
+		if (log.isDebugEnabled()) {
+			String info = isDisposed() ?
+					(!channel().isActive() ? "channel disconnected" : "subscription disposed") :
+					"operation cancelled";
+			log.debug(format(channel(), "[{}] Channel inbound receiver cancelled ({})."), formatName(), info);
+		}
 	}
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,28 @@
 package reactor.netty5.http.client;
 
 import io.netty5.handler.codec.http.websocketx.WebSocketClientHandshakeException;
+import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty5.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty5.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.netty5.CancelReceiverHandlerTest;
 import reactor.netty5.DisposableChannel;
+import reactor.netty5.LogTracker;
 import reactor.netty5.http.server.HttpServer;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.http.server.WebsocketServerSpec;
 import reactor.test.StepVerifier;
+import reactor.util.function.Tuple2;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -144,5 +152,77 @@ class WebsocketClientOperationsTest extends BaseHttpTest {
 		          .expectErrorMatches(t -> t instanceof WebSocketClientHandshakeException &&
 		                  "Connection prematurely closed BEFORE opening handshake is complete.".equals(t.getMessage()))
 		          .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void testWebSocketClientCancelled() throws InterruptedException {
+		try (LogTracker lt = new LogTracker(HttpClientOperations.class, WebsocketClientOperations.INBOUND_CANCEL_LOG)) {
+			Sinks.Empty<Void> empty = Sinks.empty();
+			CountDownLatch clientCancelled = new CountDownLatch(1);
+			CountDownLatch closeLatch = new CountDownLatch(2);
+			AtomicReference<WebSocketCloseStatus> clientCloseStatus = new AtomicReference<>();
+			AtomicReference<WebSocketCloseStatus> serverCloseStatus = new AtomicReference<>();
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(empty::tryEmitEmpty);
+
+			disposableServer = createServer()
+					.handle((in, out) -> {
+						in.withConnection(connection -> connection.onDispose(closeLatch::countDown));
+						return out.sendWebsocket((i, o) -> {
+							i.receiveCloseStatus()
+									.log("server.closestatus")
+									.doOnNext(status -> {
+										serverCloseStatus.set(status);
+										closeLatch.countDown();
+									})
+									.subscribe();
+							return o.sendString(i.receive()
+											.asString()
+											.log("server.receive"))
+									.neverComplete();
+						});
+					})
+					.bindNow();
+
+			Flux<Tuple2<String, Void>> response =
+					createClient(disposableServer.port())
+							.headers(h -> h.add("Content-Type", "text/plain"))
+							.websocket()
+							.uri("/test")
+							.handle((in, out) -> {
+								in.withConnection(conn -> conn.addHandlerFirst(cancelReceiver));
+								in.receiveCloseStatus()
+										.log("client.closestatus")
+										.doOnNext(status -> {
+											clientCloseStatus.set(status);
+											closeLatch.countDown();
+										})
+										.subscribe();
+
+								Mono<String> receive = in
+										.receive()
+										.aggregate()
+										.asString()
+										.log("client.receive")
+										.doOnCancel(clientCancelled::countDown);
+
+								out.sendString(Mono.just("PING")).then().subscribe();
+								return Flux.zip(receive, empty.asMono());
+							})
+							.log("client");
+
+			StepVerifier.create(response)
+					.expectNextCount(0)
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+
+			assertThat(clientCancelled.await(30, TimeUnit.SECONDS)).as("clientCancelled await").isTrue();
+			assertThat(closeLatch.await(30, TimeUnit.SECONDS)).as("closeLatch await").isTrue();
+			// client locally closed abnormally
+			assertThat(clientCloseStatus.get()).isNotNull().isEqualTo(WebSocketCloseStatus.ABNORMAL_CLOSURE);
+			// server received closed without any status code
+			assertThat(serverCloseStatus.get()).isNotNull().isEqualTo(WebSocketCloseStatus.EMPTY);
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
+			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+		}
 	}
 }
