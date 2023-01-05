@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,11 +27,16 @@ import io.netty.incubator.codec.quic.QuicSslEngine;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.DomainWildcardMappingBuilder;
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.CancelReceiverHandlerTest;
+import reactor.netty.LogTracker;
 import reactor.netty.NettyPipeline;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -459,6 +464,39 @@ class QuicServerTests extends BaseQuicTests {
 		assertThat(remoteCreated).isTrue();
 		assertThat(error.get()).isInstanceOf(UnsupportedOperationException.class)
 				.hasMessage("Writes on non-local created streams that are unidirectional are not supported");
+	}
+
+	@Test
+	void testQuicServerCancelled() throws InterruptedException {
+		try (LogTracker lg = new LogTracker(QuicStreamOperations.class, QuicStreamOperations.INBOUND_CANCEL_LOG)) {
+			AtomicReference<Subscription> subscription = new AtomicReference<>();
+			AtomicReference<List<String>> serverMsg = new AtomicReference<>(new ArrayList<>());
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(() -> subscription.get().cancel());
+
+			server = createServer()
+					.handleStream((in, out) -> {
+						in.withConnection(conn -> conn.addHandlerFirst(cancelReceiver));
+						return in.receive()
+								.asString()
+								.log("server.receive")
+								.doOnSubscribe(subscription::set)
+								.doOnNext(s -> serverMsg.get().add(s))
+								.then(Mono.never());
+					})
+					.bindNow();
+
+			client = createClient(server::address).connectNow();
+
+			client.createStream(QuicStreamType.BIDIRECTIONAL, (in, out) -> out.sendString(Mono.just("PING"))
+					.neverComplete())
+					.subscribe();
+
+			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+			assertThat(lg.latch.await(30, TimeUnit.SECONDS)).isTrue();
+			List<String> serverMessages = serverMsg.get();
+			assertThat(serverMessages).isNotNull();
+			assertThat(serverMessages.size()).isEqualTo(0);
+		}
 	}
 }
 

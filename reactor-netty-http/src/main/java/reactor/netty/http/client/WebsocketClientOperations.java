@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 	final boolean proxyPing;
 
 	volatile int closeSent;
+
+	final static String INBOUND_CANCEL_LOG = "WebSocket client inbound receiver cancelled, closing Websocket.";
 
 	WebsocketClientOperations(URI currentURI,
 			WebsocketClientSpec websocketClientSpec,
@@ -165,7 +167,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 	@Override
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
-			log.debug(format(channel(), "Cancelling Websocket inbound. Closing Websocket"));
+			log.debug(format(channel(), INBOUND_CANCEL_LOG));
 		}
 		sendCloseNow(new CloseWebSocketFrame(), WebSocketCloseStatus.ABNORMAL_CLOSURE);
 	}
