@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ class QuicStreamOperations extends ChannelOperations<QuicInbound, QuicOutbound> 
 	volatile int finSent;
 
 	static final Logger log = Loggers.getLogger(QuicStreamOperations.class);
+	static final String INBOUND_CANCEL_LOG = "Quic inbound stream cancelled, sending WRITE_FIN.";
 
 	QuicStreamOperations(Connection connection, ConnectionObserver listener) {
 		super(connection, listener);
@@ -127,7 +128,7 @@ class QuicStreamOperations extends ChannelOperations<QuicInbound, QuicOutbound> 
 	@Override
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
-			log.debug(format(channel(), "Cancelling inbound stream. Sending WRITE_FIN."));
+			log.debug(format(channel(), INBOUND_CANCEL_LOG));
 		}
 
 		sendFinNow(f -> terminate());

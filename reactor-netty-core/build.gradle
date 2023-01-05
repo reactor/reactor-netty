@@ -144,6 +144,8 @@ dependencies {
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 
+	testFixturesApi("ch.qos.logback:logback-classic:$logbackVersion")
+
 	for (dependency in project.configurations.shaded.dependencies) {
 		compileOnly(dependency)
 		testImplementation(dependency)

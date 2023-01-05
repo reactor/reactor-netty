@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,13 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -43,10 +45,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
+import reactor.netty.LogTracker;
 import reactor.netty.SocketUtils;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.LoopResources;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
@@ -315,6 +322,67 @@ class UdpServerTests {
 		finally {
 			loop.disposeLater()
 			    .block(Duration.ofSeconds(30));
+		}
+	}
+
+	@Test
+	void testUdpServerCancelled() throws InterruptedException {
+		LoopResources resources = LoopResources.create("testUdpServerCancelled");
+		AtomicReference<List<String>> serverMsg = new AtomicReference<>(new ArrayList<>());
+		Connection server = null;
+		Connection client = null;
+
+		try (LogTracker lt = new LogTracker(ChannelOperations.class, "Channel inbound receiver cancelled (operation cancelled).")) {
+			Sinks.Empty<Void> empty = Sinks.empty();
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(() -> empty.tryEmitEmpty());
+			CountDownLatch cancelled = new CountDownLatch(1);
+
+			server = UdpServer.create()
+					.wiretap(true)
+					.port(0)
+					.runOn(resources)
+					.handle((in, out) -> {
+						in.withConnection(conn -> conn.addHandlerFirst(cancelReceiver));
+						Mono<Void> receive = in.receive()
+								.asString()
+								.log("server.receive")
+								.doOnCancel(cancelled::countDown)
+								.doOnNext(s -> serverMsg.get().add(s))
+								.then();
+
+						return Flux.zip(receive, empty.asMono())
+								.then(Mono.never());
+					})
+					.bind()
+					.block(Duration.ofSeconds(30));
+
+			InetSocketAddress address = (InetSocketAddress) server.address();
+			client = UdpClient.create()
+					.wiretap(true)
+					.port(address.getPort())
+					.runOn(resources)
+					.handle((in, out) -> out.sendString(Mono.just("PING"))
+							.then())
+					.connect()
+					.block(Duration.ofSeconds(30));
+
+			assertThat(cancelled.await(30, TimeUnit.SECONDS)).as("cancelled").isTrue();
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).isTrue();
+			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+			if (client != null) {
+				client.disposeNow();
+			}
+			resources.disposeLater()
+					.block(Duration.ofSeconds(30));
+
+			List<String> serverMessages = serverMsg.get();
+			assertThat(serverMessages).isNotNull();
+			assertThat(serverMessages.size()).isEqualTo(0);
 		}
 	}
 }

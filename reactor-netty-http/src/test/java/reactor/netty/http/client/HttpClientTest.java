@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,10 +104,13 @@ import reactor.core.publisher.Sinks;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
+import reactor.netty.CancelReceiverHandlerTest;
 import reactor.netty.Connection;
 import reactor.netty.FutureMono;
+import reactor.netty.LogTracker;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
@@ -3153,6 +3156,63 @@ class HttpClientTest extends BaseHttpTest {
 	@Test
 	public void testSharedNameResolver_NotSharedClientNoConnectionPool() throws InterruptedException {
 		doTestSharedNameResolver(HttpClient.newConnection(), false);
+	}
+
+	@Test
+	void testHttpClientCancelled() throws InterruptedException {
+		// logged by the server when last http packet is sent and channel is terminated
+		String serverCancelledLog = "[HttpServer] Channel inbound receiver cancelled (operation cancelled).";
+		// logged by client when cancelled while receiving response
+		String clientCancelledLog = HttpClientOperations.INBOUND_CANCEL_LOG;
+
+		ConnectionProvider pool = ConnectionProvider.create("testHttpClientCancelled", 1);
+		try (LogTracker lt = new LogTracker(ChannelOperations.class, serverCancelledLog);
+		     LogTracker lt2 = new LogTracker(HttpClientOperations.class, clientCancelledLog)) {
+			CountDownLatch serverClosed = new CountDownLatch(1);
+			Sinks.Empty<Void> empty = Sinks.empty();
+			CancelReceiverHandlerTest cancelReceiver = new CancelReceiverHandlerTest(empty::tryEmitEmpty, 1);
+
+			disposableServer = createServer()
+					.handle((in, out) -> {
+						in.withConnection(connection -> connection.onDispose(serverClosed::countDown));
+						return in.receive()
+								.asString()
+								.log("server.receive")
+								.then(out.sendString(Mono.just("data")).neverComplete());
+					})
+					.bindNow();
+
+			HttpClient httpClient = createHttpClientForContextWithPort(pool);
+			CountDownLatch clientCancelled = new CountDownLatch(1);
+
+			// Creates a client that should be cancelled by the Flix.zip (see below)
+			Mono<String> client = httpClient
+					.doOnRequest((req, conn) -> conn.addHandlerFirst(cancelReceiver))
+					.get()
+					.responseContent()
+					.aggregate()
+					.asString()
+					.log("client")
+					.doOnCancel(clientCancelled::countDown);
+
+			// Zip client with a mono which completes with an empty value when the server receives the request.
+			// The client should then be cancelled with a log message.
+			StepVerifier.create(Flux.zip(client, empty.asMono())
+							.log("zip"))
+					.expectNextCount(0)
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+
+			assertThat(cancelReceiver.awaitAllReleased(30)).as("cancelReceiver").isTrue();
+			assertThat(clientCancelled.await(30, TimeUnit.SECONDS)).as("latchClient await").isTrue();
+			assertThat(serverClosed.await(30, TimeUnit.SECONDS)).as("latchServerClosed await").isTrue();
+			assertThat(lt.latch.await(30, TimeUnit.SECONDS)).as("logTracker await").isTrue();
+			assertThat(lt2.latch.await(30, TimeUnit.SECONDS)).as("logTracker2 await").isTrue();
+		}
+		finally {
+			pool.disposeLater()
+					.block(Duration.ofSeconds(30));
+		}
 	}
 
 	private void doTestSharedNameResolver(HttpClient client, boolean sharedClient) throws InterruptedException {

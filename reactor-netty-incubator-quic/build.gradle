@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,10 @@ dependencies {
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
 	api "io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion$os_suffix"
+
+	testImplementation(testFixtures(project(':reactor-netty-core'))) {
+		exclude module: "reactor-netty-core"
+	}
 
 	// Testing
 
