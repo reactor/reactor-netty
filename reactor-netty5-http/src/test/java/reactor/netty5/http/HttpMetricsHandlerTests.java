@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ import io.netty5.handler.codec.http2.HttpConversionUtil;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.handler.timeout.ReadTimeoutException;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
@@ -157,6 +158,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 *  <li> /3 does not exists but is used by testNonExistingEndpoint, checkExpectationsNonExisting tests</li>
 	 *  <li> /4 is used by testServerConnectionsMicrometer test</li>
 	 *  <li> /5 is used by testServerConnectionsRecorder test</li>
+	 *  <li> /6 is used by testServerConnectionsMicrometerConnectionClose test</li>
+	 *  <li> /7 is used by testServerConnectionsRecorderConnectionClose test</li>
 	 * </ul>
 	 */
 	@BeforeEach
@@ -178,7 +181,15 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 										checkServerConnectionsMicrometer(req))))
 						.post("/5", (req, res) -> res.header("Connection", "close")
 								.send(req.receive().transferOwnership().doOnNext(b ->
-										checkServerConnectionsRecorder(req)))));
+										checkServerConnectionsRecorder(req))))
+						.get("/6", (req, res) -> {
+							checkServerConnectionsMicrometer(req);
+							return Mono.delay(Duration.ofMillis(200)).then(res.send());
+						})
+						.get("/7", (req, res) -> {
+							checkServerConnectionsRecorder(req);
+							return Mono.delay(Duration.ofMillis(200)).then(res.send());
+						}));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
 		httpClient = createClient(provider, () -> disposableServer.address())
@@ -675,6 +686,48 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
+	void testServerConnectionsMicrometerConnectionClose(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.metrics(true, Function.identity())
+				.doOnConnection(cnx -> {
+					ServerCloseHandler.INSTANCE.register(cnx.channel());
+					if (!isHttp11) {
+						StreamCloseHandler.INSTANCE.register(cnx.channel());
+					}
+				})
+				.bindNow();
+
+		customizeClientOptions(httpClient, clientCtx, clientProtocols)
+		        .metrics(true, Function.identity())
+		        .responseTimeout(Duration.ofMillis(50))
+		        .get()
+		        .uri("/6")
+		        .responseContent()
+		        .as(StepVerifier::create)
+		        .expectError(ReadTimeoutException.class)
+		        .verify(Duration.ofSeconds(30));
+
+		String address = formatSocketAddress(disposableServer.address());
+		if (isHttp11) {
+			// make sure the client socket is closed on the server side before checking server metrics
+			assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+			checkGauge(SERVER_CONNECTIONS_TOTAL, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+			checkGauge(SERVER_CONNECTIONS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+		}
+		else {
+			// make sure the client stream is closed on the server side before checking server metrics
+			assertThat(StreamCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+			checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
+			checkGauge(SERVER_STREAMS_ACTIVE, true, 0, URI, HTTP, LOCAL_ADDRESS, address);
+			// in case of H2, the tearDown method will ensure client socket is closed on the server side
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsRecorder(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                   @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		// Invoke ServerRecorder.INSTANCE.reset() here as disposableServer.dispose (AfterEach) might be invoked after
@@ -717,6 +770,57 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 		else {
 			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
+			// in case of H2, the tearDown method will ensure client socket is closed on the server side
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testServerConnectionsRecorderConnectionClose(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		// Invoke ServerRecorder.INSTANCE.reset() here as disposableServer.dispose (AfterEach) might be invoked after
+		// ServerRecorder.INSTANCE.reset() (AfterEach) and thus leave ServerRecorder.INSTANCE in a bad state
+		ServerRecorder.INSTANCE.reset();
+		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+
+		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
+				.metrics(true, ServerRecorder.supplier(), Function.identity())
+				.doOnConnection(cnx -> {
+					ServerCloseHandler.INSTANCE.register(cnx.channel());
+					if (!isHttp11) {
+						StreamCloseHandler.INSTANCE.register(cnx.channel());
+					}
+				})
+				.bindNow();
+
+		customizeClientOptions(httpClient, clientCtx, clientProtocols)
+		        .metrics(true, Function.identity())
+		        .responseTimeout(Duration.ofMillis(50))
+		        .get()
+		        .uri("/7")
+		        .responseContent()
+		        .as(StepVerifier::create)
+		        .expectError(ReadTimeoutException.class)
+		        .verify(Duration.ofSeconds(30));
+
+		// now we can assert test expectations
+		assertThat(ServerRecorder.INSTANCE.error.get()).isNull();
+
+		String address = formatSocketAddress(disposableServer.address());
+		if (isHttp11) {
+			// wait for the AbstractHttpServerMetricsHandlerServer to be called in recordServerConnectionClosed before asserting test expectations
+			assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
+			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
+			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
+		}
+		else {
+			assertThat(StreamCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(1);
+			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
+			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
 			// in case of H2, the tearDown method will ensure client socket is closed on the server side
 		}
 	}
@@ -1187,6 +1291,18 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 
 		@Override
+		public void recordStreamOpened(SocketAddress localAddress) {
+			onActiveConnectionsLocalAddr.set(formatSocketAddress(localAddress));
+			onActiveConnectionsAmount.addAndGet(1);
+		}
+
+		@Override
+		public void recordStreamClosed(SocketAddress localAddress) {
+			onInactiveConnectionsLocalAddr.set(formatSocketAddress(localAddress));
+			onActiveConnectionsAmount.addAndGet(-1);
+		}
+
+		@Override
 		public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
 		}
 
@@ -1304,7 +1420,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 * For HTTP1.1, the handler is placed before the ReactorBridge, so all previous handlers will see
 	 * the close before this handler. For HTTP2, the handler is placed lastly on the pipeline.
 	 */
-	static final class ServerCloseHandler extends ChannelHandlerAdapter {
+	static class ServerCloseHandler extends ChannelHandlerAdapter {
 		static final ServerCloseHandler INSTANCE = new ServerCloseHandler();
 		static final String HANDLER_NAME = "ServerCloseHandler.handler";
 		private CountDownLatch latch;
@@ -1312,6 +1428,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		void register(Channel channel) {
 			this.latch = new CountDownLatch(1);
+			registerInternal(channel);
+			registered = true;
+		}
+
+		void registerInternal(Channel channel) {
 			if (channel instanceof Http2StreamChannel) {
 				if (channel.parent().pipeline().get(HANDLER_NAME) == null) {
 					channel.parent().pipeline().addLast(HANDLER_NAME, this);
@@ -1320,7 +1441,6 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			else {
 				channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, HANDLER_NAME, this);
 			}
-			registered = true;
 		}
 
 		@Override
@@ -1344,6 +1464,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				}
 			}
 			return true;
+		}
+	}
+
+	static final class StreamCloseHandler extends ServerCloseHandler {
+		static final StreamCloseHandler INSTANCE = new StreamCloseHandler();
+
+		@Override
+		void registerInternal(Channel channel) {
+			if (channel.pipeline().get(HANDLER_NAME) == null) {
+				channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, HANDLER_NAME, this);
+			}
 		}
 	}
 

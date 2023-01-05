@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@ import static reactor.netty5.ReactorNetty.format;
 abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 
 	private static final Logger log = Loggers.getLogger(AbstractHttpServerMetricsHandler.class);
+
+	boolean channelActivated;
 
 	long dataReceived;
 
@@ -97,6 +99,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
+		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+		if (channelOps instanceof HttpServerOperations ops) {
+			recordInactiveConnectionOrStream(ops);
+		}
 		ctx.fireChannelInactive();
 	}
 
@@ -135,24 +141,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 										}
 										// Allow request-response exchange to continue, unaffected by metrics problem
 									}
-									// ops.hostAddress() == null when request decoding failed, in this case
-									// we do not report active connection, so we do not report inactive connection
-									if (ops.hostAddress() != null) {
-										try {
-											if (ops.isHttp2()) {
-												recordClosedStream(ops);
-											}
-											else {
-												recordInactiveConnection(ops);
-											}
-										}
-										catch (RuntimeException e) {
-											if (log.isWarnEnabled()) {
-												log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
-											}
-											// Allow request-response exchange to continue, unaffected by metrics problem
-										}
-									}
+									recordInactiveConnectionOrStream(ops);
 								}
 
 							dataSent = 0;
@@ -174,6 +163,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 			if (msg instanceof HttpRequest) {
 				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations ops) {
+					channelActivated = true;
 					if (ops.isHttp2()) {
 						recordOpenStream(ops);
 					}
@@ -285,5 +275,27 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 
 	protected void startWrite(HttpServerOperations ops, String path, String method, String status) {
 		dataSentTime = System.nanoTime();
+	}
+
+	void recordInactiveConnectionOrStream(HttpServerOperations ops) {
+		// ops.hostAddress() == null when request decoding failed, in this case
+		// we do not report active connection, so we do not report inactive connection
+		if (ops.hostAddress() != null && channelActivated) {
+			channelActivated = false;
+			try {
+				if (ops.isHttp2()) {
+					recordClosedStream(ops);
+				}
+				else {
+					recordInactiveConnection(ops);
+				}
+			}
+			catch (RuntimeException e) {
+				if (log.isWarnEnabled()) {
+					log.warn(format(ops.channel(), "Exception caught while recording metrics."), e);
+				}
+				// Allow request-response exchange to continue, unaffected by metrics problem
+			}
+		}
 	}
 }
