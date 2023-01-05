@@ -183,11 +183,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 										checkServerConnectionsRecorder(req))))
 						.get("/6", (req, res) -> {
 							checkServerConnectionsMicrometer(req);
-							return Mono.delay(Duration.ofMillis(100)).then(res.send());
+							return Mono.delay(Duration.ofMillis(200)).then(res.send());
 						})
 						.get("/7", (req, res) -> {
 							checkServerConnectionsRecorder(req);
-							return Mono.delay(Duration.ofMillis(100)).then(res.send());
+							return Mono.delay(Duration.ofMillis(200)).then(res.send());
 						}));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
