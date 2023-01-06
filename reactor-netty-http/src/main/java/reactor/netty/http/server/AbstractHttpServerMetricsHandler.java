@@ -60,6 +60,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	}
 
 	protected AbstractHttpServerMetricsHandler(AbstractHttpServerMetricsHandler copy) {
+		this.channelActivated = copy.channelActivated;
 		this.dataReceived = copy.dataReceived;
 		this.dataReceivedTime = copy.dataReceivedTime;
 		this.dataSent = copy.dataSent;
