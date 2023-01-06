@@ -131,7 +131,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@AfterAll
 	public static void afterClass() throws Exception {
 		executor.shutdownGracefully()
-				.asStage().get(5, TimeUnit.SECONDS);
+		        .asStage().get(5, TimeUnit.SECONDS);
 	}
 
 	@BeforeAll
@@ -147,7 +147,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		                                                               .sslProvider(SslProvider.JDK));
 		clientCtx2 = Http2SslContextSpec.forClient()
 		                                .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE)
-		                                .sslProvider(SslProvider.JDK));
+		                                                             .sslProvider(SslProvider.JDK));
 	}
 
 	/**
@@ -173,23 +173,23 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.metrics(true, Function.identity())
 				.httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
 				.route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().transferOwnership().delayElements(Duration.ofMillis(10))))
-						.post("/2", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().transferOwnership().delayElements(Duration.ofMillis(10))))
-						.post("/4", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().transferOwnership().doOnNext(b ->
-										checkServerConnectionsMicrometer(req))))
-						.post("/5", (req, res) -> res.header("Connection", "close")
-								.send(req.receive().transferOwnership().doOnNext(b ->
-										checkServerConnectionsRecorder(req))))
-						.get("/6", (req, res) -> {
-							checkServerConnectionsMicrometer(req);
-							return Mono.delay(Duration.ofMillis(200)).then(res.send());
-						})
-						.get("/7", (req, res) -> {
-							checkServerConnectionsRecorder(req);
-							return Mono.delay(Duration.ofMillis(200)).then(res.send());
-						}));
+				                                          .send(req.receive().transferOwnership().delayElements(Duration.ofMillis(10))))
+				             .post("/2", (req, res) -> res.header("Connection", "close")
+				                                          .send(req.receive().transferOwnership().delayElements(Duration.ofMillis(10))))
+				             .post("/4", (req, res) -> res.header("Connection", "close")
+				                                          .send(req.receive().transferOwnership().doOnNext(b ->
+				                                                  checkServerConnectionsMicrometer(req))))
+				             .post("/5", (req, res) -> res.header("Connection", "close")
+				                                          .send(req.receive().transferOwnership().doOnNext(b ->
+				                                                  checkServerConnectionsRecorder(req))))
+				             .get("/6", (req, res) -> {
+				                 checkServerConnectionsMicrometer(req);
+				                 return Mono.delay(Duration.ofMillis(200)).then(res.send());
+				             })
+				             .get("/7", (req, res) -> {
+				                 checkServerConnectionsRecorder(req);
+				                 return Mono.delay(Duration.ofMillis(200)).then(res.send());
+				             }));
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
 		httpClient = createClient(provider, () -> disposableServer.address())
@@ -213,8 +213,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 
 		if (group != null) {
-			group.close().
-					asStage().get(5, TimeUnit.SECONDS);
+			group.close()
+			     .asStage().get(5, TimeUnit.SECONDS);
 		}
 
 		Metrics.removeRegistry(registry);
@@ -368,15 +368,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.doAfterRequest((req, conn) -> serverAddress.set(conn.channel().remoteAddress()))
 				.doAfterResponseSuccess((rsp, conn) -> clientCompletedRef.get().countDown());
 
-		StepVerifier.create(httpClient
-						.headers(h -> h.add("Connection", "close"))
-						.get()
-						.uri("/3")
-						.responseContent()
-						.aggregate()
-						.asString())
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		StepVerifier.create(httpClient.headers(h -> h.add("Connection", "close"))
+		                              .get()
+		                              .uri("/3")
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 
 		assertThat(requestReceivedRef.get().await(30, TimeUnit.SECONDS)).as("requestReceivedRef latch await").isTrue();
 		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
@@ -414,15 +413,14 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		responseSentRef.set(new CountDownLatch(1));
 		clientCompletedRef.set(new CountDownLatch(1));
 
-		StepVerifier.create(httpClient
-						.headers(h -> h.add("Connection", "close"))
-						.get()
-						.uri("/3")
-						.responseContent()
-						.aggregate()
-						.asString())
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		StepVerifier.create(httpClient.headers(h -> h.add("Connection", "close"))
+		                              .get()
+		                              .uri("/3")
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 
 		assertThat(requestReceivedRef.get().await(30, TimeUnit.SECONDS)).as("requestReceivedRef latch await").isTrue();
 		assertThat(responseSentRef.get().await(30, TimeUnit.SECONDS)).as("responseSentRef latch await").isTrue();
@@ -575,20 +573,19 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols).bindNow();
 
 		ClientContextAwareRecorder recorder = ClientContextAwareRecorder.INSTANCE;
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
-
-		httpClient.metrics(true, () -> recorder)
-		          .post()
-		          .uri("/1")
-		          .send(body)
-		          .responseContent()
-		          .aggregate()
-		          .asString()
-		          .contextWrite(Context.of("testContextAwareRecorder", "OK"))
-		          .as(StepVerifier::create)
-		          .expectNext("Hello World!")
-		          .expectComplete()
-		          .verify(Duration.ofSeconds(30));
+		customizeClientOptions(httpClient, clientCtx, clientProtocols)
+		        .metrics(true, () -> recorder)
+		        .post()
+		        .uri("/1")
+		        .send(body)
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .contextWrite(Context.of("testContextAwareRecorder", "OK"))
+		        .as(StepVerifier::create)
+		        .expectNext("Hello World!")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
 
 		assertThat(recorder.onDataReceivedContextView).isTrue();
 		assertThat(recorder.onDataSentContextView).isTrue();
@@ -607,18 +604,17 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 						.mapHandle((mono, conn) -> mono.contextWrite(Context.of("testContextAwareRecorder", "OK")))
 						.bindNow();
 
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
-
-		httpClient.post()
-		          .uri("/1")
-		          .send(body)
-		          .responseContent()
-		          .aggregate()
-		          .asString()
-		          .as(StepVerifier::create)
-		          .expectNext("Hello World!")
-		          .expectComplete()
-		          .verify(Duration.ofSeconds(30));
+		customizeClientOptions(httpClient, clientCtx, clientProtocols)
+		        .post()
+		        .uri("/1")
+		        .send(body)
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectNext("Hello World!")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
 
 		assertThat(responseSent.await(30, TimeUnit.SECONDS)).as("responseSent latch await").isTrue();
 
@@ -648,19 +644,18 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		String uri = "/4";
 		String address = formatSocketAddress(disposableServer.address());
 
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
-		httpClient
-				.metrics(true, Function.identity())
-				.post()
-				.uri(uri)
-				.send(body)
-				.responseContent()
-				.aggregate()
-				.asString()
-				.as(StepVerifier::create)
-				.expectNext("Hello World!")
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		customizeClientOptions(httpClient, clientCtx, clientProtocols)
+		        .metrics(true, Function.identity())
+		        .post()
+		        .uri(uri)
+		        .send(body)
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectNext("Hello World!")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
 
 		assertThat(responseSent.await(30, TimeUnit.SECONDS)).as("responseSent latch await").isTrue();
 
@@ -741,20 +736,18 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.bindNow();
 		String address = formatSocketAddress(disposableServer.address());
 
-		httpClient = customizeClientOptions(httpClient, clientCtx, clientProtocols);
-
-		httpClient
-				.metrics(true, Function.identity())
-				.post()
-				.uri("/5")
-				.send(body)
-				.responseContent()
-				.aggregate()
-				.asString()
-				.as(StepVerifier::create)
-				.expectNext("Hello World!")
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		customizeClientOptions(httpClient, clientCtx, clientProtocols)
+		        .metrics(true, Function.identity())
+		        .post()
+		        .uri("/5")
+		        .send(body)
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectNext("Hello World!")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
 
 		// now we can assert test expectations
 		assertThat(ServerRecorder.INSTANCE.error.get()).isNull();
@@ -832,14 +825,13 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		// The client should get two errors: NotSSLRecordException, and DecoderException.
 		CountDownLatch latch = new CountDownLatch(2);
-		httpClient
-				.doOnChannelInit((o, c, address) -> ClientExceptionHandler.INSTANCE.register(c, latch))
-				.secure(spec -> spec.sslContext(clientCtx11))
-				.post()
-				.uri("/1")
-				.send(BufferFlux.fromString(Mono.just("hello")))
-				.responseContent()
-				.subscribe();
+		httpClient.doOnChannelInit((o, c, address) -> ClientExceptionHandler.INSTANCE.register(c, latch))
+		          .secure(spec -> spec.sslContext(clientCtx11))
+		          .post()
+		          .uri("/1")
+		          .send(BufferFlux.fromString(Mono.just("hello")))
+		          .responseContent()
+		          .subscribe();
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
@@ -955,7 +947,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	private void checkExpectationsNonExisting(String serverAddress, int connIndex, int index, boolean checkTls,
 			int numWrites, @SuppressWarnings("unused")int numReads, double expectedSentAmount,
-            @SuppressWarnings("unused") double expectedReceivedAmount) {
+			@SuppressWarnings("unused") double expectedReceivedAmount) {
 		String uri = "/3";
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "GET", STATUS, "404"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "GET"};
