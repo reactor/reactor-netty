@@ -118,7 +118,7 @@ ext {
 	awaitilityVersion = '4.2.0'
 	hoverflyJavaVersion = '0.14.3'
 	tomcatVersion = '9.0.70'
-	boringSslVersion = '2.0.54.Final'
+	boringSslVersion = '2.0.55.Final'
 	junitVersion = '5.9.1'
 	junitPlatformLauncherVersion = '1.9.1'
 	mockitoVersion = '4.11.0'
