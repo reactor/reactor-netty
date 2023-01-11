@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -190,29 +190,33 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	void serverCompressionEnabledSmallResponse(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(25)
-				      .handle((in, out) -> out.header("content-length", "5")
-				                              .sendString(Mono.just("reply")))
+				      .route(r -> r.get("/1", (in, out) -> out.header("content-length", "5") //explicit 'content-length'
+				                                              .sendString(Mono.just("reply")))
+				                   .get("/2", (in, out) -> out.sendString(Mono.just("reply")))
+				                   .get("/3", (in, out) -> out.header("content-length", "5") //explicit 'content-length'
+				                                              .sendObject(out.alloc().copyOf("reply", Charset.defaultCharset())))
+				                   .get("/4", (in, out) -> out.sendObject(out.alloc().copyOf("reply", Charset.defaultCharset()))))
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		Tuple2<String, HttpHeaders> resp =
-				//edit the header manually to attempt to trigger compression on server side
-				client.port(disposableServer.port())
-				      .headers(h -> h.add("Accept-Encoding", "gzip"))
-				      .get()
-				      .uri("/test")
-				      .response((res, bufferFlux) -> bufferFlux.asString()
-				                                               .zipWith(Mono.just(res.responseHeaders())))
-				      .blockFirst(Duration.ofSeconds(10));
-		assertThat(resp).isNotNull();
-
-		//check the server didn't send the gzip header, only transfer-encoding
-		HttpHeaders headers = resp.getT2();
-		assertThat(headers.get("conTENT-encoding")).isNull();
-
-		//check the server sent plain text
-		String reply = resp.getT1();
-		assertThat(reply).isEqualTo("reply");
+		//edit the header manually to attempt to trigger compression on server side
+		Flux.range(1, 4)
+		    .flatMap(i ->
+		            client.port(disposableServer.port())
+		                  .headers(h -> h.add("Accept-Encoding", "gzip"))
+		                  .get()
+		                  .uri("/" + i)
+		                  .responseSingle((res, byteBufFlux) -> byteBufFlux.asString()
+		                                                                   .zipWith(Mono.just(res.responseHeaders()))))
+		    .collectList()
+		    .as(StepVerifier::create)
+		    .assertNext(list -> assertThat(list).allMatch(t ->
+		        //check the server didn't send the gzip header, only 'content-length'
+		        t.getT2().get("conTENT-encoding") == null &&
+		                //check the server sent plain text
+		                "reply".equals(t.getT1())))
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(10));
 	}
 
 	@ParameterizedCompressionTest
