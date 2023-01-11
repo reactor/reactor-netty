@@ -106,7 +106,7 @@ import static reactor.netty5.http.server.HttpServerState.REQUEST_DECODING_FAILED
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
 		implements HttpServerRequest, HttpServerResponse {
 
-	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
+	final BiPredicate<HttpServerRequest, HttpServerResponse> configuredCompressionPredicate;
 	final ConnectionInfo connectionInfo;
 	final ServerCookies cookieHolder;
 	final HttpServerFormDecoderProvider formDecoderProvider;
@@ -116,6 +116,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final HttpHeaders responseHeaders;
 	final String scheme;
 
+	BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 	Function<? super String, Map<String, String>> paramsResolver;
 	String path;
 	Consumer<? super HttpHeaders> trailerHeadersConsumer;
@@ -125,6 +126,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	HttpServerOperations(HttpServerOperations replaced) {
 		super(replaced);
 		this.compressionPredicate = replaced.compressionPredicate;
+		this.configuredCompressionPredicate = replaced.configuredCompressionPredicate;
 		this.connectionInfo = replaced.connectionInfo;
 		this.cookieHolder = replaced.cookieHolder;
 		this.currentContext = replaced.currentContext;
@@ -160,6 +162,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			boolean secured) {
 		super(c, listener, httpMessageLogFactory);
 		this.compressionPredicate = compressionPredicate;
+		this.configuredCompressionPredicate = compressionPredicate;
 		this.connectionInfo = connectionInfo;
 		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers());
 		this.currentContext = Context.empty();
@@ -556,6 +559,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public HttpServerResponse compression(boolean compress) {
+		compressionPredicate = compress ? configuredCompressionPredicate : COMPRESSION_DISABLED;
 		if (!compress) {
 			removeHandler(NettyPipeline.CompressionHandler);
 		}
@@ -935,6 +939,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	static final Logger log = Loggers.getLogger(HttpServerOperations.class);
 	final static AsciiString      EVENT_STREAM = new AsciiString("text/event-stream");
+
+	static final BiPredicate<HttpServerRequest, HttpServerResponse> COMPRESSION_DISABLED = (req, res) -> false;
 
 	final static FullHttpResponse CONTINUE     =
 			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
