@@ -118,13 +118,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			return new PostHeadersNettyOutbound(((Mono<ByteBuf>) source)
 					.flatMap(b -> {
 						if (markSentHeaderAndBody(b)) {
-							try {
-								afterMarkSentHeaders();
-							}
-							catch (RuntimeException e) {
-								ReferenceCountUtil.release(b);
-								return Mono.error(e);
-							}
+							HttpMessage msg;
 							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0 ||
 									isContentAlwaysEmpty()) {
 								if (log.isDebugEnabled()) {
@@ -132,9 +126,21 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 											"1. [Content-Length: 0] or 2. there must be no content: {}"), b);
 								}
 								b.release();
-								return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
+								msg = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
 							}
-							return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(b)));
+							else {
+								msg = newFullBodyMessage(b);
+							}
+
+							try {
+								afterMarkSentHeaders();
+							}
+							catch (RuntimeException e) {
+								ReferenceCountUtil.release(b);
+								return Mono.error(e);
+							}
+
+							return FutureMono.from(channel().writeAndFlush(msg));
 						}
 						return FutureMono.from(channel().writeAndFlush(b));
 					})
@@ -155,6 +161,19 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		ByteBuf b = (ByteBuf) message;
 		return new PostHeadersNettyOutbound(FutureMono.deferFuture(() -> {
 			if (markSentHeaderAndBody(b)) {
+				HttpMessage msg;
+				if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
+					if (log.isDebugEnabled()) {
+						log.debug(format(channel(), "Dropped HTTP content, " +
+								"since response has Content-Length: 0 {}"), b);
+					}
+					b.release();
+					msg = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
+				}
+				else {
+					msg = newFullBodyMessage(b);
+				}
+
 				try {
 					afterMarkSentHeaders();
 				}
@@ -162,15 +181,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					b.release();
 					throw e;
 				}
-				if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
-					if (log.isDebugEnabled()) {
-						log.debug(format(channel(), "Dropped HTTP content, " +
-								"since response has Content-Length: 0 {}"), b);
-					}
-					b.release();
-					return channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER));
-				}
-				return channel().writeAndFlush(newFullBodyMessage(b));
+
+				return channel().writeAndFlush(msg);
 			}
 			return channel().writeAndFlush(b);
 		}), this, b);
