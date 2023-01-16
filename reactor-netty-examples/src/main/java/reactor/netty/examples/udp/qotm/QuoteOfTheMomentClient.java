@@ -27,7 +27,6 @@ public class QuoteOfTheMomentClient {
 
 	public static void main(String[] args) {
 		UdpClient client = UdpClient.create()
-				//.host(HOST)
 				.port(PORT)
 				.wiretap(WIRETAP);
 
