@@ -20,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DatagramPacket;
 import reactor.core.publisher.Flux;
-import reactor.netty.Connection;
 import reactor.netty.udp.UdpServer;
 
 import java.nio.charset.StandardCharsets;
@@ -29,7 +28,6 @@ import java.util.Random;
 public class QuoteOfTheMomentServer {
 
 	private static final int PORT = Integer.parseInt(System.getProperty("port", "7686"));
-
 	private static final boolean WIRETAP = System.getProperty("wiretap") != null;
 
 	private static final Random random = new Random();
@@ -49,35 +47,34 @@ public class QuoteOfTheMomentServer {
 	}
 
 	public static void main(String[] args) {
+		UdpServer server =
+				UdpServer.create()
+				         .port(PORT)
+				         .wiretap(WIRETAP)
+				         .option(ChannelOption.SO_BROADCAST, true)
+				         .handle((in, out) -> {
+				             Flux<DatagramPacket> inFlux =
+				                     in.receiveObject()
+				                       .handle((incoming, sink) -> {
+				                           if (incoming instanceof DatagramPacket) {
+				                               DatagramPacket packet = (DatagramPacket) incoming;
+				                               String content = packet.content().toString(StandardCharsets.UTF_8);
 
-		UdpServer server = UdpServer
-				.create()
-				.port(PORT)
-				.wiretap(WIRETAP)
-				.option(ChannelOption.SO_BROADCAST, true)
-				.handle((in, out) -> {
-					Flux<DatagramPacket> inFlux = in
-							.receiveObject()
-							.handle((incoming, sink) -> {
-								if (incoming instanceof DatagramPacket) {
-									DatagramPacket packet = (DatagramPacket) incoming;
-									String content = packet.content()
-											.toString(StandardCharsets.UTF_8);
+				                               if ("QOTM?".equalsIgnoreCase(content)) {
+				                                   String nextQuote = nextQuote();
+				                                   ByteBuf byteBuf =
+				                                           Unpooled.copiedBuffer("QOTM: " + nextQuote, StandardCharsets.UTF_8);
+				                                   DatagramPacket response = new DatagramPacket(byteBuf, packet.sender());
+				                                   sink.next(response);
+				                               }
+				                           }
+				                       });
 
-									if ("QOTM?".equalsIgnoreCase(content)) {
-										String nextQuote = nextQuote();
-										ByteBuf byteBuf =
-												Unpooled.copiedBuffer("QOTM: " + nextQuote, StandardCharsets.UTF_8);
-										DatagramPacket response = new DatagramPacket(byteBuf, packet.sender());
-										sink.next(response);
-									}
-								}
-							});
-					return out.sendObject(inFlux);
+				             return out.sendObject(inFlux);
 				});
 
-		Connection conn = server.bindNow();
-		conn.onDispose().block();
+		server.bindNow()
+		      .onDispose()
+		      .block();
 	}
-
 }
