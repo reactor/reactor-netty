@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,6 +144,35 @@ public interface LoopResources extends Disposable {
 			throw new IllegalArgumentException("Must provide a strictly positive selector threads number, was: " + selectCount);
 		}
 		return new DefaultLoopResources(prefix, selectCount, workerCount, daemon);
+	}
+
+	/**
+	 * Create a simple {@link LoopResources} to provide automatically for {@link
+	 * EventLoopGroup} and {@link Channel} factories
+	 *
+	 * @param prefix the event loop thread name prefix
+	 * @param selectCount number of selector threads. When -1 is specified, no selectors threads will be created,
+	 *                    and worker threads will be also used as selector threads.
+	 * @param workerCount number of worker threads
+	 * @param daemon should the thread be released on jvm shutdown
+	 * @param colocate true means that {@link EventLoopGroup} created for clients will reuse current local event loop if already
+	 *                 working inside one.
+	 * @return a new {@link LoopResources} to provide automatically for {@link
+	 * EventLoopGroup} and {@link Channel} factories
+	 *
+	 * @since 1.0.28
+	 */
+	static LoopResources create(String prefix, int selectCount, int workerCount, boolean daemon, boolean colocate) {
+		if (Objects.requireNonNull(prefix, "prefix").isEmpty()) {
+			throw new IllegalArgumentException("Cannot use empty prefix");
+		}
+		if (workerCount < 1) {
+			throw new IllegalArgumentException("Must provide a strictly positive worker threads number, was: " + workerCount);
+		}
+		if (selectCount < 1 && selectCount != -1) {
+			throw new IllegalArgumentException("Must provide a strictly positive selector threads number or -1, was: " + selectCount);
+		}
+		return new DefaultLoopResources(prefix, selectCount, workerCount, daemon, colocate);
 	}
 
 	/**
