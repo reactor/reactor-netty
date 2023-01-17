@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,16 +48,22 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	final AtomicReference<EventLoopGroup> cacheNativeServerLoops;
 	final AtomicReference<EventLoopGroup> cacheNativeSelectLoops;
 	final AtomicBoolean                   running;
+	final boolean colocate;
 
 	DefaultLoopResources(String prefix, int workerCount, boolean daemon) {
 		this(prefix, -1, workerCount, daemon);
 	}
 
 	DefaultLoopResources(String prefix, int selectCount, int workerCount, boolean daemon) {
+		this(prefix, selectCount, workerCount, daemon, true);
+	}
+
+	DefaultLoopResources(String prefix, int selectCount, int workerCount, boolean daemon, boolean colocate) {
 		this.running = new AtomicBoolean(true);
 		this.daemon = daemon;
 		this.workerCount = workerCount;
 		this.prefix = prefix;
+		this.colocate = colocate;
 
 		this.serverLoops = new AtomicReference<>();
 		this.clientLoops = new AtomicReference<>();
@@ -170,7 +176,8 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	EventLoopGroup cacheNioClientLoops() {
 		EventLoopGroup eventLoopGroup = clientLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = LoopResources.colocate(cacheNioServerLoops());
+			EventLoopGroup newEventLoopGroup = colocate ? LoopResources.colocate(cacheNioServerLoops()) :
+					cacheNioServerLoops();
 			if (!clientLoops.compareAndSet(null, newEventLoopGroup)) {
 				// Do not shutdown newEventLoopGroup as this will shutdown the server loops
 			}
@@ -216,7 +223,8 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	EventLoopGroup cacheNativeClientLoops() {
 		EventLoopGroup eventLoopGroup = cacheNativeClientLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = LoopResources.colocate(cacheNativeServerLoops());
+			EventLoopGroup newEventLoopGroup = colocate ? LoopResources.colocate(cacheNativeServerLoops()) :
+					cacheNativeServerLoops();
 			if (!cacheNativeClientLoops.compareAndSet(null, newEventLoopGroup)) {
 				// Do not shutdown newEventLoopGroup as this will shutdown the server loops
 			}
