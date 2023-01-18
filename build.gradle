@@ -167,6 +167,13 @@ spotless {
 		target '**/*.java'
 		licenseHeaderFile('codequality/spotless/licenseSlashstarStyle.txt')
 	}
+	format 'gradle', {
+		target '**/*.gradle'
+		// find start of gradle files by looking for either `import`, `apply`
+		// or start of blocks like `javadoc{` or `configure(rootProject) {`...
+		licenseHeaderFile('codequality/spotless/licenseSlashstarStyle.txt',
+				"^\\w+(\\(\\w+\\))?\\s?\\{\$|import|apply")
+	}
 }
 
 subprojects {
