@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package reactor.netty.http.server.logging;
 
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import reactor.netty.http.server.HttpServerRequest;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -27,14 +27,14 @@ import java.util.Objects;
  */
 final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLogArgProviderH1> {
 
-	HttpRequest request;
+	HttpServerRequest request;
 	HttpResponse response;
 
 	AccessLogArgProviderH1(@Nullable SocketAddress remoteAddress) {
 		super(remoteAddress);
 	}
 
-	AccessLogArgProviderH1 request(HttpRequest request) {
+	AccessLogArgProviderH1 request(HttpServerRequest request) {
 		this.request = Objects.requireNonNull(request, "request");
 		onRequest();
 		return get();
@@ -55,7 +55,7 @@ final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLo
 	@Nullable
 	public CharSequence requestHeader(CharSequence name) {
 		Objects.requireNonNull(name, "name");
-		return request == null ? null : request.headers().get(name);
+		return request == null ? null : request.requestHeaders().get(name);
 	}
 
 	@Override
@@ -67,11 +67,15 @@ final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLo
 
 	@Override
 	void onRequest() {
-		super.onRequest();
 		if (request != null) {
+			this.accessDateTime = request.timestamp();
+			this.zonedDateTime = accessDateTime.format(DATE_TIME_FORMATTER);
+			this.startTime = accessDateTime.toInstant().toEpochMilli();
 			super.method = request.method().name();
 			super.uri = request.uri();
-			super.protocol = request.protocolVersion().text();
+			super.protocol = request.protocol();
+			super.cookies = request.cookies();
+			super.connectionInfo = request;
 		}
 	}
 
