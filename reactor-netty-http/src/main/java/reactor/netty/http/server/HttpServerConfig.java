@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -768,8 +768,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodec);
 			}
 
-			pipeline.addAfter(ctx.pipeline().context(upgrader.http2FrameCodec).name(),
-					NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(upgrader));
+			// Add this handler at the end of the pipeline as it does not forward all channelRead events
+			pipeline.addLast(NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(upgrader));
 
 			pipeline.remove(this);
 

@@ -121,6 +121,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		super.handlerAdded(ctx);
 		this.ctx = ctx;
+
+		// When the server is configured with HTTP/1.1 and H2 and the client is HTTP/1.1,
+		// when channelActive event happens, this handler is still not in the pipeline.
+		// In this use case add IdleTimeoutHandler when this handler is added to the pipeline.
+		IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
+
 		if (HttpServerOperations.log.isDebugEnabled()) {
 			HttpServerOperations.log.debug(format(ctx.channel(), "New http connection, requesting read"));
 		}
