@@ -1004,6 +1004,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				configureHttp11Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
 						decoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, idleTimeout, listener,
 						mapHandle, maxKeepAliveRequests, metricsRecorder, minCompressionSize, uriTagValue);
+
+				// When the server is configured with HTTP/1.1 and H2 and HTTP/1.1 is negotiated,
+				// when channelActive event happens, this HttpTrafficHandler is still not in the pipeline,
+				// and will not be able to add IdleTimeoutHandler. So in this use case add IdleTimeoutHandler here.
+				IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
 				return;
 			}
 
