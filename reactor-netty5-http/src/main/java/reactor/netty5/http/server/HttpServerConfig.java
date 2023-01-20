@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -759,8 +759,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodecBuilder.build());
 			}
 
-			pipeline.addAfter(ctx.pipeline().context(Http2FrameCodec.class).name(),
-					NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(upgrader));
+			// Add this handler at the end of the pipeline as it does not forward all channelRead events
+			pipeline.addLast(NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(upgrader));
 
 			pipeline.remove(this);
 
@@ -994,6 +994,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				configureHttp11Pipeline(p, accessLogEnabled, accessLog, compressPredicate,
 						decoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, idleTimeout, listener, mapHandle,
 						maxKeepAliveRequests, metricsRecorder, minCompressionSize, uriTagValue);
+
+				// When the server is configured with HTTP/1.1 and H2 and HTTP/1.1 is negotiated,
+				// when channelActive event happens, this HttpTrafficHandler is still not in the pipeline,
+				// and will not be able to add IdleTimeoutHandler. So in this use case add IdleTimeoutHandler here.
+				IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
 				return;
 			}
 
