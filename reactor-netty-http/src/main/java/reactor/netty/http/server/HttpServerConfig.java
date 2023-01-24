@@ -605,7 +605,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		                    forwardedHeaderHandler, httpMessageLogFactory, idleTimeout, listener, mapHandle, maxKeepAliveRequests));
 
 		if (accessLogEnabled) {
-			p.addBefore(NettyPipeline.HttpTrafficHandler, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
+			p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
 		}
 
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
@@ -665,7 +665,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		                    forwardedHeaderHandler, httpMessageLogFactory, idleTimeout, listener, mapHandle, maxKeepAliveRequests));
 
 		if (accessLogEnabled) {
-			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
+			p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.AccessLogHandler, AccessLogHandlerFactory.H1.create(accessLog));
 		}
 
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;

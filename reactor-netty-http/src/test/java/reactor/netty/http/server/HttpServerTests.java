@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -121,6 +122,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.LogTracker;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
+import reactor.netty.ReactorNetty;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http11SslContextSpec;
@@ -356,56 +358,80 @@ class HttpServerTests extends BaseHttpTest {
 		assertThat(code).isEqualTo(500);
 	}
 
-	@Test
-	void httpPipelining() throws Exception {
-
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void httpPipelining(boolean enableAccessLog) throws Exception {
 		AtomicInteger i = new AtomicInteger();
 
 		disposableServer = createServer()
-		                             .handle((req, resp) ->
+		                             .accessLog(enableAccessLog)
+		                             .route(r -> r.get("/plaintext", (req, resp) ->
 		                                     resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
 		                                         .sendString(Mono.just(i.incrementAndGet())
 		                                                         .flatMap(d ->
 		                                                                 Mono.delay(Duration.ofSeconds(4 - d))
-		                                                                     .map(x -> d + "\n"))))
+		                                                                     .map(x -> d + "\n")))))
 		                             .bindNow();
 
 		DefaultFullHttpRequest request =
-				new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-				                           HttpMethod.GET,
-				                           "/plaintext");
+				new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/plaintext");
 
-		CountDownLatch latch = new CountDownLatch(6);
+		DefaultFullHttpRequest requestNotFound =
+				new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/not_found");
 
-		Connection client =
-				TcpClient.create()
-				         .port(disposableServer.port())
-				         .handle((in, out) -> {
-				                 in.withConnection(x ->
-				                         x.addHandlerFirst(new HttpClientCodec()))
-				                   .receiveObject()
-				                   .ofType(DefaultHttpContent.class)
-				                   .as(ByteBufFlux::fromInbound)
-				                   .asString()
-				                   .log()
-				                   .map(Integer::parseInt)
-				                   .subscribe(d -> {
-				                       for (int x = 0; x < d; x++) {
-				                           latch.countDown();
-				                       }
-				                   });
+		CountDownLatch latch = new CountDownLatch(10);
 
-				                 return out.sendObject(Flux.just(request.retain(),
-				                                                 request.retain(),
-				                                                 request.retain()))
-				                           .neverComplete();
-				         })
-				         .wiretap(true)
-				         .connectNow();
+		String okMessage = "GET /plaintext HTTP/1.1\" 200";
+		String notFoundMessage = "GET /not_found HTTP/1.1\" 404";
+		try (LogTracker logTracker = new LogTracker("reactor.netty.http.server.AccessLog", 4, okMessage, notFoundMessage)) {
+			Connection client =
+					TcpClient.create()
+					         .port(disposableServer.port())
+					         .handle((in, out) -> {
+					                 in.withConnection(x ->
+					                         x.addHandlerFirst(new HttpClientCodec()))
+					                   .receiveObject()
+					                   .map(o -> {
+					                       if (o == LastHttpContent.EMPTY_LAST_CONTENT) {
+					                           return new DefaultHttpContent(
+					                               Unpooled.wrappedBuffer((i.incrementAndGet() + "").getBytes(Charset.defaultCharset())));
+					                       }
+					                       return o;
+					                   })
+					                   .ofType(DefaultHttpContent.class)
+					                   .as(ByteBufFlux::fromInbound)
+					                   .asString()
+					                   .log()
+					                   .map(Integer::parseInt)
+					                   .subscribe(d -> {
+					                       for (int x = 0; x < d; x++) {
+					                           latch.countDown();
+					                       }
+					                   });
 
-		assertThat(latch.await(45, TimeUnit.SECONDS)).as("latch await").isTrue();
+					                 return out.sendObject(Flux.just(request.retain(),
+					                                                 request.retain(),
+					                                                 request.retain(),
+					                                                 requestNotFound))
+					                           .neverComplete();
+					         })
+					         .wiretap(true)
+					         .connectNow();
 
-		client.disposeNow();
+			assertThat(latch.await(45, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+			client.disposeNow();
+
+			if (enableAccessLog) {
+				assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+				assertThat(logTracker.actualMessages).hasSize(4);
+				assertThat(logTracker.actualMessages.get(0).getFormattedMessage()).contains(okMessage);
+				assertThat(logTracker.actualMessages.get(1).getFormattedMessage()).contains(okMessage);
+				assertThat(logTracker.actualMessages.get(2).getFormattedMessage()).contains(okMessage);
+				assertThat(logTracker.actualMessages.get(3).getFormattedMessage()).contains(notFoundMessage);
+			}
+		}
 	}
 
 	@Test
@@ -1994,7 +2020,8 @@ class HttpServerTests extends BaseHttpTest {
 				DEFAULT_FORM_DECODER_SPEC,
 				ReactorNettyHttpMessageLogFactory.INSTANCE,
 				null,
-				false);
+				false,
+				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM));
 		ops.status(status);
 		HttpMessage response = ops.newFullBodyMessage(Unpooled.EMPTY_BUFFER);
 		assertThat(((FullHttpResponse) response).status().reasonPhrase()).isEqualTo(status.reasonPhrase());
@@ -2902,7 +2929,8 @@ class HttpServerTests extends BaseHttpTest {
 				DEFAULT_FORM_DECODER_SPEC,
 				ReactorNettyHttpMessageLogFactory.INSTANCE,
 				null,
-				false);
+				false,
+				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM));
 		assertThat(ops.isFormUrlencoded()).isEqualTo(expectation);
 		// "FutureReturnValueIgnored" is suppressed deliberately
 		channel.close();
