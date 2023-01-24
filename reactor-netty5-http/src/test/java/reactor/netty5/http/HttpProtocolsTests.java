@@ -18,7 +18,6 @@ package reactor.netty5.http;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.AppenderBase;
 import ch.qos.logback.core.read.ListAppender;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
@@ -52,6 +51,7 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.BufferFlux;
 import reactor.netty5.Connection;
+import reactor.netty5.LogTracker;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.http.client.HttpClient;
 import reactor.netty5.http.client.HttpClientConfig;
@@ -74,7 +74,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -365,18 +364,16 @@ class HttpProtocolsTests extends BaseHttpTest {
 				      .accessLog(true)
 				      .bindNow();
 
-		AccessLogAppender accessLogAppender = new AccessLogAppender();
-		accessLogAppender.start();
-		Logger accessLogger = (Logger) LoggerFactory.getLogger("reactor.netty5.http.server.AccessLog");
-		AtomicReference<String> protocol = new AtomicReference<>();
-		try {
-			accessLogger.addAppender(accessLogAppender);
-
+		HttpProtocol[] serverProtocols = server.configuration().protocols();
+		HttpProtocol[] clientProtocols = client.configuration().protocols();
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
+		String expectedLogRecord = "GET / HTTP/" + (isHttp11 ? "1.1" : "2.0") + "\" 200";
+		try (LogTracker logTracker = new LogTracker("reactor.netty5.http.server.AccessLog", expectedLogRecord)) {
 			client.port(disposableServer.port())
 			      .get()
 			      .uri("/")
 			      .responseSingle((res, bytes) -> {
-			          protocol.set(res.responseHeaders().get("x-http2-stream-id") != null ? "2.0" : "1.1");
 			          String header = getHeader(res.responseHeaders(), NettyPipeline.AccessLogHandler);
 			          return Mono.just(header == null ? "HEADER VALUE NOT FOUND" : header);
 			      })
@@ -385,14 +382,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 			      .expectComplete()
 			      .verify(Duration.ofSeconds(5));
 
-			assertThat(accessLogAppender.latch.await(5, TimeUnit.SECONDS)).isTrue();
-
-			assertThat(accessLogAppender.list).hasSize(1);
-			assertThat(accessLogAppender.list.get(0).getFormattedMessage()).contains("GET / HTTP/" + protocol.get() + "\" 200");
-		}
-		finally {
-			accessLogger.detachAppender(accessLogAppender);
-			accessLogAppender.stop();
+			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 		}
 	}
 
@@ -417,12 +407,8 @@ class HttpProtocolsTests extends BaseHttpTest {
 				          args.connectionInformation().scheme()))
 				      .bindNow();
 
-		AccessLogAppender accessLogAppender = new AccessLogAppender();
-		accessLogAppender.start();
-		Logger accessLogger = (Logger) LoggerFactory.getLogger("reactor.netty5.http.server.AccessLog");
-		try {
-			accessLogger.addAppender(accessLogAppender);
-
+		String expectedLogRecord = "192.0.2.60 203.0.113.43 http";
+		try (LogTracker logTracker = new LogTracker("reactor.netty5.http.server.AccessLog", expectedLogRecord)) {
 			client.port(disposableServer.port())
 			      .doOnRequest((req, cnx) -> req.addHeader("Forwarded",
 			              "for=192.0.2.60;proto=http;host=203.0.113.43"))
@@ -437,14 +423,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 			      .expectComplete()
 			      .verify(Duration.ofSeconds(5));
 
-			assertThat(accessLogAppender.latch.await(5, TimeUnit.SECONDS)).isTrue();
-
-			assertThat(accessLogAppender.list).hasSize(1);
-			assertThat(accessLogAppender.list.get(0).getFormattedMessage()).isEqualTo("192.0.2.60 203.0.113.43 http");
-		}
-		finally {
-			accessLogger.detachAppender(accessLogAppender);
-			accessLogAppender.stop();
+			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 		}
 	}
 
@@ -761,18 +740,6 @@ class HttpProtocolsTests extends BaseHttpTest {
 			assertThat(customHandler.list.get(1)).isInstanceOf(Http2DataFrame.class);
 			assertThat(customHandler.list.get(2)).isInstanceOf(Http2SettingsFrame.class);
 			assertThat(customHandler.list.get(3)).isInstanceOf(Http2SettingsAckFrame.class);
-		}
-	}
-
-	static final class AccessLogAppender extends AppenderBase<ILoggingEvent> {
-
-		final CountDownLatch latch = new CountDownLatch(1);
-		final List<ILoggingEvent> list = new ArrayList<>();
-
-		@Override
-		protected void append(ILoggingEvent eventObject) {
-			list.add(eventObject);
-			latch.countDown();
 		}
 	}
 
