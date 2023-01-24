@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package reactor.netty.http.server;
 
 import java.net.InetSocketAddress;
+import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -142,4 +143,19 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 */
 	HttpHeaders requestHeaders();
 
+	/**
+	 * Returns the inbound protocol and version.
+	 *
+	 * @return the inbound protocol and version
+	 * @since 1.0.28
+	 */
+	String protocol();
+
+	/**
+	 * Returns the time when the request was received.
+	 *
+	 * @return the time when the request was received
+	 * @since 1.0.28
+	 */
+	ZonedDateTime timestamp();
 }

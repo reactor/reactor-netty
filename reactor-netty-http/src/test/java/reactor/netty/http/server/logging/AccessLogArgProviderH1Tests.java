@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,16 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import reactor.netty.ReactorNetty;
+import reactor.netty.http.server.HttpServerRequest;
 
 import java.net.InetSocketAddress;
+import java.time.ZonedDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.mockito.Mockito.when;
 import static reactor.netty.http.server.logging.LoggingTests.HEADER_CONNECTION_NAME;
 import static reactor.netty.http.server.logging.LoggingTests.HEADER_CONNECTION_VALUE;
 import static reactor.netty.http.server.logging.LoggingTests.URI;
@@ -43,17 +48,25 @@ import static reactor.netty.http.server.logging.LoggingTests.URI;
  */
 class AccessLogArgProviderH1Tests {
 
-	private static final HttpRequest request;
+	private static final HttpServerRequest request;
 	private static final HttpResponse response;
+	private static final ZonedDateTime timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
 
 	static {
 		HttpHeaders requestHttpHeaders = new DefaultHttpHeaders();
 		requestHttpHeaders.add(HEADER_CONNECTION_NAME, HEADER_CONNECTION_VALUE);
-		request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, URI, requestHttpHeaders);
+		HttpRequest nativeRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, URI, requestHttpHeaders);
 
 		HttpHeaders responseHttpHeaders = new DefaultHttpHeaders();
 		responseHttpHeaders.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
 		response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, responseHttpHeaders);
+
+		request = Mockito.mock(HttpServerRequest.class);
+		when(request.method()).thenReturn(nativeRequest.method());
+		when(request.protocol()).thenReturn(nativeRequest.protocolVersion().text());
+		when(request.requestHeaders()).thenReturn(nativeRequest.headers());
+		when(request.uri()).thenReturn(nativeRequest.uri());
+		when(request.timestamp()).thenReturn(timestamp);
 	}
 
 	private AccessLogArgProviderH1 accessLogArgProvider;

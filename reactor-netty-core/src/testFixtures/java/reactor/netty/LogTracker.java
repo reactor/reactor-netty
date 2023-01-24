@@ -20,6 +20,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Stream;
 
@@ -30,31 +32,43 @@ import java.util.stream.Stream;
  */
 public final class LogTracker extends AppenderBase<ILoggingEvent> implements AutoCloseable {
 
+	public final List<ILoggingEvent> actualMessages = new ArrayList<>();
 	public final CountDownLatch latch;
 
 	private final Logger logger;
-	private final String[] messages;
+	private final String[] expectedMessages;
 
 	/**
 	 * Creates a new {@link LogTracker}.
 	 *
 	 * @param className the logger name
-	 * @param messages the expected messages
+	 * @param expectedMessages the expected messages
 	 */
-	public LogTracker(Class<?> className, String... messages) {
-		this(className.getName(), messages);
+	public LogTracker(Class<?> className, String... expectedMessages) {
+		this(className.getName(), expectedMessages);
 	}
 
 	/**
 	 * Creates a new {@link LogTracker}.
 	 *
 	 * @param loggerName the logger name
-	 * @param messages the expected messages
+	 * @param expectedMessages the expected messages
 	 */
-	public LogTracker(String loggerName, String... messages) {
+	public LogTracker(String loggerName, String... expectedMessages) {
+		this(loggerName, expectedMessages.length, expectedMessages);
+	}
+
+	/**
+	 * Creates a new {@link LogTracker}.
+	 *
+	 * @param loggerName the logger name
+	 * @param expectedCount the number of times the expected messages will appear in the logs
+	 * @param expectedMessages the expected messages
+	 */
+	public LogTracker(String loggerName, int expectedCount, String... expectedMessages) {
 		this.logger = (Logger) LoggerFactory.getLogger(loggerName);
-		this.messages = messages;
-		this.latch = new CountDownLatch(messages.length);
+		this.expectedMessages = expectedMessages;
+		this.latch = new CountDownLatch(expectedCount);
 
 		start();
 		this.logger.addAppender(this);
@@ -62,7 +76,8 @@ public final class LogTracker extends AppenderBase<ILoggingEvent> implements Aut
 
 	@Override
 	protected void append(ILoggingEvent eventObject) {
-		if (Stream.of(messages).anyMatch(msg -> eventObject.getFormattedMessage().contains(msg))) {
+		if (Stream.of(expectedMessages).anyMatch(msg -> eventObject.getFormattedMessage().contains(msg))) {
+			actualMessages.add(eventObject);
 			latch.countDown();
 		}
 	}

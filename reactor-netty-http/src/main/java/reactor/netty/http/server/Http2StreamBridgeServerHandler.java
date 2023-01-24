@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package reactor.netty.http.server;
 
 import java.net.SocketAddress;
+import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -39,6 +40,7 @@ import io.netty.util.ReferenceCountUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.ReactorNetty;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.util.annotation.Nullable;
@@ -113,6 +115,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 		if (msg instanceof HttpRequest) {
 			HttpRequest request = (HttpRequest) msg;
 			HttpServerOperations ops;
+			ZonedDateTime timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
 			try {
 				pendingResponse = true;
 				ops = new HttpServerOperations(Connection.from(ctx.channel()),
@@ -129,12 +132,13 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 						formDecoderProvider,
 						httpMessageLogFactory,
 						mapHandle,
-						secured);
+						secured,
+						timestamp);
 			}
 			catch (RuntimeException e) {
 				pendingResponse = false;
 				request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory);
+				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory, timestamp);
 				return;
 			}
 			ops.bind();

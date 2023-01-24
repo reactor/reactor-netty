@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,12 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.netty.channel.ChannelOperations;
-import reactor.netty.http.server.HttpServerInfos;
+import reactor.netty.http.server.HttpServerRequest;
 import reactor.util.annotation.Nullable;
 
 import java.util.function.Function;
@@ -46,19 +45,6 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 	}
 
 	@Override
-	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest) {
-			final HttpRequest request = (HttpRequest) msg;
-
-			if (accessLogArgProvider == null) {
-				accessLogArgProvider = new AccessLogArgProviderH1(ctx.channel().remoteAddress());
-			}
-			accessLogArgProvider.request(request);
-		}
-		ctx.fireChannelRead(msg);
-	}
-
-	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof HttpResponse) {
@@ -71,16 +57,20 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 				return;
 			}
 
+			if (accessLogArgProvider == null) {
+				accessLogArgProvider = new AccessLogArgProviderH1(ctx.channel().remoteAddress());
+			}
+
+			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+			if (ops instanceof HttpServerRequest) {
+				accessLogArgProvider.request((HttpServerRequest) ops);
+			}
+
 			final boolean chunked = HttpUtil.isTransferEncodingChunked(response);
 			accessLogArgProvider.response(response)
 					.chunked(chunked);
 			if (!chunked) {
 				accessLogArgProvider.contentLength(HttpUtil.getContentLength(response, -1));
-			}
-
-			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
-			if (ops instanceof HttpServerInfos) {
-				super.applyServerInfos(accessLogArgProvider, (HttpServerInfos) ops);
 			}
 		}
 		if (msg instanceof LastHttpContent) {
