@@ -15,6 +15,7 @@
  */
 package reactor.netty;
 
+import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
 import org.slf4j.LoggerFactory;
@@ -27,17 +28,31 @@ import java.util.stream.Stream;
  *
  * @since 1.0.27
  */
-public class LogTracker extends AppenderBase<ILoggingEvent> implements AutoCloseable {
+public final class LogTracker extends AppenderBase<ILoggingEvent> implements AutoCloseable {
 
 	public final CountDownLatch latch;
-	private final ch.qos.logback.classic.Logger logger;
+
+	private final Logger logger;
 	private final String[] messages;
 
+	/**
+	 * Creates a new {@link LogTracker}.
+	 *
+	 * @param className the logger name
+	 * @param messages the expected messages
+	 */
 	public LogTracker(Class<?> className, String... messages) {
 		this(className.getName(), messages);
 	}
+
+	/**
+	 * Creates a new {@link LogTracker}.
+	 *
+	 * @param loggerName the logger name
+	 * @param messages the expected messages
+	 */
 	public LogTracker(String loggerName, String... messages) {
-		this.logger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(loggerName);
+		this.logger = (Logger) LoggerFactory.getLogger(loggerName);
 		this.messages = messages;
 		this.latch = new CountDownLatch(messages.length);
 
@@ -57,5 +72,4 @@ public class LogTracker extends AppenderBase<ILoggingEvent> implements AutoClose
 		logger.detachAppender(this);
 		stop();
 	}
-
 }
