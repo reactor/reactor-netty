@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -80,6 +81,7 @@ import reactor.netty5.ConnectionObserver;
 import reactor.netty5.FutureMono;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.NettyPipeline;
+import reactor.netty5.ReactorNetty;
 import reactor.netty5.channel.AbortedException;
 import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.http.HttpOperations;
@@ -115,6 +117,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final HttpResponse nettyResponse;
 	final HttpHeaders responseHeaders;
 	final String scheme;
+	final ZonedDateTime timestamp;
 
 	BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 	Function<? super String, Map<String, String>> paramsResolver;
@@ -138,6 +141,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.path = replaced.path;
 		this.responseHeaders = replaced.responseHeaders;
 		this.scheme = replaced.scheme;
+		this.timestamp = replaced.timestamp;
 		this.trailerHeadersConsumer = replaced.trailerHeadersConsumer;
 	}
 
@@ -147,9 +151,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpServerFormDecoderProvider formDecoderProvider,
 			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-			boolean secured) {
+			boolean secured,
+			ZonedDateTime timestamp) {
 		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, formDecoderProvider,
-				httpMessageLogFactory, mapHandle, true, secured);
+				httpMessageLogFactory, mapHandle, true, secured, timestamp);
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
@@ -159,7 +164,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean resolvePath,
-			boolean secured) {
+			boolean secured,
+			ZonedDateTime timestamp) {
 		super(c, listener, httpMessageLogFactory);
 		this.compressionPredicate = compressionPredicate;
 		this.configuredCompressionPredicate = compressionPredicate;
@@ -179,6 +185,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.responseHeaders = nettyResponse.headers();
 		this.responseHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 		this.scheme = secured ? "https" : "http";
+		this.timestamp = timestamp;
 	}
 
 	@Override
@@ -459,6 +466,16 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public HttpHeaders responseHeaders() {
 		return responseHeaders;
+	}
+
+	@Override
+	public String protocol() {
+		return nettyRequest.protocolVersion().text();
+	}
+
+	@Override
+	public ZonedDateTime timestamp() {
+		return timestamp;
 	}
 
 	@Override
@@ -757,7 +774,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			boolean secure,
 			Throwable t,
 			Object msg,
-			HttpMessageLogFactory httpMessageLogFactory) {
+			HttpMessageLogFactory httpMessageLogFactory,
+			@Nullable ZonedDateTime timestamp) {
 
 		Throwable cause = t.getCause() != null ? t.getCause() : t;
 
@@ -789,7 +807,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (ops == null) {
 			Connection conn = Connection.from(ctx.channel());
 			if (msg instanceof HttpRequest request) {
-				ops = new FailedHttpServerRequest(conn, listener, request, response, httpMessageLogFactory, secure);
+				ops = new FailedHttpServerRequest(conn, listener, request, response, httpMessageLogFactory, secure,
+						timestamp == null ? ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM) : timestamp);
 				ops.bind();
 			}
 			else {
@@ -957,9 +976,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				HttpRequest nettyRequest,
 				HttpResponse nettyResponse,
 				HttpMessageLogFactory httpMessageLogFactory,
-				boolean secure) {
+				boolean secure,
+				ZonedDateTime timestamp) {
 			super(c, listener, nettyRequest, null, null,
-					DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, null, false, secure);
+					DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, null, false, secure, timestamp);
 			this.customResponse = nettyResponse;
 			String tempPath = "";
 			try {

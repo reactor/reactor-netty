@@ -17,6 +17,7 @@ package reactor.netty5.http.server;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.function.BiFunction;
@@ -44,6 +45,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
+import reactor.netty5.ReactorNetty;
 import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.util.annotation.Nullable;
@@ -170,7 +172,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							pipelined != null ? pipelined.size() : 0);
 				}
 				overflow = true;
-				doPipeline(ctx, msg);
+				doPipeline(ctx, new HttpRequestHolder(request));
 				return;
 			}
 			else {
@@ -183,6 +185,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 				}
 
 				HttpServerOperations ops;
+				ZonedDateTime timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
 				try {
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
 							listener,
@@ -196,11 +199,12 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							formDecoderProvider,
 							httpMessageLogFactory,
 							mapHandle,
-							secure);
+							secure,
+							timestamp);
 				}
 				catch (RuntimeException e) {
 					request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-					sendDecodingFailures(e, msg);
+					sendDecodingFailures(e, msg, timestamp);
 					return;
 				}
 				ops.bind();
@@ -266,8 +270,12 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	}
 
 	void sendDecodingFailures(Throwable t, Object msg) {
+		sendDecodingFailures(t, msg, null);
+	}
+
+	void sendDecodingFailures(Throwable t, Object msg, @Nullable ZonedDateTime timestamp) {
 		persistentConnection = false;
-		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory);
+		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory, timestamp);
 	}
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
@@ -373,7 +381,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		}
 
 		while ((next = pipelined.peek()) != null) {
-			if (next instanceof HttpRequest) {
+			if (next instanceof HttpRequestHolder) {
 				if (nextRequest != null) {
 					return;
 				}
@@ -382,32 +390,47 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 					return;
 				}
 
-				nextRequest = (HttpRequest) next;
+				HttpRequestHolder holder = (HttpRequestHolder) next;
+				nextRequest = holder.request;
 
 				DecoderResult decoderResult = nextRequest.decoderResult();
 				if (decoderResult.isFailure()) {
-					sendDecodingFailures(decoderResult.cause(), nextRequest);
+					sendDecodingFailures(decoderResult.cause(), nextRequest, holder.timestamp);
 					discard();
 					return;
 				}
 
-				HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
-						listener,
-						nextRequest,
-						compress,
-						ConnectionInfo.from(ctx.channel(),
-						                    nextRequest,
-						                    secure,
-						                    remoteAddress,
-						                    forwardedHeaderHandler),
-						formDecoderProvider,
-						httpMessageLogFactory,
-						mapHandle,
-						secure);
+				HttpServerOperations ops;
+				try {
+					ops = new HttpServerOperations(Connection.from(ctx.channel()),
+							listener,
+							nextRequest,
+							compress,
+							ConnectionInfo.from(ctx.channel(),
+							                    nextRequest,
+							                    secure,
+							                    remoteAddress,
+							                    forwardedHeaderHandler),
+							formDecoderProvider,
+							httpMessageLogFactory,
+							mapHandle,
+							secure,
+							holder.timestamp);
+				}
+				catch (RuntimeException e) {
+					holder.request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
+					sendDecodingFailures(e, holder.request, holder.timestamp);
+					return;
+				}
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
+
+				pipelined.poll();
+				ctx.fireChannelRead(holder.request);
 			}
-			ctx.fireChannelRead(pipelined.poll());
+			else {
+				ctx.fireChannelRead(pipelined.poll());
+			}
 		}
 		overflow = false;
 	}
@@ -491,4 +514,13 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 				MULTIPART_PREFIX.length());
 	}
 
+	static final class HttpRequestHolder {
+		final HttpRequest request;
+		final ZonedDateTime timestamp;
+
+		HttpRequestHolder(HttpRequest request) {
+			this.request = request;
+			this.timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
+		}
+	}
 }

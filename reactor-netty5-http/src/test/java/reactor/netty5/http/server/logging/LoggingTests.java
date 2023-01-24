@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ class LoggingTests {
 	static final CharSequence HEADER_TEST_NAME = "test";
 	static final String HEADER_TEST_VALUE = "test";
 	static final String URI = "/hello";
-	static final byte[] RESPONSE_CONTENT = "Hello".getBytes(StandardCharsets.UTF_8);
+	static final String RESPONSE_CONTENT_STRING = "Hello";
+	static final byte[] RESPONSE_CONTENT = RESPONSE_CONTENT_STRING.getBytes(StandardCharsets.UTF_8);
 
 }

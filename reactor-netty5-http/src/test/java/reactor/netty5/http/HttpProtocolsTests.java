@@ -55,6 +55,7 @@ import reactor.netty5.LogTracker;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.http.client.HttpClient;
 import reactor.netty5.http.client.HttpClientConfig;
+import reactor.netty5.http.client.HttpClientResponse;
 import reactor.netty5.http.server.HttpServer;
 import reactor.netty5.http.server.HttpServerConfig;
 import reactor.netty5.http.server.logging.AccessLog;
@@ -354,13 +355,13 @@ class HttpProtocolsTests extends BaseHttpTest {
 	@ParameterizedCompatibleCombinationsTest
 	void testAccessLog(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
-				server.handle((req, resp) -> {
+				server.route(r -> r.get("/", (req, resp) -> {
 				          resp.withConnection(conn -> {
 				              ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.AccessLogHandler);
 				              resp.header(NettyPipeline.AccessLogHandler, handler != null ? "FOUND" : "NOT FOUND");
 				          });
 				          return resp.send();
-				      })
+				      }))
 				      .accessLog(true)
 				      .bindNow();
 
@@ -368,22 +369,35 @@ class HttpProtocolsTests extends BaseHttpTest {
 		HttpProtocol[] clientProtocols = client.configuration().protocols();
 		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
 				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
-		String expectedLogRecord = "GET / HTTP/" + (isHttp11 ? "1.1" : "2.0") + "\" 200";
-		try (LogTracker logTracker = new LogTracker("reactor.netty5.http.server.AccessLog", expectedLogRecord)) {
-			client.port(disposableServer.port())
-			      .get()
-			      .uri("/")
-			      .responseSingle((res, bytes) -> {
-			          String header = getHeader(res.responseHeaders(), NettyPipeline.AccessLogHandler);
-			          return Mono.just(header == null ? "HEADER VALUE NOT FOUND" : header);
-			      })
-			      .as(StepVerifier::create)
-			      .expectNext("FOUND")
-			      .expectComplete()
-			      .verify(Duration.ofSeconds(5));
+		String okMessage = "GET / HTTP/" + (isHttp11 ? "1.1" : "2.0") + "\" 200";
+		String notFoundMessage = "GET /not_found HTTP/" + (isHttp11 ? "1.1" : "2.0") + "\" 404";
+		try (LogTracker logTracker = new LogTracker("reactor.netty5.http.server.AccessLog", okMessage, notFoundMessage)) {
+			doTestAccessLog(client, "/",
+					res -> {
+						String header = getHeader(res.responseHeaders(), NettyPipeline.AccessLogHandler);
+						return Mono.just(header == null ? "HEADER VALUE NOT FOUND" : header);
+					}, "FOUND");
+
+			doTestAccessLog(client, "/not_found", res -> Mono.just(res.status().toString()), "404 Not Found");
 
 			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(logTracker.actualMessages).hasSize(2);
+			assertThat(logTracker.actualMessages.get(0).getFormattedMessage()).contains(okMessage);
+			assertThat(logTracker.actualMessages.get(1).getFormattedMessage()).contains(notFoundMessage);
 		}
+	}
+
+	private void doTestAccessLog(HttpClient client, String uri,
+			Function<HttpClientResponse, Mono<String>> response, String expectation) {
+		client.port(disposableServer.port())
+		      .get()
+		      .uri(uri)
+		      .responseSingle((res, bytes) -> response.apply(res))
+		      .as(StepVerifier::create)
+		      .expectNext(expectation)
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
 	}
 
 	@ParameterizedCompatibleCombinationsTest
