@@ -257,7 +257,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		int[] numWrites = new int[]{14, 25};
 		int[] bytesWrite = new int[]{160, 243};
 		int connIndex = 1;
-		if (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) {
+		if ((serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11)) {
 			numWrites = new int[]{14, 28};
 			bytesWrite = new int[]{151, 310};
 			connIndex = 2;
@@ -388,7 +389,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		int[] bytesWrite = new int[]{106, 122};
 		int[] bytesRead = new int[]{37, 48};
 		int connIndex = 1;
-		if (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) {
+		if ((serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11)) {
 			numWrites = new int[]{1, 2};
 			bytesWrite = new int[]{123, 246};
 			bytesRead = new int[]{64, 128};
@@ -466,7 +468,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		int numWrites = 14;
 		int bytesWrite = 160;
-		if (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) {
+		if ((serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11)) {
 			bytesWrite = 151;
 		}
 		else if (clientProtocols.length == 2 &&
@@ -529,7 +532,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		int[] numWrites = new int[]{14, 28};
 		int[] bytesWrite = new int[]{160, 320};
-		if (clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) {
+		if ((serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11)) {
 			bytesWrite = new int[]{151, 302};
 		}
 		else if (clientProtocols.length == 2 &&
@@ -626,7 +630,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testServerConnectionsMicrometer(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		CountDownLatch responseSent = new CountDownLatch(1); // response fully sent by the server
-		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
 		HttpServer server = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, Function.identity())
 				.doOnConnection(cnx -> {
@@ -682,7 +687,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsMicrometerConnectionClose(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
 
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, Function.identity())
@@ -727,7 +733,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		// Invoke ServerRecorder.INSTANCE.reset() here as disposableServer.dispose (AfterEach) might be invoked after
 		// ServerRecorder.INSTANCE.reset() (AfterEach) and thus leave ServerRecorder.INSTANCE in a bad state
 		ServerRecorder.INSTANCE.reset();
-		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
 
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.doOnConnection(cnx -> ServerCloseHandler.INSTANCE.register(cnx.channel()))
@@ -773,7 +780,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		// Invoke ServerRecorder.INSTANCE.reset() here as disposableServer.dispose (AfterEach) might be invoked after
 		// ServerRecorder.INSTANCE.reset() (AfterEach) and thus leave ServerRecorder.INSTANCE in a bad state
 		ServerRecorder.INSTANCE.reset();
-		boolean isHttp11 = clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11;
+		boolean isHttp11 = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11);
 
 		disposableServer = customizeServerOptions(httpServer, serverCtx, serverProtocols)
 				.metrics(true, ServerRecorder.supplier(), Function.identity())
@@ -1064,7 +1072,10 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	static Stream<Arguments> httpCompatibleProtocols() {
 		return Stream.of(
 				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11}, null, null),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, null, null),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.HTTP11},
+						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11)),
+				Arguments.of(new HttpProtocol[]{HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2, HttpProtocol.HTTP11},
 						Named.of("Http11SslContextSpec", serverCtx11), Named.of("Http11SslContextSpec", clientCtx11)),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2}, new HttpProtocol[]{HttpProtocol.H2},
 						Named.of("Http2SslContextSpec", serverCtx2), Named.of("Http2SslContextSpec", clientCtx2)),
