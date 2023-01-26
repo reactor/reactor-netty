@@ -217,15 +217,17 @@ class HttpClientConnect extends HttpClient {
 						_config.sslProvider = HttpClientSecure.defaultSslProvider(_config);
 					}
 
-					if (_config.checkProtocol(HttpClientConfig.h2c) && _config.protocols.length > 1) {
-						removeIncompatibleProtocol(_config, HttpProtocol.H2C);
-					}
-					else if (_config.checkProtocol(HttpClientConfig.h2c)) {
-						sink.error(new IllegalArgumentException(
-								"Configured H2 Clear-Text protocol with TLS. " +
-										"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
-										"via HttpClient#noSSL()"));
-						return;
+					if (_config.checkProtocol(HttpClientConfig.h2c)) {
+						if (_config.protocols.length > 1) {
+							removeIncompatibleProtocol(_config, HttpProtocol.H2C);
+						}
+						else {
+							sink.error(new IllegalArgumentException(
+									"Configured H2 Clear-Text protocol with TLS. " +
+											"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
+											"via HttpClient#noSSL()"));
+							return;
+						}
 					}
 
 					if (_config.sslProvider.getDefaultConfigurationType() == null) {
@@ -245,14 +247,16 @@ class HttpClientConnect extends HttpClient {
 						_config.sslProvider = null;
 					}
 
-					if (_config.checkProtocol(HttpClientConfig.h2) && _config.protocols.length > 1) {
-						removeIncompatibleProtocol(_config, HttpProtocol.H2);
-					}
-					else if (_config.checkProtocol(HttpClientConfig.h2)) {
-						sink.error(new IllegalArgumentException(
-								"Configured H2 protocol without TLS. Use H2 Clear-Text " +
-										"protocol via HttpClient#protocol or configure TLS via HttpClient#secure"));
-						return;
+					if (_config.checkProtocol(HttpClientConfig.h2)) {
+						if (_config.protocols.length > 1) {
+							removeIncompatibleProtocol(_config, HttpProtocol.H2);
+						}
+						else {
+							sink.error(new IllegalArgumentException(
+									"Configured H2 protocol without TLS. Use H2 Clear-Text " +
+											"protocol via HttpClient#protocol or configure TLS via HttpClient#secure"));
+							return;
+						}
 					}
 				}
 

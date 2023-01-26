@@ -580,4 +580,49 @@ class Http2Tests extends BaseHttpTest {
 	void testIssue1789() throws Exception {
 		doTestMaxActiveStreams(HttpClient.create(), 1, 1, 1, 2, 0);
 	}
+
+	@Test
+	void testPR2659_SchemeHttpConfiguredNoSsl() {
+		doTestPR2659_SchemeHttp("1");
+	}
+
+	private void doTestPR2659_SchemeHttp(String expectedStreamId) {
+		disposableServer =
+				createServer()
+						.host("localhost")
+						.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
+						.handle((req, res) -> res.sendString(Mono.just("testPR2659")))
+						.bindNow(Duration.ofSeconds(30));
+
+		HttpClient.create()
+				.protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C)
+				.wiretap(true)
+				.get()
+				.uri("http://localhost:" + disposableServer.port() + "/")
+				.responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
+				.as(StepVerifier::create)
+				.expectNext(expectedStreamId)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void testPR2659_SchemeHttpsConfiguredWithSsl() {
+		doTestPR2659_SchemeHttps(s -> !"null".equals(s));
+	}
+
+	private void doTestPR2659_SchemeHttps(Predicate<String> predicate) {
+		HttpClient.create()
+				.protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C)
+				.secure(sslContextSpec -> sslContextSpec.sslContext(Http2SslContextSpec.forClient()))
+				.wiretap(true)
+				.get()
+				.uri("https://example.com")
+				.responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
+				.as(StepVerifier::create)
+				.expectNextMatches(predicate)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
 }
