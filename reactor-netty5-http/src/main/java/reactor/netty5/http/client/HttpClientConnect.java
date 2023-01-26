@@ -154,34 +154,38 @@ class HttpClientConnect extends HttpClient {
 				if (handler.toURI.isSecure()) {
 					if (_config.sslProvider == null) {
 						_config = new HttpClientConfig(config);
-						if (_config.checkProtocol(HttpClientConfig.h2c) && _config.protocols.length > 1) {
-							removeIncompatibleProtocol(_config, HttpProtocol.H2C);
-						}
 						_config.sslProvider = HttpClientSecure.defaultSslProvider(_config);
 					}
 
 					if (_config.checkProtocol(HttpClientConfig.h2c)) {
-						sink.error(new IllegalArgumentException(
-								"Configured H2 Clear-Text protocol with TLS. " +
-										"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
-										"via HttpClient#noSSL()"));
-						return;
+						if (_config.protocols.length > 1) {
+							removeIncompatibleProtocol(_config, HttpProtocol.H2C);
+						}
+						else {
+							sink.error(new IllegalArgumentException(
+									"Configured H2 Clear-Text protocol with TLS. " +
+											"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
+											"via HttpClient#noSSL()"));
+							return;
+						}
 					}
 				}
 				else {
 					if (_config.sslProvider != null) {
 						_config = new HttpClientConfig(config);
-						if (_config.checkProtocol(HttpClientConfig.h2) && _config.protocols.length > 1) {
-							removeIncompatibleProtocol(_config, HttpProtocol.H2);
-						}
 						_config.sslProvider = null;
 					}
 
 					if (_config.checkProtocol(HttpClientConfig.h2)) {
-						sink.error(new IllegalArgumentException(
-								"Configured H2 protocol without TLS. Use H2 Clear-Text " +
-										"protocol via HttpClient#protocol or configure TLS via HttpClient#secure"));
-						return;
+						if (_config.protocols.length > 1) {
+							removeIncompatibleProtocol(_config, HttpProtocol.H2);
+						}
+						else {
+							sink.error(new IllegalArgumentException(
+									"Configured H2 protocol without TLS. Use H2 Clear-Text " +
+											"protocol via HttpClient#protocol or configure TLS via HttpClient#secure"));
+							return;
+						}
 					}
 				}
 

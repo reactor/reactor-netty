@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -580,4 +580,49 @@ class Http2Tests extends BaseHttpTest {
 	void testIssue1789() throws Exception {
 		doTestMaxActiveStreams(HttpClient.create(), 1, 1, 1, 2, 0);
 	}
+
+	@Test
+	void testPR2659_SchemeHttpConfiguredNoSsl() {
+		doTestPR2659_SchemeHttp("1");
+	}
+
+	private void doTestPR2659_SchemeHttp(String expectedStreamId) {
+		disposableServer =
+				createServer()
+						.host("localhost")
+						.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
+						.handle((req, res) -> res.sendString(Mono.just("testPR2659")))
+						.bindNow(Duration.ofSeconds(30));
+
+		HttpClient.create()
+				.protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C)
+				.wiretap(true)
+				.get()
+				.uri("http://localhost:" + disposableServer.port() + "/")
+				.responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
+				.as(StepVerifier::create)
+				.expectNext(expectedStreamId)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void testPR2659_SchemeHttpsConfiguredWithSsl() {
+		doTestPR2659_SchemeHttps(s -> !"null".equals(s.toString()));
+	}
+
+	private void doTestPR2659_SchemeHttps(Predicate<CharSequence> predicate) {
+		HttpClient.create()
+				.protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C)
+				.secure(sslContextSpec -> sslContextSpec.sslContext(Http2SslContextSpec.forClient()))
+				.wiretap(true)
+				.get()
+				.uri("https://example.com")
+				.responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
+				.as(StepVerifier::create)
+				.expectNextMatches(predicate)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
 }
