@@ -124,7 +124,7 @@ ext {
 	junitVersion = '5.9.2'
 	junitPlatformLauncherVersion = '1.9.2'
 	mockitoVersion = '4.11.0'
-	blockHoundVersion = '1.0.6.RELEASE'
+	blockHoundVersion = '1.0.7.RELEASE'
 	bouncycastleVersion = '1.70'
 	reflectionsVersion = '0.10.2'
 
