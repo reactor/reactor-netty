@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -215,41 +216,24 @@ class HttpRedirectTest extends BaseHttpTest {
 				          .bindNow();
 
 		HttpClient client = createClient(disposableServer::address);
+		HttpClient redirectingClient = client.followRedirect(true);
 
-		String value =
-				client.followRedirect(true)
-				      .get()
-				      .uri("/1")
-				      .responseContent()
-				      .aggregate()
-				      .asString()
-				      .block(Duration.ofSeconds(30));
-		assertThat(value).isEqualTo("OK");
+		Flux<String> urls = Flux.just("/1", "/1", "/2", "/2");
+		Flux<HttpClient> clients = Flux.just(redirectingClient, client, redirectingClient, client);
 
-		value = client.get()
-		              .uri("/1")
-		              .responseContent()
-		              .aggregate()
-		              .asString()
-		              .block(Duration.ofSeconds(30));
-		assertThat(value).isNull();
-
-		value = client.followRedirect(true)
-		              .get()
-		              .uri("/2")
-		              .responseContent()
-		              .aggregate()
-		              .asString()
-		              .block(Duration.ofSeconds(30));
-		assertThat(value).isEqualTo("OK");
-
-		value = client.get()
-		              .uri("/2")
-		              .responseContent()
-		              .aggregate()
-		              .asString()
-		              .block(Duration.ofSeconds(30));
-		assertThat(value).isNull();
+		Flux.zip(urls, clients)
+		    .concatMap(t -> t.getT2()
+		                     .get()
+		                     .uri(t.getT1())
+		                     .responseContent()
+		                     .aggregate()
+		                     .asString()
+		                     .defaultIfEmpty("null"))
+		    .collectList()
+		    .as(StepVerifier::create)
+		    .expectNext(Arrays.asList("OK", "null", "OK", "null"))
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(30));
 	}
 
 	/**
@@ -358,66 +342,23 @@ class HttpRedirectTest extends BaseHttpTest {
 
 		HttpClient client = createClient(disposableServer::address);
 
-		StepVerifier.create(client.followRedirect(true)
-		                          .get()
-		                          .uri("/301")
-		                          .responseContent()
-		                          .aggregate()
-		                          .asString())
-		            .expectNextMatches("OK"::equals)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		Flux.just("/301", "/302", "/303", "/307", "/308", "/predicate")
+		    .flatMap(s -> {
+		            HttpClient localClient = "/predicate".equals(s) ?
+		                    client.followRedirect((req, res) -> res.responseHeaders().contains("test")) :
+		                    client.followRedirect(true);
+		            return localClient.get()
+		                              .uri(s)
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString();
+		    })
+		    .collectList()
+		    .as(StepVerifier::create)
+		    .assertNext(l -> assertThat(l).allMatch("OK"::equals))
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(client.followRedirect(true)
-		                          .get()
-		                          .uri("/302")
-		                          .responseContent()
-		                          .aggregate()
-		                          .asString())
-		            .expectNextMatches("OK"::equals)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-
-		StepVerifier.create(client.followRedirect(true)
-		                          .post()
-		                          .uri("/303")
-		                          .responseContent()
-		                          .aggregate()
-		                          .asString())
-		            .expectNextMatches("OK"::equals)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-
-		StepVerifier.create(client.followRedirect(true)
-		                          .get()
-		                          .uri("/307")
-		                          .responseContent()
-		                          .aggregate()
-		                          .asString())
-		            .expectNextMatches("OK"::equals)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-
-		StepVerifier.create(client.followRedirect(true)
-		                          .get()
-		                          .uri("/308")
-		                          .responseContent()
-		                          .aggregate()
-		                          .asString())
-		            .expectNextMatches("OK"::equals)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-
-		StepVerifier.create(client.followRedirect((req, res) -> res.responseHeaders()
-		                                                           .contains("test"))
-		                          .get()
-		                          .uri("/predicate")
-		                          .responseContent()
-		                          .aggregate()
-		                          .asString())
-		            .expectNextMatches("OK"::equals)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
 
 		StepVerifier.create(client.followRedirect(true)
 		                          .get()
