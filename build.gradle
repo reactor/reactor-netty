@@ -28,7 +28,7 @@ buildscript {
 }
 
 plugins {
-	id "com.diffplug.spotless" version "6.13.0"
+	id "com.diffplug.spotless" version "6.14.0"
 	id 'org.asciidoctor.jvm.convert' version '3.3.2' apply false
 	id 'org.asciidoctor.jvm.pdf' version '3.3.2' apply false
 	id 'com.google.osdetector' version '1.7.2'
