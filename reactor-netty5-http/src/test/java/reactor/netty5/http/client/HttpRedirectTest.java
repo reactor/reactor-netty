@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -796,5 +796,25 @@ class HttpRedirectTest extends BaseHttpTest {
 		assertThat(response).isNotNull();
 		assertThat(response.getT2()).isEqualTo(200);
 		assertThat(response.getT1()).isEqualTo("OK");
+	}
+
+	@Test
+	void testIssue2670() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("testIssue2670")))
+				        .bindNow();
+
+		createClient(disposableServer.port())
+		        .followRedirect((req, res) -> true)
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectNext("testIssue2670")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
 	}
 }

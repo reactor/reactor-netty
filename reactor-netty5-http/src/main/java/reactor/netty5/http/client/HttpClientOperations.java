@@ -714,11 +714,19 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	final boolean notRedirected(HttpResponse response) {
 		if (isFollowRedirect() && followRedirectPredicate.test(this, this)) {
+			try {
+				redirecting = new RedirectClientException(response.headers(), response.status());
+			}
+			catch (RuntimeException e) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(channel(), "The request cannot be redirected"), e);
+				}
+				return true;
+			}
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received redirect location: {}"),
 						httpMessageLogFactory().debug(HttpMessageArgProviderFactory.create(response)));
 			}
-			redirecting = new RedirectClientException(response.headers(), response.status());
 			return false;
 		}
 		return true;
