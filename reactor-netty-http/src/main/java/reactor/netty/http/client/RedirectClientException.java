@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,8 @@ final class RedirectClientException extends RuntimeException {
 	final HttpResponseStatus status;
 
 	RedirectClientException(HttpHeaders headers, HttpResponseStatus status) {
-		location = Objects.requireNonNull(headers.get(HttpHeaderNames.LOCATION));
-		this.status = Objects.requireNonNull(status);
+		location = Objects.requireNonNull(headers.get(HttpHeaderNames.LOCATION), "location");
+		this.status = Objects.requireNonNull(status, "status");
 	}
 
 	@Override
