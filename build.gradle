@@ -114,7 +114,7 @@ ext {
 	nettyContribMultipartVersion = '5.0.0.Alpha1'
 
 	// Testing
-	jacksonDatabindVersion = '2.14.1'
+	jacksonDatabindVersion = '2.14.2'
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.24.2'
 	awaitilityVersion = '4.2.0'
