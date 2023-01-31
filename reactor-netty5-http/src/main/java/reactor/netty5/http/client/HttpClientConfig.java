@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -578,7 +578,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2Flush, new FlushConsolidationHandler(1024, true))
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
-		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(new H2Codec(acceptGzip)))
+		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE))
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(observer));
 	}
 
@@ -753,12 +753,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			}
 			if (responseTimeoutHandler != null) {
 				pipeline.remove(NettyPipeline.ResponseTimeoutHandler);
-				http2MultiplexHandler = new Http2MultiplexHandler(new H2Codec(opsFactory, acceptGzip),
+				http2MultiplexHandler = new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE,
 						new H2Codec(owner, obs, opsFactory, acceptGzip, metricsRecorder,
 								responseTimeoutHandler.getReaderIdleTimeInMillis(), uriTagValue));
 			}
 			else {
-				http2MultiplexHandler = new Http2MultiplexHandler(new H2Codec(opsFactory, acceptGzip),
+				http2MultiplexHandler = new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE,
 						new H2Codec(owner, obs, opsFactory, acceptGzip, metricsRecorder, uriTagValue));
 			}
 			pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, http2FrameCodec)
@@ -781,22 +781,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final long responseTimeoutMillis;
 		final Function<String, String> uriTagValue;
 
-		H2Codec(boolean acceptGzip) {
-			// Handle inbound streams (server pushes)
-			// TODO this is not supported
-			this(null, null, null, acceptGzip, null, -1, null);
-		}
-
-		H2Codec(@Nullable ChannelOperations.OnSetup opsFactory, boolean acceptGzip) {
-			// Handle inbound streams (server pushes)
-			// TODO this is not supported
-			this(null, null, opsFactory, acceptGzip, null, -1, null);
-		}
-
 		H2Codec(
 				@Nullable Http2ConnectionProvider.DisposableAcquire owner,
 				@Nullable ConnectionObserver observer,
-				@Nullable ChannelOperations.OnSetup opsFactory,
+				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				@Nullable Function<String, String> uriTagValue) {
@@ -807,7 +795,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		H2Codec(
 				@Nullable Http2ConnectionProvider.DisposableAcquire owner,
 				@Nullable ConnectionObserver observer,
-				@Nullable ChannelOperations.OnSetup opsFactory,
+				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				long responseTimeoutMillis,
@@ -836,6 +824,19 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				// Handle server pushes (inbound streams)
 				// TODO this is not supported
 			}
+		}
+	}
+
+	/**
+	 * Handle inbound streams (server pushes).
+	 * This feature is not supported and disabled.
+	 */
+	static final class H2InboundStreamHandler extends ChannelHandlerAdapter {
+		static final ChannelHandler INSTANCE = new H2InboundStreamHandler();
+
+		@Override
+		public boolean isSharable() {
+			return true;
 		}
 	}
 
