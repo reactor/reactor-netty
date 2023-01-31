@@ -36,6 +36,13 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.client.HttpClientConfig$H2InboundStreamHandler"
+		},
+		"name": "reactor.netty.http.client.HttpClientConfig$H2InboundStreamHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.client.HttpClientConfig$H2OrHttp11Codec"
 		},
 		"name": "reactor.netty.http.client.HttpClientConfig$H2OrHttp11Codec",
