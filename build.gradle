@@ -88,7 +88,7 @@ ext {
 
 	contextPropagationVersion = '1.0.0' //optional baseline
 
-	braveVersion = '5.14.1'
+	braveVersion = '5.15.0'
 
 	jsr305Version = '3.0.2'
 
