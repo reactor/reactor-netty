@@ -68,7 +68,6 @@ import io.netty.handler.codec.http.multipart.HttpData;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
-import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
@@ -114,6 +113,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookies cookieHolder;
 	final HttpServerFormDecoderProvider formDecoderProvider;
+	final boolean isHttp2;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
 	final HttpRequest nettyRequest;
 	final HttpResponse nettyResponse;
@@ -138,6 +138,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieHolder = replaced.cookieHolder;
 		this.currentContext = replaced.currentContext;
 		this.formDecoderProvider = replaced.formDecoderProvider;
+		this.isHttp2 = replaced.isHttp2;
 		this.mapHandle = replaced.mapHandle;
 		this.nettyRequest = replaced.nettyRequest;
 		this.nettyResponse = replaced.nettyResponse;
@@ -156,11 +157,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			HttpMessageLogFactory httpMessageLogFactory,
+			boolean isHttp2,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean secured,
 			ZonedDateTime timestamp) {
 		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, formDecoderProvider,
-				httpMessageLogFactory, mapHandle, true, secured, timestamp);
+				httpMessageLogFactory, isHttp2, mapHandle, true, secured, timestamp);
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
@@ -170,6 +172,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			HttpMessageLogFactory httpMessageLogFactory,
+			boolean isHttp2,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			boolean resolvePath,
 			boolean secured,
@@ -183,6 +186,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers(), decoder);
 		this.currentContext = Context.empty();
 		this.formDecoderProvider = formDecoderProvider;
+		this.isHttp2 = isHttp2;
 		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -344,7 +348,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	final boolean isHttp2() {
-		return requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
+		return isHttp2;
 	}
 
 	@Override
@@ -777,6 +781,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return ((AtomicLong) ops.connection()).get();
 	}
 
+	static void sendDecodingFailures(
+			ChannelHandlerContext ctx,
+			ConnectionObserver listener,
+			boolean secure,
+			Throwable t,
+			Object msg,
+			HttpMessageLogFactory httpMessageLogFactory,
+			@Nullable ZonedDateTime timestamp) {
+		sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory, false, timestamp);
+	}
+
 	@SuppressWarnings("FutureReturnValueIgnored")
 	static void sendDecodingFailures(
 			ChannelHandlerContext ctx,
@@ -785,6 +800,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			Throwable t,
 			Object msg,
 			HttpMessageLogFactory httpMessageLogFactory,
+			boolean isHttp2,
 			@Nullable ZonedDateTime timestamp) {
 
 		Throwable cause = t.getCause() != null ? t.getCause() : t;
@@ -816,8 +832,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (ops == null) {
 			Connection conn = Connection.from(ctx.channel());
 			if (msg instanceof HttpRequest) {
-				ops = new FailedHttpServerRequest(conn, listener, (HttpRequest) msg, response, httpMessageLogFactory, secure,
-						timestamp == null ? ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM) : timestamp);
+				ops = new FailedHttpServerRequest(conn, listener, (HttpRequest) msg, response, httpMessageLogFactory, isHttp2,
+						secure, timestamp == null ? ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM) : timestamp);
 				ops.bind();
 			}
 			else {
@@ -986,10 +1002,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				HttpRequest nettyRequest,
 				HttpResponse nettyResponse,
 				HttpMessageLogFactory httpMessageLogFactory,
+				boolean isHttp2,
 				boolean secure,
 				ZonedDateTime timestamp) {
 			super(c, listener, nettyRequest, null, null, ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT,
-					DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, null, false, secure, timestamp);
+					DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, isHttp2, null, false, secure, timestamp);
 			this.customResponse = nettyResponse;
 			String tempPath = "";
 			try {

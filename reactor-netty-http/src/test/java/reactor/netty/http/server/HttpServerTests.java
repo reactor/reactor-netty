@@ -2018,6 +2018,7 @@ class HttpServerTests extends BaseHttpTest {
 				ServerCookieEncoder.STRICT,
 				DEFAULT_FORM_DECODER_SPEC,
 				ReactorNettyHttpMessageLogFactory.INSTANCE,
+				false,
 				null,
 				false,
 				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM));
@@ -2927,6 +2928,7 @@ class HttpServerTests extends BaseHttpTest {
 				ServerCookieEncoder.STRICT,
 				DEFAULT_FORM_DECODER_SPEC,
 				ReactorNettyHttpMessageLogFactory.INSTANCE,
+				false,
 				null,
 				false,
 				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM));
