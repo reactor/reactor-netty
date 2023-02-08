@@ -38,62 +38,61 @@ import reactor.netty5.tcp.TcpSslContextSpec;
 public class SecureChatServer {
 
 	private static final int PORT = Integer.parseInt(System.getProperty("port", "8992"));
-
 	private static final boolean WIRETAP = System.getProperty("wiretap") != null;
 
 	public static void main(String[] args) throws UnknownHostException, CertificateException {
 		ConcurrentHashMap<ChannelId, Connection> conns = new ConcurrentHashMap<>();
 		String hostname = InetAddress.getLocalHost().getHostName();
 
-		TcpServer server = TcpServer.create()
-				.port(PORT)
-				.wiretap(WIRETAP)
-				.doOnConnection(connection -> {
-					// cache the new connection. it'll be needed later
-					// when the server broadcasts messages from other clients.
-					ChannelId id = connection.channel().id();
-					conns.put(id, connection);
-					connection.addHandlerLast(new DelimiterBasedFrameDecoder(8192, Delimiters.lineDelimiter()));
-					connection.onDispose(() -> conns.remove(id));
-				}).handle((in, out) -> {
-					List<String> welcomeTexts = new ArrayList<>();
-					welcomeTexts.add("Welcome to " + hostname + " secure chat service!\n");
-					in.withConnection(connection -> {
-						SslHandler handler = connection.channel().pipeline().get(SslHandler.class);
-						SSLSession session = handler.engine().getSession();
-						String cipherSuite = session.getCipherSuite();
-						String msg = "Your session is protected by " + cipherSuite + " cipher suite.\n";
-						welcomeTexts.add(msg);
-					});
-
-					Flux<String> welcomeFlux = Flux.fromIterable(welcomeTexts);
-
-					Flux<String> flux = in.receive()
-							.asString()
-							.takeUntil("bye"::equalsIgnoreCase)
-							.handle((text, sink) -> {
-								in.withConnection(current -> {
-									for (Connection conn : conns.values()) {
-										if (conn == current) {
-											sink.next(text);
-										}
-										else {
-											String msg = "[" + conn.channel().remoteAddress() + "] " + text + '\n';
-
-											conn.outbound().sendString(Mono.just(msg)).then().subscribe();
-										}
-									}
-								});
-							})
-							.map(msg -> "[you] " + msg + '\n');
-
-
-					return out.sendString(Flux.concat(welcomeFlux, flux));
-
-				});
-
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
-		server = server.secure(spec -> spec.sslContext(TcpSslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
-		server.bindNow().onDispose().block();
+		TcpServer.create()
+		         .port(PORT)
+		         .wiretap(WIRETAP)
+		         .doOnConnection(connection -> {
+		             // Cache the new connection. It'll be needed later
+		             // when the server broadcasts messages from other clients.
+		             ChannelId id = connection.channel().id();
+		             conns.put(id, connection);
+		             connection.addHandlerLast(new DelimiterBasedFrameDecoder(8192, Delimiters.lineDelimiter()));
+		             connection.onDispose(() -> conns.remove(id));
+		         })
+		         .handle((in, out) -> {
+		             List<String> welcomeTexts = new ArrayList<>();
+		             welcomeTexts.add("Welcome to " + hostname + " secure chat service!\n");
+		             in.withConnection(connection -> {
+		                 SslHandler handler = connection.channel().pipeline().get(SslHandler.class);
+		                 SSLSession session = handler.engine().getSession();
+		                 String cipherSuite = session.getCipherSuite();
+		                 String msg = "Your session is protected by " + cipherSuite + " cipher suite.\n";
+		                 welcomeTexts.add(msg);
+		             });
+
+		             Flux<String> welcomeFlux = Flux.fromIterable(welcomeTexts);
+
+		             Flux<String> flux =
+		                     in.receive()
+		                       .asString()
+		                       .takeUntil("bye"::equalsIgnoreCase)
+		                       .handle((text, sink) ->
+		                           in.withConnection(current -> {
+		                               for (Connection conn : conns.values()) {
+		                                   if (conn == current) {
+		                                       sink.next(text);
+		                                   }
+		                                   else {
+		                                       String msg = "[" + conn.channel().remoteAddress() + "] " + text + '\n';
+
+		                                       conn.outbound().sendString(Mono.just(msg)).then().subscribe();
+		                                   }
+		                               }
+		                           }))
+		                       .map(msg -> "[you] " + msg + '\n');
+
+		             return out.sendString(Flux.concat(welcomeFlux, flux));
+		         })
+		         .secure(spec -> spec.sslContext(TcpSslContextSpec.forServer(ssc.certificate(), ssc.privateKey())))
+		         .bindNow()
+		         .onDispose()
+		         .block();
 	}
 }
