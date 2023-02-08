@@ -254,7 +254,7 @@ subprojects {
 		systemProperty("reactor.trace.cancel", "true")
 		systemProperty("reactor.trace.nocapacity", "true")
 		systemProperty("testGroups", project.properties.get("testGroups"))
-		systemProperty("io.netty5.leakDetectionLevel", "paranoid")
+		systemProperty("io.netty5.leakDetection.level", "paranoid")
 		systemProperty("io.netty5.leakDetection.targetRecords", "32")
 		systemProperty("io.netty5.buffer.lifecycleTracingEnabled", "true")
 		systemProperty("io.netty5.buffer.leakDetectionEnabled", "true")
