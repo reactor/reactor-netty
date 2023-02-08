@@ -198,6 +198,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							                    forwardedHeaderHandler),
 							formDecoderProvider,
 							httpMessageLogFactory,
+							false,
 							mapHandle,
 							secure,
 							timestamp);
@@ -413,6 +414,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							                    forwardedHeaderHandler),
 							formDecoderProvider,
 							httpMessageLogFactory,
+							false,
 							mapHandle,
 							secure,
 							holder.timestamp);

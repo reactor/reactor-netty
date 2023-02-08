@@ -1876,6 +1876,7 @@ class HttpServerTests extends BaseHttpTest {
 				null,
 				DEFAULT_FORM_DECODER_SPEC,
 				ReactorNettyHttpMessageLogFactory.INSTANCE,
+				false,
 				null,
 				false,
 				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM));
@@ -2780,6 +2781,7 @@ class HttpServerTests extends BaseHttpTest {
 				null,
 				DEFAULT_FORM_DECODER_SPEC,
 				ReactorNettyHttpMessageLogFactory.INSTANCE,
+				false,
 				null,
 				false,
 				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM));

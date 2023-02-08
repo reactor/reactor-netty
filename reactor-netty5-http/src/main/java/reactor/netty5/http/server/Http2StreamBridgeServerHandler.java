@@ -120,6 +120,7 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 						                    forwardedHeaderHandler),
 						formDecoderProvider,
 						httpMessageLogFactory,
+						true,
 						mapHandle,
 						secured,
 						timestamp);
@@ -127,7 +128,7 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 			catch (RuntimeException e) {
 				pendingResponse = false;
 				request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory, timestamp);
+				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory, true, timestamp);
 				return;
 			}
 			ops.bind();
