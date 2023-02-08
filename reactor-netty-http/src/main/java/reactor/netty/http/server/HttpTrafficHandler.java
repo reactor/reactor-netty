@@ -212,6 +212,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							cookieEncoder,
 							formDecoderProvider,
 							httpMessageLogFactory,
+							false,
 							mapHandle,
 							secure,
 							timestamp);
@@ -414,6 +415,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							cookieEncoder,
 							formDecoderProvider,
 							httpMessageLogFactory,
+							false,
 							mapHandle,
 							secure,
 							holder.timestamp);
