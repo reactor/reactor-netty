@@ -86,7 +86,7 @@ ext {
 	//Metrics
 	micrometerVersion = '1.5.0' //optional baseline: technically could work with 1.2.x, should work with any 1.3.x
 
-	contextPropagationVersion = '1.0.0' //optional baseline
+	contextPropagationVersion = '1.0.2' //optional baseline
 
 	braveVersion = '5.15.0'
 
