@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -163,7 +163,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 		if (channelOps instanceof HttpClientOperations) {
 			HttpClientOperations ops = (HttpClientOperations) channelOps;
-			path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
+			path = uriTagValue == null ? ops.fullPath() : uriTagValue.apply(ops.fullPath());
 			contextView = ops.currentContextView();
 		}
 

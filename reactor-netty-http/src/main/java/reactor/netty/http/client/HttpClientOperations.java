@@ -106,8 +106,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final Sinks.One<HttpHeaders> trailerHeaders;
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
-	String                      resourceUrl;
-	String                      path;
+	UriEndpoint                 uriEndpoint;
 	Duration                    responseTimeout;
 
 	volatile ResponseState responseState;
@@ -140,8 +139,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.requestHeaders = replaced.requestHeaders;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
-		this.resourceUrl = replaced.resourceUrl;
-		this.path = replaced.path;
+		this.uriEndpoint = replaced.uriEndpoint;
 		this.responseTimeout = replaced.responseTimeout;
 		this.is100Continue = replaced.is100Continue;
 		this.trailerHeaders = replaced.trailerHeaders;
@@ -504,12 +502,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public final String fullPath() {
-		return this.path;
+		return uriEndpoint == null ? null : uriEndpoint.getPath();
 	}
 
 	@Override
 	public String resourceUrl() {
-		return resourceUrl;
+		return uriEndpoint == null ? null : uriEndpoint.toExternalForm();
 	}
 
 	@Override

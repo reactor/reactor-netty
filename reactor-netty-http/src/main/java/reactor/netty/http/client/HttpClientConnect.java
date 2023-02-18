@@ -17,8 +17,6 @@ package reactor.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,7 +36,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslClosedEngineException;
 import io.netty.resolver.AddressResolverGroup;
@@ -55,7 +52,6 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
 import reactor.netty.channel.AbortedException;
-import reactor.netty.http.HttpOperations;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.tcp.TcpClientConfig;
 import reactor.netty.transport.AddressUtils;
@@ -455,7 +451,6 @@ class HttpClientConnect extends HttpClient {
 		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
 		                              handler;
 		final boolean                 compress;
-		final UriEndpointFactory      uriEndpointFactory;
 		final WebsocketClientSpec     websocketClientSpec;
 		final BiPredicate<HttpClientRequest, HttpClientResponse>
 		                              followRedirectPredicate;
@@ -468,7 +463,6 @@ class HttpClientConnect extends HttpClient {
 		final Duration                responseTimeout;
 
 		volatile UriEndpoint        toURI;
-		volatile String             resourceUrl;
 		volatile UriEndpoint        fromURI;
 		volatile Supplier<String>[] redirectedFrom;
 		volatile boolean            shouldRetry;
@@ -484,34 +478,10 @@ class HttpClientConnect extends HttpClient {
 			this.proxyProvider = configuration.proxyProvider();
 			this.responseTimeout = configuration.responseTimeout;
 			this.defaultHeaders = configuration.headers;
-
-			String baseUrl = configuration.baseUrl;
-
-			this.uriEndpointFactory =
-					new UriEndpointFactory(configuration.remoteAddress(), configuration.isSecure(), URI_ADDRESS_MAPPER);
-
 			this.websocketClientSpec = configuration.websocketClientSpec;
 			this.shouldRetry = !configuration.retryDisabled;
 			this.handler = configuration.body;
-
-			if (configuration.uri == null) {
-				String uri = configuration.uriStr;
-
-				uri = uri == null ? "/" : uri;
-
-				if (baseUrl != null && uri.startsWith("/")) {
-					if (baseUrl.endsWith("/")) {
-						baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-					}
-					uri = baseUrl + uri;
-				}
-
-				this.toURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketClientSpec != null);
-			}
-			else {
-				this.toURI = uriEndpointFactory.createUriEndpoint(configuration.uri, configuration.websocketClientSpec != null);
-			}
-			this.resourceUrl = toURI.toExternalForm();
+			this.toURI = UriEndpoint.create(configuration.uri, configuration.baseUrl, configuration.uriStr, configuration.remoteAddress(), configuration.isSecure(), configuration.websocketClientSpec != null);
 		}
 
 		@Override
@@ -526,17 +496,15 @@ class HttpClientConnect extends HttpClient {
 
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
-				ch.resourceUrl = this.resourceUrl;
+				UriEndpoint uriEndpoint = toURI;
+				ch.uriEndpoint = uriEndpoint;
 				ch.responseTimeout = responseTimeout;
 
-				UriEndpoint uri = toURI;
 				HttpHeaders headers = ch.getNettyRequest()
-				                        .setUri(uri.getPathAndQuery())
+				                        .setUri(uriEndpoint.getRawUri())
 				                        .setMethod(method)
 				                        .setProtocolVersion(HttpVersion.HTTP_1_1)
 				                        .headers();
-
-				ch.path = HttpOperations.resolvePath(ch.uri());
 
 				if (!defaultHeaders.isEmpty()) {
 					headers.set(defaultHeaders);
@@ -546,9 +514,8 @@ class HttpClientConnect extends HttpClient {
 					headers.set(HttpHeaderNames.USER_AGENT, USER_AGENT);
 				}
 
-				SocketAddress remoteAddress = uri.getRemoteAddress();
 				if (!headers.contains(HttpHeaderNames.HOST)) {
-					headers.set(HttpHeaderNames.HOST, resolveHostHeaderValue(remoteAddress));
+					headers.set(HttpHeaderNames.HOST, uriEndpoint.getHostHeader());
 				}
 
 				if (!headers.contains(HttpHeaderNames.ACCEPT)) {
@@ -608,46 +575,11 @@ class HttpClientConnect extends HttpClient {
 			}
 		}
 
-		static String resolveHostHeaderValue(@Nullable SocketAddress remoteAddress) {
-			if (remoteAddress instanceof InetSocketAddress) {
-				InetSocketAddress address = (InetSocketAddress) remoteAddress;
-				String host = HttpUtil.formatHostnameForHttp(address);
-				int port = address.getPort();
-				if (port != 80 && port != 443) {
-					host = host + ':' + port;
-				}
-				return host;
-			}
-			else {
-				return "localhost";
-			}
-		}
-
 		void redirect(String to) {
 			Supplier<String>[] redirectedFrom = this.redirectedFrom;
-			UriEndpoint toURITemp;
-			UriEndpoint from = toURI;
-			SocketAddress address = from.getRemoteAddress();
-			if (address instanceof InetSocketAddress) {
-				try {
-					URI redirectUri = new URI(to);
-					if (!redirectUri.isAbsolute()) {
-						URI requestUri = new URI(resourceUrl);
-						redirectUri = requestUri.resolve(redirectUri);
-					}
-					toURITemp = uriEndpointFactory.createUriEndpoint(redirectUri, from.isWs());
-				}
-				catch (URISyntaxException e) {
-					throw new IllegalArgumentException("Cannot resolve location header", e);
-				}
-			}
-			else {
-				toURITemp = uriEndpointFactory.createUriEndpoint(from, to, () -> address);
-			}
-			fromURI = from;
-			toURI = toURITemp;
-			resourceUrl = toURITemp.toExternalForm();
-			this.redirectedFrom = addToRedirectedFromArray(redirectedFrom, from);
+			fromURI = toURI;
+			toURI = toURI.redirect(to);
+			this.redirectedFrom = addToRedirectedFromArray(redirectedFrom, fromURI);
 		}
 
 		@SuppressWarnings({"unchecked", "rawtypes"})

@@ -89,6 +89,7 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
 import org.junit.jupiter.api.AfterAll;
@@ -926,7 +927,7 @@ class HttpClientTest extends BaseHttpTest {
 				HttpClient.create(ConnectionProvider.newConnection())
 				          .secure()
 				          .websocket()
-				          .uri("wss://" + disposableServer.host() + ":" + disposableServer.port())
+				          .uri("wss://" + NetUtil.toSocketAddressString(disposableServer.host(), disposableServer.port()))
 				          .handle((in, out) -> Mono.empty()))
 				    .expectErrorMatches(t -> t.getCause() instanceof CertificateException)
 				.verify(Duration.ofSeconds(30));
@@ -2533,7 +2534,7 @@ class HttpClientTest extends BaseHttpTest {
 
 		AtomicReference<String> uriFailedRequest = new AtomicReference<>();
 		HttpClient client = createHttpClientForContextWithPort()
-				          .doOnRequestError((req, t) -> uriFailedRequest.set(req.uri()));
+				          .doOnRequestError((req, t) -> uriFailedRequest.set(req.resourceUrl()));
 
 		String uri = "http://localhost:" + disposableServer.port() + "/";
 		if (useUri) {
