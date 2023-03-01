@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,10 +127,34 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	@Test
+	void xForwardedHostPortIncluded() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Host",
+						"[1abc:2abc:3abc::5ABC:6abc]:9090, 192.168.0.1"),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(9090);
+				});
+	}
+
+	@Test
 	void xForwardedHostAndPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
+					clientRequestHeaders.add("X-Forwarded-Port", "8080");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+				});
+	}
+
+	@Test
+	void xForwardedHostPortIncludedAndXForwardedPort() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1:9090");
 					clientRequestHeaders.add("X-Forwarded-Port", "8080");
 				},
 				serverRequest -> {

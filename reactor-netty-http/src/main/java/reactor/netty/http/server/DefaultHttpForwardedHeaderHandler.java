@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,8 +89,10 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		}
 		String hostHeader = request.headers().get(X_FORWARDED_HOST_HEADER);
 		if (hostHeader != null) {
-			String portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
 			int port = connectionInfo.getHostAddress().getPort();
+			connectionInfo = connectionInfo.withHostAddress(
+					AddressUtils.parseAddress(hostHeader.split(",", 2)[0].trim(), port, DEFAULT_FORWARDED_HEADER_VALIDATION));
+			String portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
 			if (portHeader != null && !portHeader.isEmpty()) {
 				String portStr = portHeader.split(",", 2)[0].trim();
 				if (portStr.chars().allMatch(Character::isDigit)) {
@@ -99,9 +101,9 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 				else if (DEFAULT_FORWARDED_HEADER_VALIDATION) {
 					throw new IllegalArgumentException("Failed to parse a port from " + portHeader);
 				}
+				connectionInfo = connectionInfo.withHostAddress(
+						AddressUtils.createUnresolved(connectionInfo.getHostAddress().getHostString(), port));
 			}
-			connectionInfo = connectionInfo.withHostAddress(
-					AddressUtils.createUnresolved(hostHeader.split(",", 2)[0].trim(), port));
 		}
 		String protoHeader = request.headers().get(X_FORWARDED_PROTO_HEADER);
 		if (protoHeader != null) {
