@@ -28,6 +28,7 @@ import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.ssl.SslContext;
@@ -50,6 +51,9 @@ import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HOST_NAME;
+import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTPS_PORT;
+import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
 
 /**
  * Tests for {@link ConnectionInfo}
@@ -81,6 +85,35 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString())
 					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("[::1]");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(this.disposableServer.port());
+				});
+	}
+
+	@Test
+	void hostHeaderNoForwardedHeaders() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add(HttpHeaderNames.HOST, DEFAULT_HOST_NAME),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo(DEFAULT_HOST_NAME);
+					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+				});
+	}
+
+	@Test
+	void hostHeaderWithPortNoForwardedHeaders() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add(HttpHeaderNames.HOST, DEFAULT_HOST_NAME + ":" + this.disposableServer.port()),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo(DEFAULT_HOST_NAME);
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
 
@@ -90,7 +123,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=192.168.0.1"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
+					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 				});
 	}
 
@@ -100,7 +136,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=[1abc:2abc:3abc::5ABC:6abc]"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
+					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 				});
 	}
 
@@ -122,7 +161,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 						"[1abc:2abc:3abc::5ABC:6abc], 192.168.0.1"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
+					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 				});
 	}
 
@@ -134,6 +176,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(9090);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(9090);
 				});
 	}
 
@@ -147,6 +191,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 				});
 	}
 
@@ -160,6 +206,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 				});
 	}
 
@@ -177,6 +225,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
 				});
 	}
@@ -190,7 +240,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 				},
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 				},
 				httpClient -> httpClient,
 				httpServer -> httpServer.port(8080),
@@ -207,6 +260,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 				},
 				null,
 				httpClient -> httpClient,
@@ -227,6 +282,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 				});
 	}
 
@@ -243,6 +300,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
 				});
 	}
@@ -260,6 +319,8 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
 				});
 	}
@@ -269,8 +330,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 		testClientRequest(
 				clientRequestHeaders ->
 					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com"),
-				serverRequest ->
-					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com"),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com");
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("b.example.com");
+				},
 				(connectionInfo, request) -> {
 					String hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
 					if (hostHeader != null) {
@@ -463,7 +526,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 						"host=a.example.com,host=b.example.com, host=c.example.com"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
+					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 				});
 	}
 
@@ -473,7 +539,9 @@ class ConnectionInfoTests extends BaseHttpTest {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=a.example.com:443;proto=https"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(443);
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(DEFAULT_HTTPS_PORT);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(DEFAULT_HTTPS_PORT);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
 				});
 	}
@@ -485,7 +553,9 @@ class ConnectionInfoTests extends BaseHttpTest {
 						"host=\"a.example.com:443\";proto=\"https\""),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(443);
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(DEFAULT_HTTPS_PORT);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(DEFAULT_HTTPS_PORT);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
 				});
 	}
@@ -499,7 +569,9 @@ class ConnectionInfoTests extends BaseHttpTest {
 				},
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(443);
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(DEFAULT_HTTPS_PORT);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(DEFAULT_HTTPS_PORT);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
 				});
 	}

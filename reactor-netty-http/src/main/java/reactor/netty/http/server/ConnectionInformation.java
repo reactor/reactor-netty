@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,4 +74,24 @@ public interface ConnectionInformation {
 	 * @return the protocol scheme
 	 */
 	String connectionScheme();
+
+	/**
+	 * Returns the host name derived from the {@code Host}/{@code X-Forwarded-Host}/{@code Forwarded} header
+	 * associated with this request.
+	 *
+	 * @return the host name derived from the {@code Host}/{@code X-Forwarded-Host}/{@code Forwarded} header
+	 * associated with this request.
+	 * @since 1.0.29
+	 */
+	String hostName();
+
+	/**
+	 * Returns the host port derived from the {@code Host}/{@code X-Forwarded-*}/{@code Forwarded} header
+	 * associated with this request.
+	 *
+	 * @return the host port derived from the {@code Host}/{@code X-Forwarded-*}/{@code Forwarded} header
+	 * associated with this request.
+	 * @since 1.0.29
+	 */
+	int hostPort();
 }
