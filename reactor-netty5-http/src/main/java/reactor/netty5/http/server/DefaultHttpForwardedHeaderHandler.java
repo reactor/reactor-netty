@@ -22,6 +22,9 @@ import java.util.regex.Pattern;
 import io.netty5.handler.codec.http.HttpRequest;
 import reactor.netty5.transport.AddressUtils;
 
+import static reactor.netty5.http.server.ConnectionInfo.DEFAULT_HTTPS_PORT;
+import static reactor.netty5.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
+
 /**
  * @author Andrey Shlykov
  * @since 0.9.12
@@ -51,14 +54,14 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 
 	private ConnectionInfo parseForwardedInfo(ConnectionInfo connectionInfo, String forwardedHeader) {
 		String forwarded = forwardedHeader.split(",", 2)[0];
-		Matcher hostMatcher = FORWARDED_HOST_PATTERN.matcher(forwarded);
-		if (hostMatcher.find()) {
-			connectionInfo = connectionInfo.withHostAddress(
-					AddressUtils.parseAddress(hostMatcher.group(1), connectionInfo.getHostAddress().getPort(), true));
-		}
 		Matcher protoMatcher = FORWARDED_PROTO_PATTERN.matcher(forwarded);
 		if (protoMatcher.find()) {
 			connectionInfo = connectionInfo.withScheme(protoMatcher.group(1).trim());
+		}
+		int port = connectionInfo.getScheme().equalsIgnoreCase("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+		Matcher hostMatcher = FORWARDED_HOST_PATTERN.matcher(forwarded);
+		if (hostMatcher.find()) {
+			connectionInfo = connectionInfo.withHostAddress(AddressUtils.parseAddress(hostMatcher.group(1), port, true));
 		}
 		Matcher forMatcher = FORWARDED_FOR_PATTERN.matcher(forwarded);
 		if (forMatcher.find()) {
@@ -74,9 +77,13 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 			connectionInfo = connectionInfo.withRemoteAddress(
 					AddressUtils.parseAddress(ipHeader.toString().split(",", 2)[0], connectionInfo.getRemoteAddress().getPort()));
 		}
+		CharSequence protoHeader = request.headers().get(X_FORWARDED_PROTO_HEADER);
+		if (protoHeader != null) {
+			connectionInfo = connectionInfo.withScheme(protoHeader.toString().split(",", 2)[0].trim());
+		}
 		CharSequence hostHeader = request.headers().get(X_FORWARDED_HOST_HEADER);
 		if (hostHeader != null) {
-			int port = connectionInfo.getHostAddress().getPort();
+			int port = connectionInfo.getScheme().equalsIgnoreCase("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 			connectionInfo = connectionInfo.withHostAddress(
 					AddressUtils.parseAddress(hostHeader.toString().split(",", 2)[0].trim(), port, true));
 			CharSequence portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
@@ -91,10 +98,6 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 				connectionInfo = connectionInfo.withHostAddress(
 						AddressUtils.createUnresolved(connectionInfo.getHostAddress().getHostString(), port));
 			}
-		}
-		CharSequence protoHeader = request.headers().get(X_FORWARDED_PROTO_HEADER);
-		if (protoHeader != null) {
-			connectionInfo = connectionInfo.withScheme(protoHeader.toString().split(",", 2)[0].trim());
 		}
 		return connectionInfo;
 	}

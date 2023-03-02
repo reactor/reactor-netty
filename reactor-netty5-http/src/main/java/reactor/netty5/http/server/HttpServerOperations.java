@@ -96,6 +96,9 @@ import reactor.util.context.Context;
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpUtil.isTransferEncodingChunked;
 import static reactor.netty5.ReactorNetty.format;
+import static reactor.netty5.http.server.ConnectionInfo.DEFAULT_HOST_NAME;
+import static reactor.netty5.http.server.ConnectionInfo.DEFAULT_HTTPS_PORT;
+import static reactor.netty5.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
 import static reactor.netty5.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 import static reactor.netty5.http.server.HttpServerState.REQUEST_DECODING_FAILED;
 
@@ -465,6 +468,18 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public String connectionScheme() {
 		return scheme;
+	}
+
+	@Override
+	public String hostName() {
+		return connectionInfo != null ? connectionInfo.getHostName() : DEFAULT_HOST_NAME;
+	}
+
+	@Override
+	public int hostPort() {
+		return connectionInfo != null ?
+				connectionInfo.getHostPort() :
+				scheme().equalsIgnoreCase("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 	}
 
 	@Override
