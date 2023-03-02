@@ -479,7 +479,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public int hostPort() {
 		return connectionInfo != null ?
 				connectionInfo.getHostPort() :
-				scheme().equalsIgnoreCase("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+				scheme().equalsIgnoreCase("https") || scheme().equalsIgnoreCase("wss") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 	}
 
 	@Override

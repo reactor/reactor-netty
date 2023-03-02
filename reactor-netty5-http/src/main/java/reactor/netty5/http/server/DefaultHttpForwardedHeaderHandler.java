@@ -58,9 +58,11 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		if (protoMatcher.find()) {
 			connectionInfo = connectionInfo.withScheme(protoMatcher.group(1).trim());
 		}
-		int port = connectionInfo.getScheme().equalsIgnoreCase("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 		Matcher hostMatcher = FORWARDED_HOST_PATTERN.matcher(forwarded);
 		if (hostMatcher.find()) {
+			String scheme = connectionInfo.getScheme();
+			int port = scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
+					DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 			connectionInfo = connectionInfo.withHostAddress(AddressUtils.parseAddress(hostMatcher.group(1), port, true));
 		}
 		Matcher forMatcher = FORWARDED_FOR_PATTERN.matcher(forwarded);
@@ -83,7 +85,9 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		}
 		CharSequence hostHeader = request.headers().get(X_FORWARDED_HOST_HEADER);
 		if (hostHeader != null) {
-			int port = connectionInfo.getScheme().equalsIgnoreCase("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+			String scheme = connectionInfo.getScheme();
+			int port = scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
+					DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 			connectionInfo = connectionInfo.withHostAddress(
 					AddressUtils.parseAddress(hostHeader.toString().split(",", 2)[0].trim(), port, true));
 			CharSequence portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
