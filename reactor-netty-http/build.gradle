@@ -241,6 +241,8 @@ task japicmp(type: JapicmpTask) {
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 	methodExcludes = [
+			'reactor.netty.http.server.ConnectionInformation#hostName()',
+			'reactor.netty.http.server.ConnectionInformation#hostPort()'
 	]
 }
 
