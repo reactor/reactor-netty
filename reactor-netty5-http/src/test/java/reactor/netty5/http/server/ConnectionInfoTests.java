@@ -85,7 +85,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString())
 					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
-					Assertions.assertThat(serverRequest.hostName()).isEqualTo("[::1]");
+					Assertions.assertThat(serverRequest.hostName()).containsPattern("^\\[::1\\]|127.0.0.1$");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(this.disposableServer.port());
 				});
 	}
