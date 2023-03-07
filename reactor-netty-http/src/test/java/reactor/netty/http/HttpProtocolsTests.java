@@ -381,8 +381,14 @@ class HttpProtocolsTests extends BaseHttpTest {
 			assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 
 			assertThat(logTracker.actualMessages).hasSize(2);
-			assertThat(logTracker.actualMessages.get(0).getFormattedMessage()).contains(okMessage);
-			assertThat(logTracker.actualMessages.get(1).getFormattedMessage()).contains(notFoundMessage);
+			List<String> actual = new ArrayList<>(2);
+			logTracker.actualMessages.forEach(e -> {
+				String msg = e.getFormattedMessage();
+				int startInd = msg.indexOf('"') + 1;
+				int endInd = msg.lastIndexOf('"') + 5;
+				actual.add(e.getFormattedMessage().substring(startInd, endInd));
+			});
+			assertThat(actual).hasSameElementsAs(Arrays.asList(okMessage, notFoundMessage));
 		}
 	}
 
