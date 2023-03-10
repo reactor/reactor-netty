@@ -91,6 +91,20 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	@Test
+	void noHeadersEmptyHostHeader() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.set(HttpHeaderNames.HOST, ""),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString())
+					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
+					Assertions.assertThat(serverRequest.hostName()).isEmpty();
+					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+				});
+	}
+
+	@Test
 	void hostHeaderNoForwardedHeaders() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add(HttpHeaderNames.HOST, DEFAULT_HOST_NAME),
@@ -131,6 +145,20 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	@Test
+	void forwardedHostEmptyHostHeader() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=192.168.0.1")
+						.set(HttpHeaderNames.HOST, ""),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
+					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+				});
+	}
+
+	@Test
 	void forwardedHostIpV6() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=[1abc:2abc:3abc::5ABC:6abc]"),
@@ -159,6 +187,20 @@ class ConnectionInfoTests extends BaseHttpTest {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Host",
 						"[1abc:2abc:3abc::5ABC:6abc], 192.168.0.1"),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+				});
+	}
+
+	@Test
+	void xForwardedHostEmptyHostHeader() {
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Host",
+						"[1abc:2abc:3abc::5ABC:6abc], 192.168.0.1").set(HttpHeaderNames.HOST, ""),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
