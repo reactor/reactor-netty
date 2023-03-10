@@ -65,10 +65,12 @@ public final class ConnectionInfo {
 		String header = request.headers().get(HttpHeaderNames.HOST);
 		if (header != null) {
 			hostName = header;
-			int portIndex = header.charAt(0) == '[' ? header.indexOf(':', header.indexOf(']')) : header.indexOf(':');
-			if (portIndex != -1) {
-				hostName = header.substring(0, portIndex);
-				hostPort = Integer.parseInt(header.substring(portIndex + 1));
+			if (!header.isEmpty()) {
+				int portIndex = header.charAt(0) == '[' ? header.indexOf(':', header.indexOf(']')) : header.indexOf(':');
+				if (portIndex != -1) {
+					hostName = header.substring(0, portIndex);
+					hostPort = Integer.parseInt(header.substring(portIndex + 1));
+				}
 			}
 		}
 
