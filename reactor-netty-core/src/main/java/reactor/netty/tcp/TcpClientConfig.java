@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,9 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 
 	@Override
 	public int channelHash() {
-		return Objects.hash(super.channelHash(), sslProvider);
+		int result = super.channelHash();
+		result = 31 * result + Objects.hashCode(sslProvider);
+		return result;
 	}
 
 	@Override

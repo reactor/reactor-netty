@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,7 +115,12 @@ final class ReactorNettyLoggingHandler extends LoggingHandler {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(byteBufFormat, charset, level(), name);
+		int result = 1;
+		result = 31 * result + Objects.hashCode(byteBufFormat);
+		result = 31 * result + Objects.hashCode(charset);
+		result = 31 * result + Objects.hashCode(level());
+		result = 31 * result + Objects.hashCode(name);
+		return result;
 	}
 
 	@Override

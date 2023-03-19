@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@ package reactor.netty.http.client;
 
 import reactor.netty.http.HttpDecoderSpec;
 import reactor.netty.http.server.HttpRequestDecoderSpec;
-
-import java.util.Objects;
 
 /**
  * A configuration builder to fine tune the {@link io.netty.handler.codec.http.HttpClientCodec}
@@ -105,7 +103,10 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(super.hashCode(), failOnMissingResponse, parseHttpAfterConnectRequest);
+		int result = super.hashCode();
+		result = 31 * result + Boolean.hashCode(failOnMissingResponse);
+		result = 31 * result + Boolean.hashCode(parseHttpAfterConnectRequest);
+		return result;
 	}
 
 	/**

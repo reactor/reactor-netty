@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package reactor.netty.http;
 
-import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -244,7 +243,14 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize,
-				allowDuplicateContentLengths, h2cMaxContentLength);
+		int result = 1;
+		result = 31 * result + maxInitialLineLength;
+		result = 31 * result + maxHeaderSize;
+		result = 31 * result + maxChunkSize;
+		result = 31 * result + Boolean.hashCode(validateHeaders);
+		result = 31 * result + initialBufferSize;
+		result = 31 * result + Boolean.hashCode(allowDuplicateContentLengths);
+		result = 31 * result + h2cMaxContentLength;
+		return result;
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,10 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	@Override
 	public int channelHash() {
-		return Objects.hash(super.channelHash(), proxyProvider, resolver);
+		int result = super.channelHash();
+		result = 31 * result + Objects.hashCode(proxyProvider);
+		result = 31 * result + Objects.hashCode(resolver);
+		return result;
 	}
 
 	/**
