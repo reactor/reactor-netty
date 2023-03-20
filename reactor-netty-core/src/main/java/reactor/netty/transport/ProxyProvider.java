@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -221,8 +221,15 @@ public final class ProxyProvider {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(
-				username, getPasswordValue(), getAddress().get(), getNonProxyHostsValue(), httpHeaders.get(), getType(), connectTimeoutMillis);
+		int result = 1;
+		result = 31 * result + Objects.hashCode(username);
+		result = 31 * result + Objects.hashCode(getPasswordValue());
+		result = 31 * result + Objects.hashCode(getAddress().get());
+		result = 31 * result + Boolean.hashCode(getNonProxyHostsValue());
+		result = 31 * result + Objects.hashCode(httpHeaders.get());
+		result = 31 * result + Objects.hashCode(getType());
+		result = 31 * result + Long.hashCode(connectTimeoutMillis);
+		return result;
 	}
 
 	private boolean getNonProxyHostsValue() {
