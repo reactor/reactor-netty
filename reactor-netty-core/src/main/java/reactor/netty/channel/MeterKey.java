@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +57,11 @@ public final class MeterKey {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(uri, remoteAddress, method, status);
+		int result = 1;
+		result = 31 * result + Objects.hashCode(uri);
+		result = 31 * result + Objects.hashCode(remoteAddress);
+		result = 31 * result + Objects.hashCode(method);
+		result = 31 * result + Objects.hashCode(status);
+		return result;
 	}
 }

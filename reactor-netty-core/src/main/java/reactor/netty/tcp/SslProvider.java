@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -613,7 +613,7 @@ public final class SslProvider {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(builderHashCode);
+		return builderHashCode;
 	}
 
 	static void addSslReadHandler(ChannelPipeline pipeline, boolean sslDebug) {
@@ -803,9 +803,18 @@ public final class SslProvider {
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(sslCtxBuilder, type, sslContext, handlerConfigurator,
-					handshakeTimeoutMillis, closeNotifyFlushTimeoutMillis, closeNotifyReadTimeoutMillis,
-					serverNames, confPerDomainName, protocolSslContextSpec);
+			int result = 1;
+			result = 31 * result + Objects.hashCode(sslCtxBuilder);
+			result = 31 * result + Objects.hashCode(type);
+			result = 31 * result + Objects.hashCode(sslContext);
+			result = 31 * result + Objects.hashCode(handlerConfigurator);
+			result = 31 * result + Long.hashCode(handshakeTimeoutMillis);
+			result = 31 * result + Long.hashCode(closeNotifyFlushTimeoutMillis);
+			result = 31 * result + Long.hashCode(closeNotifyReadTimeoutMillis);
+			result = 31 * result + Objects.hashCode(serverNames);
+			result = 31 * result + Objects.hashCode(confPerDomainName);
+			result = 31 * result + Objects.hashCode(protocolSslContextSpec);
+			return result;
 		}
 
 		void addInternal(String domainName, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {

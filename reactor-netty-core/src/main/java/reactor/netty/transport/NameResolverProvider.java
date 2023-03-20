@@ -474,10 +474,26 @@ public final class NameResolverProvider {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(cacheMaxTimeToLive, cacheMinTimeToLive, cacheNegativeTimeToLive, completeOncePreferredResolved,
-				disableRecursionDesired, disableOptionalRecord, loggingFactory, loopResources, maxPayloadSize,
-				maxQueriesPerResolve, ndots, preferNative, queryTimeout, resolvedAddressTypes, resolveCache,
-				bindAddressSupplier, roundRobinSelection, searchDomains);
+		int result = 1;
+		result = 31 * result + Objects.hashCode(cacheMaxTimeToLive);
+		result = 31 * result + Objects.hashCode(cacheMinTimeToLive);
+		result = 31 * result + Objects.hashCode(cacheNegativeTimeToLive);
+		result = 31 * result + Boolean.hashCode(completeOncePreferredResolved);
+		result = 31 * result + Boolean.hashCode(disableRecursionDesired);
+		result = 31 * result + Boolean.hashCode(disableOptionalRecord);
+		result = 31 * result + Objects.hashCode(loggingFactory);
+		result = 31 * result + Objects.hashCode(loopResources);
+		result = 31 * result + maxPayloadSize;
+		result = 31 * result + maxQueriesPerResolve;
+		result = 31 * result + ndots;
+		result = 31 * result + Boolean.hashCode(preferNative);
+		result = 31 * result + Objects.hashCode(queryTimeout);
+		result = 31 * result + Objects.hashCode(resolvedAddressTypes);
+		result = 31 * result + Objects.hashCode(resolveCache);
+		result = 31 * result + Objects.hashCode(bindAddressSupplier);
+		result = 31 * result + Boolean.hashCode(roundRobinSelection);
+		result = 31 * result + Objects.hashCode(searchDomains);
+		return result;
 	}
 
 	/**

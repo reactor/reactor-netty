@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -643,7 +643,11 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(fqdn, holder, pipelineKey);
+			int result = 1;
+			result = 31 * result + Objects.hashCode(fqdn);
+			result = 31 * result + Objects.hashCode(holder);
+			result = 31 * result + pipelineKey;
+			return result;
 		}
 	}
 }

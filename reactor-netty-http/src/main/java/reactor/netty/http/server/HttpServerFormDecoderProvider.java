@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -211,7 +211,14 @@ public final class HttpServerFormDecoderProvider {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(baseDirectory, charset, maxInMemorySize, maxSize, scheduler, streaming);
+		int result = 1;
+		result = 31 * result + Objects.hashCode(baseDirectory);
+		result = 31 * result + Objects.hashCode(charset);
+		result = 31 * result + Long.hashCode(maxInMemorySize);
+		result = 31 * result + Long.hashCode(maxSize);
+		result = 31 * result + Objects.hashCode(scheduler);
+		result = 31 * result + Boolean.hashCode(streaming);
+		return result;
 	}
 
 	Mono<Path> createDefaultTempDirectory() {

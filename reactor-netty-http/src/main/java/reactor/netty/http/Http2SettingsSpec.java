@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -176,7 +176,14 @@ public final class Http2SettingsSpec {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(headerTableSize, initialWindowSize, maxConcurrentStreams, maxFrameSize, maxHeaderListSize, pushEnabled);
+		int result = 1;
+		result = 31 * result + Long.hashCode(headerTableSize);
+		result = 31 * result + initialWindowSize;
+		result = 31 * result + Long.hashCode(maxConcurrentStreams);
+		result = 31 * result + maxFrameSize;
+		result = 31 * result + Long.hashCode(maxHeaderListSize);
+		result = 31 * result + Boolean.hashCode(pushEnabled);
+		return result;
 	}
 
 	final Long headerTableSize;
