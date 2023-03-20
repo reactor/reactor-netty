@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,8 +84,18 @@ public abstract class TransportConfig {
 	}
 
 	public int channelHash() {
-		return Objects.hash(attrs, bindAddress != null ? bindAddress.get() : 0, channelGroup, doOnChannelInit,
-				loggingHandler, loopResources, metricsRecorder, observer, options, preferNative);
+		int result = 1;
+		result = 31 * result + Objects.hashCode(attrs);
+		result = 31 * result + (bindAddress != null ? Objects.hashCode(bindAddress.get()) : 0);
+		result = 31 * result + Objects.hashCode(channelGroup);
+		result = 31 * result + Objects.hashCode(doOnChannelInit);
+		result = 31 * result + Objects.hashCode(loggingHandler);
+		result = 31 * result + Objects.hashCode(loopResources);
+		result = 31 * result + Objects.hashCode(metricsRecorder);
+		result = 31 * result + Objects.hashCode(observer);
+		result = 31 * result + Objects.hashCode(options);
+		result = 31 * result + Boolean.hashCode(preferNative);
+		return result;
 	}
 
 	/**
