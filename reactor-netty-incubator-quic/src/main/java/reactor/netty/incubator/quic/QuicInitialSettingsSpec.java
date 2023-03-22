@@ -187,8 +187,14 @@ public final class QuicInitialSettingsSpec {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(maxData, maxStreamDataBidirectionalLocal, maxStreamDataBidirectionalRemote,
-				maxStreamDataUnidirectional, maxStreamsBidirectional, maxStreamsUnidirectional);
+		int result = 1;
+		result = 31 * result + Long.hashCode(maxData);
+		result = 31 * result + Long.hashCode(maxStreamDataBidirectionalLocal);
+		result = 31 * result + Long.hashCode(maxStreamDataBidirectionalRemote);
+		result = 31 * result + Long.hashCode(maxStreamDataUnidirectional);
+		result = 31 * result + Long.hashCode(maxStreamsBidirectional);
+		result = 31 * result + Long.hashCode(maxStreamsUnidirectional);
+		return result;
 	}
 
 	static final class Build implements Builder {
