@@ -537,7 +537,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			Mono<Void> terminateSignals = Mono.empty();
 			if (config.channelGroup != null && config.channelGroup.size() > 0) {
 				HashMap<Channel, List<Mono<Void>>> channelsToMono =
-						new HashMap<>((int) Math.ceil(config.channelGroup.size() / 0.75));
+						new HashMap<>(MapUtils.calculateInitialCapacity(config.channelGroup.size()));
 				// Wait for the running requests to finish
 				for (Channel channel : config.channelGroup) {
 					Channel parent = channel.parent();
