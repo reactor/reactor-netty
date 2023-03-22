@@ -1730,15 +1730,36 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testGracefulShutdown() throws Exception {
+	void testGracefulShutdownHttp11() throws Exception {
+		doTestGracefulShutdown(createServer(), createClient(() -> disposableServer.address()));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testGracefulShutdownH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		doTestGracefulShutdown(createServer().protocol(serverProtocols),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testGracefulShutdownH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		doTestGracefulShutdown(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)));
+	}
+
+	private void doTestGracefulShutdown(HttpServer server, HttpClient client) throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(2);
 		CountDownLatch latch2 = new CountDownLatch(2);
 		CountDownLatch latch3 = new CountDownLatch(1);
 		LoopResources loop = LoopResources.create("testGracefulShutdown");
 		group = new DefaultChannelGroup(executor);
 		disposableServer =
-				createServer()
-				          .runOn(loop)
+				server.runOn(loop)
 				          .doOnConnection(c -> {
 				              c.onDispose().subscribe(null, null, latch2::countDown);
 				              latch1.countDown();
@@ -1751,8 +1772,6 @@ class HttpServerTests extends BaseHttpTest {
 				                       .get("/delay1000", (req, res) -> res.sendString(Mono.just("delay1000")
 				                                                           .delayElement(Duration.ofSeconds(1)))))
 				          .bindNow(Duration.ofSeconds(30));
-
-		HttpClient client = createClient(disposableServer::address);
 
 		AtomicReference<String> result = new AtomicReference<>();
 		Flux.just("/delay500", "/delay1000")
