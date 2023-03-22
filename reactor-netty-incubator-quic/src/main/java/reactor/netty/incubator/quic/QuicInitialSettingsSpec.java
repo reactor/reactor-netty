@@ -15,8 +15,6 @@
  */
 package reactor.netty.incubator.quic;
 
-import java.util.Objects;
-
 /**
  * A configuration builder to fine tune the QUIC initial settings.
  *
