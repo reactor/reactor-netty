@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -36,6 +37,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.AttributeKey;
@@ -50,6 +52,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.internal.util.MapUtils;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
@@ -532,21 +535,31 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			}
 			dispose();
 			Mono<Void> terminateSignals = Mono.empty();
-			if (config.channelGroup != null) {
-				List<Mono<Void>> channels = new ArrayList<>();
+			if (config.channelGroup != null && config.channelGroup.size() > 0) {
+				HashMap<Channel, List<Mono<Void>>> channelsToMono = new HashMap<>(config.channelGroup.size());
 				// Wait for the running requests to finish
-				config.channelGroup.forEach(channel -> {
+				for (Channel channel : config.channelGroup) {
+					Channel parent = channel.parent();
+					List<Mono<Void>> monos =
+							MapUtils.computeIfAbsent(channelsToMono,
+									parent instanceof ServerChannel ? channel : parent,
+									key -> new ArrayList<>());
 					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 					if (ops != null) {
-						channels.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
+						monos.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
 					}
-					else {
+				}
+				for (Map.Entry<Channel, List<Mono<Void>>> entry : channelsToMono.entrySet()) {
+					Channel channel = entry.getKey();
+					List<Mono<Void>> monos = entry.getValue();
+					if (monos.isEmpty()) {
 						//"FutureReturnValueIgnored" this is deliberate
 						channel.close();
 					}
-				});
-				if (!channels.isEmpty()) {
-					terminateSignals = Mono.when(channels);
+					else {
+						//"FutureReturnValueIgnored" this is deliberate
+						terminateSignals = Mono.when(monos).doFinally(sig -> channel.close()).and(terminateSignals);
+					}
 				}
 			}
 
