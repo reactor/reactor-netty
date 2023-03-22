@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package reactor.netty5.tcp;
 
 import io.netty5.channel.ChannelOption;
+import reactor.netty5.internal.util.MapUtils;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
@@ -35,7 +36,7 @@ final class TcpServerBind extends TcpServer {
 	final TcpServerConfig config;
 
 	TcpServerBind() {
-		Map<ChannelOption<?>, Boolean> childOptions = new HashMap<>(2);
+		Map<ChannelOption<?>, Boolean> childOptions = new HashMap<>(MapUtils.calculateInitialCapacity(2));
 		childOptions.put(ChannelOption.AUTO_READ, false);
 		childOptions.put(ChannelOption.TCP_NODELAY, true);
 		this.config = new TcpServerConfig(

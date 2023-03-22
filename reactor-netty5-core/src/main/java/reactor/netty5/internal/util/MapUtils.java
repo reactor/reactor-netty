@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * It's a temporary workaround for Java 8 specific performance issue JDK-8161372
- * and this class should be removed once the Java 8 support is dropped.
+ * This class contains temporary workarounds for Java 8 {@link Map} issues.
  * <p><strong>Note:</strong> This utility class is for internal use only. It can be removed at any time.
  *
  * @author zimatars
@@ -29,6 +28,24 @@ import java.util.function.Function;
 public final class MapUtils {
 
 	/**
+	 * This is a temporary workaround for Java 8 issue https://bugs.openjdk.org/browse/JDK-8186958. Fix is available
+	 * in Java 19.
+	 * <p>
+	 * Calculate the initial capacity for the {@link Map} from the expected size and the default load factor
+	 * for the {@link Map} (0.75).
+	 *
+	 * @param expectedSize the expected size
+	 * @return the initial capacity for the {@link Map}
+	 * @since 1.0.31
+	 */
+	public static int calculateInitialCapacity(int expectedSize) {
+		return (int) Math.ceil(expectedSize / 0.75);
+	}
+
+	/**
+	 * This is a temporary workaround for Java 8 specific performance issue https://bugs.openjdk.org/browse/JDK-8161372.
+	 * Fix is available in Java 9.
+	 * <p>
 	 * ConcurrentHashMap.computeIfAbsent(k,v) locks when k is present.
 	 * Add pre-screen before locking inside computeIfAbsent.
 	 * <p><strong>Note:</strong> This utility is not for a general purpose usage.

@@ -43,6 +43,7 @@ import reactor.netty5.ConnectionObserver;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.channel.ChannelMetricsRecorder;
 import reactor.netty5.channel.ChannelOperations;
+import reactor.netty5.internal.util.MapUtils;
 import reactor.netty5.internal.util.Metrics;
 import reactor.netty5.resources.LoopResources;
 import reactor.util.Logger;
@@ -384,7 +385,7 @@ public abstract class TransportConfig {
 			return value == null ? parentMap : Collections.singletonMap((K) key, (V) value);
 		}
 		else {
-			Map<K, V> attrs = new HashMap<>(parentMap.size() + 1);
+			Map<K, V> attrs = new HashMap<>(MapUtils.calculateInitialCapacity(parentMap.size() + 1));
 			attrs.putAll(parentMap);
 			if (value == null) {
 				attrs.remove(key);
