@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 package reactor.netty.incubator.quic;
-
-import java.util.Objects;
 
 /**
  * A configuration builder to fine tune the QUIC initial settings.
@@ -187,8 +185,14 @@ public final class QuicInitialSettingsSpec {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(maxData, maxStreamDataBidirectionalLocal, maxStreamDataBidirectionalRemote,
-				maxStreamDataUnidirectional, maxStreamsBidirectional, maxStreamsUnidirectional);
+		int result = 1;
+		result = 31 * result + Long.hashCode(maxData);
+		result = 31 * result + Long.hashCode(maxStreamDataBidirectionalLocal);
+		result = 31 * result + Long.hashCode(maxStreamDataBidirectionalRemote);
+		result = 31 * result + Long.hashCode(maxStreamDataUnidirectional);
+		result = 31 * result + Long.hashCode(maxStreamsBidirectional);
+		result = 31 * result + Long.hashCode(maxStreamsUnidirectional);
+		return result;
 	}
 
 	static final class Build implements Builder {
