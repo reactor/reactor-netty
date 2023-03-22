@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
+import reactor.netty.internal.util.MapUtils;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServerConfig;
 
@@ -41,7 +42,7 @@ final class HttpServerBind extends HttpServer {
 	final HttpServerConfig config;
 
 	HttpServerBind() {
-		Map<ChannelOption<?>, Boolean> childOptions = new HashMap<>(2);
+		Map<ChannelOption<?>, Boolean> childOptions = new HashMap<>(MapUtils.calculateInitialCapacity(2));
 		childOptions.put(ChannelOption.AUTO_READ, false);
 		childOptions.put(ChannelOption.TCP_NODELAY, true);
 		this.config = new HttpServerConfig(
