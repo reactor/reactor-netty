@@ -240,7 +240,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		toDispose.forEach(e -> {
 			if (channelPools.remove(e.getKey(), e.getValue())) {
 				if (log.isDebugEnabled()) {
-					log.debug("ConnectionProvider[name={}]: Disposing pool for [{}]", name, e.getKey().fqdn);
+					log.debug("ConnectionProvider[name={}]: Disposing pool for [{}]", name, e.getKey().holder);
 				}
 				String id = e.getKey().hashCode() + "";
 				PoolFactory<T> poolFactory = poolFactory(address);
@@ -364,7 +364,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			toDispose.forEach(e -> {
 				if (channelPools.remove(e.getKey(), e.getValue())) {
 					if (log.isDebugEnabled()) {
-						log.debug("ConnectionProvider[name={}]: Disposing inactive pool for [{}]", name, e.getKey().fqdn);
+						log.debug("ConnectionProvider[name={}]: Disposing inactive pool for [{}]", name, e.getKey().holder);
 					}
 					e.getValue().dispose();
 				}
@@ -633,7 +633,15 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		final int pipelineKey;
 
 		PoolKey(SocketAddress holder, int pipelineKey) {
-			this.fqdn = holder.toString();
+			String fqdn = null;
+			if (holder instanceof InetSocketAddress) {
+				InetSocketAddress inetSocketAddress = (InetSocketAddress) holder;
+				if (!inetSocketAddress.isUnresolved()) {
+					// Use FDQN as a tie-breaker over IP's
+					fqdn = inetSocketAddress.getHostString().toLowerCase();
+				}
+			}
+			this.fqdn = fqdn;
 			this.holder = holder;
 			this.pipelineKey = pipelineKey;
 		}
