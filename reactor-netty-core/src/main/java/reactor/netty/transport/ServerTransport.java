@@ -530,6 +530,9 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void disposeNow(Duration timeout) {
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel(), "Server is about to be disposed with timeout: {}"), timeout);
+			}
 			if (isDisposed()) {
 				return;
 			}
@@ -554,12 +557,17 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 					Channel channel = entry.getKey();
 					List<Mono<Void>> monos = entry.getValue();
 					if (monos.isEmpty()) {
-						//"FutureReturnValueIgnored" this is deliberate
+						// At this point there are no running requests for this channel
+						// "FutureReturnValueIgnored" this is deliberate
 						channel.close();
 					}
 					else {
-						//"FutureReturnValueIgnored" this is deliberate
-						terminateSignals = Mono.when(monos).doFinally(sig -> channel.close()).and(terminateSignals);
+						terminateSignals =
+								Mono.when(monos)
+								    // At this point there are no running requests for this channel
+								    // "FutureReturnValueIgnored" this is deliberate
+								    .doFinally(sig -> channel.close())
+								    .and(terminateSignals);
 					}
 				}
 			}
