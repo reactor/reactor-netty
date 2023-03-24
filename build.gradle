@@ -98,7 +98,7 @@ ext {
 
 	// Logging
 	slf4jVersion = '1.7.36'
-	logbackVersion = '1.2.11'
+	logbackVersion = '1.2.12'
 
 	// Netty
 	nettyDefaultVersion = '5.0.0.Alpha6-SNAPSHOT'
