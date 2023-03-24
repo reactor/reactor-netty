@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PoolKeyTest {
 
 	@Test
-	void test() throws IllegalAccessException {
+	void test() {
 		Set<PoolKey> set = new LinkedHashSet<>();
 		PoolKey key1 = new PoolKey(AddressUtils.createUnresolved("wikipedia.org", 80), 0);
 		assertThat(set.add(key1)).isTrue();

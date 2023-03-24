@@ -637,7 +637,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			if (holder instanceof InetSocketAddress) {
 				InetSocketAddress inetSocketAddress = (InetSocketAddress) holder;
 				if (!inetSocketAddress.isUnresolved()) {
-					// Use FDQN as a tie-breaker over IP's
+					// Use FQDN as a tie-breaker over IP's
 					fqdn = inetSocketAddress.getHostString().toLowerCase();
 				}
 			}
