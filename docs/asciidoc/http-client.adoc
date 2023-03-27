@@ -537,6 +537,7 @@ Default: 0.
 | `completeOncePreferredResolved` | When this setting is enabled, the resolver notifies as soon as all queries for the preferred address type are complete.
 When this setting is disabled, the resolver notifies when all possible address types are complete.
 This configuration is applicable for `DnsNameResolver#resolveAll(String)`. By default, this setting is enabled.
+| `dnsAddressResolverGroupProvider` | Sets a custom function to create a `DnsAddressResolverGroup` given a `DnsNameResolverBuilder`
 | `disableOptionalRecord` | Disables the automatic inclusion of an optional record that tries to give a hint to the remote DNS server about
 how much data the resolver can read per response. By default, this setting is enabled.
 | `disableRecursionDesired` | Specifies whether this resolver has to send a DNS query with the recursion desired (RD) flag set.
