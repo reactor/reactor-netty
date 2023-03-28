@@ -355,9 +355,11 @@ task japicmp(type: JapicmpTask) {
 
 			'reactor.netty.transport.ClientTransport#resolver(io.netty.resolver.AddressResolverGroup)',
 			'reactor.netty.transport.ClientTransportConfig#resolver()',
+			'reactor.netty.transport.NameResolverProvider#dnsAddressResolverGroupProvider()',
 			'reactor.netty.transport.NameResolverProvider#hostsFileEntriesResolver()',
 			'reactor.netty.transport.NameResolverProvider#newNameResolverGroup(reactor.netty.resources.LoopResources, boolean)',
 			'reactor.netty.transport.NameResolverProvider#resolvedAddressTypes()',
+			'reactor.netty.transport.NameResolverProvider$NameResolverSpec#dnsAddressResolverGroupProvider(java.util.function.Function)',
 			'reactor.netty.transport.NameResolverProvider$NameResolverSpec#hostsFileEntriesResolver(io.netty.resolver.HostsFileEntriesResolver)',
 			'reactor.netty.transport.NameResolverProvider$NameResolverSpec#resolvedAddressTypes(io.netty.resolver.ResolvedAddressTypes)',
 			'reactor.netty.transport.NameResolverProvider$NameResolverSpec#runOn(io.netty.channel.EventLoopGroup)',

@@ -38,6 +38,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -121,6 +122,16 @@ public final class NameResolverProvider {
 		 * @return {@code this}
 		 */
 		NameResolverSpec disableRecursionDesired(boolean disable);
+
+		/**
+		 * Sets the custom function to build the {@link DnsAddressResolverGroup} given a {@link DnsNameResolverBuilder}
+		 *
+		 * @param dnsAddressResolverGroupProvider the {@link DnsAddressResolverGroup} provider function
+		 * @return {@code this}
+		 * @since 1.1.6
+		 */
+		NameResolverSpec dnsAddressResolverGroupProvider(
+				Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider);
 
 		/**
 		 * Specifies a custom {@link HostsFileEntriesResolver} to be used for hosts file entries.
@@ -296,6 +307,17 @@ public final class NameResolverProvider {
 	}
 
 	/**
+	 * Returns the configured custom provider of {@link DnsAddressResolverGroup} or null
+	 *
+	 * @return the configured custom provider of {@link DnsAddressResolverGroup} or null
+	 * @since 1.1.6
+	 */
+	@Nullable
+	public Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider() {
+		return dnsAddressResolverGroupProvider;
+	}
+
+	/**
 	 * Returns the configured custom {@link HostsFileEntriesResolver} to be used for hosts file entries or null.
 	 *
 	 * @return the configured custom {@link HostsFileEntriesResolver} to be used for hosts file entries or null
@@ -451,6 +473,7 @@ public final class NameResolverProvider {
 			return false;
 		}
 		return completeOncePreferredResolved == that.completeOncePreferredResolved &&
+				Objects.equals(dnsAddressResolverGroupProvider, that.dnsAddressResolverGroupProvider) &&
 				disableRecursionDesired == that.disableRecursionDesired &&
 				disableOptionalRecord == that.disableOptionalRecord &&
 				maxPayloadSize == that.maxPayloadSize &&
@@ -478,6 +501,7 @@ public final class NameResolverProvider {
 		result = 31 * result + Objects.hashCode(cacheMinTimeToLive);
 		result = 31 * result + Objects.hashCode(cacheNegativeTimeToLive);
 		result = 31 * result + Boolean.hashCode(completeOncePreferredResolved);
+		result = 31 * result + Objects.hashCode(dnsAddressResolverGroupProvider);
 		result = 31 * result + Boolean.hashCode(disableRecursionDesired);
 		result = 31 * result + Boolean.hashCode(disableOptionalRecord);
 		result = 31 * result + Objects.hashCode(loggingFactory);
@@ -546,6 +570,9 @@ public final class NameResolverProvider {
 		if (searchDomains != null) {
 			builder.searchDomains(searchDomains);
 		}
+		if (dnsAddressResolverGroupProvider != null) {
+			return dnsAddressResolverGroupProvider.apply(builder);
+		}
 		return roundRobinSelection ? new RoundRobinDnsAddressResolverGroup(builder) : new DnsAddressResolverGroup(builder);
 	}
 
@@ -569,11 +596,14 @@ public final class NameResolverProvider {
 	final boolean roundRobinSelection;
 	final Iterable<String> searchDomains;
 
+	final Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider;
+
 	NameResolverProvider(Build build) {
 		this.cacheMaxTimeToLive = build.cacheMaxTimeToLive;
 		this.cacheMinTimeToLive = build.cacheMinTimeToLive;
 		this.cacheNegativeTimeToLive = build.cacheNegativeTimeToLive;
 		this.completeOncePreferredResolved = build.completeOncePreferredResolved;
+		this.dnsAddressResolverGroupProvider = build.dnsAddressResolverGroupProvider;
 		this.disableOptionalRecord = build.disableOptionalRecord;
 		this.disableRecursionDesired = build.disableRecursionDesired;
 		this.hostsFileEntriesResolver = build.hostsFileEntriesResolver;
@@ -621,6 +651,8 @@ public final class NameResolverProvider {
 		boolean roundRobinSelection;
 		Iterable<String> searchDomains;
 
+		Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider;
+
 		@Override
 		public NameResolverSpec cacheMaxTimeToLive(Duration cacheMaxTimeToLive) {
 			this.cacheMaxTimeToLive = Objects.requireNonNull(cacheMaxTimeToLive);
@@ -654,6 +686,13 @@ public final class NameResolverProvider {
 		@Override
 		public NameResolverSpec disableRecursionDesired(boolean disable) {
 			this.disableRecursionDesired = disable;
+			return this;
+		}
+
+		@Override
+		public NameResolverSpec dnsAddressResolverGroupProvider(
+				Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider) {
+			this.dnsAddressResolverGroupProvider = Objects.requireNonNull(dnsAddressResolverGroupProvider);
 			return this;
 		}
 

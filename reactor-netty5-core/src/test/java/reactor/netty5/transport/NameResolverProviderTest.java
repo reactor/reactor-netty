@@ -18,9 +18,12 @@ package reactor.netty5.transport;
 import io.netty5.channel.EventLoop;
 import io.netty5.handler.codec.dns.DnsRecord;
 import io.netty5.resolver.ResolvedAddressTypes;
+import io.netty5.resolver.dns.DnsAddressResolverGroup;
 import io.netty5.resolver.dns.DnsCache;
 import io.netty5.resolver.dns.DnsCacheEntry;
+import io.netty5.resolver.dns.DnsNameResolverBuilder;
 import io.netty5.resolver.dns.DnsServerAddressStreamProviders;
+import io.netty5.resolver.dns.RoundRobinDnsAddressResolverGroup;
 import io.netty5.resolver.dns.macos.MacOSDnsServerAddressStreamProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -126,6 +130,15 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	void dnsAddressResolverGroupProvider() {
+		assertThat(builder.build().dnsAddressResolverGroupProvider()).isNull();
+
+		Function<DnsNameResolverBuilder, DnsAddressResolverGroup> provider = RoundRobinDnsAddressResolverGroup::new;
+		builder.dnsAddressResolverGroupProvider(provider);
+		assertThat(builder.build().dnsAddressResolverGroupProvider()).isEqualTo(provider);
+	}
+
+	@Test
 	void disableOptionalRecord() {
 		assertThat(builder.build().isDisableOptionalRecord()).isFalse();
 
@@ -143,10 +156,10 @@ class NameResolverProviderTest {
 
 	@Test
 	void hostsFileEntriesResolver() {
-		assertThat(builder.build().hostsFileEntriesResolver).isNull();
+		assertThat(builder.build().hostsFileEntriesResolver()).isNull();
 
 		builder.hostsFileEntriesResolver((inetHost, resolvedAddressTypes) -> null);
-		assertThat(builder.build().hostsFileEntriesResolver).isNotNull();
+		assertThat(builder.build().hostsFileEntriesResolver()).isNotNull();
 	}
 
 	@Test
