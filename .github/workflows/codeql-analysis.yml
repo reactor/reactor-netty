@@ -10,13 +10,13 @@ on:
     branches:
       - main
       - 1.0.x
-      - netty5
+#      - netty5
   pull_request:
     # The branches below must be a subset of the branches above
     branches:
       - main
       - 1.0.x
-      - netty5
+#      - netty5
   schedule:
     - cron: '0 12 * * 6'
 permissions: read-all
