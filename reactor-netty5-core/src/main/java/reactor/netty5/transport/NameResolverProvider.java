@@ -18,7 +18,6 @@ package reactor.netty5.transport;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.SocketChannel;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.DefaultHostsFileEntriesResolver;
 import io.netty5.resolver.HostsFileEntriesResolver;
@@ -31,6 +30,7 @@ import io.netty5.resolver.dns.DnsQueryLifecycleObserverFactory;
 import io.netty5.resolver.dns.LoggingDnsQueryLifeCycleObserverFactory;
 import io.netty5.resolver.dns.RoundRobinDnsAddressResolverGroup;
 import io.netty5.util.concurrent.Future;
+import org.slf4j.event.Level;
 import reactor.netty5.resources.LoopResources;
 import reactor.util.annotation.Nullable;
 
@@ -256,7 +256,7 @@ public final class NameResolverProvider {
 		 * @param level the logger level
 		 * @return {@code this}
 		 */
-		NameResolverSpec trace(String category, LogLevel level);
+		NameResolverSpec trace(String category, Level level);
 	}
 
 	/**
@@ -749,7 +749,7 @@ public final class NameResolverProvider {
 		}
 
 		@Override
-		public NameResolverSpec trace(String category, LogLevel level) {
+		public NameResolverSpec trace(String category, Level level) {
 			Objects.requireNonNull(category, "category");
 			Objects.requireNonNull(level, "level");
 			this.loggingFactory = new LoggingDnsQueryLifeCycleObserverFactory(category, level);

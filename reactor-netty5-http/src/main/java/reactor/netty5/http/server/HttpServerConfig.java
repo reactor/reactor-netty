@@ -43,6 +43,7 @@ import io.netty5.handler.ssl.ApplicationProtocolNames;
 import io.netty5.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
+import org.slf4j.event.Level;
 import reactor.core.publisher.Mono;
 import reactor.netty5.ChannelPipelineConfigurer;
 import reactor.netty5.Connection;
@@ -506,7 +507,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				                      .initialSettings(http2Settings);
 
 		if (p.get(NettyPipeline.LoggingHandler) != null) {
-			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG,
+			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(Level.DEBUG,
 					"reactor.netty5.http.server.h2"));
 		}
 
@@ -900,7 +901,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (debug) {
 				http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(
-						LogLevel.DEBUG,
+						Level.DEBUG,
 						"reactor.netty5.http.server.h2"));
 			}
 			this.httpMessageLogFactory = httpMessageLogFactory;

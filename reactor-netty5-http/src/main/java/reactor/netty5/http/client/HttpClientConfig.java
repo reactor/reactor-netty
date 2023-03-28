@@ -60,6 +60,7 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.resolver.AddressResolverGroup;
 import org.reactivestreams.Publisher;
+import org.slf4j.event.Level;
 import reactor.core.publisher.Mono;
 import reactor.netty5.ChannelPipelineConfigurer;
 import reactor.netty5.Connection;
@@ -578,7 +579,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				                      .initialSettings(http2Settings);
 
 		if (p.get(NettyPipeline.LoggingHandler) != null) {
-			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG,
+			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(Level.DEBUG,
 					"reactor.netty5.http.client.h2"));
 		}
 
@@ -613,7 +614,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 						.initialSettings(http2Settings);
 
 		if (p.get(NettyPipeline.LoggingHandler) != null) {
-			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG,
+			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(Level.DEBUG,
 					"reactor.netty5.http.client.h2"));
 		}
 

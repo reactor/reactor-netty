@@ -29,7 +29,7 @@ dependencies {
 	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 	// Needed for proxy testing
-	runtimeOnly "io.netty.contrib:netty-handler-proxy:$nettyContribVersion"
+	runtimeOnly "io.netty.contrib:netty-handler-proxy:$nettyContribHandlerProxyVersion"
 }
 
 description = "Examples for the Reactor Netty library"

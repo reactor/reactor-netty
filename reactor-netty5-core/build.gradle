@@ -58,7 +58,7 @@ dependencies {
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
 	api "io.netty:netty5-handler:$nettyVersion"
-	api("io.netty.contrib:netty-handler-proxy:$nettyContribVersion") {
+	api("io.netty.contrib:netty-handler-proxy:$nettyContribHandlerProxyVersion") {
 		exclude module: "netty5-codec-http"
 	}
 	api "io.netty:netty5-resolver-dns:$nettyVersion"
