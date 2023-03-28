@@ -4,41 +4,41 @@ on:
   pull_request: {}
 permissions: read-all
 jobs:
-  preliminary:
-    name: preliminary sanity checks
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 #needed by spotless
-      - uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: 17
-      - name: spotless (license header)
-        if: always()
-        run: ./gradlew clean spotlessCheck -PspotlessFrom=origin/${{ github.base_ref }}
-      - name: api compatibility
-        if: always()
-        run: ./gradlew clean japicmp
-      - name: how to fix
-        if: failure()
+#  preliminary:
+#    name: preliminary sanity checks
+#    runs-on: ubuntu-20.04
+#    steps:
+#      - uses: actions/checkout@v3
+#        with:
+#          fetch-depth: 0 #needed by spotless
+#      - uses: actions/setup-java@v3
+#        with:
+#          distribution: 'temurin'
+#          java-version: 17
+#      - name: spotless (license header)
+#        if: always()
+#        run: ./gradlew clean spotlessCheck -PspotlessFrom=origin/${{ github.base_ref }}
+#      - name: api compatibility
+#        if: always()
+#        run: ./gradlew clean japicmp
+#      - name: how to fix
+#        if: failure()
         # the foreground (38;5) color code 208 is orange. we also have bold, white bg (38;5;0;48;5;255m), white fg on black bg...
-        run: |
-          echo -e "\n\033[38;5;0;48;5;208m \u001b[1m How to deal with errors in preliminary job: \u001b[0m\033[0m"
-          echo "(Have a look at the steps above to see what failed exactly)"
-          echo -e "\n - \u001b[1mSpotless (license headers)\u001b[0m failures on touched java files \033[38;5;255;48;5;0m\u001b[1mcan be automatically fixed by running\u001b[0m:"
-          echo -e "   \033[38;5;0;48;5;255m ./gradlew spotlessApply \033[0m"
-          echo -e "\n - \u001b[1mAPI Compatibility\u001b[0m failures should be considered carefully and \033[38;5;255;48;5;0m\u001b[1mdiscussed with maintainers in the PR\u001b[0m"
-          echo "   If there are failures, the detail should be available in the step's log:"
-          echo -e "   Look for the \033[38;5;0;48;5;255m API compatibility failures \033[0m block(s)."
-          echo "   Alternatively, locally run the following command to get access to the full report:"
-          echo -e "   \033[38;5;0;48;5;255m ./gradlew japicmp \033[0m"
-          echo ""
-          exit -1
+#        run: |
+#          echo -e "\n\033[38;5;0;48;5;208m \u001b[1m How to deal with errors in preliminary job: \u001b[0m\033[0m"
+#          echo "(Have a look at the steps above to see what failed exactly)"
+#          echo -e "\n - \u001b[1mSpotless (license headers)\u001b[0m failures on touched java files \033[38;5;255;48;5;0m\u001b[1mcan be automatically fixed by running\u001b[0m:"
+#          echo -e "   \033[38;5;0;48;5;255m ./gradlew spotlessApply \033[0m"
+#          echo -e "\n - \u001b[1mAPI Compatibility\u001b[0m failures should be considered carefully and \033[38;5;255;48;5;0m\u001b[1mdiscussed with maintainers in the PR\u001b[0m"
+#          echo "   If there are failures, the detail should be available in the step's log:"
+#          echo -e "   Look for the \033[38;5;0;48;5;255m API compatibility failures \033[0m block(s)."
+#          echo "   Alternatively, locally run the following command to get access to the full report:"
+#          echo -e "   \033[38;5;0;48;5;255m ./gradlew japicmp \033[0m"
+#          echo ""
+#          exit -1
 
   build:
-    needs: preliminary
+#    needs: preliminary
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -54,9 +54,9 @@ jobs:
             transport: native
     steps:
       - uses: actions/checkout@v3
-#        with:
-#          path: reactor-netty
-#          fetch-depth: 0 #needed by spotless
+        with:
+          path: reactor-netty
+          fetch-depth: 0 #needed by spotless
 #      - uses: actions/checkout@v3
 #        with:
 #          repository: netty-contrib/codec-haproxy
@@ -65,10 +65,14 @@ jobs:
 #        with:
 #          repository: netty-contrib/codec-extras
 #          path: codec-extras
-#      - uses: actions/checkout@v3
-#        with:
-#          repository: netty-contrib/socks-proxy
-#          path: socks-proxy
+      - uses: actions/checkout@v3
+        with:
+          repository: netty-contrib/socks-proxy
+          path: socks-proxy
+      - uses: actions/checkout@v3
+        with:
+            repository: netty-contrib/codec-multipart
+            path: codec-multipart
       - uses: gradle/wrapper-validation-action@v1
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -81,9 +85,13 @@ jobs:
 #      - name: Build codec-extras
 #        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5"
 #        working-directory: ./codec-extras
-#      - name: Build socks-proxy
-#        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha5"
-#        working-directory: ./socks-proxy
+      - name: Build socks-proxy
+        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha6-SNAPSHOT"
+        working-directory: ./socks-proxy
+      - name: Build codec-multipart
+        run: ./mvnw install -DskipTests=true "-Dnetty.version=5.0.0.Alpha6-SNAPSHOT"
+        working-directory: ./codec-multipart
       - name: Build with Gradle
-        run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -x spotlessCheck
-#        working-directory: ./reactor-netty
+#        run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -x spotlessCheck
+        run: ./gradlew clean check --no-daemon -PforceTransport=${{ matrix.transport }} -PspotlessFrom=origin/netty5
+        working-directory: ./reactor-netty

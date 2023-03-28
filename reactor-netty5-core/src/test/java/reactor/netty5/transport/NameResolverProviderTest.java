@@ -17,7 +17,6 @@ package reactor.netty5.transport;
 
 import io.netty5.channel.EventLoop;
 import io.netty5.handler.codec.dns.DnsRecord;
-import io.netty5.handler.logging.LogLevel;
 import io.netty5.resolver.ResolvedAddressTypes;
 import io.netty5.resolver.dns.DnsCache;
 import io.netty5.resolver.dns.DnsCacheEntry;
@@ -27,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.slf4j.event.Level;
 import reactor.netty5.resources.LoopResources;
 import reactor.netty5.tcp.TcpResources;
 
@@ -301,7 +301,7 @@ class NameResolverProviderTest {
 	@Test
 	void traceBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
-				.isThrownBy(() -> builder.trace(null, LogLevel.DEBUG));
+				.isThrownBy(() -> builder.trace(null, Level.DEBUG));
 
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.trace("category", null));

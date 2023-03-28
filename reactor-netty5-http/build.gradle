@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ dependencies {
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	api "io.netty.contrib:netty-handler-proxy:$nettyContribVersion"
+	api "io.netty.contrib:netty-handler-proxy:$nettyContribHandlerProxyVersion"
 	api "io.netty:netty5-codec-http:$nettyVersion"
 	api "io.netty:netty5-codec-http2:$nettyVersion"
 	api "io.netty:netty5-resolver-dns:$nettyVersion"
@@ -148,6 +148,7 @@ dependencies {
 	}
 	testImplementation "io.netty.contrib:netty-codec-extras:$nettyContribVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
+	testImplementation "org.slf4j:slf4j-api:$slf4jVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
@@ -155,7 +156,7 @@ dependencies {
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 
 	// Needed for proxy testing
-	testRuntimeOnly "io.netty.contrib:netty-handler-proxy:$nettyContribVersion"
+	testRuntimeOnly "io.netty.contrib:netty-handler-proxy:$nettyContribHandlerProxyVersion"
 	testRuntimeOnly "io.netty.contrib:netty-codec-haproxy:$nettyContribVersion"
 	// Needed for HTTP/2 testing
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
@@ -259,7 +260,7 @@ task japicmp(type: JapicmpTask) {
 	methodExcludes = [
 			'reactor.netty.http.server.logging.AccessLogArgProvider#connectionInformation()',
 			'reactor.netty.http.server.HttpServerRequest#scheme()',
-	
+
 			'reactor.netty.http.HttpOperations#send(org.reactivestreams.Publisher)',
 
 			'reactor.netty.http.client.HttpClient$ResponseReceiver#responseContent()',

@@ -97,8 +97,8 @@ ext {
 	jsr305Version = '3.0.2'
 
 	// Logging
-	slf4jVersion = '1.7.36'
-	logbackVersion = '1.2.12'
+	slf4jVersion = '2.0.7'
+	logbackVersion = '1.4.6'
 
 	// Netty
 	nettyDefaultVersion = '5.0.0.Alpha6-SNAPSHOT'
@@ -111,7 +111,8 @@ ext {
 	}
 	nettyContribVersion = '5.0.0.Alpha2'
 	//nettyQuicVersion = '0.0.38.Final'
-	nettyContribMultipartVersion = '5.0.0.Alpha1'
+	nettyContribMultipartVersion = '5.0.0.Alpha2-SNAPSHOT'
+	nettyContribHandlerProxyVersion = '5.0.0.Alpha3-SNAPSHOT'
 
 	// Testing
 	jacksonDatabindVersion = '2.14.2'
