@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import java.net.SocketAddress;
 public class Metrics {
 	public static final MeterRegistry REGISTRY = io.micrometer.core.instrument.Metrics.globalRegistry;
 	public static final String OBSERVATION_KEY = "micrometer.observation";
-	public static final ObservationRegistry OBSERVATION_REGISTRY = ObservationRegistry.create();
+	public static ObservationRegistry OBSERVATION_REGISTRY = ObservationRegistry.create();
 	static {
 		OBSERVATION_REGISTRY.observationConfig().observationHandler(
 				new ObservationHandler.FirstMatchingCompositeObservationHandler(
@@ -311,6 +311,18 @@ public class Metrics {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Set the {@link ObservationRegistry} to use in Reactor Netty for tracing related purposes.
+	 *
+	 * @return the previously configured registry.
+	 * @since 1.1.6
+	 */
+	public static ObservationRegistry observationRegistry(ObservationRegistry observationRegistry) {
+		ObservationRegistry previous = OBSERVATION_REGISTRY;
+		OBSERVATION_REGISTRY = observationRegistry;
+		return previous;
 	}
 
 	public static Context updateContext(Context context, Object observation) {
