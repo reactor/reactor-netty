@@ -97,7 +97,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.reactivestreams.Publisher;
-import org.slf4j.event.Level;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -2613,7 +2612,7 @@ class HttpClientTest extends BaseHttpTest {
 		            .verify(Duration.ofSeconds(30));
 
 		StepVerifier.create(client.runOn(loop, false)
-		                          .resolver(spec -> spec.trace("reactor.netty5.testLoopAndResolver", Level.DEBUG))
+		                          .resolver(spec -> spec.trace("reactor.netty5.testLoopAndResolver", LogLevel.DEBUG))
 		                          .get()
 		                          .uri("https://example.com")
 		                          .response((r, buf) -> Mono.just(r.status().code())))
