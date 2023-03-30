@@ -32,6 +32,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.codec.http2.HttpConversionUtil;
@@ -64,6 +66,7 @@ import reactor.netty.http.server.HttpServerMetricsRecorder;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
+import reactor.netty.transport.AddressUtils;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
@@ -75,6 +78,8 @@ import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -200,8 +205,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@AfterEach
 	void tearDown() throws InterruptedException, ExecutionException, TimeoutException {
-		provider.disposeLater()
-		        .block(Duration.ofSeconds(30));
+		// Dispose connection provider, unless a test already disposed it
+		if (!provider.isDisposed()) {
+			provider.disposeLater()
+					.block(Duration.ofSeconds(30));
+		}
 
 		// In case the ServerCloseHandler is registered on the server, make sure client socket is closed on the server side
 		assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
@@ -882,6 +890,103 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		checkExpectationsBadRequest(sa.getHostString() + ":" + sa.getPort(), serverCtx != null);
 	}
 
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testServerConnectionsRecorderBadUri(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+	                                                      @Nullable ProtocolSslContextSpec serverCtx,
+	                                                      @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1,
+				Function.identity(), Function.identity());
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testServerConnectionsRecorderBadUriUDS(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+	                                         @Nullable ProtocolSslContextSpec serverCtx,
+	                                         @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1,
+				client -> client.bindAddress(() -> new DomainSocketAddress("/tmp/test.sockclient"))
+						.remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock")),
+				server -> server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock")));
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testServerConnectionsRecorderBadUriForwarded(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+	                                                  @Nullable ProtocolSslContextSpec serverCtx,
+	                                                  @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx,
+				"192.168.0.1", 8080,
+				Function.identity(),
+				Function.identity());
+	}
+
+	private void testServerConnectionsRecorderBadUri(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+	                                                 @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+	                                                 @Nullable String xForwardedFor, int xForwardedPort,
+	                                                 Function<HttpClient, HttpClient> bindClient,
+	                                                 Function<HttpServer, HttpServer> bindServer) throws Exception {
+		ServerRecorderBadUri.INSTANCE.init();
+
+		AtomicReference<SocketAddress> clientSA = new AtomicReference<>();
+		disposableServer = bindServer.apply(customizeServerOptions(httpServer, serverCtx, serverProtocols))
+				.metrics(true, () -> ServerRecorderBadUri.INSTANCE, Function.identity())
+				.forwarded(xForwardedFor != null || xForwardedPort != -1)
+				.childObserve((conn, state) -> {
+					if (xForwardedFor != null && xForwardedPort != -1) {
+						clientSA.set(AddressUtils.createUnresolved(xForwardedFor, xForwardedPort));
+					}
+					else {
+						clientSA.set(conn.address());
+					}
+				})
+				.bindNow();
+
+		bindClient.apply(customizeClientOptions(httpClient, clientCtx, clientProtocols))
+				.doOnRequest((req, conn) -> {
+					conn.addHandlerFirst("bad_uri", new ChannelOutboundHandlerAdapter() {
+						@Override
+						@SuppressWarnings("FutureReturnValueIgnored")
+						public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+							if (msg instanceof HttpRequest) {
+								((HttpRequest) msg).setUri("/s=set&_method=__construct&method=*&filter[]=system");
+							}
+							ctx.write(msg, promise);
+						}
+					});
+					if (xForwardedFor != null) {
+						req.addHeader("X-Forwarded-For", xForwardedFor + ":" + xForwardedPort);
+					}
+				})
+				.metrics(true, Function.identity())
+				.post()
+				.uri("/")
+				.send(body)
+				.responseContent()
+				.aggregate()
+				.asString()
+				.as(StepVerifier::create)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+
+		// dispose connection provider now, in order to ensure connection is closed on the server
+		provider.disposeLater()
+				.block(Duration.ofSeconds(30));
+
+		assertThat(ServerRecorderBadUri.INSTANCE.closed.await(30, TimeUnit.SECONDS))
+				.as("awaitClose timeout")
+				.isTrue();
+
+		assertThat(ServerRecorderBadUri.INSTANCE.nullMethodParams.size() == 0)
+				.as("some method got null parameters: %s", ServerRecorderBadUri.INSTANCE.nullMethodParams)
+				.isTrue();
+
+		SocketAddress recordedClientSA = ServerRecorderBadUri.INSTANCE.clientAddr;
+		assertThat(recordedClientSA)
+				.as("recorded client remote socket address %s is different from expected client socket address %s", recordedClientSA, clientSA.get())
+				.isEqualTo(clientSA.get());
+	}
+
 	private void checkServerConnectionsMicrometer(HttpServerRequest request) {
 		String address = formatSocketAddress(request.hostAddress());
 		boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
@@ -1342,6 +1447,122 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		@Override
 		public void recordResolveAddressTime(SocketAddress socketAddress, Duration duration, String s) {
+		}
+	}
+
+	/**
+	 * Server metrics recorder used to verify that HttpServerMetricsRecorder method parameters
+	 * are not null when a bad request URI is received.
+	 */
+	static final class ServerRecorderBadUri implements HttpServerMetricsRecorder {
+
+		static final ServerRecorderBadUri INSTANCE = new ServerRecorderBadUri();
+		final ConcurrentLinkedQueue<String> nullMethodParams = new ConcurrentLinkedQueue<>();
+		volatile CountDownLatch closed;
+		volatile SocketAddress clientAddr;
+
+		void init() {
+			nullMethodParams.clear();
+			closed = new CountDownLatch(1);
+			clientAddr = null;
+		}
+
+		void checkNullParam(String method, Object... params) {
+			if (Arrays.stream(params).anyMatch(Objects::isNull)) {
+				nullMethodParams.add(method);
+			}
+		}
+
+		@Override
+		public void recordServerConnectionOpened(SocketAddress localAddress) {
+			checkNullParam("recordServerConnectionOpened", localAddress);
+		}
+
+		@Override
+		public void recordServerConnectionClosed(SocketAddress localAddress) {
+			checkNullParam("recordServerConnectionClosed", localAddress);
+			closed.countDown();
+		}
+
+		@Override
+		public void recordServerConnectionActive(SocketAddress localAddress) {
+			checkNullParam("recordServerConnectionActive", localAddress);
+		}
+
+		@Override
+		public void recordServerConnectionInactive(SocketAddress localAddress) {
+			checkNullParam("recordServerConnectionInactive", localAddress);
+		}
+
+		@Override
+		public void recordStreamOpened(SocketAddress localAddress) {
+			checkNullParam("recordStreamOpened", localAddress);
+		}
+
+		@Override
+		public void recordStreamClosed(SocketAddress localAddress) {
+			checkNullParam("recordStreamClosed", localAddress);
+		}
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+			checkNullParam("recordDataReceived", remoteAddress, uri);
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+			checkNullParam("recordDataSent", remoteAddress, uri);
+			clientAddr = remoteAddress;
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+			checkNullParam("incrementErrorsCount", remoteAddress, uri);
+		}
+
+		@Override
+		public void recordDataReceivedTime(String uri, String method, Duration time) {
+			checkNullParam("recordDataReceivedTime", uri, method, time);
+		}
+
+		@Override
+		public void recordDataSentTime(String uri, String method, String status, Duration time) {
+			checkNullParam("recordDataSentTime", uri, method, status, time);
+		}
+
+		@Override
+		public void recordResponseTime(String uri, String method, String status, Duration time) {
+			checkNullParam("recordResponseTime", uri, method, status, time);
+		}
+
+		@Override
+		public void recordDataReceived(SocketAddress socketAddress, long l) {
+			checkNullParam("recordDataReceived", socketAddress);
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress socketAddress, long l) {
+			checkNullParam("recordDataSent", socketAddress);
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress socketAddress) {
+			checkNullParam("incrementErrorsCount", socketAddress);
+		}
+
+		@Override
+		public void recordTlsHandshakeTime(SocketAddress socketAddress, Duration duration, String s) {
+			checkNullParam("recordTlsHandshakeTime", socketAddress, duration, s);
+		}
+
+		@Override
+		public void recordConnectTime(SocketAddress socketAddress, Duration duration, String s) {
+			checkNullParam("recordConnectTime", socketAddress, duration, s);
+		}
+
+		@Override
+		public void recordResolveAddressTime(SocketAddress socketAddress, Duration duration, String s) {
+			checkNullParam("recordResolveAddressTime", socketAddress, duration, s);
 		}
 	}
 

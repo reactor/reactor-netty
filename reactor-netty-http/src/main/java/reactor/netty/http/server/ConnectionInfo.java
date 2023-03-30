@@ -20,7 +20,6 @@ import java.net.SocketAddress;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import reactor.util.annotation.Nullable;
@@ -45,10 +44,9 @@ public final class ConnectionInfo {
 	static final int DEFAULT_HTTP_PORT = 80;
 	static final int DEFAULT_HTTPS_PORT = 443;
 	static final String DEFAULT_HOST_NAME = "localhost";
+	final SocketAddress hostAddress;
 
-	final InetSocketAddress hostAddress;
-
-	final InetSocketAddress remoteAddress;
+	final SocketAddress remoteAddress;
 
 	final String scheme;
 
@@ -56,45 +54,40 @@ public final class ConnectionInfo {
 
 	final int hostPort;
 
-	static ConnectionInfo from(Channel channel, HttpRequest request, boolean secured, SocketAddress remoteAddress,
+	final boolean isInetAddress;
+
+	static ConnectionInfo from(Channel channel, @Nullable HttpRequest request, boolean secured, SocketAddress remoteAddress,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
 		String hostName = DEFAULT_HOST_NAME;
 		int hostPort = -1;
 		String scheme = secured ? "https" : "http";
 
-		String header = request.headers().get(HttpHeaderNames.HOST);
-		if (header != null) {
-			hostName = header;
-			if (!header.isEmpty()) {
-				int portIndex = header.charAt(0) == '[' ? header.indexOf(':', header.indexOf(']')) : header.indexOf(':');
-				if (portIndex != -1) {
-					hostName = header.substring(0, portIndex);
-					hostPort = Integer.parseInt(header.substring(portIndex + 1));
+		if (request != null) {
+			String header = request.headers().get(HttpHeaderNames.HOST);
+			if (header != null) {
+				hostName = header;
+				if (!header.isEmpty()) {
+					int portIndex = header.charAt(0) == '[' ? header.indexOf(':', header.indexOf(']')) : header.indexOf(':');
+					if (portIndex != -1) {
+						hostName = header.substring(0, portIndex);
+						hostPort = Integer.parseInt(header.substring(portIndex + 1));
+					}
 				}
 			}
 		}
 
-		if (!(remoteAddress instanceof InetSocketAddress)) {
-			return new ConnectionInfo(hostName, hostPort, scheme);
+		ConnectionInfo connectionInfo = new ConnectionInfo(channel.localAddress(), hostName, hostPort, remoteAddress, scheme);
+
+		if (forwardedHeaderHandler != null && request != null && connectionInfo.isInetAddress) {
+			return forwardedHeaderHandler.apply(connectionInfo, request);
 		}
-		else {
-			ConnectionInfo connectionInfo =
-					new ConnectionInfo(((SocketChannel) channel).localAddress(), hostName, hostPort,
-							(InetSocketAddress) remoteAddress, scheme);
-			if (forwardedHeaderHandler != null) {
-				return forwardedHeaderHandler.apply(connectionInfo, request);
-			}
-			return connectionInfo;
-		}
+		return connectionInfo;
 	}
 
-	ConnectionInfo(String hostName, int hostPort, String scheme) {
-		this(null, hostName, hostPort, null, scheme);
-	}
-
-	ConnectionInfo(@Nullable InetSocketAddress hostAddress, String hostName, int hostPort,
-			@Nullable InetSocketAddress remoteAddress, String scheme) {
+	ConnectionInfo(SocketAddress hostAddress, String hostName, int hostPort,
+	               SocketAddress remoteAddress, String scheme) {
 		this.hostAddress = hostAddress;
+		this.isInetAddress = hostAddress instanceof InetSocketAddress;
 		this.hostName = hostName;
 		this.hostPort = hostPort;
 		this.remoteAddress = remoteAddress;
@@ -107,7 +100,7 @@ public final class ConnectionInfo {
 	 */
 	@Nullable
 	public InetSocketAddress getHostAddress() {
-		return hostAddress;
+		return isInetAddress ? (InetSocketAddress) hostAddress : null;
 	}
 
 	/**
@@ -116,7 +109,7 @@ public final class ConnectionInfo {
 	 */
 	@Nullable
 	public InetSocketAddress getRemoteAddress() {
-		return remoteAddress;
+		return isInetAddress ? (InetSocketAddress) remoteAddress : null;
 	}
 
 	/**
@@ -198,5 +191,13 @@ public final class ConnectionInfo {
 	public static int getDefaultHostPort(String scheme) {
 		return scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
 				DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+	}
+
+	SocketAddress getHostSocketAddress() {
+		return hostAddress;
+	}
+
+	SocketAddress getRemoteSocketAddress() {
+		return remoteAddress;
 	}
 }

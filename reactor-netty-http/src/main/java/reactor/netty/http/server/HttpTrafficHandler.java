@@ -198,16 +198,18 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 				HttpServerOperations ops;
 				ZonedDateTime timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
+				ConnectionInfo connectionInfo = null;
 				try {
+					connectionInfo = ConnectionInfo.from(ctx.channel(),
+							request,
+							secure,
+							remoteAddress,
+							forwardedHeaderHandler);
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
 							listener,
 							request,
 							compress,
-							ConnectionInfo.from(ctx.channel(),
-							                    request,
-							                    secure,
-							                    remoteAddress,
-							                    forwardedHeaderHandler),
+							connectionInfo,
 							cookieDecoder,
 							cookieEncoder,
 							formDecoderProvider,
@@ -219,7 +221,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				}
 				catch (RuntimeException e) {
 					request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-					sendDecodingFailures(e, msg, timestamp);
+					sendDecodingFailures(e, msg, timestamp, connectionInfo);
 					return;
 				}
 				ops.bind();
@@ -275,12 +277,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	}
 
 	void sendDecodingFailures(Throwable t, Object msg) {
-		sendDecodingFailures(t, msg, null);
+		sendDecodingFailures(t, msg, null, null);
 	}
 
-	void sendDecodingFailures(Throwable t, Object msg, @Nullable ZonedDateTime timestamp) {
+	void sendDecodingFailures(Throwable t, Object msg, @Nullable ZonedDateTime timestamp, @Nullable ConnectionInfo connectionInfo) {
 		persistentConnection = false;
-		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory, timestamp);
+		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory, timestamp, connectionInfo,
+				remoteAddress);
 	}
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
@@ -395,22 +398,24 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 				DecoderResult decoderResult = nextRequest.decoderResult();
 				if (decoderResult.isFailure()) {
-					sendDecodingFailures(decoderResult.cause(), nextRequest, holder.timestamp);
+					sendDecodingFailures(decoderResult.cause(), nextRequest, holder.timestamp, null);
 					discard();
 					return;
 				}
 
 				HttpServerOperations ops;
+				ConnectionInfo connectionInfo = null;
 				try {
+					connectionInfo = ConnectionInfo.from(ctx.channel(),
+							nextRequest,
+							secure,
+							remoteAddress,
+							forwardedHeaderHandler);
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
 							listener,
 							nextRequest,
 							compress,
-							ConnectionInfo.from(ctx.channel(),
-							                    nextRequest,
-							                    secure,
-							                    remoteAddress,
-							                    forwardedHeaderHandler),
+							connectionInfo,
 							cookieDecoder,
 							cookieEncoder,
 							formDecoderProvider,
@@ -422,7 +427,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				}
 				catch (RuntimeException e) {
 					holder.request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-					sendDecodingFailures(e, holder.request, holder.timestamp);
+					sendDecodingFailures(e, holder.request, holder.timestamp, connectionInfo);
 					return;
 				}
 				ops.bind();
