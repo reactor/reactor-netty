@@ -170,7 +170,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			s.onSubscribe(this);
 		}
 		else {
-			if ((inboundDone && getPending() == 0) || isCancelled()) {
+			if (inboundDone && getPending() == 0) {
 				if (inboundError != null) {
 					Operators.error(s, inboundError);
 					return;
