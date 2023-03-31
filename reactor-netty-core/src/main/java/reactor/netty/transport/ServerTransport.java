@@ -50,6 +50,7 @@ import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
+import reactor.netty.FutureMono;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.internal.util.MapUtils;
@@ -530,11 +531,14 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void disposeNow(Duration timeout) {
+			if (isDisposed()) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(channel(), "Server has been disposed"));
+				}
+				return;
+			}
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Server is about to be disposed with timeout: {}"), timeout);
-			}
-			if (isDisposed()) {
-				return;
 			}
 			dispose();
 			Mono<Void> terminateSignals = Mono.empty();
@@ -544,10 +548,21 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				// Wait for the running requests to finish
 				for (Channel channel : config.channelGroup) {
 					Channel parent = channel.parent();
+					// For TCP and HTTP/1.1 the channel parent is the ServerChannel
+					boolean isParentServerChannel = parent instanceof ServerChannel;
 					List<Mono<Void>> monos =
 							MapUtils.computeIfAbsent(channelsToMono,
-									parent instanceof ServerChannel ? channel : parent,
-									key -> new ArrayList<>());
+									isParentServerChannel ? channel : parent,
+									key -> {
+										List<Mono<Void>> list = new ArrayList<>();
+										if (!isParentServerChannel) {
+											// In case of HTTP/2 Reactor Netty will send GO_AWAY with lastStreamId to notify the
+											// client to stop opening streams, the actual CLOSE will happen when all
+											// streams up to lastStreamId are closed
+											list.add(FutureMono.from(key.close()));
+										}
+										return list;
+									});
 					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 					if (ops != null) {
 						monos.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
@@ -558,16 +573,12 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 					List<Mono<Void>> monos = entry.getValue();
 					if (monos.isEmpty()) {
 						// At this point there are no running requests for this channel
+						// This can happen for TCP and HTTP/1.1
 						// "FutureReturnValueIgnored" this is deliberate
 						channel.close();
 					}
 					else {
-						terminateSignals =
-								Mono.when(monos)
-								    // At this point there are no running requests for this channel
-								    // "FutureReturnValueIgnored" this is deliberate
-								    .doFinally(sig -> channel.close())
-								    .and(terminateSignals);
+						terminateSignals = Mono.when(monos).and(terminateSignals);
 					}
 				}
 			}
