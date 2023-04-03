@@ -97,26 +97,36 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 			connectionInfo = connectionInfo.withScheme(protoHeader.split(",", 2)[0].trim());
 		}
 		String hostHeader = request.headers().get(X_FORWARDED_HOST_HEADER);
+		int port = -1;
 		if (hostHeader != null) {
-			String scheme = connectionInfo.getScheme();
-			int port = scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
-					DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+			port = getDefaultHostPort(connectionInfo);
 			connectionInfo = connectionInfo.withHostAddress(
 					AddressUtils.parseAddress(hostHeader.split(",", 2)[0].trim(), port, DEFAULT_FORWARDED_HEADER_VALIDATION));
-			String portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
-			if (portHeader != null && !portHeader.isEmpty()) {
-				String portStr = portHeader.split(",", 2)[0].trim();
-				if (portStr.chars().allMatch(Character::isDigit)) {
-					port = Integer.parseInt(portStr);
-				}
-				else if (DEFAULT_FORWARDED_HEADER_VALIDATION) {
-					throw new IllegalArgumentException("Failed to parse a port from " + portHeader);
-				}
-				connectionInfo = connectionInfo.withHostAddress(
-						AddressUtils.createUnresolved(connectionInfo.getHostAddress().getHostString(), port));
+		}
+
+		String portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
+		if (portHeader != null && !portHeader.isEmpty()) {
+			if (port == -1) {
+				port = getDefaultHostPort(connectionInfo);
 			}
+			String portStr = portHeader.split(",", 2)[0].trim();
+			if (portStr.chars().allMatch(Character::isDigit)) {
+				port = Integer.parseInt(portStr);
+			}
+			else if (DEFAULT_FORWARDED_HEADER_VALIDATION) {
+				throw new IllegalArgumentException("Failed to parse a port from " + portHeader);
+			}
+			connectionInfo = new ConnectionInfo(
+					AddressUtils.createUnresolved(connectionInfo.getHostAddress().getHostString(), port),
+					connectionInfo.getHostName(), port, connectionInfo.getRemoteAddress(), connectionInfo.getScheme());
 		}
 		return connectionInfo;
+	}
+
+	private int getDefaultHostPort(ConnectionInfo connectionInfo) {
+		String scheme = connectionInfo.getScheme();
+		return scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
+				DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 	}
 
 }

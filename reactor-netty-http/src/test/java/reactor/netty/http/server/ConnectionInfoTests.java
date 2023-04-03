@@ -368,6 +368,30 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	@Test
+	void xForwardedForAndHostOnly() throws SSLException {
+		SslContext clientSslContext = SslContextBuilder.forClient()
+				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("Host", "a.example.com");
+					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
+					clientRequestHeaders.add("X-Forwarded-Port", "8443");
+					clientRequestHeaders.add("X-Forwarded-Proto", "https");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8443);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
+				},
+				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
+				httpServer -> httpServer.secure(ssl -> ssl.sslContext(serverSslContext)),
+				true);
+	}
+
+	@Test
 	void customForwardedHandlerForMultipleHost() {
 		testClientRequest(
 				clientRequestHeaders ->
