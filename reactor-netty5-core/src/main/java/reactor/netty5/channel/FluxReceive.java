@@ -18,7 +18,6 @@ package reactor.netty5.channel;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.IntConsumer;
 
@@ -60,9 +59,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	volatile IntConsumer receiverCancel;
 
-	volatile int once;
-	static final AtomicIntegerFieldUpdater<FluxReceive> ONCE =
-		AtomicIntegerFieldUpdater.newUpdater(FluxReceive.class, "once");
+	boolean subscribedOnce;
 
 	// Please note, in this specific case WIP is non-volatile since all operation that
 	// involves work-in-progress pattern is within Netty Event-Loops which guarantees
@@ -151,11 +148,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	}
 
 	final void startReceiver(CoreSubscriber<? super Object> s) {
-		if (once == 0 && ONCE.compareAndSet(this, 0, 1)) {
+		if (!subscribedOnce) {
+			subscribedOnce = true;
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel, "{}: subscribing inbound receiver"), this);
 			}
-			if (inboundDone && getPending() == 0) {
+			if ((inboundDone && getPending() == 0) || isCancelled()) {
 				if (inboundError != null) {
 					Operators.error(s, inboundError);
 					return;
