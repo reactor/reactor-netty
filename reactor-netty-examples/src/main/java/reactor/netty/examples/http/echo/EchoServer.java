@@ -17,6 +17,7 @@ package reactor.netty.examples.http.echo;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 
@@ -48,8 +49,12 @@ public final class EchoServer {
 
 		if (SECURE) {
 			SelfSignedCertificate ssc = new SelfSignedCertificate();
-			server = server.secure(
-					spec -> spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+			if (HTTP2) {
+				server = server.secure(spec -> spec.sslContext(Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+			}
+			else {
+				server = server.secure(spec -> spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+			}
 		}
 
 		if (HTTP2) {
