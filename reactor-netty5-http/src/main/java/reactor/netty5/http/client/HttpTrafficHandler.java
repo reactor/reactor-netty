@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,10 @@ import static reactor.netty5.ReactorNetty.format;
  * {@link ChannelHandlerAdapter} prior {@link reactor.netty5.channel.ChannelOperationsHandler}
  * for handling H2/H2C use cases. HTTP/1.x use cases are delegated to
  * {@link reactor.netty5.channel.ChannelOperationsHandler} without any interference.
+ * <p>
+ * Once the channel is activated, the upgrade is decided (H2C or HTTP/1.1) and in case H2/H2C the first SETTINGS frame
+ * is received, this handler is not needed any more. Thus said {@link #channelInactive(ChannelHandlerContext)}
+ * is invoked only in case there are issues with the connection itself.
  *
  * @author Violeta Georgieva
  * @since 1.0.0
@@ -79,6 +83,10 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter {
 		ctx.fireChannelRead(msg);
 	}
 
+	public void channelInactive(ChannelHandlerContext ctx) {
+		ctx.fireChannelExceptionCaught(new PrematureCloseException("Connection prematurely closed BEFORE response"));
+	}
+
 	@Override
 	public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
 		Channel channel = ctx.channel();
@@ -100,6 +108,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter {
 				log.debug(format(channel, "The upgrade to H2C protocol was rejected, continue using HTTP/1.x protocol."));
 			}
 			sendNewState(Connection.from(channel), HttpClientState.UPGRADE_REJECTED);
+			removeThisHandler = true; // we have to remove ourselves from the pipeline after having fired the event below.
 		}
 		ctx.fireChannelInboundEvent(evt);
 		if (removeThisHandler) {
