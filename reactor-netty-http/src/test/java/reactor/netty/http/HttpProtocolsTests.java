@@ -457,8 +457,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		doTestResponseTimeout(localClient, 200);
 	}
 
-	private void doTestResponseTimeout(HttpClient client, long expectedTimeout)
-			throws Exception {
+	private static void doTestResponseTimeout(HttpClient client, long expectedTimeout) throws Exception {
 		AtomicBoolean onRequest = new AtomicBoolean();
 		AtomicBoolean onResponse = new AtomicBoolean();
 		AtomicBoolean onDisconnected = new AtomicBoolean();
@@ -530,7 +529,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		doTestConcurrentRequests(client.port(disposableServer.port()));
 	}
 
-	private void doTestConcurrentRequests(HttpClient client) {
+	private static void doTestConcurrentRequests(HttpClient client) {
 		List<String> responses =
 				Flux.range(0, 10)
 				    .flatMapDelayError(i -> client.get()
@@ -611,7 +610,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		doTestTrailerHeaders(client.port(disposableServer.port()), "empty", "testTrailerHeadersFullResponse");
 	}
 
-	private void doTestTrailerHeaders(HttpClient client, String expectedHeaderValue, String expectedResponse) {
+	private static void doTestTrailerHeaders(HttpClient client, String expectedHeaderValue, String expectedResponse) {
 		client.get()
 		      .uri("/")
 		      .responseSingle((res, bytes) -> bytes.asString().zipWith(res.trailerHeaders()))
