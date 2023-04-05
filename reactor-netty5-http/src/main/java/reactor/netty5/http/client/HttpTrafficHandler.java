@@ -83,6 +83,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter {
 		ctx.fireChannelRead(msg);
 	}
 
+	@Override
 	public void channelInactive(ChannelHandlerContext ctx) {
 		ctx.fireChannelExceptionCaught(new PrematureCloseException("Connection prematurely closed BEFORE response"));
 	}
