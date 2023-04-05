@@ -35,6 +35,7 @@ import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.test.StepVerifier;
+import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import java.security.cert.CertificateException;
@@ -79,25 +80,25 @@ class Http2Tests extends BaseHttpTest {
 
 	@Test
 	void testHttpNoSslH2Fails() {
-		StepVerifier.create(
-		        createServer()
-		                  .protocol(HttpProtocol.H2)
-		                  .handle((req, res) -> res.sendString(Mono.just("Hello")))
-		                  .bind())
-		            .verifyErrorMessage(H2_WITHOUT_TLS_SERVER);
+		createServer()
+		          .protocol(HttpProtocol.H2)
+		          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+		          .bind()
+		          .as(StepVerifier::create)
+		          .verifyErrorMessage(H2_WITHOUT_TLS_SERVER);
 	}
 
 	@Test
 	void testHttpSslH2CFails() {
 		Http2SslContextSpec serverOptions = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 
-		StepVerifier.create(
-		        createServer()
-		                  .protocol(HttpProtocol.H2C)
-		                  .secure(ssl -> ssl.sslContext(serverOptions))
-		                  .handle((req, res) -> res.sendString(Mono.just("Hello")))
-		                  .bind())
-		            .verifyErrorMessage(H2C_WITH_TLS_SERVER);
+		createServer()
+		          .protocol(HttpProtocol.H2C)
+		          .secure(ssl -> ssl.sslContext(serverOptions))
+		          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+		          .bind()
+		          .as(StepVerifier::create)
+		          .verifyErrorMessage(H2C_WITH_TLS_SERVER);
 	}
 
 	@Test
@@ -179,18 +180,18 @@ class Http2Tests extends BaseHttpTest {
 		assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 	}
 
-	void doTestMaxActiveStreams_1_CustomPool(BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer) throws Exception {
+	void doTestMaxActiveStreams_1_CustomPool(@Nullable BiFunction<Runnable, Duration, Disposable> pendingAcquireTimer) throws Exception {
 		ConnectionProvider.Builder builder =
 				ConnectionProvider.builder("testMaxActiveStreams_1_CustomPool")
-						.maxConnections(1)
-						.pendingAcquireTimeout(Duration.ofMillis(10)); // the default is 45s
+				                  .maxConnections(1)
+				                  .pendingAcquireTimeout(Duration.ofMillis(10)); // the default is 45s
 		if (pendingAcquireTimer != null) {
 			builder = builder.pendingAcquireTimer(pendingAcquireTimer);
 		}
 		ConnectionProvider provider = builder.build();
 		doTestMaxActiveStreams(HttpClient.create(provider), 1, 1, 1);
 		provider.disposeLater()
-				.block();
+		        .block();
 	}
 
 	@Test
@@ -249,7 +250,7 @@ class Http2Tests extends BaseHttpTest {
 				                  .aggregate()
 				                  .asString()
 				                  .materialize(),
-				    concurrency, prefetch)
+				            concurrency, prefetch)
 				    .collectList()
 				    .doFinally(fin -> latch.countDown())
 				    .block(Duration.ofSeconds(30));
@@ -330,15 +331,15 @@ class Http2Tests extends BaseHttpTest {
 
 		doTestHttpClientDefaultSslProvider(client.protocol(HttpProtocol.H2));
 		doTestHttpClientDefaultSslProvider(client.protocol(HttpProtocol.H2)
-		                               .secure());
+		                                         .secure());
 		doTestHttpClientDefaultSslProvider(client.secure()
-		                               .protocol(HttpProtocol.H2));
+		                                         .protocol(HttpProtocol.H2));
 		doTestHttpClientDefaultSslProvider(client.protocol(HttpProtocol.HTTP11)
-		                               .secure()
-		                               .protocol(HttpProtocol.H2));
+		                                         .secure()
+		                                         .protocol(HttpProtocol.H2));
 	}
 
-	private void doTestHttpClientDefaultSslProvider(HttpClient client) {
+	private static void doTestHttpClientDefaultSslProvider(HttpClient client) {
 		AtomicBoolean channel = new AtomicBoolean();
 		StepVerifier.create(client.doOnRequest((req, conn) -> channel.set(conn.channel().parent() != null))
 		                          .get()
@@ -488,7 +489,7 @@ class Http2Tests extends BaseHttpTest {
 		doTestIssue1394_SchemeHttps("null"::equals, HttpProtocol.HTTP11, HttpProtocol.H2C);
 	}
 
-	private void doTestIssue1394_SchemeHttps(Predicate<String> predicate, HttpProtocol... protocols) {
+	private static void doTestIssue1394_SchemeHttps(Predicate<String> predicate, HttpProtocol... protocols) {
 		HttpClient.create()
 		          .protocol(protocols)
 		          .wiretap(true)
@@ -511,7 +512,7 @@ class Http2Tests extends BaseHttpTest {
 		doTestIssue1394_ProtocolSchemeNotCompatible(HttpProtocol.H2C, "https", H2C_WITH_TLS_CLIENT);
 	}
 
-	private void doTestIssue1394_ProtocolSchemeNotCompatible(HttpProtocol protocol, String scheme, String expectedMessage) {
+	private static void doTestIssue1394_ProtocolSchemeNotCompatible(HttpProtocol protocol, String scheme, String expectedMessage) {
 		HttpClient.create()
 		          .protocol(protocol)
 		          .wiretap(true)
@@ -589,21 +590,21 @@ class Http2Tests extends BaseHttpTest {
 	private void doTestPR2659_SchemeHttp(String expectedStreamId) {
 		disposableServer =
 				createServer()
-						.host("localhost")
-						.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
-						.handle((req, res) -> res.sendString(Mono.just("testPR2659")))
-						.bindNow(Duration.ofSeconds(30));
+				        .host("localhost")
+				        .protocol(HttpProtocol.HTTP11, HttpProtocol.H2C)
+				        .handle((req, res) -> res.sendString(Mono.just("testPR2659")))
+				        .bindNow(Duration.ofSeconds(30));
 
 		HttpClient.create()
-				.protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C)
-				.wiretap(true)
-				.get()
-				.uri("http://localhost:" + disposableServer.port() + "/")
-				.responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
-				.as(StepVerifier::create)
-				.expectNext(expectedStreamId)
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C)
+		          .wiretap(true)
+		          .get()
+		          .uri("http://localhost:" + disposableServer.port() + "/")
+		          .responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
+		          .as(StepVerifier::create)
+		          .expectNext(expectedStreamId)
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -611,18 +612,18 @@ class Http2Tests extends BaseHttpTest {
 		doTestPR2659_SchemeHttps(s -> !"null".equals(s));
 	}
 
-	private void doTestPR2659_SchemeHttps(Predicate<String> predicate) {
+	private static void doTestPR2659_SchemeHttps(Predicate<String> predicate) {
 		HttpClient.create()
-				.protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C)
-				.secure(sslContextSpec -> sslContextSpec.sslContext(Http2SslContextSpec.forClient()))
-				.wiretap(true)
-				.get()
-				.uri("https://example.com")
-				.responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
-				.as(StepVerifier::create)
-				.expectNextMatches(predicate)
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C)
+		          .secure(sslContextSpec -> sslContextSpec.sslContext(Http2SslContextSpec.forClient()))
+		          .wiretap(true)
+		          .get()
+		          .uri("https://example.com")
+		          .responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("x-http2-stream-id", "null")))
+		          .as(StepVerifier::create)
+		          .expectNextMatches(predicate)
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
 	}
 
 }
