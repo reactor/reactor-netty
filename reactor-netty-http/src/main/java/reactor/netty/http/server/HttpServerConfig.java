@@ -503,6 +503,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
+			boolean enableGracefulShutdown,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
@@ -521,6 +522,12 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				Http2FrameCodecBuilder.forServer()
 				                      .validateHeaders(validate)
 				                      .initialSettings(http2Settings);
+
+		if (enableGracefulShutdown) {
+			// Configure the graceful shutdown with indefinite timeout as Reactor Netty controls the timeout
+			// when disposeNow(timeout) is invoked
+			http2FrameCodecBuilder.gracefulShutdownTimeoutMillis(-1);
+		}
 
 		if (p.get(NettyPipeline.LoggingHandler) != null) {
 			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG,
@@ -552,6 +559,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
 			HttpRequestDecoderSpec decoder,
+			boolean enableGracefulShutdown,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
@@ -570,7 +578,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 						decoder.allowDuplicateContentLengths());
 
 		Http11OrH2CleartextCodec upgrader = new Http11OrH2CleartextCodec(accessLogEnabled, accessLog, compressPredicate,
-				cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null, formDecoderProvider,
+				cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null, enableGracefulShutdown, formDecoderProvider,
 				forwardedHeaderHandler, http2Settings, httpMessageLogFactory, listener, mapHandle, metricsRecorder,
 				minCompressionSize, opsFactory, uriTagValue, decoder.validateHeaders());
 
@@ -880,6 +888,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				ServerCookieDecoder cookieDecoder,
 				ServerCookieEncoder cookieEncoder,
 				boolean debug,
+				boolean enableGracefulShutdown,
 				HttpServerFormDecoderProvider formDecoderProvider,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				Http2Settings http2Settings,
@@ -902,6 +911,12 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 					Http2FrameCodecBuilder.forServer()
 					                      .validateHeaders(validate)
 					                      .initialSettings(http2Settings);
+
+			if (enableGracefulShutdown) {
+				// Configure the graceful shutdown with indefinite timeout as Reactor Netty controls the timeout
+				// when disposeNow(timeout) is invoked
+				http2FrameCodecBuilder.gracefulShutdownTimeoutMillis(-1);
+			}
 
 			if (debug) {
 				http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(
@@ -949,6 +964,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ServerCookieDecoder                                     cookieDecoder;
 		final ServerCookieEncoder                                     cookieEncoder;
 		final HttpRequestDecoderSpec                                  decoder;
+		final boolean                                                 enableGracefulShutdown;
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2Settings                                           http2Settings;
@@ -971,6 +987,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.cookieDecoder = initializer.cookieDecoder;
 			this.cookieEncoder = initializer.cookieEncoder;
 			this.decoder = initializer.decoder;
+			this.enableGracefulShutdown = initializer.enableGracefulShutdown;
 			this.formDecoderProvider = initializer.formDecoderProvider;
 			this.forwardedHeaderHandler = initializer.forwardedHeaderHandler;
 			this.http2Settings = initializer.http2Settings;
@@ -995,7 +1012,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
 				configureH2Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-						formDecoderProvider, forwardedHeaderHandler, http2Settings, httpMessageLogFactory, idleTimeout,
+						enableGracefulShutdown, formDecoderProvider, forwardedHeaderHandler, http2Settings, httpMessageLogFactory, idleTimeout,
 						listener, mapHandle, metricsRecorder, minCompressionSize, opsFactory, uriTagValue, decoder.validateHeaders());
 				return;
 			}
@@ -1024,6 +1041,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ServerCookieDecoder                                     cookieDecoder;
 		final ServerCookieEncoder                                     cookieEncoder;
 		final HttpRequestDecoderSpec                                  decoder;
+		final boolean                                                 enableGracefulShutdown;
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2Settings                                           http2Settings;
@@ -1048,6 +1066,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.cookieDecoder = config.cookieDecoder;
 			this.cookieEncoder = config.cookieEncoder;
 			this.decoder = config.decoder;
+			this.enableGracefulShutdown = config.channelGroup() != null;
 			this.formDecoderProvider = config.formDecoderProvider;
 			this.forwardedHeaderHandler = config.forwardedHeaderHandler;
 			this.http2Settings = config.http2Settings();
@@ -1115,6 +1134,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							compressPredicate(compressPredicate, minCompressionSize),
 							cookieDecoder,
 							cookieEncoder,
+							enableGracefulShutdown,
 							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
@@ -1139,6 +1159,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							cookieDecoder,
 							cookieEncoder,
 							decoder,
+							enableGracefulShutdown,
 							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
@@ -1180,6 +1201,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							compressPredicate(compressPredicate, minCompressionSize),
 							cookieDecoder,
 							cookieEncoder,
+							enableGracefulShutdown,
 							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
