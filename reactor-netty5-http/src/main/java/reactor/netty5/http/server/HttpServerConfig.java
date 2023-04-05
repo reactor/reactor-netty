@@ -486,6 +486,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			boolean accessLogEnabled,
 			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+			boolean enableGracefulShutdown,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
@@ -504,6 +505,12 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				Http2FrameCodecBuilder.forServer()
 				                      .validateHeaders(validate)
 				                      .initialSettings(http2Settings);
+
+		if (enableGracefulShutdown) {
+			// Configure the graceful shutdown with indefinite timeout as Reactor Netty controls the timeout
+			// when disposeNow(timeout) is invoked
+			http2FrameCodecBuilder.gracefulShutdownTimeoutMillis(-1);
+		}
 
 		if (p.get(NettyPipeline.LoggingHandler) != null) {
 			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG,
@@ -533,6 +540,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			HttpRequestDecoderSpec decoder,
+			boolean enableGracefulShutdown,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			Http2Settings http2Settings,
@@ -551,7 +559,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 						decoder.allowDuplicateContentLengths());
 
 		Http11OrH2CleartextCodec upgrader = new Http11OrH2CleartextCodec(accessLogEnabled, accessLog, compressPredicate,
-				 p.get(NettyPipeline.LoggingHandler) != null, formDecoderProvider,
+				 p.get(NettyPipeline.LoggingHandler) != null, enableGracefulShutdown, formDecoderProvider,
 				forwardedHeaderHandler, http2Settings, httpMessageLogFactory, listener, mapHandle, metricsRecorder,
 				minCompressionSize, opsFactory, uriTagValue, decoder.validateHeaders());
 
@@ -877,6 +885,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				boolean debug,
+				boolean enableGracefulShutdown,
 				HttpServerFormDecoderProvider formDecoderProvider,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 				Http2Settings http2Settings,
@@ -897,6 +906,12 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 					Http2FrameCodecBuilder.forServer()
 					                      .validateHeaders(validate)
 					                      .initialSettings(http2Settings);
+
+			if (enableGracefulShutdown) {
+				// Configure the graceful shutdown with indefinite timeout as Reactor Netty controls the timeout
+				// when disposeNow(timeout) is invoked
+				http2FrameCodecBuilder.gracefulShutdownTimeoutMillis(-1);
+			}
 
 			if (debug) {
 				http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(
@@ -941,6 +956,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Function<AccessLogArgProvider, AccessLog>               accessLog;
 		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 		final HttpRequestDecoderSpec                                  decoder;
+		final boolean                                                 enableGracefulShutdown;
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2Settings                                           http2Settings;
@@ -961,6 +977,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.accessLog = initializer.accessLog;
 			this.compressPredicate = compressPredicate(initializer.compressPredicate, initializer.minCompressionSize);
 			this.decoder = initializer.decoder;
+			this.enableGracefulShutdown = initializer.enableGracefulShutdown;
 			this.formDecoderProvider = initializer.formDecoderProvider;
 			this.forwardedHeaderHandler = initializer.forwardedHeaderHandler;
 			this.http2Settings = initializer.http2Settings;
@@ -985,7 +1002,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
 				configureH2Pipeline(p, accessLogEnabled, accessLog, compressPredicate,
-						formDecoderProvider, forwardedHeaderHandler, http2Settings, httpMessageLogFactory, idleTimeout, listener, mapHandle,
+						enableGracefulShutdown, formDecoderProvider, forwardedHeaderHandler, http2Settings, httpMessageLogFactory, idleTimeout, listener, mapHandle,
 						metricsRecorder, minCompressionSize, opsFactory, uriTagValue, decoder.validateHeaders());
 				return;
 			}
@@ -1012,6 +1029,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Function<AccessLogArgProvider, AccessLog>               accessLog;
 		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 		final HttpRequestDecoderSpec                                  decoder;
+		final boolean                                                 enableGracefulShutdown;
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2Settings                                           http2Settings;
@@ -1034,6 +1052,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.accessLog = config.accessLog;
 			this.compressPredicate = config.compressPredicate;
 			this.decoder = config.decoder;
+			this.enableGracefulShutdown = config.channelGroup() != null;
 			this.formDecoderProvider = config.formDecoderProvider;
 			this.forwardedHeaderHandler = config.forwardedHeaderHandler;
 			this.http2Settings = config.http2Settings();
@@ -1095,6 +1114,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							accessLogEnabled,
 							accessLog,
 							compressPredicate(compressPredicate, minCompressionSize),
+							enableGracefulShutdown,
 							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
@@ -1117,6 +1137,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							accessLog,
 							compressPredicate(compressPredicate, minCompressionSize),
 							decoder,
+							enableGracefulShutdown,
 							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
@@ -1154,6 +1175,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							accessLogEnabled,
 							accessLog,
 							compressPredicate(compressPredicate, minCompressionSize),
+							enableGracefulShutdown,
 							formDecoderProvider,
 							forwardedHeaderHandler,
 							http2Settings,
