@@ -353,7 +353,13 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						}
 
 						if (sourceMode == ASYNC) {
-							// notify that consumption has been terminated
+							// notify that queue draining is done and no more interactions are expected for here
+							//
+							// This is needed due to ASYNC fusion contract.
+							// This call notifies upstream that the interaction with the queue is done on the
+							// downstream side.
+							// Some upstreams implementations may have `onClose()` mechanism to send notification
+							// about its termination and finalization of the offered events consumption
 							queue.clear();
 						}
 						return;
