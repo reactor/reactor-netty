@@ -119,7 +119,7 @@ ext {
 	junitVersion = '5.9.2'
 	junitPlatformLauncherVersion = '1.9.2'
 	mockitoVersion = '4.11.0'
-	blockHoundVersion = '1.0.7.RELEASE'
+	blockHoundVersion = '1.0.8.RELEASE'
 
 	javadocLinks = ["https://docs.oracle.com/javase/8/docs/api/",
 					// Use Reactive Streams 1.0.3 version for javadoc generation
