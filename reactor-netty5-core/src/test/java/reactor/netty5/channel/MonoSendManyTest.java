@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -33,11 +34,14 @@ import io.netty5.handler.timeout.WriteTimeoutHandler;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
 import reactor.core.Exceptions;
+import reactor.core.Fuseable;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Operators;
 import reactor.core.publisher.Sinks;
 import reactor.test.StepVerifier;
 import reactor.test.publisher.TestPublisher;
@@ -255,6 +259,84 @@ class MonoSendManyTest {
 					.isEqualTo(messagesToSend);
 			discarded.clear();
 		}
+	}
+
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void shouldCallQueueClearToNotifyTermination(boolean flushOnEach) {
+		//use an extra handler
+		EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
+		AtomicBoolean cleared = new AtomicBoolean();
+
+		Sinks.Many<Buffer> source = Sinks.many().unicast().onBackpressureBuffer();
+		MonoSendMany<Buffer, Buffer> m =
+				MonoSendMany.bufferSource(source.asFlux().transform(Operators.<Buffer, Buffer>lift((__,
+						downstream) -> new CoreSubscriber<Buffer>() {
+					@Override
+					public void onSubscribe(Subscription s) {
+						downstream.onSubscribe(new Fuseable.QueueSubscription<Buffer>() {
+							@Override
+							public void request(long n) {
+								s.request(n);
+							}
+
+							@Override
+							public void cancel() {
+								s.cancel();
+							}
+
+							@Override
+							public int size() {
+								return ((Fuseable.QueueSubscription<Buffer>) s).size();
+							}
+
+							@Override
+							public boolean isEmpty() {
+								return ((Fuseable.QueueSubscription<Buffer>) s).isEmpty();
+							}
+
+							@Override
+							public void clear() {
+								cleared.set(true);
+								((Fuseable.QueueSubscription<Buffer>) s).clear();
+							}
+
+							@Override
+							public Buffer poll() {
+								return ((Fuseable.QueueSubscription<Buffer>) s).poll();
+							}
+
+							@Override
+							public int requestFusion(int requestedMode) {
+								return ((Fuseable.QueueSubscription<Buffer>) s).requestFusion(requestedMode);
+							}
+						});
+					}
+
+					@Override
+					public void onNext(Buffer buf) {
+						downstream.onNext(buf);
+					}
+
+					@Override
+					public void onError(Throwable t) {
+						downstream.onError(t);
+					}
+
+					@Override
+					public void onComplete() {
+						downstream.onComplete();
+					}
+				})), channel, b -> flushOnEach);
+		m.subscribe();
+		Queue<Object> messages = channel.outboundMessages();
+
+		source.emitComplete(Sinks.EmitFailureHandler.FAIL_FAST);
+
+		channel.flush();
+		messages.forEach(Resource::dispose);
+		assertThat(cleared).isTrue();
 	}
 
 	static void wait(WeakReference<Subscription> ref) {
