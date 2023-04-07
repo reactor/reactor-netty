@@ -264,6 +264,7 @@ class MonoSendManyTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
+	@SuppressWarnings("unchecked")
 	void shouldCallQueueClearToNotifyTermination(boolean flushOnEach) {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
