@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -350,6 +350,17 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						}
 						else {
 							actual.onError(t);
+						}
+
+						if (sourceMode == ASYNC) {
+							// notify that queue draining is done and no more interactions are expected for here
+							//
+							// This is needed due to ASYNC fusion contract.
+							// This call notifies upstream that the interaction with the queue is done on the
+							// downstream side.
+							// Some upstreams implementations may have `onClose()` mechanism to send notification
+							// about its termination and finalization of the offered events consumption
+							queue.clear();
 						}
 						return;
 					}
