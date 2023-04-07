@@ -33,7 +33,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscription;
@@ -267,6 +266,7 @@ class MonoSendManyTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
+	@SuppressWarnings("unchecked")
 	void shouldCallQueueClearToNotifyTermination(boolean flushOnEach) {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
@@ -339,7 +339,7 @@ class MonoSendManyTest {
 
 		channel.flush();
 		messages.forEach(ReferenceCountUtil::release);
-		Assertions.assertThat(cleared).isTrue();
+		assertThat(cleared).isTrue();
 	}
 
 	static void wait(WeakReference<Subscription> ref) {
