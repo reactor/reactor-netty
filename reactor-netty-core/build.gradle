@@ -240,8 +240,6 @@ task japicmp(type: JapicmpTask) {
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 
 	methodExcludes = [
-			'reactor.netty.transport.NameResolverProvider#dnsAddressResolverGroupProvider()',
-			'reactor.netty.transport.NameResolverProvider$NameResolverSpec#dnsAddressResolverGroupProvider(java.util.function.Function)'
 	]
 }
 
