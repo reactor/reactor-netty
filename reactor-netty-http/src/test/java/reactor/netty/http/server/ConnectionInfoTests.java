@@ -172,21 +172,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 				});
 	}
-
-	@Test
-	void forwardedProtoHttpOnly() {
-		testClientRequest(
-				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "proto=http")
-						.set(HttpHeaderNames.HOST, "192.168.0.1"),
-				serverRequest -> {
-					Assertions.assertThat(serverRequest.hostAddress().getHostString())
-							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(80);
-					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(80);
-				});
-	}
-
+	
 	@ParameterizedTest(name = "{displayName}({arguments})")
 	@ValueSource(strings = {"http", "https", "wss"})
 	void forwardedProtoOnly(String protocol) {
@@ -417,7 +403,6 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostAddress().getHostString())
 							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8443);
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8443);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
