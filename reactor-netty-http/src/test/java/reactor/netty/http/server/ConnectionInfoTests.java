@@ -39,6 +39,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.Connection;
@@ -167,6 +169,23 @@ class ConnectionInfoTests extends BaseHttpTest {
 					int port = serverRequest.scheme().equals("https") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+				});
+	}
+
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(strings = {"http", "https", "wss"})
+	void forwardedProtoOnly(String protocol) {
+		int port = protocol.equals("https") || protocol.equals("wss") ? 443 : 80;
+
+		testClientRequest(
+				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "proto=" + protocol)
+						.set(HttpHeaderNames.HOST, "192.168.0.1"),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString())
+							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 				});
 	}
@@ -391,6 +410,26 @@ class ConnectionInfoTests extends BaseHttpTest {
 				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
 				httpServer -> httpServer.secure(ssl -> ssl.sslContext(serverSslContext)),
 				true);
+	}
+
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(strings = {"http", "https", "wss"})
+	void xForwardedProtoOnly(String protocol) {
+		int port = protocol.equals("https") || protocol.equals("wss") ? 443 : 80;
+
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("Host", "a.example.com");
+					clientRequestHeaders.add("X-Forwarded-Proto", protocol);
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString())
+							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo(protocol);
+				});
 	}
 
 	@Test
