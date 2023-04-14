@@ -172,7 +172,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 				});
 	}
-	
+
 	@ParameterizedTest(name = "{displayName}({arguments})")
 	@ValueSource(strings = {"http", "https", "wss"})
 	void forwardedProtoOnly(String protocol) {
