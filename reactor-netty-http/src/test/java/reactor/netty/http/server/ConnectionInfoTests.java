@@ -187,6 +187,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo(protocol);
 				});
 	}
 
