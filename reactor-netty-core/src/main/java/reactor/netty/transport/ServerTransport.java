@@ -551,10 +551,12 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 					// For TCP and HTTP/1.1 the channel parent is the ServerChannel
 					boolean isParentServerChannel = parent instanceof ServerChannel;
 					List<Mono<Void>> monos =
-							MapUtils.computeIfAbsent(channelsToMono,
+							channelsToMono.compute(
 									isParentServerChannel ? channel : parent,
-									key -> {
-										List<Mono<Void>> list = new ArrayList<>();
+									(key, list) -> {
+										if (list == null) {
+											list = new ArrayList<>();
+										}
 										if (!isParentServerChannel) {
 											// In case of HTTP/2 Reactor Netty will send GO_AWAY with lastStreamId to notify the
 											// client to stop opening streams, the actual CLOSE will happen when all
