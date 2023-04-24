@@ -546,30 +546,31 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				HashMap<Channel, List<Mono<Void>>> channelsToMono =
 						new HashMap<>(MapUtils.calculateInitialCapacity(config.channelGroup.size()));
 				// Wait for the running requests to finish
-				for (Channel channel : config.channelGroup) {
-					Channel parent = channel.parent();
-					// For TCP and HTTP/1.1 the channel parent is the ServerChannel
-					boolean isParentServerChannel = parent instanceof ServerChannel;
-					List<Mono<Void>> monos =
-							channelsToMono.compute(
-									isParentServerChannel ? channel : parent,
-									(key, list) -> {
-										if (list == null) {
-											list = new ArrayList<>();
-										}
-										if (!isParentServerChannel) {
-											// In case of HTTP/2 Reactor Netty will send GO_AWAY with lastStreamId to notify the
-											// client to stop opening streams, the actual CLOSE will happen when all
-											// streams up to lastStreamId are closed
-											list.add(FutureMono.from(key.close()));
-										}
-										return list;
-									});
-					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
-					if (ops != null) {
-						monos.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
-					}
-				}
+				config.channelGroup
+						.stream()
+						.sorted(this::sortChannelsStreamsFirst)
+						.forEach(channel -> {
+							Channel parent = channel.parent();
+							// For TCP and HTTP/1.1 the channel parent is the ServerChannel
+							boolean isParentServerChannel = parent instanceof ServerChannel;
+							List<Mono<Void>> monos =
+									MapUtils.computeIfAbsent(channelsToMono,
+											isParentServerChannel ? channel : parent,
+											key -> {
+												List<Mono<Void>> list = new ArrayList<>();
+												if (!isParentServerChannel) {
+													// In case of HTTP/2 Reactor Netty will send GO_AWAY with lastStreamId to notify the
+													// client to stop opening streams, the actual CLOSE will happen when all
+													// streams up to lastStreamId are closed
+													list.add(FutureMono.from(key.close()));
+												}
+												return list;
+											});
+							ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
+							if (ops != null) {
+								monos.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
+							}
+						});
 				for (Map.Entry<Channel, List<Mono<Void>>> entry : channelsToMono.entrySet()) {
 					Channel channel = entry.getKey();
 					List<Mono<Void>> monos = entry.getValue();
@@ -626,6 +627,13 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				sink.onCancel(this);
 				s.request(Long.MAX_VALUE);
 			}
+		}
+
+		int sortChannelsStreamsFirst(Channel ch1, Channel ch2) {
+			boolean ch1ServerChannel = ch1.parent() instanceof ServerChannel;
+			boolean ch2ServerChannel = ch2.parent() instanceof ServerChannel;
+			return ch1ServerChannel == ch2ServerChannel ?
+					0 : ((ch1ServerChannel && !ch2ServerChannel) ? 1 : -1);
 		}
 	}
 
