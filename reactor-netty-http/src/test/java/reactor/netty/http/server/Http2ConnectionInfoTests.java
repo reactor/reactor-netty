@@ -18,7 +18,6 @@ package reactor.netty.http.server;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import org.junit.jupiter.api.Disabled;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 
@@ -57,7 +56,6 @@ class Http2ConnectionInfoTests extends ConnectionInfoTests {
 	}
 
 	@Override
-	@Disabled
 	void forwardedHostEmptyHostHeader() {
 		// HTTP/2 does not allow ':authority' to be empty
 		// https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
