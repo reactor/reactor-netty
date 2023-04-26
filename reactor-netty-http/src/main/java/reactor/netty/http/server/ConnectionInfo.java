@@ -57,7 +57,7 @@ public final class ConnectionInfo {
 	final int hostPort;
 
 	/**
-	 * true when the Host header is present and contains a port number.
+	 * true when the Host header is present and contains a port number that has been successfully  parsed.
 	 */
 	final boolean hostPortParsed;
 
@@ -136,6 +136,15 @@ public final class ConnectionInfo {
 	}
 
 	/**
+	 * Return whether or not the port number has been parsed from the Host header.
+	 * @return true if the Host port is present and has been succesfully parsed
+	 * @since 1.0.32
+	 */
+	public boolean isHostPortParsed() {
+		return hostPortParsed;
+	}
+
+	/**
 	 * Return a new {@link ConnectionInfo} with the updated host address.
 	 * @param hostAddress the host address
 	 * @return a new {@link ConnectionInfo}
@@ -144,6 +153,16 @@ public final class ConnectionInfo {
 		requireNonNull(hostAddress, "hostAddress");
 		return new ConnectionInfo(hostAddress, hostAddress.getHostString(), hostAddress.getPort(), this.remoteAddress, this.scheme,
 				this.hostPortParsed);
+	}
+
+	/**
+	 * Return a new {@link ConnectionInfo} with the updated host port.
+	 * @param hostPort the host port
+	 * @return a new {@link ConnectionInfo}
+	 * @since 1.0.32
+	 */
+	public ConnectionInfo withHostPort(int hostPort) {
+		return new ConnectionInfo(this.hostAddress, this.hostName, hostPort, remoteAddress, this.scheme, this.hostPortParsed);
 	}
 
 	/**

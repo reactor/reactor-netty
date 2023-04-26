@@ -79,10 +79,10 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 			connectionInfo = connectionInfo.withHostAddress(
 					AddressUtils.parseAddress(hostMatcher.group(1), port, DEFAULT_FORWARDED_HEADER_VALIDATION));
 		}
-		else if (protoMatched && !connectionInfo.hostPortParsed) {
+		else if (protoMatched && !connectionInfo.isHostPortParsed()) {
 			// There is no Forwarded host / port, and no port was found from the Host header.
 			// But we have one Forwarded proto, so determine the default port from it.
-			connectionInfo = withPort(connectionInfo, getDefaultHostPort(connectionInfo.getScheme()));
+			connectionInfo = connectionInfo.withHostPort(getDefaultHostPort(connectionInfo.getScheme()));
 		}
 		Matcher forMatcher = FORWARDED_FOR_PATTERN.matcher(forwarded);
 		if (forMatcher.find()) {
@@ -115,17 +115,24 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 			String portStr = portHeader.split(",", 2)[0].trim();
 			if (portStr.chars().allMatch(Character::isDigit)) {
 				int port = Integer.parseInt(portStr);
-				connectionInfo = withPort(connectionInfo, port);
+				// If a X-Forwarded-Host was present, update it with the provided port number.
+				if (hostHeader != null) {
+					connectionInfo = connectionInfo.withHostAddress(
+							AddressUtils.createUnresolved(connectionInfo.getHostAddress().getHostString(), port));
+				}
+				else {
+					connectionInfo = connectionInfo.withHostPort(port);
+				}
 			}
 			else if (DEFAULT_FORWARDED_HEADER_VALIDATION) {
 				throw new IllegalArgumentException("Failed to parse a port from " + portHeader);
 			}
 		}
-		else if (hostHeader == null && !connectionInfo.hostPortParsed && protoHeader != null) {
+		else if (hostHeader == null && !connectionInfo.isHostPortParsed() && protoHeader != null) {
 			// There is no X-Forwarded-Host/X-Forwarded-Port headers, and no port was found from the Host
 			// header. But we have one X-Forwarded-Proto header, so determine the default host port
 			// from it.
-			connectionInfo = withPort(connectionInfo, getDefaultHostPort(protoHeader));
+			connectionInfo = connectionInfo.withHostPort(getDefaultHostPort(protoHeader));
 		}
 		return connectionInfo;
 	}
@@ -133,11 +140,6 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	private int getDefaultHostPort(String scheme) {
 		return scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
 				DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
-	}
-
-	private ConnectionInfo withPort(ConnectionInfo cInfo, int port) {
-		return new ConnectionInfo(AddressUtils.createUnresolved(cInfo.getHostAddress().getHostString(), port),
-				cInfo.getHostName(), port, cInfo.getRemoteAddress(), cInfo.getScheme(), cInfo.hostPortParsed);
 	}
 
 }

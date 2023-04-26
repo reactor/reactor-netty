@@ -15,7 +15,6 @@
  */
 package reactor.netty.http.server;
 
-import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
@@ -47,7 +46,6 @@ import reactor.netty.Connection;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
-import reactor.netty.transport.AddressUtils;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 
@@ -62,7 +60,7 @@ import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
  *
  * @author Brian Clozel
  */
-class ConnectionInfoTests extends BaseHttpTest {
+public class ConnectionInfoTests extends BaseHttpTest {
 
 	static SelfSignedCertificate ssc;
 
@@ -184,7 +182,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString())
 							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo(protocol);
@@ -388,7 +386,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	@Test
-	void xForwardedForAndHostOnly() throws SSLException {
+	void xForwardedForAndPortOnly() throws SSLException {
 		SslContext clientSslContext = SslContextBuilder.forClient()
 				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -426,31 +424,10 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString())
 							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo(protocol);
-				});
-	}
-
-	@Test
-	void customForwardedHandlerForMultipleHost() {
-		testClientRequest(
-				clientRequestHeaders ->
-					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com"),
-				serverRequest -> {
-					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com");
-					Assertions.assertThat(serverRequest.hostName()).isEqualTo("b.example.com");
-				},
-				(connectionInfo, request) -> {
-					String hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
-					if (hostHeader != null) {
-						InetSocketAddress hostAddress = AddressUtils.createUnresolved(
-								hostHeader.split(",", 2)[1].trim(),
-								connectionInfo.getHostAddress().getPort());
-						connectionInfo = connectionInfo.withHostAddress(hostAddress);
-					}
-					return connectionInfo;
 				});
 	}
 
@@ -721,7 +698,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, null, Function.identity(), Function.identity(), false);
 	}
 
-	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
+	protected void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverRequestConsumer,
 			BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
 		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, forwardedHeaderHandler, Function.identity(), Function.identity(), false);
