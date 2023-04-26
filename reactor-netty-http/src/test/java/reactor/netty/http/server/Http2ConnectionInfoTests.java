@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package reactor.netty.http.server;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import org.junit.jupiter.api.Disabled;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 
@@ -53,5 +54,24 @@ class Http2ConnectionInfoTests extends ConnectionInfoTests {
 		catch (SSLException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	@Override
+	@Disabled
+	void forwardedHostEmptyHostHeader() {
+		// HTTP/2 does not allow ':authority' to be empty
+		// https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
+	}
+
+	@Override
+	void noHeadersEmptyHostHeader() {
+		// HTTP/2 does not allow ':authority' to be empty
+		// https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
+	}
+
+	@Override
+	void xForwardedHostEmptyHostHeader() {
+		// HTTP/2 does not allow ':authority' to be empty
+		// https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
 	}
 }
