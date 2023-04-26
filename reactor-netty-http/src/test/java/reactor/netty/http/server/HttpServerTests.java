@@ -1876,8 +1876,8 @@ class HttpServerTests extends BaseHttpTest {
 				      .wiretap(true)
 				      .handle((req, res) -> {
 				          req.withConnection(conn -> {
-				              assertThat(conn.channel().localAddress()).isNull();
-				              assertThat(conn.channel().remoteAddress()).isNull();
+				              assertThat(conn.channel().localAddress()).isNotNull();
+				              assertThat(conn.channel().remoteAddress()).isNotNull();
 				              assertThat(req.hostAddress()).isNull();
 				              assertThat(req.remoteAddress()).isNull();
 				              assertThat(req.scheme()).isNotNull().isEqualTo(expectedScheme);
