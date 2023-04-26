@@ -59,7 +59,7 @@ public final class ConnectionInfo {
 	static ConnectionInfo from(Channel channel, HttpRequest request, boolean secured, SocketAddress remoteAddress,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
 		String hostName = DEFAULT_HOST_NAME;
-		int hostPort = secured ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+		int hostPort = -1;
 		String scheme = secured ? "https" : "http";
 
 		String header = request.headers().get(HttpHeaderNames.HOST);
@@ -157,11 +157,16 @@ public final class ConnectionInfo {
 		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, this.remoteAddress, scheme);
 	}
 
-	String getHostName() {
+	public String getHostName() {
 		return hostName;
 	}
 
-	int getHostPort() {
-		return hostPort;
+	public int getHostPort() {
+		return hostPort != -1 ? hostPort : getDefaultHostPort(scheme);
+	}
+
+	public static int getDefaultHostPort(String scheme) {
+		return scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
+				DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 	}
 }
