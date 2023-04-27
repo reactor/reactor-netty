@@ -56,6 +56,7 @@ import static org.assertj.core.api.Assertions.fail;
 import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HOST_NAME;
 import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTPS_PORT;
 import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
+import static reactor.netty.http.server.ConnectionInfo.getDefaultHostPort;
 
 /**
  * Tests for {@link ConnectionInfo}
@@ -176,8 +177,6 @@ class ConnectionInfoTests extends BaseHttpTest {
 	@ParameterizedTest(name = "{displayName}({arguments})")
 	@ValueSource(strings = {"http", "https", "wss"})
 	void forwardedProtoOnly(String protocol) {
-		int port = protocol.equals("https") || protocol.equals("wss") ? 443 : 80;
-
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "proto=" + protocol)
 						.set(HttpHeaderNames.HOST, "192.168.0.1"),
@@ -186,7 +185,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(getDefaultHostPort(protocol));
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo(protocol);
 				});
 	}
@@ -416,8 +415,6 @@ class ConnectionInfoTests extends BaseHttpTest {
 	@ParameterizedTest(name = "{displayName}({arguments})")
 	@ValueSource(strings = {"http", "https", "wss"})
 	void xForwardedProtoOnly(String protocol) {
-		int port = protocol.equals("https") || protocol.equals("wss") ? 443 : 80;
-
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("Host", "a.example.com");
@@ -428,7 +425,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.disposableServer.port());
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
-					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(getDefaultHostPort(protocol));
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo(protocol);
 				});
 	}
