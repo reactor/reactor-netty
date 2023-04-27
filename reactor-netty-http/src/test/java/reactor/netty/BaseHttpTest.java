@@ -15,15 +15,25 @@
  */
 package reactor.netty;
 
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.provider.Arguments;
+import reactor.core.publisher.Mono;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.server.ConnectionInfo;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -144,5 +154,71 @@ public class BaseHttpTest {
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C}),
 				Arguments.of(new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11}, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})
 		);
+	}
+
+	protected HttpClient customizeClientOptions(HttpClient httpClient) {
+		return httpClient;
+	}
+
+	protected HttpServer customizeServerOptions(HttpServer httpServer) {
+		return httpServer;
+	}
+
+	protected void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
+	                               Consumer<HttpServerRequest> serverRequestConsumer,
+	                               @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+	                               Function<HttpClient, HttpClient> clientConfigFunction,
+	                               Function<HttpServer, HttpServer> serverConfigFunction,
+	                               boolean useHttps,
+	                               boolean is400BadRequest) {
+
+		HttpServer server = createServer().forwarded(true);
+		if (forwardedHeaderHandler != null) {
+			server = server.forwarded(forwardedHeaderHandler);
+		}
+		this.disposableServer =
+				customizeServerOptions(serverConfigFunction.apply(server))
+						.handle((req, res) -> {
+							try {
+								serverRequestConsumer.accept(req);
+								return res.status(200)
+										.sendString(Mono.just("OK"));
+							}
+							catch (Throwable e) {
+								return res.status(500)
+										.sendString(Mono.just(e.getMessage()));
+							}
+						})
+						.bindNow();
+
+		String uri = "/test";
+		if (useHttps) {
+			uri += "https://localhost:" + this.disposableServer.port();
+		}
+
+		if (!is400BadRequest) {
+			customizeClientOptions(clientConfigFunction.apply(createClient(this.disposableServer.port())))
+					.headers(clientRequestHeadersConsumer)
+					.get()
+					.uri(uri)
+					.responseContent()
+					.aggregate()
+					.asString()
+					.as(StepVerifier::create)
+					.expectNext("OK")
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+		}
+		else {
+			customizeClientOptions(clientConfigFunction.apply(createClient(this.disposableServer.port())))
+					.headers(clientRequestHeadersConsumer)
+					.get()
+					.uri(uri)
+					.responseSingle((res, bytes) -> Mono.just(res.status().toString()))
+					.as(StepVerifier::create)
+					.expectNext("400 Bad Request")
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+		}
 	}
 }

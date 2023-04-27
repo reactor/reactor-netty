@@ -15,10 +15,8 @@
  */
 package reactor.netty.http.server;
 
-import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
-import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
@@ -47,8 +45,6 @@ import reactor.netty.Connection;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
-import reactor.netty.transport.AddressUtils;
-import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,14 +62,6 @@ import static reactor.netty.http.server.ConnectionInfo.getDefaultHostPort;
 class ConnectionInfoTests extends BaseHttpTest {
 
 	static SelfSignedCertificate ssc;
-
-	protected HttpClient customizeClientOptions(HttpClient httpClient) {
-		return httpClient;
-	}
-
-	protected HttpServer customizeServerOptions(HttpServer httpServer) {
-		return httpServer;
-	}
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
@@ -431,27 +419,6 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	@Test
-	void customForwardedHandlerForMultipleHost() {
-		testClientRequest(
-				clientRequestHeaders ->
-					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com"),
-				serverRequest -> {
-					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com");
-					Assertions.assertThat(serverRequest.hostName()).isEqualTo("b.example.com");
-				},
-				(connectionInfo, request) -> {
-					String hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
-					if (hostHeader != null) {
-						InetSocketAddress hostAddress = AddressUtils.createUnresolved(
-								hostHeader.split(",", 2)[1].trim(),
-								connectionInfo.getHostAddress().getPort());
-						connectionInfo = connectionInfo.withHostAddress(hostAddress);
-					}
-					return connectionInfo;
-				});
-	}
-
-	@Test
 	void proxyProtocolOn() throws InterruptedException {
 		String remoteAddress = "202.112.144.236";
 		ArrayBlockingQueue<String> resultQueue = new ArrayBlockingQueue<>(1);
@@ -740,63 +707,5 @@ class ConnectionInfoTests extends BaseHttpTest {
 			boolean useHttps) {
 		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, forwardedHeaderHandler,
 				clientConfigFunction, serverConfigFunction, useHttps, false);
-	}
-
-	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
-				Consumer<HttpServerRequest> serverRequestConsumer,
-				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
-				Function<HttpClient, HttpClient> clientConfigFunction,
-				Function<HttpServer, HttpServer> serverConfigFunction,
-				boolean useHttps,
-				boolean is400BadRequest) {
-
-		HttpServer server = createServer().forwarded(true);
-		if (forwardedHeaderHandler != null) {
-			server = server.forwarded(forwardedHeaderHandler);
-		}
-		this.disposableServer =
-				customizeServerOptions(serverConfigFunction.apply(server))
-				        .handle((req, res) -> {
-				            try {
-				                serverRequestConsumer.accept(req);
-				                return res.status(200)
-				                          .sendString(Mono.just("OK"));
-				            }
-				            catch (Throwable e) {
-				                return res.status(500)
-				                          .sendString(Mono.just(e.getMessage()));
-				            }
-				        })
-				        .bindNow();
-
-		String uri = "/test";
-		if (useHttps) {
-			uri += "https://localhost:" + this.disposableServer.port();
-		}
-
-		if (!is400BadRequest) {
-			customizeClientOptions(clientConfigFunction.apply(createClient(this.disposableServer.port())))
-			        .headers(clientRequestHeadersConsumer)
-			        .get()
-			        .uri(uri)
-			        .responseContent()
-			        .aggregate()
-			        .asString()
-			        .as(StepVerifier::create)
-			        .expectNext("OK")
-			        .expectComplete()
-			        .verify(Duration.ofSeconds(30));
-		}
-		else {
-			customizeClientOptions(clientConfigFunction.apply(createClient(this.disposableServer.port())))
-			        .headers(clientRequestHeadersConsumer)
-			        .get()
-			        .uri(uri)
-			        .responseSingle((res, bytes) -> Mono.just(res.status().toString()))
-			        .as(StepVerifier::create)
-			        .expectNext("400 Bad Request")
-			        .expectComplete()
-			        .verify(Duration.ofSeconds(30));
-		}
 	}
 }

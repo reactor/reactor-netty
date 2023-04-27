@@ -138,6 +138,16 @@ public final class ConnectionInfo {
 	}
 
 	/**
+	 * Return a new {@link ConnectionInfo} with the updated host port.
+	 * @param hostPort the host port
+	 * @return a new {@link ConnectionInfo}
+	 * @since 1.0.32
+	 */
+	public ConnectionInfo withHostPort(int hostPort) {
+		return new ConnectionInfo(this.hostAddress, this.hostName, hostPort, this.remoteAddress, this.scheme);
+	}
+
+	/**
 	 * Return a new {@link ConnectionInfo} with the updated remote address.
 	 * @param remoteAddress the remote address
 	 * @return a new {@link ConnectionInfo}
