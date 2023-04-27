@@ -24,6 +24,7 @@ import reactor.netty.transport.AddressUtils;
 
 import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTPS_PORT;
 import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
+import static reactor.netty.http.server.ConnectionInfo.getDefaultHostPort;
 
 /**
  * @author Andrey Shlykov
@@ -100,7 +101,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		if (hostHeader != null) {
 			connectionInfo = connectionInfo.withHostAddress(
 					AddressUtils.parseAddress(hostHeader.split(",", 2)[0].trim(),
-							getDefaultHostPort(connectionInfo), DEFAULT_FORWARDED_HEADER_VALIDATION));
+							getDefaultHostPort(connectionInfo.getScheme()), DEFAULT_FORWARDED_HEADER_VALIDATION));
 		}
 
 		String portHeader = request.headers().get(X_FORWARDED_PORT_HEADER);
@@ -118,11 +119,4 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		}
 		return connectionInfo;
 	}
-
-	private int getDefaultHostPort(ConnectionInfo connectionInfo) {
-		String scheme = connectionInfo.getScheme();
-		return scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
-				DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
-	}
-
 }
