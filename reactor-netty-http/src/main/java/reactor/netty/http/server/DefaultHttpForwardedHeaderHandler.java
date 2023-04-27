@@ -22,8 +22,6 @@ import java.util.regex.Pattern;
 import io.netty.handler.codec.http.HttpRequest;
 import reactor.netty.transport.AddressUtils;
 
-import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTPS_PORT;
-import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
 import static reactor.netty.http.server.ConnectionInfo.getDefaultHostPort;
 
 /**
@@ -72,11 +70,9 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		}
 		Matcher hostMatcher = FORWARDED_HOST_PATTERN.matcher(forwarded);
 		if (hostMatcher.find()) {
-			String scheme = connectionInfo.getScheme();
-			int port = scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
-					DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 			connectionInfo = connectionInfo.withHostAddress(
-					AddressUtils.parseAddress(hostMatcher.group(1), port, DEFAULT_FORWARDED_HEADER_VALIDATION));
+					AddressUtils.parseAddress(hostMatcher.group(1),
+							getDefaultHostPort(connectionInfo.getScheme()), DEFAULT_FORWARDED_HEADER_VALIDATION));
 		}
 		Matcher forMatcher = FORWARDED_FOR_PATTERN.matcher(forwarded);
 		if (forMatcher.find()) {
