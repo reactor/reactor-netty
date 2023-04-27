@@ -553,7 +553,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 					// For TCP and HTTP/1.1 the channel parent is the ServerChannel
 					boolean isParentServerChannel = parent instanceof ServerChannel;
 					if (isParentServerChannel) {
-						// We'll handle TCP or HTTP/1.1 channels after having handled HTTP2 stream chanels
+						// We'll handle TCP or HTTP/1.1 channels after having handled HTTP2 streams.
 						nonStreamChannels.add(channel);
 					}
 					else {
@@ -572,7 +572,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 					}
 				}
 
-				// Now all stream channels have been processed, we can check other channels (TCP or HTTP/1.1 channels)
+				// Now all stream channels have been processed, we can check other channels for TCP or HTTP/1.1
 				for (Channel channel : nonStreamChannels) {
 					List<Mono<Void>> monos = MapUtils.computeIfAbsent(channelsToMono, channel, key -> new ArrayList<>());
 					getRunningOperations(monos, channel);
