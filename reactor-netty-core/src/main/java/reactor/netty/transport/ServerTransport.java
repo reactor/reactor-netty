@@ -553,16 +553,13 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 					List<Mono<Void>> monos =
 							MapUtils.computeIfAbsent(channelsToMono,
 									isParentServerChannel ? channel : parent,
-									key -> {
-										List<Mono<Void>> list = new ArrayList<>();
-										if (!isParentServerChannel) {
-											// In case of HTTP/2 Reactor Netty will send GO_AWAY with lastStreamId to notify the
-											// client to stop opening streams, the actual CLOSE will happen when all
-											// streams up to lastStreamId are closed
-											list.add(FutureMono.from(key.close()));
-										}
-										return list;
-									});
+									key -> new ArrayList<>());
+					if (monos.isEmpty() && !isParentServerChannel) {
+						// In case of HTTP/2 Reactor Netty will send GO_AWAY with lastStreamId to notify the
+						// client to stop opening streams, the actual CLOSE will happen when all
+						// streams up to lastStreamId are closed
+						monos.add(FutureMono.from(parent.close()));
+					}
 					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 					if (ops != null) {
 						monos.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
