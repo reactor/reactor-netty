@@ -84,6 +84,8 @@ import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
+import io.netty5.handler.codec.http2.Http2GoAwayFrame;
+import io.netty5.handler.codec.http2.Http2StreamChannel;
 import io.netty5.handler.ssl.SniCompletionEvent;
 import io.netty5.handler.ssl.SslCloseCompletionEvent;
 import io.netty5.handler.ssl.SslContext;
@@ -1755,6 +1757,7 @@ class HttpServerTests extends BaseHttpTest {
 	private void doTestGracefulShutdown(HttpServer server, HttpClient client) throws Exception {
 		CountDownLatch latch1 = new CountDownLatch(2);
 		CountDownLatch latch2 = new CountDownLatch(2);
+		CountDownLatch latchGoAway = new CountDownLatch(2);
 		CountDownLatch latch3 = new CountDownLatch(1);
 		LoopResources loop = LoopResources.create("testGracefulShutdown");
 		group = new DefaultChannelGroup(executor);
@@ -1776,7 +1779,22 @@ class HttpServerTests extends BaseHttpTest {
 		AtomicReference<String> result = new AtomicReference<>();
 		Flux.just("/delay500", "/delay1000")
 		    .flatMap(s ->
-		            client.get()
+		            client
+				            .doOnConnected(conn -> conn.addHandlerLast(new ChannelHandlerAdapter() {
+					            @Override
+					            public void channelRead(@NotNull ChannelHandlerContext ctx, @NotNull Object msg) {
+									if (msg instanceof Http2GoAwayFrame) {
+										latchGoAway.countDown();
+						            }
+									ctx.fireChannelRead(msg);
+					            }
+				            }))
+				            .doOnResponse((res, conn) -> {
+					            if (!(conn.channel() instanceof Http2StreamChannel)) {
+						            latchGoAway.countDown(); // we are not using neither H2C nore H2
+					            }
+				            })
+				          .get()
 		                  .uri(s)
 		                  .responseContent()
 		                  .aggregate()
@@ -1792,6 +1810,7 @@ class HttpServerTests extends BaseHttpTest {
 		// Stop accepting incoming requests, wait at most 3s for the active requests to finish
 		disposableServer.disposeNow();
 
+		assertThat(latchGoAway.await(30, TimeUnit.SECONDS)).as("2 GOAWAY should have been received").isTrue();
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
 
 		// Dispose the event loop
