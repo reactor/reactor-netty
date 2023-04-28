@@ -15,13 +15,16 @@
  */
 package reactor.netty.http.server;
 
+import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
+import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import javax.net.ssl.SSLException;
 
@@ -38,13 +41,18 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.Connection;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.server.forwardheaderhandler.CustomXForwardedHeadersHandler;
 import reactor.netty.tcp.TcpClient;
+import reactor.netty.transport.AddressUtils;
+import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,9 +71,32 @@ class ConnectionInfoTests extends BaseHttpTest {
 
 	static SelfSignedCertificate ssc;
 
+	protected HttpClient customizeClientOptions(HttpClient httpClient) {
+		return httpClient;
+	}
+
+	protected HttpServer customizeServerOptions(HttpServer httpServer) {
+		return httpServer;
+	}
+
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
+	}
+
+	static Stream<Arguments> forwardedProtoOnlyParams() {
+		return Stream.of(
+				Arguments.of("http", true),
+				Arguments.of("http", false),
+				Arguments.of("https", true),
+				Arguments.of("https", false),
+				Arguments.of("wss", true),
+				Arguments.of("wss", false));
+	}
+
+	@Nullable
+	static BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> getForwardedHandler(boolean useCustomForwardedHandler) {
+		return useCustomForwardedHandler ? CustomXForwardedHeadersHandler.INSTANCE::apply : null;
 	}
 
 	@Test
@@ -178,19 +209,22 @@ class ConnectionInfoTests extends BaseHttpTest {
 				});
 	}
 
-	@Test
-	void xForwardedFor() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedFor(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-For",
 						"[1abc:2abc:3abc::5ABC:6abc]:8080, 192.168.0.1"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isEqualTo(8080);
-				});
+				},
+				useCustomForwardedHandler);
 	}
 
-	@Test
-	void xForwardedHost() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedHost(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Host",
 						"[1abc:2abc:3abc::5ABC:6abc], 192.168.0.1"),
@@ -200,11 +234,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
-				});
+				},
+				useCustomForwardedHandler);
 	}
 
-	@Test
-	void xForwardedHostEmptyHostHeader() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedHostEmptyHostHeader(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Host",
 						"[1abc:2abc:3abc::5ABC:6abc], 192.168.0.1").set(HttpHeaderNames.HOST, ""),
@@ -214,11 +250,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
-				});
+				},
+				useCustomForwardedHandler);
 	}
 
-	@Test
-	void xForwardedHostPortIncluded() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedHostPortIncluded(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Host",
 						"[1abc:2abc:3abc::5ABC:6abc]:9090, 192.168.0.1"),
@@ -227,11 +265,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(9090);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(9090);
-				});
+				},
+				useCustomForwardedHandler);
 	}
 
-	@Test
-	void xForwardedHostAndPort() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedHostAndPort(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -242,11 +282,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
-				});
+				},
+				useCustomForwardedHandler);
 	}
 
-	@Test
-	void xForwardedHostPortIncludedAndXForwardedPort() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedHostPortIncludedAndXForwardedPort(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1:9090");
@@ -257,11 +299,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
-				});
+				},
+				useCustomForwardedHandler);
 	}
 
-	@Test
-	void xForwardedMultipleHeaders() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedMultipleHeaders(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -277,11 +321,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
-				});
+				},
+				useCustomForwardedHandler);
 	}
 
-	@Test
-	void xForwardedHostAndEmptyPort() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedHostAndEmptyPort(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -294,13 +340,15 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
 				},
+				getForwardedHandler(useCustomForwardedHandler),
 				httpClient -> httpClient,
 				httpServer -> httpServer.port(8080),
 				false);
 	}
 
-	@Test
-	void xForwardedHostAndNonNumericPort() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedHostAndNonNumericPort(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
@@ -312,15 +360,16 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 				},
-				null,
+				getForwardedHandler(useCustomForwardedHandler),
 				httpClient -> httpClient,
 				httpServer -> httpServer.port(8080),
 				false,
 				true);
 	}
 
-	@Test
-	void xForwardedForHostAndPort() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedForHostAndPort(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
@@ -333,11 +382,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
-				});
+				},
+				useCustomForwardedHandler);
 	}
 
-	@Test
-	void xForwardedForHostAndPortAndProto() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedForHostAndPortAndProto(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
@@ -352,11 +403,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
-				});
+				},
+				useCustomForwardedHandler);
 	}
 
-	@Test
-	void xForwardedForMultipleHostAndPortAndProto() {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedForMultipleHostAndPortAndProto(boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1,10.20.30.1,10.20.30.2");
@@ -371,11 +424,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
-				});
+				},
+				useCustomForwardedHandler);
 	}
 
-	@Test
-	void xForwardedForAndPortOnly() throws SSLException {
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedForAndPortOnly(boolean useCustomForwardedHandler) throws SSLException {
 		SslContext clientSslContext = SslContextBuilder.forClient()
 				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -395,14 +450,15 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
 				},
+				getForwardedHandler(useCustomForwardedHandler),
 				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
 				httpServer -> httpServer.secure(ssl -> ssl.sslContext(serverSslContext)),
 				true);
 	}
 
 	@ParameterizedTest(name = "{displayName}({arguments})")
-	@ValueSource(strings = {"http", "https", "wss"})
-	void xForwardedProtoOnly(String protocol) {
+	@MethodSource("forwardedProtoOnlyParams")
+	void xForwardedProtoOnly(String protocol, boolean useCustomForwardedHandler) {
 		testClientRequest(
 				clientRequestHeaders -> {
 					clientRequestHeaders.add("Host", "a.example.com");
@@ -415,6 +471,28 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(getDefaultHostPort(protocol));
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo(protocol);
+				},
+				useCustomForwardedHandler);
+	}
+
+	@Test
+	void customForwardedHandlerForMultipleHost() {
+		testClientRequest(
+				clientRequestHeaders ->
+					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com"),
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("b.example.com");
+					Assertions.assertThat(serverRequest.hostName()).isEqualTo("b.example.com");
+				},
+				(connectionInfo, request) -> {
+					String hostHeader = request.headers().get(DefaultHttpForwardedHeaderHandler.X_FORWARDED_HOST_HEADER);
+					if (hostHeader != null) {
+						InetSocketAddress hostAddress = AddressUtils.createUnresolved(
+								hostHeader.split(",", 2)[1].trim(),
+								connectionInfo.getHostAddress().getPort());
+						connectionInfo = connectionInfo.withHostAddress(hostAddress);
+					}
+					return connectionInfo;
 				});
 	}
 
@@ -681,6 +759,13 @@ class ConnectionInfoTests extends BaseHttpTest {
 	}
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
+	                               Consumer<HttpServerRequest> serverRequestConsumer,
+	                               boolean useCustomForwardedHandler) {
+		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, getForwardedHandler(useCustomForwardedHandler),
+				Function.identity(), Function.identity(), false);
+	}
+
+	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverRequestConsumer) {
 		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, null, Function.identity(), Function.identity(), false);
 	}
@@ -707,5 +792,63 @@ class ConnectionInfoTests extends BaseHttpTest {
 			boolean useHttps) {
 		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, forwardedHeaderHandler,
 				clientConfigFunction, serverConfigFunction, useHttps, false);
+	}
+
+	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
+				Consumer<HttpServerRequest> serverRequestConsumer,
+				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+				Function<HttpClient, HttpClient> clientConfigFunction,
+				Function<HttpServer, HttpServer> serverConfigFunction,
+				boolean useHttps,
+				boolean is400BadRequest) {
+
+		HttpServer server = createServer().forwarded(true);
+		if (forwardedHeaderHandler != null) {
+			server = server.forwarded(forwardedHeaderHandler);
+		}
+		this.disposableServer =
+				customizeServerOptions(serverConfigFunction.apply(server))
+				        .handle((req, res) -> {
+				            try {
+				                serverRequestConsumer.accept(req);
+				                return res.status(200)
+				                          .sendString(Mono.just("OK"));
+				            }
+				            catch (Throwable e) {
+				                return res.status(500)
+				                          .sendString(Mono.just(e.getMessage()));
+				            }
+				        })
+				        .bindNow();
+
+		String uri = "/test";
+		if (useHttps) {
+			uri += "https://localhost:" + this.disposableServer.port();
+		}
+
+		if (!is400BadRequest) {
+			customizeClientOptions(clientConfigFunction.apply(createClient(this.disposableServer.port())))
+			        .headers(clientRequestHeadersConsumer)
+			        .get()
+			        .uri(uri)
+			        .responseContent()
+			        .aggregate()
+			        .asString()
+			        .as(StepVerifier::create)
+			        .expectNext("OK")
+			        .expectComplete()
+			        .verify(Duration.ofSeconds(30));
+		}
+		else {
+			customizeClientOptions(clientConfigFunction.apply(createClient(this.disposableServer.port())))
+			        .headers(clientRequestHeadersConsumer)
+			        .get()
+			        .uri(uri)
+			        .responseSingle((res, bytes) -> Mono.just(res.status().toString()))
+			        .as(StepVerifier::create)
+			        .expectNext("400 Bad Request")
+			        .expectComplete()
+			        .verify(Duration.ofSeconds(30));
+		}
 	}
 }
