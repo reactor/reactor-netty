@@ -545,39 +545,26 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			if (config.channelGroup != null && config.channelGroup.size() > 0) {
 				HashMap<Channel, List<Mono<Void>>> channelsToMono =
 						new HashMap<>(MapUtils.calculateInitialCapacity(config.channelGroup.size()));
-				List<Channel> nonStreamChannels = new ArrayList<>();
-
 				// Wait for the running requests to finish
 				for (Channel channel : config.channelGroup) {
 					Channel parent = channel.parent();
 					// For TCP and HTTP/1.1 the channel parent is the ServerChannel
 					boolean isParentServerChannel = parent instanceof ServerChannel;
-					if (isParentServerChannel) {
-						// We'll handle TCP or HTTP/1.1 channels after having handled HTTP2 streams.
-						nonStreamChannels.add(channel);
+					List<Mono<Void>> monos =
+							MapUtils.computeIfAbsent(channelsToMono,
+									isParentServerChannel ? channel : parent,
+									key -> new ArrayList<>());
+					if (monos.isEmpty() && !isParentServerChannel) {
+						// In case of HTTP/2 Reactor Netty will send GO_AWAY with lastStreamId to notify the
+						// client to stop opening streams, the actual CLOSE will happen when all
+						// streams up to lastStreamId are closed
+						monos.add(FutureMono.from(parent.close()));
 					}
-					else {
-						List<Mono<Void>> monos =
-								MapUtils.computeIfAbsent(channelsToMono,
-										parent,
-										key -> {
-											List<Mono<Void>> list = new ArrayList<>();
-											// In case of HTTP/2 Reactor Netty will send GO_AWAY with lastStreamId to notify the
-											// client to stop opening streams, the actual CLOSE will happen when all
-											// streams up to lastStreamId are closed
-											list.add(FutureMono.from(key.close()));
-											return list;
-										});
-						getRunningOperations(monos, channel);
+					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
+					if (ops != null) {
+						monos.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
 					}
 				}
-
-				// Now all stream channels have been processed, we can check other channels for TCP or HTTP/1.1
-				for (Channel channel : nonStreamChannels) {
-					List<Mono<Void>> monos = MapUtils.computeIfAbsent(channelsToMono, channel, key -> new ArrayList<>());
-					getRunningOperations(monos, channel);
-				}
-
 				for (Map.Entry<Channel, List<Mono<Void>>> entry : channelsToMono.entrySet()) {
 					Channel channel = entry.getKey();
 					List<Mono<Void>> monos = entry.getValue();
@@ -633,13 +620,6 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				this.subscription = s;
 				sink.onCancel(this);
 				s.request(Long.MAX_VALUE);
-			}
-		}
-
-		void getRunningOperations(List<Mono<Void>> monos, Channel channel) {
-			ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
-			if (ops != null) {
-				monos.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
 			}
 		}
 	}
