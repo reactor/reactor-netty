@@ -1804,7 +1804,7 @@ class HttpServerTests extends BaseHttpTest {
 				            }))
 				            .doOnResponse((res, conn) -> {
 					            if (!(conn.channel() instanceof Http2StreamChannel)) {
-						            latchGoAway.countDown(); // we are not using neither H2C nore H2
+						            latchGoAway.countDown(); // we are not using neither H2C nor H2
 					            }
 				            })
 				          .get()
