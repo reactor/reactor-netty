@@ -139,18 +139,16 @@ public final class ConnectionInfo {
 
 	/**
 	 * Return a new {@link ConnectionInfo} with updated host address, host name, and host port information.
-	 * @param hostAddress the updated host address (if null, the host address won't be updated and the currently configured one will be kept)
-	 * @param hostName the updated host name (if null, the host name won't be updated and the currently configured one will be kept)
-	 * @param hostPort the updated host port (if -1, the host port won't be updated and the currently configured one will be kept)
+	 * @param hostAddress the updated host address
+	 * @param hostName the updated host name
+	 * @param hostPort the updated host port
 	 * @return a new {@link ConnectionInfo}
 	 * @since 1.0.32
 	 */
-	public ConnectionInfo withHostAddress(@Nullable InetSocketAddress hostAddress, @Nullable String hostName, int hostPort) {
-		return new ConnectionInfo(
-				hostAddress == null ? this.hostAddress : hostAddress,
-				hostName == null ? this.hostName : hostName,
-				hostPort == -1 ? this.hostPort : hostPort,
-				this.remoteAddress, this.scheme);
+	public ConnectionInfo withHostAddress(InetSocketAddress hostAddress, String hostName, int hostPort) {
+		requireNonNull(hostAddress, "hostAddress");
+		requireNonNull(hostName, "hostName");
+		return new ConnectionInfo(hostAddress, hostName, hostPort, this.remoteAddress, this.scheme);
 	}
 
 	/**
