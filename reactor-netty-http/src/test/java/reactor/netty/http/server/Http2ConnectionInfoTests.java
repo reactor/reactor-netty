@@ -68,7 +68,7 @@ class Http2ConnectionInfoTests extends ConnectionInfoTests {
 	}
 
 	@Override
-	void xForwardedHostEmptyHostHeader() {
+	void xForwardedHostEmptyHostHeader(boolean useCustomForwardedHandler) {
 		// HTTP/2 does not allow ':authority' to be empty
 		// https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
 	}
