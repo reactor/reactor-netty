@@ -23,6 +23,8 @@ import reactor.netty.transport.AddressUtils;
  * Custom X-Forwarded-XX headers handler which implement the same logic of the Default handler.
  * This class is meant to verify that people can implement at least the same logic provided
  * by the DefaultHttpForwardedHeaderHandler class.
+ * <p>
+ * <b> WARNING: This class is not for general purpose, it is not an API and can be changed at any time.</b>
  */
 public final class CustomXForwardedHeadersHandler {
 
