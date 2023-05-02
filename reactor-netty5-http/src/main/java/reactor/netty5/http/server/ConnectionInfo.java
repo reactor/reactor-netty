@@ -138,6 +138,20 @@ public final class ConnectionInfo {
 	}
 
 	/**
+	 * Return a new {@link ConnectionInfo} with updated host address, host name, and host port information.
+	 * @param hostAddress the updated host address
+	 * @param hostName the updated host name
+	 * @param hostPort the updated host port
+	 * @return a new {@link ConnectionInfo}
+	 * @since 1.0.32
+	 */
+	public ConnectionInfo withHostAddress(InetSocketAddress hostAddress, String hostName, int hostPort) {
+		requireNonNull(hostAddress, "hostAddress");
+		requireNonNull(hostName, "hostName");
+		return new ConnectionInfo(hostAddress, hostName, hostPort, this.remoteAddress, this.scheme);
+	}
+
+	/**
 	 * Return a new {@link ConnectionInfo} with the updated remote address.
 	 * @param remoteAddress the remote address
 	 * @return a new {@link ConnectionInfo}
@@ -157,15 +171,31 @@ public final class ConnectionInfo {
 		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, this.remoteAddress, scheme);
 	}
 
-	String getHostName() {
+	/**
+	 * Returns the connection host name.
+	 * @return the connection host name
+	 * @since 1.0.32
+	 */
+	public String getHostName() {
 		return hostName;
 	}
 
-	int getHostPort() {
+	/**
+	 * Returns the connection host port.
+	 * @return the connection host port
+	 * @since 1.0.32
+	 */
+	public int getHostPort() {
 		return hostPort != -1 ? hostPort : getDefaultHostPort(scheme);
 	}
 
-	static int getDefaultHostPort(String scheme) {
+	/**
+	 * Returns the default host port number based on scheme
+	 * @param scheme a connection scheme like "http", "https", or "wss"
+	 * @return the default host port number based on scheme
+	 * @since 1.0.32
+	 */
+	public static int getDefaultHostPort(String scheme) {
 		return scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
 				DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
 	}

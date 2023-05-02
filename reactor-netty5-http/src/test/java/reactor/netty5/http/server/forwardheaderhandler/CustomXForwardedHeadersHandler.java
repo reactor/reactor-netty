@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,61 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty5.http.server;
-
-import java.util.function.BiFunction;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+package reactor.netty5.http.server.forwardheaderhandler;
 
 import io.netty5.handler.codec.http.HttpRequest;
+import reactor.netty5.http.server.ConnectionInfo;
 import reactor.netty5.transport.AddressUtils;
 
 import static reactor.netty5.http.server.ConnectionInfo.getDefaultHostPort;
 
 /**
- * @author Andrey Shlykov
- * @since 0.9.12
+ * Custom X-Forwarded-XX headers handler which implement the same logic of the Default handler.
+ * This class is meant to verify that people can implement at least the same logic provided
+ * by the DefaultHttpForwardedHeaderHandler class.
+ * <p>
+ * <b> WARNING: This class is not for general purpose, it is not an API and can be changed at any time.</b>
  */
-final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> {
+public final class CustomXForwardedHeadersHandler {
 
-	static final DefaultHttpForwardedHeaderHandler INSTANCE = new DefaultHttpForwardedHeaderHandler();
+	public static final CustomXForwardedHeadersHandler INSTANCE = new CustomXForwardedHeadersHandler();
 
-	static final String  FORWARDED_HEADER         = "Forwarded";
-	static final String  X_FORWARDED_IP_HEADER    = "X-Forwarded-For";
-	static final String  X_FORWARDED_HOST_HEADER  = "X-Forwarded-Host";
-	static final String  X_FORWARDED_PORT_HEADER  = "X-Forwarded-Port";
-	static final String  X_FORWARDED_PROTO_HEADER = "X-Forwarded-Proto";
+	static final String X_FORWARDED_IP_HEADER = "X-Forwarded-For";
+	static final String X_FORWARDED_HOST_HEADER = "X-Forwarded-Host";
+	static final String X_FORWARDED_PORT_HEADER = "X-Forwarded-Port";
+	static final String X_FORWARDED_PROTO_HEADER = "X-Forwarded-Proto";
 
-	static final Pattern FORWARDED_HOST_PATTERN   = Pattern.compile("host=\"?([^;,\"]+)\"?");
-	static final Pattern FORWARDED_PROTO_PATTERN  = Pattern.compile("proto=\"?([^;,\"]+)\"?");
-	static final Pattern FORWARDED_FOR_PATTERN    = Pattern.compile("for=\"?([^;,\"]+)\"?");
-
-	@Override
-	public ConnectionInfo apply(ConnectionInfo connectionInfo, HttpRequest request) {
-		CharSequence forwardedHeader = request.headers().get(FORWARDED_HEADER);
-		if (forwardedHeader != null) {
-			return parseForwardedInfo(connectionInfo, forwardedHeader.toString());
-		}
-		return parseXForwardedInfo(connectionInfo, request);
+	private CustomXForwardedHeadersHandler() {
 	}
 
-	private ConnectionInfo parseForwardedInfo(ConnectionInfo connectionInfo, String forwardedHeader) {
-		String forwarded = forwardedHeader.split(",", 2)[0];
-		Matcher protoMatcher = FORWARDED_PROTO_PATTERN.matcher(forwarded);
-		if (protoMatcher.find()) {
-			connectionInfo = connectionInfo.withScheme(protoMatcher.group(1).trim());
-		}
-		Matcher hostMatcher = FORWARDED_HOST_PATTERN.matcher(forwarded);
-		if (hostMatcher.find()) {
-			connectionInfo = connectionInfo.withHostAddress(
-					AddressUtils.parseAddress(hostMatcher.group(1), getDefaultHostPort(connectionInfo.getScheme()), true));
-		}
-		Matcher forMatcher = FORWARDED_FOR_PATTERN.matcher(forwarded);
-		if (forMatcher.find()) {
-			connectionInfo = connectionInfo.withRemoteAddress(
-					AddressUtils.parseAddress(forMatcher.group(1).trim(), connectionInfo.getRemoteAddress().getPort(), true));
-		}
-		return connectionInfo;
+	public ConnectionInfo apply(ConnectionInfo connectionInfo, HttpRequest request) {
+		return parseXForwardedInfo(connectionInfo, request);
 	}
 
 	private ConnectionInfo parseXForwardedInfo(ConnectionInfo connectionInfo, HttpRequest request) {
