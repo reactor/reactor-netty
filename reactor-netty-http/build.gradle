@@ -151,10 +151,7 @@ dependencies {
 	// Needed for HTTP/2 testing
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 
-	if (project.hasProperty("forceTransport") && forceTransport == "io_uring" && osdetector.os == "linux") {
-		testRuntimeOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
-	}
-	else if (osdetector.os == "osx") {
+	if (osdetector.os == "osx") {
 		testRuntimeOnly "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
 	}
 	else if (osdetector.os == "linux") {

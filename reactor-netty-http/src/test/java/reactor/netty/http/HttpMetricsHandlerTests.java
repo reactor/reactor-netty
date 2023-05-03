@@ -50,6 +50,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -901,6 +903,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
+	@EnabledOnOs({OS.LINUX, OS.MAC})
 	void testServerConnectionsRecorderBadUriUDS(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                         @Nullable ProtocolSslContextSpec serverCtx,
 	                                         @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
