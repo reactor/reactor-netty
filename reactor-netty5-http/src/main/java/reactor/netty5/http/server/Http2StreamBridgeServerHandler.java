@@ -107,17 +107,19 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 		if (msg instanceof HttpRequest request) {
 			HttpServerOperations ops;
 			ZonedDateTime timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
+			ConnectionInfo connectionInfo = null;
 			try {
 				pendingResponse = true;
+				connectionInfo = ConnectionInfo.from(ctx.channel(),
+						request,
+						secured,
+						remoteAddress,
+						forwardedHeaderHandler);
 				ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						request,
 						compress,
-						ConnectionInfo.from(ctx.channel().parent(),
-						                    request,
-						                    secured,
-						                    remoteAddress,
-						                    forwardedHeaderHandler),
+						connectionInfo,
 						formDecoderProvider,
 						httpMessageLogFactory,
 						true,
@@ -128,7 +130,7 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 			catch (RuntimeException e) {
 				pendingResponse = false;
 				request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory, true, timestamp);
+				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory, true, timestamp, connectionInfo, remoteAddress);
 				return;
 			}
 			ops.bind();

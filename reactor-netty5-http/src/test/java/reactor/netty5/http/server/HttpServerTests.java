@@ -134,6 +134,7 @@ import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.resources.LoopResources;
 import reactor.netty5.tcp.SslProvider;
 import reactor.netty5.tcp.TcpClient;
+import reactor.netty5.transport.AddressUtils;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -148,6 +149,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
 import static reactor.netty5.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
+import static reactor.netty5.http.server.ConnectionInfo.DEFAULT_HOST_NAME;
+import static reactor.netty5.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
 
 /**
  * @author Stephane Maldini
@@ -1908,12 +1911,14 @@ class HttpServerTests extends BaseHttpTest {
 
 	private void doTestStatus(HttpResponseStatus status) {
 		EmbeddedChannel channel = new EmbeddedChannel();
+		InetSocketAddress localSocketAddress = AddressUtils.createUnresolved("localhost", 80);
+		InetSocketAddress remoteSocketAddress = AddressUtils.createUnresolved("localhost", 9999);
 		HttpServerOperations ops = new HttpServerOperations(
 				Connection.from(channel),
 				ConnectionObserver.emptyListener(),
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
 				null,
-				null,
+				new ConnectionInfo(localSocketAddress, DEFAULT_HOST_NAME, DEFAULT_HTTP_PORT, remoteSocketAddress, "http", true),
 				DEFAULT_FORM_DECODER_SPEC,
 				ReactorNettyHttpMessageLogFactory.INSTANCE,
 				false,
@@ -2813,12 +2818,14 @@ class HttpServerTests extends BaseHttpTest {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		request.headers().set(HttpHeaderNames.CONTENT_TYPE, headerValue);
+		InetSocketAddress localSocketAddress = AddressUtils.createUnresolved("localhost", 80);
+		InetSocketAddress remoteSocketAddress = AddressUtils.createUnresolved("localhost", 9999);
 		HttpServerOperations ops = new HttpServerOperations(
 				Connection.from(channel),
 				ConnectionObserver.emptyListener(),
 				request,
 				null,
-				null,
+				new ConnectionInfo(localSocketAddress, DEFAULT_HOST_NAME, DEFAULT_HTTP_PORT, remoteSocketAddress, "http", true),
 				DEFAULT_FORM_DECODER_SPEC,
 				ReactorNettyHttpMessageLogFactory.INSTANCE,
 				false,

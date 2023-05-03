@@ -96,9 +96,6 @@ import reactor.util.context.Context;
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpUtil.isTransferEncodingChunked;
 import static reactor.netty5.ReactorNetty.format;
-import static reactor.netty5.http.server.ConnectionInfo.DEFAULT_HOST_NAME;
-import static reactor.netty5.http.server.ConnectionInfo.DEFAULT_HTTPS_PORT;
-import static reactor.netty5.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
 import static reactor.netty5.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 import static reactor.netty5.http.server.HttpServerState.REQUEST_DECODING_FAILED;
 
@@ -151,7 +148,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			@Nullable ConnectionInfo connectionInfo,
+			ConnectionInfo connectionInfo,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			HttpMessageLogFactory httpMessageLogFactory,
 			boolean isHttp2,
@@ -164,7 +161,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			@Nullable ConnectionInfo connectionInfo,
+			ConnectionInfo connectionInfo,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			HttpMessageLogFactory httpMessageLogFactory,
 			boolean isHttp2,
@@ -416,12 +413,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	@Nullable
 	public InetSocketAddress hostAddress() {
-		if (connectionInfo != null) {
-			return this.connectionInfo.getHostAddress();
-		}
-		else {
-			return null;
-		}
+		return this.connectionInfo.getHostAddress();
+	}
+
+	final SocketAddress hostSocketAddress() {
+		return this.connectionInfo.hostAddress;
 	}
 
 	@Override
@@ -433,12 +429,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	@Nullable
 	public InetSocketAddress remoteAddress() {
-		if (connectionInfo != null) {
-			return this.connectionInfo.getRemoteAddress();
-		}
-		else {
-			return null;
-		}
+		return this.connectionInfo.getRemoteAddress();
+	}
+
+	final SocketAddress remoteSocketAddress() {
+		return this.connectionInfo.remoteAddress;
 	}
 
 	@Override
@@ -457,12 +452,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public String scheme() {
-		if (connectionInfo != null) {
-			return this.connectionInfo.getScheme();
-		}
-		else {
-			return scheme;
-		}
+		return this.connectionInfo.getScheme();
 	}
 
 	@Override
@@ -472,14 +462,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public String hostName() {
-		return connectionInfo != null ? connectionInfo.getHostName() : DEFAULT_HOST_NAME;
+		return connectionInfo.getHostName();
 	}
 
 	@Override
 	public int hostPort() {
-		return connectionInfo != null ?
-				connectionInfo.getHostPort() :
-				scheme().equalsIgnoreCase("https") || scheme().equalsIgnoreCase("wss") ? DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
+		return connectionInfo.getHostPort();
 	}
 
 	@Override
@@ -794,8 +782,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			Throwable t,
 			Object msg,
 			HttpMessageLogFactory httpMessageLogFactory,
-			@Nullable ZonedDateTime timestamp) {
-		sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory, false, timestamp);
+			@Nullable ZonedDateTime timestamp,
+			@Nullable ConnectionInfo connectionInfo,
+			SocketAddress remoteAddress) {
+		sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory, false, timestamp, connectionInfo, remoteAddress);
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
@@ -807,7 +797,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			Object msg,
 			HttpMessageLogFactory httpMessageLogFactory,
 			boolean isHttp2,
-			@Nullable ZonedDateTime timestamp) {
+			@Nullable ZonedDateTime timestamp,
+			@Nullable ConnectionInfo connectionInfo,
+			SocketAddress remoteAddress) {
 
 		Throwable cause = t.getCause() != null ? t.getCause() : t;
 
@@ -840,7 +832,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			Connection conn = Connection.from(ctx.channel());
 			if (msg instanceof HttpRequest request) {
 				ops = new FailedHttpServerRequest(conn, listener, request, response, httpMessageLogFactory, isHttp2,
-						secure, timestamp == null ? ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM) : timestamp);
+						secure, timestamp == null ? ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM) : timestamp,
+						connectionInfo == null ? new ConnectionInfo(ctx.channel().localAddress(), remoteAddress, secure) : connectionInfo);
 				ops.bind();
 			}
 			else {
@@ -1010,8 +1003,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				HttpMessageLogFactory httpMessageLogFactory,
 				boolean isHttp2,
 				boolean secure,
-				ZonedDateTime timestamp) {
-			super(c, listener, nettyRequest, null, null,
+				ZonedDateTime timestamp,
+				ConnectionInfo connectionInfo) {
+			super(c, listener, nettyRequest, null, connectionInfo,
 					DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, isHttp2, null, false, secure, timestamp);
 			this.customResponse = nettyResponse;
 			String tempPath = "";

@@ -45,15 +45,17 @@ public final class ConnectionInfo {
 	static final int DEFAULT_HTTPS_PORT = 443;
 	static final String DEFAULT_HOST_NAME = "localhost";
 
-	final InetSocketAddress hostAddress;
+	final SocketAddress hostAddress;
 
-	final InetSocketAddress remoteAddress;
+	final SocketAddress remoteAddress;
 
 	final String scheme;
 
 	final String hostName;
 
 	final int hostPort;
+
+	final boolean isInetAddress;
 
 	static ConnectionInfo from(Channel channel, HttpRequest request, boolean secured, SocketAddress remoteAddress,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
@@ -73,14 +75,12 @@ public final class ConnectionInfo {
 				}
 			}
 		}
-
-		if (!(remoteAddress instanceof InetSocketAddress inetSocketAddress)) {
-			return new ConnectionInfo(hostName, hostPort, scheme);
+		if (!(remoteAddress instanceof InetSocketAddress)) {
+			return new ConnectionInfo(channel.localAddress(), hostName, hostPort, remoteAddress, scheme, false);
 		}
 		else {
 			ConnectionInfo connectionInfo =
-					new ConnectionInfo((InetSocketAddress) channel.localAddress(), hostName, hostPort,
-							inetSocketAddress, scheme);
+					new ConnectionInfo(channel.localAddress(), hostName, hostPort, remoteAddress, scheme, true);
 			if (forwardedHeaderHandler != null) {
 				return forwardedHeaderHandler.apply(connectionInfo, request);
 			}
@@ -88,15 +88,16 @@ public final class ConnectionInfo {
 		}
 	}
 
-	ConnectionInfo(String hostName, int hostPort, String scheme) {
-		this(null, hostName, hostPort, null, scheme);
+	ConnectionInfo(SocketAddress hostAddress, SocketAddress remoteAddress, boolean secured) {
+		this(hostAddress, DEFAULT_HOST_NAME, -1, remoteAddress, secured ? "https" : "http", remoteAddress instanceof InetSocketAddress);
 	}
 
-	ConnectionInfo(@Nullable InetSocketAddress hostAddress, String hostName, int hostPort,
-			@Nullable InetSocketAddress remoteAddress, String scheme) {
+	ConnectionInfo(SocketAddress hostAddress, String hostName, int hostPort,
+			SocketAddress remoteAddress, String scheme, boolean isInetAddress) {
 		this.hostAddress = hostAddress;
 		this.hostName = hostName;
 		this.hostPort = hostPort;
+		this.isInetAddress = isInetAddress;
 		this.remoteAddress = remoteAddress;
 		this.scheme = scheme;
 	}
@@ -107,7 +108,7 @@ public final class ConnectionInfo {
 	 */
 	@Nullable
 	public InetSocketAddress getHostAddress() {
-		return hostAddress;
+		return isInetAddress ? (InetSocketAddress) hostAddress : null;
 	}
 
 	/**
@@ -116,7 +117,7 @@ public final class ConnectionInfo {
 	 */
 	@Nullable
 	public InetSocketAddress getRemoteAddress() {
-		return remoteAddress;
+		return isInetAddress ? (InetSocketAddress) remoteAddress : null;
 	}
 
 	/**
@@ -134,7 +135,8 @@ public final class ConnectionInfo {
 	 */
 	public ConnectionInfo withHostAddress(InetSocketAddress hostAddress) {
 		requireNonNull(hostAddress, "hostAddress");
-		return new ConnectionInfo(hostAddress, hostAddress.getHostString(), hostAddress.getPort(), this.remoteAddress, this.scheme);
+		return new ConnectionInfo(hostAddress, hostAddress.getHostString(), hostAddress.getPort(), this.remoteAddress,
+				this.scheme, true);
 	}
 
 	/**
@@ -148,7 +150,7 @@ public final class ConnectionInfo {
 	public ConnectionInfo withHostAddress(InetSocketAddress hostAddress, String hostName, int hostPort) {
 		requireNonNull(hostAddress, "hostAddress");
 		requireNonNull(hostName, "hostName");
-		return new ConnectionInfo(hostAddress, hostName, hostPort, this.remoteAddress, this.scheme);
+		return new ConnectionInfo(hostAddress, hostName, hostPort, this.remoteAddress, this.scheme, true);
 	}
 
 	/**
@@ -158,7 +160,7 @@ public final class ConnectionInfo {
 	 */
 	public ConnectionInfo withRemoteAddress(InetSocketAddress remoteAddress) {
 		requireNonNull(remoteAddress, "remoteAddress");
-		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, remoteAddress, this.scheme);
+		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, remoteAddress, this.scheme, true);
 	}
 
 	/**
@@ -168,7 +170,7 @@ public final class ConnectionInfo {
 	 */
 	public ConnectionInfo withScheme(String scheme) {
 		requireNonNull(scheme, "scheme");
-		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, this.remoteAddress, scheme);
+		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, this.remoteAddress, scheme, this.isInetAddress);
 	}
 
 	/**

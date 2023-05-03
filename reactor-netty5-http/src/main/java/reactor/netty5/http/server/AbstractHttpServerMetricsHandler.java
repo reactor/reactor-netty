@@ -229,14 +229,16 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 
 	protected void recordException(HttpServerOperations ops, String path) {
 		// Always take the remote address from the operations in order to consider proxy information
-		recorder().incrementErrorsCount(ops.remoteAddress(), path);
+		// Use remoteSocketAddress() in order to obtain UDS info
+		recorder().incrementErrorsCount(ops.remoteSocketAddress(), path);
 	}
 
 	protected void recordRead(HttpServerOperations ops, String path, String method) {
 		recorder().recordDataReceivedTime(path, method, Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 		// Always take the remote address from the operations in order to consider proxy information
-		recorder().recordDataReceived(ops.remoteAddress(), path, dataReceived);
+		// Use remoteSocketAddress() in order to obtain UDS info
+		recorder().recordDataReceived(ops.remoteSocketAddress(), path, dataReceived);
 	}
 
 	protected void recordWrite(HttpServerOperations ops, String path, String method, String status) {
@@ -251,23 +253,24 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 		}
 
 		// Always take the remote address from the operations in order to consider proxy information
-		recorder().recordDataSent(ops.remoteAddress(), path, dataSent);
+		// Use remoteSocketAddress() in order to obtain UDS info
+		recorder().recordDataSent(ops.remoteSocketAddress(), path, dataSent);
 	}
 
 	protected void recordActiveConnection(HttpServerOperations ops) {
-		recorder().recordServerConnectionActive(ops.hostAddress());
+		recorder().recordServerConnectionActive(ops.hostSocketAddress());
 	}
 
 	protected void recordInactiveConnection(HttpServerOperations ops) {
-		recorder().recordServerConnectionInactive(ops.hostAddress());
+		recorder().recordServerConnectionInactive(ops.hostSocketAddress());
 	}
 
 	protected void recordOpenStream(HttpServerOperations ops) {
-		recorder().recordStreamOpened(ops.hostAddress());
+		recorder().recordStreamOpened(ops.hostSocketAddress());
 	}
 
 	protected void recordClosedStream(HttpServerOperations ops) {
-		recorder().recordStreamClosed(ops.hostAddress());
+		recorder().recordStreamClosed(ops.hostSocketAddress());
 	}
 
 	protected void startRead(HttpServerOperations ops, String path, String method) {
@@ -279,9 +282,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	}
 
 	void recordInactiveConnectionOrStream(HttpServerOperations ops) {
-		// ops.hostAddress() == null when request decoding failed, in this case
-		// we do not report active connection, so we do not report inactive connection
-		if (ops.hostAddress() != null && channelActivated) {
+		if (channelActivated) {
 			channelActivated = false;
 			try {
 				if (ops.isHttp2()) {
