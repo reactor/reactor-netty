@@ -139,6 +139,7 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpServer;
+import reactor.netty.transport.AddressUtils;
 import reactor.netty.transport.TransportConfig;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
@@ -154,6 +155,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
+import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HOST_NAME;
+import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
 
 /**
  * @author Stephane Maldini
@@ -2047,12 +2050,14 @@ class HttpServerTests extends BaseHttpTest {
 	@SuppressWarnings("FutureReturnValueIgnored")
 	private void doTestStatus(HttpResponseStatus status) {
 		EmbeddedChannel channel = new EmbeddedChannel();
+		InetSocketAddress localSocketAddress = AddressUtils.createUnresolved("localhost", 80);
+		InetSocketAddress remoteSocketAddress = AddressUtils.createUnresolved("localhost", 9999);
 		HttpServerOperations ops = new HttpServerOperations(
 				Connection.from(channel),
 				ConnectionObserver.emptyListener(),
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
 				null,
-				null,
+				new ConnectionInfo(localSocketAddress, DEFAULT_HOST_NAME, DEFAULT_HTTP_PORT, remoteSocketAddress, "http", true),
 				ServerCookieDecoder.STRICT,
 				ServerCookieEncoder.STRICT,
 				DEFAULT_FORM_DECODER_SPEC,
@@ -2957,12 +2962,14 @@ class HttpServerTests extends BaseHttpTest {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		request.headers().set(HttpHeaderNames.CONTENT_TYPE, headerValue);
+		InetSocketAddress localSocketAddress = AddressUtils.createUnresolved("localhost", 80);
+		InetSocketAddress remoteSocketAddress = AddressUtils.createUnresolved("localhost", 9999);
 		HttpServerOperations ops = new HttpServerOperations(
 				Connection.from(channel),
 				ConnectionObserver.emptyListener(),
 				request,
 				null,
-				null,
+				new ConnectionInfo(localSocketAddress, DEFAULT_HOST_NAME, DEFAULT_HTTP_PORT, remoteSocketAddress, "http", true),
 				ServerCookieDecoder.STRICT,
 				ServerCookieEncoder.STRICT,
 				DEFAULT_FORM_DECODER_SPEC,
