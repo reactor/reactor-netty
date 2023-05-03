@@ -108,15 +108,9 @@ final class WebsocketFinalizer extends HttpClientConnect implements HttpClient.W
 
 	@Override
 	public ByteBufFlux receive() {
-		ByteBufAllocator alloc = (ByteBufAllocator) configuration().options()
-		                                                           .get(ChannelOption.ALLOCATOR);
-		if (alloc == null) {
-			alloc = ByteBufAllocator.DEFAULT;
-		}
-
 		@SuppressWarnings("unchecked")
 		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) connect();
-		return ByteBufFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
+		return connector.flatMapMany(ChannelOperations::receiveObject);
 	}
 
 	@Override
