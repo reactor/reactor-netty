@@ -31,8 +31,6 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
-import static reactor.netty.http.client.HttpClientFinalizer.contentReceiver;
-
 /**
  * Configures the Websocket request before calling one of the terminal,
  * {@link Publisher} based, {@link WebsocketReceiver} API.
@@ -108,9 +106,15 @@ final class WebsocketFinalizer extends HttpClientConnect implements HttpClient.W
 
 	@Override
 	public ByteBufFlux receive() {
+		ByteBufAllocator alloc = (ByteBufAllocator) configuration().options()
+				.get(ChannelOption.ALLOCATOR);
+		if (alloc == null) {
+			alloc = ByteBufAllocator.DEFAULT;
+		}
+
 		@SuppressWarnings("unchecked")
 		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) connect();
-		return connector.flatMapMany(ChannelOperations::receiveObject);
+		return ByteBufFlux.fromInbound(connector.flatMapMany(ChannelOperations::receiveObject), alloc);
 	}
 
 	@Override
