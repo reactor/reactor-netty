@@ -927,7 +927,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	private void checkUDSSupported() {
 		try {
 			Class.forName("io.netty.channel.kqueue.KQueue");
-		} catch (ClassNotFoundException kqueueNotFound) {
+		}
+		catch (ClassNotFoundException kqueueNotFound) {
 			try {
 				Class<?> epollClass = Class.forName("io.netty.channel.epoll.Epoll");
 				if (epollClass != null) {
