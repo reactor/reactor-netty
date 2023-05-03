@@ -46,12 +46,11 @@ import io.netty.util.concurrent.EventExecutor;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -903,10 +902,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
-	@EnabledOnOs({OS.LINUX, OS.MAC})
 	void testServerConnectionsRecorderBadUriUDS(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 	                                         @Nullable ProtocolSslContextSpec serverCtx,
 	                                         @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		// only run Unix Domain Socket test if netty native transport are available
+		checkUDSSupported();
 		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1,
 				client -> client.bindAddress(() -> new DomainSocketAddress("/tmp/test.sockclient"))
 						.remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock")),
@@ -922,6 +922,25 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				"192.168.0.1", 8080,
 				Function.identity(),
 				Function.identity());
+	}
+
+	private void checkUDSSupported() {
+		try {
+			Class.forName("io.netty.channel.kqueue.KQueue");
+		} catch (ClassNotFoundException kqueueNotFound) {
+			try {
+				Class<?> epollClass = Class.forName("io.netty.channel.epoll.Epoll");
+				if (epollClass != null) {
+					Boolean epollAvailable = ((Boolean) epollClass.getMethod("isAvailable").invoke(null)).booleanValue();
+					if (!epollAvailable) {
+						Assumptions.assumeTrue(false, "Skipping test because EPoll is unavailable.");
+					}
+				}
+			}
+			catch (Exception epollNotFound) {
+				Assumptions.assumeTrue(false, "Skipping test because neither netty native kqueue nor epoll is available.");
+			}
+		}
 	}
 
 	private void testServerConnectionsRecorderBadUri(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,

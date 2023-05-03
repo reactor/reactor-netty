@@ -151,13 +151,6 @@ dependencies {
 	// Needed for HTTP/2 testing
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 
-	if (osdetector.os == "osx") {
-		testRuntimeOnly "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
-	}
-	else if (osdetector.os == "linux") {
-		testRuntimeOnly "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
-	}
-
 	// noMicrometerTest sourceSet (must not include Micrometer)
 	noMicrometerTestImplementation "org.assertj:assertj-core:$assertJVersion"
 	noMicrometerTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
