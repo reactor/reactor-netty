@@ -428,7 +428,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	final SocketAddress hostSocketAddress() {
-		return this.connectionInfo.getHostSocketAddress();
+		return this.connectionInfo.hostAddress;
 	}
 
 	@Override
@@ -444,7 +444,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	final SocketAddress remoteSocketAddress() {
-		return this.connectionInfo.getRemoteSocketAddress();
+		return this.connectionInfo.remoteAddress;
 	}
 
 	@Override
@@ -818,11 +818,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 							httpMessageLogFactory.warn(HttpMessageArgProviderFactory.create(msg)) : msg);
 		}
 
-		if (connectionInfo == null) {
-			// ConnectionInfo could not be created because of malformed Host or forwarded headers. Fallback on established connection info.
-			connectionInfo = ConnectionInfo.from(ctx.channel(), null, secure, remoteAddress, null);
-		}
-
 		ReferenceCountUtil.release(msg);
 
 		final HttpResponseStatus status;
@@ -845,7 +840,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			Connection conn = Connection.from(ctx.channel());
 			if (msg instanceof HttpRequest) {
 				ops = new FailedHttpServerRequest(conn, listener, (HttpRequest) msg, response, httpMessageLogFactory, isHttp2,
-						secure, timestamp == null ? ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM) : timestamp, connectionInfo);
+						secure, timestamp == null ? ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM) : timestamp,
+						connectionInfo == null ? new ConnectionInfo(ctx.channel().localAddress(), remoteAddress, secure) : connectionInfo);
 				ops.bind();
 			}
 			else {

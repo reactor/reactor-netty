@@ -44,6 +44,7 @@ public final class ConnectionInfo {
 	static final int DEFAULT_HTTP_PORT = 80;
 	static final int DEFAULT_HTTPS_PORT = 443;
 	static final String DEFAULT_HOST_NAME = "localhost";
+
 	final SocketAddress hostAddress;
 
 	final SocketAddress remoteAddress;
@@ -56,40 +57,47 @@ public final class ConnectionInfo {
 
 	final boolean isInetAddress;
 
-	static ConnectionInfo from(Channel channel, @Nullable HttpRequest request, boolean secured, SocketAddress remoteAddress,
+	static ConnectionInfo from(Channel channel, HttpRequest request, boolean secured, SocketAddress remoteAddress,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
 		String hostName = DEFAULT_HOST_NAME;
 		int hostPort = -1;
 		String scheme = secured ? "https" : "http";
 
-		if (request != null) {
-			String header = request.headers().get(HttpHeaderNames.HOST);
-			if (header != null) {
-				hostName = header;
-				if (!header.isEmpty()) {
-					int portIndex = header.charAt(0) == '[' ? header.indexOf(':', header.indexOf(']')) : header.indexOf(':');
-					if (portIndex != -1) {
-						hostName = header.substring(0, portIndex);
-						hostPort = Integer.parseInt(header.substring(portIndex + 1));
-					}
+		String header = request.headers().get(HttpHeaderNames.HOST);
+		if (header != null) {
+			hostName = header;
+			if (!header.isEmpty()) {
+				int portIndex = header.charAt(0) == '[' ? header.indexOf(':', header.indexOf(']')) : header.indexOf(':');
+				if (portIndex != -1) {
+					hostName = header.substring(0, portIndex);
+					hostPort = Integer.parseInt(header.substring(portIndex + 1));
 				}
 			}
 		}
 
-		ConnectionInfo connectionInfo = new ConnectionInfo(channel.localAddress(), hostName, hostPort, remoteAddress, scheme);
-
-		if (forwardedHeaderHandler != null && request != null && connectionInfo.isInetAddress) {
-			return forwardedHeaderHandler.apply(connectionInfo, request);
+		if (!(remoteAddress instanceof InetSocketAddress)) {
+			return new ConnectionInfo(channel.localAddress(), hostName, hostPort, remoteAddress, scheme, false);
 		}
-		return connectionInfo;
+		else {
+			ConnectionInfo connectionInfo =
+					new ConnectionInfo(channel.localAddress(), hostName, hostPort, remoteAddress, scheme, true);
+			if (forwardedHeaderHandler != null) {
+				return forwardedHeaderHandler.apply(connectionInfo, request);
+			}
+			return connectionInfo;
+		}
+	}
+
+	ConnectionInfo(SocketAddress hostAddress, SocketAddress remoteAddress, boolean secured) {
+		this(hostAddress, DEFAULT_HOST_NAME, -1, remoteAddress, secured ? "https" : "http", remoteAddress instanceof InetSocketAddress);
 	}
 
 	ConnectionInfo(SocketAddress hostAddress, String hostName, int hostPort,
-	               SocketAddress remoteAddress, String scheme) {
+			SocketAddress remoteAddress, String scheme, boolean isInetAddress) {
 		this.hostAddress = hostAddress;
-		this.isInetAddress = hostAddress instanceof InetSocketAddress;
 		this.hostName = hostName;
 		this.hostPort = hostPort;
+		this.isInetAddress = isInetAddress;
 		this.remoteAddress = remoteAddress;
 		this.scheme = scheme;
 	}
@@ -127,7 +135,8 @@ public final class ConnectionInfo {
 	 */
 	public ConnectionInfo withHostAddress(InetSocketAddress hostAddress) {
 		requireNonNull(hostAddress, "hostAddress");
-		return new ConnectionInfo(hostAddress, hostAddress.getHostString(), hostAddress.getPort(), this.remoteAddress, this.scheme);
+		return new ConnectionInfo(hostAddress, hostAddress.getHostString(), hostAddress.getPort(), this.remoteAddress,
+				this.scheme, true);
 	}
 
 	/**
@@ -141,7 +150,7 @@ public final class ConnectionInfo {
 	public ConnectionInfo withHostAddress(InetSocketAddress hostAddress, String hostName, int hostPort) {
 		requireNonNull(hostAddress, "hostAddress");
 		requireNonNull(hostName, "hostName");
-		return new ConnectionInfo(hostAddress, hostName, hostPort, this.remoteAddress, this.scheme);
+		return new ConnectionInfo(hostAddress, hostName, hostPort, this.remoteAddress, this.scheme, true);
 	}
 
 	/**
@@ -151,7 +160,7 @@ public final class ConnectionInfo {
 	 */
 	public ConnectionInfo withRemoteAddress(InetSocketAddress remoteAddress) {
 		requireNonNull(remoteAddress, "remoteAddress");
-		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, remoteAddress, this.scheme);
+		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, remoteAddress, this.scheme, true);
 	}
 
 	/**
@@ -161,7 +170,7 @@ public final class ConnectionInfo {
 	 */
 	public ConnectionInfo withScheme(String scheme) {
 		requireNonNull(scheme, "scheme");
-		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, this.remoteAddress, scheme);
+		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, this.remoteAddress, scheme, this.isInetAddress);
 	}
 
 	/**
@@ -191,13 +200,5 @@ public final class ConnectionInfo {
 	public static int getDefaultHostPort(String scheme) {
 		return scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("wss") ?
 				DEFAULT_HTTPS_PORT : DEFAULT_HTTP_PORT;
-	}
-
-	SocketAddress getHostSocketAddress() {
-		return hostAddress;
-	}
-
-	SocketAddress getRemoteSocketAddress() {
-		return remoteAddress;
 	}
 }

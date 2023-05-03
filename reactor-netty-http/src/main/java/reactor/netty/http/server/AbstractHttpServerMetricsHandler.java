@@ -229,6 +229,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	protected void recordException(HttpServerOperations ops, String path) {
 		// Always take the remote address from the operations in order to consider proxy information
+		// Use remoteSocketAddress() in order to obtain UDS info
 		recorder().incrementErrorsCount(ops.remoteSocketAddress(), path);
 	}
 
@@ -236,6 +237,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordDataReceivedTime(path, method, Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 		// Always take the remote address from the operations in order to consider proxy information
+		// Use remoteSocketAddress() in order to obtain UDS info
 		recorder().recordDataReceived(ops.remoteSocketAddress(), path, dataReceived);
 	}
 
@@ -251,6 +253,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		}
 
 		// Always take the remote address from the operations in order to consider proxy information
+		// Use remoteSocketAddress() in order to obtain UDS info
 		recorder().recordDataSent(ops.remoteSocketAddress(), path, dataSent);
 	}
 
@@ -271,9 +274,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	}
 
 	void recordInactiveConnectionOrStream(HttpServerOperations ops) {
-		// ops.hostAddress() == null when request decoding failed, in this case
-		// we do not report active connection, so we do not report inactive connection
-		if (ops.hostSocketAddress() != null && channelActivated) {
+		if (channelActivated) {
 			channelActivated = false;
 			try {
 				if (ops.isHttp2()) {

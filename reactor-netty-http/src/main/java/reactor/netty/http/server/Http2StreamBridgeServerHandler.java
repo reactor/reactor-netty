@@ -119,7 +119,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			ConnectionInfo connectionInfo = null;
 			try {
 				pendingResponse = true;
-				connectionInfo = ConnectionInfo.from(ctx.channel().parent(),
+				connectionInfo = ConnectionInfo.from(ctx.channel(),
 						request,
 						secured,
 						remoteAddress,

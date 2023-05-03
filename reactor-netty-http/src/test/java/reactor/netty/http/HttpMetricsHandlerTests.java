@@ -46,7 +46,6 @@ import io.netty.util.concurrent.EventExecutor;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
@@ -58,6 +57,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.ContextAwareHttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
@@ -66,6 +66,7 @@ import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerMetricsRecorder;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.netty.transport.AddressUtils;
 import reactor.test.StepVerifier;
@@ -93,6 +94,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static reactor.netty.Metrics.CONNECTIONS_ACTIVE;
 import static reactor.netty.Metrics.CONNECTIONS_TOTAL;
 import static reactor.netty.Metrics.CONNECT_TIME;
@@ -894,8 +896,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsRecorderBadUri(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                                      @Nullable ProtocolSslContextSpec serverCtx,
-	                                                      @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+			@Nullable ProtocolSslContextSpec serverCtx,
+			@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1,
 				Function.identity(), Function.identity());
 	}
@@ -903,10 +905,9 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsRecorderBadUriUDS(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                         @Nullable ProtocolSslContextSpec serverCtx,
-	                                         @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		// only run Unix Domain Socket test if netty native transport are available
-		checkUDSSupported();
+			@Nullable ProtocolSslContextSpec serverCtx,
+			@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		assumeThat(LoopResources.hasNativeSupport()).isTrue();
 		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1,
 				client -> client.bindAddress(() -> new DomainSocketAddress("/tmp/test.sockclient"))
 						.remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock")),
@@ -916,39 +917,19 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsRecorderBadUriForwarded(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                                  @Nullable ProtocolSslContextSpec serverCtx,
-	                                                  @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+			@Nullable ProtocolSslContextSpec serverCtx,
+			@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx,
 				"192.168.0.1", 8080,
 				Function.identity(),
 				Function.identity());
 	}
 
-	private void checkUDSSupported() {
-		try {
-			Class.forName("io.netty.channel.kqueue.KQueue");
-		}
-		catch (ClassNotFoundException kqueueNotFound) {
-			try {
-				Class<?> epollClass = Class.forName("io.netty.channel.epoll.Epoll");
-				if (epollClass != null) {
-					Boolean epollAvailable = ((Boolean) epollClass.getMethod("isAvailable").invoke(null)).booleanValue();
-					if (!epollAvailable) {
-						Assumptions.assumeTrue(false, "Skipping test because EPoll is unavailable.");
-					}
-				}
-			}
-			catch (Exception epollNotFound) {
-				Assumptions.assumeTrue(false, "Skipping test because neither netty native kqueue nor epoll is available.");
-			}
-		}
-	}
-
 	private void testServerConnectionsRecorderBadUri(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-	                                                 @Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-	                                                 @Nullable String xForwardedFor, int xForwardedPort,
-	                                                 Function<HttpClient, HttpClient> bindClient,
-	                                                 Function<HttpServer, HttpServer> bindServer) throws Exception {
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
+			@Nullable String xForwardedFor, int xForwardedPort,
+			Function<HttpClient, HttpClient> bindClient,
+			Function<HttpServer, HttpServer> bindServer) throws Exception {
 		ServerRecorderBadUri.INSTANCE.init();
 
 		AtomicReference<SocketAddress> clientSA = new AtomicReference<>();
@@ -956,11 +937,13 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.metrics(true, () -> ServerRecorderBadUri.INSTANCE, Function.identity())
 				.forwarded(xForwardedFor != null || xForwardedPort != -1)
 				.childObserve((conn, state) -> {
-					if (xForwardedFor != null && xForwardedPort != -1) {
-						clientSA.set(AddressUtils.createUnresolved(xForwardedFor, xForwardedPort));
-					}
-					else {
-						clientSA.set(conn.address());
+					if (state == ConnectionObserver.State.CONNECTED) {
+						if (xForwardedFor != null && xForwardedPort != -1) {
+							clientSA.set(AddressUtils.createUnresolved(xForwardedFor, xForwardedPort));
+						}
+						else {
+							clientSA.set(conn.address());
+						}
 					}
 				})
 				.bindNow();
