@@ -820,7 +820,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		if (connectionInfo == null) {
 			// ConnectionInfo could not be created because of malformed Host or forwarded headers. Fallback on established connection info.
-			connectionInfo = ConnectionInfo.from(isHttp2 ? ctx.channel().parent() : ctx.channel(), null, secure, remoteAddress, null);
+			connectionInfo = ConnectionInfo.from(ctx.channel(), null, secure, remoteAddress, null);
 		}
 
 		ReferenceCountUtil.release(msg);
