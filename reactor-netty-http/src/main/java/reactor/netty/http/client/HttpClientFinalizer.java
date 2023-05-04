@@ -113,7 +113,7 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 
 		@SuppressWarnings("unchecked")
 		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) connect();
-		return ByteBufFlux.fromInbound(connector.flatMapMany(ChannelOperations::receiveObject), alloc);
+		return ByteBufFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
 	}
 
 	@Override
@@ -164,6 +164,8 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 			c.discard();
 		}
 	}
+
+	static final Function<ChannelOperations<?, ?>, Flux<?>> contentReceiver = ChannelOperations::receiveObject;
 
 	static final Function<HttpClientOperations, HttpClientResponse> RESPONSE_ONLY = ops -> {
 		//defer the dispose to avoid over disposing on receive
