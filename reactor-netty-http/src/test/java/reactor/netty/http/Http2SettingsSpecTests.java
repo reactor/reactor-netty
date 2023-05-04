@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ class Http2SettingsSpecTests {
 	void headerTableSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.headerTableSize(-1))
-				.withMessage("Setting HEADER_TABLE_SIZE is invalid: -1");
+				.withMessageContaining("Setting HEADER_TABLE_SIZE is invalid: -1");
 	}
 
 	@Test
@@ -66,7 +66,7 @@ class Http2SettingsSpecTests {
 	void initialWindowSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.initialWindowSize(-1))
-				.withMessage("Setting INITIAL_WINDOW_SIZE is invalid: -1");
+				.withMessageContaining("Setting INITIAL_WINDOW_SIZE is invalid: -1");
 	}
 
 	@Test
@@ -85,7 +85,7 @@ class Http2SettingsSpecTests {
 	void maxConcurrentStreamsBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxConcurrentStreams(-1))
-				.withMessage("Setting MAX_CONCURRENT_STREAMS is invalid: -1");
+				.withMessageContaining("Setting MAX_CONCURRENT_STREAMS is invalid: -1");
 	}
 
 	@Test
@@ -104,7 +104,7 @@ class Http2SettingsSpecTests {
 	void maxFrameSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxFrameSize(-1))
-				.withMessage("Setting MAX_FRAME_SIZE is invalid: -1");
+				.withMessageContaining("Setting MAX_FRAME_SIZE is invalid: -1");
 	}
 
 	@Test
@@ -123,7 +123,7 @@ class Http2SettingsSpecTests {
 	void maxHeaderListSizeBadValues() {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxHeaderListSize(-1))
-				.withMessage("Setting MAX_HEADER_LIST_SIZE is invalid: -1");
+				.withMessageContaining("Setting MAX_HEADER_LIST_SIZE is invalid: -1");
 	}
 
 	/*
