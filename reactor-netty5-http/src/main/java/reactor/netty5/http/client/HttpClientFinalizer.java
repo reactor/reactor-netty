@@ -36,6 +36,7 @@ import reactor.netty5.channel.ChannelOperations;
 import reactor.util.annotation.Nullable;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
+import static reactor.netty5.http.HttpOperations.bufferExtractorFunction;
 
 /**
  * Configures the HTTP request before calling one of the terminal,
@@ -115,7 +116,7 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 
 		@SuppressWarnings("unchecked")
 		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) connect();
-		return BufferFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
+		return BufferFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc, bufferExtractorFunction);
 	}
 
 	@Override

@@ -485,7 +485,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	/**
 	 * A channel object to {@link Buffer} transformer
 	 */
-	static final Function<Object, Buffer> bufferExtractorFunction = o -> {
+	public static final Function<Object, Buffer> bufferExtractorFunction = o -> {
 		if (o instanceof Buffer buffer) {
 			return buffer;
 		}

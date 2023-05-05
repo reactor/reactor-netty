@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import reactor.netty5.http.websocket.WebsocketInbound;
 import reactor.netty5.http.websocket.WebsocketOutbound;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
+import static reactor.netty5.http.HttpOperations.bufferExtractorFunction;
 import static reactor.netty5.http.client.HttpClientFinalizer.contentReceiver;
 
 /**
@@ -117,7 +118,7 @@ final class WebsocketFinalizer extends HttpClientConnect implements HttpClient.W
 
 		@SuppressWarnings("unchecked")
 		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) connect();
-		return BufferFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
+		return BufferFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc, bufferExtractorFunction);
 	}
 
 	@Override
