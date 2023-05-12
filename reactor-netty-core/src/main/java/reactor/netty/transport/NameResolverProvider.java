@@ -192,7 +192,9 @@ public final class NameResolverProvider {
 		NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes);
 
 		/**
-		 * Sets the resolve cache to use for DNS resolution
+		 * Sets the resolve cache to use for DNS resolution. {@link NameResolverSpec#cacheMinTimeToLive},
+		 * {@link NameResolverSpec#cacheMaxTimeToLive} and {@link NameResolverSpec#cacheNegativeTimeToLive} will be
+		 * ignored if this is set.
 		 *
 		 * @param resolveCache the resolution DNS cache
 		 * @return {@code this}
@@ -539,8 +541,6 @@ public final class NameResolverProvider {
 			group = loop.onClient(preferNative);
 		}
 		DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
-				.ttl(Math.toIntExact(cacheMinTimeToLive.getSeconds()), Math.toIntExact(cacheMaxTimeToLive.getSeconds()))
-				.negativeTtl(Math.toIntExact(cacheNegativeTimeToLive.getSeconds()))
 				.completeOncePreferredResolved(completeOncePreferredResolved)
 				.optResourceEnabled(!disableOptionalRecord)
 				.recursionDesired(!disableRecursionDesired)
@@ -562,6 +562,10 @@ public final class NameResolverProvider {
 		}
 		if (resolveCache != null) {
 			builder.resolveCache(resolveCache);
+		}
+		else {
+			builder.ttl(Math.toIntExact(cacheMinTimeToLive.getSeconds()), Math.toIntExact(cacheMaxTimeToLive.getSeconds()))
+					.negativeTtl(Math.toIntExact(cacheNegativeTimeToLive.getSeconds()));
 		}
 		if (bindAddressSupplier != null) {
 			// There is no check for bindAddressSupplier.get() == null
