@@ -16,15 +16,21 @@
 package reactor.netty5.http;
 
 import io.netty5.buffer.Buffer;
+import io.netty5.handler.codec.http2.Http2Connection;
+import io.netty5.handler.codec.http2.Http2FrameCodec;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.BufferFlux;
@@ -51,6 +57,7 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty5.ConnectionObserver.State.CONFIGURED;
 
 /**
  * Holds HTTP/2 specific tests.
@@ -626,4 +633,66 @@ class Http2Tests extends BaseHttpTest {
 		          .verify(Duration.ofSeconds(30));
 	}
 
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testMaxStreamsH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		ConnectionProvider provider = ConnectionProvider.create("testMaxStreamsH2C", 1);
+		try {
+			doTestMaxStreams(createServer().protocol(serverProtocols),
+					createClient(provider, () -> disposableServer.address()).protocol(clientProtocols));
+		}
+		finally {
+			provider.disposeLater().block(Duration.ofSeconds(5));
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testMaxStreamsH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		ConnectionProvider provider = ConnectionProvider.create("testMaxStreamsH2", 1);
+		try {
+			doTestMaxStreams(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+					createClient(provider, () -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)));
+		}
+		finally {
+			provider.disposeLater().block(Duration.ofSeconds(5));
+		}
+	}
+
+	private void doTestMaxStreams(HttpServer server, HttpClient client) {
+		Sinks.One<String> goAwaySent = Sinks.one();
+		disposableServer =
+				server.childObserve((conn, state) -> {
+				          if (state == CONFIGURED) {
+				              Http2FrameCodec http2FrameCodec = conn.channel().parent().pipeline().get(Http2FrameCodec.class);
+				              Http2Connection.Listener goAwayFrameListener = Mockito.mock(Http2Connection.Listener.class);
+				              Mockito.doAnswer(invocation -> {
+				                         goAwaySent.tryEmitValue("goAwaySent");
+				                         return null;
+				                     })
+				                     .when(goAwayFrameListener)
+				                     .onGoAwaySent(Mockito.anyInt(), Mockito.anyLong(), Mockito.any());
+				              http2FrameCodec.connection().addListener(goAwayFrameListener);
+				          }
+				      })
+				      .http2Settings(spec -> spec.maxStreams(2))
+				      .handle((req, res) -> res.sendString(Mono.just("doTestMaxStreams")))
+				      .bindNow();
+
+		Flux.range(0, 2)
+		    .flatMap(i ->
+		        client.get()
+		              .uri("/")
+		              .responseSingle((res, bytes) -> bytes.asString()))
+		    .collectList()
+		    .zipWith(goAwaySent.asMono())
+		    .as(StepVerifier::create)
+		    .assertNext(t -> assertThat(t.getT1()).isNotNull().hasSize(2).allMatch("doTestMaxStreams"::equals))
+		    .expectComplete()
+		    .verify(Duration.ofSeconds(5));
+	}
 }

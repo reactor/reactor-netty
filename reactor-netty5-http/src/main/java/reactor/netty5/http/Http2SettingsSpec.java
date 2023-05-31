@@ -79,6 +79,14 @@ public final class Http2SettingsSpec {
 		Builder maxHeaderListSize(long maxHeaderListSize);
 
 		/**
+		 * The connection is marked for closing once the number of all-time streams reaches {@code maxStreams}.
+		 *
+		 * @return {@code this}
+		 * @since 1.0.33
+		 */
+		Builder maxStreams(long maxStreams);
+
+		/**
 		 * Sets the {@code SETTINGS_ENABLE_PUSH} value.
 		 *
 		 * @param pushEnabled the {@code SETTINGS_ENABLE_PUSH} value
@@ -148,6 +156,17 @@ public final class Http2SettingsSpec {
 	}
 
 	/**
+	 * Returns the configured {@code maxStreams} value or null.
+	 *
+	 * @return the configured {@code maxStreams} value or null
+	 * @since 1.0.33
+	 */
+	@Nullable
+	public Long maxStreams() {
+		return maxStreams;
+	}
+
+	/**
 	 * Returns the configured {@code SETTINGS_ENABLE_PUSH} value or null.
 	 *
 	 * @return the configured {@code SETTINGS_ENABLE_PUSH} value or null
@@ -170,6 +189,7 @@ public final class Http2SettingsSpec {
 				Objects.equals(maxConcurrentStreams, that.maxConcurrentStreams) &&
 				Objects.equals(maxFrameSize, that.maxFrameSize) &&
 				maxHeaderListSize.equals(that.maxHeaderListSize) &&
+				Objects.equals(maxStreams, that.maxStreams) &&
 				Objects.equals(pushEnabled, that.pushEnabled);
 	}
 
@@ -181,6 +201,7 @@ public final class Http2SettingsSpec {
 		result = 31 * result + Long.hashCode(maxConcurrentStreams);
 		result = 31 * result + maxFrameSize;
 		result = 31 * result + Long.hashCode(maxHeaderListSize);
+		result = 31 * result + Long.hashCode(maxStreams);
 		result = 31 * result + Boolean.hashCode(pushEnabled);
 		return result;
 	}
@@ -190,19 +211,28 @@ public final class Http2SettingsSpec {
 	final Long maxConcurrentStreams;
 	final Integer maxFrameSize;
 	final Long maxHeaderListSize;
+	final Long maxStreams;
 	final Boolean pushEnabled;
 
 	Http2SettingsSpec(Build build) {
 		Http2Settings settings = build.http2Settings;
 		headerTableSize = settings.headerTableSize();
 		initialWindowSize = settings.initialWindowSize();
-		maxConcurrentStreams = settings.maxConcurrentStreams();
+		if (settings.maxConcurrentStreams() != null) {
+			maxConcurrentStreams = build.maxStreams != null ?
+					Math.min(settings.maxConcurrentStreams(), build.maxStreams) : settings.maxConcurrentStreams();
+		}
+		else {
+			maxConcurrentStreams = build.maxStreams;
+		}
 		maxFrameSize = settings.maxFrameSize();
 		maxHeaderListSize = settings.maxHeaderListSize();
+		maxStreams = build.maxStreams;
 		pushEnabled = settings.pushEnabled();
 	}
 
 	static final class Build implements Builder {
+		Long maxStreams;
 		final Http2Settings http2Settings = Http2Settings.defaultSettings();
 
 		@Override
@@ -237,6 +267,15 @@ public final class Http2SettingsSpec {
 		@Override
 		public Builder maxHeaderListSize(long maxHeaderListSize) {
 			http2Settings.maxHeaderListSize(maxHeaderListSize);
+			return this;
+		}
+
+		@Override
+		public Builder maxStreams(long maxStreams) {
+			if (maxStreams < 1) {
+				throw new IllegalArgumentException("maxStreams must be positive");
+			}
+			this.maxStreams = Long.valueOf(maxStreams);
 			return this;
 		}
 
