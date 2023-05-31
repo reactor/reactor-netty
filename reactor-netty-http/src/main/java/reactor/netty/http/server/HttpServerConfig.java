@@ -32,12 +32,14 @@ import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http2.CleartextHttp2ServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2ConnectionAdapter;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.codec.http2.Http2Stream;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -370,7 +372,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this._protocols = _protocols;
 	}
 
-	Http2Settings http2Settings() {
+	static Http2Settings http2Settings(@Nullable Http2SettingsSpec http2Settings) {
 		Http2Settings settings = Http2Settings.defaultSettings();
 
 		if (http2Settings != null) {
@@ -522,7 +524,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			boolean enableGracefulShutdown,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
-			Http2Settings http2Settings,
+			@Nullable Http2SettingsSpec http2SettingsSpec,
 			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
@@ -537,11 +539,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		Http2FrameCodecBuilder http2FrameCodecBuilder =
 				Http2FrameCodecBuilder.forServer()
 				                      .validateHeaders(validate)
-				                      .initialSettings(http2Settings);
+				                      .initialSettings(http2Settings(http2SettingsSpec));
 
-		if (enableGracefulShutdown) {
-			// Configure the graceful shutdown with indefinite timeout as Reactor Netty controls the timeout
+		Long maxStreams = http2SettingsSpec != null ? http2SettingsSpec.maxStreams() : null;
+		if (enableGracefulShutdown || maxStreams != null) {
+			// 1. Configure the graceful shutdown with indefinite timeout as Reactor Netty controls the timeout
 			// when disposeNow(timeout) is invoked
+			// 2. When 'maxStreams' is configured, the graceful shutdown is enabled.
+			// The graceful shutdown is configured with indefinite timeout because
+			// the response time is controlled by the user and might be different
+			// for the different requests.
 			http2FrameCodecBuilder.gracefulShutdownTimeoutMillis(-1);
 		}
 
@@ -550,7 +557,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 					"reactor.netty.http.server.h2"));
 		}
 
-		p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
+		Http2FrameCodec http2FrameCodec = http2FrameCodecBuilder.build();
+		if (maxStreams != null) {
+			http2FrameCodec.connection().addListener(new H2ConnectionListener(p.channel(), maxStreams));
+		}
+		p.addLast(NettyPipeline.HttpCodec, http2FrameCodec)
 		 .addLast(NettyPipeline.H2MultiplexHandler,
 		          new Http2MultiplexHandler(new H2Codec(accessLogEnabled, accessLog, compressPredicate, cookieDecoder,
 		                  cookieEncoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener,
@@ -579,7 +590,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			boolean enableGracefulShutdown,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
-			Http2Settings http2Settings,
+			@Nullable Http2SettingsSpec http2SettingsSpec,
 			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
@@ -596,10 +607,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		Http11OrH2CleartextCodec upgrader = new Http11OrH2CleartextCodec(accessLogEnabled, accessLog, compressPredicate,
 				cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null, enableGracefulShutdown, formDecoderProvider,
-				forwardedHeaderHandler, http2Settings, httpMessageLogFactory, listener, mapHandle, metricsRecorder,
+				forwardedHeaderHandler, http2SettingsSpec, httpMessageLogFactory, listener, mapHandle, metricsRecorder,
 				minCompressionSize, opsFactory, uriTagValue, decoder.validateHeaders());
 
-		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader);
+		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader, http2SettingsSpec != null ? http2SettingsSpec.maxStreams() : null);
 		CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler = new CleartextHttp2ServerUpgradeHandler(
 				httpServerCodec,
 				new HttpServerUpgradeHandler(httpServerCodec, upgrader, decoder.h2cMaxContentLength()),
@@ -783,27 +794,33 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Http11OrH2CleartextCodec upgrader;
 		final boolean addHttp2FrameCodec;
 		final boolean removeMetricsHandler;
+		final Long maxStreams;
 
 		/**
 		 * Used when full H2 preface is received
 		 */
-		H2CleartextCodec(Http11OrH2CleartextCodec upgrader) {
-			this(upgrader, true, true);
+		H2CleartextCodec(Http11OrH2CleartextCodec upgrader, @Nullable Long maxStreams) {
+			this(upgrader, true, true, maxStreams);
 		}
 
 		/**
 		 * Used when upgrading from HTTP/1.1 to H2. When an upgrade happens {@link Http2FrameCodec}
 		 * is added by {@link Http2ServerUpgradeCodec}
 		 */
-		H2CleartextCodec(Http11OrH2CleartextCodec upgrader, boolean addHttp2FrameCodec, boolean removeMetricsHandler) {
+		H2CleartextCodec(Http11OrH2CleartextCodec upgrader, boolean addHttp2FrameCodec, boolean removeMetricsHandler,
+				@Nullable Long maxStreams) {
 			this.upgrader = upgrader;
 			this.addHttp2FrameCodec = addHttp2FrameCodec;
 			this.removeMetricsHandler = removeMetricsHandler;
+			this.maxStreams = maxStreams;
 		}
 
 		@Override
 		public void handlerAdded(ChannelHandlerContext ctx) {
 			ChannelPipeline pipeline = ctx.pipeline();
+			if (maxStreams != null) {
+				upgrader.http2FrameCodec.connection().addListener(new H2ConnectionListener(ctx.channel(), maxStreams));
+			}
 			if (addHttp2FrameCodec) {
 				pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodec);
 			}
@@ -908,6 +925,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ConnectionObserver                                      listener;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 		                                                              mapHandle;
+		final Long                                                    maxStreams;
 		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
 		final ChannelOperations.OnSetup                               opsFactory;
@@ -923,7 +941,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				boolean enableGracefulShutdown,
 				HttpServerFormDecoderProvider formDecoderProvider,
 				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
-				Http2Settings http2Settings,
+				@Nullable Http2SettingsSpec http2SettingsSpec,
 				HttpMessageLogFactory httpMessageLogFactory,
 				ConnectionObserver listener,
 				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
@@ -942,11 +960,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			Http2FrameCodecBuilder http2FrameCodecBuilder =
 					Http2FrameCodecBuilder.forServer()
 					                      .validateHeaders(validate)
-					                      .initialSettings(http2Settings);
+					                      .initialSettings(http2Settings(http2SettingsSpec));
 
-			if (enableGracefulShutdown) {
-				// Configure the graceful shutdown with indefinite timeout as Reactor Netty controls the timeout
+			this.maxStreams = http2SettingsSpec != null ? http2SettingsSpec.maxStreams() : null;
+			if (enableGracefulShutdown || maxStreams != null) {
+				// 1. Configure the graceful shutdown with indefinite timeout as Reactor Netty controls the timeout
 				// when disposeNow(timeout) is invoked
+				// 2. When 'maxStreams' is configured, the graceful shutdown is enabled.
+				// The graceful shutdown is configured with indefinite timeout because
+				// the response time is controlled by the user and might be different
+				// for the different requests.
 				http2FrameCodecBuilder.gracefulShutdownTimeoutMillis(-1);
 			}
 
@@ -980,10 +1003,33 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		@Nullable
 		public HttpServerUpgradeHandler.UpgradeCodec newUpgradeCodec(CharSequence protocol) {
 			if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-				return new Http2ServerUpgradeCodec(http2FrameCodec, new H2CleartextCodec(this, false, false));
+				return new Http2ServerUpgradeCodec(http2FrameCodec, new H2CleartextCodec(this, false, false, maxStreams));
 			}
 			else {
 				return null;
+			}
+		}
+	}
+
+	static final class H2ConnectionListener extends Http2ConnectionAdapter {
+
+		final Channel channel;
+		final long maxStreams;
+
+		long numStreams;
+
+		H2ConnectionListener(Channel channel, long maxStreams) {
+			this.channel = channel;
+			this.maxStreams = maxStreams;
+		}
+
+		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
+		public void onStreamActive(Http2Stream stream) {
+			assert channel.eventLoop().inEventLoop();
+			if (++numStreams == maxStreams) {
+				//"FutureReturnValueIgnored" this is deliberate
+				channel.close();
 			}
 		}
 	}
@@ -999,7 +1045,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final boolean                                                 enableGracefulShutdown;
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-		final Http2Settings                                           http2Settings;
+		final Http2SettingsSpec                                       http2SettingsSpec;
 		final HttpMessageLogFactory                                   httpMessageLogFactory;
 		final Duration                                                idleTimeout;
 		final ConnectionObserver                                      listener;
@@ -1022,7 +1068,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.enableGracefulShutdown = initializer.enableGracefulShutdown;
 			this.formDecoderProvider = initializer.formDecoderProvider;
 			this.forwardedHeaderHandler = initializer.forwardedHeaderHandler;
-			this.http2Settings = initializer.http2Settings;
+			this.http2SettingsSpec = initializer.http2SettingsSpec;
 			this.httpMessageLogFactory = initializer.httpMessageLogFactory;
 			this.idleTimeout = initializer.idleTimeout;
 			this.listener = listener;
@@ -1044,7 +1090,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
 				configureH2Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
-						enableGracefulShutdown, formDecoderProvider, forwardedHeaderHandler, http2Settings, httpMessageLogFactory, idleTimeout,
+						enableGracefulShutdown, formDecoderProvider, forwardedHeaderHandler, http2SettingsSpec, httpMessageLogFactory, idleTimeout,
 						listener, mapHandle, metricsRecorder, minCompressionSize, opsFactory, uriTagValue, decoder.validateHeaders());
 				return;
 			}
@@ -1076,7 +1122,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final boolean                                                 enableGracefulShutdown;
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-		final Http2Settings                                           http2Settings;
+		final Http2SettingsSpec                                       http2SettingsSpec;
 		final HttpMessageLogFactory                                   httpMessageLogFactory;
 		final Duration                                                idleTimeout;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -1101,7 +1147,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.enableGracefulShutdown = config.channelGroup() != null;
 			this.formDecoderProvider = config.formDecoderProvider;
 			this.forwardedHeaderHandler = config.forwardedHeaderHandler;
-			this.http2Settings = config.http2Settings();
+			this.http2SettingsSpec = config.http2Settings;
 			this.httpMessageLogFactory = config.httpMessageLogFactory;
 			this.idleTimeout = config.idleTimeout;
 			this.mapHandle = config.mapHandle;
@@ -1169,7 +1215,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							enableGracefulShutdown,
 							formDecoderProvider,
 							forwardedHeaderHandler,
-							http2Settings,
+							http2SettingsSpec,
 							httpMessageLogFactory,
 							idleTimeout,
 							observer,
@@ -1194,7 +1240,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							enableGracefulShutdown,
 							formDecoderProvider,
 							forwardedHeaderHandler,
-							http2Settings,
+							http2SettingsSpec,
 							httpMessageLogFactory,
 							idleTimeout,
 							observer,
@@ -1236,7 +1282,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							enableGracefulShutdown,
 							formDecoderProvider,
 							forwardedHeaderHandler,
-							http2Settings,
+							http2SettingsSpec,
 							httpMessageLogFactory,
 							idleTimeout,
 							observer,
