@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package reactor.netty5.http.server;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.codec.compression.CompressionOptions;
 import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.FullHttpRequest;
@@ -28,6 +29,10 @@ import io.netty5.util.concurrent.Future;
  * @author Stephane Maldini
  */
 final class SimpleCompressionHandler extends HttpContentCompressor {
+
+	SimpleCompressionHandler() {
+		super((CompressionOptions[]) null);
+	}
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
