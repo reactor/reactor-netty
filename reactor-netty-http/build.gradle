@@ -145,6 +145,15 @@ dependencies {
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 
+	// Needed for Brotli compression
+	testImplementation "com.aayushatharva.brotli4j:brotli4j:$brotli4jVersion"
+	if (osdetector.classifier == "linux-aarch_64" || osdetector.classifier == "osx-aarch_64") {
+		testRuntimeOnly "com.aayushatharva.brotli4j:native-${osdetector.os}-aarch64:$brotli4jVersion"
+	}
+	else {
+		testRuntimeOnly "com.aayushatharva.brotli4j:native-${osdetector.classifier}:$brotli4jVersion"
+	}
+
 	// Needed for proxy testing
 	testRuntimeOnly "io.netty:netty-handler-proxy:$nettyVersion"
 	testRuntimeOnly "io.netty:netty-codec-haproxy:$nettyVersion"
