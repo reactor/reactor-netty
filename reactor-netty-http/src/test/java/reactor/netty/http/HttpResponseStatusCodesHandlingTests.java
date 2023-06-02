@@ -102,8 +102,11 @@ class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {
 				                   .get("/304-3", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
 				                                                   .sendString(Mono.just("/304-3")))
 				                   .get("/304-4", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
-				                                                   .sendString(Flux.just("/", "304-4")))
+				                                                   .header(HttpHeaderNames.CONTENT_LENGTH, "6")
+				                                                   .sendString(Mono.just("/304-4")))
 				                   .get("/304-5", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
+				                                                   .sendString(Flux.just("/", "304-5")))
+				                   .get("/304-6", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
 				                                                   .send()))
 				      .bindNow();
 
@@ -130,6 +133,7 @@ class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {
 		checkResponse("/304-3", client);
 		checkResponse("/304-4", client);
 		checkResponse("/304-5", client);
+		checkResponse("/304-6", client);
 	}
 
 	static void checkResponse(String url, HttpClient client) {
