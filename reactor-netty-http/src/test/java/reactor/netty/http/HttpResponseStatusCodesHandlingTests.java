@@ -15,6 +15,7 @@
  */
 package reactor.netty.http;
 
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
@@ -33,6 +34,7 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.stream.Stream;
@@ -102,9 +104,17 @@ class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {
 				                   .get("/304-3", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
 				                                                   .sendString(Mono.just("/304-3")))
 				                   .get("/304-4", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
-				                                                   .sendString(Flux.just("/", "304-4")))
+				                                                   .header(HttpHeaderNames.CONTENT_LENGTH, "6")
+				                                                   .sendString(Mono.just("/304-4")))
 				                   .get("/304-5", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
-				                                                   .send()))
+				                                                   .sendString(Flux.just("/", "304-5")))
+				                   .get("/304-6", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
+				                                                   .send())
+				                   .get("/304-7", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
+				                                                   .sendObject(Unpooled.wrappedBuffer("/304-7".getBytes(Charset.defaultCharset()))))
+				                   .get("/304-8", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
+				                                                   .header(HttpHeaderNames.CONTENT_LENGTH, "6")
+				                                                   .sendObject(Unpooled.wrappedBuffer("/304-8".getBytes(Charset.defaultCharset())))))
 				      .bindNow();
 
 		HttpClient client = createClient(disposableServer::address).protocol(clientProtocols);
@@ -130,6 +140,9 @@ class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {
 		checkResponse("/304-3", client);
 		checkResponse("/304-4", client);
 		checkResponse("/304-5", client);
+		checkResponse("/304-6", client);
+		checkResponse("/304-7", client);
+		checkResponse("/304-8", client);
 	}
 
 	static void checkResponse(String url, HttpClient client) {
