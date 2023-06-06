@@ -127,19 +127,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			return new PostHeadersNettyOutbound(((Mono<Buffer>) source)
 					.flatMap(b -> {
 						if (markSentHeaderAndBody(b)) {
-							HttpMessage msg;
-							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0 ||
-									isContentAlwaysEmpty()) {
-								if (log.isDebugEnabled()) {
-									log.debug(format(channel(), "Dropped HTTP content, since response has " +
-											"1. [Content-Length: 0] or 2. there must be no content: {}"), b);
-								}
-								b.close();
-								msg = newFullBodyMessage(channel().bufferAllocator().allocate(0));
-							}
-							else {
-								msg = newFullBodyMessage(b);
-							}
+							HttpMessage msg = prepareHttpMessage(b);
 
 							try {
 								afterMarkSentHeaders();
@@ -169,18 +157,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		}
 		return new PostHeadersNettyOutbound(FutureMono.deferFuture(() -> {
 			if (markSentHeaderAndBody(b)) {
-				HttpMessage msg;
-				if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
-					if (log.isDebugEnabled()) {
-						log.debug(format(channel(), "Dropped HTTP content, " +
-								"since response has Content-Length: 0 {}"), b);
-					}
-					b.close();
-					msg = newFullBodyMessage(channel().bufferAllocator().allocate(0));
-				}
-				else {
-					msg = newFullBodyMessage(b);
-				}
+				HttpMessage msg = prepareHttpMessage(b);
 
 				try {
 					afterMarkSentHeaders();
@@ -455,6 +432,24 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 * @return Outbound Netty HttpMessage
 	 */
 	protected abstract HttpMessage outboundHttpMessage();
+
+	HttpMessage prepareHttpMessage(Buffer buffer) {
+		HttpMessage msg;
+		if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0 ||
+				isContentAlwaysEmpty()) {
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel(), "Dropped HTTP content, since response has " +
+						"1. [Content-Length: 0] or 2. there must be no content: {}"), buffer);
+			}
+			buffer.close();
+			msg = newFullBodyMessage(channel().bufferAllocator().allocate(0));
+		}
+		else {
+			msg = newFullBodyMessage(buffer);
+		}
+
+		return msg;
+	}
 
 	@SuppressWarnings("rawtypes")
 	final static AtomicIntegerFieldUpdater<HttpOperations> HTTP_STATE =
