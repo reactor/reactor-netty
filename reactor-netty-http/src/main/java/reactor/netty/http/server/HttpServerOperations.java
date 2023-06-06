@@ -680,8 +680,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected boolean isContentAlwaysEmpty() {
 		int code = status().code();
-		return HttpResponseStatus.NOT_MODIFIED.code() == code ||
-				HttpResponseStatus.NO_CONTENT.code() == code ||
+		if (HttpResponseStatus.NOT_MODIFIED.code() == code) {
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
+			               .remove(HttpHeaderNames.CONTENT_LENGTH);
+			return true;
+		}
+		return HttpResponseStatus.NO_CONTENT.code() == code ||
 				HttpResponseStatus.RESET_CONTENT.code() == code;
 	}
 
