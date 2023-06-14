@@ -578,6 +578,7 @@ include::{examplesdir}/resolver/custom/Application.java[lines=18..38]
 <1> Sets the JVM built-in resolver.
 ====
 
+[[timeout-configuration]]
 == Timeout Configuration
 This section describes various timeout configuration options that can be used in `HttpClient`.
 Configuring a proper timeout may improve or solve issues in the communication process.

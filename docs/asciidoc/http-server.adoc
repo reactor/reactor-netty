@@ -679,6 +679,7 @@ include::{examplesdir}/uds/Application.java[lines=18..33]
 <1> Specifies `DomainSocketAddress` that will be used
 ====
 
+[[http-server-timeout-configuration]]
 == Timeout Configuration
 This section describes various timeout configuration options that can be used in `HttpServer`.
 Configuring a proper timeout may improve or solve issues in the communication process.
