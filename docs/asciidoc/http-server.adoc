@@ -681,7 +681,30 @@ This section describes various timeout configuration options that can be used in
 Configuring a proper timeout may improve or solve issues in the communication process.
 The configuration options can be grouped as follows:
 
+* <<http-server-connection-timeout>>
 * <<http-server-ssl-tls-timeout>>
+
+[[http-server-connection-timeout]]
+=== Connection Timeout
+The following listing shows all available connection timeout configuration options.
+
+* `idleTimeout` - The maximum time (resolution: ms) that this connection stays opened and waits for HTTP request.
+Once the timeout is reached, the connection is closed. By default,
+{javadoc}/reactor/netty/http/server/HttpServer.html#idleTimeout-java.time.Duration-[`idleTimeout`] is not specified,
+this indicates no timeout (i.e. infinite), which means the connection is closed only if one of the peers decides to close it explicitly.
+
+NOTE: It is always a good practice to configure an idle timeout.
+
+To customize the default settings, you can configure `HttpServer` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/idle/timeout/Application.java
+----
+include::{examplesdir}/idle/timeout/Application.java[lines=18..35]
+----
+<1> Configures the default idle timeout to 1 second.
+====
 
 [[http-server-ssl-tls-timeout]]
 === SSL/TLS Timeout
