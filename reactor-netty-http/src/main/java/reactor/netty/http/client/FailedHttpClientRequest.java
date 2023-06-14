@@ -139,7 +139,7 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 
 	@Override
 	public HttpClientRequest responseTimeout(Duration maxReadOperationInterval) {
-		throw new UnsupportedOperationException("Should not add request timeout");
+		throw new UnsupportedOperationException("Should not add response timeout");
 	}
 
 	@Override
