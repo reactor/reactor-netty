@@ -125,7 +125,7 @@ If, on the client side, you observe `Connection prematurely closed BEFORE respon
 * Check for any proxies and load balancers.
 ** Do they have some kind of idle timeout configuration (the connection is closed when there is no incoming data for a certain period of time)?
 ** Do they silently drop the idle connections without sending any signal?
-In order to verify whether this might be the issue, you can enable the TCP keep-alive as described in the section <<Connection Timeout>>.
+In order to verify whether this might be the issue, you can enable the TCP keep-alive as described in the section <<connection-timeout>>.
 Issues related to TCP keep-alive configuration on various load balancers were reported in the past.
 *** https://github.com/reactor/reactor-netty/issues/764#issuecomment-1011373248
 *** https://github.com/reactor/reactor-netty/issues/1510
@@ -137,5 +137,5 @@ Issues related to TCP keep-alive configuration on various load balancers were re
 ** bad request
 ** max keep alive requests (the connection is closed when the requests reach the configured maximum number)
 
-Consider checking <<Timeout Configuration>>. The section describes various timeout configuration options that are available for Reactor Netty clients.
+Consider checking <<timeout-configuration>>. The section describes various timeout configuration options that are available for Reactor Netty clients.
 Configuring a proper timeout may improve or solve issues in the communication process.
