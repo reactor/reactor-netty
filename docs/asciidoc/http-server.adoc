@@ -678,3 +678,36 @@ include::{examplesdir}/uds/Application.java[lines=18..33]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
 ====
+
+== Timeout Configuration
+This section describes various timeout configuration options that can be used in `HttpServer`.
+Configuring a proper timeout may improve or solve issues in the communication process.
+The configuration options can be grouped as follows:
+
+* <<http-server-ssl-tls-timeout>>
+
+[[http-server-ssl-tls-timeout]]
+=== SSL/TLS Timeout
+`HttpServer` supports the SSL/TLS functionality provided by Netty.
+
+The following list describes the available timeout configuration options:
+
+* `handshakeTimeout` - Use this option to configure the SSL handshake timeout (resolution: ms). Default: 10s.
+
+NOTE: You should consider increasing the SSL handshake timeout when expecting slow network connections.
+
+* `closeNotifyFlushTimeout` - Use this option to configure the SSL `close_notify` flush timeout (resolution: ms). Default: 3s.
+* `closeNotifyReadTimeout` - Use this option to configure the SSL `close_notify` read timeout (resolution: ms). Default: 0s.
+
+To customize the default settings, you can configure `HttpServer` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/security/custom/Application.java
+----
+include::{examplesdir}/security/custom/Application.java[lines=18..44]
+----
+<1> Configures the SSL handshake timeout to 30 seconds.
+<2> Configures the SSL `close_notify` flush timeout to 10 seconds.
+<3> Configures the SSL `close_notify` read timeout to 10 seconds.
+====
