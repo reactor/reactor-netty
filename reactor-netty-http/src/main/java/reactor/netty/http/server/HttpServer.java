@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ServerTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
@@ -736,6 +737,50 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 		HttpServer dup = duplicate();
 		dup.configuration().proxyProtocolSupportType = proxyProtocolSupportType;
+		return dup;
+	}
+
+	/**
+	 * Specifies the maximum duration allowed between each network-level read operation while reading a given request
+	 * content (resolution: ms). In other words, {@link io.netty.handler.timeout.ReadTimeoutHandler} is added to the
+	 * channel pipeline once the request headers are received.
+	 * If the {@code readTimeout} is {@code null}, any previous setting will be removed and no
+	 * {@code readTimeout} will be applied.
+	 * If the {@code readTimeout} is less than {@code 1ms}, then {@code 1ms} will be the
+	 * {@code readTimeout}.
+	 *
+	 * @param readTimeout the maximum duration allowed between each network-level read operation while reading a given
+	 * request content (resolution: ms)
+	 * @return a new {@link HttpServer}
+	 * @since 1.1.9
+	 * @see io.netty.handler.timeout.ReadTimeoutHandler
+	 */
+	public final HttpServer readTimeout(@Nullable Duration readTimeout) {
+		if (Objects.equals(readTimeout, configuration().readTimeout)) {
+			return this;
+		}
+		HttpServer dup = duplicate();
+		dup.configuration().readTimeout = readTimeout;
+		return dup;
+	}
+
+	/**
+	 * Specifies the maximum duration for reading a given request content (resolution: ms).
+	 * If the {@code requestTimeout} is {@code null}, any previous setting will be removed and no
+	 * {@code requestTimeout} will be applied.
+	 * If the {@code requestTimeout} is less than {@code 1ms}, then {@code 1ms} will be the
+	 * {@code requestTimeout}.
+	 *
+	 * @param requestTimeout the maximum duration for reading a given request content (resolution: ms)
+	 * @return a new {@link HttpServer}
+	 * @since 1.1.9
+	 */
+	public final HttpServer requestTimeout(@Nullable Duration requestTimeout) {
+		if (Objects.equals(requestTimeout, configuration().requestTimeout)) {
+			return this;
+		}
+		HttpServer dup = duplicate();
+		dup.configuration().requestTimeout = requestTimeout;
 		return dup;
 	}
 
