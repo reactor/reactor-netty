@@ -768,6 +768,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		AtomicReference<List<Boolean>> handlerAvailable = new AtomicReference<>(new ArrayList<>(3));
 		AtomicReference<List<Boolean>> onTerminate = new AtomicReference<>(new ArrayList<>(3));
 		AtomicReference<List<Long>> timeout = new AtomicReference<>(new ArrayList<>(3));
+		CountDownLatch latch = new CountDownLatch(1);
 		disposableServer =
 				server.readTimeout(Duration.ofMillis(60))
 				      .requestTimeout(Duration.ofMillis(150))
@@ -778,7 +779,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 				              if (httpServerCodec != null) {
 				                  String name = ch.pipeline().context(httpServerCodec).name();
 				                  ch.pipeline().addAfter(name, "testRequestTimeout",
-				                          new RequestTimeoutTestChannelInboundHandler(handlerAvailable, onTerminate, timeout));
+				                          new RequestTimeoutTestChannelInboundHandler(handlerAvailable, onTerminate, timeout, latch));
 				              }
 				          }
 				      })
@@ -789,9 +790,11 @@ class HttpProtocolsTests extends BaseHttpTest {
 				                      handlerAvailable.get().add(true);
 				                      timeout.get().add(((ReadTimeoutHandler) handler).getReaderIdleTimeInMillis());
 				                  }
-				                  conn.onTerminate().subscribe(null, null, () ->
-				                          onTerminate.get().add(conn.channel().isActive() &&
-				                                  conn.channel().pipeline().get(NettyPipeline.ReadTimeoutHandler) != null));
+				                  conn.onTerminate().subscribe(null, null, () -> {
+				                      onTerminate.get().add(conn.channel().isActive() &&
+				                              conn.channel().pipeline().get(NettyPipeline.ReadTimeoutHandler) != null);
+				                      latch.countDown();
+				                  });
 				             })
 				             .send(req.receive().retain()))
 				      .bindNow();
@@ -895,16 +898,19 @@ class HttpProtocolsTests extends BaseHttpTest {
 		final AtomicReference<List<Boolean>> handlerAvailable;
 		final AtomicReference<List<Boolean>> onTerminate;
 		final AtomicReference<List<Long>> timeout;
+		final CountDownLatch latch;
 
 		boolean added;
 
 		RequestTimeoutTestChannelInboundHandler(
 				AtomicReference<List<Boolean>> handlerAvailable,
 				AtomicReference<List<Boolean>> onTerminate,
-				AtomicReference<List<Long>> timeout) {
+				AtomicReference<List<Long>> timeout,
+				CountDownLatch latch) {
 			this.handlerAvailable = handlerAvailable;
 			this.onTerminate = onTerminate;
 			this.timeout = timeout;
+			this.latch = latch;
 		}
 		@Override
 		public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -924,6 +930,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		public void channelInactive(ChannelHandlerContext ctx) {
 			onTerminate.get().add(ctx.channel().isActive() &&
 					ctx.channel().pipeline().get(NettyPipeline.ReadTimeoutHandler) != null);
+			latch.countDown();
 
 			ctx.fireChannelInactive();
 		}
