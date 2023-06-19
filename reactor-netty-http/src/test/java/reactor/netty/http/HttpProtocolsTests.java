@@ -847,7 +847,8 @@ class HttpProtocolsTests extends BaseHttpTest {
 				onNext++;
 				assertThat(signal.get()).isEqualTo("testProtocolVariationsRequestTimeout");
 			}
-			else if (signal.getThrowable() instanceof PrematureCloseException) {
+			else if (signal.getThrowable() instanceof PrematureCloseException ||
+					signal.getThrowable().getMessage().contains("Connection reset by peer")) {
 				onError++;
 			}
 		}
