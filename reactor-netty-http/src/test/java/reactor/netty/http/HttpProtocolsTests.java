@@ -768,7 +768,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		AtomicReference<List<Boolean>> handlerAvailable = new AtomicReference<>(new ArrayList<>(3));
 		AtomicReference<List<Boolean>> onTerminate = new AtomicReference<>(new ArrayList<>(3));
 		AtomicReference<List<Long>> timeout = new AtomicReference<>(new ArrayList<>(3));
-		CountDownLatch latch = new CountDownLatch(1);
+		CountDownLatch latch = new CountDownLatch(3);
 		disposableServer =
 				server.readTimeout(Duration.ofMillis(60))
 				      .requestTimeout(Duration.ofMillis(150))
