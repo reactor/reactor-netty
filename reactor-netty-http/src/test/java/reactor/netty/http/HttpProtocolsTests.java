@@ -762,7 +762,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompatibleCombinationsTest
-	void testRequestTimeout(HttpServer server, HttpClient client) {
+	void testRequestTimeout(HttpServer server, HttpClient client) throws Exception {
 		HttpProtocol[] serverProtocols = server.configuration().protocols();
 		HttpProtocol[] clientProtocols = client.configuration().protocols();
 		AtomicReference<List<Boolean>> handlerAvailable = new AtomicReference<>(new ArrayList<>(3));
@@ -831,6 +831,8 @@ class HttpProtocolsTests extends BaseHttpTest {
 				Flux.concat(response1.materialize(), response2.materialize(), response3.materialize())
 				    .collectList()
 				    .block(Duration.ofSeconds(30));
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
 		assertThat(result).isNotNull();
 
