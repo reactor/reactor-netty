@@ -632,13 +632,16 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
-			if (readTimeout != null) {
-				addHandlerFirst(NettyPipeline.ReadTimeoutHandler,
-						new ReadTimeoutHandler(readTimeout.toMillis(), TimeUnit.MILLISECONDS));
-			}
-			if (requestTimeout != null) {
-				requestTimeoutFuture =
-						ctx.executor().schedule(new RequestTimeoutTask(ctx), Math.max(requestTimeout.toMillis(), 1), TimeUnit.MILLISECONDS);
+			boolean isFullHttpRequest = msg instanceof FullHttpRequest;
+			if (!(isHttp2() && isFullHttpRequest)) {
+				if (readTimeout != null) {
+					addHandlerFirst(NettyPipeline.ReadTimeoutHandler,
+							new ReadTimeoutHandler(readTimeout.toMillis(), TimeUnit.MILLISECONDS));
+				}
+				if (requestTimeout != null) {
+					requestTimeoutFuture =
+							ctx.executor().schedule(new RequestTimeoutTask(ctx), Math.max(requestTimeout.toMillis(), 1), TimeUnit.MILLISECONDS);
+				}
 			}
 			try {
 				listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
@@ -648,7 +651,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ReferenceCountUtil.release(msg);
 				return;
 			}
-			if (msg instanceof FullHttpRequest) {
+			if (isFullHttpRequest) {
 				FullHttpRequest request = (FullHttpRequest) msg;
 				if (request.content().readableBytes() > 0) {
 					super.onInboundNext(ctx, msg);
@@ -657,11 +660,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					request.release();
 				}
 				if (isHttp2()) {
-					removeHandler(NettyPipeline.ReadTimeoutHandler);
-					if (requestTimeoutFuture != null) {
-						requestTimeoutFuture.cancel(false);
-						requestTimeoutFuture = null;
-					}
 					//force auto read to enable more accurate close selection now inbound is done
 					channel().config().setAutoRead(true);
 					onInboundComplete();
