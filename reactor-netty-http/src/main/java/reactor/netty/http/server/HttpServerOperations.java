@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -27,6 +28,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -68,6 +71,7 @@ import io.netty.handler.codec.http.multipart.HttpData;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
@@ -117,6 +121,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
 	final HttpRequest nettyRequest;
 	final HttpResponse nettyResponse;
+	final Duration readTimeout;
+	final Duration requestTimeout;
 	final HttpHeaders responseHeaders;
 	final String scheme;
 	final ZonedDateTime timestamp;
@@ -124,6 +130,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 	Function<? super String, Map<String, String>> paramsResolver;
 	String path;
+	Future<?> requestTimeoutFuture;
 	Consumer<? super HttpHeaders> trailerHeadersConsumer;
 
 	volatile Context currentContext;
@@ -144,6 +151,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.nettyResponse = replaced.nettyResponse;
 		this.paramsResolver = replaced.paramsResolver;
 		this.path = replaced.path;
+		this.readTimeout = replaced.readTimeout;
+		this.requestTimeout = replaced.requestTimeout;
 		this.responseHeaders = replaced.responseHeaders;
 		this.scheme = replaced.scheme;
 		this.timestamp = replaced.timestamp;
@@ -159,10 +168,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpMessageLogFactory httpMessageLogFactory,
 			boolean isHttp2,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			@Nullable Duration readTimeout,
+			@Nullable Duration requestTimeout,
 			boolean secured,
 			ZonedDateTime timestamp) {
 		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, formDecoderProvider,
-				httpMessageLogFactory, isHttp2, mapHandle, true, secured, timestamp);
+				httpMessageLogFactory, isHttp2, mapHandle, readTimeout, requestTimeout, true, secured, timestamp);
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
@@ -174,6 +185,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpMessageLogFactory httpMessageLogFactory,
 			boolean isHttp2,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			@Nullable Duration readTimeout,
+			@Nullable Duration requestTimeout,
 			boolean resolvePath,
 			boolean secured,
 			ZonedDateTime timestamp) {
@@ -196,6 +209,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else {
 			this.path = null;
 		}
+		this.readTimeout = readTimeout;
+		this.requestTimeout = requestTimeout;
 		this.responseHeaders = nettyResponse.headers();
 		this.responseHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 		this.scheme = secured ? "https" : "http";
@@ -617,6 +632,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
+			boolean isFullHttpRequest = msg instanceof FullHttpRequest;
+			if (!(isHttp2() && isFullHttpRequest)) {
+				if (readTimeout != null) {
+					addHandlerFirst(NettyPipeline.ReadTimeoutHandler,
+							new ReadTimeoutHandler(readTimeout.toMillis(), TimeUnit.MILLISECONDS));
+				}
+				if (requestTimeout != null) {
+					requestTimeoutFuture =
+							ctx.executor().schedule(new RequestTimeoutTask(ctx), Math.max(requestTimeout.toMillis(), 1), TimeUnit.MILLISECONDS);
+				}
+			}
 			try {
 				listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
 			}
@@ -625,7 +651,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ReferenceCountUtil.release(msg);
 				return;
 			}
-			if (msg instanceof FullHttpRequest) {
+			if (isFullHttpRequest) {
 				FullHttpRequest request = (FullHttpRequest) msg;
 				if (request.content().readableBytes() > 0) {
 					super.onInboundNext(ctx, msg);
@@ -646,6 +672,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				super.onInboundNext(ctx, msg);
 			}
 			if (msg instanceof LastHttpContent) {
+				removeHandler(NettyPipeline.ReadTimeoutHandler);
+				if (requestTimeoutFuture != null) {
+					requestTimeoutFuture.cancel(false);
+					requestTimeoutFuture = null;
+				}
 				//force auto read to enable more accurate close selection now inbound is done
 				channel().config().setAutoRead(true);
 				onInboundComplete();
@@ -1020,7 +1051,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ConnectionInfo connectionInfo) {
 			super(c, listener, nettyRequest, null, connectionInfo,
 					ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT, DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, isHttp2,
-					null, false, secure, timestamp);
+					null, null, null, false, secure, timestamp);
 			this.customResponse = nettyResponse;
 			String tempPath = "";
 			try {
@@ -1042,6 +1073,26 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		@Override
 		public HttpResponseStatus status() {
 			return customResponse.status();
+		}
+	}
+
+
+	final class RequestTimeoutTask implements Runnable {
+
+		final ChannelHandlerContext ctx;
+
+		RequestTimeoutTask(ChannelHandlerContext ctx) {
+			this.ctx = ctx;
+		}
+
+		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
+		public void run() {
+			if (ctx.channel().isActive() && !(isInboundCancelled() || isInboundDisposed())) {
+				onInboundError(RequestTimeoutException.INSTANCE);
+				//"FutureReturnValueIgnored" this is deliberate
+				ctx.close();
+			}
 		}
 	}
 
