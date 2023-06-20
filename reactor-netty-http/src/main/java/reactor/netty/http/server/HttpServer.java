@@ -743,7 +743,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Specifies the maximum duration allowed between each network-level read operation while reading a given request
 	 * content (resolution: ms). In other words, {@link io.netty.handler.timeout.ReadTimeoutHandler} is added to the
-	 * channel pipeline once the request headers are received.
+	 * channel pipeline after all the request headers are received, and removed from the channel pipeline after the
+	 * content is fully received.
 	 * If the {@code readTimeout} is {@code null}, any previous setting will be removed and no
 	 * {@code readTimeout} will be applied.
 	 * If the {@code readTimeout} is less than {@code 1ms}, then {@code 1ms} will be the
