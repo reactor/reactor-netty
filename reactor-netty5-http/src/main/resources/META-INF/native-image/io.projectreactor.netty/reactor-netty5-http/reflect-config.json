@@ -155,6 +155,13 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty5.http.server.HttpServerConfig$ReactorNettyHttpServerUpgradeHandler"
+		},
+		"name": "reactor.netty5.http.server.HttpServerConfig$ReactorNettyHttpServerUpgradeHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty5.http.server.HttpServerMetricsHandler"
 		},
 		"name": "reactor.netty5.http.server.HttpServerMetricsHandler",

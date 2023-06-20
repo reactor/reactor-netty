@@ -77,6 +77,8 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 	                                                              mapHandle;
 	final int                                                     maxKeepAliveRequests;
+	final Duration                                                readTimeout;
+	final Duration                                                requestTimeout;
 
 	ChannelHandlerContext ctx;
 
@@ -101,7 +103,9 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			@Nullable Duration idleTimeout,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-			int maxKeepAliveRequests) {
+			int maxKeepAliveRequests,
+			@Nullable Duration readTimeout,
+			@Nullable Duration requestTimeout) {
 		this.listener = listener;
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
@@ -110,6 +114,8 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		this.idleTimeout = idleTimeout;
 		this.mapHandle = mapHandle;
 		this.maxKeepAliveRequests = maxKeepAliveRequests;
+		this.readTimeout = readTimeout;
+		this.requestTimeout = requestTimeout;
 	}
 
 	@Override
@@ -202,6 +208,8 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							httpMessageLogFactory,
 							false,
 							mapHandle,
+							readTimeout,
+							requestTimeout,
 							secure,
 							timestamp);
 				}
@@ -421,6 +429,8 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							httpMessageLogFactory,
 							false,
 							mapHandle,
+							readTimeout,
+							requestTimeout,
 							secure,
 							holder.timestamp);
 				}

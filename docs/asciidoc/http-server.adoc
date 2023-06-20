@@ -682,8 +682,30 @@ This section describes various timeout configuration options that can be used in
 Configuring a proper timeout may improve or solve issues in the communication process.
 The configuration options can be grouped as follows:
 
+* <<http-server-request-timeout>>
 * <<http-server-connection-timeout>>
 * <<http-server-ssl-tls-timeout>>
+
+[[http-server-request-timeout]]
+=== Request Timeout
+The following listing shows all available request timeout configuration options.
+
+* `readTimeout` - the maximum time between each network-level read operation while reading a given request content (resolution: ms)
+* `requestTimeout` - the maximum time for reading a given request content (resolution: ms).
+
+NOTE: It is always a good practice to configure a read/request timeout.
+
+To customize the default settings, you can configure `HttpServer` as follows:
+
+====
+[source,java,indent=0]
+.{examplesdir}/read/timeout/Application.java
+----
+include::{examplesdir}/read/timeout/Application.java[lines=18..36]
+----
+<1> Configures the read timeout to 5 second.
+<2> Configures the request timeout to 30 second.
+====
 
 [[http-server-connection-timeout]]
 === Connection Timeout
