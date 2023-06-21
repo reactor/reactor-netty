@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,10 +57,12 @@ final class SniProvider {
 		SslProvider.addSslReadHandler(pipeline, sslDebug);
 	}
 
+	final long handshakeTimeoutMillis;
 	final AsyncMapping<String, SslProvider> mappings;
 
-	SniProvider(AsyncMapping<String, SslProvider> mappings) {
+	SniProvider(AsyncMapping<String, SslProvider> mappings, long handshakeTimeoutMillis) {
 		this.mappings = mappings;
+		this.handshakeTimeoutMillis = handshakeTimeoutMillis;
 	}
 
 	SniProvider(Map<String, SslProvider> confPerDomainName, SslProvider defaultSslProvider) {
@@ -68,10 +70,11 @@ final class SniProvider {
 				new DomainWildcardMappingBuilder<>(defaultSslProvider);
 		confPerDomainName.forEach(mappingsSslProviderBuilder::add);
 		this.mappings = new AsyncMappingAdapter(mappingsSslProviderBuilder.build());
+		this.handshakeTimeoutMillis = defaultSslProvider.handshakeTimeoutMillis;
 	}
 
 	SniHandler newSniHandler() {
-		return new SniHandler(mappings);
+		return new SniHandler(mappings, handshakeTimeoutMillis);
 	}
 
 	static final class AsyncMappingAdapter implements AsyncMapping<String, SslProvider> {
@@ -97,7 +100,8 @@ final class SniProvider {
 
 		final AsyncMapping<String, SslProvider> mappings;
 
-		SniHandler(AsyncMapping<String, SslProvider> mappings) {
+		SniHandler(AsyncMapping<String, SslProvider> mappings, long handshakeTimeoutMillis) {
+			super(handshakeTimeoutMillis);
 			this.mappings = mappings;
 		}
 
