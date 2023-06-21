@@ -57,6 +57,8 @@ import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
+import io.netty5.channel.FixedReadHandleFactory;
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.group.DefaultChannelGroup;
@@ -92,6 +94,7 @@ import io.netty5.handler.ssl.SslCloseCompletionEvent;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
+import io.netty5.handler.ssl.SslHandshakeTimeoutException;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.Resource;
@@ -2070,6 +2073,51 @@ class HttpServerTests extends BaseHttpTest {
 
 		assertThat(hostname.get()).isNotNull();
 		assertThat(hostname.get()).isEqualTo("test.com");
+	}
+
+	@Test
+	void testSniSupportHandshakeTimeout() {
+		Http11SslContextSpec defaultSslContextBuilder =
+				Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+
+		Http11SslContextSpec clientSslContextBuilder =
+				Http11SslContextSpec.forClient()
+				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		disposableServer =
+				createServer()
+				        .childOption(ChannelOption.READ_HANDLE_FACTORY, new FixedReadHandleFactory(64))
+				        .secure(spec -> spec.sslContext(defaultSslContextBuilder)
+				                            .handshakeTimeout(Duration.ofMillis(1))
+				                            .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(defaultSslContextBuilder)))
+				        .doOnChannelInit((obs, ch, addr) ->
+				                ch.pipeline().addBefore(NettyPipeline.ReactiveBridge, "testSniSupportHandshakeTimeout",
+				                        new ChannelHandlerAdapter() {
+
+				                            @Override
+				                            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+				                                if (evt instanceof SniCompletionEvent) {
+				                                    error.set(((SniCompletionEvent) evt).cause());
+				                                }
+				                                ctx.fireChannelInboundEvent(evt);
+				                            }
+				                        }))
+				        .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
+				        .bindNow();
+
+		createClient(disposableServer::address)
+		        .secure(spec -> spec.sslContext(clientSslContextBuilder)
+		                            .serverNames(new SNIHostName("test.com")))
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .aggregate()
+		        .as(StepVerifier::create)
+		        .expectError()
+		        .verify(Duration.ofSeconds(5));
+
+		assertThat(error.get()).isNotNull().isInstanceOf(SslHandshakeTimeoutException.class);
 	}
 
 	@Test

@@ -331,7 +331,7 @@ public final class SslProvider {
 			this.sniProvider = new SniProvider(confPerDomainName, this);
 		}
 		else if (sniMappings != null) {
-			this.sniProvider = new SniProvider(sniMappings);
+			this.sniProvider = new SniProvider(sniMappings, builder.handshakeTimeoutMillis);
 		}
 		else {
 			this.sniProvider = null;
