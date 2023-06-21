@@ -418,7 +418,7 @@ public final class SslProvider {
 			}
 		}
 		else if (sniMappings != null) {
-			this.sniProvider = new SniProvider(sniMappings);
+			this.sniProvider = new SniProvider(sniMappings, builder.handshakeTimeoutMillis);
 		}
 		else {
 			this.sniProvider = null;
@@ -474,7 +474,7 @@ public final class SslProvider {
 				this.sniProvider = updateAllSslProviderConfiguration(confPerDomainName, this, type);
 			}
 			else {
-				this.sniProvider = new SniProvider(sniMappings);
+				this.sniProvider = new SniProvider(sniMappings, from.handshakeTimeoutMillis);
 			}
 		}
 		else {
