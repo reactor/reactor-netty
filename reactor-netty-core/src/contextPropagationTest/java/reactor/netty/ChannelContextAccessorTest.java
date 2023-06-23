@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class ChannelContextAccessorTest {
 
 		TestThreadLocalHolder.value("test2");
 
-		try (ContextSnapshot.Scope scope = ContextSnapshot.captureFrom(channel).setThreadLocals()) {
+		try (ContextSnapshot.Scope scope = ContextSnapshot.setAllThreadLocalsFrom(channel)) {
 			assertThat(TestThreadLocalHolder.value()).isEqualTo(expectation);
 		}
 		finally {

@@ -662,8 +662,16 @@ include::{examplesdir}/tracing/custom/Application.java[lines=18..85]
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Templated URIs are used as an URI tag value when possible.
 <3> Enables the built-in integration with Micrometer.
-<4> Custom `ChannelHandler` that uses context propagation library.
+<4> Custom `ChannelHandler` that uses context propagation library. This concrete example overrides only
+`ChannelOutboundHandlerAdapter#write`, if it is needed, the same logic can be used for the rest of the methods.
+Also, this concrete example sets all `ThreadLocal` values for which there is a value in the given `Channel`,
+if another behaviour is needed please check https://micrometer.io/docs/contextPropagation[`context propagation library API`].
+For example, you may want to set only some of the `ThreadLocal` values.
 ====
+
+NOTE: When you enable Reactor Netty tracing within a framework, you may need to let Reactor Netty use the `ObservationRegistry` created by this framework.
+For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry-io.micrometer.observation.ObservationRegistry-[`reactor.netty.Metrics#observationRegistry`].
+You may also need to configure the Reactor Netty `ObservationHandlers` using the API provided by the framework.
 
 == Unix Domain Sockets
 The `HTTP` server supports Unix Domain Sockets (UDS) when native transport is in use.
