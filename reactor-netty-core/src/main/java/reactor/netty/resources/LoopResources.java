@@ -176,6 +176,18 @@ public interface LoopResources extends Disposable {
 	}
 
 	/**
+	 * Return a {@link LoopResources} that will share the same {@link EventLoopGroup} from this {@link LoopResources}, but with
+	 * colocation support disabled (if it was enabled).<p>
+	 * Disposing the returned {@link LoopResources} will also dispose the {@link EventLoopGroup} from the origin {@link LoopResources}.
+	 *
+	 * @return a LoopResources that will share the same {@link EventLoopGroup} from this {@link LoopResources}
+	 * @since 1.1.9
+	 */
+	default LoopResources disableColocation() {
+		return new DefaultLoopResources(this);
+	}
+
+	/**
 	 * return true if {@link EventLoopGroup} should not be shutdown
 	 *
 	 * @return true if {@link EventLoopGroup} should not be shutdown

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpResources;
 import reactor.netty.tcp.TcpServer;
@@ -210,5 +211,43 @@ class DefaultLoopResourcesTest {
 	void testKQueueIsAvailable() {
 		assumeThat(System.getProperty("forceTransport")).isEqualTo("native");
 		assertThat(KQueue.isAvailable()).isTrue();
+	}
+
+	@Test
+	void testDisableColocation() {
+		LoopResources colocated = LoopResources.create("colocated", -1, 2, true, true);
+		LoopResources notColocated = null;
+
+		try {
+			notColocated = colocated.disableColocation();
+			Sinks.One<Thread> t1 = Sinks.unsafe().one();
+			Sinks.One<Thread> t2 = Sinks.unsafe().one();
+
+			EventLoopGroup group = notColocated.onClient(false);
+			group.execute(() -> {
+				t1.tryEmitValue(Thread.currentThread());
+				group.execute(() -> t2.tryEmitValue(Thread.currentThread()));
+			});
+
+			StepVerifier.create(t1.asMono()
+							.zipWith(t2.asMono()))
+					.expectNextMatches(tuple -> !tuple.getT1().equals(tuple.getT2()))
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+		}
+
+		finally {
+			if (notColocated != null) {
+				notColocated.disposeLater()
+						.block(Duration.ofSeconds(5));
+
+				assertThat(notColocated.isDisposed()).isTrue();
+				assertThat(colocated.isDisposed()).isTrue();
+			}
+			else {
+				colocated.disposeLater()
+						.block(Duration.ofSeconds(5));
+			}
+		}
 	}
 }
