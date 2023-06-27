@@ -581,8 +581,10 @@ public final class TransportConnector {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public boolean tryFailure(Throwable cause) {
 			if (RESULT_UPDATER.compareAndSet(this, null, cause)) {
+				channel.close();
 				if (actual != null) {
 					actual.onError(cause);
 				}
