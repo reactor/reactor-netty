@@ -216,14 +216,14 @@ class DefaultLoopResourcesTest {
 	@Test
 	void testDisableColocation() {
 		LoopResources colocated = LoopResources.create("colocated", -1, 2, true, true);
-		LoopResources notColocated = null;
+		LoopResources uncolocated = null;
 
 		try {
-			notColocated = colocated.disableColocation();
+			uncolocated = colocated.disableColocation();
 			Sinks.One<Thread> t1 = Sinks.unsafe().one();
 			Sinks.One<Thread> t2 = Sinks.unsafe().one();
 
-			EventLoopGroup group = notColocated.onClient(false);
+			EventLoopGroup group = uncolocated.onClient(false);
 			group.execute(() -> {
 				t1.tryEmitValue(Thread.currentThread());
 				group.execute(() -> t2.tryEmitValue(Thread.currentThread()));
@@ -237,11 +237,11 @@ class DefaultLoopResourcesTest {
 		}
 
 		finally {
-			if (notColocated != null) {
-				notColocated.disposeLater()
+			if (uncolocated != null) {
+				uncolocated.disposeLater()
 						.block(Duration.ofSeconds(5));
 
-				assertThat(notColocated.isDisposed()).isTrue();
+				assertThat(uncolocated.isDisposed()).isTrue();
 				assertThat(colocated.isDisposed()).isTrue();
 			}
 			else {

@@ -176,15 +176,15 @@ public interface LoopResources extends Disposable {
 	}
 
 	/**
-	 * Return a {@link LoopResources} that will share the same {@link EventLoopGroup} from this {@link LoopResources}, but with
-	 * colocation support disabled (if it was enabled).<p>
-	 * Disposing the returned {@link LoopResources} will also dispose the {@link EventLoopGroup} from the origin {@link LoopResources}.
+	 * Return a mutated version of this {@link LoopResources} with colocation disabled if it was enabled.
+	 * <p>
+	 * Disposing the returned {@link LoopResources} will also dispose this {@link LoopResources}.
 	 *
-	 * @return a LoopResources that will share the same {@link EventLoopGroup} from this {@link LoopResources}
+	 * @return a mutated version of this {@link LoopResources} with colocation disabled
 	 * @since 1.1.9
 	 */
 	default LoopResources disableColocation() {
-		return new DefaultLoopResources(this);
+		return new MapLoopResources(this, MapLoopResources.UNCOLOCATE);
 	}
 
 	/**

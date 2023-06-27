@@ -29,7 +29,6 @@ import io.netty.util.concurrent.Future;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.NonBlocking;
 import reactor.netty.FutureMono;
-import reactor.util.annotation.Nullable;
 
 /**
  * An adapted global eventLoop handler.
@@ -50,31 +49,21 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	final AtomicReference<EventLoopGroup> cacheNativeSelectLoops;
 	final AtomicBoolean                   running;
 	final boolean colocate;
-	final LoopResources parent;
 
 	DefaultLoopResources(String prefix, int workerCount, boolean daemon) {
 		this(prefix, -1, workerCount, daemon);
 	}
 
 	DefaultLoopResources(String prefix, int selectCount, int workerCount, boolean daemon) {
-		this(prefix, selectCount, workerCount, daemon, true, null);
+		this(prefix, selectCount, workerCount, daemon, true);
 	}
 
 	DefaultLoopResources(String prefix, int selectCount, int workerCount, boolean daemon, boolean colocate) {
-		this(prefix, selectCount, workerCount, daemon, colocate, null);
-	}
-
-	DefaultLoopResources(LoopResources parent) {
-		this(null, -1, -1, parent.daemon(), false, parent);
-	}
-
-	DefaultLoopResources(@Nullable String prefix, int selectCount, int workerCount, boolean daemon, boolean colocate, @Nullable LoopResources parent) {
 		this.running = new AtomicBoolean(true);
 		this.daemon = daemon;
 		this.workerCount = workerCount;
 		this.prefix = prefix;
 		this.colocate = colocate;
-		this.parent = parent;
 
 		this.serverLoops = new AtomicReference<>();
 		this.clientLoops = new AtomicReference<>();
@@ -95,130 +84,93 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
-	public boolean daemon() {
-		return parent == null ? daemon : parent.daemon();
-	}
-
-	@Override
 	@SuppressWarnings("unchecked")
 	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
-		return parent == null ?
-				Mono.defer(() -> {
-					long quietPeriodMillis = quietPeriod.toMillis();
-					long timeoutMillis = timeout.toMillis();
+		return Mono.defer(() -> {
+			long quietPeriodMillis = quietPeriod.toMillis();
+			long timeoutMillis = timeout.toMillis();
 
-					EventLoopGroup serverLoopsGroup = serverLoops.get();
-					EventLoopGroup clientLoopsGroup = clientLoops.get();
-					EventLoopGroup serverSelectLoopsGroup = serverSelectLoops.get();
-					EventLoopGroup cacheNativeClientGroup = cacheNativeClientLoops.get();
-					EventLoopGroup cacheNativeSelectGroup = cacheNativeSelectLoops.get();
-					EventLoopGroup cacheNativeServerGroup = cacheNativeServerLoops.get();
+			EventLoopGroup serverLoopsGroup = serverLoops.get();
+			EventLoopGroup clientLoopsGroup = clientLoops.get();
+			EventLoopGroup serverSelectLoopsGroup = serverSelectLoops.get();
+			EventLoopGroup cacheNativeClientGroup = cacheNativeClientLoops.get();
+			EventLoopGroup cacheNativeSelectGroup = cacheNativeSelectLoops.get();
+			EventLoopGroup cacheNativeServerGroup = cacheNativeServerLoops.get();
 
-					Mono<?> clMono = Mono.empty();
-					Mono<?> sslMono = Mono.empty();
-					Mono<?> slMono = Mono.empty();
-					Mono<?> cnclMono = Mono.empty();
-					Mono<?> cnslMono = Mono.empty();
-					Mono<?> cnsrvlMono = Mono.empty();
-					if (running.compareAndSet(true, false)) {
-						if (clientLoopsGroup != null) {
-							clMono = FutureMono.from((Future) clientLoopsGroup.shutdownGracefully(
-									quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
-						}
-						if (serverSelectLoopsGroup != null) {
-							sslMono = FutureMono.from((Future) serverSelectLoopsGroup.shutdownGracefully(
-									quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
-						}
-						if (serverLoopsGroup != null) {
-							slMono = FutureMono.from((Future) serverLoopsGroup.shutdownGracefully(
-									quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
-						}
-						if (cacheNativeClientGroup != null) {
-							cnclMono = FutureMono.from((Future) cacheNativeClientGroup.shutdownGracefully(
-									quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
-						}
-						if (cacheNativeSelectGroup != null) {
-							cnslMono = FutureMono.from((Future) cacheNativeSelectGroup.shutdownGracefully(
-									quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
-						}
-						if (cacheNativeServerGroup != null) {
-							cnsrvlMono = FutureMono.from((Future) cacheNativeServerGroup.shutdownGracefully(
-									quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
-						}
-					}
+			Mono<?> clMono = Mono.empty();
+			Mono<?> sslMono = Mono.empty();
+			Mono<?> slMono = Mono.empty();
+			Mono<?> cnclMono = Mono.empty();
+			Mono<?> cnslMono = Mono.empty();
+			Mono<?> cnsrvlMono = Mono.empty();
+			if (running.compareAndSet(true, false)) {
+				if (clientLoopsGroup != null) {
+					clMono = FutureMono.from((Future) clientLoopsGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+				}
+				if (serverSelectLoopsGroup != null) {
+					sslMono = FutureMono.from((Future) serverSelectLoopsGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+				}
+				if (serverLoopsGroup != null) {
+					slMono = FutureMono.from((Future) serverLoopsGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+				}
+				if (cacheNativeClientGroup != null) {
+					cnclMono = FutureMono.from((Future) cacheNativeClientGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+				}
+				if (cacheNativeSelectGroup != null) {
+					cnslMono = FutureMono.from((Future) cacheNativeSelectGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+				}
+				if (cacheNativeServerGroup != null) {
+					cnsrvlMono = FutureMono.from((Future) cacheNativeServerGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
+				}
+			}
 
-					return Mono.when(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono);
-				})
-				: parent.disposeLater(quietPeriod, timeout);
+			return Mono.when(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono);
+		});
 	}
 
 	@Override
 	public boolean isDisposed() {
-		return parent == null ? !running.get() : parent.isDisposed();
+		return !running.get();
 	}
 
 	@Override
 	public EventLoopGroup onClient(boolean useNative) {
-		if (parent == null) {
-			if (useNative && LoopResources.hasNativeSupport()) {
-				return cacheNativeClientLoops();
-			}
-			return cacheNioClientLoops();
+		if (useNative && LoopResources.hasNativeSupport()) {
+			return cacheNativeClientLoops();
 		}
-		else {
-			return onClientFromParent(useNative);
-		}
+		return cacheNioClientLoops();
 	}
 
 	@Override
 	public EventLoopGroup onServer(boolean useNative) {
-		if (parent == null) {
-			if (useNative && LoopResources.hasNativeSupport()) {
-				return cacheNativeServerLoops();
-			}
-			return cacheNioServerLoops();
+		if (useNative && LoopResources.hasNativeSupport()) {
+			return cacheNativeServerLoops();
 		}
-		else {
-			return parent.onServer(useNative);
-		}
+		return cacheNioServerLoops();
 	}
 
 	@Override
 	public EventLoopGroup onServerSelect(boolean useNative) {
-		if (parent == null) {
-			if (useNative && LoopResources.hasNativeSupport()) {
-				return cacheNativeSelectLoops();
-			}
-			return cacheNioSelectLoops();
+		if (useNative && LoopResources.hasNativeSupport()) {
+			return cacheNativeSelectLoops();
 		}
-		else {
-			return parent.onServerSelect(useNative);
-		}
+		return cacheNioSelectLoops();
 	}
 
 	@Override
 	public String toString() {
-		return parent == null ?
-				"DefaultLoopResources {" +
-						"prefix=" + prefix +
-						", daemon=" + daemon +
-						", selectCount=" + selectCount +
-						", workerCount=" + workerCount +
-						'}'
-				: parent.toString();
-	}
-
-	EventLoopGroup onClientFromParent(boolean useNative) {
-		AtomicReference<EventLoopGroup> cache = useNative && LoopResources.hasNativeSupport() ?
-				cacheNativeClientLoops : clientLoops;
-		// Reuse EventLoopGroup from the parent and disable colocation if it is enabled in the parent
-		EventLoopGroup group = cache.get();
-		if (null == group) {
-			group = parent.onClient(useNative);
-			group = (group instanceof ColocatedEventLoopGroup) ? ((ColocatedEventLoopGroup) group).get() : group;
-			cache.set(group);
-		}
-		return group;
+		return "DefaultLoopResources {" +
+				"prefix=" + prefix +
+				", daemon=" + daemon +
+				", selectCount=" + selectCount +
+				", workerCount=" + workerCount +
+				'}';
 	}
 
 	EventLoopGroup cacheNioClientLoops() {

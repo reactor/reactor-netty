@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
@@ -35,6 +36,7 @@ import reactor.netty.SocketUtils;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.TransportConfig;
+import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -172,5 +174,49 @@ class TcpResourcesTest {
 		TcpResources.disposeLoopsAndConnectionsLater()
 		            .block();
 		assertThat(current.isDisposed()).isTrue();
+	}
+
+	@Test
+	void testDisableColocation() {
+		LoopResources colocated = TcpResources.get();
+		LoopResources uncolocated = null;
+
+		try {
+			uncolocated = colocated.disableColocation();
+			Sinks.One<Thread> t1 = Sinks.unsafe().one();
+			Sinks.One<Thread> t2 = Sinks.unsafe().one();
+
+			EventLoopGroup group = uncolocated.onClient(false);
+			group.execute(() -> {
+				t1.tryEmitValue(Thread.currentThread());
+				group.execute(() -> t2.tryEmitValue(Thread.currentThread()));
+			});
+
+			StepVerifier.create(t1.asMono()
+							.zipWith(t2.asMono()))
+					.expectNextMatches(tuple -> !tuple.getT1().equals(tuple.getT2()))
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+		}
+
+		finally {
+			if (uncolocated != null) {
+				uncolocated.disposeLater()
+						.block(Duration.ofSeconds(5));
+
+				assertThat(uncolocated.isDisposed()).isFalse();
+				assertThat(colocated.isDisposed()).isFalse();
+
+				TcpResources.disposeLoopsAndConnectionsLater()
+						.block();
+
+				assertThat(uncolocated.isDisposed()).isTrue();
+				assertThat(colocated.isDisposed()).isTrue();
+			}
+			else {
+				colocated.disposeLater()
+						.block(Duration.ofSeconds(5));
+			}
+		}
 	}
 }
