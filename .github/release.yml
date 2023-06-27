@@ -21,7 +21,7 @@ changelog:
         - "type/documentation"
         - "type/test"
         - "type/chore"
-    - title: ":up: Dependency Upgrades"
+    - title: ":up: Build/Test Dependency Upgrades"
       labels:
         - "type/dependency-upgrade"
     - title: ":question: Other Changes"
