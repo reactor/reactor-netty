@@ -23,13 +23,13 @@ import reactor.netty.tcp.TcpClientConfig;
 
 import java.net.InetSocketAddress;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TransportConnectorTest {
 
 	@Test
+	@SuppressWarnings("FutureReturnValueIgnored")
 	void bind_whenBindException_thenChannelIsUnregistered() {
 		final TcpClientConfig transportConfig = TcpClient.newConnection().configuration();
 		final Channel channel1 = TransportConnector.bind(
@@ -38,14 +38,14 @@ class TransportConnectorTest {
 				new InetSocketAddress("localhost", 0),
 				false).block();
 		final RecordingChannelInitializer channelInitializer = new RecordingChannelInitializer();
-		assertThrows(Throwable.class, () -> TransportConnector.bind(
+		assertThatThrownBy(() -> TransportConnector.bind(
 				transportConfig,
 				channelInitializer,
 				new InetSocketAddress("localhost", ((InetSocketAddress) channel1.localAddress()).getPort()),
 				false).block());
 		final Channel channel2 = channelInitializer.channel;
-		assertTrue(channel1.isRegistered());
-		assertFalse(channel2.isRegistered());
+		assertThat(channel1.isRegistered()).isTrue();
+		assertThat(channel2.isRegistered()).isFalse();
 		channel1.close();
 	}
 
