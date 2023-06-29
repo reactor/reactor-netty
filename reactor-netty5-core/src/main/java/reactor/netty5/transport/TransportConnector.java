@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -257,8 +257,6 @@ public final class TransportConnector {
 					connectPromise.setSuccess();
 				}
 				else {
-					channel.close();
-
 					Throwable cause = future.cause();
 					if (log.isDebugEnabled()) {
 						log.debug(format(channel, "Connect attempt to [" + remoteAddress + "] failed."), cause);
@@ -326,18 +324,11 @@ public final class TransportConnector {
 							monoChannelPromise.setSuccess();
 						}
 						else {
-							if (channel.isRegistered()) {
-								channel.close();
-							}
-							else {
-								channel.close();
-							}
 							monoChannelPromise.setFailure(f.cause());
 						}
 					});
 				}
 				else {
-					channel.close();
 					monoChannelPromise.setFailure(future.cause());
 				}
 			});
@@ -414,7 +405,6 @@ public final class TransportConnector {
 			MonoChannelPromise monoChannelPromise = new MonoChannelPromise(channel);
 			resolveFuture.addListener(future -> {
 				if (future.cause() != null) {
-					channel.close();
 					monoChannelPromise.setFailure(future.cause());
 				}
 				else {
@@ -476,6 +466,7 @@ public final class TransportConnector {
 
 		void setFailure(Throwable cause) {
 			if (RESULT_UPDATER.compareAndSet(this, null, cause)) {
+				channel.close();
 				if (actual != null) {
 					actual.onError(cause);
 				}
