@@ -265,7 +265,6 @@ public final class TransportConnector {
 		});
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	static Mono<Channel> doInitAndRegister(
 			TransportConfig config,
 			ChannelInitializer<Channel> channelInitializer,
