@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -221,11 +221,10 @@ public final class TransportConnector {
 		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	static void doConnect(
 			List<SocketAddress> addresses,
 			@Nullable Supplier<? extends SocketAddress> bindAddress,
-			ChannelPromise connectPromise,
+			MonoChannelPromise connectPromise,
 			int index) {
 		Channel channel = connectPromise.channel();
 		channel.eventLoop().execute(() -> {
@@ -249,9 +248,6 @@ public final class TransportConnector {
 					connectPromise.setSuccess();
 				}
 				else {
-					// "FutureReturnValueIgnored" this is deliberate
-					channel.close();
-
 					Throwable cause = future.cause();
 					if (log.isDebugEnabled()) {
 						log.debug(format(channel, "Connect attempt to [" + remoteAddress + "] failed."), cause);
@@ -295,19 +291,7 @@ public final class TransportConnector {
 		}
 
 		MonoChannelPromise monoChannelPromise = new MonoChannelPromise(channel);
-
 		channel.unsafe().register(eventLoop, monoChannelPromise);
-		Throwable cause = monoChannelPromise.cause();
-		if (cause != null) {
-			if (channel.isRegistered()) {
-				// "FutureReturnValueIgnored" this is deliberate
-				channel.close();
-			}
-			else {
-				channel.unsafe().closeForcibly();
-			}
-		}
-
 		return monoChannelPromise;
 	}
 
@@ -389,8 +373,6 @@ public final class TransportConnector {
 			MonoChannelPromise monoChannelPromise = new MonoChannelPromise(channel);
 			resolveFuture.addListener((FutureListener<List<SocketAddress>>) future -> {
 				if (future.cause() != null) {
-					// "FutureReturnValueIgnored" this is deliberate
-					channel.close();
 					monoChannelPromise.tryFailure(future.cause());
 				}
 				else {
@@ -581,8 +563,16 @@ public final class TransportConnector {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public boolean tryFailure(Throwable cause) {
 			if (RESULT_UPDATER.compareAndSet(this, null, cause)) {
+				if (channel.isRegistered()) {
+					// "FutureReturnValueIgnored" this is deliberate
+					channel.close();
+				}
+				else {
+					channel.unsafe().closeForcibly();
+				}
 				if (actual != null) {
 					actual.onError(cause);
 				}
