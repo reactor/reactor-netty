@@ -16,18 +16,23 @@
 package reactor.netty.resources;
 
 import java.time.Duration;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.netty.FutureMono;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpResources;
 import reactor.netty.tcp.TcpServer;
@@ -40,8 +45,10 @@ class DefaultLoopResourcesTest {
 
 	@Test
 	void disposeLaterDefers() {
-		DefaultLoopResources loopResources = new DefaultLoopResources(
-				"test", 0, false);
+		DefaultLoopResources loopResources = (DefaultLoopResources) LoopResources.builder("test")
+				.workerCount(1)
+				.daemon(false)
+				.build();
 
 		Mono<Void> disposer = loopResources.disposeLater();
 		assertThat(loopResources.isDisposed()).isFalse();
@@ -52,8 +59,10 @@ class DefaultLoopResourcesTest {
 
 	@Test
 	void disposeLaterSubsequentIsQuick() {
-		DefaultLoopResources loopResources = new DefaultLoopResources(
-				"test", 0, false);
+		DefaultLoopResources loopResources = (DefaultLoopResources) LoopResources.builder("test")
+				.workerCount(1)
+				.daemon(false)
+				.build();
 		loopResources.onServer(true);
 
 		assertThat(loopResources.isDisposed()).isFalse();
@@ -215,11 +224,15 @@ class DefaultLoopResourcesTest {
 
 	@Test
 	void testDisableColocation() {
-		LoopResources colocated = LoopResources.create("colocated", -1, 2, true, true);
-		LoopResources uncolocated = null;
+		LoopResources colocated = LoopResources.builder("myloop")
+				.workerCount(2)
+				.colocate(true)
+				.build();
 
 		try {
-			uncolocated = colocated.disableColocation();
+			LoopResources uncolocated = LoopResources.builder(colocated)
+					.colocate(false)
+					.build();
 			Sinks.One<Thread> t1 = Sinks.unsafe().one();
 			Sinks.One<Thread> t2 = Sinks.unsafe().one();
 
@@ -234,20 +247,151 @@ class DefaultLoopResourcesTest {
 					.expectNextMatches(tuple -> !tuple.getT1().equals(tuple.getT2()))
 					.expectComplete()
 					.verify(Duration.ofSeconds(30));
+
+			uncolocated.disposeLater()
+					.block(Duration.ofSeconds(5));
+
+			assertThat(uncolocated.isDisposed()).isFalse();
+			assertThat(colocated.isDisposed()).isFalse();
 		}
 
 		finally {
-			if (uncolocated != null) {
-				uncolocated.disposeLater()
-						.block(Duration.ofSeconds(5));
+			colocated.disposeLater()
+					.block(Duration.ofSeconds(5));
+			assertThat(colocated.isDisposed()).isTrue();
+		}
+	}
 
-				assertThat(uncolocated.isDisposed()).isTrue();
-				assertThat(colocated.isDisposed()).isTrue();
-			}
-			else {
-				colocated.disposeLater()
-						.block(Duration.ofSeconds(5));
-			}
+	@Test
+	void testEnableColocation() {
+		LoopResources uncolocated = LoopResources.builder("myloop")
+				.workerCount(2)
+				.colocate(false)
+				.build();
+
+		try {
+			LoopResources colocated = LoopResources.builder(uncolocated)
+					.colocate(true)
+					.build();
+			Sinks.One<Thread> t1 = Sinks.unsafe().one();
+			Sinks.One<Thread> t2 = Sinks.unsafe().one();
+
+			EventLoopGroup group = colocated.onClient(false);
+			group.execute(() -> {
+				t1.tryEmitValue(Thread.currentThread());
+				group.execute(() -> t2.tryEmitValue(Thread.currentThread()));
+			});
+
+			StepVerifier.create(t1.asMono()
+							.zipWith(t2.asMono()))
+					.expectNextMatches(tuple -> tuple.getT1().equals(tuple.getT2()))
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+
+			colocated.disposeLater()
+					.block(Duration.ofSeconds(5));
+
+			assertThat(colocated.isDisposed()).isFalse();
+			assertThat(uncolocated.isDisposed()).isFalse();
+		}
+
+		finally {
+			uncolocated.disposeLater()
+					.block(Duration.ofSeconds(5));
+			assertThat(uncolocated.isDisposed()).isTrue();
+		}
+	}
+
+	/**
+	 * This test checks if we can enable colocation on a LoopResources created using a custom external LoopsResourceFactory
+	 * (like https://github.com/turms-im/turms/blob/b2a817058b45b5e8bbb8c0a6e5808e92bfbbb884/turms-server-common/src/main/java/im/turms/server/common/access/common/LoopResourcesFactory.java#L30)
+	 */
+	@Test
+	void colocateCustomLoopResourcesFactory() {
+		LoopResources custom = CustomLoopResourcesFactory.createForClient("custom");
+
+		try {
+			LoopResources colocated = LoopResources.builder(custom)
+					.colocate(true)
+					.build();
+
+			Sinks.One<Thread> t1 = Sinks.unsafe().one();
+			Sinks.One<Thread> t2 = Sinks.unsafe().one();
+
+			EventLoopGroup group = colocated.onClient(false);
+			group.execute(() -> {
+				t1.tryEmitValue(Thread.currentThread());
+				group.execute(() -> t2.tryEmitValue(Thread.currentThread()));
+			});
+
+			StepVerifier.create(t1.asMono()
+							.zipWith(t2.asMono()))
+					.expectNextMatches(tuple -> tuple.getT1().equals(tuple.getT2()))
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+
+			colocated.disposeLater()
+					.block(Duration.ofSeconds(5));
+			assertThat(colocated.isDisposed()).isFalse();
+			assertThat(custom.isDisposed()).isFalse();
+		}
+
+		finally {
+			custom.disposeLater()
+					.block(Duration.ofSeconds(5));
+			assertThat(custom.isDisposed()).isTrue();
+		}
+	}
+
+	static final class CustomLoopResourcesFactory {
+		private static final int DEFAULT_WORKER_THREADS = Math.max(Runtime.getRuntime()
+				.availableProcessors(), 1);
+		private static final AtomicReference<EventLoopGroup> cache = new AtomicReference<>();
+		private static final AtomicBoolean running = new AtomicBoolean(true);
+
+		private CustomLoopResourcesFactory() {
+		}
+
+		public static LoopResources createForClient(String prefix) {
+			return new LoopResources() {
+				@Override
+				public EventLoopGroup onServer(boolean useNative) {
+					EventLoopGroup group = cache.get();
+					if (group == null) {
+						ThreadFactory threadFactory = new DefaultThreadFactory(
+								prefix
+										+ "-worker",
+								false);
+						group = new NioEventLoopGroup(DEFAULT_WORKER_THREADS, threadFactory);
+						if (!cache.compareAndSet(null, group)) {
+							group = onServer(useNative);
+						}
+					}
+
+					running.set(true);
+					return group;
+				}
+
+				@Override
+				public boolean isDisposed() {
+					return !running.get();
+				}
+
+				@Override
+				@SuppressWarnings("unchecked")
+				public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
+					Mono<Void> mono = Mono.empty();
+
+					EventLoopGroup group = cache.get();
+					if (group == null) {
+						return mono;
+					}
+					if (running.compareAndSet(true, false)) {
+						mono = FutureMono.from((Future<Void>) group.shutdownGracefully(0L, 5000, TimeUnit.MILLISECONDS));
+					}
+					return mono;
+				}
+			};
 		}
 	}
 }

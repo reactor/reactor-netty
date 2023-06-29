@@ -179,10 +179,11 @@ class TcpResourcesTest {
 	@Test
 	void testDisableColocation() {
 		LoopResources colocated = TcpResources.get();
-		LoopResources uncolocated = null;
 
 		try {
-			uncolocated = colocated.disableColocation();
+			LoopResources uncolocated = LoopResources.builder(colocated)
+					.colocate(false)
+					.build();
 			Sinks.One<Thread> t1 = Sinks.unsafe().one();
 			Sinks.One<Thread> t2 = Sinks.unsafe().one();
 
@@ -197,26 +198,17 @@ class TcpResourcesTest {
 					.expectNextMatches(tuple -> !tuple.getT1().equals(tuple.getT2()))
 					.expectComplete()
 					.verify(Duration.ofSeconds(30));
+
+			uncolocated.disposeLater()
+					.block(Duration.ofSeconds(5));
+
+			assertThat(uncolocated.isDisposed()).isFalse();
+			assertThat(colocated.isDisposed()).isFalse();
 		}
 
 		finally {
-			if (uncolocated != null) {
-				uncolocated.disposeLater()
-						.block(Duration.ofSeconds(5));
-
-				assertThat(uncolocated.isDisposed()).isFalse();
-				assertThat(colocated.isDisposed()).isFalse();
-
-				TcpResources.disposeLoopsAndConnectionsLater()
-						.block();
-
-				assertThat(uncolocated.isDisposed()).isTrue();
-				assertThat(colocated.isDisposed()).isTrue();
-			}
-			else {
-				colocated.disposeLater()
-						.block(Duration.ofSeconds(5));
-			}
+			colocated.disposeLater()
+					.block(Duration.ofSeconds(5));
 		}
 	}
 }

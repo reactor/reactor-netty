@@ -35,6 +35,50 @@ import reactor.netty.ReactorNetty;
 public interface LoopResources extends Disposable {
 
 	/**
+	 * Return a builder used to instantiate default Reactor Netty {@link LoopResources}.
+	 *
+	 * @param prefix the event loop thread name prefix
+	 * @return a builder used to instantiate default reactor netty {@link LoopResources}.
+	 * @since 1.1.9
+	 */
+	static LoopResources.Builder builder(String prefix) {
+		return new LoopResources.Builder(prefix);
+	}
+
+	/**
+	 * Return a builder for creating a wrapper {@link LoopResources} that can filter an existing parent
+	 * {@link LoopResources}, in order to disable/enable functionalities from the parent, without affecting it.
+	 * The underlying event loop groups of the parent will be reused by the wrapper {@link LoopResources}.
+	 * Disposing the wrapper {@link LoopResources} does not affect the parent {@link LoopResources}.
+	 * When creating a {@link LoopResources} filter on top of a parent, the builder prefix, selectCount, workerCount and daemon
+	 * parameters are ignored by the filter.
+	 * <p></p>The new filter {@link LoopResources} behavior depends on the Builder's parameter:
+	 *
+	 * <p>colocation:
+	 * <ul>
+	 * <li>if the builder's colocate flag is set to false and the parent is colocated, the
+	 * new filter {@link LoopResources} disables colocation without affecting the parent.</li>
+	 * <li>similarly, if the builder's colocate flag is set to true and the parent's event loop group is not colocated,
+	 * the filter {@link LoopResources} object enables colocation mode without affecting the parent.</li>
+	 * </ul>
+	 * <p>As an example, the code below creates a new LoopResources object by wrapping the existing colocated TCP LoopResources.
+	 * The new object reuses the event loop groups from the parent but disables colocation. Importantly, the parent object
+	 * remains unaffected and remains colocated if someone else is using it directly.
+	 * <pre>
+	 * LoopResources filterLoop = LoopResources.builder(TcpResources.get())
+	 *     .colocated(false)
+	 *     .build();
+	 * </pre>
+	 *
+	 * @param parent   the parent LoopResources to wrap
+	 * @return {@literal this}
+	 * @since 1.1.9
+	 */
+	static LoopResources.Builder builder(LoopResources parent) {
+		return new LoopResources.Builder(parent);
+	}
+
+	/**
 	 * Default worker thread count, fallback to available processor
 	 * (but with a minimum value of 4)
 	 */
@@ -96,10 +140,11 @@ public interface LoopResources extends Disposable {
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
 	static LoopResources create(String prefix) {
-		if (Objects.requireNonNull(prefix, "prefix").isEmpty()) {
-			throw new IllegalArgumentException("Cannot use empty prefix");
-		}
-		return new DefaultLoopResources(prefix, DEFAULT_IO_SELECT_COUNT, DEFAULT_IO_WORKER_COUNT, true);
+		return builder(prefix)
+				.selectCount(DEFAULT_IO_SELECT_COUNT)
+				.workerCount(DEFAULT_IO_WORKER_COUNT)
+				.daemon(true)
+				.build();
 	}
 
 	/**
@@ -113,13 +158,11 @@ public interface LoopResources extends Disposable {
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
 	static LoopResources create(String prefix, int workerCount, boolean daemon) {
-		if (Objects.requireNonNull(prefix, "prefix").isEmpty()) {
-			throw new IllegalArgumentException("Cannot use empty prefix");
-		}
-		if (workerCount < 1) {
-			throw new IllegalArgumentException("Must provide a strictly positive worker threads number, was: " + workerCount);
-		}
-		return new DefaultLoopResources(prefix, workerCount, daemon);
+		return builder(prefix)
+				.selectCount(-1)
+				.workerCount(workerCount)
+				.daemon(daemon)
+				.build();
 	}
 
 	/**
@@ -134,16 +177,14 @@ public interface LoopResources extends Disposable {
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
 	static LoopResources create(String prefix, int selectCount, int workerCount, boolean daemon) {
-		if (Objects.requireNonNull(prefix, "prefix").isEmpty()) {
-			throw new IllegalArgumentException("Cannot use empty prefix");
-		}
-		if (workerCount < 1) {
-			throw new IllegalArgumentException("Must provide a strictly positive worker threads number, was: " + workerCount);
-		}
 		if (selectCount < 1) {
 			throw new IllegalArgumentException("Must provide a strictly positive selector threads number, was: " + selectCount);
 		}
-		return new DefaultLoopResources(prefix, selectCount, workerCount, daemon);
+		return builder(prefix)
+				.selectCount(selectCount)
+				.workerCount(workerCount)
+				.daemon(daemon)
+				.build();
 	}
 
 	/**
@@ -163,28 +204,12 @@ public interface LoopResources extends Disposable {
 	 * @since 1.0.28
 	 */
 	static LoopResources create(String prefix, int selectCount, int workerCount, boolean daemon, boolean colocate) {
-		if (Objects.requireNonNull(prefix, "prefix").isEmpty()) {
-			throw new IllegalArgumentException("Cannot use empty prefix");
-		}
-		if (workerCount < 1) {
-			throw new IllegalArgumentException("Must provide a strictly positive worker threads number, was: " + workerCount);
-		}
-		if (selectCount < 1 && selectCount != -1) {
-			throw new IllegalArgumentException("Must provide a strictly positive selector threads number or -1, was: " + selectCount);
-		}
-		return new DefaultLoopResources(prefix, selectCount, workerCount, daemon, colocate);
-	}
-
-	/**
-	 * Return a mutated version of this {@link LoopResources} with colocation disabled if it was enabled.
-	 * <p>
-	 * Disposing the returned {@link LoopResources} will also dispose this {@link LoopResources}.
-	 *
-	 * @return a mutated version of this {@link LoopResources} with colocation disabled
-	 * @since 1.1.9
-	 */
-	default LoopResources disableColocation() {
-		return new MapLoopResources(this, MapLoopResources.UNCOLOCATE);
+		return builder(prefix)
+				.selectCount(selectCount)
+				.workerCount(workerCount)
+				.daemon(daemon)
+				.colocate(colocate)
+				.build();
 	}
 
 	/**
@@ -309,5 +334,102 @@ public interface LoopResources extends Disposable {
 	 */
 	static boolean hasNativeSupport() {
 		return DefaultLoopNativeDetector.INSTANCE != DefaultLoopNativeDetector.NIO;
+	}
+
+	/**
+	 * LoopResources builder used to instantiate Reactor Netty default loop resources.
+	 *
+	 * @since 1.1.9
+	 */
+	final class Builder {
+		final String prefix;
+		final LoopResources parent;
+		int selectCount = -1;
+		int workerCount = DEFAULT_IO_WORKER_COUNT;
+		boolean daemon = true;
+		boolean colocate = true;
+
+		/**
+		 * Creates a builder for instantiating a Reactor Netty default {@link LoopResources}.
+		 * @see LoopResources#builder(String)
+		 */
+		private Builder(String prefix) {
+			this.prefix = prefix;
+			this.parent = null;
+		}
+
+		/**
+		 * Creates a builder for instantiating a filter {@link LoopResources} used to wrap an existing parent {@link LoopResources}.
+		 * @see LoopResources#builder(LoopResources)
+		 */
+		private Builder(LoopResources parent) {
+			this.prefix = null;
+			this.parent = parent;
+		}
+
+		/**
+		 * Sets the number of selector threads to create (-1 by default)
+		 *
+		 * @param selectCount number of selector threads. When -1 is specified, no selectors threads will be created,
+		 *                    and worker threads will be also used as selector threads (-1 by default)
+		 * @return {@literal this}
+		 */
+		public Builder selectCount(int selectCount) {
+			this.selectCount = selectCount;
+			return this;
+		}
+
+		/**
+		 * Set the number of worker threads ({@link #DEFAULT_IO_WORKER_COUNT} by default)
+		 * @param workerCount the number of worker threads ({@link #DEFAULT_IO_WORKER_COUNT} by default)
+		 * @return {@literal this}
+		 */
+		public Builder workerCount(int workerCount) {
+			this.workerCount = workerCount;
+			return this;
+		}
+
+		/**
+		 * Sets whether the thread should be released on jvm shutdown (true by default).
+		 *
+		 * @param daemon should the thread be released on jvm shutdown (true by default)
+		 * @return {@literal this}
+		 */
+		public Builder daemon(boolean daemon) {
+			this.daemon = daemon;
+			return this;
+		}
+
+		/**
+		 * Set colocation mode for onClient callbacks (true by default).
+		 *
+		 * @param colocate true means that {@link EventLoopGroup} created for clients will reuse current local event loop if already
+		 *                  working inside one (true by default)
+		 * @return {@literal this}
+		 */
+		public Builder colocate(boolean colocate) {
+			this.colocate = colocate;
+			return this;
+		}
+
+		/**
+		 * Builds a new LoopResources instance.
+		 *
+		 * @return a new LoopResources instance.
+		 */
+		public LoopResources build() {
+			if (parent == null) {
+				if (Objects.requireNonNull(prefix, "prefix").isEmpty()) {
+					throw new IllegalArgumentException("Cannot use empty prefix");
+				}
+				if (workerCount < 1) {
+					throw new IllegalArgumentException("Must provide a strictly positive worker threads number, was: " + workerCount);
+				}
+				if (selectCount < 1 && selectCount != -1) {
+					throw new IllegalArgumentException("Must provide a strictly positive selector threads number or -1, was: " + selectCount);
+				}
+			}
+			return new DefaultLoopResources(this);
+		}
 	}
 }
