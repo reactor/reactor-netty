@@ -22,11 +22,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.nio.charset.Charset;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
 
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import com.aayushatharva.brotli4j.decoder.DirectDecompress;
+import com.google.common.collect.ImmutableList;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.Zstd;
@@ -447,7 +449,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 
 	@ParameterizedCompressionTest
 	void compressionActivatedOnClientAddsHeader(HttpServer server, HttpClient client) {
-		AtomicReference<String> zip = new AtomicReference<>("fail");
+		AtomicReference<List<String>> acceptEncodingHeaderValues = new AtomicReference<>(ImmutableList.of("fail"));
 
 		disposableServer =
 				server.compress(true)
@@ -455,13 +457,13 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				      .bindNow(Duration.ofSeconds(10));
 		client.port(disposableServer.port())
 		      .compress(true)
-		      .headers(h -> zip.set(h.get("accept-encoding")))
+		      .headers(h -> acceptEncodingHeaderValues.set(h.getAll("accept-encoding")))
 		      .get()
 		      .uri("/test")
 		      .responseContent()
 		      .blockLast(Duration.ofSeconds(10));
 
-		assertThat(zip.get()).isEqualTo("gzip");
+		assertThat(acceptEncodingHeaderValues.get()).isEqualTo(ImmutableList.of("br", "gzip"));
 	}
 
 	@ParameterizedCompressionTest

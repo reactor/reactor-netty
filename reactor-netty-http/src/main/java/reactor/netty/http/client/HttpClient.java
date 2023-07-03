@@ -29,6 +29,7 @@ import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -515,7 +516,13 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient compress(boolean compressionEnabled) {
+		configuration().headers.remove(HttpHeaderNames.ACCEPT_ENCODING);
 		if (compressionEnabled) {
+			configuration().acceptBrotli = Brotli.isAvailable();
+			if (configuration().acceptBrotli) {
+				configuration().headers.add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.BR);
+			}
+
 			if (!configuration().acceptGzip) {
 				HttpClient dup = duplicate();
 				HttpHeaders headers = configuration().headers.copy();
@@ -525,7 +532,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 				return dup;
 			}
 		}
-		else if (configuration().acceptGzip) {
+		else if (configuration().acceptGzip || configuration().acceptBrotli) {
 			HttpClient dup = duplicate();
 			if (isCompressing(configuration().headers)) {
 				HttpHeaders headers = configuration().headers.copy();
@@ -533,6 +540,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 				dup.configuration().headers = headers;
 			}
 			dup.configuration().acceptGzip = false;
+			dup.configuration().acceptBrotli = false;
 			return dup;
 		}
 		return this;
@@ -1602,7 +1610,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	static boolean isCompressing(HttpHeaders h) {
-		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true);
+		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true)
+				|| h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.BR, true);
 	}
 
 	static String reactorNettyVersion() {
