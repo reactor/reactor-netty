@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,10 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -26,21 +29,31 @@ import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpData;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.TomcatServer;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.test.StepVerifier;
+import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.net.SocketAddress;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -48,15 +61,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FACTORY;
+import static reactor.netty.http.client.HttpClientTest.ClientMetricsRecorder;
 
 /**
  * @author Violeta Georgieva
  */
 class HttpClientWithTomcatTest {
 	private static TomcatServer tomcat;
+	private static final byte[] PAYLOAD = String.join("", Collections.nCopies(1024 * 128, "X"))
+			.getBytes(Charset.defaultCharset());
 
 	@BeforeAll
 	static void startTomcat() throws Exception {
@@ -315,6 +333,54 @@ class HttpClientWithTomcatTest {
 
 		assertThat(r).isEqualTo(HttpResponseStatus.BAD_REQUEST);
 		fixed.dispose();
+	}
+
+	static Stream<Arguments> testIssue2825Args() {
+		Supplier<Publisher<ByteBuf>> postMono = () -> Mono.just(Unpooled.wrappedBuffer(PAYLOAD));
+		Supplier<Publisher<ByteBuf>> postFlux = () -> Flux.just(Unpooled.wrappedBuffer(PAYLOAD));
+
+		return Stream.of(
+				Arguments.of(Named.of("postMono", postMono), Named.of("bytes", PAYLOAD.length)),
+				Arguments.of(Named.of("postFlux", postFlux), Named.of("bytes", PAYLOAD.length))
+		);
+	}
+
+	@ParameterizedTest
+	@MethodSource("testIssue2825Args")
+	void testIssue2825_Http11(@Nullable Supplier<Publisher<ByteBuf>> payload, long bytesToSend) {
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		HttpClient client = HttpClient.create()
+				.port(getPort())
+				.wiretap(false)
+				.disableRetry(true)
+				.metrics(true, ClientMetricsRecorder::reset)
+				// Needed to trigger many writability change events
+				.doOnConnected(conn -> {
+					conn.channel().config().setOption(ChannelOption.SO_SNDBUF, 128);
+					serverAddress.set(conn.address());
+				});
+
+		StepVerifier.create(client
+						.headers(hdr -> hdr.set("Content-Type", "text/plain"))
+						.post()
+						.uri("/payload-size")
+						.send(payload.get())
+						.response((r, buf) -> buf.aggregate().asString()
+								.zipWith(Mono.just(r))))
+				.expectNextMatches(tuple -> TomcatServer.TOO_LARGE.equals(tuple.getT1())
+						&& tuple.getT2().status().equals(HttpResponseStatus.BAD_REQUEST))
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeMethod).isEqualTo("POST");
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime).isNotNull();
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime.isZero()).isFalse();
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeUri).isEqualTo("/payload-size");
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeRemoteAddr).isEqualTo(serverAddress.get());
+
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentRemoteAddr).isEqualTo(serverAddress.get());
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentUri).isEqualTo("/payload-size");
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentBytes).isEqualTo(bytesToSend);
 	}
 
 	private int getPort() {

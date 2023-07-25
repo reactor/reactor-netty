@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.Collection;
 
@@ -35,6 +36,7 @@ import java.util.Collection;
  */
 public class TomcatServer {
 	static final String TOMCAT_BASE_DIR = "./build/tomcat";
+	public static final String TOO_LARGE = "Request payload too large";
 
 	final Tomcat tomcat;
 
@@ -82,6 +84,7 @@ public class TomcatServer {
 		addServlet(ctx, new StatusServlet(), "/status/*");
 		addServlet(ctx, new MultipartServlet(), "/multipart")
 				.setMultipartConfigElement(new MultipartConfigElement(""));
+		addServlet(ctx, new PayloadSizeServlet(), "/payload-size");
 	}
 
 	public void createContext(HttpServlet servlet, String mapping) {
@@ -161,6 +164,43 @@ public class TomcatServer {
 				writer.print(path);
 				writer.flush();
 			}
+		}
+	}
+
+	static final class PayloadSizeServlet extends HttpServlet {
+
+		static final int MAX = 1024 * 64;
+
+		@Override
+		protected void service(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+			InputStream in = req.getInputStream();
+			byte[] buf = new byte[4096];
+			int count = 0;
+			int n;
+
+			if ((count = req.getContentLength()) != -1 && count >= MAX) {
+				sendResponse(resp, TOO_LARGE, HttpServletResponse.SC_BAD_REQUEST);
+			}
+
+			count = 0;
+			while ((n = in.read(buf, 0, buf.length)) != -1) {
+				count += n;
+				if (count >= MAX) {
+					sendResponse(resp, TOO_LARGE, HttpServletResponse.SC_BAD_REQUEST);
+					return;
+				}
+			}
+			sendResponse(resp, "Request payload size: " + count, HttpServletResponse.SC_OK);
+		}
+
+		private void sendResponse(HttpServletResponse resp, String message, int status) throws IOException {
+			resp.setStatus(status);
+			resp.setHeader("Transfer-Encoding", "chunked");
+			resp.setHeader("Content-Type", "text/plain");
+			PrintWriter out = resp.getWriter();
+			out.print(message);
+			resp.flushBuffer();
+			out.close(); // will send last-chunk header and will close
 		}
 	}
 }

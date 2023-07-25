@@ -336,6 +336,16 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	/**
+	 * Has Body been sent
+	 *
+	 * @return true if body have been sent
+	 * @since 1.0.35
+	 */
+	protected final boolean hasSentBody() {
+		return statusAndHeadersSent == BODY_SENT;
+	}
+
+	/**
 	 * Mark the headers and body sent
 	 *
 	 * @return true if marked for the first time

@@ -60,6 +60,7 @@ import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
+import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
@@ -522,6 +523,46 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			return HttpVersion.HTTP_1_1;
 		}
 		throw new IllegalStateException(version.protocolName() + " not supported");
+	}
+
+	/**
+	 * React on channel unwritability event while the http client request is being written.
+	 *
+	 * <p>When using plain HTTP/1.1 and {@code HttpClient.send(Mono<ByteBuf>)}, if the socket becomes unwritable while writing,
+	 * we need to request for reads. This is necessary to read any early server responses, such as a 400 bad request followed
+	 * by a socket close, while the request is still being written. Else, a "premature close exception before response" may be reported
+	 * to the user, causing confusion about the server's early response.
+	 *
+	 * <p>There is no need to request for reading in other cases
+	 * (H2/H2C/H1S/WebSocket), because in these cases the read interest has already been requested, or auto-read is enabled
+	 *
+	 * <p>Important notes:
+	 * <p>
+	 * - If the connection is unwritable and {@code send(Flux<ByteBuf>)} has been used, then {@code hasSentBody()} will
+	 * always return false, because when {@code send(Flux<ByteBuf>)} is used, {@code hasSentBody()} can only return true
+	 * if the request is fully written (see {@link #onOutboundComplete()} method which invokes {@code markSentBody()}
+	 * and sets the state to BODY_SENT).
+	 * So if channel is unwritable and {@code hasSentBody()} returns true, it means that {@code send(Mono<ByteBuf>)} has
+	 * been used (see {@link HttpOperations#send(Publisher)} where {@code markSentHeaderAndBody(b)} is setting
+	 * the state to BODY_SENT when the Publisher is a Mono).
+	 *
+	 * <p>- When the channel is unwritable, a channel read() has already been requested or is in auto-read if:
+	 * <ul><li> Secure mode is used (Netty SslHandler requests read() when flushing).</li>
+	 * <li>HTTP2 is used.</li>
+	 * <li>WebSocket is used.</li>
+	 * </ul>
+	 *
+	 * <p>See GH-2825 for more info
+	 */
+	@Override
+	protected void onWritabilityChanged() {
+		if (!channel().isWritable() && !channel().config().isAutoRead() &&
+				hasSentBody() &&
+				!isSecure &&
+				!(channel() instanceof Http2StreamChannel) &&
+				!isWebsocket()) {
+			channel().read();
+		}
 	}
 
 	@Override
