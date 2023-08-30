@@ -17,6 +17,9 @@ updates:
   - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
     versions:
     - ">= 10.0.a"
+  - dependency-name: com.diffplug.spotless
+    versions:
+    - ">= 6.14.a"
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
