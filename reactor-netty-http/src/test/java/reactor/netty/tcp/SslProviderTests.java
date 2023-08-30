@@ -399,7 +399,8 @@ class SslProviderTests extends BaseHttpTest {
 		// This change enables client side session cache when using native SSL by default
 		if (nettyVersionMicro != null && !nettyVersionMicro.isEmpty() && Integer.parseInt(nettyVersionMicro) >= 98) {
 			assertThat(sessionContext.isSessionCacheEnabled()).isTrue();
-		} else {
+		}
+		else {
 			assertThat(sessionContext.isSessionCacheEnabled()).isFalse();
 		}
 	}
