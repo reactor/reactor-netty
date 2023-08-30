@@ -258,6 +258,7 @@ subprojects {
 		if (project.hasProperty("forceTransport")) {
 			systemProperty("forceTransport", forceTransport)
 		}
+		systemProperty("nettyVersionMicro", VersionNumber.parse(nettyVersion.toString()).micro)
 		scanForTestClasses = false
 		include '**/*Tests.*'
 		include '**/*Test.*'
