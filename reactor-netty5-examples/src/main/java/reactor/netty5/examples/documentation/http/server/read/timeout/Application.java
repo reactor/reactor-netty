@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.documentation.http.server.read.timeout;
+package reactor.netty5.examples.documentation.http.server.read.timeout;
 
-import reactor.netty.DisposableServer;
-import reactor.netty.http.server.HttpServer;
+import reactor.netty5.DisposableServer;
+import reactor.netty5.http.server.HttpServer;
 
 import java.time.Duration;
 
