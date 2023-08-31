@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -637,7 +637,7 @@ public interface ConnectionProvider extends Disposable {
 		 * If {@link #maxLifeTime(Duration)} and/or {@link #maxIdleTime(Duration)} settings are configured,
 		 * they are also taken into account.
 		 * <p>Otherwise only the custom eviction predicate is invoked.
-		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty.tcp.TcpClient}.
+		 * <p><strong>Note:</strong> This configuration is not applicable for {@link reactor.netty5.tcp.TcpClient}.
 		 * A TCP connection is always closed and never returned to the pool.
 		 *
 		 * @param evictionPredicate The predicate function that evaluates whether a connection should be evicted
