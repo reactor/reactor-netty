@@ -112,12 +112,15 @@ public class HttpSnoopServer {
 		Mono<String> responseContent;
 		if (isATextualContentType(contentType)) {
 			responseContent = request.receive().aggregate().asString()
-				   .onErrorReturn("")
+				   .onErrorResume(e -> {
+					   System.out.println("error occurs when receiving the content: " + e.getMessage());
+					   return Mono.empty();
+				   })
 				   .switchIfEmpty(Mono.just(""))
-			       .flatMap(content -> {
+			       .map(content -> {
 						buf.append(content);
 						buf.append("\n");
-						return Mono.just(buf.toString());
+						return buf.toString();
 					});
 		} else {
 			buf.append("there is no content or the content is not textual, so we don't print it here\n");
