@@ -32,8 +32,6 @@ public class HttpSnoopClient {
 
 	public static void main(String[] args) {
 		HttpSnoopClient httpSnoopClient = new HttpSnoopClient();
-		httpSnoopClient.client.warmup().block();
-		System.out.println("client is ready");
 
 		// we fire two requests to the server asynchronously
 		Mono<String> respOfGet = httpSnoopClient.get();

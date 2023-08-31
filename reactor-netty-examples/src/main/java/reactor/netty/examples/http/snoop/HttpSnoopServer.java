@@ -71,8 +71,7 @@ public class HttpSnoopServer {
 				this::parseRequestAndSendResponse
 		));
 
-		// 3. start the server, using eager mode
-		server.warmup().block();
+		// 3. start the server
 		this.server = server.bindNow();
 
 		// 4. block the main thread to keep the server running
