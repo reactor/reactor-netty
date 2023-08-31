@@ -19,9 +19,12 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
 import reactor.netty.NettyOutbound;
+import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.http.Http2SslContextSpec;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -35,50 +38,45 @@ import java.util.List;
  **/
 public class HttpSnoopServer {
 
-	public static void main(String[] args) {
-		HttpSnoopServer server = new HttpSnoopServer(8080);
-		server.startup();
-	}
+	static final boolean SECURE = System.getProperty("secure") != null;
+	static final int PORT = Integer.parseInt(System.getProperty("port", SECURE ? "8443" : "8080"));
+	static final boolean WIRETAP = System.getProperty("wiretap") != null;
+	static final boolean COMPRESS = System.getProperty("compress") != null;
+	static final boolean HTTP2 = System.getProperty("http2") != null;
 
-	/**
-	 * the port of the server
-	 **/
-	private final int port;
-
-	/**
-	 * the server instance
-	 **/
-	private DisposableServer server;
-
-	public HttpSnoopServer(int port) {
-		this.port = port;
-	}
-
-	/**
-	 * startup the server
-	 **/
-	public void startup() {
+	public static void main(String[] args) throws Exception {
 		// 1.create and config the server instance
 		HttpServer server = HttpServer
 				.create()
-				.port(port)
-				.wiretap(false);
+				.port(PORT)
+				.wiretap(WIRETAP)
+				.compress(COMPRESS);
+
+		if (SECURE) {
+			SelfSignedCertificate ssc = new SelfSignedCertificate();
+			if (HTTP2) {
+				server = server.secure(spec -> spec.sslContext(Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+			}
+			else {
+				server = server.secure(spec -> spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
+			}
+		}
+		if (HTTP2) {
+			server = server.protocol(HttpProtocol.H2);
+		}
 
 		// 2.config the route rule, this server will receive any request that has any path and any method,
 		// and then send back the details of the received HTTP request
 		server = server.route(routes -> routes.route(
 				req -> true,
-				this::parseRequestAndSendResponse
+				HttpSnoopServer::parseRequestAndSendResponse
 		));
 
-		// 3. start the server
-		this.server = server.bindNow();
-
-		// 4. block the main thread to keep the server running
-		this.server.onDispose().block();
+		// 3. start the server and block the main thread to keep the server running
+		server.bindNow().onDispose().block();
 	}
 
-	private NettyOutbound parseRequestAndSendResponse(HttpServerRequest request, HttpServerResponse response) {
+	private static NettyOutbound parseRequestAndSendResponse(HttpServerRequest request, HttpServerResponse response) {
 		StringBuilder buf = new StringBuilder();
 		buf.append("request received, the details are: \n\n");
 
@@ -112,7 +110,7 @@ public class HttpSnoopServer {
 		buf.append("content: \n");
 		String contentType = request.requestHeaders().get(HttpHeaderNames.CONTENT_TYPE);
 		Mono<String> responseContent;
-		if (this.isATextualContentType(contentType)) {
+		if (isATextualContentType(contentType)) {
 			responseContent = request.receive().aggregate().asString()
 				   .onErrorReturn("")
 				   .switchIfEmpty(Mono.just(""))
@@ -136,7 +134,7 @@ public class HttpSnoopServer {
 	/**
 	 * check whether the content type is textual
 	 **/
-	private boolean isATextualContentType(String contentType) {
+	private static boolean isATextualContentType(String contentType) {
 		if (contentType == null) {
 			return false;
 		}
