@@ -51,7 +51,10 @@ public class HttpSnoopClient {
 		// we fire two requests to the server asynchronously
 		Mono<String> respOfGet =
 				client.headers(hds -> hds.set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN))
-				      .get().uri("/hello?q1=a&q2=b").responseContent().aggregate()
+				      .get()
+				      .uri("/hello?q1=a&q2=b")
+				      .responseContent()
+				      .aggregate()
 				      .asString()
 				      .doOnNext(resp -> System.out.println("resp of get(): \n" + resp));
 		Mono<String> respOfPost =
