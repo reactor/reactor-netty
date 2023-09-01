@@ -59,11 +59,13 @@ public class HttpSnoopClient {
 				      .doOnNext(resp -> System.out.println("resp of get(): \n" + resp));
 		Mono<String> respOfPost =
 				client.headers(hds -> hds.set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON))
-				      .post().uri("/hello2")
-				      .send(ByteBufFlux.fromString(Mono.just("{\"foo\": 1,\"bar\": 2}")))
-				      .responseContent().aggregate()
+				      .post()
+				      .uri("/hello2")
+				      .send(ByteBufMono.fromString(Mono.just("{\"foo\": 1,\"bar\": 2}")))
+				      .responseContent()
+				      .aggregate()
 				      .asString()
-				      .doOnNext(resp -> System.out.println("resp of postSomeJsonData(): \n" + resp));
+				      .doOnNext(resp -> System.out.println("resp of post(): \n" + resp));
 		System.out.println("requests have fired");
 
 		// then let the main thread wait for the completion of the two requests
