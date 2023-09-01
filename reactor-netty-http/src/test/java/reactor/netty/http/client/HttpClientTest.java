@@ -3368,6 +3368,18 @@ class HttpClientTest extends BaseHttpTest {
 
 		return Stream.of(
 				Arguments.of(HttpProtocol.HTTP11, HttpProtocol.HTTP11,
+						null, // no SSL Context
+						null, // no SSL Context
+						Named.of("postMono", postMono),
+						Named.of("bytes", PAYLOAD.length)),
+
+				Arguments.of(HttpProtocol.HTTP11, HttpProtocol.HTTP11,
+						null, // no SSL Context
+						null, // no SSL Context
+						Named.of("postFlux", postFlux),
+						Named.of("bytes", PAYLOAD.length)),
+
+				Arguments.of(HttpProtocol.HTTP11, HttpProtocol.HTTP11,
 						Named.of("Http11SslContextSpec", serverCtx11),
 						Named.of("Http11SslContextSpec", clientCtx11),
 						Named.of("postMono", postMono),
@@ -3407,7 +3419,7 @@ class HttpClientTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("issue2825Params")
-	void testIssue2825_H1S_H2C_H2(HttpProtocol serverProtocols, HttpProtocol clientProtocols,
+	void testIssue2825(HttpProtocol serverProtocols, HttpProtocol clientProtocols,
 			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx,
 			Supplier<Publisher<ByteBuf>> payload, long bytesToSend) {
 		int maxSize = 1024 * 64; // 400 bad request is returned if payload exceeds this limit, and the socket is then closed
