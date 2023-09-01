@@ -34,7 +34,7 @@ import java.util.List;
 
 /**
  * An HTTP server that receives any request and tells the client the details of the request in a formatted string.
- * 
+ *
  * @author Kun.Long
  **/
 public class HttpSnoopServer {
@@ -122,7 +122,7 @@ public class HttpSnoopServer {
 						buf.append("\n");
 						return buf.toString();
 					});
-		} 
+		}
 		else {
 			buf.append("there is no content or the content is not textual, so we don't print it here\n");
 			responseContent = Mono.just(buf.toString());
