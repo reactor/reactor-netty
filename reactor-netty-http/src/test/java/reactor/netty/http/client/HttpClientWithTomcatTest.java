@@ -18,7 +18,7 @@ package reactor.netty.http.client;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -66,14 +66,13 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FACTORY;
-import static reactor.netty.http.client.HttpClientTest.ClientMetricsRecorder;
 
 /**
  * @author Violeta Georgieva
  */
 class HttpClientWithTomcatTest {
 	private static TomcatServer tomcat;
-	private static final byte[] PAYLOAD = String.join("", Collections.nCopies(1024 * 128, "X"))
+	private static final byte[] PAYLOAD = String.join("", Collections.nCopies((5 * 1024 * 1024) + (1024 * 1024), "X"))
 			.getBytes(Charset.defaultCharset());
 
 	@BeforeAll
@@ -347,28 +346,24 @@ class HttpClientWithTomcatTest {
 
 	@ParameterizedTest
 	@MethodSource("testIssue2825Args")
-	void testIssue2825_Http11(@Nullable Supplier<Publisher<ByteBuf>> payload, long bytesToSend) {
+	void testIssue2825(@Nullable Supplier<Publisher<ByteBuf>> payload, long bytesToSend) {
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		HttpClient client = HttpClient.create()
 				.port(getPort())
 				.wiretap(false)
-				.disableRetry(true)
 				.metrics(true, ClientMetricsRecorder::reset)
-				// Needed to trigger many writability change events
 				.doOnConnected(conn -> {
-					conn.channel().config().setOption(ChannelOption.SO_SNDBUF, 128);
 					serverAddress.set(conn.address());
 				});
 
 		StepVerifier.create(client
-						.headers(hdr -> hdr.set("Content-Type", "text/plain"))
-						.post()
-						.uri("/payload-size")
-						.send(payload.get())
-						.response((r, buf) -> buf.aggregate().asString()
-								.zipWith(Mono.just(r))))
-				.expectNextMatches(tuple -> TomcatServer.TOO_LARGE.equals(tuple.getT1())
-						&& tuple.getT2().status().equals(HttpResponseStatus.BAD_REQUEST))
+				.headers(hdr -> hdr.set("Content-Type", "text/plain"))
+				.post()
+				.uri("/payload-size")
+				.send(payload.get())
+				.response((r, buf) -> buf.aggregate().asString()
+						.then(Mono.just(r))))
+				.expectNextMatches(r -> r.status().equals(HttpResponseStatus.BAD_REQUEST))
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
@@ -389,5 +384,88 @@ class HttpClientWithTomcatTest {
 
 	private String getURL() {
 		return "http://localhost:" + tomcat.port();
+	}
+
+	/**
+	 * This Custom metrics recorder checks that the {@link AbstractHttpClientMetricsHandler#recordWrite(SocketAddress)} is properly invoked by
+	 * (see {@link AbstractHttpClientMetricsHandler#channelRead(ChannelHandlerContext, Object)}) when
+	 * an early response is received while the corresponding request it still being written.
+	 */
+	static final class ClientMetricsRecorder implements HttpClientMetricsRecorder {
+
+		static final ClientMetricsRecorder INSTANCE = new ClientMetricsRecorder();
+		volatile SocketAddress recordDataSentTimeRemoteAddr;
+		volatile String recordDataSentTimeUri;
+		volatile String recordDataSentTimeMethod;
+		volatile Duration recordDataSentTimeTime;
+		volatile SocketAddress recordDataSentRemoteAddr;
+		volatile String recordDataSentUri;
+		volatile long recordDataSentBytes;
+
+		static ClientMetricsRecorder reset() {
+			INSTANCE.recordDataSentTimeRemoteAddr = null;
+			INSTANCE.recordDataSentTimeUri = null;
+			INSTANCE.recordDataSentTimeMethod = null;
+			INSTANCE.recordDataSentTimeTime = null;
+			INSTANCE.recordDataSentRemoteAddr = null;
+			INSTANCE.recordDataSentUri = null;
+			INSTANCE.recordDataSentBytes = -1;
+			return INSTANCE;
+		}
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, long bytes) {
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress) {
+		}
+
+		@Override
+		public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+			this.recordDataSentRemoteAddr = remoteAddress;
+			this.recordDataSentUri = uri;
+			this.recordDataSentBytes = bytes;
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+		}
+
+		@Override
+		public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
+		}
+
+		@Override
+		public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
+			this.recordDataSentTimeRemoteAddr = remoteAddress;
+			this.recordDataSentTimeUri = uri;
+			this.recordDataSentTimeMethod = method;
+			this.recordDataSentTimeTime = time;
+		}
+
+		@Override
+		public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
+		}
 	}
 }

@@ -169,28 +169,27 @@ public class TomcatServer {
 
 	static final class PayloadSizeServlet extends HttpServlet {
 
-		static final int MAX = 1024 * 64;
+		static final int MAX = 5000000;
 
 		@Override
 		protected void service(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 			InputStream in = req.getInputStream();
-			byte[] buf = new byte[4096];
 			int count = 0;
 			int n;
 
-			if ((count = req.getContentLength()) != -1 && count >= MAX) {
-				sendResponse(resp, TOO_LARGE, HttpServletResponse.SC_BAD_REQUEST);
-			}
-
-			count = 0;
-			while ((n = in.read(buf, 0, buf.length)) != -1) {
+			while ((n = in.read()) != -1) {
 				count += n;
 				if (count >= MAX) {
+					// By default, Tomcat is configured with maxSwallowSize=2 MB (see https://tomcat.apache.org/tomcat-9.0-doc/config/http.html)
+					// This means that once the 400 bad request is sent, the client will still be able to continue writing (if it is currently writing)
+					// up to 2 MB. So, it is very likely that the client will be blocked and it will then be able to consume the 400 bad request and
+					// close itself the connection.
 					sendResponse(resp, TOO_LARGE, HttpServletResponse.SC_BAD_REQUEST);
 					return;
 				}
 			}
-			sendResponse(resp, "Request payload size: " + count, HttpServletResponse.SC_OK);
+
+			sendResponse(resp, String.valueOf(count), HttpServletResponse.SC_OK);
 		}
 
 		private void sendResponse(HttpServletResponse resp, String message, int status) throws IOException {
@@ -199,8 +198,7 @@ public class TomcatServer {
 			resp.setHeader("Content-Type", "text/plain");
 			PrintWriter out = resp.getWriter();
 			out.print(message);
-			resp.flushBuffer();
-			out.close(); // will send last-chunk header and will close
+			out.flush();
 		}
 	}
 }
