@@ -41,6 +41,7 @@ public class HttpSnoopClient {
 		                              .port(PORT)
 		                              .wiretap(WIRETAP)
 		                              .compress(COMPRESS);
+
 		if (SECURE) {
 			Http11SslContextSpec http11SslContextSpec =
 					Http11SslContextSpec.forClient()
@@ -57,6 +58,7 @@ public class HttpSnoopClient {
 				      .aggregate()
 				      .asString()
 				      .doOnNext(resp -> System.out.println("resp of get(): \n" + resp));
+
 		Mono<String> respOfPost =
 				client.headers(hds -> hds.set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON))
 				      .post()
@@ -66,10 +68,13 @@ public class HttpSnoopClient {
 				      .aggregate()
 				      .asString()
 				      .doOnNext(resp -> System.out.println("resp of post(): \n" + resp));
+
 		System.out.println("requests have fired");
 
 		// then let the main thread wait for the completion of the two requests
-		Mono.when(respOfGet, respOfPost).block();
+		Mono.when(respOfGet, respOfPost)
+		    .block();
+
 		System.out.println("main thread exits");
 	}
 }

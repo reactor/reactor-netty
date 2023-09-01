@@ -61,19 +61,19 @@ public class HttpSnoopServer {
 				server = server.secure(spec -> spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
 			}
 		}
+
 		if (HTTP2) {
 			server = server.protocol(HttpProtocol.H2);
 		}
 
 		// 2.config the route rule, this server will receive any request that has any path and any method,
 		// and then send back the details of the received HTTP request
-		server = server.route(routes -> routes.route(
-				req -> true,
-				HttpSnoopServer::parseRequestAndSendResponse
-		));
+		server = server.route(routes -> routes.route(req -> true, HttpSnoopServer::parseRequestAndSendResponse));
 
 		// 3. start the server and block the main thread to keep the server running
-		server.bindNow().onDispose().block();
+		server.bindNow()
+		      .onDispose()
+		      .block();
 	}
 
 	private static NettyOutbound parseRequestAndSendResponse(HttpServerRequest request, HttpServerResponse response) {
@@ -111,17 +111,20 @@ public class HttpSnoopServer {
 		String contentType = request.requestHeaders().get(HttpHeaderNames.CONTENT_TYPE);
 		Mono<String> responseContent;
 		if (isATextualContentType(contentType)) {
-			responseContent = request.receive().aggregate().asString()
-				   .onErrorResume(e -> {
-					   System.out.println("error occurs when receiving the content: " + e.getMessage());
-					   return Mono.empty();
-				   })
-				   .switchIfEmpty(Mono.just(""))
-			       .map(content -> {
-						buf.append(content);
-						buf.append("\n");
-						return buf.toString();
-					});
+			responseContent =
+					request.receive()
+					       .aggregate()
+					       .asString()
+					       .onErrorResume(e -> {
+					           System.out.println("error occurs when receiving the content: " + e.getMessage());
+					           return Mono.empty();
+					       })
+					       .switchIfEmpty(Mono.just(""))
+					       .map(content -> {
+					           buf.append(content);
+					           buf.append("\n");
+					           return buf.toString();
+					       });
 		}
 		else {
 			buf.append("there is no content or the content is not textual, so we don't print it here\n");
@@ -148,6 +151,7 @@ public class HttpSnoopServer {
 				return true;
 			}
 		}
+
 		return false;
 	}
 
