@@ -36,7 +36,7 @@ public class HttpSnoopClient {
 	static final boolean WIRETAP = System.getProperty("wiretap") != null;
 	static final boolean COMPRESS = System.getProperty("compress") != null;
 
-	public static void main(String[] args) throws Exception{
+	public static void main(String[] args) throws Exception {
 		HttpClient client = HttpClient.create()
 		                              .port(PORT)
 		                              .wiretap(WIRETAP)
