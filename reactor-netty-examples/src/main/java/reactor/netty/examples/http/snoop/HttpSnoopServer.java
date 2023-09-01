@@ -122,7 +122,8 @@ public class HttpSnoopServer {
 						buf.append("\n");
 						return buf.toString();
 					});
-		} else {
+		} 
+		else {
 			buf.append("there is no content or the content is not textual, so we don't print it here\n");
 			responseContent = Mono.just(buf.toString());
 		}
