@@ -46,11 +46,10 @@ public class HttpSnoopServer {
 
 	public static void main(String[] args) throws Exception {
 		// 1.create and config the server instance
-		HttpServer server = HttpServer
-				.create()
-				.port(PORT)
-				.wiretap(WIRETAP)
-				.compress(COMPRESS);
+		HttpServer server = HttpServer.create()
+		                              .port(PORT)
+		                              .wiretap(WIRETAP)
+		                              .compress(COMPRESS);
 
 		if (SECURE) {
 			SelfSignedCertificate ssc = new SelfSignedCertificate();
