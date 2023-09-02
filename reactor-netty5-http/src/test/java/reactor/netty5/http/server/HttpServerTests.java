@@ -114,6 +114,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
+import reactor.core.publisher.Sinks;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.BufferFlux;
 import reactor.netty5.ChannelBindException;
@@ -2084,7 +2085,7 @@ class HttpServerTests extends BaseHttpTest {
 				Http11SslContextSpec.forClient()
 				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
-		AtomicReference<Throwable> error = new AtomicReference<>();
+		Sinks.One<Throwable> error = Sinks.one();
 		disposableServer =
 				createServer()
 				        .childOption(ChannelOption.READ_HANDLE_FACTORY, new FixedReadHandleFactory(64))
@@ -2098,7 +2099,7 @@ class HttpServerTests extends BaseHttpTest {
 				                            @Override
 				                            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
 				                                if (evt instanceof SniCompletionEvent) {
-				                                    error.set(((SniCompletionEvent) evt).cause());
+				                                    error.tryEmitValue(((SniCompletionEvent) evt).cause());
 				                                }
 				                                ctx.fireChannelInboundEvent(evt);
 				                            }
@@ -2117,7 +2118,10 @@ class HttpServerTests extends BaseHttpTest {
 		        .expectError()
 		        .verify(Duration.ofSeconds(5));
 
-		assertThat(error.get()).isNotNull().isInstanceOf(SslHandshakeTimeoutException.class);
+		StepVerifier.create(error.asMono())
+		            .expectNextMatches(t -> t instanceof SslHandshakeTimeoutException)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(10));
 	}
 
 	@Test
