@@ -8,7 +8,7 @@ jobs:
 #    name: preliminary sanity checks
 #    runs-on: ubuntu-20.04
 #    steps:
-#      - uses: actions/checkout@v3
+#      - uses: actions/checkout@v4
 #        with:
 #          fetch-depth: 0 #needed by spotless
 #      - uses: actions/setup-java@v3
@@ -53,23 +53,23 @@ jobs:
           - os: macos-11
             transport: native
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: reactor-netty
           fetch-depth: 0 #needed by spotless
-#      - uses: actions/checkout@v3
+#      - uses: actions/checkout@v4
 #        with:
 #          repository: netty-contrib/codec-haproxy
 #          path: codec-haproxy
-#      - uses: actions/checkout@v3
+#      - uses: actions/checkout@v4
 #        with:
 #          repository: netty-contrib/codec-extras
 #          path: codec-extras
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: netty-contrib/socks-proxy
           path: socks-proxy
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
             repository: netty-contrib/codec-multipart
             path: codec-multipart
