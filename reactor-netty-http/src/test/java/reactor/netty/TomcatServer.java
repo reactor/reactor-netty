@@ -37,6 +37,7 @@ import java.util.Collection;
 public class TomcatServer {
 	static final String TOMCAT_BASE_DIR = "./build/tomcat";
 	public static final String TOO_LARGE = "Request payload too large";
+	public static final int PAYLOAD_MAX = 5000000;
 
 	final Tomcat tomcat;
 
@@ -169,8 +170,6 @@ public class TomcatServer {
 
 	static final class PayloadSizeServlet extends HttpServlet {
 
-		static final int MAX = 5000000;
-
 		@Override
 		protected void service(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 			InputStream in = req.getInputStream();
@@ -179,7 +178,7 @@ public class TomcatServer {
 
 			while ((n = in.read()) != -1) {
 				count += n;
-				if (count >= MAX) {
+				if (count >= PAYLOAD_MAX) {
 					// By default, Tomcat is configured with maxSwallowSize=2 MB (see https://tomcat.apache.org/tomcat-9.0-doc/config/http.html)
 					// This means that once the 400 bad request is sent, the client will still be able to continue writing (if it is currently writing)
 					// up to 2 MB. So, it is very likely that the client will be blocked and it will then be able to consume the 400 bad request and

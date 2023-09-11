@@ -72,7 +72,7 @@ import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FA
  */
 class HttpClientWithTomcatTest {
 	private static TomcatServer tomcat;
-	private static final byte[] PAYLOAD = String.join("", Collections.nCopies((5 * 1024 * 1024) + (1024 * 1024), "X"))
+	private static final byte[] PAYLOAD = String.join("", Collections.nCopies((TomcatServer.PAYLOAD_MAX) + (1024 * 1024), "X"))
 			.getBytes(Charset.defaultCharset());
 
 	@BeforeAll
