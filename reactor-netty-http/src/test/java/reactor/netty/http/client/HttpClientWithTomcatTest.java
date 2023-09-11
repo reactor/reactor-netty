@@ -361,9 +361,10 @@ class HttpClientWithTomcatTest {
 				.post()
 				.uri("/payload-size")
 				.send(payload.get())
-				.response((r, buf) -> buf.aggregate().asString()
-						.then(Mono.just(r))))
-				.expectNextMatches(r -> r.status().equals(HttpResponseStatus.BAD_REQUEST))
+						.response((r, buf) -> buf.aggregate().asString()
+								.zipWith(Mono.just(r))))
+				.expectNextMatches(tuple -> TomcatServer.TOO_LARGE.equals(tuple.getT1())
+						&& tuple.getT2().status().equals(HttpResponseStatus.BAD_REQUEST))
 				.expectComplete()
 				.verify(Duration.ofSeconds(30));
 
