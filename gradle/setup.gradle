@@ -15,7 +15,7 @@
  */
 import org.gradle.util.VersionNumber
 
-if (project.name == 'reactor-netty-examples') {
+if (project.name == 'reactor-netty-examples' || project.name == 'reactor-netty-graalvm-smoke-tests') {
 	return
 }
 
