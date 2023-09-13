@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,4 +18,5 @@ include 'reactor-netty5-core'
 include 'reactor-netty5-http'
 //include 'reactor-netty-incubator-quic'
 include 'reactor-netty5-examples'
+include 'reactor-netty5-graalvm-smoke-tests'
 include 'reactor-netty5'
