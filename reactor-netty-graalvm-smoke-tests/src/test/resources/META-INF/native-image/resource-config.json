@@ -1,0 +1,13 @@
+{
+	"resources": {
+		"includes": [
+			{
+				"condition": {
+					"typeReachable": "io.netty.util.internal.NativeLibraryLoader"
+				},
+				"pattern": "\\QMETA-INF/native/libnetty_transport_native_kqueue_x86_64.jnilib\\E"
+			}
+		]
+	},
+	"bundles": []
+}

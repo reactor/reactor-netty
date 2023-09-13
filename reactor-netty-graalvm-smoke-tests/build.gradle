@@ -1,0 +1,82 @@
+/*
+ * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+apply plugin: 'org.graalvm.buildtools.native'
+
+dependencies {
+	// MacOS binaries are not available for Netty SNAPSHOT version
+	if (!"$nettyVersion".endsWithAny("SNAPSHOT")) {
+		if (osdetector.classifier == "osx-x86_64" || osdetector.classifier == "osx-aarch_64") {
+			testRuntimeOnly "io.netty:netty-resolver-dns-native-macos:$nettyVersion$os_suffix"
+		} else {
+			testRuntimeOnly "io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-x86_64"
+		}
+	} else {
+		// MacOS binaries are not available for Netty SNAPSHOT version
+		testRuntimeOnly "io.netty:netty-resolver-dns-native-macos:$nettyVersion"
+	}
+
+	testImplementation "io.netty:netty-transport-native-epoll:$nettyVersion"
+	testImplementation "io.netty:netty-transport-native-kqueue:$nettyVersion"
+	testImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+	if (project.hasProperty("forceTransport")) {
+		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
+		if (forceTransport == "native") {
+			if (osdetector.os == "osx") {
+				testRuntimeOnly "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
+			} else if (osdetector.os == "linux") {
+				testRuntimeOnly "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
+			}
+		} else if (forceTransport == "io_uring" && osdetector.os == "linux") {
+			testRuntimeOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion$os_suffix"
+		} else if (forceTransport != "nio") {
+			throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
+		}
+	}
+
+	testImplementation project(':reactor-netty-http')
+	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+	testImplementation "io.projectreactor:reactor-test:$testAddonVersion"
+	testImplementation "org.assertj:assertj-core:$assertJVersion"
+}
+
+tasks.withType(JavaCompile).configureEach {
+	javaCompiler = javaToolchains.compilerFor {
+		languageVersion = JavaLanguageVersion.of(17)
+		vendor = JvmVendorSpec.GRAAL_VM
+	}
+}
+
+tasks.withType(Test).configureEach {
+	javaLauncher = javaToolchains.launcherFor {
+		languageVersion = JavaLanguageVersion.of(17)
+		vendor = JvmVendorSpec.GRAAL_VM
+	}
+}
+
+graalvmNative {
+	binaries {
+		test {
+			if (project.hasProperty("forceTransport")) {
+				runtimeArgs.add("-DforceTransport=$forceTransport")
+			}
+		}
+	}
+	metadataRepository {
+		enabled = true
+	}
+}
+
+description = "GraalVM smoke tests for the Reactor Netty library"
