@@ -155,7 +155,6 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 		if (ops != null) {
 			ops.onWritabilityChanged();
 		}
-		ctx.fireChannelWritabilityChanged();
 	}
 
 	static void safeRelease(Object msg) {
