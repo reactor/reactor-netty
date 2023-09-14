@@ -41,7 +41,6 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.TomcatServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
-import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
@@ -72,7 +71,7 @@ import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FA
  */
 class HttpClientWithTomcatTest {
 	private static TomcatServer tomcat;
-	private static final byte[] PAYLOAD = String.join("", Collections.nCopies((TomcatServer.PAYLOAD_MAX) + (1024 * 1024), "X"))
+	private static final byte[] PAYLOAD = String.join("", Collections.nCopies(TomcatServer.PAYLOAD_MAX + (1024 * 1024), "X"))
 			.getBytes(Charset.defaultCharset());
 
 	@BeforeAll
