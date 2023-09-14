@@ -529,7 +529,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	 * React on channel unwritability event while the http client request is being written.
 	 *
 	 * <p>When using plain HTTP/1.1 and {@code HttpClient.send(Mono<ByteBuf>)}, if the socket becomes unwritable while writing,
-	 * we need to request for reads. This is necessary to read any early server responses, such as a 400 bad request followed
+	 * we need to request for reads. This is necessary to read any early server response, such as a 400 bad request followed
 	 * by a socket close, while the request is still being written. Else, a "premature close exception before response" may be reported
 	 * to the user, causing confusion about the server's early response.
 	 *
