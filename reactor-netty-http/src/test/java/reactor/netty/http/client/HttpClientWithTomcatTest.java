@@ -346,7 +346,7 @@ class HttpClientWithTomcatTest {
 
 	@ParameterizedTest
 	@MethodSource("testIssue2825Args")
-	void testIssue2825(@Nullable Supplier<Publisher<ByteBuf>> payload, long bytesToSend) {
+	void testIssue2825(Supplier<Publisher<ByteBuf>> payload, long bytesToSend) {
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		HttpClient client = HttpClient.create()
 				.port(getPort())
