@@ -556,9 +556,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	 */
 	@Override
 	protected void onWritabilityChanged() {
-		if (!channel().isWritable() && !channel().config().isAutoRead() &&
+		if (!isSecure &&
+				!channel().isWritable() && !channel().config().isAutoRead() &&
 				hasSentBody() &&
-				!isSecure &&
 				!(channel() instanceof Http2StreamChannel) &&
 				!isWebsocket()) {
 			channel().read();
