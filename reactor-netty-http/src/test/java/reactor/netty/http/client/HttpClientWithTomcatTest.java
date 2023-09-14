@@ -352,9 +352,7 @@ class HttpClientWithTomcatTest {
 				.port(getPort())
 				.wiretap(false)
 				.metrics(true, ClientMetricsRecorder::reset)
-				.doOnConnected(conn -> {
-					serverAddress.set(conn.address());
-				});
+				.doOnConnected(conn -> serverAddress.set(conn.address()));
 
 		StepVerifier.create(client
 				.headers(hdr -> hdr.set("Content-Type", "text/plain"))
