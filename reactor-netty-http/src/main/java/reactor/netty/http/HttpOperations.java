@@ -338,8 +338,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	/**
 	 * Has Body been sent
 	 *
-	 * @return true if body have been sent
-	 * @since 1.0.35
+	 * @return true if body has been sent
+	 * @since 1.0.37
 	 */
 	protected final boolean hasSentBody() {
 		return statusAndHeadersSent == BODY_SENT;
