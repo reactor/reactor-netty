@@ -547,7 +547,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	/**
 	 * React on  Channel writability change.
 	 *
-	 * @since 1.0.35
+	 * @since 1.0.37
 	 */
 	protected void onWritabilityChanged() {
 	}
