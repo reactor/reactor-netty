@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.Collection;
 
@@ -35,6 +36,8 @@ import java.util.Collection;
  */
 public class TomcatServer {
 	static final String TOMCAT_BASE_DIR = "./build/tomcat";
+	public static final String TOO_LARGE = "Request payload too large";
+	public static final int PAYLOAD_MAX = 5000000;
 
 	final Tomcat tomcat;
 
@@ -82,6 +85,7 @@ public class TomcatServer {
 		addServlet(ctx, new StatusServlet(), "/status/*");
 		addServlet(ctx, new MultipartServlet(), "/multipart")
 				.setMultipartConfigElement(new MultipartConfigElement(""));
+		addServlet(ctx, new PayloadSizeServlet(), "/payload-size");
 	}
 
 	public void createContext(HttpServlet servlet, String mapping) {
@@ -161,6 +165,39 @@ public class TomcatServer {
 				writer.print(path);
 				writer.flush();
 			}
+		}
+	}
+
+	static final class PayloadSizeServlet extends HttpServlet {
+
+		@Override
+		protected void service(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+			InputStream in = req.getInputStream();
+			int count = 0;
+			int n;
+
+			while ((n = in.read()) != -1) {
+				count += n;
+				if (count >= PAYLOAD_MAX) {
+					// By default, Tomcat is configured with maxSwallowSize=2 MB (see https://tomcat.apache.org/tomcat-9.0-doc/config/http.html)
+					// This means that once the 400 bad request is sent, the client will still be able to continue writing (if it is currently writing)
+					// up to 2 MB. So, it is very likely that the client will be blocked and it will then be able to consume the 400 bad request and
+					// close itself the connection.
+					sendResponse(resp, TOO_LARGE, HttpServletResponse.SC_BAD_REQUEST);
+					return;
+				}
+			}
+
+			sendResponse(resp, String.valueOf(count), HttpServletResponse.SC_OK);
+		}
+
+		private void sendResponse(HttpServletResponse resp, String message, int status) throws IOException {
+			resp.setStatus(status);
+			resp.setHeader("Transfer-Encoding", "chunked");
+			resp.setHeader("Content-Type", "text/plain");
+			PrintWriter out = resp.getWriter();
+			out.print(message);
+			out.flush();
 		}
 	}
 }

@@ -149,6 +149,14 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 		}
 	}
 
+	@Override
+	final public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+		if (ops != null) {
+			ops.onWritabilityChanged();
+		}
+	}
+
 	static void safeRelease(Object msg) {
 		if (msg instanceof ReferenceCounted) {
 			ReferenceCounted referenceCounted = (ReferenceCounted) msg;

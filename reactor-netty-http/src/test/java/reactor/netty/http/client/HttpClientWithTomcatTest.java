@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,10 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -26,21 +29,30 @@ import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpData;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.TomcatServer;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.net.SocketAddress;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -48,6 +60,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FACTORY;
@@ -57,6 +71,8 @@ import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FA
  */
 class HttpClientWithTomcatTest {
 	private static TomcatServer tomcat;
+	private static final byte[] PAYLOAD = String.join("", Collections.nCopies(TomcatServer.PAYLOAD_MAX + (1024 * 1024), "X"))
+			.getBytes(Charset.defaultCharset());
 
 	@BeforeAll
 	static void startTomcat() throws Exception {
@@ -317,11 +333,136 @@ class HttpClientWithTomcatTest {
 		fixed.dispose();
 	}
 
+	static Stream<Arguments> testIssue2825Args() {
+		Supplier<Publisher<ByteBuf>> postMono = () -> Mono.just(Unpooled.wrappedBuffer(PAYLOAD));
+		Supplier<Publisher<ByteBuf>> postFlux = () -> Flux.just(Unpooled.wrappedBuffer(PAYLOAD));
+
+		return Stream.of(
+				Arguments.of(Named.of("postMono", postMono), Named.of("bytes", PAYLOAD.length)),
+				Arguments.of(Named.of("postFlux", postFlux), Named.of("bytes", PAYLOAD.length))
+		);
+	}
+
+	@ParameterizedTest
+	@MethodSource("testIssue2825Args")
+	void testIssue2825(Supplier<Publisher<ByteBuf>> payload, long bytesToSend) {
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		HttpClient client = HttpClient.create()
+				.port(getPort())
+				.wiretap(false)
+				.metrics(true, ClientMetricsRecorder::reset)
+				.doOnConnected(conn -> serverAddress.set(conn.address()));
+
+		StepVerifier.create(client
+				.headers(hdr -> hdr.set("Content-Type", "text/plain"))
+				.post()
+				.uri("/payload-size")
+				.send(payload.get())
+				.response((r, buf) -> buf.aggregate().asString().zipWith(Mono.just(r))))
+				.expectNextMatches(tuple -> TomcatServer.TOO_LARGE.equals(tuple.getT1())
+						&& tuple.getT2().status().equals(HttpResponseStatus.BAD_REQUEST))
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeMethod).isEqualTo("POST");
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime).isNotNull();
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime.isZero()).isFalse();
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeUri).isEqualTo("/payload-size");
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeRemoteAddr).isEqualTo(serverAddress.get());
+
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentRemoteAddr).isEqualTo(serverAddress.get());
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentUri).isEqualTo("/payload-size");
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentBytes).isEqualTo(bytesToSend);
+	}
+
 	private int getPort() {
 		return tomcat.port();
 	}
 
 	private String getURL() {
 		return "http://localhost:" + tomcat.port();
+	}
+
+	/**
+	 * This Custom metrics recorder checks that the {@link AbstractHttpClientMetricsHandler#recordWrite(SocketAddress)} is properly invoked by
+	 * (see {@link AbstractHttpClientMetricsHandler#channelRead(ChannelHandlerContext, Object)}) when
+	 * an early response is received while the corresponding request it still being written.
+	 */
+	static final class ClientMetricsRecorder implements HttpClientMetricsRecorder {
+
+		static final ClientMetricsRecorder INSTANCE = new ClientMetricsRecorder();
+		volatile SocketAddress recordDataSentTimeRemoteAddr;
+		volatile String recordDataSentTimeUri;
+		volatile String recordDataSentTimeMethod;
+		volatile Duration recordDataSentTimeTime;
+		volatile SocketAddress recordDataSentRemoteAddr;
+		volatile String recordDataSentUri;
+		volatile long recordDataSentBytes;
+
+		static ClientMetricsRecorder reset() {
+			INSTANCE.recordDataSentTimeRemoteAddr = null;
+			INSTANCE.recordDataSentTimeUri = null;
+			INSTANCE.recordDataSentTimeMethod = null;
+			INSTANCE.recordDataSentTimeTime = null;
+			INSTANCE.recordDataSentRemoteAddr = null;
+			INSTANCE.recordDataSentUri = null;
+			INSTANCE.recordDataSentBytes = -1;
+			return INSTANCE;
+		}
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, long bytes) {
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress) {
+		}
+
+		@Override
+		public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+			this.recordDataSentRemoteAddr = remoteAddress;
+			this.recordDataSentUri = uri;
+			this.recordDataSentBytes = bytes;
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+		}
+
+		@Override
+		public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
+		}
+
+		@Override
+		public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
+			this.recordDataSentTimeRemoteAddr = remoteAddress;
+			this.recordDataSentTimeUri = uri;
+			this.recordDataSentTimeMethod = method;
+			this.recordDataSentTimeTime = time;
+		}
+
+		@Override
+		public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
+		}
 	}
 }
