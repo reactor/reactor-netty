@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,10 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	final Function<String, String> uriTagValue;
 
+	int lastReadSeq;
+
+	int lastWriteSeq;
+
 	protected AbstractHttpClientMetricsHandler(@Nullable Function<String, String> uriTagValue) {
 		this.uriTagValue = uriTagValue;
 	}
@@ -78,6 +82,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		this.path = copy.path;
 		this.status = copy.status;
 		this.uriTagValue = copy.uriTagValue;
+		this.lastWriteSeq = copy.lastWriteSeq;
+		this.lastReadSeq = copy.lastReadSeq;
 	}
 
 	@Override
@@ -91,10 +97,15 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 			dataSent += extractProcessedDataFromBuffer(msg);
 
 			if (msg instanceof LastHttpContent) {
+				int currentLastWriteSeq = lastWriteSeq;
 				SocketAddress address = ctx.channel().remoteAddress();
 				promise.addListener(future -> {
 					try {
-						recordWrite(address);
+						// Record write, unless channelRead has already done it (because an early full response has been received)
+						if (currentLastWriteSeq == lastWriteSeq) {
+							lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
+							recordWrite(address);
+						}
 					}
 					catch (RuntimeException e) {
 						if (log.isWarnEnabled()) {
@@ -128,6 +139,13 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 			dataReceived += extractProcessedDataFromBuffer(msg);
 
 			if (msg instanceof LastHttpContent) {
+				// Detect if we have received an early response before the request has been fully flushed.
+				// In this case, invoke recordwrite now (because next we will reset all class fields).
+				lastReadSeq = (lastReadSeq + 1) & 0x7F_FF_FF_FF;
+				if ((lastReadSeq > lastWriteSeq) || (lastReadSeq == 0 && lastWriteSeq == Integer.MAX_VALUE)) {
+					lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
+					recordWrite(ctx.channel().remoteAddress());
+				}
 				recordRead(ctx.channel());
 				reset();
 			}
@@ -217,6 +235,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		dataSent = 0;
 		dataReceivedTime = 0;
 		dataSentTime = 0;
+		// don't reset lastWriteSeq and lastReadSeq, which must be incremented for ever
 	}
 
 	protected void startRead(HttpResponse msg) {

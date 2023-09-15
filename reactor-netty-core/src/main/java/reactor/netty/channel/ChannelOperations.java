@@ -551,6 +551,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		return o.toString();
 	}
 
+	/**
+	 * React on  Channel writability change.
+	 *
+	 * @since 1.0.37
+	 */
+	protected void onWritabilityChanged() {
+	}
+
 	@Override
 	public boolean isPersistent() {
 		return connection.isPersistent();
