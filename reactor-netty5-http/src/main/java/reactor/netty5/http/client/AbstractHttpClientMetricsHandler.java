@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,11 +64,9 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	final Function<String, String> uriTagValue;
 
-	int flags;
+	int lastReadSeq;
 
-	final static int REQUEST_SENT = 0x01;
-
-	final static int RESPONSE_RECEIVED = 0x02;
+	int lastWriteSeq;
 
 	protected AbstractHttpClientMetricsHandler(@Nullable Function<String, String> uriTagValue) {
 		this.uriTagValue = uriTagValue;
@@ -84,7 +82,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		this.path = copy.path;
 		this.status = copy.status;
 		this.uriTagValue = copy.uriTagValue;
-		this.flags = copy.flags;
+		this.lastWriteSeq = copy.lastWriteSeq;
+		this.lastReadSeq = copy.lastReadSeq;
 	}
 
 	@Override
@@ -97,21 +96,31 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 			dataSent += extractProcessedDataFromBuffer(msg);
 
 			if (msg instanceof LastHttpContent) {
+				int currentLastWriteSeq = lastWriteSeq;
 				SocketAddress address = ctx.channel().remoteAddress();
 				return ctx.write(msg)
 						.addListener(future -> {
 							try {
-								recordWrite(address);
-								// Indicate that we have fully flushed the request. The channelRead method will reset
-								// only if the REQUEST_SENT flag is set
-								flags |= REQUEST_SENT;
-
-								// Under heavy load, it may happen that the netty Selector is processing OP_WRITES, then OP_READ operations.
-								// So, since netty5 write listeners are executed asynchronously, it may happen that the channelRead method
-								// has already been called before our write listener in case we have already received the response.
-								// So, we need to reset class fields in case we detect that the channelRead has been called before our write listener.
-								if ((flags & RESPONSE_RECEIVED) == RESPONSE_RECEIVED) {
-									reset();
+								/**
+								 * Records write metrics information after sending the last part of the request.
+								 * There are two cases to consider:
+								 *
+								 * 1. Netty's Selector processes OP_READ operations after OP_WRITE operations, but in Netty 5,
+								 *    write listeners are invoked asynchronously. This can lead to a situation where the
+								 *    channelRead method has already read the response before write listener has been invoked.
+								 *    In such cases, the channelRead method has already called 'recordWrites' and 'reset' itself.
+								 *
+								 * 2. When sending a large POST request, it's possible that an early response has already been
+								 *    read by the channelRead method even if we are still in the process of writing the request.
+								 *    In this scenario (e.g., encountering a 400 Bad Request), the channelRead method may have
+								 *    already called 'recordWrites' and 'reset' itself.
+								 *
+								 * To determine whether the channelRead method has already invoked 'recordWrites' and 'reset',
+								 * we use the 'lastWriteSeq' and 'lastReadSeq' sequence numbers.
+								 */
+								if (currentLastWriteSeq == lastWriteSeq) {
+									lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
+									recordWrite(address);
 								}
 							}
 							catch (RuntimeException e) {
@@ -145,16 +154,15 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 			dataReceived += extractProcessedDataFromBuffer(msg);
 
 			if (msg instanceof LastHttpContent) {
-				recordRead(ctx.channel());
-				// Set flag used to indicate that we have received the full response.
-				flags |= RESPONSE_RECEIVED;
-
-				// Under heavy load, it may happen that the netty Selector is processing OP_WRITES, then OP_READ operations.
-				// So, since netty5 write listeners are executed asynchronously, it may happen that channelRead is called before
-				// the write listener is called. So, only reset class fields if the write listener has been called.
-				if ((flags & REQUEST_SENT) == REQUEST_SENT) {
-					reset();
+				// Detect if we have received an early response before the write listener has been invoked.
+				// In this case, invoke recordwrite now (because next we will reset all class fields).
+				lastReadSeq = (lastReadSeq + 1) & 0x7F_FF_FF_FF;
+				if ((lastReadSeq > lastWriteSeq) || (lastReadSeq == 0 && lastWriteSeq == Integer.MAX_VALUE)) {
+					lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
+					recordWrite(ctx.channel().remoteAddress());
 				}
+				recordRead(ctx.channel());
+				reset();
 			}
 		}
 		catch (RuntimeException e) {
@@ -241,7 +249,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		dataSent = 0;
 		dataReceivedTime = 0;
 		dataSentTime = 0;
-		flags = 0x0;
+		// don't reset lastWriteSeq and lastReadSeq, which must be incremented for ever
 	}
 
 	protected void startRead(HttpResponse msg) {
