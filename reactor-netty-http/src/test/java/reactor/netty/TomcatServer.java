@@ -18,6 +18,9 @@ package reactor.netty;
 import org.apache.catalina.Context;
 import org.apache.catalina.Wrapper;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.coyote.AbstractProtocol;
+import org.apache.coyote.ProtocolHandler;
+import org.apache.coyote.http11.AbstractHttp11Protocol;
 
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletException;
@@ -38,6 +41,7 @@ public class TomcatServer {
 	static final String TOMCAT_BASE_DIR = "./build/tomcat";
 	public static final String TOO_LARGE = "Request payload too large";
 	public static final int PAYLOAD_MAX = 5000000;
+	public static final String SO_RCVBUF = "socket.rxBufSize"; // The socket receive buffer (SO_RCVBUF) size in bytes. JVM default used if not set
 
 	final Tomcat tomcat;
 
@@ -52,6 +56,15 @@ public class TomcatServer {
 		this.tomcat.setPort(port);
 		File baseDir = new File(TOMCAT_BASE_DIR);
 		this.tomcat.setBaseDir(baseDir.getAbsolutePath());
+	}
+
+	public void setProtocolHandlerProperty(String name, String value) {
+		ProtocolHandler protoHandler = tomcat.getConnector().getProtocolHandler();
+		if (!(protoHandler instanceof AbstractProtocol<?>)) {
+			throw new IllegalStateException("Connection protocol handler is not an instance of AbstractProtocol: " + protoHandler.getClass().getName());
+		}
+		AbstractHttp11Protocol<?> protocol = (AbstractHttp11Protocol<?>) protoHandler;
+		protocol.setProperty(name, value);
 	}
 
 	public int port() {
@@ -174,14 +187,15 @@ public class TomcatServer {
 		protected void service(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 			InputStream in = req.getInputStream();
 			int count = 0;
+			byte[] buf = new byte[4096];
 			int n;
 
-			while ((n = in.read()) != -1) {
+			while ((n = in.read(buf, 0, buf.length)) != -1) {
 				count += n;
 				if (count >= PAYLOAD_MAX) {
 					// By default, Tomcat is configured with maxSwallowSize=2 MB (see https://tomcat.apache.org/tomcat-9.0-doc/config/http.html)
 					// This means that once the 400 bad request is sent, the client will still be able to continue writing (if it is currently writing)
-					// up to 2 MB. So, it is very likely that the client will be blocked and it will then be able to consume the 400 bad request and
+					// up to 2 MB. So, it is very likely that the client will be blocked, and it will then be able to consume the 400 bad request and
 					// close itself the connection.
 					sendResponse(resp, TOO_LARGE, HttpServletResponse.SC_BAD_REQUEST);
 					return;

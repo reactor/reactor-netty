@@ -43,6 +43,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
+import reactor.util.retry.Retry;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -71,7 +72,8 @@ import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FA
  */
 class HttpClientWithTomcatTest {
 	private static TomcatServer tomcat;
-	private static final byte[] PAYLOAD = String.join("", Collections.nCopies(TomcatServer.PAYLOAD_MAX + (1024 * 1024), "X"))
+	private static final String TOMCAT_RCVBUF_SIZE = String.valueOf(32 * 1024);
+	private static final byte[] PAYLOAD = String.join("", Collections.nCopies(TomcatServer.PAYLOAD_MAX + (10 * 1024 * 1024), "X"))
 			.getBytes(Charset.defaultCharset());
 
 	@BeforeAll
@@ -346,6 +348,12 @@ class HttpClientWithTomcatTest {
 	@ParameterizedTest
 	@MethodSource("testIssue2825Args")
 	void testIssue2825(Supplier<Publisher<ByteBuf>> payload, long bytesToSend) {
+		// manage to get the server reads slow, to avoid having the server closing the connection while the client is writing.
+		// Even if we cannot totally avoid that situation, reducing the Tomcat server socket receive buffer will reduce the
+		// probability to have the server closing the connection while the client is writing, hence will reduce the probability
+		// to get a "Connection has been closed BEFORE response, while sending request body".
+		tomcat.setProtocolHandlerProperty(TomcatServer.SO_RCVBUF, TOMCAT_RCVBUF_SIZE);
+
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		HttpClient client = HttpClient.create()
 				.port(getPort())
@@ -353,16 +361,18 @@ class HttpClientWithTomcatTest {
 				.metrics(true, ClientMetricsRecorder::reset)
 				.doOnConnected(conn -> serverAddress.set(conn.address()));
 
-		StepVerifier.create(client
-				.headers(hdr -> hdr.set("Content-Type", "text/plain"))
-				.post()
-				.uri("/payload-size")
-				.send(payload.get())
-				.response((r, buf) -> buf.aggregate().asString().zipWith(Mono.just(r))))
+		StepVerifier.create(Flux.defer(() -> client
+								.headers(hdr -> hdr.set("Content-Type", "text/plain"))
+								.post()
+								.uri("/payload-size")
+								.send(payload.get())
+								.response((r, buf) -> buf.aggregate().asString().zipWith(Mono.just(r))))
+						.retryWhen(Retry.backoff(3, Duration.ofSeconds(3))
+								.filter(throwable -> throwable instanceof PrematureCloseException)))
 				.expectNextMatches(tuple -> TomcatServer.TOO_LARGE.equals(tuple.getT1())
 						&& tuple.getT2().status().equals(HttpResponseStatus.BAD_REQUEST))
 				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+				.verify(Duration.ofMinutes(1));
 
 		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeMethod).isEqualTo("POST");
 		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime).isNotNull();
