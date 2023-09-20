@@ -40,8 +40,7 @@ import java.util.Collection;
 public class TomcatServer {
 	static final String TOMCAT_BASE_DIR = "./build/tomcat";
 	public static final String TOO_LARGE = "Request payload too large";
-	public static final int PAYLOAD_MAX = 5000000;
-	public static final String SO_RCVBUF = "socket.rxBufSize"; // The socket receive buffer (SO_RCVBUF) size in bytes. JVM default used if not set
+	public static final int PAYLOAD_MAX = 4096;
 
 	final Tomcat tomcat;
 
@@ -58,13 +57,13 @@ public class TomcatServer {
 		this.tomcat.setBaseDir(baseDir.getAbsolutePath());
 	}
 
-	public void setProtocolHandlerProperty(String name, String value) {
+	public void setMaxSwallowSize(int bytes) {
 		ProtocolHandler protoHandler = tomcat.getConnector().getProtocolHandler();
 		if (!(protoHandler instanceof AbstractProtocol<?>)) {
 			throw new IllegalStateException("Connection protocol handler is not an instance of AbstractProtocol: " + protoHandler.getClass().getName());
 		}
 		AbstractHttp11Protocol<?> protocol = (AbstractHttp11Protocol<?>) protoHandler;
-		protocol.setProperty(name, value);
+		protocol.setMaxSwallowSize(bytes);
 	}
 
 	public int port() {
@@ -207,7 +206,7 @@ public class TomcatServer {
 
 		private void sendResponse(HttpServletResponse resp, String message, int status) throws IOException {
 			resp.setStatus(status);
-			resp.setHeader("Transfer-Encoding", "chunked");
+			resp.setHeader("Content-Length", String.valueOf(message.length()));
 			resp.setHeader("Content-Type", "text/plain");
 			PrintWriter out = resp.getWriter();
 			out.print(message);

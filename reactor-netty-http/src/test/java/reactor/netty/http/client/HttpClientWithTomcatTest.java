@@ -15,10 +15,10 @@
  */
 package reactor.netty.http.client;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -29,12 +29,7 @@ import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpData;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
@@ -43,7 +38,6 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
-import reactor.util.retry.Retry;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -61,8 +55,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FACTORY;
@@ -72,8 +64,8 @@ import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FA
  */
 class HttpClientWithTomcatTest {
 	private static TomcatServer tomcat;
-	private static final String TOMCAT_RCVBUF_SIZE = String.valueOf(32 * 1024);
-	private static final byte[] PAYLOAD = String.join("", Collections.nCopies(TomcatServer.PAYLOAD_MAX + (10 * 1024 * 1024), "X"))
+	private static final int MAX_SWALLOW_SIZE = 1024 * 1024;
+	private static final byte[] PAYLOAD = String.join("", Collections.nCopies(TomcatServer.PAYLOAD_MAX + MAX_SWALLOW_SIZE + (1024 * 1024), "X"))
 			.getBytes(Charset.defaultCharset());
 
 	@BeforeAll
@@ -335,44 +327,30 @@ class HttpClientWithTomcatTest {
 		fixed.dispose();
 	}
 
-	static Stream<Arguments> testIssue2825Args() {
-		Supplier<Publisher<ByteBuf>> postMono = () -> Mono.just(Unpooled.wrappedBuffer(PAYLOAD));
-		Supplier<Publisher<ByteBuf>> postFlux = () -> Flux.just(Unpooled.wrappedBuffer(PAYLOAD));
-
-		return Stream.of(
-				Arguments.of(Named.of("postMono", postMono), Named.of("bytes", PAYLOAD.length)),
-				Arguments.of(Named.of("postFlux", postFlux), Named.of("bytes", PAYLOAD.length))
-		);
-	}
-
-	@ParameterizedTest
-	@MethodSource("testIssue2825Args")
-	void testIssue2825(Supplier<Publisher<ByteBuf>> payload, long bytesToSend) {
-		// manage to get the server reads slow, to avoid having the server closing the connection while the client is writing.
-		// Even if we cannot totally avoid that situation, reducing the Tomcat server socket receive buffer will reduce the
-		// probability to have the server closing the connection while the client is writing, hence will reduce the probability
-		// to get a "Connection has been closed BEFORE response, while sending request body".
-		tomcat.setProtocolHandlerProperty(TomcatServer.SO_RCVBUF, TOMCAT_RCVBUF_SIZE);
+	@Test
+	void testIssue2825() {
+		tomcat.setMaxSwallowSize(MAX_SWALLOW_SIZE);
 
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		HttpClient client = HttpClient.create()
 				.port(getPort())
 				.wiretap(false)
 				.metrics(true, ClientMetricsRecorder::reset)
-				.doOnConnected(conn -> serverAddress.set(conn.address()));
+				.doOnConnected(conn -> {
+					conn.channel().config().setOption(ChannelOption.SO_SNDBUF, 4 * 1024);
+					serverAddress.set(conn.address());
+				});
 
-		StepVerifier.create(Flux.defer(() -> client
-								.headers(hdr -> hdr.set("Content-Type", "text/plain"))
-								.post()
-								.uri("/payload-size")
-								.send(payload.get())
-								.response((r, buf) -> buf.aggregate().asString().zipWith(Mono.just(r))))
-						.retryWhen(Retry.backoff(3, Duration.ofSeconds(3))
-								.filter(throwable -> throwable instanceof PrematureCloseException)))
+		StepVerifier.create(client
+				.headers(hdr -> hdr.set("Content-Type", "text/plain"))
+				.post()
+				.uri("/payload-size")
+				.send(Mono.just(Unpooled.wrappedBuffer(PAYLOAD)))
+				.response((r, buf) -> buf.aggregate().asString().zipWith(Mono.just(r))))
 				.expectNextMatches(tuple -> TomcatServer.TOO_LARGE.equals(tuple.getT1())
 						&& tuple.getT2().status().equals(HttpResponseStatus.BAD_REQUEST))
 				.expectComplete()
-				.verify(Duration.ofMinutes(1));
+				.verify(Duration.ofSeconds(30));
 
 		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeMethod).isEqualTo("POST");
 		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime).isNotNull();
@@ -382,7 +360,7 @@ class HttpClientWithTomcatTest {
 
 		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentRemoteAddr).isEqualTo(serverAddress.get());
 		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentUri).isEqualTo("/payload-size");
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentBytes).isEqualTo(bytesToSend);
+		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentBytes).isEqualTo(PAYLOAD.length);
 	}
 
 	private int getPort() {
