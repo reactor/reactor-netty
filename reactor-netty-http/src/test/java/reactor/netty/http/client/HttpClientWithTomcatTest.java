@@ -339,10 +339,8 @@ class HttpClientWithTomcatTest {
 					.port(getPort())
 					.wiretap(false)
 					.metrics(true, ClientMetricsRecorder::reset)
-					.doOnConnected(conn -> {
-						conn.channel().config().setOption(ChannelOption.SO_SNDBUF, 4 * 1024);
-						serverAddress.set(conn.address());
-					});
+					.option(ChannelOption.SO_SNDBUF, 4096)
+					.doOnConnected(conn -> serverAddress.set(conn.address()));
 
 			StepVerifier.create(client
 					.headers(hdr -> hdr.set("Content-Type", "text/plain"))
