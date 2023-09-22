@@ -15,9 +15,9 @@
  */
 package reactor.netty5.http.client;
 
-import io.netty5.buffer.Buffer;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelOption;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
@@ -28,12 +28,7 @@ import io.netty.contrib.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.contrib.handler.codec.http.multipart.HttpData;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty5.BufferFlux;
@@ -59,8 +54,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -71,7 +64,8 @@ import static reactor.netty5.http.client.HttpClientOperations.SendForm.DEFAULT_F
  */
 class HttpClientWithTomcatTest {
 	private static TomcatServer tomcat;
-	private static final byte[] PAYLOAD = String.join("", Collections.nCopies(TomcatServer.PAYLOAD_MAX + (1024 * 1024), "X"))
+	private static final int MAX_SWALLOW_SIZE = 1024 * 1024;
+	private static final byte[] PAYLOAD = String.join("", Collections.nCopies(TomcatServer.PAYLOAD_MAX + MAX_SWALLOW_SIZE + (1024 * 1024), "X"))
 			.getBytes(Charset.defaultCharset());
 
 	@BeforeAll
@@ -333,46 +327,46 @@ class HttpClientWithTomcatTest {
 		fixed.dispose();
 	}
 
-	static Stream<Arguments> testIssue2825Args() {
-		Supplier<Publisher<Buffer>> postMono = () -> Mono.just(preferredAllocator().copyOf(PAYLOAD));
-		Supplier<Publisher<Buffer>> postFlux = () -> Flux.just(preferredAllocator().copyOf(PAYLOAD));
+	@Test
+	void testIssue2825() {
+		int currentMaxSwallowSize = tomcat.getMaxSwallowSize();
 
-		return Stream.of(
-				Arguments.of(Named.of("postMono", postMono), Named.of("bytes", PAYLOAD.length)),
-				Arguments.of(Named.of("postFlux", postFlux), Named.of("bytes", PAYLOAD.length))
-		);
-	}
+		try {
+			tomcat.setMaxSwallowSize(MAX_SWALLOW_SIZE);
 
-	@ParameterizedTest
-	@MethodSource("testIssue2825Args")
-	void testIssue2825(Supplier<Publisher<Buffer>> payload, long bytesToSend) {
-		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		HttpClient client = HttpClient.create()
-				.port(getPort())
-				.wiretap(false)
-				.metrics(true, ClientMetricsRecorder::reset)
-				.doOnConnected(conn -> serverAddress.set(conn.address()));
+			AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+			HttpClient client = HttpClient.create()
+					.port(getPort())
+					.wiretap(false)
+					.metrics(true, ClientMetricsRecorder::reset)
+					.option(ChannelOption.SO_SNDBUF, 4096)
+					.doOnConnected(conn -> serverAddress.set(conn.address()));
 
-		StepVerifier.create(client
-				.headers(hdr -> hdr.set("Content-Type", "text/plain"))
-				.post()
-				.uri("/payload-size")
-				.send(payload.get())
-				.response((r, buf) -> buf.aggregate().asString().zipWith(Mono.just(r))))
-				.expectNextMatches(tuple -> TomcatServer.TOO_LARGE.equals(tuple.getT1())
-						&& tuple.getT2().status().equals(HttpResponseStatus.BAD_REQUEST))
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+			StepVerifier.create(client
+					.headers(hdr -> hdr.set("Content-Type", "text/plain"))
+					.post()
+					.uri("/payload-size")
+					.send(Mono.just(preferredAllocator().copyOf(PAYLOAD)))
+					.response((r, buf) -> buf.aggregate().asString().zipWith(Mono.just(r))))
+					.expectNextMatches(tuple -> TomcatServer.TOO_LARGE.equals(tuple.getT1())
+							&& tuple.getT2().status().equals(HttpResponseStatus.BAD_REQUEST))
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
 
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeMethod).isEqualTo("POST");
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime).isNotNull();
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime.isZero()).isFalse();
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeUri).isEqualTo("/payload-size");
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeRemoteAddr).isEqualTo(serverAddress.get());
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeMethod).isEqualTo("POST");
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime).isNotNull();
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime.isZero()).isFalse();
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeUri).isEqualTo("/payload-size");
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeRemoteAddr).isEqualTo(serverAddress.get());
 
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentRemoteAddr).isEqualTo(serverAddress.get());
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentUri).isEqualTo("/payload-size");
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentBytes).isEqualTo(bytesToSend);
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentRemoteAddr).isEqualTo(serverAddress.get());
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentUri).isEqualTo("/payload-size");
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentBytes).isEqualTo(PAYLOAD.length);
+		}
+
+		finally {
+			tomcat.setMaxSwallowSize(currentMaxSwallowSize);
+		}
 	}
 
 	private int getPort() {
