@@ -329,38 +329,46 @@ class HttpClientWithTomcatTest {
 
 	@Test
 	void testIssue2825() {
-		tomcat.setMaxSwallowSize(MAX_SWALLOW_SIZE);
+		int currentMaxSwallowSize = tomcat.getMaxSwallowSize();
 
-		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-		HttpClient client = HttpClient.create()
-				.port(getPort())
-				.wiretap(false)
-				.metrics(true, ClientMetricsRecorder::reset)
-				.doOnConnected(conn -> {
-					conn.channel().config().setOption(ChannelOption.SO_SNDBUF, 4 * 1024);
-					serverAddress.set(conn.address());
-				});
+		try {
+			tomcat.setMaxSwallowSize(MAX_SWALLOW_SIZE);
 
-		StepVerifier.create(client
-				.headers(hdr -> hdr.set("Content-Type", "text/plain"))
-				.post()
-				.uri("/payload-size")
-				.send(Mono.just(Unpooled.wrappedBuffer(PAYLOAD)))
-				.response((r, buf) -> buf.aggregate().asString().zipWith(Mono.just(r))))
-				.expectNextMatches(tuple -> TomcatServer.TOO_LARGE.equals(tuple.getT1())
-						&& tuple.getT2().status().equals(HttpResponseStatus.BAD_REQUEST))
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+			AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+			HttpClient client = HttpClient.create()
+					.port(getPort())
+					.wiretap(false)
+					.metrics(true, ClientMetricsRecorder::reset)
+					.doOnConnected(conn -> {
+						conn.channel().config().setOption(ChannelOption.SO_SNDBUF, 4 * 1024);
+						serverAddress.set(conn.address());
+					});
 
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeMethod).isEqualTo("POST");
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime).isNotNull();
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime.isZero()).isFalse();
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeUri).isEqualTo("/payload-size");
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeRemoteAddr).isEqualTo(serverAddress.get());
+			StepVerifier.create(client
+					.headers(hdr -> hdr.set("Content-Type", "text/plain"))
+					.post()
+					.uri("/payload-size")
+					.send(Mono.just(Unpooled.wrappedBuffer(PAYLOAD)))
+					.response((r, buf) -> buf.aggregate().asString().zipWith(Mono.just(r))))
+					.expectNextMatches(tuple -> TomcatServer.TOO_LARGE.equals(tuple.getT1())
+							&& tuple.getT2().status().equals(HttpResponseStatus.BAD_REQUEST))
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
 
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentRemoteAddr).isEqualTo(serverAddress.get());
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentUri).isEqualTo("/payload-size");
-		assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentBytes).isEqualTo(PAYLOAD.length);
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeMethod).isEqualTo("POST");
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime).isNotNull();
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeTime.isZero()).isFalse();
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeUri).isEqualTo("/payload-size");
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentTimeRemoteAddr).isEqualTo(serverAddress.get());
+
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentRemoteAddr).isEqualTo(serverAddress.get());
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentUri).isEqualTo("/payload-size");
+			assertThat(ClientMetricsRecorder.INSTANCE.recordDataSentBytes).isEqualTo(PAYLOAD.length);
+		}
+
+		finally {
+			tomcat.setMaxSwallowSize(currentMaxSwallowSize);
+		}
 	}
 
 	private int getPort() {

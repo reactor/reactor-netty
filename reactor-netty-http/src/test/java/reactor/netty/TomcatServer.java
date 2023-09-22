@@ -57,6 +57,15 @@ public class TomcatServer {
 		this.tomcat.setBaseDir(baseDir.getAbsolutePath());
 	}
 
+	public int getMaxSwallowSize() {
+		ProtocolHandler protoHandler = tomcat.getConnector().getProtocolHandler();
+		if (!(protoHandler instanceof AbstractProtocol<?>)) {
+			throw new IllegalStateException("Connection protocol handler is not an instance of AbstractProtocol: " + protoHandler.getClass().getName());
+		}
+		AbstractHttp11Protocol<?> protocol = (AbstractHttp11Protocol<?>) protoHandler;
+		return protocol.getMaxSwallowSize();
+	}
+
 	public void setMaxSwallowSize(int bytes) {
 		ProtocolHandler protoHandler = tomcat.getConnector().getProtocolHandler();
 		if (!(protoHandler instanceof AbstractProtocol<?>)) {
