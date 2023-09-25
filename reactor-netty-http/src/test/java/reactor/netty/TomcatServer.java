@@ -21,6 +21,7 @@ import org.apache.catalina.startup.Tomcat;
 import org.apache.coyote.AbstractProtocol;
 import org.apache.coyote.ProtocolHandler;
 import org.apache.coyote.http11.AbstractHttp11Protocol;
+import org.apache.tomcat.util.security.Escape;
 
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletException;
@@ -183,7 +184,10 @@ public class TomcatServer {
 				}
 				resp.setStatus(Integer.parseInt(path));
 
-				writer.print(path);
+				// Use Tomcat's HTML escaping method, to avoid cross-site scripting Github security alert.
+				String sanitizedPath = Escape.htmlElementContent(path);
+
+				writer.print(sanitizedPath);
 				writer.flush();
 			}
 		}
