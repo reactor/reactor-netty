@@ -1124,22 +1124,26 @@ class HttpClientTest extends BaseHttpTest {
 				          })
 				          .bindNow();
 
+		HttpClient client = createHttpClientForContextWithPort();
+		doOnError(client.headers(h -> h.add("before", "test")));
+		doOnError(client.headersWhen(h -> Mono.just(h.add("before", "test"))));
+	}
+
+	private void doOnError(HttpClient client) {
 		AtomicReference<String> requestError1 = new AtomicReference<>();
 		AtomicReference<String> responseError1 = new AtomicReference<>();
 
 		Mono<String> content =
-				createHttpClientForContextWithPort()
-				        .headers(h -> h.add("before", "test"))
-				        .doOnRequestError((req, err) ->
-				            requestError1.set(req.currentContextView().getOrDefault("test", "empty")))
-				        .doOnResponseError((res, err) ->
-				            responseError1.set(res.currentContextView().getOrDefault("test", "empty")))
-				        .mapConnect(c -> c.contextWrite(Context.of("test", "success")))
-				        .get()
-				        .uri("/")
-				        .responseContent()
-				        .aggregate()
-				        .asString();
+				client.doOnRequestError((req, err) ->
+				          requestError1.set(req.currentContextView().getOrDefault("test", "empty")))
+				      .doOnResponseError((res, err) ->
+				          responseError1.set(res.currentContextView().getOrDefault("test", "empty")))
+				      .mapConnect(c -> c.contextWrite(Context.of("test", "success")))
+				      .get()
+				      .uri("/")
+				      .responseContent()
+				      .aggregate()
+				      .asString();
 
 		StepVerifier.create(content)
 		            .verifyError(PrematureCloseException.class);
