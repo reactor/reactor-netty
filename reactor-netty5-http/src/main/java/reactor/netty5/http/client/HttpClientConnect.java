@@ -106,7 +106,7 @@ class HttpClientConnect extends HttpClient {
 
 		Mono<? extends Connection> mono;
 		if (config.deferredConf != null) {
-			return config.deferredConf.apply(Mono.just(config))
+			mono = config.deferredConf.apply(Mono.just(config))
 			           .flatMap(MonoHttpConnect::new);
 		}
 		else {
