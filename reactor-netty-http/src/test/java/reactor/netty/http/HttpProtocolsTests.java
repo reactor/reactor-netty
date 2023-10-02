@@ -27,6 +27,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2Connection;
@@ -755,6 +756,37 @@ class HttpProtocolsTests extends BaseHttpTest {
 			assertThat(customHandler.list.get(2)).isInstanceOf(Http2SettingsFrame.class);
 			assertThat(customHandler.list.get(3)).isInstanceOf(Http2SettingsAckFrame.class);
 		}
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void test100Continue(HttpServer server, HttpClient client) throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		disposableServer =
+				server.handle((req, res) -> req.receive()
+				                               .aggregate()
+				                               .asString()
+				                               .flatMap(s -> {
+				                                       latch.countDown();
+				                                       return res.sendString(Mono.just(s))
+				                                                 .then();
+				                               }))
+				      .bindNow();
+
+		Tuple2<String, Integer> content =
+				client.port(disposableServer.port())
+				      .headers(h -> h.add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE))
+				      .post()
+				      .uri("/")
+				      .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+				      .responseSingle((res, bytes) -> bytes.asString()
+				                                           .zipWith(Mono.just(res.status().code())))
+				      .block(Duration.ofSeconds(5));
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		assertThat(content).isNotNull();
+		assertThat(content.getT1()).isEqualTo("12345");
+		assertThat(content.getT2()).isEqualTo(200);
 	}
 
 	static final class IdleTimeoutTestChannelInboundHandler extends ChannelInboundHandlerAdapter {

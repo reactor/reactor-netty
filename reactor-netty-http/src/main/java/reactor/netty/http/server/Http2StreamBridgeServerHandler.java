@@ -31,6 +31,8 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -167,6 +169,10 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 		if (msg instanceof ByteBuf) {
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
+		}
+		else if (msg instanceof HttpResponse && HttpResponseStatus.CONTINUE.equals(((HttpResponse) msg).status())) {
+			//"FutureReturnValueIgnored" this is deliberate
+			ctx.write(msg, promise);
 		}
 		else {
 			//"FutureReturnValueIgnored" this is deliberate
