@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package reactor.netty.http.server.logging;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2DataFrame;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import reactor.netty.channel.ChannelOperations;
@@ -59,6 +60,13 @@ final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 		boolean lastContent = false;
 		if (msg instanceof Http2HeadersFrame) {
 			final Http2HeadersFrame responseHeaders = (Http2HeadersFrame) msg;
+
+			if (HttpResponseStatus.CONTINUE.codeAsText().contentEquals(responseHeaders.headers().status())) {
+				//"FutureReturnValueIgnored" this is deliberate
+				ctx.write(msg, promise);
+				return;
+			}
+
 			lastContent = responseHeaders.isEndStream();
 
 			accessLogArgProvider.responseHeaders(responseHeaders)
