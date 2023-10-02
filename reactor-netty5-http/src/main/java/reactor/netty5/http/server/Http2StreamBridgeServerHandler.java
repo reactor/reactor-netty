@@ -30,6 +30,7 @@ import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.http.DefaultHttpContent;
 import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpRequest;
+import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty5.handler.ssl.SslHandler;
@@ -44,6 +45,7 @@ import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.util.annotation.Nullable;
 
+import static io.netty5.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static reactor.netty5.ReactorNetty.format;
 
 /**
@@ -163,6 +165,9 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof Buffer buffer) {
 			return ctx.write(new DefaultHttpContent(buffer));
+		}
+		else if (msg instanceof HttpResponse && CONTINUE.equals(((HttpResponse) msg).status())) {
+			return ctx.write(msg);
 		}
 		else {
 			Future<Void> f = ctx.write(msg);

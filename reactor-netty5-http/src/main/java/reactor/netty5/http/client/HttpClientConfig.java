@@ -43,6 +43,7 @@ import io.netty5.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpResponse;
+import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http2.Http2ClientUpgradeCodec;
@@ -59,6 +60,7 @@ import io.netty5.handler.ssl.ApplicationProtocolNames;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.resolver.AddressResolverGroup;
+import io.netty5.util.Resource;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty5.ChannelPipelineConfigurer;
@@ -85,6 +87,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
+import static io.netty5.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty5.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static reactor.netty5.ReactorNetty.format;
 import static reactor.netty5.ReactorNetty.setChannelContext;
@@ -1025,6 +1028,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final Http2FrameCodec http2FrameCodec;
 
 		boolean decoded;
+		boolean is100Continue;
 
 		ReactorNettyHttpClientUpgradeHandler(
 				Http2FrameCodec http2FrameCodec,
@@ -1033,6 +1037,27 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				int maxContentLength) {
 			super(sourceCodec, upgradeCodec, maxContentLength);
 			this.http2FrameCodec = http2FrameCodec;
+		}
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+			if (msg instanceof HttpResponse) {
+				if (CONTINUE.equals(((HttpResponse) msg).status())) {
+					is100Continue = true;
+					Resource.dispose(msg);
+					ctx.read();
+					return;
+				}
+				is100Continue = false;
+			}
+
+			if (is100Continue && msg instanceof LastHttpContent<?>) {
+				is100Continue = false;
+				((LastHttpContent<?>) msg).close();
+				return;
+			}
+
+			super.channelRead(ctx, msg);
 		}
 
 		@Override

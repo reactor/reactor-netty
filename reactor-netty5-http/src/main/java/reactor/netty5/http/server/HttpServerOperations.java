@@ -45,7 +45,6 @@ import io.netty5.handler.codec.http.DefaultHttpResponse;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpRequest;
-import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
@@ -412,7 +411,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
 			return FutureMono.deferFuture(() -> {
 						if (!hasSentHeaders()) {
-							return channel().writeAndFlush(CONTINUE);
+							return channel().writeAndFlush(
+									new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE,
+											preferredAllocator().allocate(0)));
 						}
 						return channel().newSucceededFuture();
 					})
@@ -1020,11 +1021,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final static AsciiString      EVENT_STREAM = new AsciiString("text/event-stream");
 
 	static final BiPredicate<HttpServerRequest, HttpServerResponse> COMPRESSION_DISABLED = (req, res) -> false;
-
-	final static FullHttpResponse CONTINUE     =
-			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-					HttpResponseStatus.CONTINUE,
-					preferredAllocator().allocate(0));
 
 	static final class FailedHttpServerRequest extends HttpServerOperations {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import reactor.netty5.http.server.HttpServerInfos;
 import reactor.util.annotation.Nullable;
 
 import java.util.function.Function;
+
+import static io.netty5.handler.codec.http.HttpResponseStatus.CONTINUE;
 
 /**
  * {@link ChannelHandler} for access log of HTTP/2.0.
@@ -56,6 +58,10 @@ final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		boolean lastContent = false;
 		if (msg instanceof Http2HeadersFrame responseHeaders) {
+			if (CONTINUE.codeAsText().contentEquals(responseHeaders.headers().status())) {
+				return ctx.write(msg);
+			}
+
 			lastContent = responseHeaders.isEndStream();
 
 			accessLogArgProvider.responseHeaders(responseHeaders)
