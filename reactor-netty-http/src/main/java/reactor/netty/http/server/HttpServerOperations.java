@@ -113,6 +113,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookies cookieHolder;
 	final HttpServerFormDecoderProvider formDecoderProvider;
+	final boolean is100ContinueExpected;
 	final boolean isHttp2;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle;
 	final HttpRequest nettyRequest;
@@ -138,6 +139,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieHolder = replaced.cookieHolder;
 		this.currentContext = replaced.currentContext;
 		this.formDecoderProvider = replaced.formDecoderProvider;
+		this.is100ContinueExpected = replaced.is100ContinueExpected;
 		this.isHttp2 = replaced.isHttp2;
 		this.mapHandle = replaced.mapHandle;
 		this.nettyRequest = replaced.nettyRequest;
@@ -186,6 +188,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.cookieHolder = ServerCookies.newServerRequestHolder(nettyRequest.headers(), decoder);
 		this.currentContext = Context.empty();
 		this.formDecoderProvider = formDecoderProvider;
+		this.is100ContinueExpected = HttpUtil.is100ContinueExpected(nettyRequest);
 		this.isHttp2 = isHttp2;
 		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
@@ -406,7 +409,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		//   and discard the traffic or close the connection.
 		//       No need to notify the upstream handlers - just log.
 		//       If decoding a response, just throw an error.
-		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
+		if (is100ContinueExpected) {
 			return FutureMono.deferFuture(() -> {
 						if (!hasSentHeaders()) {
 							return channel().writeAndFlush(CONTINUE);
@@ -674,7 +677,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void beforeMarkSentHeaders() {
-		//noop
+		if (is100ContinueExpected && !isInboundComplete()) {
+			int code = status().code();
+			if (code < 200 || code > 299) {
+				keepAlive(false);
+			}
+		}
 	}
 
 	@Override
