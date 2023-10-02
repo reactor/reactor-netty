@@ -44,6 +44,9 @@ import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
@@ -60,6 +63,7 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.ChannelPipelineConfigurer;
@@ -635,7 +639,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(http2FrameCodec,
 				new H2CleartextCodec(http2FrameCodec, opsFactory, acceptGzip, metricsRecorder, uriTagValue));
 
-		HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(httpClientCodec, upgradeCodec, decoder.h2cMaxContentLength());
+		HttpClientUpgradeHandler upgradeHandler =
+				new ReactorNettyHttpClientUpgradeHandler(httpClientCodec, upgradeCodec, decoder.h2cMaxContentLength());
 
 		p.addBefore(NettyPipeline.ReactiveBridge, null, httpClientCodec)
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2CUpgradeHandler, upgradeHandler)
@@ -1018,6 +1023,36 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					!(error instanceof RedirectClientException)) {
 				doOnResponseError.accept(connection.as(HttpClientOperations.class), error);
 			}
+		}
+	}
+
+	static final class ReactorNettyHttpClientUpgradeHandler extends HttpClientUpgradeHandler {
+
+		boolean is100Continue;
+
+		ReactorNettyHttpClientUpgradeHandler(SourceCodec sourceCodec, UpgradeCodec upgradeCodec, int maxContentLength) {
+			super(sourceCodec, upgradeCodec, maxContentLength);
+		}
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+			if (msg instanceof HttpResponse) {
+				if (HttpResponseStatus.CONTINUE.equals(((HttpResponse) msg).status())) {
+					is100Continue = true;
+					ReferenceCountUtil.release(msg);
+					ctx.read();
+					return;
+				}
+				is100Continue = false;
+			}
+
+			if (is100Continue && msg instanceof LastHttpContent) {
+				is100Continue = false;
+				((LastHttpContent) msg).release();
+				return;
+			}
+
+			super.channelRead(ctx, msg);
 		}
 	}
 
