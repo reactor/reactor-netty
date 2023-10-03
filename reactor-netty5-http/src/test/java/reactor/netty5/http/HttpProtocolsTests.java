@@ -46,6 +46,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
+import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -53,6 +54,7 @@ import reactor.core.publisher.Signal;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.BufferFlux;
+import reactor.netty5.BufferMono;
 import reactor.netty5.Connection;
 import reactor.netty5.LogTracker;
 import reactor.netty5.NettyPipeline;
@@ -62,6 +64,8 @@ import reactor.netty5.http.client.HttpClientResponse;
 import reactor.netty5.http.client.PrematureCloseException;
 import reactor.netty5.http.server.HttpServer;
 import reactor.netty5.http.server.HttpServerConfig;
+import reactor.netty5.http.server.HttpServerRequest;
+import reactor.netty5.http.server.HttpServerResponse;
 import reactor.netty5.http.server.logging.AccessLog;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
@@ -82,6 +86,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -892,6 +897,95 @@ class HttpProtocolsTests extends BaseHttpTest {
 		assertThat(content).isNotNull();
 		assertThat(content.getT1()).isEqualTo("12345");
 		assertThat(content.getT2()).isEqualTo(200);
+	}
+
+	@ParameterizedCompatibleCombinationsCustomPoolTest
+	void test100ContinueConnectionClose(HttpServer server, HttpClient client) throws Exception {
+		doTest100ContinueConnection(server, client,
+				(req, res) -> res.status(400).sendString(Mono.just("ERROR")),
+				BufferFlux.fromString(Flux.just("1", "2", "3", "4", "5").delaySubscription(Duration.ofMillis(100))),
+				false);
+	}
+
+	@ParameterizedCompatibleCombinationsCustomPoolTest
+	void test100ContinueConnectionKeepAlive(HttpServer server, HttpClient client) throws Exception {
+		doTest100ContinueConnection(server, client,
+				(req, res) -> res.status(400).sendString(Mono.just("ERROR").delaySubscription(Duration.ofMillis(100))),
+				BufferMono.fromString(Mono.just("12345")),
+				true);
+	}
+
+	private void doTest100ContinueConnection(
+			HttpServer server,
+			HttpClient client,
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> postHandler,
+			Publisher<Buffer> sendBody,
+			boolean isKeepAlive) throws Exception {
+		HttpProtocol[] serverProtocols = server.configuration().protocols();
+		HttpProtocol[] clientProtocols = client.configuration().protocols();
+
+		CountDownLatch latch = new CountDownLatch(2);
+		AtomicReference<List<Channel>> channels = new AtomicReference<>(new ArrayList<>(2));
+		disposableServer =
+				server.doOnConnection(conn -> {
+				          channels.get().add(conn.channel());
+				          conn.onTerminate().subscribe(null, t -> latch.countDown(), latch::countDown);
+				      })
+				      .route(r ->
+				          r.post("/post", postHandler)
+				           .get("/get", (req, res) -> res.sendString(Mono.just("OK"))))
+				      .bindNow();
+
+		Mono<Tuple2<String, HttpClientResponse>> content1 =
+				client.port(disposableServer.port())
+				      .headers(h -> h.add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE))
+				      .post()
+				      .uri("/post")
+				      .send(sendBody)
+				      .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just(res)));
+
+		Mono<Tuple2<String, HttpClientResponse>> content2 =
+				client.port(disposableServer.port())
+				      .get()
+				      .uri("/get")
+				      .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just(res)));
+
+		List<Tuple2<String, HttpClientResponse>> responses =
+				Flux.concat(content1, content2)
+				    .collectList()
+				    .block(Duration.ofSeconds(5));
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		assertThat(responses).isNotNull();
+		assertThat(responses.size()).isEqualTo(2);
+		assertThat(responses.get(0).getT1()).isEqualTo("ERROR");
+		assertThat(responses.get(0).getT2().status().code()).isEqualTo(400);
+		assertThat(responses.get(1).getT1()).isEqualTo("OK");
+		assertThat(responses.get(1).getT2().status().code()).isEqualTo(200);
+
+		assertThat(channels.get().size()).isEqualTo(2);
+		if ((serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11)) {
+			if (isKeepAlive) {
+				assertThat(channels.get().get(0)).isEqualTo(channels.get().get(1));
+
+				assertThat(responses.get(0).getT2().responseHeaders().get(HttpHeaderNames.CONNECTION))
+						.isNull();
+			}
+			else {
+				assertThat(channels.get()).doesNotHaveDuplicates();
+
+				assertThat(responses.get(0).getT2().responseHeaders().get(HttpHeaderNames.CONNECTION))
+						.isEqualTo(HttpHeaderValues.CLOSE.toString());
+			}
+		}
+		else {
+			assertThat(channels.get()).doesNotHaveDuplicates();
+
+			assertThat(responses.get(0).getT2().responseHeaders().get(HttpHeaderNames.CONNECTION))
+					.isNull();
+		}
 	}
 
 	static final class IdleTimeoutTestChannelInboundHandler extends ChannelHandlerAdapter {
