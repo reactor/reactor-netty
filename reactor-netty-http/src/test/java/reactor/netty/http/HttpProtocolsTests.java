@@ -832,23 +832,21 @@ class HttpProtocolsTests extends BaseHttpTest {
 				           .get("/get", (req, res) -> res.sendString(Mono.just("OK"))))
 				      .bindNow();
 
-		Mono<Tuple2<String, Integer>> content1 =
+		Mono<Tuple2<String, HttpClientResponse>> content1 =
 				client.port(disposableServer.port())
 				      .headers(h -> h.add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE))
 				      .post()
 				      .uri("/post")
 				      .send(sendBody)
-				      .responseSingle((res, bytes) -> bytes.asString()
-				                                           .zipWith(Mono.just(res.status().code())));
+				      .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just(res)));
 
-		Mono<Tuple2<String, Integer>> content2 =
+		Mono<Tuple2<String, HttpClientResponse>> content2 =
 				client.port(disposableServer.port())
 				      .get()
 				      .uri("/get")
-				      .responseSingle((res, bytes) -> bytes.asString()
-				                                           .zipWith(Mono.just(res.status().code())));
+				      .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just(res)));
 
-		List<Tuple2<String, Integer>> responses =
+		List<Tuple2<String, HttpClientResponse>> responses =
 				Flux.concat(content1, content2)
 				    .collectList()
 				    .block(Duration.ofSeconds(5));
@@ -858,18 +856,29 @@ class HttpProtocolsTests extends BaseHttpTest {
 		assertThat(responses).isNotNull();
 		assertThat(responses.size()).isEqualTo(2);
 		assertThat(responses.get(0).getT1()).isEqualTo("ERROR");
-		assertThat(responses.get(0).getT2()).isEqualTo(400);
+		assertThat(responses.get(0).getT2().status().code()).isEqualTo(400);
 		assertThat(responses.get(1).getT1()).isEqualTo("OK");
-		assertThat(responses.get(1).getT2()).isEqualTo(200);
+		assertThat(responses.get(1).getT2().status().code()).isEqualTo(200);
 
 		assertThat(channels.get().size()).isEqualTo(2);
-		if (((serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
-				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11)) &&
-				isKeepAlive) {
-			assertThat(channels.get().get(0)).isEqualTo(channels.get().get(1));
+		if ((serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11)) {
+			if (isKeepAlive) {
+				assertThat(channels.get().get(0)).isEqualTo(channels.get().get(1));
+
+				assertThat(responses.get(0).getT2().responseHeaders().get(HttpHeaderNames.CONNECTION))
+						.isNull();
+			}
+			else {
+				assertThat(responses.get(0).getT2().responseHeaders().get(HttpHeaderNames.CONNECTION))
+						.isEqualTo(HttpHeaderValues.CLOSE.toString());
+			}
 		}
 		else {
 			assertThat(channels.get()).doesNotHaveDuplicates();
+
+			assertThat(responses.get(0).getT2().responseHeaders().get(HttpHeaderNames.CONNECTION))
+					.isNull();
 		}
 	}
 
