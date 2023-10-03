@@ -393,12 +393,25 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Return true if inbound traffic is not incoming or expected anymore
+	 * Return true if inbound traffic is not incoming or expected anymore.
+	 * The buffered data is consumed.
 	 *
-	 * @return true if inbound traffic is not incoming or expected anymore
+	 * @return true if inbound traffic is not incoming or expected anymore.
+	 * The buffered data is consumed
 	 */
 	public final boolean isInboundDisposed() {
 		return inbound.isDisposed();
+	}
+
+	/**
+	 * Return true if inbound traffic is not incoming or expected anymore.
+	 * The buffered data might still not be consumed.
+	 *
+	 * @return true if inbound traffic is not incoming or expected anymore.
+	 * The buffered data might still not be consumed.
+	 */
+	protected final boolean isInboundComplete() {
+		return inbound.inboundDone;
 	}
 
 	/**
