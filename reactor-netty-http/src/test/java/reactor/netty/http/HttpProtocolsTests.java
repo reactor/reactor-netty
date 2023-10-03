@@ -870,6 +870,8 @@ class HttpProtocolsTests extends BaseHttpTest {
 						.isNull();
 			}
 			else {
+				assertThat(channels.get()).doesNotHaveDuplicates();
+
 				assertThat(responses.get(0).getT2().responseHeaders().get(HttpHeaderNames.CONNECTION))
 						.isEqualTo(HttpHeaderValues.CLOSE.toString());
 			}
