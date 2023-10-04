@@ -32,6 +32,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http11SslContextSpec;
@@ -44,7 +45,9 @@ import reactor.test.StepVerifier;
 
 import java.nio.charset.Charset;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.ReactorNetty.getChannelContext;
 
 class ContextPropagationTest {
@@ -99,6 +102,68 @@ class ContextPropagationTest {
 		finally {
 			TestThreadLocalHolder.reset();
 			registry.removeThreadLocalAccessor(TestThreadLocalAccessor.KEY);
+			disposableServer.disposeNow();
+		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpClientCombinations")
+	void testAutomaticContextPropagation(HttpClient client) throws Exception {
+		String reactorCoreVersionMinor = System.getProperty("reactorCoreVersionMinor");
+		String contextPropagationVersionMicro =  System.getProperty("contextPropagationVersionMicro");
+
+		boolean enableAutomaticContextPropagation =
+				reactorCoreVersionMinor != null && !reactorCoreVersionMinor.isEmpty() && Integer.parseInt(reactorCoreVersionMinor) >= 6 && // 3.6.x
+						contextPropagationVersionMicro != null && !contextPropagationVersionMicro.isEmpty() && Integer.parseInt(contextPropagationVersionMicro) >= 5; // 1.0.5 or above
+
+		ssc = new SelfSignedCertificate();
+		Http2SslContextSpec serverCtxHttp = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		HttpServer server =
+				HttpServer.create()
+				          .wiretap(true)
+				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
+				          .handle((in, out) -> out.send(in.receive().retain()));
+
+		server = client.configuration().sslProvider() != null ?
+				server.secure(spec -> spec.sslContext(serverCtxHttp)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2) :
+				server.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C);
+
+		disposableServer = server.bindNow();
+
+		try {
+			if (enableAutomaticContextPropagation) {
+				Hooks.enableAutomaticContextPropagation();
+			}
+
+			registry.registerThreadLocalAccessor(new TestThreadLocalAccessor());
+
+			TestThreadLocalHolder.value("First");
+
+			AtomicReference<String> threadLocal = new AtomicReference<>();
+			client.port(disposableServer.port())
+			      .wiretap(true)
+			      .post()
+			      .uri("/")
+			      .send(ByteBufMono.fromString(Mono.just("test")))
+			      .responseContent()
+			      .aggregate()
+			      .asString()
+			      .doOnNext(s -> threadLocal.set(TestThreadLocalHolder.value()))
+			      .block(Duration.ofSeconds(5));
+
+			if (enableAutomaticContextPropagation) {
+				assertThat(threadLocal.get()).isNotNull().isEqualTo("First");
+			}
+			else {
+				assertThat(threadLocal.get()).isNull();
+			}
+		}
+		finally {
+			TestThreadLocalHolder.reset();
+			registry.removeThreadLocalAccessor(TestThreadLocalAccessor.KEY);
+			if (enableAutomaticContextPropagation) {
+				Hooks.disableAutomaticContextPropagation();
+			}
 			disposableServer.disposeNow();
 		}
 	}
