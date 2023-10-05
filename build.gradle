@@ -89,7 +89,14 @@ ext {
 	micrometerTracingVersion = '1.0.0' //optional baseline
 	micrometerDocsVersion = '1.0.0' //optional baseline
 
-	contextPropagationVersion = '1.0.0' //optional baseline
+	contextPropagationDefaultVersion = '1.0.0' //optional baseline
+	if (!project.hasProperty("forceContextPropagationVersion")) {
+		contextPropagationVersion = contextPropagationDefaultVersion
+	}
+	else {
+		contextPropagationVersion = forceContextPropagationVersion
+		println "Context Propagation version defined from command line: ${forceContextPropagationVersion}"
+	}
 
 	// Used only in examples
 	braveVersion = '5.16.0'
@@ -266,6 +273,8 @@ subprojects {
 		if (project.hasProperty("forceTransport")) {
 			systemProperty("forceTransport", forceTransport)
 		}
+		systemProperty("reactorCoreVersionMinor", VersionNumber.parse(reactorCoreVersion.toString()).minor)
+		systemProperty("contextPropagationVersionMicro", VersionNumber.parse(contextPropagationVersion.toString()).micro)
 		scanForTestClasses = false
 		include '**/*Tests.*'
 		include '**/*Test.*'
