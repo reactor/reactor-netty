@@ -30,6 +30,8 @@ import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import reactor.core.publisher.Hooks;
@@ -54,8 +56,17 @@ class ContextPropagationTest {
 	static final ConnectionProvider provider = ConnectionProvider.create("testContextPropagation", 1);
 	static final ContextRegistry registry = ContextRegistry.getInstance();
 
+	static SelfSignedCertificate ssc;
+
+	HttpServer baseServer;
 	DisposableServer disposableServer;
-	SelfSignedCertificate ssc;
+	Http2SslContextSpec serverCtx;
+
+
+	@BeforeAll
+	static void createSelfSignedCertificate() throws Exception {
+		ssc = new SelfSignedCertificate();
+	}
 
 	@AfterAll
 	static void disposePool() {
@@ -63,20 +74,22 @@ class ContextPropagationTest {
 		        .block(Duration.ofSeconds(30));
 	}
 
-	@ParameterizedTest
-	@MethodSource("httpClientCombinations")
-	void testContextPropagation(HttpClient client) throws Exception {
-		ssc = new SelfSignedCertificate();
-		Http2SslContextSpec serverCtxHttp = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
-		HttpServer server =
+	@BeforeEach
+	void setUp() {
+		serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		baseServer =
 				HttpServer.create()
 				          .wiretap(true)
 				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
 				          .handle((in, out) -> out.send(in.receive().retain()));
+	}
 
-		server = client.configuration().sslProvider() != null ?
-				server.secure(spec -> spec.sslContext(serverCtxHttp)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2) :
-				server.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C);
+	@ParameterizedTest
+	@MethodSource("httpClientCombinations")
+	void testContextPropagation(HttpClient client) {
+		HttpServer server = client.configuration().sslProvider() != null ?
+				baseServer.secure(spec -> spec.sslContext(serverCtx)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2) :
+				baseServer.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C);
 
 		disposableServer = server.bindNow();
 
@@ -108,7 +121,7 @@ class ContextPropagationTest {
 
 	@ParameterizedTest
 	@MethodSource("httpClientCombinations")
-	void testAutomaticContextPropagation(HttpClient client) throws Exception {
+	void testAutomaticContextPropagation(HttpClient client) {
 		String reactorCoreVersionMinor = System.getProperty("reactorCoreVersionMinor");
 		String contextPropagationVersionMicro =  System.getProperty("contextPropagationVersionMicro");
 
@@ -116,17 +129,9 @@ class ContextPropagationTest {
 				reactorCoreVersionMinor != null && !reactorCoreVersionMinor.isEmpty() && Integer.parseInt(reactorCoreVersionMinor) >= 6 && // 3.6.x
 						contextPropagationVersionMicro != null && !contextPropagationVersionMicro.isEmpty() && Integer.parseInt(contextPropagationVersionMicro) >= 5; // 1.0.5 or above
 
-		ssc = new SelfSignedCertificate();
-		Http2SslContextSpec serverCtxHttp = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
-		HttpServer server =
-				HttpServer.create()
-				          .wiretap(true)
-				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(256))
-				          .handle((in, out) -> out.send(in.receive().retain()));
-
-		server = client.configuration().sslProvider() != null ?
-				server.secure(spec -> spec.sslContext(serverCtxHttp)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2) :
-				server.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C);
+		HttpServer server = client.configuration().sslProvider() != null ?
+				baseServer.secure(spec -> spec.sslContext(serverCtx)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2) :
+				baseServer.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C);
 
 		disposableServer = server.bindNow();
 
