@@ -366,7 +366,19 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					if (log.isDebugEnabled()) {
 						log.debug("ConnectionProvider[name={}]: Disposing inactive pool for [{}]", name, e.getKey().holder);
 					}
-					e.getValue().dispose();
+					SocketAddress address = e.getKey().holder;
+					String id = e.getKey().hashCode() + "";
+					PoolFactory<T> poolFactory = poolFactory(address);
+					e.getValue().disposeLater().then(
+							Mono.<Void>fromRunnable(() -> {
+								if (poolFactory.registrar != null) {
+									poolFactory.registrar.get().deRegisterMetrics(name, id, address);
+								}
+								else if (Metrics.isInstrumentationAvailable()) {
+									deRegisterDefaultMetrics(id, address);
+								}
+							})
+					).subscribe();
 				}
 			});
 		}
