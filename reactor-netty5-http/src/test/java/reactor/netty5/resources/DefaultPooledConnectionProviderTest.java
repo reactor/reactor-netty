@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,6 +74,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -652,7 +653,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("disposeInactivePoolsInBackgroundCombinations")
-	void testDisposeInactivePoolsInBackground(boolean enableEvictInBackground, boolean isHttp2) throws Exception {
+	void testDisposeInactivePoolsInBackground(boolean enableEvictInBackground, boolean isHttp2, boolean isBuiltInMetrics) throws Exception {
 		disposableServer =
 				createServer()
 				        .wiretap(false)
@@ -669,6 +670,19 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 		if (enableEvictInBackground) {
 			builder.evictInBackground(Duration.ofMillis(50));
+		}
+
+		MeterRegistrarImpl meterRegistrar;
+		String metricsName = "";
+		if (isBuiltInMetrics) {
+			meterRegistrar = null;
+			builder.metrics(true);
+
+			metricsName = isHttp2 ? "http2.testDisposeInactivePoolsInBackground" : "testDisposeInactivePoolsInBackground";
+		}
+		else {
+			meterRegistrar = new MeterRegistrarImpl();
+			builder.metrics(true, () -> meterRegistrar);
 		}
 
 		CountDownLatch latch = new CountDownLatch(10);
@@ -697,6 +711,12 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			    .verify(Duration.ofSeconds(5));
 
 			assertThat(provider.channelPools.size()).isEqualTo(1);
+			if (meterRegistrar != null) {
+				assertThat(meterRegistrar.registered.get()).isTrue();
+			}
+			else {
+				assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, metricsName)).isNotEqualTo(-1);
+			}
 
 			if (enableEvictInBackground) {
 				assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
@@ -709,6 +729,17 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			               .isEqualTo(enableEvictInBackground ? 0 : 1));
 
 			assertThat(provider.isDisposed()).isEqualTo(enableEvictInBackground);
+			if (meterRegistrar != null) {
+				assertThat(meterRegistrar.deRegistered.get()).isEqualTo(enableEvictInBackground);
+			}
+			else {
+				if (enableEvictInBackground) {
+					assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, metricsName)).isEqualTo(-1);
+				}
+				else {
+					assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, metricsName)).isNotEqualTo(-1);
+				}
+			}
 		}
 		finally {
 			if (!enableEvictInBackground) {
@@ -720,10 +751,15 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	static Stream<Arguments> disposeInactivePoolsInBackgroundCombinations() {
 		return Stream.of(
-				Arguments.of(false, false),
-				Arguments.of(false, true),
-				Arguments.of(true, false),
-				Arguments.of(true, true)
+				// enableEvictInBackground, isHttp2, isBuiltInMetrics
+				Arguments.of(false, false, false),
+				Arguments.of(false, false, true),
+				Arguments.of(false, true, false),
+				Arguments.of(false, true, true),
+				Arguments.of(true, false, false),
+				Arguments.of(true, false, true),
+				Arguments.of(true, true, false),
+				Arguments.of(true, true, true)
 		);
 	}
 
@@ -823,6 +859,24 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		finally {
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
+		AtomicBoolean registered = new AtomicBoolean();
+		AtomicBoolean deRegistered = new AtomicBoolean();
+
+		MeterRegistrarImpl() {
+		}
+
+		@Override
+		public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics) {
+			registered.compareAndSet(false, true);
+		}
+
+		@Override
+		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
+			deRegistered.compareAndSet(false, true);
 		}
 	}
 }
