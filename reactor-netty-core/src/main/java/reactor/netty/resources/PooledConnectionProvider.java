@@ -374,7 +374,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 								if (poolFactory.registrar != null) {
 									poolFactory.registrar.get().deRegisterMetrics(name, id, address);
 								}
-								else if (Metrics.isInstrumentationAvailable()) {
+								else if (Metrics.isMicrometerAvailable()) {
 									deRegisterDefaultMetrics(id, address);
 								}
 							})
