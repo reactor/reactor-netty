@@ -19,7 +19,7 @@ updates:
     - ">= 10.0.a"
   - dependency-name: com.diffplug.spotless
     versions:
-    - "[>= 6.14.a, < 7.0]"
+    - "[6.14.a, 7.0]"
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
