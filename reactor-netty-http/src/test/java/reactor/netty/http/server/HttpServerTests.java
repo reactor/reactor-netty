@@ -2820,6 +2820,101 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
+	void testRouteQuery() {
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/yes/value",
+						(request, response) -> {
+					StringBuilder sbuf = new StringBuilder();
+					request.queryParams().forEach((key, list) -> {
+						for (String value : list) {
+
+							sbuf.append(key);
+							sbuf.append('=');
+							sbuf.append(value);
+							sbuf.append('&');
+						}
+						sbuf.deleteCharAt(sbuf.length() - 1);
+					});
+					return response.sendString(Mono.just("/yes/value?" + sbuf));
+				}).route(r -> true, (req, resp) -> {
+					return resp.sendString(Mono.just("/default"));
+				});
+
+		try {
+			disposableServer = HttpServer
+					.create()
+					.handle(serverRoutes)
+					.bindNow();
+
+			// verify HttpServerRequest has query parameters as the incoming request has query parameters
+			StepVerifier
+					.create(createClient(disposableServer.port())
+							.get()
+							.uri("/yes/value?id=a&id=b")
+							.responseSingle((response, mono) -> mono.asString()))
+					.expectNext("/yes/value?id=a&id=b")
+					.verifyComplete();
+
+			// verify HttpServerRequest does not have query parameters if the http request does not have query
+			// parameters
+			StepVerifier
+					.create(createClient(disposableServer.port())
+							.get()
+							.uri("/yes/value")
+							.responseSingle((response, mono) -> mono.asString()))
+					.expectNext("/yes/value?")
+					.verifyComplete();
+		}
+		finally {
+			if (disposableServer != null) {
+				disposableServer.disposeNow();
+			}
+		}
+	}
+
+	@Test
+	void testRouteQueryUnterminatedEncodedQueryParameters() {
+		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
+				.get("/yes/value",
+						(request, response) -> {
+							StringBuilder sbuf = new StringBuilder();
+							request.queryParams().forEach((key, list) -> {
+
+								for (String value : list) {
+									sbuf.append(key);
+									sbuf.append('=');
+									sbuf.append(value);
+									sbuf.append('&');
+								}
+								sbuf.deleteCharAt(sbuf.length() - 1);
+							});
+							return response.sendString(Mono.just("/yes/value?" + sbuf));
+						}).route(r -> true, (req, resp) -> {
+					return resp.sendString(Mono.just("/default"));
+				});
+
+		try {
+			disposableServer = HttpServer
+					.create()
+					.handle(serverRoutes)
+					.bindNow();
+
+			// verify HttpServerRequest has query parameters as the incoming request has query parameters
+			StepVerifier
+					.create(createClient(disposableServer.port())
+							.get()
+							.uri("/yes/value?id=a%&id=b")
+							.responseSingle((response, mono) -> mono.asString()))
+					.expectError(IllegalArgumentException.class);
+		}
+		finally {
+			if (disposableServer != null) {
+				disposableServer.disposeNow();
+			}
+		}
+	}
+
+	@Test
 	void testOverrideRouteOrder() {
 		HttpServerRoutes serverRoutes = HttpServerRoutes.newRoutes()
 				.get("/yes/{value}", (request, response) -> response.sendString(Mono.just("/yes/{value}")))
