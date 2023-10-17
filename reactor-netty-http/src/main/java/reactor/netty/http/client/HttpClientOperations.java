@@ -122,6 +122,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	Consumer<HttpClientRequest> redirectRequestConsumer;
 	HttpHeaders previousRequestHeaders;
 	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
+	Throwable unprocessedOutboundError;
 
 	final static String INBOUND_CANCEL_LOG = "Http client inbound receiver cancelled, closing channel.";
 
@@ -285,6 +286,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	protected final void onUnprocessedOutboundError(Throwable t) {
+		this.unprocessedOutboundError = t;
+	}
+
+	@Override
 	protected void onInboundClose() {
 		if (isInboundCancelled() || isInboundDisposed()) {
 			listener().onStateChange(this, ConnectionObserver.State.DISCONNECTING);
@@ -292,18 +298,21 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		listener().onStateChange(this, HttpClientState.RESPONSE_INCOMPLETE);
 		if (responseState == null) {
+			Throwable exception;
 			if (markSentHeaderAndBody()) {
-				listener().onUncaughtException(this, AbortedException.beforeSend());
+				exception = AbortedException.beforeSend();
 			}
 			else if (markSentBody()) {
-				listener().onUncaughtException(this, new PrematureCloseException("Connection has been closed BEFORE response, while sending request body"));
+				exception = new PrematureCloseException("Connection has been closed BEFORE response, while sending request body");
 			}
 			else {
-				listener().onUncaughtException(this, new PrematureCloseException("Connection prematurely closed BEFORE response"));
+				exception = new PrematureCloseException("Connection prematurely closed BEFORE response");
 			}
+			listener().onUncaughtException(this, addOutboundErrorCause(exception, unprocessedOutboundError));
 			return;
 		}
-		super.onInboundError(new PrematureCloseException("Connection prematurely closed DURING response"));
+		super.onInboundError(addOutboundErrorCause(new PrematureCloseException("Connection prematurely closed DURING response"),
+				unprocessedOutboundError));
 	}
 
 	@Override
@@ -868,6 +877,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						get(channel()) + " to " + ops));
 			}
 		}
+	}
+
+	final Throwable addOutboundErrorCause(Throwable exception, Throwable cause) {
+		if (cause != null) {
+			cause.setStackTrace(new StackTraceElement[0]);
+			exception.initCause(cause);
+		}
+		return exception;
 	}
 
 	static final class ResponseState {
