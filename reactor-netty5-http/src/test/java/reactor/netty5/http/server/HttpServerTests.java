@@ -87,6 +87,7 @@ import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus;
+import io.netty5.handler.codec.http2.Http2Exception;
 import io.netty5.handler.codec.http2.Http2GoAwayFrame;
 import io.netty5.handler.codec.http2.Http2StreamChannel;
 import io.netty5.handler.ssl.SniCompletionEvent;
@@ -104,6 +105,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -3376,5 +3378,53 @@ class HttpServerTests extends BaseHttpTest {
 				)
 				.expectComplete()
 				.verify(Duration.ofSeconds(60));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	@Disabled
+	void testIssue2927_H2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx = Http2SslContextSpec.forClient()
+				.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		testIssue2927(
+				server -> server.protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+				client -> client.protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	@Disabled
+	void testIssue2927_H2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		testIssue2927(server -> server.protocol(serverProtocols), client -> client.protocol(clientProtocols));
+	}
+
+	private void testIssue2927(Function<HttpServer, HttpServer> serverCustomizer, Function<HttpClient, HttpClient> clientCustomizer) {
+		HttpServer httpServer = serverCustomizer.apply(HttpServer.create())
+				.http2Settings(spec -> spec.maxHeaderListSize(1024));
+
+		disposableServer =
+				httpServer
+						.handle((req, res) -> res.sendString(Mono.just("Hello")))
+						.bindNow();
+
+		HttpClient client = clientCustomizer.apply(createClient(disposableServer.port()));
+
+		Flux<HttpResponseStatus> responseFlux = Flux.range(0, 2)
+				.flatMap(i -> i == 1 ?
+						// For the second request, add some extra headers in order to exceed server max header list size
+						Flux.range(0, 100).reduce(client, (c, j) -> c.headers(h -> h.set("Foo" + j, "Bar" + j)))
+						:
+						Mono.just(client))
+				.flatMap(cl -> cl
+						.get()
+						.uri("/test")
+						.responseSingle((res, byteBufMono) -> Mono.just(res.status())), 1);
+
+		StepVerifier.create(responseFlux)
+				.expectNextMatches(HttpResponseStatus.OK::equals)
+				.expectErrorMatches(t -> t instanceof PrematureCloseException && t.getCause() instanceof Http2Exception.HeaderListSizeException)
+				.verify(Duration.ofSeconds(30));
 	}
 }

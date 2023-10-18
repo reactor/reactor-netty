@@ -121,6 +121,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	Consumer<HttpClientRequest> redirectRequestConsumer;
 	HttpHeaders previousRequestHeaders;
 	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
+	volatile Throwable unprocessedOutboundError;
 
 	final static String INBOUND_CANCEL_LOG = "Http client inbound receiver cancelled, closing channel.";
 
@@ -143,6 +144,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.responseTimeout = replaced.responseTimeout;
 		this.is100Continue = replaced.is100Continue;
 		this.trailerHeaders = replaced.trailerHeaders;
+		// No need to copy the unprocessedOutboundError field from the replaced instance. The reason for this is that the
+		// "unprocessedOutboundError" field contains an error that occurs when the connection of the HttpClientOperations
+		// is already closed. In essence, this error represents the final state for the HttpClientOperations, and there's
+		// no need to carry it over because it's considered as a terminal/concluding state.
 	}
 
 	HttpClientOperations(Connection c, ConnectionObserver listener, HttpMessageLogFactory httpMessageLogFactory) {
@@ -262,6 +267,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	protected final void onUnprocessedOutboundError(Throwable t) {
+		this.unprocessedOutboundError = t;
+	}
+
+	@Override
 	protected void onInboundClose() {
 		if (isInboundCancelled() || isInboundDisposed()) {
 			listener().onStateChange(this, ConnectionObserver.State.DISCONNECTING);
@@ -269,18 +279,21 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		listener().onStateChange(this, HttpClientState.RESPONSE_INCOMPLETE);
 		if (responseState == null) {
+			Throwable exception;
 			if (markSentHeaderAndBody()) {
-				listener().onUncaughtException(this, AbortedException.beforeSend());
+				exception = AbortedException.beforeSend();
 			}
 			else if (markSentBody()) {
-				listener().onUncaughtException(this, new PrematureCloseException("Connection has been closed BEFORE response, while sending request body"));
+				exception = new PrematureCloseException("Connection has been closed BEFORE response, while sending request body");
 			}
 			else {
-				listener().onUncaughtException(this, new PrematureCloseException("Connection prematurely closed BEFORE response"));
+				exception = new PrematureCloseException("Connection prematurely closed BEFORE response");
 			}
+			listener().onUncaughtException(this, addOutboundErrorCause(exception, unprocessedOutboundError));
 			return;
 		}
-		super.onInboundError(new PrematureCloseException("Connection prematurely closed DURING response"));
+		super.onInboundError(addOutboundErrorCause(new PrematureCloseException("Connection prematurely closed DURING response"),
+				unprocessedOutboundError));
 	}
 
 	@Override
@@ -837,6 +850,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						get(channel()) + " to " + ops));
 			}
 		}
+	}
+
+	static Throwable addOutboundErrorCause(Throwable exception, @Nullable Throwable cause) {
+		if (cause != null) {
+			cause.setStackTrace(new StackTraceElement[0]);
+			exception.initCause(cause);
+		}
+		return exception;
 	}
 
 	static final class ResponseState {
