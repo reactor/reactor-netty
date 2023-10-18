@@ -122,7 +122,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	Consumer<HttpClientRequest> redirectRequestConsumer;
 	HttpHeaders previousRequestHeaders;
 	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
-	Throwable unprocessedOutboundError;
+	volatile Throwable unprocessedOutboundError;
 
 	final static String INBOUND_CANCEL_LOG = "Http client inbound receiver cancelled, closing channel.";
 
@@ -879,7 +879,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 	}
 
-	final Throwable addOutboundErrorCause(Throwable exception, Throwable cause) {
+	static Throwable addOutboundErrorCause(Throwable exception, @Nullable Throwable cause) {
 		if (cause != null) {
 			cause.setStackTrace(new StackTraceElement[0]);
 			exception.initCause(cause);
