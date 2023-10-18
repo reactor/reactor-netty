@@ -147,6 +147,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.responseTimeout = replaced.responseTimeout;
 		this.is100Continue = replaced.is100Continue;
 		this.trailerHeaders = replaced.trailerHeaders;
+		// No need to copy the unprocessedOutboundError field from the replaced instance. The reason for this is that the
+		// "unprocessedOutboundError" field contains an error that occurs when the connection of the HttpClientOperations
+		// is already closed. In essence, this error represents the final state for the HttpClientOperations, and there's
+		// no need to carry it over because it's considered as a terminal/concluding state.
 	}
 
 	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder,
