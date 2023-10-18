@@ -181,7 +181,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 		if (channelOps instanceof HttpClientOperations) {
 			HttpClientOperations ops = (HttpClientOperations) channelOps;
-			path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
+			path = uriTagValue == null ? ops.fullPath() : uriTagValue.apply(ops.fullPath());
 			contextView = ops.currentContextView();
 		}
 

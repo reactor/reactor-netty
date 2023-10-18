@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1608,4 +1608,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	static final String WS_SCHEME = "ws";
 
 	static final String WSS_SCHEME = "wss";
+
+	static final int DEFAULT_PORT = 80;
+
+	static final int DEFAULT_SECURE_PORT = 443;
 }
