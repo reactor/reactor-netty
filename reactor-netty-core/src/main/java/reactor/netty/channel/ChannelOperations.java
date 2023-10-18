@@ -255,6 +255,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "An outbound error could not be processed"), t);
 			}
+			// Let any child class process the outbound error which has not been processed
+			onUnprocessedOutboundError(t);
 			return;
 		}
 		OUTBOUND_CLOSE.set(this, Operators.cancelledSubscription());
@@ -570,6 +572,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @since 1.0.37
 	 */
 	protected void onWritabilityChanged() {
+	}
+
+	/**
+	 * React on an unprocessed outbound error.
+	 *
+	 * @since 1.0.39
+	 */
+	protected void onUnprocessedOutboundError(Throwable t) {
 	}
 
 	@Override
