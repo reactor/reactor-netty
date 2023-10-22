@@ -1383,6 +1383,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * <ul>
 	 *     <li>{@code 10} seconds handshake timeout unless
 	 *     the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set</li>
+	 *     <li>{@code 3} seconds close_notify flush timeout</li>
+	 *     <li>{@code 0} second close_notify read timeout</li>
 	 *     <li>hostname verification enabled</li>
 	 * </ul>
 	 * </p>
@@ -1405,6 +1407,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * <ul>
 	 *     <li>{@code 10} seconds handshake timeout unless the passed builder sets another configuration or
 	 *     the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set</li>
+	 *     <li>{@code 3} seconds close_notify flush timeout</li>
+	 *     <li>{@code 0} second close_notify read timeout</li>
 	 *     <li>hostname verification enabled</li>
 	 * </ul>
 	 * </p>
