@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1383,6 +1383,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * <ul>
 	 *     <li>{@code 10} seconds handshake timeout unless
 	 *     the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set</li>
+	 *     <li>{@code 3} seconds close_notify flush timeout</li>
+	 *     <li>{@code 0} second close_notify read timeout</li>
 	 *     <li>hostname verification enabled</li>
 	 * </ul>
 	 * </p>
@@ -1405,6 +1407,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * <ul>
 	 *     <li>{@code 10} seconds handshake timeout unless the passed builder sets another configuration or
 	 *     the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set</li>
+	 *     <li>{@code 3} seconds close_notify flush timeout</li>
+	 *     <li>{@code 0} second close_notify read timeout</li>
 	 *     <li>hostname verification enabled</li>
 	 * </ul>
 	 * </p>

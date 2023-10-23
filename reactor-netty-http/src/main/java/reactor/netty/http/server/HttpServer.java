@@ -800,10 +800,13 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 
 	/**
 	 * Apply an SSL configuration customization via the passed builder. The builder
-	 * will produce the {@link SslContext} to be passed to with a default value of
-	 * {@code 10} seconds handshake timeout unless the environment property {@code
-	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
-	 *
+	 * will produce the {@link SslContext} to be passed to with a default value of:
+	 * <ul>
+	 *     <li>{@code 10} seconds handshake timeout unless the environment property
+	 *     {@code reactor.netty.tcp.sslHandshakeTimeout} is set.</li>
+	 *     <li>{@code 3} seconds close_notify flush timeout</li>
+	 *     <li>{@code 0} second close_notify read timeout</li>
+	 * </ul>
 	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
 	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
 	 * <pre>
@@ -824,9 +827,13 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 
 	/**
 	 * Apply an SSL configuration customization via the passed builder. The builder
-	 * will produce the {@link SslContext} to be passed to with a default value of
-	 * {@code 10} seconds handshake timeout unless the environment property {@code
-	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 * will produce the {@link SslContext} to be passed to with a default value of:
+	 * <ul>
+	 *     <li>{@code 10} seconds handshake timeout unless the environment property
+	 *     {@code reactor.netty.tcp.sslHandshakeTimeout} is set.</li>
+	 *     <li>{@code 3} seconds close_notify flush timeout</li>
+	 *     <li>{@code 0} second close_notify read timeout</li>
+	 * </ul>
 	 * <p>
 	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
 	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
