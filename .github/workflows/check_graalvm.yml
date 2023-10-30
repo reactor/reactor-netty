@@ -23,9 +23,9 @@ jobs:
       - name: Download GraalVM 17
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            download_url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.8/graalvm-community-jdk-17.0.8_linux-x64_bin.tar.gz"
+            download_url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.9/graalvm-community-jdk-17.0.9_linux-x64_bin.tar.gz"
           else
-            download_url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.8/graalvm-community-jdk-17.0.8_macos-x64_bin.tar.gz"
+            download_url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.9/graalvm-community-jdk-17.0.9_macos-x64_bin.tar.gz"
           fi
           curl -L $download_url --output $RUNNER_TEMP/java_package.tar.gz
         shell: bash
