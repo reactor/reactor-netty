@@ -1,0 +1,13 @@
+[
+	{
+		"condition": {
+			"typeReachable": "io.netty5.buffer.internal.LeakDetection"
+		},
+		"name": "io.netty5.buffer.internal.LeakDetection",
+		"fields": [
+			{
+				"name": "leakDetectionEnabled"
+			}
+		]
+	}
+]
