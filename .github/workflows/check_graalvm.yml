@@ -12,6 +12,10 @@ jobs:
       matrix:
         os: [ubuntu-20.04, macos-11]
         transport: [native, nio]
+        exclude:
+          # macOS - https://github.com/netty/netty/issues/9689
+          - os: macos-11
+            transport: native
 
     steps:
       - uses: actions/checkout@v4
