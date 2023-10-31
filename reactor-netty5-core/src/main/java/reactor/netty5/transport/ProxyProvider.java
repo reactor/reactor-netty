@@ -293,7 +293,7 @@ public class ProxyProvider {
 		return Integer.parseInt(port);
 	}
 
-	protected static abstract class AbstractBuild<T extends AbstractBuild<T>>
+	protected abstract static class AbstractBuild<T extends AbstractBuild<T>>
 			implements TypeSpec, AddressSpec<T>, Builder<T>, Supplier<T> {
 
 		static final Predicate<SocketAddress> ALWAYS_PROXY = a -> false;
