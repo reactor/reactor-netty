@@ -462,11 +462,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@SuppressWarnings("rawtypes")
-	final static AtomicIntegerFieldUpdater<HttpOperations> HTTP_STATE =
+	static final AtomicIntegerFieldUpdater<HttpOperations> HTTP_STATE =
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");
 
-	final static ChannelHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
+	static final ChannelHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
 			(ctx, msg) -> {
 				if (msg instanceof HttpContent<?> httpContent) {
 					if (msg instanceof FullHttpMessage) {

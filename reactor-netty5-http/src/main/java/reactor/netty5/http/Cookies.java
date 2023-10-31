@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ import io.netty5.handler.codec.http.headers.HttpCookiePair;
  */
 public abstract class Cookies<T extends HttpCookiePair> {
 
-	final static int NOT_READ = 0;
-	final static int READING  = 1;
-	final static int READ     = 2;
+	static final int NOT_READ = 0;
+	static final int READING  = 1;
+	static final int READ     = 2;
 
 	volatile     int                                state;
 	@SuppressWarnings("rawtypes")

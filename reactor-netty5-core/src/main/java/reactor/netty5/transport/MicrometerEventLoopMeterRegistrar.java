@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import static reactor.netty5.Metrics.REGISTRY;
  */
 final class MicrometerEventLoopMeterRegistrar {
 
-	final static MicrometerEventLoopMeterRegistrar INSTANCE = new MicrometerEventLoopMeterRegistrar();
+	static final MicrometerEventLoopMeterRegistrar INSTANCE = new MicrometerEventLoopMeterRegistrar();
 	static final Logger log = Loggers.getLogger(MicrometerEventLoopMeterRegistrar.class);
 
 	private final ConcurrentMap<String, EventLoop> cache = new ConcurrentHashMap<>();

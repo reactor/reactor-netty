@@ -1026,7 +1026,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	static final Logger log = Loggers.getLogger(HttpServerOperations.class);
-	final static AsciiString      EVENT_STREAM = new AsciiString("text/event-stream");
+	static final AsciiString      EVENT_STREAM = new AsciiString("text/event-stream");
 
 	static final BiPredicate<HttpServerRequest, HttpServerResponse> COMPRESSION_DISABLED = (req, res) -> false;
 

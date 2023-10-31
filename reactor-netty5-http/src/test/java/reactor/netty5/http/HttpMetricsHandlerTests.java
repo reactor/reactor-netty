@@ -1587,8 +1587,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 * Metrics are up-to-date when the latch is counted down.
 	 */
 	static final class ResponseSentHandler extends ChannelHandlerAdapter {
-		final static String HANDLER_NAME = "ServerCompletedHandler.handler";
-		final static ResponseSentHandler INSTANCE = new ResponseSentHandler();
+		static final String HANDLER_NAME = "ServerCompletedHandler.handler";
+		static final ResponseSentHandler INSTANCE = new ResponseSentHandler();
 		AtomicReference<CountDownLatch> latchRef;
 
 		void register(AtomicReference<CountDownLatch> latchRef, ChannelPipeline pipeline) {
@@ -1622,8 +1622,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 * Metrics are up-to-date when the latch is counted down.
 	 */
 	static final class RequestReceivedHandler extends ChannelHandlerAdapter {
-		final static RequestReceivedHandler INSTANCE = new RequestReceivedHandler();
-		final static String HANDLER_NAME = "ServerReceivedHandler.handler";
+		static final RequestReceivedHandler INSTANCE = new RequestReceivedHandler();
+		static final String HANDLER_NAME = "ServerReceivedHandler.handler";
 		AtomicReference<CountDownLatch> latchRef;
 
 		void register(AtomicReference<CountDownLatch> latchRef, ChannelPipeline pipeline) {

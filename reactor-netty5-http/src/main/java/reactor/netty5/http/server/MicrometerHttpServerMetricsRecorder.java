@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,8 +50,8 @@ import static reactor.netty5.http.server.HttpServerMeters.STREAMS_ACTIVE;
  */
 final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpServerMetricsRecorder {
 
-	final static MicrometerHttpServerMetricsRecorder INSTANCE = new MicrometerHttpServerMetricsRecorder();
-	private final static String PROTOCOL_VALUE_HTTP = "http";
+	static final MicrometerHttpServerMetricsRecorder INSTANCE = new MicrometerHttpServerMetricsRecorder();
+	private static final String PROTOCOL_VALUE_HTTP = "http";
 	private final LongAdder activeConnectionsAdder = new LongAdder();
 	private final LongAdder activeStreamsAdder = new LongAdder();
 	private final ConcurrentMap<String, LongAdder> activeConnectionsCache = new ConcurrentHashMap<>();

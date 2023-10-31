@@ -66,15 +66,15 @@ import static reactor.netty5.ConnectionObserver.State.CONFIGURED;
  * @since 1.0.0
  */
 class Http2Tests extends BaseHttpTest {
-	private final static String H2_WITHOUT_TLS_SERVER = "Configured H2 protocol without TLS. Use" +
+	private static final String H2_WITHOUT_TLS_SERVER = "Configured H2 protocol without TLS. Use" +
 			" a Clear-Text H2 protocol via HttpServer#protocol or configure TLS" +
 			" via HttpServer#secure";
-	private final static String H2C_WITH_TLS_SERVER = "Configured H2 Clear-Text protocol with TLS. Use" +
+	private static final String H2C_WITH_TLS_SERVER = "Configured H2 Clear-Text protocol with TLS. Use" +
 			" the non Clear-Text H2 protocol via HttpServer#protocol or disable TLS" +
 			" via HttpServer#noSSL())";
-	private final static String H2_WITHOUT_TLS_CLIENT = "Configured H2 protocol without TLS. Use H2 Clear-Text " +
+	private static final String H2_WITHOUT_TLS_CLIENT = "Configured H2 protocol without TLS. Use H2 Clear-Text " +
 			"protocol via HttpClient#protocol or configure TLS via HttpClient#secure";
-	private final static String H2C_WITH_TLS_CLIENT = "Configured H2 Clear-Text protocol with TLS. " +
+	private static final String H2C_WITH_TLS_CLIENT = "Configured H2 Clear-Text protocol with TLS. " +
 			"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
 			"via HttpClient#noSSL()";
 

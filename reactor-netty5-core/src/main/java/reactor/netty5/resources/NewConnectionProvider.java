@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,9 +52,9 @@ import static reactor.netty5.ReactorNetty.format;
  */
 final class NewConnectionProvider implements ConnectionProvider {
 
-	final static Logger log = Loggers.getLogger(NewConnectionProvider.class);
+	static final Logger log = Loggers.getLogger(NewConnectionProvider.class);
 
-	final static NewConnectionProvider INSTANCE = new NewConnectionProvider();
+	static final NewConnectionProvider INSTANCE = new NewConnectionProvider();
 
 	@Override
 	public Mono<? extends Connection> acquire(TransportConfig config,
