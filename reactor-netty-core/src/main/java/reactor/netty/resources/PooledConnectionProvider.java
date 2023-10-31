@@ -76,7 +76,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	/**
 	 * Context key used to propagate the caller event loop in the connection pool subscription.
 	 */
-	protected final static String CONTEXT_CALLER_EVENTLOOP = "callereventloop";
+	protected static final String CONTEXT_CALLER_EVENTLOOP = "callereventloop";
 
 	final PoolFactory<T> defaultPoolFactory;
 	final Map<SocketAddress, PoolFactory<T>> poolFactoryPerRemoteHost = new HashMap<>();

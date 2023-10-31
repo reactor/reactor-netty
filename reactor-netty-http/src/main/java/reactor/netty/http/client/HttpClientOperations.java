@@ -124,7 +124,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer;
 	volatile Throwable unprocessedOutboundError;
 
-	final static String INBOUND_CANCEL_LOG = "Http client inbound receiver cancelled, closing channel.";
+	static final String INBOUND_CANCEL_LOG = "Http client inbound receiver cancelled, closing channel.";
 
 	HttpClientOperations(HttpClientOperations replaced) {
 		super(replaced);

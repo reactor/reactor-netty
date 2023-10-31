@@ -60,7 +60,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 	volatile int closeSent;
 
-	final static String INBOUND_CANCEL_LOG = "WebSocket client inbound receiver cancelled, closing Websocket.";
+	static final String INBOUND_CANCEL_LOG = "WebSocket client inbound receiver cancelled, closing Websocket.";
 
 	WebsocketClientOperations(URI currentURI,
 			WebsocketClientSpec websocketClientSpec,

@@ -792,7 +792,7 @@ public final class ReactorNetty {
 		}
 	}
 
-	final static class OutboundIdleStateHandler extends IdleStateHandler {
+	static final class OutboundIdleStateHandler extends IdleStateHandler {
 
 		final Runnable onWriteIdle;
 
@@ -811,7 +811,7 @@ public final class ReactorNetty {
 		}
 	}
 
-	final static class InboundIdleStateHandler extends IdleStateHandler {
+	static final class InboundIdleStateHandler extends IdleStateHandler {
 
 		final Runnable onReadIdle;
 
@@ -830,35 +830,35 @@ public final class ReactorNetty {
 		}
 	}
 
-	final static ConnectionObserver.State CONNECTED = new ConnectionObserver.State() {
+	static final ConnectionObserver.State CONNECTED = new ConnectionObserver.State() {
 		@Override
 		public String toString() {
 			return "[connected]";
 		}
 	};
 
-	final static ConnectionObserver.State ACQUIRED = new ConnectionObserver.State() {
+	static final ConnectionObserver.State ACQUIRED = new ConnectionObserver.State() {
 		@Override
 		public String toString() {
 			return "[acquired]";
 		}
 	};
 
-	final static ConnectionObserver.State CONFIGURED = new ConnectionObserver.State() {
+	static final ConnectionObserver.State CONFIGURED = new ConnectionObserver.State() {
 		@Override
 		public String toString() {
 			return "[configured]";
 		}
 	};
 
-	final static ConnectionObserver.State RELEASED = new ConnectionObserver.State() {
+	static final ConnectionObserver.State RELEASED = new ConnectionObserver.State() {
 		@Override
 		public String toString() {
 			return "[released]";
 		}
 	};
 
-	final static ConnectionObserver.State DISCONNECTING = new ConnectionObserver.State() {
+	static final ConnectionObserver.State DISCONNECTING = new ConnectionObserver.State() {
 		@Override
 		public String toString() {
 			return "[disconnecting]";

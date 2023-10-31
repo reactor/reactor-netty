@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,9 +50,9 @@ class PooledConnectionProviderCustomMetricsTest {
 
 	private ConnectionProvider pool;
 
-	private final static int MAX_ALLOC_SIZE = 100;
+	private static final int MAX_ALLOC_SIZE = 100;
 
-	private final static int MAX_PENDING_ACQUIRE_SIZE = 1000;
+	private static final int MAX_PENDING_ACQUIRE_SIZE = 1000;
 
 	@BeforeEach
 	void setUp() {
