@@ -98,6 +98,9 @@
 		<module name="OuterTypeFilename"/>
 		<module name="UpperEll"/>
 
+		<!-- Modifiers -->
+		<module name="ModifierOrder"/>
+
 		<!-- Whitespaces -->
 		<module name="GenericWhitespace"/>
 		<module name="EmptyForInitializerPad"/>
