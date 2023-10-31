@@ -1,0 +1,28 @@
+:eventloopsourcedir: ./../../reactor-netty-core/src/main/java
+
+=== Event Loop Group
+
+By default `Reactor Netty` uses an "`Event Loop Group`", where the number of the worker threads equals the number of
+processors available to the runtime on initialization (but with a minimum value of 4). When you need a different configuration,
+you can use one of the {javadoc}/reactor/netty/resources/LoopResources.html[`LoopResource`]`#create`
+methods.
+
+The following listing shows the default configuration for the Event Loop Group:
+
+====
+[source,java,indent=0]
+.{eventloopsourcedir}/reactor/netty/ReactorNetty.java
+----
+include::{eventloopsourcedir}/reactor/netty/ReactorNetty.java[lines=86..120]
+----
+====
+
+If you need changes to these settings, you can apply the following configuration:
+
+====
+[source,java,indent=0]
+.{examplesdir}/eventloop/Application.java
+----
+include::{examplesdir}/eventloop/Application.java[lines=18..38]
+----
+====
