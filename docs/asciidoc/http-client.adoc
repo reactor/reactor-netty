@@ -278,6 +278,8 @@ See <<tcp-client>> for more about `TCP` level configurations.
 
 include::wire-logger.adoc[]
 
+include::eventloop.adoc[]
+
 include::http-client-conn-provider.adoc[]
 
 == SSL and TLS
