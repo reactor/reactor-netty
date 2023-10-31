@@ -62,7 +62,7 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
-	final public void channelInactive(ChannelHandlerContext ctx) {
+	public final void channelInactive(ChannelHandlerContext ctx) {
 		try {
 			Connection connection = Connection.from(ctx.channel());
 			ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
@@ -97,7 +97,7 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
-	final public void channelRead(ChannelHandlerContext ctx, Object msg) {
+	public final void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg == null) {
 			return;
 		}
@@ -134,7 +134,7 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
-	final public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable err) {
+	public final void channelExceptionCaught(ChannelHandlerContext ctx, Throwable err) {
 		Connection connection = Connection.from(ctx.channel());
 		ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
 		if (ops != null) {
@@ -146,7 +146,7 @@ final class ChannelOperationsHandler extends ChannelHandlerAdapter {
 	}
 
 	@Override
-	final public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+	public final void channelWritabilityChanged(ChannelHandlerContext ctx) {
 		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 		if (ops != null) {
 			ops.onWritabilityChanged();
