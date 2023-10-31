@@ -383,6 +383,8 @@ See <<tcp-server>> for more detail about TCP-level configuration.
 
 include::wire-logger.adoc[]
 
+include::eventloop.adoc[]
+
 == SSL and TLS
 
 When you need SSL or TLS, you can apply the configuration shown in the next example.
