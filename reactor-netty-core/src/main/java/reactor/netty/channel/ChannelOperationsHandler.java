@@ -65,7 +65,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	@Override
-	final public void channelInactive(ChannelHandlerContext ctx) {
+	public final void channelInactive(ChannelHandlerContext ctx) {
 		try {
 			Connection connection = Connection.from(ctx.channel());
 			ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
@@ -104,7 +104,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
-	final public void channelRead(ChannelHandlerContext ctx, Object msg) {
+	public final void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg == null || msg == Unpooled.EMPTY_BUFFER || msg instanceof EmptyByteBuf) {
 			return;
 		}
@@ -138,7 +138,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	@Override
-	final public void exceptionCaught(ChannelHandlerContext ctx, Throwable err) {
+	public final void exceptionCaught(ChannelHandlerContext ctx, Throwable err) {
 		Connection connection = Connection.from(ctx.channel());
 		ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
 		if (ops != null) {
@@ -150,7 +150,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	@Override
-	final public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+	public final void channelWritabilityChanged(ChannelHandlerContext ctx) {
 		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 		if (ops != null) {
 			ops.onWritabilityChanged();
