@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ public abstract class FutureMono extends Mono<Void> {
 		return new DeferredFutureMono<>(deferredFuture);
 	}
 
-	final static class ImmediateFutureMono<F extends Future<Void>> extends FutureMono {
+	static final class ImmediateFutureMono<F extends Future<Void>> extends FutureMono {
 
 		final F future;
 
@@ -84,7 +84,7 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 	}
 
-	final static class DeferredFutureMono<F extends Future<Void>> extends FutureMono {
+	static final class DeferredFutureMono<F extends Future<Void>> extends FutureMono {
 
 		final Supplier<F> deferredFuture;
 
@@ -151,7 +151,7 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 	}
 
-	final static class FutureSubscription<F extends Future<Void>>
+	static final class FutureSubscription<F extends Future<Void>>
 			implements GenericFutureListener<F>, Subscription, Supplier<Context> {
 
 		final CoreSubscriber<? super Void> s;

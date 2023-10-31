@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -350,7 +350,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	/**
 	 * A channel object to {@link ByteBuf} transformer
 	 */
-	final static Function<Object, ByteBuf> bytebufExtractor = o -> {
+	static final Function<Object, ByteBuf> bytebufExtractor = o -> {
 		if (o instanceof ByteBuf) {
 			return (ByteBuf) o;
 		}
@@ -363,9 +363,9 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 		throw new IllegalArgumentException("Object " + o + " of type " + o.getClass() + " " + "cannot be converted to ByteBuf");
 	};
 
-	final static int MAX_CHUNK_SIZE = 1024 * 512; //500k
+	static final int MAX_CHUNK_SIZE = 1024 * 512; //500k
 
-	final static Logger log = Loggers.getLogger(ByteBufFlux.class);
+	static final Logger log = Loggers.getLogger(ByteBufFlux.class);
 
 	static void safeRelease(ByteBuf byteBuf) {
 		if (byteBuf.refCnt() > 0) {

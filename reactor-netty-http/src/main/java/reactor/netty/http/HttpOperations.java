@@ -443,11 +443,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@SuppressWarnings("rawtypes")
-	final static AtomicIntegerFieldUpdater<HttpOperations> HTTP_STATE =
+	static final AtomicIntegerFieldUpdater<HttpOperations> HTTP_STATE =
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");
 
-	final static ChannelInboundHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
+	static final ChannelInboundHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
 			(ctx, msg) -> {
 				if (msg instanceof ByteBufHolder) {
 					if (msg instanceof FullHttpMessage) {

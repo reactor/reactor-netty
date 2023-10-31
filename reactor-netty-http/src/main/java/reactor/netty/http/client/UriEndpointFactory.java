@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ final class UriEndpointFactory {
 
 	static final Pattern URL_PATTERN = Pattern.compile(
 			"(?:(\\w+)://)?((?:\\[.+?])|(?<!\\[)(?:[^/?]+?))(?::(\\d{2,5}))?([/?].*)?");
+	static final Pattern SCHEME_PATTERN = Pattern.compile("https?|wss?");
 
 	UriEndpointFactory(Supplier<? extends SocketAddress> connectAddress, boolean defaultSecure,
 			BiFunction<String, Integer, InetSocketAddress> inetSocketAddressFunction) {
@@ -52,7 +53,7 @@ final class UriEndpointFactory {
 			Matcher matcher = URL_PATTERN.matcher(url);
 			if (matcher.matches()) {
 				// scheme is optional in pattern. use default if it's not specified
-				String scheme = matcher.group(1) != null ? matcher.group(1).toLowerCase()
+				String scheme = matcher.group(1) != null ? validateScheme(matcher.group(1).toLowerCase())
 						: resolveScheme(isWs);
 				String host = cleanHostString(matcher.group(2));
 
@@ -77,7 +78,7 @@ final class UriEndpointFactory {
 		if (url.getHost() == null) {
 			throw new IllegalArgumentException("Host is not specified");
 		}
-		String scheme = url.getScheme() != null ? url.getScheme().toLowerCase() : resolveScheme(isWs);
+		String scheme = url.getScheme() != null ? validateScheme(url.getScheme().toLowerCase()) : resolveScheme(isWs);
 		String host = cleanHostString(url.getHost());
 		int port = url.getPort() != -1 ? url.getPort() : (UriEndpoint.isSecureScheme(scheme) ? 443 : 80);
 		String path = url.getRawPath() != null ? url.getRawPath() : "";
@@ -131,5 +132,12 @@ final class UriEndpointFactory {
 		else {
 			return defaultSecure ? HttpClient.HTTPS_SCHEME : HttpClient.HTTP_SCHEME;
 		}
+	}
+
+	static String validateScheme(String scheme) {
+		if (!SCHEME_PATTERN.matcher(scheme).matches()) {
+			throw new IllegalArgumentException("Invalid scheme [" + scheme + "]");
+		}
+		return scheme;
 	}
 }

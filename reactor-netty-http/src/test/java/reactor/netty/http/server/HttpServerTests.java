@@ -180,8 +180,8 @@ class HttpServerTests extends BaseHttpTest {
 	 * Server Handler used to send a TLS close_notify after the server last response has been flushed.
 	 * The close_notify is sent without closing the connection.
 	 */
-	final static class SendCloseNotifyAfterLastResponseHandler extends ChannelOutboundHandlerAdapter {
-		final static String NAME = "handler.send_close_notify_after_response";
+	static final class SendCloseNotifyAfterLastResponseHandler extends ChannelOutboundHandlerAdapter {
+		static final String NAME = "handler.send_close_notify_after_response";
 		final CountDownLatch latch;
 
 		SendCloseNotifyAfterLastResponseHandler(CountDownLatch latch) {
@@ -212,8 +212,8 @@ class HttpServerTests extends BaseHttpTest {
 	 * any received SslCloseCompletionEvent events. Hence, ChannelOperationsHandler won't get the close_notify ack,
 	 * and won't close the channel.
 	 */
-	final static class IgnoreCloseNotifyHandler extends ChannelInboundHandlerAdapter {
-		final static String NAME = "handler.ignore_close_notify";
+	static final class IgnoreCloseNotifyHandler extends ChannelInboundHandlerAdapter {
+		static final String NAME = "handler.ignore_close_notify";
 
 		static void register(Connection cnx) {
 			cnx.channel().pipeline().addBefore(NettyPipeline.ReactiveBridge, NAME, new IgnoreCloseNotifyHandler());
@@ -231,9 +231,9 @@ class HttpServerTests extends BaseHttpTest {
 	 * Handler used to delay a bit outgoing HTTP/2 server responses. This handler will be placed
 	 * at the head of the server channel pipeline.
 	 */
-	final static class DelayH2FlushHandler extends ChannelOutboundHandlerAdapter {
-		final static String NAME = "handler.h2flush_delay";
-		final static DelayH2FlushHandler INSTANCE = new DelayH2FlushHandler();
+	static final class DelayH2FlushHandler extends ChannelOutboundHandlerAdapter {
+		static final String NAME = "handler.h2flush_delay";
+		static final DelayH2FlushHandler INSTANCE = new DelayH2FlushHandler();
 
 		static void register(Connection cnx) {
 			Channel channel = cnx.channel();
