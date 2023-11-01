@@ -650,7 +650,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 					ServerCloseHandler.INSTANCE.register(cnx.channel());
 				});
 
-		disposableServer = server.bindNow();
+		disposableServer = server.forwarded(true).bindNow();
 
 		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
 		httpClient = httpClient
@@ -661,6 +661,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		customizeClientOptions(httpClient, clientCtx, clientProtocols)
 		        .metrics(true, Function.identity())
+		        .headers(h -> h.add("X-Forwarded-Host", "192.168.0.1"))
 		        .post()
 		        .uri(uri)
 		        .send(body)
@@ -994,7 +995,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	private void checkServerConnectionsMicrometer(HttpServerRequest request) {
-		String address = formatSocketAddress(request.hostAddress());
+		String address = formatSocketAddress(request.connectionHostAddress());
 		boolean isHttp2 = request.requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
 		checkGauge(SERVER_CONNECTIONS_TOTAL, true, 1, URI, HTTP, LOCAL_ADDRESS, address);
 		if (isHttp2) {
