@@ -46,6 +46,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	private static final Logger log = Loggers.getLogger(AbstractHttpServerMetricsHandler.class);
 
 	boolean channelActivated;
+	boolean channelOpened;
 
 	long dataReceived;
 
@@ -78,6 +79,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		if (!(ctx.channel() instanceof Http2StreamChannel) && recorder() instanceof MicrometerHttpServerMetricsRecorder) {
 			try {
 				// Always use the real connection local address without any proxy information
+				channelOpened = true;
 				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
 			}
 			catch (RuntimeException e) {
@@ -95,7 +97,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		if (!(ctx.channel() instanceof Http2StreamChannel) && recorder() instanceof MicrometerHttpServerMetricsRecorder) {
 			try {
 				// Always use the real connection local address without any proxy information
-				recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+				if (channelOpened) {
+					channelOpened = false;
+					recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+				}
 			}
 			catch (RuntimeException e) {
 				if (log.isWarnEnabled()) {

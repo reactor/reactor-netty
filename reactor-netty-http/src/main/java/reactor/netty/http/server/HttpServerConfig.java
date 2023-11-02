@@ -704,6 +704,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
+			boolean channelOpened,
 			HttpRequestDecoderSpec decoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
@@ -740,7 +741,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		if (metricsRecorder != null) {
 			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
-				ChannelHandler handler;
+				AbstractHttpServerMetricsHandler handler;
 				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
 					handler = new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsRecorder) metricsRecorder, uriTagValue);
 				}
@@ -749,6 +750,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				}
 				else {
 					handler = new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, uriTagValue);
+				}
+				if (channelOpened) {
+					handler.channelOpened = true;
 				}
 				p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, handler);
 				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
@@ -1158,7 +1162,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			}
 
 			if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
-				configureHttp11Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
+				configureHttp11Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder, true,
 						decoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, idleTimeout, listener,
 						mapHandle, maxKeepAliveRequests, metricsRecorder, minCompressionSize, readTimeout, requestTimeout, uriTagValue);
 
@@ -1258,6 +1262,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							compressPredicate(compressPredicate, minCompressionSize),
 							cookieDecoder,
 							cookieEncoder,
+							false,
 							decoder,
 							formDecoderProvider,
 							forwardedHeaderHandler,
@@ -1331,6 +1336,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							compressPredicate(compressPredicate, minCompressionSize),
 							cookieDecoder,
 							cookieEncoder,
+							false,
 							decoder,
 							formDecoderProvider,
 							forwardedHeaderHandler,
