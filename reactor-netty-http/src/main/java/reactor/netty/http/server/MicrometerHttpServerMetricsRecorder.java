@@ -55,8 +55,6 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	private static final String PROTOCOL_VALUE_HTTP = "http";
 	private static final String ACTIVE_CONNECTIONS_DESCRIPTION = "The number of http connections currently processing requests";
 	private static final String ACTIVE_STREAMS_DESCRIPTION = "The number of HTTP/2 streams currently active on the server";
-	private final LongAdder activeConnectionsAdder = new LongAdder();
-	private final LongAdder activeStreamsAdder = new LongAdder();
 	private final ConcurrentMap<String, LongAdder> activeConnectionsCache = new ConcurrentHashMap<>();
 	private final ConcurrentMap<String, LongAdder> activeStreamsCache = new ConcurrentHashMap<>();
 	private final ConcurrentMap<String, DistributionSummary> dataReceivedCache = new ConcurrentHashMap<>();
@@ -206,10 +204,11 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	}
 
 	@Nullable
-	private LongAdder getActiveStreamsAdder(SocketAddress localAddress) {
+	LongAdder getActiveStreamsAdder(SocketAddress localAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
 		return MapUtils.computeIfAbsent(activeStreamsCache, address,
 				key -> {
+					LongAdder activeStreamsAdder = new LongAdder();
 					Gauge gauge = filter(
 							Gauge.builder(name() + STREAMS_ACTIVE, activeStreamsAdder, LongAdder::longValue)
 							     .tags(URI, PROTOCOL_VALUE_HTTP, LOCAL_ADDRESS, address)
@@ -220,10 +219,11 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	}
 
 	@Nullable
-	private LongAdder getServerConnectionAdder(SocketAddress localAddress) {
+	LongAdder getServerConnectionAdder(SocketAddress localAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
 		return MapUtils.computeIfAbsent(activeConnectionsCache, address,
 				key -> {
+					LongAdder activeConnectionsAdder = new LongAdder();
 					Gauge gauge = filter(Gauge.builder(reactor.netty.Metrics.HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE,
 							activeConnectionsAdder, LongAdder::longValue)
 							.tags(URI, PROTOCOL_VALUE_HTTP, LOCAL_ADDRESS, address)
