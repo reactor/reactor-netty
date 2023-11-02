@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 
 	final boolean onServer;
 
+	boolean channelOpened;
+
 	protected AbstractChannelMetricsHandler(@Nullable SocketAddress remoteAddress, boolean onServer) {
 		this.remoteAddress = remoteAddress;
 		this.onServer = onServer;
@@ -53,6 +55,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	public void channelActive(ChannelHandlerContext ctx) {
 		if (onServer) {
 			try {
+				channelOpened = true;
 				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
 			}
 			catch (RuntimeException e) {
@@ -69,7 +72,10 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	public void channelInactive(ChannelHandlerContext ctx) {
 		if (onServer) {
 			try {
-				recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+				if (channelOpened) {
+					channelOpened = false;
+					recorder().recordServerConnectionClosed(ctx.channel().localAddress());
+				}
 			}
 			catch (RuntimeException e) {
 				if (log.isWarnEnabled()) {

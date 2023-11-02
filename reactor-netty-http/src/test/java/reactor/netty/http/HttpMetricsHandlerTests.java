@@ -926,6 +926,55 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				Function.identity());
 	}
 
+
+	@ParameterizedTest
+	@MethodSource("combinationsIssue2956")
+	void testIssue2956(boolean isCustomRecorder, boolean isHttp2) throws Exception {
+		HttpServer server =
+				httpServer.secure(spec -> spec.sslContext(isHttp2 ? serverCtx2 : serverCtx11))
+				          .protocol(isHttp2 ? HttpProtocol.H2 : HttpProtocol.HTTP11)
+				          .doOnConnection(conn ->  ServerCloseHandler.INSTANCE.register(conn.channel()));
+
+		if (isCustomRecorder) {
+			server = server.metrics(true, ServerRecorder.supplier());
+		}
+
+		disposableServer = server.bindNow();
+
+		httpClient.protocol(isHttp2 ? HttpProtocol.H2C : HttpProtocol.HTTP11)
+		          .post()
+		          .uri("/1")
+		          .send(ByteBufFlux.fromString(Mono.just("hello")))
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .as(StepVerifier::create)
+		          .expectError()
+		          .verify(Duration.ofSeconds(5));
+
+		assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+
+		if (isCustomRecorder) {
+			assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
+		}
+		else {
+			InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
+			String serverAddress = sa.getHostString() + ":" + sa.getPort();
+			String[] tags = new String[]{URI, HTTP, LOCAL_ADDRESS, serverAddress};
+			checkGauge(SERVER_CONNECTIONS_TOTAL, false, 0, tags);
+		}
+	}
+
+	static Stream<Arguments> combinationsIssue2956() {
+		return Stream.of(
+				// isCustomRecorder, isHttp2
+				Arguments.of(false, false),
+				Arguments.of(false, true),
+				Arguments.of(true, false),
+				Arguments.of(true, true)
+		);
+	}
+
 	private void testServerConnectionsRecorderBadUri(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
 			@Nullable String xForwardedFor, int xForwardedPort,
