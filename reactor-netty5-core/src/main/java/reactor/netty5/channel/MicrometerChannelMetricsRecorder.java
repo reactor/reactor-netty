@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,8 +61,6 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = new ConcurrentHashMap<>();
 
 	final ConcurrentMap<String, LongAdder> totalConnectionsCache = new ConcurrentHashMap<>();
-
-	final LongAdder totalConnectionsAdder = new LongAdder();
 
 	final String name;
 	final String protocol;
@@ -202,10 +200,11 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	@Nullable
-	private LongAdder getTotalConnectionsAdder(SocketAddress serverAddress) {
+	LongAdder getTotalConnectionsAdder(SocketAddress serverAddress) {
 		String address = reactor.netty5.Metrics.formatSocketAddress(serverAddress);
 		return MapUtils.computeIfAbsent(totalConnectionsCache, address,
 				key -> {
+					LongAdder totalConnectionsAdder = new LongAdder();
 					Gauge gauge = filter(Gauge.builder(name + CONNECTIONS_TOTAL, totalConnectionsAdder, LongAdder::longValue)
 					                          .tags(ChannelMeters.ConnectionsTotalMeterTags.URI.asString(), protocol,
 					                                ChannelMeters.ConnectionsTotalMeterTags.LOCAL_ADDRESS.asString(), address)
