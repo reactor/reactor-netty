@@ -10,9 +10,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-11]
+        os: [ubuntu-20.04, macos-11, windows-2022]
         transport: [native, nio]
         exclude:
+          # excludes native on Windows (there's none)
+          - os: windows-2022
+            transport: native
           # macOS - https://github.com/netty/netty/issues/9689
           - os: macos-11
             transport: native
@@ -33,8 +36,10 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             download_url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.9/graalvm-community-jdk-17.0.9_linux-x64_bin.tar.gz"
-          else
+          elif [ "$RUNNER_OS" == "macOS" ]; then
             download_url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.9/graalvm-community-jdk-17.0.9_macos-x64_bin.tar.gz"
+          else
+            download_url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.9/graalvm-community-jdk-17.0.9_windows-x64_bin.zip"
           fi
           curl -L $download_url --output $RUNNER_TEMP/java_package.tar.gz
         shell: bash
