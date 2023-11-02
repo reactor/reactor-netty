@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -30,6 +31,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.function.Function;
 
@@ -75,6 +77,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		// not our MicrometerHttpServerMetricsRecorder. See HttpServerConfig class.
 		if (!(ctx.channel() instanceof Http2StreamChannel) && recorder() instanceof MicrometerHttpServerMetricsRecorder) {
 			try {
+				// Always use the real connection local address without any proxy information
 				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
 			}
 			catch (RuntimeException e) {
@@ -91,6 +94,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	public void channelInactive(ChannelHandlerContext ctx) {
 		if (!(ctx.channel() instanceof Http2StreamChannel) && recorder() instanceof MicrometerHttpServerMetricsRecorder) {
 			try {
+				// Always use the real connection local address without any proxy information
 				recorder().recordServerConnectionClosed(ctx.channel().localAddress());
 			}
 			catch (RuntimeException e) {
@@ -100,10 +104,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
-		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-		if (channelOps instanceof HttpServerOperations) {
-			recordInactiveConnectionOrStream((HttpServerOperations) channelOps);
-		}
+
+		recordInactiveConnectionOrStream(ctx.channel());
+
 		ctx.fireChannelInactive();
 	}
 
@@ -136,8 +139,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 							}
 							// Allow request-response exchange to continue, unaffected by metrics problem
 						}
-						recordInactiveConnectionOrStream(ops);
 					}
+
+					recordInactiveConnectionOrStream(ctx.channel());
 
 					dataSent = 0;
 				});
@@ -160,16 +164,15 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		try {
 			if (msg instanceof HttpRequest) {
 				dataReceivedTime = System.nanoTime();
-				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-				if (channelOps instanceof HttpServerOperations) {
-					channelActivated = true;
-					HttpServerOperations ops = (HttpServerOperations) channelOps;
-					if (ops.isHttp2()) {
-						recordOpenStream(ops);
-					}
-					else {
-						recordActiveConnection(ops);
-					}
+
+				channelActivated = true;
+				if (ctx.channel() instanceof Http2StreamChannel) {
+					// Always use the real connection local address without any proxy information
+					recordOpenStream(ctx.channel().localAddress());
+				}
+				else {
+					// Always use the real connection local address without any proxy information
+					recordActiveConnection(ctx.channel().localAddress());
 				}
 			}
 
@@ -257,36 +260,38 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordDataSent(ops.remoteSocketAddress(), path, dataSent);
 	}
 
-	protected void recordActiveConnection(HttpServerOperations ops) {
-		recorder().recordServerConnectionActive(ops.hostSocketAddress());
+	protected void recordActiveConnection(SocketAddress localAddress) {
+		recorder().recordServerConnectionActive(localAddress);
 	}
 
-	protected void recordInactiveConnection(HttpServerOperations ops) {
-		recorder().recordServerConnectionInactive(ops.hostSocketAddress());
+	protected void recordInactiveConnection(SocketAddress localAddress) {
+		recorder().recordServerConnectionInactive(localAddress);
 	}
 
-	protected void recordOpenStream(HttpServerOperations ops) {
-		recorder().recordStreamOpened(ops.hostSocketAddress());
+	protected void recordOpenStream(SocketAddress localAddress) {
+		recorder().recordStreamOpened(localAddress);
 	}
 
-	protected void recordClosedStream(HttpServerOperations ops) {
-		recorder().recordStreamClosed(ops.hostSocketAddress());
+	protected void recordClosedStream(SocketAddress localAddress) {
+		recorder().recordStreamClosed(localAddress);
 	}
 
-	void recordInactiveConnectionOrStream(HttpServerOperations ops) {
+	void recordInactiveConnectionOrStream(Channel channel) {
 		if (channelActivated) {
 			channelActivated = false;
 			try {
-				if (ops.isHttp2()) {
-					recordClosedStream(ops);
+				if (channel instanceof Http2StreamChannel) {
+					// Always use the real connection local address without any proxy information
+					recordClosedStream(channel.localAddress());
 				}
 				else {
-					recordInactiveConnection(ops);
+					// Always use the real connection local address without any proxy information
+					recordInactiveConnection(channel.localAddress());
 				}
 			}
 			catch (RuntimeException e) {
 				if (log.isWarnEnabled()) {
-					log.warn(format(ops.channel(), "Exception caught while recording metrics."), e);
+					log.warn(format(channel, "Exception caught while recording metrics."), e);
 				}
 				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
