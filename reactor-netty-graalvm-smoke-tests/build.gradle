@@ -58,6 +58,7 @@ graalvmNative {
 			if (project.hasProperty("forceTransport")) {
 				runtimeArgs.add("-DforceTransport=$forceTransport")
 			}
+			buildArgs.add('--initialize-at-run-time=sun.net.dns.ResolverConfigurationImpl')
 		}
 	}
 	metadataRepository {
