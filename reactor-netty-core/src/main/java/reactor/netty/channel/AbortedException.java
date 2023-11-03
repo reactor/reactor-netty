@@ -49,10 +49,10 @@ public class AbortedException extends RuntimeException {
 		                                       err.getMessage()
 		                                          .contains("Broken pipe") ||
 		                                       err.getMessage()
-		                                          .contains("Connection reset by peer"))) ||
+		                                          .contains("Connection reset"))) ||
 		       (err instanceof SocketException && err.getMessage() != null &&
 		                                          err.getMessage()
-		                                             .contains("Connection reset by peer"));
+		                                             .contains("Connection reset"));
 	}
 
 	public static AbortedException beforeSend() {
