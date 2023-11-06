@@ -64,6 +64,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 
 	protected AbstractHttpServerMetricsHandler(AbstractHttpServerMetricsHandler copy) {
 		this.channelActivated = copy.channelActivated;
+		this.channelOpened = copy.channelOpened;
 		this.dataReceived = copy.dataReceived;
 		this.dataReceivedTime = copy.dataReceivedTime;
 		this.dataSent = copy.dataSent;
