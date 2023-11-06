@@ -117,7 +117,7 @@ ext {
 	hoverflyJavaVersion = '0.15.0'
 	tomcatVersion = '9.0.82'
 	boringSslVersion = '2.0.62.Final'
-	junitVersion = '5.10.0'
+	junitVersion = '5.10.1'
 	junitPlatformLauncherVersion = '1.10.0'
 	mockitoVersion = '4.11.0'
 	blockHoundVersion = '1.0.8.RELEASE'
