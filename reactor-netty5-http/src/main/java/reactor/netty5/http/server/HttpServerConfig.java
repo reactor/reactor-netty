@@ -168,8 +168,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * The configured maximum number of HTTP/1.1 requests which can be served until the connection is closed by the server.
 	 *
 	 * @return the configured maximum number of HTTP/1.1 requests which can be served until the connection is closed by the server.
-	 * @see HttpServer#maxKeepAliveRequests(int)
 	 * @since 1.0.13
+	 * @see HttpServer#maxKeepAliveRequests(int)
 	 */
 	public int maxKeepAliveRequests() {
 		return maxKeepAliveRequests;

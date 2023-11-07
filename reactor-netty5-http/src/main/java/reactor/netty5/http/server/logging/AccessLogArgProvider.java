@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,8 +57,8 @@ public interface AccessLogArgProvider {
 	 * <p> Note that the {@link ConnectionInformation#remoteAddress()} will return the forwarded
 	 * remote client address if the server is configured in forwarded mode.
 	 *
-	 * @since 1.0.26
 	 * @return the connection info
+	 * @since 1.0.26
 	 * @see reactor.netty5.http.server.HttpServer#forwarded(BiFunction)
 	 */
 	@Nullable
