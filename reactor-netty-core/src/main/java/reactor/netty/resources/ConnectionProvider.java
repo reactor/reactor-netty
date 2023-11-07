@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -570,8 +570,8 @@ public interface ConnectionProvider extends Disposable {
 		 *
 		 * @param maxConnections the maximum number of connections (per connection pool) before start pending
 		 * @return {@literal this}
-		 * @see #allocationStrategy(AllocationStrategy)
 		 * @throws IllegalArgumentException if maxConnections is negative
+		 * @see #allocationStrategy(AllocationStrategy)
 		 */
 		public final SPEC maxConnections(int maxConnections) {
 			if (maxConnections <= 0) {
@@ -783,8 +783,8 @@ public interface ConnectionProvider extends Disposable {
 		 *
 		 * @param allocationStrategy the {@link AllocationStrategy} to use
 		 * @return {@literal this}
-		 * @see #maxConnections()
 		 * @since 1.0.20
+		 * @see #maxConnections()
 		 */
 		public final SPEC allocationStrategy(AllocationStrategy<?> allocationStrategy) {
 			this.allocationStrategy = Objects.requireNonNull(allocationStrategy, "allocationStrategy");
