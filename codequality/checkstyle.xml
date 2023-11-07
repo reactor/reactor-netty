@@ -92,6 +92,17 @@
 		<module name="RedundantImport"/>
 		<module name="UnusedImports"/>
 
+		<!-- Javadoc Comments -->
+		<module name="NonEmptyAtclauseDescription" />
+		<module name="AtclauseOrder">
+			<property name="target" value="CLASS_DEF, INTERFACE_DEF, ENUM_DEF"/>
+			<property name="tagOrder" value="@param, @author, @since, @see, @version, @serial, @deprecated"/>
+		</module>
+		<module name="AtclauseOrder">
+			<property name="target" value="METHOD_DEF, CTOR_DEF, VARIABLE_DEF"/>
+			<property name="tagOrder" value="@param, @return, @throws, @since, @deprecated, @see"/>
+		</module>
+
 		<!-- Miscellaneous -->
 		<module name="ArrayTypeStyle"/>
 		<module name="CommentsIndentation"/>
