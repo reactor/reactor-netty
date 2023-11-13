@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,8 @@ import reactor.netty.http.server.HttpServerRequest;
 import reactor.test.StepVerifier;
 
 /**
+ * This test class verifies HTTP cookie handling.
+ *
  * @author Violeta Georgieva
  */
 class HttpCookieHandlingTests extends BaseHttpTest {

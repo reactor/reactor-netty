@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package reactor.netty.resources;
 
+import io.netty.channel.EventLoopGroup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -31,6 +32,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ * This test class verifies {@link EventLoopGroup} colocation.
+ *
  * @author Violeta Georgieva
  */
 class ColocatedEventLoopGroupTest extends BaseHttpTest {

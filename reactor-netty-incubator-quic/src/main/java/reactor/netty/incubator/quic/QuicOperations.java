@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@ import static reactor.netty.ConnectionObserver.State.CONFIGURED;
 import static reactor.netty.ReactorNetty.format;
 
 /**
+ * {@link QuicInbound} and {@link QuicOutbound} that apply to a {@link Connection}.
+ *
  * @author Violeta Georgieva
  */
 final class QuicOperations implements ChannelOperationsId, QuicConnection {

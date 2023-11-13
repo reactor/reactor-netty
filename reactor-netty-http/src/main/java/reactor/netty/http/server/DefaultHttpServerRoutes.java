@@ -36,6 +36,8 @@ import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 /**
+ * Server routes are unique and only the first matching in order of declaration will be invoked.
+ *
  * @author Stephane Maldini
  */
 final class DefaultHttpServerRoutes implements HttpServerRoutes {

@@ -60,6 +60,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.http.client.HttpClientOperations.SendForm.DEFAULT_FACTORY;
 
 /**
+ * This test class verifies {@link HttpClient} against {@code Tomcat} server.
+ *
  * @author Violeta Georgieva
  */
 class HttpClientWithTomcatTest {

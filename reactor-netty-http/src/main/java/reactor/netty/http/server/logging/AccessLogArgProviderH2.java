@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.net.SocketAddress;
 import java.util.Objects;
 
 /**
+ * A provider of the args required for access log of HTTP/2.
+ *
  * @author limaoning
  */
 final class AccessLogArgProviderH2 extends AbstractAccessLogArgProvider<AccessLogArgProviderH2> {

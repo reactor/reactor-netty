@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
+ * This test class verifies {@link HttpServer} websocket functionality.
+ *
  * @author Pierre De Rop
  * @since 1.0.27
  */

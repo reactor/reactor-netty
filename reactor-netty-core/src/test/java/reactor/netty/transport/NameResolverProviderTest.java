@@ -50,6 +50,8 @@ import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_NDOTS;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_QUERY_TIMEOUT;
 
 /**
+ * This test class verifies {@link NameResolverProvider}.
+ *
  * @author Violeta Georgieva
  */
 class NameResolverProviderTest {

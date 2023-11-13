@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +57,8 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	EncoderMode     newMode;
 
 	/**
+	 * Constructs a new {@link HttpClientFormEncoder}.
+	 *
 	 * @param factory the factory used to create InterfaceHttpData
 	 * @param request the request to encode
 	 * @param multipart True if the FORM is a ENCTYPE="multipart/form-data"

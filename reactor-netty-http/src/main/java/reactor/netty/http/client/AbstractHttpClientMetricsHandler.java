@@ -36,6 +36,8 @@ import java.util.function.Function;
 import static reactor.netty.ReactorNetty.format;
 
 /**
+ * {@link ChannelDuplexHandler} for handling {@link HttpClient} metrics.
+ *
  * @author Violeta Georgieva
  * @since 1.0.8
  */

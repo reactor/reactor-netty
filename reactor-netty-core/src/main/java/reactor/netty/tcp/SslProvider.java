@@ -88,6 +88,8 @@ public final class SslProvider {
 	}
 
 	/**
+	 * Updates the {@link DefaultConfigurationType} used by this {@link SslProvider}.
+	 *
 	 * @deprecated as of 1.0.6. Prefer {@link SslProvider.SslContextSpec#sslContext(ProtocolSslContextSpec)},
 	 * where the default configuration is applied before any other custom configuration.
 	 * This will be removed in version 1.2.0.
@@ -305,6 +307,9 @@ public final class SslProvider {
 	}
 
 	/**
+	 * Default configuration type that will be applied to the provided
+	 * {@link SslContextBuilder}.
+	 *
 	 * @deprecated as of 1.0.6. Prefer {@link SslProvider.SslContextSpec#sslContext(ProtocolSslContextSpec)},
 	 * where the default configuration is applied before any other custom configuration.
 	 * This will be removed in version 1.2.0.

@@ -35,6 +35,8 @@ import static reactor.netty.Metrics.URI;
 import static reactor.netty.Metrics.formatSocketAddress;
 
 /**
+ * {@link HttpClientMetricsRecorder} for Reactor Netty built-in integration with Micrometer.
+ *
  * @author Violeta Georgieva
  * @since 0.9
  */

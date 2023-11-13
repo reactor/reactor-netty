@@ -30,6 +30,9 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
+ * Provides utility methods for {@link QuicServer} and {@link QuicClient} creation.
+ * At the end of each test guarantees that the server and the client are disposed.
+ *
  * @author Violeta Georgieva
  */
 class BaseQuicTests {

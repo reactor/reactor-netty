@@ -48,6 +48,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
+ * This test class verifies {@link QuicServer}.
+ *
  * @author Violeta Georgieva
  */
 class QuicServerTests extends BaseQuicTests {

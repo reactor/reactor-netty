@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,8 @@ import static reactor.netty.Metrics.UDP_SERVER_PREFIX;
 import static reactor.netty.Metrics.URI;
 
 /**
+ * This test class verifies UDP metrics functionality.
+ *
  * @author Violeta Georgieva
  */
 class UdpMetricsTests {

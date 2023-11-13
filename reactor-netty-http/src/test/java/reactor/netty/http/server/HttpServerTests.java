@@ -165,6 +165,8 @@ import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
 import static reactor.netty.resources.LoopResources.DEFAULT_SHUTDOWN_TIMEOUT;
 
 /**
+ * This test class verifies {@link HttpServer}.
+ *
  * @author Stephane Maldini
  */
 class HttpServerTests extends BaseHttpTest {

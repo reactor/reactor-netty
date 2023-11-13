@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ import reactor.core.publisher.Mono;
 import reactor.netty.ReactorNetty;
 
 /**
+ * An outbound-traffic API delegating to an underlying {@link Channel}.
+ *
  * @author Stephane Maldini
  */
 abstract class MonoSend<I, O> extends Mono<Void> {

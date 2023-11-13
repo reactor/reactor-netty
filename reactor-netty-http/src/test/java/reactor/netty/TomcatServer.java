@@ -36,6 +36,8 @@ import java.io.PrintWriter;
 import java.util.Collection;
 
 /**
+ * Prepares Tomcat server.
+ *
  * @author Violeta Georgieva
  */
 public class TomcatServer {
