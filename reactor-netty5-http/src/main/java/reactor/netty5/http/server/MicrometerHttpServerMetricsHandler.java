@@ -58,9 +58,11 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	Observation responseTimeObservation;
 	ContextView parentContextView;
 
-	MicrometerHttpServerMetricsHandler(MicrometerHttpServerMetricsRecorder recorder,
+	MicrometerHttpServerMetricsHandler(
+			MicrometerHttpServerMetricsRecorder recorder,
+			@Nullable Function<String, String> methodTagValue,
 			@Nullable Function<String, String> uriTagValue) {
-		super(uriTagValue);
+		super(methodTagValue, uriTagValue);
 		this.recorder = recorder;
 		this.responseTimeName = recorder.name() + RESPONSE_TIME;
 	}
@@ -106,7 +108,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	protected void startRead(HttpServerOperations ops, String path, String method) {
 		super.startRead(ops, path, method);
 
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops);
+		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, method, path, ops);
 		responseTimeObservation = Observation.createNotStarted(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		parentContextView = updateChannelContext(ops.channel(), responseTimeObservation);
 		responseTimeObservation.start();
@@ -118,7 +120,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		super.startWrite(ops, path, method, status);
 
 		if (responseTimeObservation == null) {
-			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, path, ops);
+			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, method, path, ops);
 			responseTimeObservation = Observation.createNotStarted(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 			parentContextView = updateChannelContext(ops.channel(), responseTimeObservation);
 			responseTimeObservation.start();
@@ -147,14 +149,14 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		// status might not be known beforehand
 		String status = UNKNOWN;
 
-		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, String path, HttpServerOperations ops) {
+		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, String method, String path, HttpServerOperations ops) {
 			super((carrier, key) -> {
 				CharSequence value = Objects.requireNonNull(carrier).headers().get(key);
 				return value != null ?  value.toString() : null;
 			});
 			this.recorder = recorder;
 			HttpRequest request = ops.nettyRequest;
-			this.method = request.method().name();
+			this.method = method;
 			InetSocketAddress hostAddress = ops.hostAddress();
 			this.netHostName = hostAddress != null ? hostAddress.getHostString() : "";
 			this.netHostPort = hostAddress != null ? hostAddress.getPort() + "" : "";

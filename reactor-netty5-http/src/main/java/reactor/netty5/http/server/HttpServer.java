@@ -479,6 +479,73 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 	}
 
+	/**
+	 * Whether to enable metrics to be collected and registered in Micrometer's
+	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
+	 * under the name {@link reactor.netty5.Metrics#HTTP_SERVER_PREFIX}.
+	 * <p>{@code uriTagValue} function receives the actual uri and returns the uri tag value
+	 * that will be used for the metrics with {@link reactor.netty5.Metrics#URI} tag.
+	 * For example instead of using the actual uri {@code "/users/1"} as uri tag value, templated uri
+	 * {@code "/users/{id}"} can be used.
+	 * <p><strong>Note:</strong>
+	 * It is strongly recommended to provide template-like form for the URIs. Without a conversion to a template-like form,
+	 * each distinct URI leads to the creation of a distinct tag, which takes a lot of memory for the metrics.
+	 * <p><strong>Note:</strong>
+	 * It is strongly recommended applications to configure an upper limit for the number of the URI tags.
+	 * For example:
+	 * <pre class="code">
+	 * Metrics.globalRegistry
+	 *        .config()
+	 *        .meterFilter(MeterFilter.maximumAllowableTags(HTTP_SERVER_PREFIX, URI, 100, MeterFilter.deny()));
+	 * </pre>
+	 * <p>{@code methodTagValue} function receives the actual method name and returns the method tag value
+	 * that will be used for the metrics with {@link reactor.netty5.Metrics#METHOD} tag.
+	 * <p>By default metrics are not enabled.
+	 *
+	 * @param enable true enables metrics collection; false disables it
+	 * @param uriTagValue a function that receives the actual uri and returns the uri tag value
+	 * that will be used for the metrics with {@link reactor.netty5.Metrics#URI} tag
+	 * @param methodTagValue a function that receives the actual method name and returns the method tag value
+	 * that will be used for the metrics with {@link reactor.netty5.Metrics#METHOD} tag
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.39
+	 */
+	public final HttpServer metrics(boolean enable, Function<String, String> uriTagValue, Function<String, String> methodTagValue) {
+		if (enable) {
+			Objects.requireNonNull(methodTagValue, "methodTagValue");
+			if (!Metrics.isMicrometerAvailable() && !Metrics.isTracingAvailable()) {
+				throw new UnsupportedOperationException(
+						"To enable metrics, you must add the dependencies to `io.micrometer:micrometer-core`" +
+								" and `io.micrometer:micrometer-tracing` to the class path first");
+			}
+			if (uriTagValue == Function.<String>identity()) {
+				log.debug("Metrics are enabled with [uriTagValue=Function#identity]. " +
+						"It is strongly recommended to provide template-like form for the URIs. " +
+						"Without a conversion to a template-like form, each distinct URI leads " +
+						"to the creation of a distinct tag, which takes a lot of memory for the metrics.");
+			}
+			if (methodTagValue == Function.<String>identity()) {
+				log.debug("Metrics are enabled with [methodTagValue=Function#identity]. " +
+						"It is strongly recommended to provide a function for transforming the method names.");
+			}
+			HttpServer dup = duplicate();
+			dup.configuration().metricsRecorder(() -> configuration().defaultMetricsRecorder());
+			dup.configuration().methodTagValue = methodTagValue;
+			dup.configuration().uriTagValue = uriTagValue;
+			return dup;
+		}
+		else if (configuration().metricsRecorder() != null) {
+			HttpServer dup = duplicate();
+			dup.configuration().metricsRecorder(null);
+			dup.configuration().methodTagValue = null;
+			dup.configuration().uriTagValue = null;
+			return dup;
+		}
+		else {
+			return this;
+		}
+	}
+
 	@Override
 	public final HttpServer metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		return super.metrics(enable, recorder);
@@ -510,6 +577,49 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		else if (configuration().metricsRecorder() != null) {
 			HttpServer dup = duplicate();
 			dup.configuration().metricsRecorder(null);
+			dup.configuration().uriTagValue = null;
+			return dup;
+		}
+		else {
+			return this;
+		}
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link HttpServer}.
+	 * All generated metrics are provided to the specified recorder which is only
+	 * instantiated if metrics are being enabled (the instantiation is not lazy,
+	 * but happens immediately, while configuring the {@link HttpServer}).
+	 * <p>{@code uriValue} function receives the actual uri and returns the uri value
+	 * that will be used when the metrics are propagated to the recorder.
+	 * For example instead of using the actual uri {@code "/users/1"} as uri value, templated uri
+	 * {@code "/users/{id}"} can be used.
+	 * <p>{@code methodValue} function receives the actual method name and returns the method value
+	 * that will be used when the metrics are propagated to the recorder.
+	 *
+	 * @param enable true enables metrics collection; false disables it
+	 * @param recorder a supplier for the metrics recorder that receives the collected metrics
+	 * @param uriValue a function that receives the actual uri and returns the uri value
+	 * that will be used when the metrics are propagated to the recorder.
+	 * @param methodValue a function that receives the actual method name and returns the method value
+	 * that will be used when the metrics are propagated to the recorder.
+	 * @return a new {@link HttpServer}
+	 * @since 1.0.39
+	 */
+	public final HttpServer metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder,
+			Function<String, String> uriValue, Function<String, String> methodValue) {
+		if (enable) {
+			Objects.requireNonNull(methodValue, "methodTagValue");
+			HttpServer dup = duplicate();
+			dup.configuration().metricsRecorder(recorder);
+			dup.configuration().methodTagValue = methodValue;
+			dup.configuration().uriTagValue = uriValue;
+			return dup;
+		}
+		else if (configuration().metricsRecorder() != null) {
+			HttpServer dup = duplicate();
+			dup.configuration().metricsRecorder(null);
+			dup.configuration().methodTagValue = null;
 			dup.configuration().uriTagValue = null;
 			return dup;
 		}
