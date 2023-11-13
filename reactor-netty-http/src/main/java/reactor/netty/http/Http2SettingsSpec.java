@@ -32,7 +32,7 @@ public final class Http2SettingsSpec {
 	public interface Builder {
 
 		/**
-		 * Build a new {@link Http2SettingsSpec}
+		 * Build a new {@link Http2SettingsSpec}.
 		 *
 		 * @return a new {@link Http2SettingsSpec}
 		 */

@@ -35,7 +35,7 @@ import static reactor.netty.ReactorNetty.format;
 
 /**
  * Netty {@link io.netty.channel.ChannelDuplexHandler} implementation that bridge data
- * via an IPC {@link NettyOutbound}
+ * via an IPC {@link NettyOutbound}.
  *
  * @author Stephane Maldini
  */

@@ -24,7 +24,7 @@ import reactor.netty.http.client.HttpClient;
 import javax.net.ssl.SSLException;
 
 /**
- * Tests for HTTP/2.0 and {@link ConnectionInfo}
+ * Tests for HTTP/2.0 and {@link ConnectionInfo}.
  *
  * @author Violeta Georgieva
  * @since 1.0.0

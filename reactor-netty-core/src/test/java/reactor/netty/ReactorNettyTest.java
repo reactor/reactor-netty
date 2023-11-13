@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ReactorNettyTest {
 
-	/**
+	/*
 	 * Original channel string: [id: 0x1320c27a]
 	 * Expected channel string: [1320c27a]
 	 */
@@ -44,7 +44,7 @@ class ReactorNettyTest {
 		doTestFormatChannel(new TestChannel(new EmbeddedChannel()));
 	}
 
-	/**
+	/*
 	 * Original channel string: [id: 0x2f07a7a0, L:127.0.0.1:8080]
 	 * Expected channel string: [2f07a7a0, L:127.0.0.1:8080]
 	 */
@@ -54,7 +54,7 @@ class ReactorNettyTest {
 				InetSocketAddress.createUnresolved("127.0.0.1", 8080)));
 	}
 
-	/**
+	/*
 	 * Original channel string: [id: 0x9ed4b854, L:127.0.0.1:8080 - R:127.0.0.1:9090]
 	 * Expected channel string: [9ed4b854, L:127.0.0.1:8080 - R:127.0.0.1:9090]
 	 */
@@ -65,7 +65,7 @@ class ReactorNettyTest {
 				InetSocketAddress.createUnresolved("127.0.0.1", 9090)));
 	}
 
-	/**
+	/*
 	 * Original channel id: ()[id: 0x1320c27a]
 	 * Expected channel id: ()[1320c27a]
 	 */
@@ -74,7 +74,7 @@ class ReactorNettyTest {
 		doTestFormatChannel(new ChildTestChannel(new TestChannel(new EmbeddedChannel())));
 	}
 
-	/**
+	/*
 	 * Original channel id: ()[id: 0x867c3169, L:127.0.0.1:8080]
 	 * Expected channel id: ()[867c3169, L:127.0.0.1:8080]
 	 */
@@ -84,7 +84,7 @@ class ReactorNettyTest {
 				InetSocketAddress.createUnresolved("127.0.0.1", 8080)));
 	}
 
-	/**
+	/*
 	 * Original channel id: ()[id: 0x43f4ed87, L:127.0.0.1:8080 - R:127.0.0.1:9090]
 	 * Expected channel id: ()[43f4ed87, L:127.0.0.1:8080 - R:127.0.0.1:9090]
 	 */

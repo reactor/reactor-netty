@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,14 @@ import java.net.SocketAddress;
 import java.time.Duration;
 
 /**
- * Interface for collecting metrics on HTTP server level
+ * Interface for collecting metrics on HTTP server level.
  *
  * @author Violeta Georgieva
  */
 public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 
 	/**
-	 * Records the time that is spent in consuming incoming data
+	 * Records the time that is spent in consuming incoming data.
 	 *
 	 * @param uri the requested URI
 	 * @param method the HTTP method
@@ -37,7 +37,7 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	void recordDataReceivedTime(String uri, String method, Duration time);
 
 	/**
-	 * Records the time that is spent in sending outgoing data
+	 * Records the time that is spent in sending outgoing data.
 	 *
 	 * @param uri the requested URI
 	 * @param method the HTTP method
@@ -47,7 +47,7 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	void recordDataSentTime(String uri, String method, String status, Duration time);
 
 	/**
-	 * Records the total time for the request/response
+	 * Records the total time for the request/response.
 	 *
 	 * @param uri the requested URI
 	 * @param method the HTTP method
@@ -57,7 +57,7 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	void recordResponseTime(String uri, String method, String status, Duration time);
 
 	/**
-	 * Record a new active in-use http connection
+	 * Record a new active in-use http connection.
 	 *
 	 * @param localAddress the local server address
 	 * @since 1.0.15
@@ -65,7 +65,7 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	default void recordServerConnectionActive(SocketAddress localAddress) { }
 
 	/**
-	 * Record an inactive http connection
+	 * Record an inactive http connection.
 	 *
 	 * @param localAddress the local server address
 	 * @since 1.0.15
@@ -73,7 +73,7 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	default void recordServerConnectionInactive(SocketAddress localAddress) { }
 
 	/**
-	 * Record an opened HTTP/2 stream
+	 * Record an opened HTTP/2 stream.
 	 *
 	 * @param localAddress the local server address
 	 * @since 1.0.21
@@ -81,7 +81,7 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	default void recordStreamOpened(SocketAddress localAddress) { }
 
 	/**
-	 * Record a closed HTTP/2 stream
+	 * Record a closed HTTP/2 stream.
 	 *
 	 * @param localAddress the local server address
 	 * @since 1.0.21

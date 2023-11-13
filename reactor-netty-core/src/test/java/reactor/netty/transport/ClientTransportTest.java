@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -238,7 +238,7 @@ class ClientTransportTest {
 	}
 
 	/**
-	 * On Windows OS it is rare to have hosts file
+	 * On Windows OS it is rare to have hosts file.
 	 */
 	@Test
 	@DisabledOnOs(WINDOWS)
@@ -247,7 +247,7 @@ class ClientTransportTest {
 	}
 
 	/**
-	 * On Windows OS it is rare to have hosts file
+	 * On Windows OS it is rare to have hosts file.
 	 */
 	@Test
 	@DisabledOnOs(WINDOWS)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * A generic QUIC {@link Transport}
+ * A generic QUIC {@link Transport}.
  *
  * @param <T> {@link QuicTransport} implementation
  * @param <CONF> {@link QuicTransportConfig} implementation
@@ -261,7 +261,7 @@ abstract class QuicTransport<T extends Transport<T, CONF>, CONF extends QuicTran
 	}
 
 	/**
-	 * Configure QUIC initial settings
+	 * Configure QUIC initial settings.
 	 *
 	 * @param initialSettings configures QUIC initial settings
 	 * @return a {@link QuicTransport} reference
@@ -417,7 +417,7 @@ abstract class QuicTransport<T extends Transport<T, CONF>, CONF extends QuicTran
 	}
 
 	/**
-	 * Set or add the given {@link ConnectionObserver} for each stream
+	 * Set or add the given {@link ConnectionObserver} for each stream.
 	 *
 	 * @param observer the {@link ConnectionObserver} addition
 	 * @return a {@link QuicTransport} reference

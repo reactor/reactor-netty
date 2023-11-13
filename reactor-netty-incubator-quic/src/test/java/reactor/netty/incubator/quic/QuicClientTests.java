@@ -55,7 +55,7 @@ class QuicClientTests extends BaseQuicTests {
 	}
 
 	/**
-	 * DATA_BLOCKED
+	 * DATA_BLOCKED.
 	 */
 	@Test
 	void testMaxDataNotSpecifiedBidirectional() throws Exception {
@@ -66,7 +66,7 @@ class QuicClientTests extends BaseQuicTests {
 	}
 
 	/**
-	 * DATA_BLOCKED
+	 * DATA_BLOCKED.
 	 */
 	@Test
 	void testMaxDataNotSpecifiedUnidirectional() throws Exception {
@@ -76,7 +76,7 @@ class QuicClientTests extends BaseQuicTests {
 	}
 
 	/**
-	 * STREAM_DATA_BLOCKED
+	 * STREAM_DATA_BLOCKED.
 	 */
 	@Test
 	void testMaxStreamDataNotSpecifiedUnidirectional() throws Exception {
@@ -86,7 +86,7 @@ class QuicClientTests extends BaseQuicTests {
 	}
 
 	/**
-	 * STREAM_DATA_BLOCKED
+	 * STREAM_DATA_BLOCKED.
 	 */
 	@Test
 	void testMaxStreamDataLocalNotSpecifiedBidirectional() throws Exception {
@@ -94,7 +94,7 @@ class QuicClientTests extends BaseQuicTests {
 	}
 
 	/**
-	 * STREAM_DATA_BLOCKED
+	 * STREAM_DATA_BLOCKED.
 	 */
 	@Test
 	void testMaxStreamDataRemoteNotSpecifiedBidirectional() throws Exception {

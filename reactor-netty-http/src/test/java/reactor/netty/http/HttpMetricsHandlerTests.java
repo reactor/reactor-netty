@@ -493,7 +493,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				serverCtx != null, numWrites, bytesWrite);
 	}
 
-	/**
+	/*
 	 * https://github.com/reactor/reactor-netty/issues/1559
 	 */
 	@ParameterizedTest

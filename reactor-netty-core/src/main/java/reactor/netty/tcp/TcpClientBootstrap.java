@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import java.net.SocketAddress;
 import java.util.function.Function;
 
 /**
- * This class provides a migration for the {@link TcpClient#bootstrap(Function)} in 0.9.x
+ * This class provides a migration for the {@link TcpClient#bootstrap(Function)} in 0.9.x.
  *
  * @author Violeta Georgieva
  * @deprecated Use {@link TcpClient} methods for configurations. This class will be removed in version 1.1.0.

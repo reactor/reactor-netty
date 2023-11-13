@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package reactor.netty.http.server;
 import reactor.netty.http.websocket.WebsocketSpec;
 
 /**
- * Websocket server configuration
+ * Websocket server configuration.
  *
  * @author Violeta Georgieva
  * @since 0.9.5
@@ -26,7 +26,7 @@ import reactor.netty.http.websocket.WebsocketSpec;
 public interface WebsocketServerSpec extends WebsocketSpec {
 
 	/**
-	 * Create builder with default properties:<br>
+	 * Create builder with default properties.<br>
 	 * protocols = null
 	 * <br>
 	 * maxFramePayloadLength = 65536
@@ -47,7 +47,7 @@ public interface WebsocketServerSpec extends WebsocketSpec {
 		}
 
 		/**
-		 * Builds new {@link WebsocketServerSpec}
+		 * Builds new {@link WebsocketServerSpec}.
 		 *
 		 * @return builds new {@link WebsocketServerSpec}
 		 */

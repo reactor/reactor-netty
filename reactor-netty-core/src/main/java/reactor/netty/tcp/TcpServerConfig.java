@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ public final class TcpServerConfig extends ServerTransportConfig<TcpServerConfig
 	}
 
 	/**
-	 * Returns true if that {@link TcpServer} secured via SSL transport
+	 * Returns true if that {@link TcpServer} secured via SSL transport.
 	 *
 	 * @return true if that {@link TcpServer} secured via SSL transport
 	 */
@@ -118,7 +118,7 @@ public final class TcpServerConfig extends ServerTransportConfig<TcpServerConfig
 
 	/**
 	 * Default value whether the SSL debugging on the server side will be enabled/disabled,
-	 * fallback to SSL debugging disabled
+	 * fallback to SSL debugging disabled.
 	 */
 	static final boolean SSL_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_SERVER_DEBUG, "false"));
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +24,12 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import reactor.util.annotation.Nullable;
 
 /**
- * An HTTP Form builder
+ * An HTTP Form builder.
  */
 public interface HttpClientForm {
 
 	/**
-	 * Add an HTTP Form attribute
+	 * Add an HTTP Form attribute.
 	 *
 	 * @param name Attribute name
 	 * @param value Attribute value
@@ -39,7 +39,7 @@ public interface HttpClientForm {
 	HttpClientForm attr(String name, String value);
 
 	/**
-	 * Set the Form {@link Charset}
+	 * Set the Form {@link Charset}.
 	 *
 	 * @param charset form charset
 	 *
@@ -58,7 +58,7 @@ public interface HttpClientForm {
 	HttpClientForm cleanOnTerminate(boolean clean);
 
 	/**
-	 * Set Form encoding
+	 * Set Form encoding.
 	 *
 	 * @param mode the encoding mode for this form encoding
 	 * @return this builder
@@ -66,7 +66,7 @@ public interface HttpClientForm {
 	HttpClientForm encoding(HttpPostRequestEncoder.EncoderMode mode);
 
 	/**
-	 * Set Upload factories (allows memory threshold configuration)
+	 * Set Upload factories (allows memory threshold configuration).
 	 *
 	 * @param factory the new {@link HttpDataFactory} to use
 	 * @return this builder
@@ -74,7 +74,7 @@ public interface HttpClientForm {
 	HttpClientForm factory(HttpDataFactory factory);
 
 	/**
-	 * Add an HTTP File Upload attribute
+	 * Add an HTTP File Upload attribute.
 	 *
 	 * @param name File name
 	 * @param file File reference
@@ -84,7 +84,7 @@ public interface HttpClientForm {
 	HttpClientForm file(String name, File file);
 
 	/**
-	 * Add an HTTP File Upload attribute
+	 * Add an HTTP File Upload attribute.
 	 *
 	 * @param name File name
 	 * @param stream File content as InputStream
@@ -94,7 +94,7 @@ public interface HttpClientForm {
 	HttpClientForm file(String name, InputStream stream);
 
 	/**
-	 * Add an HTTP File Upload attribute
+	 * Add an HTTP File Upload attribute.
 	 *
 	 * @param name File name
 	 * @param file File reference
@@ -107,7 +107,7 @@ public interface HttpClientForm {
 	}
 
 	/**
-	 * Add an HTTP File Upload attribute
+	 * Add an HTTP File Upload attribute.
 	 *
 	 * @param name File name
 	 * @param filename File name to override origin name
@@ -119,7 +119,7 @@ public interface HttpClientForm {
 	HttpClientForm file(String name, String filename, File file, @Nullable String contentType);
 
 	/**
-	 * Add an HTTP File Upload attribute
+	 * Add an HTTP File Upload attribute.
 	 *
 	 * @param name File name
 	 * @param stream File content as InputStream
@@ -132,7 +132,7 @@ public interface HttpClientForm {
 	}
 
 	/**
-	 * Add an HTTP File Upload attribute
+	 * Add an HTTP File Upload attribute.
 	 *
 	 * @param name File name
 	 * @param filename File name to override origin name
@@ -144,7 +144,7 @@ public interface HttpClientForm {
 	HttpClientForm file(String name, String filename, InputStream stream, @Nullable String contentType);
 
 	/**
-	 * Add an HTTP File Upload attribute
+	 * Add an HTTP File Upload attribute.
 	 *
 	 * @param name File name
 	 * @param files File references
@@ -155,7 +155,7 @@ public interface HttpClientForm {
 	HttpClientForm files(String name, File[] files, String[] contentTypes);
 
 	/**
-	 * Add an HTTP File Upload attribute
+	 * Add an HTTP File Upload attribute.
 	 *
 	 * @param name File name
 	 * @param files File references
@@ -167,7 +167,7 @@ public interface HttpClientForm {
 	HttpClientForm files(String name, File[] files, String[] contentTypes, boolean[] textFiles);
 
 	/**
-	 * Define if this request will be encoded as Multipart
+	 * Define if this request will be encoded as Multipart.
 	 *
 	 * @param multipart should this form be encoded as Multipart
 	 *

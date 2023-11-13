@@ -45,14 +45,14 @@ import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.annotation.Nullable;
 
 /**
- * Proxy configuration
+ * Proxy configuration.
  *
  * @author Violeta Georgieva
  */
 public final class ProxyProvider {
 
 	/**
-	 * Creates a builder for {@link ProxyProvider ProxyProvider}
+	 * Creates a builder for {@link ProxyProvider ProxyProvider}.
 	 *
 	 * @return a new ProxyProvider builder
 	 */
@@ -89,7 +89,7 @@ public final class ProxyProvider {
 	}
 
 	/**
-	 * The proxy type
+	 * The proxy type.
 	 *
 	 * @return The proxy type
 	 */
@@ -108,7 +108,7 @@ public final class ProxyProvider {
 
 	/**
 	 * A predicate {@link Predicate} on {@link SocketAddress} that returns true when the provided address should be
-	 * reached directly, bypassing the proxy
+	 * reached directly, bypassing the proxy.
 	 *
 	 * @return The predicate {@link Predicate} to test the incoming {@link SocketAddress} if it should be reached
 	 * directly, bypassing the proxy
@@ -119,7 +119,7 @@ public final class ProxyProvider {
 	}
 
 	/**
-	 * Return a new eventual {@link ProxyHandler}
+	 * Return a new eventual {@link ProxyHandler}.
 	 *
 	 * @return a new eventual {@link ProxyHandler}
 	 */
@@ -166,7 +166,7 @@ public final class ProxyProvider {
 	}
 
 	/**
-	 * Proxy Type
+	 * Proxy Type.
 	 */
 	public enum Proxy {
 		HTTP, SOCKS4, SOCKS5
@@ -487,7 +487,7 @@ public final class ProxyProvider {
 
 		/**
 		 * Creates a {@link RegexShouldProxyPredicate} based off the provided pattern with possible wildcards as
-		 * described in https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
+		 * described in https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html.
 		 *
 		 * @param pattern The string wildcarded expression
 		 * @return a predicate whether we should direct to proxy
@@ -652,7 +652,7 @@ public final class ProxyProvider {
 		Builder connectTimeoutMillis(long connectTimeoutMillis);
 
 		/**
-		 * Builds new ProxyProvider
+		 * Builds new ProxyProvider.
 		 *
 		 * @return builds new ProxyProvider
 		 */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import reactor.netty.http.websocket.WebsocketSpec;
 import java.util.Objects;
 
 /**
- * Websocket client configuration
+ * Websocket client configuration.
  *
  * @author Violeta Georgieva
  * @since 0.9.7
@@ -29,7 +29,7 @@ import java.util.Objects;
 public interface WebsocketClientSpec extends WebsocketSpec {
 
 	/**
-	 * Returns the configured WebSocket version
+	 * Returns the configured WebSocket version.
 	 *
 	 * @return returns the configured WebSocket version
 	 * @since 1.0.3
@@ -37,7 +37,7 @@ public interface WebsocketClientSpec extends WebsocketSpec {
 	WebSocketVersion version();
 
 	/**
-	 * Create builder with default properties:<br>
+	 * Create builder with default properties.<br>
 	 * version = {@link io.netty.handler.codec.http.websocketx.WebSocketVersion#V13}
 	 * <br>
 	 * protocols = null
@@ -81,7 +81,7 @@ public interface WebsocketClientSpec extends WebsocketSpec {
 		}
 
 		/**
-		 * Builds new {@link WebsocketClientSpec}
+		 * Builds new {@link WebsocketClientSpec}.
 		 *
 		 * @return builds new {@link WebsocketClientSpec}
 		 */

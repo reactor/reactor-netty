@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,14 +30,14 @@ import java.util.function.Function;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Hold the default QUIC resources
+ * Hold the default QUIC resources.
  *
  * @author Violeta Georgieva
  */
 public class QuicResources implements LoopResources {
 
 	/**
-	 * Return the global QUIC resources for loops
+	 * Return the global QUIC resources for loops.
 	 *
 	 * @return the global QUIC resources for loops
 	 */
@@ -46,7 +46,7 @@ public class QuicResources implements LoopResources {
 	}
 
 	/**
-	 * Reset QUIC resources to default and return its instance
+	 * Reset QUIC resources to default and return its instance.
 	 *
 	 * @return the global QUIC resources
 	 */
@@ -199,7 +199,7 @@ public class QuicResources implements LoopResources {
 	}
 
 	/**
-	 * Dispose underlying resources
+	 * Dispose underlying resources.
 	 */
 	protected void _dispose() {
 		defaultLoops.dispose();
@@ -277,7 +277,7 @@ public class QuicResources implements LoopResources {
 
 	/**
 	 * Default worker thread count, fallback to available processor
-	 * (but with a minimum value of 4)
+	 * (but with a minimum value of 4).
 	 */
 	//	static final int DEFAULT_QUIC_THREAD_COUNT = Integer.parseInt(System.getProperty(
 	//			ReactorNetty.QUIC_IO_THREAD_COUNT,

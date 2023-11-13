@@ -43,7 +43,7 @@ import static reactor.netty.http.brave.ReactorNettyHttpTracing.SPAN_ATTR_KEY;
 
 /**
  * This class is based on
- * https://github.com/spring-cloud/spring-cloud-sleuth/blob/d969aa7b549e9c82729e16dc7d846654e32ddef9/spring-cloud-sleuth-core/src/main/java/org/springframework/cloud/sleuth/instrument/web/client/HttpClientBeanPostProcessor.java
+ * https://github.com/spring-cloud/spring-cloud-sleuth/blob/d969aa7b549e9c82729e16dc7d846654e32ddef9/spring-cloud-sleuth-core/src/main/java/org/springframework/cloud/sleuth/instrument/web/client/HttpClientBeanPostProcessor.java.
  */
 final class TracingHttpClientDecorator {
 

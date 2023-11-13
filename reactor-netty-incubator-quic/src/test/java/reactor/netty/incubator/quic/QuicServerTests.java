@@ -53,7 +53,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 class QuicServerTests extends BaseQuicTests {
 
 	/**
-	 * DATA_BLOCKED
+	 * DATA_BLOCKED.
 	 */
 	@Test
 	void testMaxDataNotSpecifiedBidirectional() throws Exception {
@@ -64,7 +64,7 @@ class QuicServerTests extends BaseQuicTests {
 	}
 
 	/**
-	 * DATA_BLOCKED
+	 * DATA_BLOCKED.
 	 */
 	@Test
 	void testMaxDataNotSpecifiedUnidirectional() throws Exception {
@@ -74,7 +74,7 @@ class QuicServerTests extends BaseQuicTests {
 	}
 
 	/**
-	 * STREAM_DATA_BLOCKED
+	 * STREAM_DATA_BLOCKED.
 	 */
 	@Test
 	void testMaxStreamDataNotSpecifiedUnidirectional() throws Exception {
@@ -84,7 +84,7 @@ class QuicServerTests extends BaseQuicTests {
 	}
 
 	/**
-	 * STREAM_DATA_BLOCKED
+	 * STREAM_DATA_BLOCKED.
 	 */
 	@Test
 	void testMaxStreamDataLocalNotSpecifiedBidirectional() throws Exception {
@@ -92,7 +92,7 @@ class QuicServerTests extends BaseQuicTests {
 	}
 
 	/**
-	 * STREAM_DATA_BLOCKED
+	 * STREAM_DATA_BLOCKED.
 	 */
 	@Test
 	void testMaxStreamDataRemoteNotSpecifiedBidirectional() throws Exception {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ import reactor.netty.http.websocket.WebsocketOutbound;
 public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 
 	/**
-	 * Adds an outbound cookie
+	 * Adds an outbound cookie.
 	 *
 	 * @return this {@link HttpServerResponse}
 	 */
@@ -57,7 +57,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	HttpServerResponse addHeader(CharSequence name, CharSequence value);
 
 	/**
-	 * Sets Transfer-Encoding header
+	 * Sets Transfer-Encoding header.
 	 *
 	 * @param chunked true if Transfer-Encoding: chunked
 	 *
@@ -69,7 +69,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	HttpServerResponse withConnection(Consumer<? super Connection> withConnection);
 
 	/**
-	 * Enables/Disables compression handling (gzip/deflate) for the underlying response
+	 * Enables/Disables compression handling (gzip/deflate) for the underlying response.
 	 *
 	 * @param compress should handle compression
 	 *
@@ -78,7 +78,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	HttpServerResponse compression(boolean compress);
 
 	/**
-	 * Returns true if headers and status have been sent to the client
+	 * Returns true if headers and status have been sent to the client.
 	 *
 	 * @return true if headers and status have been sent to the client
 	 */
@@ -104,14 +104,14 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	HttpServerResponse headers(HttpHeaders headers);
 
 	/**
-	 * Sets the request {@code keepAlive} if true otherwise remove the existing connection keep alive header
+	 * Sets the request {@code keepAlive} if true otherwise remove the existing connection keep alive header.
 	 *
 	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse keepAlive(boolean keepAlive);
 
 	/**
-	 * Returns the outbound HTTP headers, sent back to the clients
+	 * Returns the outbound HTTP headers, sent back to the clients.
 	 *
 	 * @return headers sent back to the clients
 	 */
@@ -126,7 +126,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	Mono<Void> send();
 
 	/**
-	 * Returns a {@link NettyOutbound} successful on committed response
+	 * Returns a {@link NettyOutbound} successful on committed response.
 	 *
 	 * @return a {@link NettyOutbound} successful on committed response
 	 */
@@ -176,21 +176,21 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 			WebsocketServerSpec websocketServerSpec);
 
 	/**
-	 * Adds "text/event-stream" content-type for Server-Sent Events
+	 * Adds "text/event-stream" content-type for Server-Sent Events.
 	 *
 	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse sse();
 
 	/**
-	 * Returns the assigned HTTP status
+	 * Returns the assigned HTTP status.
 	 *
 	 * @return the assigned HTTP status
 	 */
 	HttpResponseStatus status();
 
 	/**
-	 * Sets an HTTP status to be sent along with the headers
+	 * Sets an HTTP status to be sent along with the headers.
 	 *
 	 * @param status an HTTP status to be sent along with the headers
 	 * @return this {@link HttpServerResponse}
@@ -198,7 +198,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpServerInfos {
 	HttpServerResponse status(HttpResponseStatus status);
 
 	/**
-	 * Sets an HTTP status to be sent along with the headers
+	 * Sets an HTTP status to be sent along with the headers.
 	 *
 	 * @param status an HTTP status to be sent along with the headers
 	 * @return this {@link HttpServerResponse}

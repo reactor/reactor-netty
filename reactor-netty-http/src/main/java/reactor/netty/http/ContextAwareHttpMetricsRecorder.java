@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import java.net.SocketAddress;
 public abstract class ContextAwareHttpMetricsRecorder extends ContextAwareChannelMetricsRecorder implements HttpMetricsRecorder {
 
 	/**
-	 * Increments the number of the errors that are occurred
+	 * Increments the number of the errors that are occurred.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
 	 * @param remoteAddress The remote peer
@@ -39,7 +39,7 @@ public abstract class ContextAwareHttpMetricsRecorder extends ContextAwareChanne
 	public abstract void incrementErrorsCount(ContextView contextView, SocketAddress remoteAddress, String uri);
 
 	/**
-	 * Records the amount of the data that is received, in bytes
+	 * Records the amount of the data that is received, in bytes.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
 	 * @param remoteAddress The remote peer
@@ -49,7 +49,7 @@ public abstract class ContextAwareHttpMetricsRecorder extends ContextAwareChanne
 	public abstract void recordDataReceived(ContextView contextView, SocketAddress remoteAddress, String uri, long bytes);
 
 	/**
-	 * Records the amount of the data that is sent, in bytes
+	 * Records the amount of the data that is sent, in bytes.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
 	 * @param remoteAddress The remote peer

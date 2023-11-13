@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,14 +34,14 @@ import reactor.util.annotation.Nullable;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Hold the default UDP resources
+ * Hold the default UDP resources.
  *
  * @author Violeta Georgieva
  */
 public class UdpResources implements LoopResources {
 
 	/**
-	 * Return the global UDP resources for pooling
+	 * Return the global UDP resources for pooling.
 	 *
 	 * @return the global UDP resources for pooling
 	 */
@@ -50,7 +50,7 @@ public class UdpResources implements LoopResources {
 	}
 
 	/**
-	 * Reset UDP resources to default and return its instance
+	 * Reset UDP resources to default and return its instance.
 	 *
 	 * @return the global UDP resources
 	 */
@@ -205,7 +205,7 @@ public class UdpResources implements LoopResources {
 	}
 
 	/**
-	 * Dispose underlying resources
+	 * Dispose underlying resources.
 	 */
 	protected void _dispose() {
 		_disposeResolver();
@@ -322,7 +322,7 @@ public class UdpResources implements LoopResources {
 
 	/**
 	 * Default worker thread count, fallback to available processor
-	 * (but with a minimum value of 4)
+	 * (but with a minimum value of 4).
 	 */
 	static final int DEFAULT_UDP_THREAD_COUNT = Integer.parseInt(System.getProperty(
 			ReactorNetty.UDP_IO_THREAD_COUNT,

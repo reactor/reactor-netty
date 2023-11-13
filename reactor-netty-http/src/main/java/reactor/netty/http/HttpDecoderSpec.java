@@ -19,7 +19,7 @@ import java.util.function.Supplier;
 
 /**
  * A configuration builder to fine tune the {@code HttpCodec} (or more precisely
- * the settings for the decoder)
+ * the settings for the decoder).
  *
  * @author Violeta Georgieva
  */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,9 +43,9 @@ public class Application {
 	}
 
 	/**
-	 * Prepares SSE response
-	 * The "Content-Type" is "text/event-stream"
-	 * The flushing strategy is "flush after every element" emitted by the provided Publisher
+	 * Prepares SSE response.
+	 * The "Content-Type" is "text/event-stream".
+	 * The flushing strategy is "flush after every element" emitted by the provided Publisher.
 	 */
 	private static BiFunction<HttpServerRequest, HttpServerResponse, Publisher<Void>> serveSse() {
 		Flux<Long> flux = Flux.interval(Duration.ofSeconds(10));

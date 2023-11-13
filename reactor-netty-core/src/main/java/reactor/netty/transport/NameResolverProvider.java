@@ -51,7 +51,7 @@ public final class NameResolverProvider {
 	public interface NameResolverSpec {
 
 		/**
-		 * Build a new {@link NameResolverProvider}
+		 * Build a new {@link NameResolverProvider}.
 		 *
 		 * @return a new {@link NameResolverProvider}
 		 */
@@ -181,7 +181,7 @@ public final class NameResolverProvider {
 		NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes);
 
 		/**
-		 * Sets the resolve cache to use for DNS resolution
+		 * Sets the resolve cache to use for DNS resolution.
 		 *
 		 * @param resolveCache the resolution DNS cache
 		 * @return {@code this}
@@ -410,7 +410,7 @@ public final class NameResolverProvider {
 	}
 
 	/**
-	 * Returns the configured DNS resolver cache or null
+	 * Returns the configured DNS resolver cache or null.
 	 *
 	 * @return the configured DNS resolver cache or null
 	 * @since 1.0.27

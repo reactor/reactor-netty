@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * This class provides a migration for the {@link HttpServer#tcpConfiguration(Function)} in 0.9.x
+ * This class provides a migration for the {@link HttpServer#tcpConfiguration(Function)} in 0.9.x.
  *
  * @author Violeta Georgieva
  * @deprecated Use {@link HttpServer} methods for TCP level configurations. This class will be removed in version 1.1.0.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 
 /**
- * {@link ContextView} aware class for collecting metrics on HTTP client level
+ * {@link ContextView} aware class for collecting metrics on HTTP client level.
  *
  * @author Violeta Georgieva
  * @since 1.0.8
@@ -32,7 +32,7 @@ public abstract class ContextAwareHttpClientMetricsRecorder extends ContextAware
 		implements HttpClientMetricsRecorder {
 
 	/**
-	 * Records the time that is spent in consuming incoming data
+	 * Records the time that is spent in consuming incoming data.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
 	 * @param remoteAddress The remote peer
@@ -45,7 +45,7 @@ public abstract class ContextAwareHttpClientMetricsRecorder extends ContextAware
 			String method, String status, Duration time);
 
 	/**
-	 * Records the time that is spent in sending outgoing data
+	 * Records the time that is spent in sending outgoing data.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
 	 * @param remoteAddress The remote peer
@@ -57,7 +57,7 @@ public abstract class ContextAwareHttpClientMetricsRecorder extends ContextAware
 			String method, Duration time);
 
 	/**
-	 * Records the total time for the request/response
+	 * Records the total time for the request/response.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
 	 * @param remoteAddress The remote peer

@@ -15,7 +15,7 @@
  */
 
 /**
- * Http Client abstractions and factory
+ * Http Client abstractions and factory.
  */
 @NonNullApi
 package reactor.netty.http.client;
