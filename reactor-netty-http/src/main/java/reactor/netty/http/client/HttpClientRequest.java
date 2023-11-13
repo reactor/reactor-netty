@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import java.time.Duration;
 public interface HttpClientRequest extends HttpClientInfos {
 
 	/**
-	 * Add an outbound cookie
+	 * Add an outbound cookie.
 	 *
 	 * @return this outbound
 	 */
@@ -67,7 +67,7 @@ public interface HttpClientRequest extends HttpClientInfos {
 	HttpClientRequest headers(HttpHeaders headers);
 
 	/**
-	 * Return true if redirected will be followed
+	 * Return true if redirected will be followed.
 	 *
 	 * @return true if redirected will be followed
 	 */

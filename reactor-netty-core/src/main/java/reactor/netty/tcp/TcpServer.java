@@ -66,7 +66,7 @@ import static reactor.netty.ReactorNetty.format;
 public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConfig> {
 
 	/**
-	 * Prepare a {@link TcpServer}
+	 * Prepare a {@link TcpServer}.
 	 *
 	 * @return a new {@link TcpServer}
 	 */
@@ -105,7 +105,7 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	}
 
 	/**
-	 * Attaches an I/O handler to react on a connected client
+	 * Attaches an I/O handler to react on a connected client.
 	 *
 	 * @param handler an I/O handler that can dispose underlying connection when
 	 * {@link Publisher} terminates.
@@ -133,7 +133,7 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	}
 
 	/**
-	 * Removes any previously applied SSL configuration customization
+	 * Removes any previously applied SSL configuration customization.
 	 *
 	 * @return a new {@link TcpServer}
 	 */

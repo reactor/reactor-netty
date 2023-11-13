@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ public final class UdpServerConfig extends TransportConfig {
 	}
 
 	/**
-	 * Return the configured callback or null
+	 * Return the configured callback or null.
 	 *
 	 * @return the configured callback or null
 	 */
@@ -67,7 +67,7 @@ public final class UdpServerConfig extends TransportConfig {
 	}
 
 	/**
-	 * Return the configured callback or null
+	 * Return the configured callback or null.
 	 *
 	 * @return the configured callback or null
 	 */
@@ -77,7 +77,7 @@ public final class UdpServerConfig extends TransportConfig {
 	}
 
 	/**
-	 * Return the configured callback or null
+	 * Return the configured callback or null.
 	 *
 	 * @return the configured callback or null
 	 */
@@ -87,7 +87,7 @@ public final class UdpServerConfig extends TransportConfig {
 	}
 
 	/**
-	 * Return the configured {@link InternetProtocolFamily} to run with or null
+	 * Return the configured {@link InternetProtocolFamily} to run with or null.
 	 *
 	 * @return the configured {@link InternetProtocolFamily} to run with or null
 	 */

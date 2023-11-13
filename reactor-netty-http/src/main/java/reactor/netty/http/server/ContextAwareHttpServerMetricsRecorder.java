@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import reactor.util.context.ContextView;
 import java.time.Duration;
 
 /**
- * {@link ContextView} aware class for collecting metrics on HTTP server level
+ * {@link ContextView} aware class for collecting metrics on HTTP server level.
  *
  * @author Violeta Georgieva
  * @since 1.0.8
@@ -30,7 +30,7 @@ import java.time.Duration;
 public abstract class ContextAwareHttpServerMetricsRecorder extends ContextAwareHttpMetricsRecorder implements HttpServerMetricsRecorder {
 
 	/**
-	 * Records the time that is spent in consuming incoming data
+	 * Records the time that is spent in consuming incoming data.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
 	 * @param uri The requested URI
@@ -40,7 +40,7 @@ public abstract class ContextAwareHttpServerMetricsRecorder extends ContextAware
 	public abstract void recordDataReceivedTime(ContextView contextView, String uri, String method, Duration time);
 
 	/**
-	 * Records the time that is spent in sending outgoing data
+	 * Records the time that is spent in sending outgoing data.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
 	 * @param uri The requested URI
@@ -51,7 +51,7 @@ public abstract class ContextAwareHttpServerMetricsRecorder extends ContextAware
 	public abstract void recordDataSentTime(ContextView contextView, String uri, String method, String status, Duration time);
 
 	/**
-	 * Records the total time for the request/response
+	 * Records the total time for the request/response.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
 	 * @param uri The requested URI

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import java.nio.file.Paths;
 import static java.util.Collections.emptyMap;
 
 /**
- * A helper class to access the content of a shaded JAR
+ * A helper class to access the content of a shaded JAR.
  */
 class AbstractJarFileTest {
 

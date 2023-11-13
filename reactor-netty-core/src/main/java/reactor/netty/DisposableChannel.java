@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Holds contextual information for the underlying channel and provides
- * non-blocking resource disposing API
+ * non-blocking resource disposing API.
  *
  * @author Stephane Maldini
  * @since 0.7
@@ -63,7 +63,7 @@ public interface DisposableChannel extends Disposable {
 	Channel channel();
 
 	/**
-	 * Releases or closes the underlying {@link Channel}
+	 * Releases or closes the underlying {@link Channel}.
 	 */
 	@Override
 	@SuppressWarnings({"FutureReturnValueIgnored", "FunctionalInterfaceMethodChanged"})
@@ -107,7 +107,7 @@ public interface DisposableChannel extends Disposable {
 	}
 
 	/**
-	 * Returns a {@link CoreSubscriber} that will dispose on complete or error
+	 * Returns a {@link CoreSubscriber} that will dispose on complete or error.
 	 */
 	default CoreSubscriber<Void> disposeSubscriber() {
 		return new ReactorNetty.ChannelDisposer(this);

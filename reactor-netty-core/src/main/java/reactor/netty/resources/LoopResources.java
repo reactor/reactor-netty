@@ -36,14 +36,14 @@ public interface LoopResources extends Disposable {
 
 	/**
 	 * Default worker thread count, fallback to available processor
-	 * (but with a minimum value of 4)
+	 * (but with a minimum value of 4).
 	 */
 	int DEFAULT_IO_WORKER_COUNT = Integer.parseInt(System.getProperty(
 			ReactorNetty.IO_WORKER_COUNT,
 			"" + Math.max(Runtime.getRuntime().availableProcessors(), 4)));
 
 	/**
-	 * Default selector thread count, fallback to -1 (no selector thread)
+	 * Default selector thread count, fallback to -1 (no selector thread).
 	 */
 	int DEFAULT_IO_SELECT_COUNT = Integer.parseInt(System.getProperty(
 			ReactorNetty.IO_SELECT_COUNT,
@@ -51,7 +51,7 @@ public interface LoopResources extends Disposable {
 
 	/**
 	 * Default value whether the native transport (epoll, kqueue) will be preferred,
-	 * fallback it will be preferred when available
+	 * fallback it will be preferred when available.
 	 */
 	boolean DEFAULT_NATIVE = Boolean.parseBoolean(System.getProperty(
 			ReactorNetty.NATIVE,
@@ -89,7 +89,7 @@ public interface LoopResources extends Disposable {
 
 	/**
 	 * Create a simple {@link LoopResources} to provide automatically for {@link
-	 * EventLoopGroup} and {@link Channel} factories
+	 * EventLoopGroup} and {@link Channel} factories.
 	 *
 	 * @param prefix the event loop thread name prefix
 	 * @return a new {@link LoopResources} to provide automatically for {@link
@@ -104,7 +104,7 @@ public interface LoopResources extends Disposable {
 
 	/**
 	 * Create a simple {@link LoopResources} to provide automatically for {@link
-	 * EventLoopGroup} and {@link Channel} factories
+	 * EventLoopGroup} and {@link Channel} factories.
 	 *
 	 * @param prefix the event loop thread name prefix
 	 * @param workerCount number of worker threads
@@ -124,7 +124,7 @@ public interface LoopResources extends Disposable {
 
 	/**
 	 * Create a simple {@link LoopResources} to provide automatically for {@link
-	 * EventLoopGroup} and {@link Channel} factories
+	 * EventLoopGroup} and {@link Channel} factories.
 	 *
 	 * @param prefix the event loop thread name prefix
 	 * @param selectCount number of selector threads
@@ -148,7 +148,7 @@ public interface LoopResources extends Disposable {
 
 	/**
 	 * Create a simple {@link LoopResources} to provide automatically for {@link
-	 * EventLoopGroup} and {@link Channel} factories
+	 * EventLoopGroup} and {@link Channel} factories.
 	 *
 	 * @param prefix the event loop thread name prefix
 	 * @param selectCount number of selector threads. When -1 is specified, no selectors threads will be created,
@@ -176,7 +176,7 @@ public interface LoopResources extends Disposable {
 	}
 
 	/**
-	 * return true if {@link EventLoopGroup} should not be shutdown
+	 * return true if {@link EventLoopGroup} should not be shutdown.
 	 *
 	 * @return true if {@link EventLoopGroup} should not be shutdown
 	 */
@@ -291,7 +291,7 @@ public interface LoopResources extends Disposable {
 	}
 
 	/**
-	 * Return true if environment supports native connections
+	 * Return true if environment supports native connections.
 	 *
 	 * @return true if environment supports native connections
 	 */

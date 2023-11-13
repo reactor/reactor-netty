@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import reactor.util.context.Context;
 public interface ConnectionObserver {
 
 	/**
-	 * Return a noop connection listener
+	 * Return a noop connection listener.
 	 *
 	 * @return a noop connection listener
 	 */
@@ -42,7 +42,7 @@ public interface ConnectionObserver {
 	}
 
 	/**
-	 * Connection listener {@link Context}
+	 * Connection listener {@link Context}.
 	 *
 	 * @return current {@link Context} or {@link Context#empty()}
 	 */
@@ -63,7 +63,7 @@ public interface ConnectionObserver {
 	}
 
 	/**
-	 * React on connection state change (e.g. http request or response)
+	 * React on connection state change (e.g. http request or response).
 	 *
 	 * @param connection the connection reference
 	 * @param newState the new State
@@ -71,7 +71,7 @@ public interface ConnectionObserver {
 	void onStateChange(Connection connection, State newState);
 
 	/**
-	 * Chain together another {@link ConnectionObserver}
+	 * Chain together another {@link ConnectionObserver}.
 	 *
 	 * @param other the next {@link ConnectionObserver}
 	 *

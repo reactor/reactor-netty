@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@ package reactor.netty.http.client;
 import reactor.netty.ConnectionObserver;
 
 /**
- * Specific Http Client state observable by {@link HttpClient#observe(ConnectionObserver)}
+ * Specific Http Client state observable by {@link HttpClient#observe(ConnectionObserver)}.
  *
  * @author Stephane Maldini
  */
 public enum HttpClientState implements ConnectionObserver.State {
 	/**
-	 * The request has been prepared and ready for I/O handler to be invoked
+	 * The request has been prepared and ready for I/O handler to be invoked.
 	 */
 	REQUEST_PREPARED() {
 		@Override
@@ -33,7 +33,7 @@ public enum HttpClientState implements ConnectionObserver.State {
 		}
 	},
 	/**
-	 * The request has been sent
+	 * The request has been sent.
 	 */
 	REQUEST_SENT() {
 		@Override
@@ -43,7 +43,7 @@ public enum HttpClientState implements ConnectionObserver.State {
 	},
 	/**
 	 * The request has been sent but the response has not been fully received and the
-	 * connection has been prematurely closed
+	 * connection has been prematurely closed.
 	 */
 	RESPONSE_INCOMPLETE() {
 		@Override
@@ -52,7 +52,7 @@ public enum HttpClientState implements ConnectionObserver.State {
 		}
 	},
 	/**
-	 * The response status and headers have been received
+	 * The response status and headers have been received.
 	 */
 	RESPONSE_RECEIVED() {
 		@Override
@@ -61,7 +61,7 @@ public enum HttpClientState implements ConnectionObserver.State {
 		}
 	},
 	/**
-	 * The response fully received
+	 * The response fully received.
 	 */
 	RESPONSE_COMPLETED() {
 		@Override
@@ -71,7 +71,7 @@ public enum HttpClientState implements ConnectionObserver.State {
 	},
 	/**
 	 * Propagated when a stream is bound to a channelOperation and ready for
-	 * user interaction
+	 * user interaction.
 	 */
 	STREAM_CONFIGURED() {
 		@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import io.netty.channel.Channel;
 import reactor.core.publisher.Flux;
 
 /**
- * An inbound-traffic API delegating to an underlying {@link Channel}
+ * An inbound-traffic API delegating to an underlying {@link Channel}.
  *
  * @author Stephane Maldini
  * @since 0.6
@@ -30,7 +30,7 @@ public interface NettyInbound {
 
 
 	/**
-	 * A {@link Flux} extension that allows for extra decoding operators
+	 * A {@link Flux} extension that allows for extra decoding operators.
 	 *
 	 * @return a new {@link ByteBufFlux}
 	 */
@@ -38,7 +38,7 @@ public interface NettyInbound {
 
 
 	/**
-	 * a {@literal Object} inbound {@link Flux}
+	 * a {@literal Object} inbound {@link Flux}.
 	 *
 	 * @return a {@literal Object} inbound {@link Flux}
 	 */

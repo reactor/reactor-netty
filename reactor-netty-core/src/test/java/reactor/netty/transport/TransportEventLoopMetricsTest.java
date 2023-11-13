@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.PENDING_TASKS;
 
 /**
- * Tests for event loop metrics
+ * Tests for event loop metrics.
  *
  * @author Pierre De Rop
  * @since 1.0.14

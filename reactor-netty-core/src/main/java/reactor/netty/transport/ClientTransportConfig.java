@@ -60,7 +60,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return the {@link ConnectionProvider}
+	 * Return the {@link ConnectionProvider}.
 	 *
 	 * @return the {@link ConnectionProvider}
 	 */
@@ -69,7 +69,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return the configured callback or null
+	 * Return the configured callback or null.
 	 *
 	 * @return the configured callback or null
 	 */
@@ -79,7 +79,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return the configured callback or null
+	 * Return the configured callback or null.
 	 *
 	 * @return the configured callback or null
 	 */
@@ -89,7 +89,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return the configured callback or null
+	 * Return the configured callback or null.
 	 *
 	 * @return the configured callback or null
 	 */
@@ -99,7 +99,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return true if that {@link ClientTransportConfig} is configured with a proxy
+	 * Return true if that {@link ClientTransportConfig} is configured with a proxy.
 	 *
 	 * @return true if that {@link ClientTransportConfig} is configured with a proxy
 	 */
@@ -108,7 +108,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return the configured {@link NameResolverProvider} or null
+	 * Return the configured {@link NameResolverProvider} or null.
 	 *
 	 * @return the configured {@link NameResolverProvider} or null
 	 */
@@ -118,7 +118,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return the {@link ProxyProvider} if any or null
+	 * Return the {@link ProxyProvider} if any or null.
 	 *
 	 * @return the {@link ProxyProvider} if any or null
 	 */
@@ -128,7 +128,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return the remote configured {@link SocketAddress}
+	 * Return the remote configured {@link SocketAddress}.
 	 *
 	 * @return the remote configured {@link SocketAddress}
 	 */

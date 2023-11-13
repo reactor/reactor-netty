@@ -531,7 +531,7 @@ class Http2Tests extends BaseHttpTest {
 		          .verify(Duration.ofSeconds(30));
 	}
 
-	/**
+	/*
 	 * https://github.com/reactor/reactor-netty/issues/1813
 	 */
 	@Test
@@ -539,7 +539,7 @@ class Http2Tests extends BaseHttpTest {
 		testTooManyPermitsReturned(createClient(() -> disposableServer.address()));
 	}
 
-	/**
+	/*
 	 * https://github.com/reactor/reactor-netty/issues/1813
 	 */
 	@Test

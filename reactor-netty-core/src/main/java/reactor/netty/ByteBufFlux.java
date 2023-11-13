@@ -48,7 +48,7 @@ import reactor.util.Loggers;
 public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 
 	/**
-	 * Decorate as {@link ByteBufFlux}
+	 * Decorate as {@link ByteBufFlux}.
 	 *
 	 * @param source publisher to decorate
 	 *
@@ -59,7 +59,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * Decorate as {@link ByteBufFlux}
+	 * Decorate as {@link ByteBufFlux}.
 	 *
 	 * @param source publisher to decorate
 	 * @param allocator the channel {@link ByteBufAllocator}
@@ -73,7 +73,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 
 
 	/**
-	 * Decorate as {@link ByteBufFlux}
+	 * Decorate as {@link ByteBufFlux}.
 	 *
 	 * @param source publisher to decorate
 	 * @return a {@link ByteBufFlux}
@@ -83,7 +83,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * Decorate as {@link ByteBufFlux}
+	 * Decorate as {@link ByteBufFlux}.
 	 *
 	 * @param source publisher to decorate
 	 * @param charset the encoding charset
@@ -105,7 +105,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	/**
 	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
 	 * {@link ByteBuf} chunks with a default maximum size of 500K into
-	 * the returned {@link ByteBufFlux}
+	 * the returned {@link ByteBufFlux}.
 	 *
 	 * @param path the path to the resource to stream
 	 *
@@ -117,7 +117,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 
 	/**
 	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
-	 * {@link ByteBuf} chunks with a given maximum size into the returned {@link ByteBufFlux}
+	 * {@link ByteBuf} chunks with a given maximum size into the returned {@link ByteBufFlux}.
 	 *
 	 * @param path the path to the resource to stream
 	 * @param maxChunkSize the maximum per-item ByteBuf size
@@ -185,7 +185,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * Convert to a {@link ByteBuffer} inbound {@link Flux}
+	 * Convert to a {@link ByteBuffer} inbound {@link Flux}.
 	 *
 	 * @return a {@link ByteBuffer} inbound {@link Flux}
 	 */
@@ -201,7 +201,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * Convert to a {@literal byte[]} inbound {@link Flux}
+	 * Convert to a {@literal byte[]} inbound {@link Flux}.
 	 *
 	 * @return a {@literal byte[]} inbound {@link Flux}
 	 */
@@ -348,7 +348,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * A channel object to {@link ByteBuf} transformer
+	 * A channel object to {@link ByteBuf} transformer.
 	 */
 	static final Function<Object, ByteBuf> bytebufExtractor = o -> {
 		if (o instanceof ByteBuf) {

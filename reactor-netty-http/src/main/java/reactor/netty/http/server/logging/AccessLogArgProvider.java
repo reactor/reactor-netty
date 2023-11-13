@@ -44,7 +44,7 @@ public interface AccessLogArgProvider {
 	String zonedDateTime();
 
 	/**
-	 * Returns the date-time of the moment when the request was received
+	 * Returns the date-time of the moment when the request was received.
 	 *
 	 * @return zoned date-time
 	 * @since 1.0.6

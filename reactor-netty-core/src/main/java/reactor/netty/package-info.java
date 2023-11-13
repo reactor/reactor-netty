@@ -15,7 +15,7 @@
  */
 
 /**
- * Main Reactor Netty Contracts used by all client and server implementations
+ * Main Reactor Netty Contracts used by all client and server implementations.
  */
 @NonNullApi
 package reactor.netty;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@ package reactor.netty.http;
 
 /**
  * An enum defining various HTTP negotiations between H2, H2C-upgrade,
- * H2C-prior-knowledge and HTTP/1.1
+ * H2C-prior-knowledge and HTTP/1.1.
  *
  * @author Stephane Maldini
  */
 public enum HttpProtocol {
 
 	/**
-	 * The default supported HTTP protocol by HttpServer and HttpClient
+	 * The default supported HTTP protocol by HttpServer and HttpClient.
 	 */
 	HTTP11,
 

@@ -74,7 +74,7 @@ import static reactor.netty.ReactorNetty.format;
 public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConfig> {
 
 	/**
-	 * Prepare a pooled {@link TcpClient}
+	 * Prepare a pooled {@link TcpClient}.
 	 *
 	 * @return a {@link TcpClient}
 	 */
@@ -84,7 +84,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 
 
 	/**
-	 * Prepare a {@link TcpClient}
+	 * Prepare a {@link TcpClient}.
 	 *
 	 * @param provider a {@link ConnectionProvider} to acquire connections
 	 *
@@ -96,7 +96,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	}
 
 	/**
-	 * Prepare a non pooled {@link TcpClient}
+	 * Prepare a non pooled {@link TcpClient}.
 	 *
 	 * @return a {@link TcpClient}
 	 */
@@ -219,7 +219,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	}
 
 	/**
-	 * Attach an IO handler to react on connected client
+	 * Attach an IO handler to react on connected client.
 	 *
 	 * @param handler an IO handler that can dispose underlying connection when {@link
 	 * Publisher} terminates.
@@ -252,7 +252,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	}
 
 	/**
-	 * Remove any previously applied SSL configuration customization
+	 * Remove any previously applied SSL configuration customization.
 	 *
 	 * @return a new {@link TcpClient}
 	 */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,14 @@ import java.net.SocketAddress;
 import java.time.Duration;
 
 /**
- * Interface for collecting metrics on HTTP client level
+ * Interface for collecting metrics on HTTP client level.
  *
  * @author Violeta Georgieva
  */
 public interface HttpClientMetricsRecorder extends HttpMetricsRecorder {
 
 	/**
-	 * Records the time that is spent in consuming incoming data
+	 * Records the time that is spent in consuming incoming data.
 	 *
 	 * @param remoteAddress The remote peer
 	 * @param uri the requested URI
@@ -39,7 +39,7 @@ public interface HttpClientMetricsRecorder extends HttpMetricsRecorder {
 	void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time);
 
 	/**
-	 * Records the time that is spent in sending outgoing data
+	 * Records the time that is spent in sending outgoing data.
 	 *
 	 * @param remoteAddress The remote peer
 	 * @param uri the requested URI
@@ -49,7 +49,7 @@ public interface HttpClientMetricsRecorder extends HttpMetricsRecorder {
 	void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time);
 
 	/**
-	 * Records the total time for the request/response
+	 * Records the total time for the request/response.
 	 *
 	 * @param remoteAddress The remote peer
 	 * @param uri the requested URI

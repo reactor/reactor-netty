@@ -63,7 +63,7 @@ import static reactor.netty.http.server.ConnectionInfo.DEFAULT_HTTP_PORT;
 import static reactor.netty.http.server.ConnectionInfo.getDefaultHostPort;
 
 /**
- * Tests for {@link ConnectionInfo}
+ * Tests for {@link ConnectionInfo}.
  *
  * @author Brian Clozel
  */

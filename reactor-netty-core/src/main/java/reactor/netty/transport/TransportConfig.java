@@ -59,7 +59,7 @@ import static reactor.netty.ReactorNetty.format;
 public abstract class TransportConfig {
 
 	/**
-	 * Return the read-only default channel attributes
+	 * Return the read-only default channel attributes.
 	 *
 	 * @return the read-only default channel attributes
 	 */
@@ -71,7 +71,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the local {@link SocketAddress} supplier that will be bound or null
+	 * Return the local {@link SocketAddress} supplier that will be bound or null.
 	 *
 	 * @return the {@link SocketAddress} supplier
 	 */
@@ -96,7 +96,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the configured {@link ChannelGroup} or null
+	 * Return the configured {@link ChannelGroup} or null.
 	 *
 	 * @return the configured {@link ChannelGroup} or null
 	 */
@@ -106,7 +106,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the {@link ChannelInitializer} that will be used for initializing the channel pipeline
+	 * Return the {@link ChannelInitializer} that will be used for initializing the channel pipeline.
 	 *
 	 * @param connectionObserver the configured {@link ConnectionObserver}
 	 * @param remoteAddress the remote address
@@ -120,7 +120,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the associated {@link ChannelOperations.OnSetup}, config implementations might override this
+	 * Return the associated {@link ChannelOperations.OnSetup}, config implementations might override this.
 	 *
 	 * @return the associated {@link ChannelOperations.OnSetup}
 	 */
@@ -129,7 +129,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the configured {@link ConnectionObserver} if any or {@link ConnectionObserver#emptyListener()}
+	 * Return the configured {@link ConnectionObserver} if any or {@link ConnectionObserver#emptyListener()}.
 	 *
 	 * @return the configured {@link ConnectionObserver} if any or {@link ConnectionObserver#emptyListener()}
 	 */
@@ -138,7 +138,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the configured callback if any or {@link ChannelPipelineConfigurer#emptyConfigurer()}
+	 * Return the configured callback if any or {@link ChannelPipelineConfigurer#emptyConfigurer()}.
 	 *
 	 * @return the configured callback if any or {@link ChannelPipelineConfigurer#emptyConfigurer()}
 	 */
@@ -147,7 +147,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return {@code true} if prefer native event loop and channel factory (e.g. epoll or kqueue)
+	 * Return {@code true} if prefer native event loop and channel factory (e.g. epoll or kqueue).
 	 *
 	 * @return {@code true} if prefer native event loop and channel factory (e.g. epoll or kqueue)
 	 */
@@ -156,7 +156,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the configured {@link LoggingHandler} or null
+	 * Return the configured {@link LoggingHandler} or null.
 	 *
 	 * @return the configured {@link LoggingHandler} or null
 	 */
@@ -166,7 +166,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the configured {@link LoopResources} or the default
+	 * Return the configured {@link LoopResources} or the default.
 	 *
 	 * @return the configured  {@link LoopResources} or the default
 	 */
@@ -175,7 +175,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the configured metrics recorder {@link ChannelMetricsRecorder} or null
+	 * Return the configured metrics recorder {@link ChannelMetricsRecorder} or null.
 	 *
 	 * @return the configured metrics recorder {@link ChannelMetricsRecorder} or null
 	 */
@@ -185,7 +185,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the read-only {@link ChannelOption} map
+	 * Return the read-only {@link ChannelOption} map.
 	 *
 	 * @return the read-only {@link ChannelOption} map
 	 */
@@ -211,7 +211,7 @@ public abstract class TransportConfig {
 	boolean                                    preferNative;
 
 	/**
-	 * Default TransportConfig with options
+	 * Default TransportConfig with options.
 	 */
 	protected TransportConfig(Map<ChannelOption<?>, ?> options) {
 		this.attrs = Collections.emptyMap();
@@ -222,7 +222,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Default TransportConfig with options
+	 * Default TransportConfig with options.
 	 */
 	protected TransportConfig(Map<ChannelOption<?>, ?> options, Supplier<? extends SocketAddress> bindAddress) {
 		this.attrs = Collections.emptyMap();
@@ -234,7 +234,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Create TransportConfig from an existing one
+	 * Create TransportConfig from an existing one.
 	 */
 	protected TransportConfig(TransportConfig parent) {
 		this.attrs = parent.attrs;
@@ -250,7 +250,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Return the channel type this configuration is associated with, it can be one of the following:
+	 * Return the channel type this configuration is associated with, it can be one of the following.
 	 * <ul>
 	 *   <li>{@link io.netty.channel.socket.SocketChannel}</li>
 	 *   <li>{@link io.netty.channel.socket.ServerSocketChannel}</li>
@@ -285,14 +285,14 @@ public abstract class TransportConfig {
 	protected abstract ConnectionObserver defaultConnectionObserver();
 
 	/**
-	 * Return the default {@link LoggingHandler} to wiretap this transport
+	 * Return the default {@link LoggingHandler} to wiretap this transport.
 	 *
 	 * @return the default {@link LoggingHandler} to wiretap this transport
 	 */
 	protected abstract LoggingHandler defaultLoggingHandler();
 
 	/**
-	 * Return the default {@link LoopResources} for this transport
+	 * Return the default {@link LoopResources} for this transport.
 	 *
 	 * @return the default {@link LoopResources} for this transport
 	 */
@@ -306,7 +306,7 @@ public abstract class TransportConfig {
 	protected abstract ChannelMetricsRecorder defaultMetricsRecorder();
 
 	/**
-	 * Return the default callback if any or {@link ChannelPipelineConfigurer#emptyConfigurer()}
+	 * Return the default callback if any or {@link ChannelPipelineConfigurer#emptyConfigurer()}.
 	 *
 	 * @return the default callback if any or {@link ChannelPipelineConfigurer#emptyConfigurer()}
 	 */
@@ -324,7 +324,7 @@ public abstract class TransportConfig {
 	}
 
 	/**
-	 * Obtains immediately the {@link ChannelMetricsRecorder} from the provided {@link Supplier}
+	 * Obtains immediately the {@link ChannelMetricsRecorder} from the provided {@link Supplier}.
 	 *
 	 * @param metricsRecorderSupplier a supplier for the {@link ChannelMetricsRecorder}
 	 */

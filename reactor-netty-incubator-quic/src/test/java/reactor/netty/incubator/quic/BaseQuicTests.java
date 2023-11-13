@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ class BaseQuicTests {
 	}
 
 	/**
-	 * Creates {@link QuicServer} bound on a random port with:
+	 * Creates {@link QuicServer} bound on a random port with.
 	 * <ul>
 	 *     <li>InsecureQuicTokenHandler</li>
 	 *     <li>wire logging enabled</li>
@@ -151,7 +151,7 @@ class BaseQuicTests {
 		                 .initialSettings(initialSettings);
 	}
 	/**
-	 * Creates {@link QuicClient} with a specified remote address to connect to and the following configuration:
+	 * Creates {@link QuicClient} with a specified remote address to connect to and the following configuration.
 	 * <ul>
 	 *     <li>wire logging enabled</li>
 	 *     <li>InsecureTrustManagerFactory</li>
@@ -182,7 +182,7 @@ class BaseQuicTests {
 	}
 
 	/**
-	 * Creates {@link QuicClient} with a specified remote address to connect to and the following configuration:
+	 * Creates {@link QuicClient} with a specified remote address to connect to and the following configuration.
 	 * <ul>
 	 *     <li>wire logging enabled</li>
 	 *     <li>InsecureTrustManagerFactory</li>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import java.net.SocketAddress;
 public interface HttpMetricsRecorder extends ChannelMetricsRecorder {
 
 	/**
-	 * Records the amount of the data that is received, in bytes
+	 * Records the amount of the data that is received, in bytes.
 	 *
 	 * @param remoteAddress The remote peer
 	 * @param uri the requested URI
@@ -36,7 +36,7 @@ public interface HttpMetricsRecorder extends ChannelMetricsRecorder {
 	void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes);
 
 	/**
-	 * Records the amount of the data that is sent, in bytes
+	 * Records the amount of the data that is sent, in bytes.
 	 *
 	 * @param remoteAddress The remote peer
 	 * @param uri the requested URI
@@ -45,7 +45,7 @@ public interface HttpMetricsRecorder extends ChannelMetricsRecorder {
 	void recordDataSent(SocketAddress remoteAddress, String uri, long bytes);
 
 	/**
-	 * Increments the number of the errors that are occurred
+	 * Increments the number of the errors that are occurred.
 	 *
 	 * @param remoteAddress The remote peer
 	 * @param uri the requested URI

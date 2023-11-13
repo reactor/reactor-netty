@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import reactor.util.annotation.Nullable;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Hold contextual information for the underlying {@link Channel}
+ * Hold contextual information for the underlying {@link Channel}.
  *
  * @author Stephane Maldini
  * @since 0.8
@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
 public interface Connection extends DisposableChannel {
 
 	/**
-	 * Return an existing {@link Connection} wrapper or create a simple new one
+	 * Return an existing {@link Connection} wrapper or create a simple new one.
 	 *
 	 * @param channel channel to retrieve the connection reference from
 	 *
@@ -345,7 +345,7 @@ public interface Connection extends DisposableChannel {
 	}
 
 	/**
-	 * Remove a named handler if present and return this context
+	 * Remove a named handler if present and return this context.
 	 *
 	 * @param name handler name
 	 *

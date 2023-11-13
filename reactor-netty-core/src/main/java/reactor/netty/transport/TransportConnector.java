@@ -180,7 +180,7 @@ public final class TransportConnector {
 	}
 
 	/**
-	 * Set the channel attributes
+	 * Set the channel attributes.
 	 *
 	 * @param channel the channel
 	 * @param attrs the attributes
@@ -193,7 +193,7 @@ public final class TransportConnector {
 	}
 
 	/**
-	 * Set the channel options
+	 * Set the channel options.
 	 *
 	 * @param channel the channel
 	 * @param options the options

@@ -58,14 +58,14 @@ import reactor.util.annotation.Nullable;
 import static reactor.netty.ReactorNetty.format;
 
 /**
- * SSL Provider
+ * SSL Provider.
  *
  * @author Violeta Georgieva
  */
 public final class SslProvider {
 
 	/**
-	 * Creates a builder for {@link SslProvider SslProvider}
+	 * Creates a builder for {@link SslProvider SslProvider}.
 	 *
 	 * @return a new SslProvider builder
 	 */
@@ -100,7 +100,7 @@ public final class SslProvider {
 	}
 
 	/**
-	 * Return the default client ssl provider
+	 * Return the default client ssl provider.
 	 *
 	 * @return default client ssl provider
 	 */
@@ -112,7 +112,7 @@ public final class SslProvider {
 
 		/**
 		 * Set a configurator callback to mutate any property from the provided
-		 * {@link SslHandler}
+		 * {@link SslHandler}.
 		 *
 		 * @param handlerConfigurator A callback given the generated {@link SslHandler}
 		 *
@@ -233,7 +233,7 @@ public final class SslProvider {
 		Builder serverNames(SNIServerName... serverNames);
 
 		/**
-		 * Builds new SslProvider
+		 * Builds new SslProvider.
 		 *
 		 * @return builds new SslProvider
 		 */
@@ -255,7 +255,7 @@ public final class SslProvider {
 		Builder sslContext(ProtocolSslContextSpec spec);
 
 		/**
-		 * The SslContext to set when configuring SSL
+		 * The SslContext to set when configuring SSL.
 		 *
 		 * @param sslContext The context to set when configuring SSL
 		 *
@@ -278,7 +278,7 @@ public final class SslProvider {
 
 	/**
 	 * Default configuration that will be applied to the provided
-	 * {@link SslContextBuilder}
+	 * {@link SslContextBuilder}.
 	 * @deprecated as of 1.0.6. Prefer {@link SslProvider.SslContextSpec#sslContext(ProtocolSslContextSpec)},
 	 * where the default configuration is applied before any other custom configuration.
 	 * This will be removed in version 1.2.0.
@@ -286,12 +286,12 @@ public final class SslProvider {
 	@Deprecated
 	public enum DefaultConfigurationType {
 		/**
-		 * There will be no default configuration
+		 * There will be no default configuration.
 		 */
 		NONE,
 		/**
 		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
-		 * <code>OpenSsl.isAvailable()</code>
+		 * <code>OpenSsl.isAvailable()</code>.
 		 */
 		TCP,
 		/**
@@ -299,7 +299,7 @@ public final class SslProvider {
 		 * <code>OpenSsl.isAlpnSupported()</code>,
 		 * {@link #HTTP2_CIPHERS},
 		 * ALPN support,
-		 * HTTP/1.1 and HTTP/2 support
+		 * HTTP/1.1 and HTTP/2 support.
 		 */
 		H2
 	}
@@ -314,7 +314,7 @@ public final class SslProvider {
 
 		/**
 		 * Default configuration type that will be applied to the provided
-		 * {@link SslContextBuilder}
+		 * {@link SslContextBuilder}.
 		 *
 		 * @param type The default configuration type.
 		 * @return {@code this}
@@ -631,7 +631,7 @@ public final class SslProvider {
 	static final class Build implements SslContextSpec, DefaultConfigurationSpec, Builder {
 
 		/**
-		 * Default SSL handshake timeout (milliseconds), fallback to 10 seconds
+		 * Default SSL handshake timeout (milliseconds), fallback to 10 seconds.
 		 */
 		static final long DEFAULT_SSL_HANDSHAKE_TIMEOUT =
 				Long.parseLong(System.getProperty(

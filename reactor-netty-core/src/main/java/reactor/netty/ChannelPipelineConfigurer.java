@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import static reactor.netty.ReactorNetty.CompositeChannelPipelineConfigurer.comp
 public interface ChannelPipelineConfigurer {
 
 	/**
-	 * Return a noop configurer
+	 * Return a noop configurer.
 	 *
 	 * @return a noop configurer
 	 */
@@ -50,7 +50,7 @@ public interface ChannelPipelineConfigurer {
 	void onChannelInit(ConnectionObserver connectionObserver, Channel channel, @Nullable SocketAddress remoteAddress);
 
 	/**
-	 * Chain together another {@link ChannelPipelineConfigurer}
+	 * Chain together another {@link ChannelPipelineConfigurer}.
 	 *
 	 * @param other the next {@link ChannelPipelineConfigurer}
 	 *

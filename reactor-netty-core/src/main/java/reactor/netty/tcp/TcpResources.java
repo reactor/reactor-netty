@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import reactor.util.annotation.Nullable;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Hold the default Tcp resources
+ * Hold the default Tcp resources.
  *
  * @author Stephane Maldini
  * @since 0.6
@@ -101,7 +101,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * Return the global TCP resources for event loops and pooling
+	 * Return the global TCP resources for event loops and pooling.
 	 *
 	 * @return the global TCP resources for event loops and pooling
 	 */
@@ -110,7 +110,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * Reset TCP resources to default and return its instance
+	 * Reset TCP resources to default and return its instance.
 	 *
 	 * @return the global TCP resources
 	 */
@@ -274,7 +274,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * Dispose underlying resources
+	 * Dispose underlying resources.
 	 */
 	protected void _dispose() {
 		defaultProvider.dispose();

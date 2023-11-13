@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import java.util.Comparator;
 public interface HttpRouteHandlerMetadata {
 
 	/**
-	 * Get the http path this handler can handle
+	 * Get the http path this handler can handle.
 	 *
 	 * @return the http path
 	 */
@@ -38,7 +38,7 @@ public interface HttpRouteHandlerMetadata {
 	String getPath();
 
 	/**
-	 * Get the http method this handler can handle
+	 * Get the http method this handler can handle.
 	 *
 	 * @return the http method {@link HttpMethod}
 	 * @since 1.0.11

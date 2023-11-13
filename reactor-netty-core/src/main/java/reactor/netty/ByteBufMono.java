@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import static java.util.Objects.requireNonNull;
 public class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 
 	/**
-	 * a {@link ByteBuffer} inbound {@link Mono}
+	 * a {@link ByteBuffer} inbound {@link Mono}.
 	 *
 	 * @return a {@link ByteBuffer} inbound {@link Mono}
 	 */
@@ -58,7 +58,7 @@ public class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * a {@literal byte[]} inbound {@link Mono}
+	 * a {@literal byte[]} inbound {@link Mono}.
 	 *
 	 * @return a {@literal byte[]} inbound {@link Mono}
 	 */
@@ -76,7 +76,7 @@ public class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * a {@link String} inbound {@link Mono}
+	 * a {@link String} inbound {@link Mono}.
 	 *
 	 * @return a {@link String} inbound {@link Mono}
 	 */
@@ -85,7 +85,7 @@ public class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * a {@link String} inbound {@link Mono}
+	 * a {@link String} inbound {@link Mono}.
 	 *
 	 * @param charset the decoding charset
 	 *
@@ -124,7 +124,7 @@ public class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * Decorate as {@link ByteBufMono}
+	 * Decorate as {@link ByteBufMono}.
 	 *
 	 * @param source publisher to decorate
 	 * @return a {@link ByteBufMono}
@@ -134,7 +134,7 @@ public class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * Decorate as {@link ByteBufMono}
+	 * Decorate as {@link ByteBufMono}.
 	 *
 	 * @param source publisher to decorate
 	 * @param charset the encoding charset

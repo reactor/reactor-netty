@@ -63,7 +63,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 
 	/**
 	 * Configure whether to throw an exception on a channel inactive
-	 * in case there was a missing response
+	 * in case there was a missing response.
 	 *
 	 * @param failOnMissingResponse true - throw an exception on a channel inactive
 	 *                              in case there was a missing response, otherwise false

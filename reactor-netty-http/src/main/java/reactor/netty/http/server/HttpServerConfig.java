@@ -150,7 +150,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	/**
-	 * Return the HTTP/2 configuration
+	 * Return the HTTP/2 configuration.
 	 *
 	 * @return the HTTP/2 configuration
 	 */
@@ -180,7 +180,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	/**
-	 * Returns true if that {@link HttpServer} secured via SSL transport
+	 * Returns true if that {@link HttpServer} secured via SSL transport.
 	 *
 	 * @return true if that {@link HttpServer} secured via SSL transport
 	 */
@@ -276,7 +276,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	/**
 	 * Returns the configured function that receives the actual uri and returns the uri tag value
-	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag
+	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag.
 	 *
 	 * @return the configured function that receives the actual uri and returns the uri tag value
 	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag
@@ -787,7 +787,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	/**
 	 * Default value whether the SSL debugging on the server side will be enabled/disabled,
-	 * fallback to SSL debugging disabled
+	 * fallback to SSL debugging disabled.
 	 */
 	static final boolean SSL_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_SERVER_DEBUG, "false"));
 
@@ -846,7 +846,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Long maxStreams;
 
 		/**
-		 * Used when full H2 preface is received
+		 * Used when full H2 preface is received.
 		 */
 		H2CleartextCodec(Http11OrH2CleartextCodec upgrader, @Nullable Long maxStreams) {
 			this(upgrader, true, true, maxStreams);
@@ -1050,7 +1050,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		/**
-		 * Inline channel initializer
+		 * Inline channel initializer.
 		 */
 		@Override
 		protected void initChannel(Channel ch) {

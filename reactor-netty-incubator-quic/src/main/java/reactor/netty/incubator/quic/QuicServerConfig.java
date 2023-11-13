@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 
 	/**
 	 * Name prefix that will be used for the QUIC server's metrics
-	 * registered in Micrometer's global registry
+	 * registered in Micrometer's global registry.
 	 */
 	public static final String QUIC_SERVER_PREFIX = "reactor.netty.quic.server";
 
@@ -92,7 +92,7 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 	}
 
 	/**
-	 * Return the configured callback or null
+	 * Return the configured callback or null.
 	 *
 	 * @return the configured callback or null
 	 */

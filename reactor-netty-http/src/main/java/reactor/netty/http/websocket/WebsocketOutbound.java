@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import reactor.netty.NettyOutbound;
 import reactor.util.annotation.Nullable;
 
 /**
- * A websocket framed outbound
+ * A websocket framed outbound.
  *
  * @author Stephane Maldini
  * @author Simon Baslé
@@ -50,7 +50,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	NettyOutbound send(Publisher<? extends ByteBuf> dataStream);
 
 	/**
-	 * Prepare to send a close frame on subscribe then close the underlying channel
+	 * Prepare to send a close frame on subscribe then close the underlying channel.
 	 *
 	 * @return a {@link Mono} fulfilled when the send succeeded or failed, immediately
 	 * completed if already closed
@@ -58,7 +58,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	Mono<Void> sendClose();
 
 	/**
-	 * Prepare to send a close frame on subscribe then close the underlying channel
+	 * Prepare to send a close frame on subscribe then close the underlying channel.
 	 *
 	 * @param rsv
 	 *            reserved bits used for protocol extensions
@@ -69,7 +69,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	Mono<Void> sendClose(int rsv);
 
 	/**
-	 * Prepare to send a close frame on subscribe then close the underlying channel
+	 * Prepare to send a close frame on subscribe then close the underlying channel.
 	 *
 	 * @param statusCode
 	 *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455#section-7.4</a>. For
@@ -87,7 +87,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	Mono<Void> sendClose(int statusCode, @Nullable String reasonText);
 
 	/**
-	 * Prepare to send a close frame on subscribe then close the underlying channel
+	 * Prepare to send a close frame on subscribe then close the underlying channel.
 	 *
 	 * @param rsv
 	 *            reserved bits used for protocol extensions

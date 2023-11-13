@@ -79,7 +79,7 @@ import static reactor.netty.ReactorNetty.format;
 public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerConfig> {
 
 	/**
-	 * Prepare an {@link HttpServer}
+	 * Prepare an {@link HttpServer}.
 	 *
 	 * @return a new {@link HttpServer}
 	 */
@@ -316,7 +316,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 
 	/**
 	 * Enable GZip response compression if the client request presents accept encoding
-	 * headers AND the response reaches a minimum threshold
+	 * headers AND the response reaches a minimum threshold.
 	 *
 	 * @param minResponseSize compression is performed once response size exceeds the given
 	 * value in bytes
@@ -335,7 +335,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Configure the
 	 * {@link ServerCookieEncoder}; {@link ServerCookieDecoder} will be
-	 * chosen based on the encoder
+	 * chosen based on the encoder.
 	 *
 	 * @param encoder the preferred ServerCookieEncoder
 	 *
@@ -355,7 +355,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 
 	/**
 	 * Configure the
-	 * {@link ServerCookieEncoder} and {@link ServerCookieDecoder}
+	 * {@link ServerCookieEncoder} and {@link ServerCookieDecoder}.
 	 *
 	 * @param encoder the preferred ServerCookieEncoder
 	 * @param decoder the preferred ServerCookieDecoder
@@ -415,7 +415,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
-	 * Attach an I/O handler to react on a connected client
+	 * Attach an I/O handler to react on a connected client.
 	 *
 	 * @param handler an I/O handler that can dispose underlying connection when {@link
 	 * Publisher} terminates. Only the first registered handler will subscribe to the
@@ -436,7 +436,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
-	 * Apply HTTP/2 configuration
+	 * Apply HTTP/2 configuration.
 	 *
 	 * @param http2Settings configures {@link Http2SettingsSpec} before requesting
 	 * @return a new {@link HttpServer}
@@ -669,7 +669,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
-	 * Removes any previously applied SSL configuration customization
+	 * Removes any previously applied SSL configuration customization.
 	 *
 	 * @return a new {@link HttpServer}
 	 */

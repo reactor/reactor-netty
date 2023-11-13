@@ -70,7 +70,7 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	HttpServerRequest paramsResolver(Function<? super String, Map<String, String>> paramsResolver);
 
 	/**
-	 * Returns a {@link Flux} of {@link HttpContent} containing received chunks
+	 * Returns a {@link Flux} of {@link HttpContent} containing received chunks.
 	 *
 	 * @return a {@link Flux} of {@link HttpContent} containing received chunks
 	 */
@@ -137,7 +137,7 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	InetSocketAddress remoteAddress();
 
 	/**
-	 * Returns inbound {@link HttpHeaders}
+	 * Returns inbound {@link HttpHeaders}.
 	 *
 	 * @return inbound {@link HttpHeaders}
 	 */

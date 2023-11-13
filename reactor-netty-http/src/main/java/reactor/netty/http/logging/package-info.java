@@ -15,7 +15,7 @@
  */
 
 /**
- * Http message log factory
+ * Http message log factory.
  */
 @NonNullApi
 package reactor.netty.http.logging;
