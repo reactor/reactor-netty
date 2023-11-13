@@ -33,6 +33,9 @@ import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Function;
 
 import static reactor.netty.ReactorNetty.format;
@@ -84,10 +87,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
 			}
 			catch (RuntimeException e) {
+				// Allow request-response exchange to continue, unaffected by metrics problem
 				if (log.isWarnEnabled()) {
 					log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 				}
-				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
 		ctx.fireChannelActive();
@@ -104,10 +107,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				}
 			}
 			catch (RuntimeException e) {
+				// Allow request-response exchange to continue, unaffected by metrics problem
 				if (log.isWarnEnabled()) {
 					log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 				}
-				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
 
@@ -147,10 +150,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 									ops.method().name(), ops.status().codeAsText().toString());
 						}
 						catch (RuntimeException e) {
+							// Allow request-response exchange to continue, unaffected by metrics problem
 							if (log.isWarnEnabled()) {
 								log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 							}
-							// Allow request-response exchange to continue, unaffected by metrics problem
 						}
 					}
 
@@ -161,10 +164,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			}
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 		finally {
 			//"FutureReturnValueIgnored" this is deliberate
@@ -206,10 +209,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			}
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		ctx.fireChannelRead(msg);
@@ -226,10 +229,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			}
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		ctx.fireExceptionCaught(cause);
@@ -315,11 +318,28 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				}
 			}
 			catch (RuntimeException e) {
+				// Allow request-response exchange to continue, unaffected by metrics problem
 				if (log.isWarnEnabled()) {
 					log.warn(format(channel, "Exception caught while recording metrics."), e);
 				}
-				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
 	}
+
+	static final Set<String> STANDARD_METHODS;
+	static {
+		Set<String> standardMethods = new HashSet<>();
+		standardMethods.add("GET");
+		standardMethods.add("HEAD");
+		standardMethods.add("POST");
+		standardMethods.add("PUT");
+		standardMethods.add("PATCH");
+		standardMethods.add("DELETE");
+		standardMethods.add("OPTIONS");
+		standardMethods.add("TRACE");
+		standardMethods.add("CONNECT");
+		STANDARD_METHODS = Collections.unmodifiableSet(standardMethods);
+	}
+	static final String UNKNOWN_METHOD = "UNKNOWN";
+	static final Function<String, String> DEFAULT_METHOD_TAG_VALUE = m -> STANDARD_METHODS.contains(m) ? m : UNKNOWN_METHOD;
 }

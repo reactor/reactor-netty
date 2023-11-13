@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,8 +60,7 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 	@Override
 	protected void recordWrite(SocketAddress address) {
 		if (contextView != null) {
-			recorder.recordDataSentTime(contextView, address,
-					path, method,
+			recorder.recordDataSentTime(contextView, address, path, method,
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 			recorder.recordDataSent(contextView, address, path, dataSent);
@@ -75,12 +74,10 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 	protected void recordRead(Channel channel) {
 		if (contextView != null) {
 			SocketAddress address = channel.remoteAddress();
-			recorder.recordDataReceivedTime(contextView, address,
-					path, method, status,
+			recorder.recordDataReceivedTime(contextView, address, path, method, status,
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-			recorder.recordResponseTime(contextView, address,
-					path, method, status,
+			recorder.recordResponseTime(contextView, address, path, method, status,
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 			recorder.recordDataReceived(contextView, address, path, dataReceived);

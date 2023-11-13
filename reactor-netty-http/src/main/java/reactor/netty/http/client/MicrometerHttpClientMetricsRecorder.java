@@ -16,7 +16,6 @@
 package reactor.netty.http.client;
 
 import io.micrometer.core.instrument.Timer;
-import reactor.netty.Metrics;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 import reactor.netty.internal.util.MapUtils;
@@ -34,6 +33,7 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
+import static reactor.netty.Metrics.formatSocketAddress;
 
 /**
  * @author Violeta Georgieva
@@ -49,7 +49,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-		String address = Metrics.formatSocketAddress(remoteAddress);
+		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, method, status);
 		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
@@ -65,7 +65,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
-		String address = Metrics.formatSocketAddress(remoteAddress);
+		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(uri, address, method, null);
 		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
@@ -80,7 +80,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-		String address = Metrics.formatSocketAddress(remoteAddress);
+		String address = formatSocketAddress(remoteAddress);
 		Timer responseTime = getResponseTimeTimer(name() + RESPONSE_TIME, address, uri, method, status);
 		if (responseTime != null) {
 			responseTime.record(time);
@@ -92,7 +92,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, address, method, status);
 		return MapUtils.computeIfAbsent(responseTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
-						.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
-						.register(REGISTRY)));
+				                   .tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
+				                   .register(REGISTRY)));
 	}
 }

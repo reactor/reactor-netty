@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package reactor.netty.http.client;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tags;
-import reactor.netty.Metrics;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 
 import java.net.SocketAddress;
@@ -31,6 +30,7 @@ import static reactor.netty.http.client.Http2ConnectionProviderMeters.Http2Conne
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.Http2ConnectionProviderMetersTags.REMOTE_ADDRESS;
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.IDLE_CONNECTIONS;
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.PENDING_STREAMS;
+import static reactor.netty.Metrics.formatSocketAddress;
 
 final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 
@@ -41,7 +41,7 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 	}
 
 	void registerMetrics(String poolName, String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
-		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
+		String addressAsString = formatSocketAddress(remoteAddress);
 		Tags tags = Tags.of(ID.asString(), id, REMOTE_ADDRESS.asString(), addressAsString, NAME.asString(), poolName);
 
 		Gauge.builder(ACTIVE_CONNECTIONS.getName(), metrics, InstrumentedPool.PoolMetrics::acquiredSize)
@@ -62,7 +62,7 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 	}
 
 	void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
-		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
+		String addressAsString = formatSocketAddress(remoteAddress);
 		Tags tags = Tags.of(ID.asString(), id, REMOTE_ADDRESS.asString(), addressAsString, NAME.asString(), poolName);
 
 		REGISTRY.remove(new Meter.Id(ACTIVE_CONNECTIONS.getName(), tags, null, null, Meter.Type.GAUGE));

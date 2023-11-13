@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -259,16 +259,17 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 			observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
 			parentContextView = updateChannelContext(ctx.channel(), observation);
 			observation.start();
-			ctx.pipeline().get(SslHandler.class)
-					.handshakeFuture()
-					.addListener(f -> {
-						ctx.pipeline().remove(this);
-						status = f.isSuccess() ? SUCCESS : ERROR;
-						observation.stop();
+			ctx.pipeline()
+			   .get(SslHandler.class)
+			   .handshakeFuture()
+			   .addListener(f -> {
+			           ctx.pipeline().remove(this);
+			           status = f.isSuccess() ? SUCCESS : ERROR;
+			           observation.stop();
 
-						ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
-						parentContextView = null;
-					});
+			           ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
+			           parentContextView = null;
+			   });
 
 			ctx.fireChannelActive();
 		}

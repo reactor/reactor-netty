@@ -43,6 +43,7 @@ import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
 import static reactor.netty.http.server.HttpServerMeters.CONNECTIONS_ACTIVE;
 import static reactor.netty.http.server.HttpServerMeters.STREAMS_ACTIVE;
+import static reactor.netty.Metrics.formatSocketAddress;
 
 /**
  * @author Violeta Georgieva
@@ -102,8 +103,8 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		MeterKey meterKey = new MeterKey(uri, null, method, status);
 		return MapUtils.computeIfAbsent(responseTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
-						.tags(URI, uri, METHOD, method, STATUS, status)
-						.register(REGISTRY)));
+				                   .tags(URI, uri, METHOD, method, STATUS, status)
+				                   .register(REGISTRY)));
 	}
 
 	@Override
@@ -205,22 +206,22 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Nullable
 	LongAdder getActiveStreamsAdder(SocketAddress localAddress) {
-		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		String address = formatSocketAddress(localAddress);
 		return MapUtils.computeIfAbsent(activeStreamsCache, address,
 				key -> {
 					LongAdder activeStreamsAdder = new LongAdder();
 					Gauge gauge = filter(
 							Gauge.builder(STREAMS_ACTIVE.getName(), activeStreamsAdder, LongAdder::longValue)
-									.tags(HttpServerMeters.StreamsActiveTags.URI.asString(), PROTOCOL_VALUE_HTTP,
-											HttpServerMeters.StreamsActiveTags.LOCAL_ADDRESS.asString(), address)
-									.register(REGISTRY));
+							     .tags(HttpServerMeters.StreamsActiveTags.URI.asString(), PROTOCOL_VALUE_HTTP,
+							           HttpServerMeters.StreamsActiveTags.LOCAL_ADDRESS.asString(), address)
+							     .register(REGISTRY));
 					return gauge != null ? activeStreamsAdder : null;
 				});
 	}
 
 	@Nullable
 	LongAdder getServerConnectionAdder(SocketAddress localAddress) {
-		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		String address = formatSocketAddress(localAddress);
 		return MapUtils.computeIfAbsent(activeConnectionsCache, address,
 				key -> {
 					LongAdder activeConnectionsAdder = new LongAdder();
