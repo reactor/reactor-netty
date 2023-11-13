@@ -59,9 +59,13 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	long dataSentTime;
 
+	final Function<String, String> methodTagValue;
 	final Function<String, String> uriTagValue;
 
-	protected AbstractHttpServerMetricsHandler(@Nullable Function<String, String> uriTagValue) {
+	protected AbstractHttpServerMetricsHandler(
+			@Nullable Function<String, String> methodTagValue,
+			@Nullable Function<String, String> uriTagValue) {
+		this.methodTagValue = methodTagValue == null ? Function.identity() : methodTagValue;
 		this.uriTagValue = uriTagValue;
 	}
 
@@ -72,6 +76,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		this.dataReceivedTime = copy.dataReceivedTime;
 		this.dataSent = copy.dataSent;
 		this.dataSentTime = copy.dataSentTime;
+		this.methodTagValue = copy.methodTagValue;
 		this.uriTagValue = copy.uriTagValue;
 	}
 
@@ -140,7 +145,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 						HttpServerOperations ops = (HttpServerOperations) channelOps;
 						try {
 							recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-									ops.method().name(), ops.status().codeAsText().toString());
+									methodTagValue.apply(ops.method().name()), ops.status().codeAsText().toString());
 						}
 						catch (RuntimeException e) {
 							// Allow request-response exchange to continue, unaffected by metrics problem
@@ -191,7 +196,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
-					recordRead(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), ops.method().name());
+					recordRead(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), methodTagValue.apply(ops.method().name()));
 				}
 
 				dataReceived = 0;
