@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import io.netty5.handler.codec.http.HttpVersion;
 public interface HttpInfos {
 
 	/**
-	 * Returns the decoded path portion from the {@link #uri()}
+	 * Returns the decoded path portion from the {@link #uri()}.
 	 *
 	 * @return the decoded path portion from the {@link #uri()}
 	 * @since 0.9.6
@@ -58,28 +58,28 @@ public interface HttpInfos {
 	String requestId();
 
 	/**
-	 * Is the request keep alive
+	 * Is the request keep alive.
 	 *
 	 * @return is keep alive
 	 */
 	boolean isKeepAlive();
 
 	/**
-	 * Returns true if websocket connection (upgraded)
+	 * Returns true if websocket connection (upgraded).
 	 *
 	 * @return true if websocket connection
 	 */
 	boolean isWebsocket();
 
 	/**
-	 * Returns the resolved request method (HTTP 1.1 etc.)
+	 * Returns the resolved request method (HTTP 1.1 etc.).
 	 *
 	 * @return the resolved request method (HTTP 1.1 etc.)
 	 */
 	HttpMethod method();
 
 	/**
-	 * Returns the decoded path portion from the {@link #uri()} without the leading and trailing '/' if present
+	 * Returns the decoded path portion from the {@link #uri()} without the leading and trailing '/' if present.
 	 *
 	 * @return the decoded path portion from the {@link #uri()} without the leading and trailing '/' if present
 	 */
@@ -100,14 +100,14 @@ public interface HttpInfos {
 	}
 
 	/**
-	 * Returns the resolved target address
+	 * Returns the resolved target address.
 	 *
 	 * @return the resolved target address
 	 */
 	String uri();
 
 	/**
-	 * Returns the resolved request version (HTTP 1.1 etc)
+	 * Returns the resolved request version (HTTP 1.1 etc).
 	 *
 	 * @return the resolved request version (HTTP 1.1 etc)
 	 */

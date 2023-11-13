@@ -107,12 +107,12 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	public static final String USER_AGENT = String.format("ReactorNetty/%s", reactorNettyVersion());
 
 	/**
-	 * A URI configuration
+	 * A URI configuration.
 	 */
 	public interface UriConfiguration<S extends UriConfiguration<?>> {
 
 		/**
-		 * Configure URI to use for this request/response
+		 * Configure URI to use for this request/response.
 		 *
 		 * @param uri target URI, if starting with "/" it will be prepended with
 		 * {@link #baseUrl(String)} when available
@@ -122,7 +122,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		S uri(String uri);
 
 		/**
-		 * Configure URI to use for this request/response on subscribe
+		 * Configure URI to use for this request/response on subscribe.
 		 *
 		 * @param uri target URI, if starting with "/" it will be prepended with
 		 * {@link #baseUrl(String)} when available
@@ -938,7 +938,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Apply HTTP/2 configuration
+	 * Apply HTTP/2 configuration.
 	 *
 	 * @param http2Settings configures {@link Http2SettingsSpec} before requesting
 	 * @return a new {@link HttpClient}
@@ -1125,7 +1125,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Removes any previously applied SSL configuration customization
+	 * Removes any previously applied SSL configuration customization.
 	 *
 	 * @return a new {@link HttpClient}
 	 */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import java.time.Duration;
 public abstract class ContextAwareChannelMetricsRecorder implements ChannelMetricsRecorder {
 
 	/**
-	 * Increments the number of the errors that are occurred
+	 * Increments the number of the errors that are occurred.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux pipeline
 	 * @param remoteAddress The remote peer
@@ -38,8 +38,8 @@ public abstract class ContextAwareChannelMetricsRecorder implements ChannelMetri
 	public abstract void incrementErrorsCount(ContextView contextView, SocketAddress remoteAddress);
 
 	/**
-	 * Records the time that is spent for connecting to the remote address
-	 * Relevant only when on the client
+	 * Records the time that is spent for connecting to the remote address.
+	 * Relevant only when on the client.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux pipeline
 	 * @param remoteAddress The remote peer
@@ -49,7 +49,7 @@ public abstract class ContextAwareChannelMetricsRecorder implements ChannelMetri
 	public abstract void recordConnectTime(ContextView contextView, SocketAddress remoteAddress, Duration time, String status);
 
 	/**
-	 * Records the amount of the data that is received, in bytes
+	 * Records the amount of the data that is received, in bytes.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux pipeline
 	 * @param remoteAddress The remote peer
@@ -58,7 +58,7 @@ public abstract class ContextAwareChannelMetricsRecorder implements ChannelMetri
 	public abstract void recordDataReceived(ContextView contextView, SocketAddress remoteAddress, long bytes);
 
 	/**
-	 * Records the amount of the data that is sent, in bytes
+	 * Records the amount of the data that is sent, in bytes.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux pipeline
 	 * @param remoteAddress The remote peer
@@ -67,7 +67,7 @@ public abstract class ContextAwareChannelMetricsRecorder implements ChannelMetri
 	public abstract void recordDataSent(ContextView contextView, SocketAddress remoteAddress, long bytes);
 
 	/**
-	 * Records the time that is spent for TLS handshake
+	 * Records the time that is spent for TLS handshake.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux pipeline
 	 * @param remoteAddress The remote peer

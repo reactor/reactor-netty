@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import reactor.netty5.resources.LoopResources;
 import reactor.util.annotation.Nullable;
 
 /**
- * A generic client {@link Transport} that will {@link #connect()} to a remote address and provide a {@link Connection}
+ * A generic client {@link Transport} that will {@link #connect()} to a remote address and provide a {@link Connection}.
  *
  * @param <T> ClientTransport implementation
  * @param <CONF> Client Configuration implementation
@@ -205,7 +205,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	}
 
 	/**
-	 * Remove any previously applied Proxy configuration customization
+	 * Remove any previously applied Proxy configuration customization.
 	 *
 	 * @return a new {@link ClientTransport} reference
 	 */
@@ -234,7 +234,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	}
 
 	/**
-	 * Apply a proxy configuration
+	 * Apply a proxy configuration.
 	 *
 	 * @param proxyOptions the proxy configuration callback
 	 * @return a new {@link ClientTransport} reference

@@ -192,7 +192,7 @@ public final class ConnectionInfo {
 	}
 
 	/**
-	 * Returns the default host port number based on scheme
+	 * Returns the default host port number based on scheme.
 	 * @param scheme a connection scheme like "http", "https", or "wss"
 	 * @return the default host port number based on scheme
 	 * @since 1.0.32

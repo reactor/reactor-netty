@@ -22,7 +22,7 @@ import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 
 /**
- * An error for signalling that an error occurred during a communication over HTTP version
+ * An error for signalling that an error occurred during a communication over HTTP version.
  *
  */
 final class RedirectClientException extends RuntimeException {

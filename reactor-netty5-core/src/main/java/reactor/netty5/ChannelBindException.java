@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +23,14 @@ import java.util.Objects;
 import reactor.util.annotation.Nullable;
 
 /**
- * Represents a failing attempt to bind a local socket address
+ * Represents a failing attempt to bind a local socket address.
  *
  * @author Stephane Maldini
  */
 public class ChannelBindException extends RuntimeException {
 
 	/**
-	 * Build a {@link ChannelBindException}
+	 * Build a {@link ChannelBindException}.
 	 *
 	 * @param bindAddress the local address
 	 * @param cause the root cause
@@ -75,7 +75,7 @@ public class ChannelBindException extends RuntimeException {
 	}
 
 	/**
-	 * Return the configured binding host
+	 * Return the configured binding host.
 	 *
 	 * @return the configured binding host
 	 */
@@ -84,7 +84,7 @@ public class ChannelBindException extends RuntimeException {
 	}
 
 	/**
-	 * Return the configured binding port
+	 * Return the configured binding port.
 	 *
 	 * @return the configured local binding port
 	 */

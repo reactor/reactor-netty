@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,7 +127,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		responseTimeObservation.start();
 	}
 
-	/**
+	/*
 	 * Requirements for HTTP clients
 	 * <p>https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#name
 	 * The contextual name must be in the format 'HTTP &lt;method&gt;'

@@ -24,7 +24,7 @@ import reactor.netty5.http.Http11SslContextSpec;
 import reactor.netty5.http.client.HttpClient;
 
 /**
- * An HTTP client demo that sends two requests to the http snoop server and then waits for the completion of the two requests
+ * An HTTP client demo that sends two requests to the http snoop server and then waits for the completion of the two requests.
  *
  * @author Kun.Long
  * @see HttpSnoopServer

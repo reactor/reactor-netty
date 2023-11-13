@@ -45,7 +45,7 @@ import static reactor.netty5.Metrics.NAME;
 import static reactor.netty5.Metrics.PENDING_TASKS;
 
 /**
- * Tests for event loop metrics
+ * Tests for event loop metrics.
  *
  * @author Pierre De Rop
  * @since 1.0.14

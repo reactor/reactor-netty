@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 
 	/**
 	 * Name prefix that will be used for the QUIC client's metrics
-	 * registered in Micrometer's global registry
+	 * registered in Micrometer's global registry.
 	 */
 	public static final String QUIC_CLIENT_PREFIX = "reactor.netty.quic.client";
 
@@ -79,7 +79,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	}
 
 	/**
-	 * Return the configured callback or null
+	 * Return the configured callback or null.
 	 *
 	 * @return the configured callback or null
 	 */
@@ -89,7 +89,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	}
 
 	/**
-	 * Return the configured callback or null
+	 * Return the configured callback or null.
 	 *
 	 * @return the configured callback or null
 	 */
@@ -99,7 +99,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	}
 
 	/**
-	 * Return the configured callback or null
+	 * Return the configured callback or null.
 	 *
 	 * @return the configured callback or null
 	 */
@@ -109,7 +109,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	}
 
 	/**
-	 * Return the remote configured {@link SocketAddress}
+	 * Return the remote configured {@link SocketAddress}.
 	 *
 	 * @return the remote configured {@link SocketAddress}
 	 */

@@ -32,7 +32,7 @@ import reactor.util.annotation.Nullable;
 import static java.util.Objects.requireNonNull;
 
 /**
- * A Predicate to match against ServerRequest
+ * A Predicate to match against ServerRequest.
  *
  * @author Stephane Maldini
  */

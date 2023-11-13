@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 
 	/**
-	 * Decorate as {@link BufferFlux}
+	 * Decorate as {@link BufferFlux}.
 	 *
 	 * @param source publisher to decorate
 	 * @return a {@link BufferFlux}
@@ -60,7 +60,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * Decorate as {@link BufferFlux}
+	 * Decorate as {@link BufferFlux}.
 	 *
 	 * @param source publisher to decorate
 	 * @param allocator the channel {@link BufferAllocator}
@@ -71,7 +71,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * Decorate as {@link BufferFlux}
+	 * Decorate as {@link BufferFlux}.
 	 *
 	 * @param source publisher to decorate
 	 * @param allocator the channel {@link BufferAllocator}
@@ -84,7 +84,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * Decorate as {@link BufferFlux}
+	 * Decorate as {@link BufferFlux}.
 	 *
 	 * @param source publisher to decorate
 	 * @return a {@link BufferFlux}
@@ -94,7 +94,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * Decorate as {@link BufferFlux}
+	 * Decorate as {@link BufferFlux}.
 	 *
 	 * @param source publisher to decorate
 	 * @param charset the encoding charset
@@ -111,7 +111,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	/**
 	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
 	 * {@link Buffer} chunks with a default maximum size of 500K into
-	 * the returned {@link BufferFlux}
+	 * the returned {@link BufferFlux}.
 	 *
 	 * @param path the path to the resource to stream
 	 * @return a {@link BufferFlux}
@@ -122,7 +122,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 
 	/**
 	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
-	 * {@link Buffer} chunks with a given maximum size into the returned {@link BufferFlux}
+	 * {@link Buffer} chunks with a given maximum size into the returned {@link BufferFlux}.
 	 *
 	 * @param path the path to the resource to stream
 	 * @param maxChunkSize the maximum per-item Buffer size
@@ -187,7 +187,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * Convert to a {@link ByteBuffer} inbound {@link Flux}
+	 * Convert to a {@link ByteBuffer} inbound {@link Flux}.
 	 *
 	 * @return a {@link ByteBuffer} inbound {@link Flux}
 	 */
@@ -201,7 +201,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * Convert to a {@literal byte[]} inbound {@link Flux}
+	 * Convert to a {@literal byte[]} inbound {@link Flux}.
 	 *
 	 * @return a {@literal byte[]} inbound {@link Flux}
 	 */
@@ -296,7 +296,7 @@ public class BufferFlux extends FluxOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * A channel object to {@link Buffer} transformer
+	 * A channel object to {@link Buffer} transformer.
 	 */
 	static final Function<Object, Buffer> bufferExtractorFunction = o -> {
 		if (o instanceof Buffer buffer) {

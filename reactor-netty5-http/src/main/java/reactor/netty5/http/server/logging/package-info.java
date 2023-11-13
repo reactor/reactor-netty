@@ -15,7 +15,7 @@
  */
 
 /**
- * Http access log
+ * Http access log.
  */
 @NonNullApi
 package reactor.netty5.http.server.logging;

@@ -94,7 +94,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	/**
-	 * Has headers been sent
+	 * Has headers been sent.
 	 *
 	 * @return true if headers have been sent
 	 */
@@ -321,7 +321,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	/**
-	 * Mark the headers sent
+	 * Mark the headers sent.
 	 *
 	 * @return true if marked for the first time
 	 */
@@ -346,7 +346,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	/**
-	 * Mark the body sent
+	 * Mark the body sent.
 	 *
 	 * @return true if marked for the first time
 	 */
@@ -355,7 +355,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	/**
-	 * Has Body been sent
+	 * Has Body been sent.
 	 *
 	 * @return true if body has been sent
 	 * @since 1.0.37
@@ -365,7 +365,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	/**
-	 * Mark the headers and body sent
+	 * Mark the headers and body sent.
 	 *
 	 * @return true if marked for the first time
 	 */
@@ -398,7 +398,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	/**
-	 * Returns the decoded path portion from the provided {@code uri}
+	 * Returns the decoded path portion from the provided {@code uri}.
 	 *
 	 * @param uri an HTTP URL that may contain a path with query/fragment
 	 * @return the decoded path portion from the provided {@code uri}
@@ -437,7 +437,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	/**
-	 * Outbound Netty HttpMessage
+	 * Outbound Netty HttpMessage.
 	 *
 	 * @return Outbound Netty HttpMessage
 	 */
@@ -488,7 +488,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	);
 
 	/**
-	 * A channel object to {@link Buffer} transformer
+	 * A channel object to {@link Buffer} transformer.
 	 */
 	public static final Function<Object, Buffer> bufferExtractorFunction = o -> {
 		if (o instanceof Buffer buffer) {

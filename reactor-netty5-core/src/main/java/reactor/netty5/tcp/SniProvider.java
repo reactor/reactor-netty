@@ -33,7 +33,7 @@ import reactor.netty5.NettyPipeline;
 import java.util.Map;
 
 /**
- * An {@link SniProvider} to configure the channel pipeline in order to support server SNI
+ * An {@link SniProvider} to configure the channel pipeline in order to support server SNI.
  *
  * @author Violeta Georgieva
  * @since 1.0.0

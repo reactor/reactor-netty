@@ -235,7 +235,7 @@ class HttpRedirectTest extends BaseHttpTest {
 		    .verify(Duration.ofSeconds(30));
 	}
 
-	/**
+	/*
 	 * https://github.com/reactor/reactor-netty/issues/278
 	 * https://github.com/reactor/reactor-netty/issues/1533
 	 */

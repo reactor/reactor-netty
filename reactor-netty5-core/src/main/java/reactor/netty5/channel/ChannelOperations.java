@@ -55,7 +55,7 @@ import static java.util.Objects.requireNonNull;
 import static reactor.netty5.ReactorNetty.format;
 
 /**
- * {@link NettyInbound} and {@link NettyOutbound}  that apply to a {@link Connection}
+ * {@link NettyInbound} and {@link NettyOutbound}  that apply to a {@link Connection}.
  *
  * @author Stephane Maldini
  * @since 0.6
@@ -111,7 +111,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Return the current {@link Channel} bound {@link ChannelOperations} or null if none
+	 * Return the current {@link Channel} bound {@link ChannelOperations} or null if none.
 	 *
 	 * @param ch the current {@link Channel}
 	 *
@@ -220,7 +220,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Return true if dispose subscription has been terminated
+	 * Return true if dispose subscription has been terminated.
 	 *
 	 * @return true if dispose subscription has been terminated
 	 */
@@ -337,7 +337,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Return a Mono succeeding when a {@link ChannelOperations} has been terminated
+	 * Return a Mono succeeding when a {@link ChannelOperations} has been terminated.
 	 *
 	 * @return a Mono succeeding when a {@link ChannelOperations} has been terminated
 	 */
@@ -351,7 +351,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	/**
 	 * Return the available parent {@link ConnectionObserver} for user-facing lifecycle
-	 * handling
+	 * handling.
 	 *
 	 * @return the available parent {@link ConnectionObserver}for user-facing lifecycle
 	 * handling
@@ -384,7 +384,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Return true if inbound traffic is not expected anymore
+	 * Return true if inbound traffic is not expected anymore.
 	 *
 	 * @return true if inbound traffic is not expected anymore
 	 */
@@ -415,7 +415,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * React on inbound {@link Channel#read}
+	 * React on inbound {@link Channel#read}.
 	 *
 	 * @param ctx the context
 	 * @param msg the read payload
@@ -425,7 +425,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * React on inbound cancel (receive() subscriber cancelled)
+	 * React on inbound cancel (receive() subscriber cancelled).
 	 */
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
@@ -438,21 +438,21 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 
 	/**
-	 * React on inbound completion (last packet)
+	 * React on inbound completion (last packet).
 	 */
 	protected void onInboundComplete() {
 		inbound.onInboundComplete();
 	}
 
 	/**
-	 * React after inbound completion (last packet)
+	 * React after inbound completion (last packet).
 	 */
 	protected void afterInboundComplete() {
 		// noop
 	}
 
 	/**
-	 * React on inbound close (channel closed prematurely)
+	 * React on inbound close (channel closed prematurely).
 	 */
 	protected void onInboundClose() {
 		discardWhenNoReceiver();
@@ -460,7 +460,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * React on inbound/outbound completion (last packet)
+	 * React on inbound/outbound completion (last packet).
 	 */
 	protected void onOutboundComplete() {
 		if (log.isDebugEnabled()) {
@@ -471,7 +471,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * React on inbound/outbound error
+	 * React on inbound/outbound error.
 	 *
 	 * @param err the {@link Throwable} cause
 	 */
@@ -482,7 +482,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 
 	/**
-	 * Final release/close (last packet)
+	 * Final release/close (last packet).
 	 */
 	protected final void terminate() {
 		if (rebind(connection)) {
@@ -505,7 +505,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * React on inbound error
+	 * React on inbound error.
 	 *
 	 * @param err the {@link Throwable} cause
 	 */
@@ -514,7 +514,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Return the delegate IO  {@link Connection} for  low-level IO access
+	 * Return the delegate IO  {@link Connection} for  low-level IO access.
 	 *
 	 * @return the delegate IO  {@link Connection} for  low-level IO access
 	 */
@@ -523,7 +523,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Return formatted name of this operation
+	 * Return formatted name of this operation.
 	 *
 	 * @return formatted name of this operation
 	 */
@@ -537,7 +537,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Wrap an inbound error
+	 * Wrap an inbound error.
 	 *
 	 * @param err the {@link Throwable} cause
 	 */
@@ -635,13 +635,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * A {@link ChannelOperations} factory
+	 * A {@link ChannelOperations} factory.
 	 */
 	@FunctionalInterface
 	public interface OnSetup {
 
 		/**
-		 * Return an empty, no-op factory
+		 * Return an empty, no-op factory.
 		 *
 		 * @return an empty, no-op factory
 		 */

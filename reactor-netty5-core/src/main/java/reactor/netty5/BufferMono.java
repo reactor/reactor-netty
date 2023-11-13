@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ import static java.util.Objects.requireNonNull;
 public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 
 	/**
-	 * a {@link ByteBuffer} inbound {@link Mono}
+	 * a {@link ByteBuffer} inbound {@link Mono}.
 	 *
 	 * @return a {@link ByteBuffer} inbound {@link Mono}
 	 */
@@ -59,7 +59,7 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * a {@literal byte[]} inbound {@link Mono}
+	 * a {@literal byte[]} inbound {@link Mono}.
 	 *
 	 * @return a {@literal byte[]} inbound {@link Mono}
 	 */
@@ -73,7 +73,7 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * a {@link String} inbound {@link Mono}
+	 * a {@link String} inbound {@link Mono}.
 	 *
 	 * @return a {@link String} inbound {@link Mono}
 	 */
@@ -82,7 +82,7 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * a {@link String} inbound {@link Mono}
+	 * a {@link String} inbound {@link Mono}.
 	 *
 	 * @param charset the decoding charset
 	 *
@@ -107,7 +107,7 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * Decorate as {@link BufferMono}
+	 * Decorate as {@link BufferMono}.
 	 *
 	 * @param source publisher to decorate
 	 * @return a {@link BufferMono}
@@ -117,7 +117,7 @@ public class BufferMono  extends MonoOperator<Buffer, Buffer> {
 	}
 
 	/**
-	 * Decorate as {@link BufferMono}
+	 * Decorate as {@link BufferMono}.
 	 *
 	 * @param source publisher to decorate
 	 * @param charset the encoding charset

@@ -892,7 +892,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	/**
 	 * There is no need of invoking {@link #discard()}, the inbound will
-	 * be canceled on channel inactive event if there is no subscriber available
+	 * be canceled on channel inactive event if there is no subscriber available.
 	 *
 	 * @param err the {@link Throwable} cause
 	 */
@@ -1117,7 +1117,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 
 		/**
-		 * Contains the headers names specified with {@link HttpHeaderNames#TRAILER}
+		 * Contains the headers names specified with {@link HttpHeaderNames#TRAILER}.
 		 */
 		final Set<String> declaredHeaderNames;
 

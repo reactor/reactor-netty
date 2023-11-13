@@ -52,14 +52,14 @@ import reactor.util.annotation.Nullable;
 import static reactor.netty5.ReactorNetty.format;
 
 /**
- * SSL Provider
+ * SSL Provider.
  *
  * @author Violeta Georgieva
  */
 public final class SslProvider {
 
 	/**
-	 * Creates a builder for {@link SslProvider SslProvider}
+	 * Creates a builder for {@link SslProvider SslProvider}.
 	 *
 	 * @return a new SslProvider builder
 	 */
@@ -82,7 +82,7 @@ public final class SslProvider {
 	}
 
 	/**
-	 * Return the default client ssl provider
+	 * Return the default client ssl provider.
 	 *
 	 * @return default client ssl provider
 	 */
@@ -94,7 +94,7 @@ public final class SslProvider {
 
 		/**
 		 * Set a configurator callback to mutate any property from the provided
-		 * {@link SslHandler}
+		 * {@link SslHandler}.
 		 *
 		 * @param handlerConfigurator A callback given the generated {@link SslHandler}
 		 *
@@ -215,7 +215,7 @@ public final class SslProvider {
 		Builder serverNames(SNIServerName... serverNames);
 
 		/**
-		 * Builds new SslProvider
+		 * Builds new SslProvider.
 		 *
 		 * @return builds new SslProvider
 		 */
@@ -236,7 +236,7 @@ public final class SslProvider {
 		Builder sslContext(ProtocolSslContextSpec spec);
 
 		/**
-		 * The SslContext to set when configuring SSL
+		 * The SslContext to set when configuring SSL.
 		 *
 		 * @param sslContext The context to set when configuring SSL
 		 *
@@ -460,7 +460,7 @@ public final class SslProvider {
 	static final class Build implements SslContextSpec, Builder {
 
 		/**
-		 * Default SSL handshake timeout (milliseconds), fallback to 10 seconds
+		 * Default SSL handshake timeout (milliseconds), fallback to 10 seconds.
 		 */
 		static final long DEFAULT_SSL_HANDSHAKE_TIMEOUT =
 				Long.parseLong(System.getProperty(

@@ -64,7 +64,7 @@ import reactor.util.context.Context;
 import static reactor.netty5.ReactorNetty.format;
 
 /**
- * A generic server {@link Transport} that will {@link #bind()} to a local address and provide a {@link DisposableServer}
+ * A generic server {@link Transport} that will {@link #bind()} to a local address and provide a {@link DisposableServer}.
  *
  * @param <T> ServerTransport implementation
  * @param <CONF> Server Configuration implementation
@@ -204,7 +204,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	}
 
 	/**
-	 * Set or add the given {@link ConnectionObserver} for each remote connection
+	 * Set or add the given {@link ConnectionObserver} for each remote connection.
 	 *
 	 * @param observer the {@link ConnectionObserver} addition
 	 * @return a new {@link ServerTransport} reference

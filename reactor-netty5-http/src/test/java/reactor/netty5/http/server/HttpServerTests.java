@@ -2927,7 +2927,7 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	/**
-	 * This test verifies if server h2 streams are closed properly when the server does not consume client post data chunks
+	 * This test verifies if server h2 streams are closed properly when the server does not consume client post data chunks.
 	 */
 	@ParameterizedTest
 	@MethodSource("h2cCompatibleCombinations")
@@ -2942,7 +2942,7 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	/**
-	 * This test verifies if server h2 streams are closed properly when the server does not consume client post data chunks
+	 * This test verifies if server h2 streams are closed properly when the server does not consume client post data chunks.
 	 */
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")

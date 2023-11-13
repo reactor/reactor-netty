@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,11 @@ import java.util.function.Function;
 public enum AccessLogHandlerFactory {
 
 	/**
-	 * HTTP/1.1
+	 * HTTP/1.1.
 	 */
 	H1,
 	/**
-	 * HTTP/2.0
+	 * HTTP/2.0.
 	 */
 	H2;
 

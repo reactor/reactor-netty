@@ -17,7 +17,7 @@
 /**
  * Contracts for managing connections via
  * {@link reactor.netty5.resources.ConnectionProvider} and event-loop resources via
- * {@link reactor.netty5.resources.LoopResources}
+ * {@link reactor.netty5.resources.LoopResources}.
  */
 @NonNullApi
 package reactor.netty5.resources;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ import static reactor.netty5.ReactorNetty.format;
 public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 
 	/**
-	 * Prepare a {@link UdpServer}
+	 * Prepare a {@link UdpServer}.
 	 *
 	 * @return a {@link UdpServer}
 	 */
@@ -170,7 +170,7 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 	}
 
 	/**
-	 * Attach an IO handler to react on connected client
+	 * Attach an IO handler to react on connected client.
 	 *
 	 * @param handler an IO handler that can dispose underlying connection when {@link
 	 * Publisher} terminates.

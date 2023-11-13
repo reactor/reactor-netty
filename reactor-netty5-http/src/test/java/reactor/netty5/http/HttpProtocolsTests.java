@@ -95,7 +95,7 @@ import static reactor.netty5.ConnectionObserver.State.CONNECTED;
 
 /**
  * Test a combination of {@link HttpServer} + {@link HttpProtocol}
- * with a combination of {@link HttpClient} + {@link HttpProtocol}
+ * with a combination of {@link HttpClient} + {@link HttpProtocol}.
  *
  * @author Violeta Georgieva
  * @since 1.0.0

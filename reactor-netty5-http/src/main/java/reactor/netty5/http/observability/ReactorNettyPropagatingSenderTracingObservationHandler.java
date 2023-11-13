@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import io.netty5.handler.codec.http.HttpRequest;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
 
 /**
- * Reactor Netty specific {@link PropagatingSenderTracingObservationHandler}
+ * Reactor Netty specific {@link PropagatingSenderTracingObservationHandler}.
  *
  * @author Marcin Grzejszczak
  * @author Violeta Georgieva

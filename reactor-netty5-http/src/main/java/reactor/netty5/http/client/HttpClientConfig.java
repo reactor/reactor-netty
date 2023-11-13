@@ -161,7 +161,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	/**
-	 * Return the HTTP/2 configuration
+	 * Return the HTTP/2 configuration.
 	 *
 	 * @return the HTTP/2 configuration
 	 */
@@ -188,7 +188,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	/**
-	 * Returns true if that {@link HttpClient} secured via SSL transport
+	 * Returns true if that {@link HttpClient} secured via SSL transport.
 	 *
 	 * @return true if that {@link HttpClient} secured via SSL transport
 	 */
@@ -235,7 +235,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	/**
-	 * Return the configured response timeout or null
+	 * Return the configured response timeout or null.
 	 *
 	 * @return the configured response timeout or null
 	 */
@@ -246,7 +246,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	/**
 	 * Returns the current {@link SslProvider} if that {@link HttpClient} secured via SSL
-	 * transport or null
+	 * transport or null.
 	 *
 	 * @return the current {@link SslProvider} if that {@link HttpClient} secured via SSL
 	 * transport or null
@@ -267,7 +267,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	/**
 	 * Returns the configured function that receives the actual uri and returns the uri tag value
-	 * that will be used for the metrics with {@link reactor.netty5.Metrics#URI} tag
+	 * that will be used for the metrics with {@link reactor.netty5.Metrics#URI} tag.
 	 *
 	 * @return the configured function that receives the actual uri and returns the uri tag value
 	 * that will be used for the metrics with {@link reactor.netty5.Metrics#URI} tag
@@ -722,7 +722,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	/**
 	 * Default value whether the SSL debugging on the client side will be enabled/disabled,
-	 * fallback to SSL debugging disabled
+	 * fallback to SSL debugging disabled.
 	 */
 	static final boolean SSL_DEBUG = Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_CLIENT_DEBUG, "false"));
 

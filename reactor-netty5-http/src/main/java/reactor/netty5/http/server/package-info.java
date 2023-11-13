@@ -15,7 +15,7 @@
  */
 
 /**
- * Http Server abstractions and factory
+ * Http Server abstractions and factory.
  */
 @NonNullApi
 package reactor.netty5.http.server;

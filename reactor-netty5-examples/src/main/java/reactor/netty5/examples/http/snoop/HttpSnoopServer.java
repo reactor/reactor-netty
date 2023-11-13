@@ -139,8 +139,8 @@ public class HttpSnoopServer {
 	}
 
 	/**
-	 * check whether the content type is textual
-	 **/
+	 * Check whether the content type is textual.
+	 */
 	private static boolean isATextualContentType(String contentType) {
 		if (contentType == null) {
 			return false;
