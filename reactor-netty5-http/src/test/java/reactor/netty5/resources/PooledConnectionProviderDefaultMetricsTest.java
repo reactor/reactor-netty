@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,8 @@ import static reactor.netty5.Metrics.TOTAL_CONNECTIONS;
 import static reactor.netty5.http.client.HttpClientState.STREAM_CONFIGURED;
 
 /**
+ * This test class verifies {@link ConnectionProvider} metrics functionality.
+ *
  * @author Violeta Georgieva
  */
 class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {

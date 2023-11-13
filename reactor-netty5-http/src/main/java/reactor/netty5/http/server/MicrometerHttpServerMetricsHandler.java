@@ -46,6 +46,8 @@ import static reactor.netty5.http.server.HttpServerObservations.ResponseTimeLowC
 import static reactor.netty5.http.server.HttpServerObservations.ResponseTimeLowCardinalityTags.URI;
 
 /**
+ * {@link AbstractHttpServerMetricsHandler} for Reactor Netty built-in integration with Micrometer.
+ *
  * @author Marcin Grzejszczak
  * @author Violeta Georgieva
  * @since 1.1.0

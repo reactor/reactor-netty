@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,8 @@ import reactor.netty5.transport.logging.AdvancedBufferFormat;
 import reactor.netty5.resources.LoopResources;
 
 /**
+ * This test class verifies {@link Transport}.
+ *
  * @author Violeta Georgieva
  */
 class TransportTest {

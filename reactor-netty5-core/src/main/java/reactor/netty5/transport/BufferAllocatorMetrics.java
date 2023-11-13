@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package reactor.netty5.transport;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Tags;
+import io.netty5.buffer.Buffer;
 import io.netty5.buffer.pool.BufferAllocatorMetric;
 import reactor.netty5.internal.util.MapUtils;
 
@@ -35,6 +36,8 @@ import static reactor.netty5.transport.BufferAllocatorMeters.THREAD_LOCAL_CACHES
 import static reactor.netty5.transport.BufferAllocatorMeters.USED_MEMORY;
 
 /**
+ * Metrics related to {@link Buffer}.
+ *
  * @author Violeta Georgieva
  * @since 0.9
  */

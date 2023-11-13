@@ -26,6 +26,8 @@ import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.util.concurrent.Future;
 
 /**
+ * {@link HttpContentCompressor} to enable on-demand compression.
+ *
  * @author Stephane Maldini
  */
 final class SimpleCompressionHandler extends HttpContentCompressor {

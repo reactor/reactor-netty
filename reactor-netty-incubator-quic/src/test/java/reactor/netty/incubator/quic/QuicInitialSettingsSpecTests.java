@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ import static reactor.netty.incubator.quic.QuicInitialSettingsSpec.Build.DEFAULT
 import static reactor.netty.incubator.quic.QuicInitialSettingsSpec.Build.DEFAULT_MAX_STREAM_UNIDIRECTIONAL;
 
 /**
+ * This test class verifies {@link QuicInitialSettingsSpec}.
+ *
  * @author Violeta Georgieva
  */
 class QuicInitialSettingsSpecTests {

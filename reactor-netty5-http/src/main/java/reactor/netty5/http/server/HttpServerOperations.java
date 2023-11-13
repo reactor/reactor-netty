@@ -102,7 +102,7 @@ import static reactor.netty5.http.server.HttpServerFormDecoderProvider.DEFAULT_F
 import static reactor.netty5.http.server.HttpServerState.REQUEST_DECODING_FAILED;
 
 /**
- * Conversion between Netty types  and Reactor types ({@link HttpOperations}.
+ * Conversion between Netty types and Reactor types ({@link HttpOperations}.
  *
  * @author Stephane Maldini1
  */
@@ -538,7 +538,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	/**
-	 * @return the Transfer setting SSE for this http connection (e.g. event-stream)
+	 * The {@code Content-Type} setting SSE for this http connection (e.g. event-stream).
+	 *
+	 * @return the {@code Content-Type} setting SSE for this http connection (e.g. event-stream)
 	 */
 	@Override
 	public HttpServerResponse sse() {

@@ -47,6 +47,8 @@ import reactor.util.context.Context;
 import static reactor.netty5.ReactorNetty.format;
 
 /**
+ * {@link ConnectionProvider} that always establishes a new connection.
+ *
  * @author Stephane Maldini
  * @author Violeta Georgieva
  */

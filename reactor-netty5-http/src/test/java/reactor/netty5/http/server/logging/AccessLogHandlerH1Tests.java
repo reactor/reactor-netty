@@ -35,6 +35,8 @@ import static reactor.netty5.http.server.logging.LoggingTests.RESPONSE_CONTENT_S
 import static reactor.netty5.http.server.logging.LoggingTests.URI;
 
 /**
+ * This test class verifies {@link AccessLogHandlerH1}.
+ *
  * @author limaoning
  */
 class AccessLogHandlerH1Tests extends BaseHttpTest {

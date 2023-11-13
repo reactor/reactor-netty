@@ -52,6 +52,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.condition.OS.WINDOWS;
 
 /**
+ * This test class verifies {@link ClientTransport}.
+ *
  * @author Violeta Georgieva
  */
 class ClientTransportTest {

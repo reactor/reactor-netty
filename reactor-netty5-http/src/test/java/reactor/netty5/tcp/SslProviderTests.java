@@ -51,6 +51,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
+ * This test class verifies {@link SslProvider}.
+ *
  * @author Violeta Georgieva
  */
 class SslProviderTests extends BaseHttpTest {

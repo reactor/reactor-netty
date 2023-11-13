@@ -92,6 +92,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
+ * This test class verifies {@link TcpServer}.
+ *
  * @author Jon Brisbin
  * @author Stephane Maldini
  */

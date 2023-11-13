@@ -64,6 +64,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
 
 /**
+ * This test class verifies {@link UdpServer}.
+ *
  * @author Jon Brisbin
  * @author Stephane Maldini
  */

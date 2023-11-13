@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import io.netty5.util.concurrent.Future;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -30,6 +31,8 @@ import static reactor.netty5.Metrics.ERROR;
 import static reactor.netty5.Metrics.SUCCESS;
 
 /**
+ * {@link AbstractChannelMetricsHandler} that propagates {@link ContextView}.
+ *
  * @author Violeta Georgieva
  * @since 1.0.8
  */

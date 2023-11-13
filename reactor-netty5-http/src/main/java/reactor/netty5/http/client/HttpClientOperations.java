@@ -94,6 +94,8 @@ import reactor.util.context.ContextView;
 import static reactor.netty5.ReactorNetty.format;
 
 /**
+ * Conversion between Netty types and Reactor types ({@link HttpOperations}.
+ *
  * @author Stephane Maldini
  * @author Simon Baslé
  */

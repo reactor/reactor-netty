@@ -41,6 +41,7 @@ import reactor.core.publisher.Sinks;
 import reactor.netty5.FutureMono;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.ReactorNetty;
+import reactor.netty5.http.HttpOperations;
 import reactor.netty5.http.websocket.WebsocketInbound;
 import reactor.netty5.http.websocket.WebsocketOutbound;
 import reactor.util.annotation.Nullable;
@@ -48,6 +49,8 @@ import reactor.util.annotation.Nullable;
 import static reactor.netty5.ReactorNetty.format;
 
 /**
+ * Conversion between Netty types and Reactor types ({@link HttpOperations}.
+ *
  * @author Stephane Maldini
  * @author Simon Baslé
  */

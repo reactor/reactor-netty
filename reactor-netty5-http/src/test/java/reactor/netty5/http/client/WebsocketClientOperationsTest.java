@@ -44,6 +44,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 /**
+ * This test class verifies {@link HttpClient} websocket functionality.
+ *
  * @author Violeta Georgieva
  */
 class WebsocketClientOperationsTest extends BaseHttpTest {

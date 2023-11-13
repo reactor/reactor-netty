@@ -48,6 +48,8 @@ import reactor.util.function.Tuple2;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
+ * This test class verifies HTTP compression.
+ *
  * @author mostroverkhov
  * @author smaldini
  * @author Violeta Georgieva

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package reactor.netty5.http.server.logging;
 
+import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import reactor.netty5.http.server.HttpServerInfos;
 import reactor.util.annotation.Nullable;
@@ -27,6 +28,8 @@ import static reactor.netty5.http.server.logging.AbstractAccessLogArgProvider.DA
 import static reactor.netty5.http.server.logging.AbstractAccessLogArgProvider.MISSING;
 
 /**
+ * {@link ChannelHandler} for access log.
+ *
  * @author limaoning
  */
 class BaseAccessLogHandler extends ChannelHandlerAdapter {

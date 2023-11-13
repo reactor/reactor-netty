@@ -315,7 +315,7 @@ By default, the `HTTP` server is configured with the following settings:
 [source,java,indent=0]
 .{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java[lines=29..39]
+include::{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java[lines=28..32]
 ----
 ====
 ====

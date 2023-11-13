@@ -50,6 +50,8 @@ import reactor.test.util.RaceTestUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
+ * This test class verifies {@link MonoSendMany}.
+ *
  * @author Stephane Maldini
  */
 class MonoSendManyTest {
