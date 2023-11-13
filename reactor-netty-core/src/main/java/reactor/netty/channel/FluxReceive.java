@@ -38,6 +38,8 @@ import reactor.util.annotation.Nullable;
 import static reactor.netty.ReactorNetty.format;
 
 /**
+ * An inbound-traffic API delegating to an underlying {@link Channel}.
+ *
  * @author Stephane Maldini
  */
 final class FluxReceive extends Flux<Object> implements Subscription, Disposable {

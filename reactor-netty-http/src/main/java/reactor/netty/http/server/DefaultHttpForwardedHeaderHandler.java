@@ -25,6 +25,8 @@ import reactor.netty.transport.AddressUtils;
 import static reactor.netty.http.server.ConnectionInfo.getDefaultHostPort;
 
 /**
+ * Default implementation for handling {@code X-Forwarded}/{@code Forwarded} headers.
+ *
  * @author Andrey Shlykov
  * @since 0.9.12
  */

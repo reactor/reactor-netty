@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -154,7 +154,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * <p>It will listens for any error on write and closes
 	 * on terminal signal (complete|error). If more than one publisher is attached
 	 * (multiple calls to send()) completion occurs after all publishers complete.</p>
-	 * <p></p>Note: Nesting any send* method is not supported.</p>
+	 * <p>Note: Nesting any send* method is not supported.</p>
 	 *
 	 * @param file the file Path
 	 * @param position where to start

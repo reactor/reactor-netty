@@ -87,7 +87,7 @@ public class Application {
 
 	/**
 	 * This setup is based on
-	 * <a href="https://micrometer.io/docs/tracing#_micrometer_tracing_brave_setup">Micrometer Tracing Brave Setup</a>
+	 * <a href="https://micrometer.io/docs/tracing#_micrometer_tracing_brave_setup">Micrometer Tracing Brave Setup</a>.
 	 */
 	static void init() {
 		SpanHandler spanHandler = ZipkinSpanHandler

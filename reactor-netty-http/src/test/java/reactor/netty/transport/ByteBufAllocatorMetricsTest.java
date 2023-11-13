@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,8 @@ import static reactor.netty.Metrics.USED_DIRECT_MEMORY;
 import static reactor.netty.Metrics.USED_HEAP_MEMORY;
 
 /**
+ * This test class verifies {@link ByteBuf} metrics functionality.
+ *
  * @author Violeta Georgieva
  */
 class ByteBufAllocatorMetricsTest extends BaseHttpTest {

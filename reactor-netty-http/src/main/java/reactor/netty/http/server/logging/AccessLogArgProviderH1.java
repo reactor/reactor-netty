@@ -23,6 +23,8 @@ import java.net.SocketAddress;
 import java.util.Objects;
 
 /**
+ * A provider of the args required for access log of HTTP/1.1.
+ *
  * @author limaoning
  */
 final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLogArgProviderH1> {

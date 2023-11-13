@@ -31,6 +31,8 @@ import java.net.SocketAddress;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
+ * This test class verifies {@link ReactorNetty}.
+ *
  * @author Violeta Georgieva
  */
 class ReactorNettyTest {

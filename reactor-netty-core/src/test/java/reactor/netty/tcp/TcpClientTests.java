@@ -85,6 +85,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
+ * This test class verifies {@link TcpClient}.
+ *
  * @author Stephane Maldini
  * @since 2.5
  */

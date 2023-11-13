@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,8 @@ import static reactor.netty.transport.HostnameResolutionObservations.HostnameRes
 import static reactor.netty.transport.HostnameResolutionObservations.HostnameResolutionTimeLowCardinalityTags.STATUS;
 
 /**
+ * Metrics related to name resolution.
+ *
  * @author Marcin Grzejszczak
  * @author Violeta Georgieva
  * @since 1.1.0

@@ -41,6 +41,8 @@ import java.util.function.Function;
 import static reactor.netty.ReactorNetty.format;
 
 /**
+ * {@link ChannelDuplexHandler} for handling {@link HttpServer} metrics.
+ *
  * @author Violeta Georgieva
  * @since 1.0.8
  */
@@ -65,7 +67,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	protected AbstractHttpServerMetricsHandler(
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable Function<String, String> uriTagValue) {
-		this.methodTagValue = methodTagValue == null ? Function.identity() : methodTagValue;
+		this.methodTagValue = methodTagValue == null ? DEFAULT_METHOD_TAG_VALUE : methodTagValue;
 		this.uriTagValue = uriTagValue;
 	}
 

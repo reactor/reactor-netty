@@ -119,6 +119,8 @@ import static reactor.netty.Metrics.URI;
 import static reactor.netty.Metrics.formatSocketAddress;
 
 /**
+ * This test class verifies HTTP metrics functionality.
+ *
  * @author Violeta Georgieva
  */
 class HttpMetricsHandlerTests extends BaseHttpTest {

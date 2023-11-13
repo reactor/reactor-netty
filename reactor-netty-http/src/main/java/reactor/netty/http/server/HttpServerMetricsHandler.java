@@ -20,6 +20,8 @@ import reactor.util.annotation.Nullable;
 import java.util.function.Function;
 
 /**
+ * {@link AbstractHttpServerMetricsHandler} for collecting metrics on {@link HttpServer} level.
+ *
  * @author Violeta Georgieva
  */
 final class HttpServerMetricsHandler extends AbstractHttpServerMetricsHandler {

@@ -46,6 +46,8 @@ import static reactor.netty.http.server.HttpServerObservations.ResponseTimeLowCa
 import static reactor.netty.http.server.HttpServerObservations.ResponseTimeLowCardinalityTags.URI;
 
 /**
+ * {@link AbstractHttpServerMetricsHandler} for Reactor Netty built-in integration with Micrometer.
+ *
  * @author Marcin Grzejszczak
  * @author Violeta Georgieva
  * @since 1.1.0
@@ -129,7 +131,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		responseTimeHandlerContext.status = status;
 	}
 
-	/**
+	/*
 	 * Requirements for HTTP servers
 	 * <p>https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#span
 	 * <p>https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#common-attributes

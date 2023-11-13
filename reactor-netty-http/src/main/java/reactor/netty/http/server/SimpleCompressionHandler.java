@@ -31,6 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * {@link HttpContentCompressor} to enable on-demand compression.
+ *
  * @author Stephane Maldini
  */
 final class SimpleCompressionHandler extends HttpContentCompressor {

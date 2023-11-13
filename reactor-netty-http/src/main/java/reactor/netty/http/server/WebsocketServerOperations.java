@@ -50,7 +50,7 @@ import reactor.util.annotation.Nullable;
 import static reactor.netty.ReactorNetty.format;
 
 /**
- * Conversion between Netty types  and Reactor types ({@link HttpOperations}.
+ * Conversion between Netty types and Reactor types ({@link HttpOperations}.
  *
  * @author Stephane Maldini
  * @author Simon Baslé

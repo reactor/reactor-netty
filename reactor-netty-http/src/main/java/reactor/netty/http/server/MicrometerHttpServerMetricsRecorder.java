@@ -46,6 +46,8 @@ import static reactor.netty.http.server.HttpServerMeters.STREAMS_ACTIVE;
 import static reactor.netty.Metrics.formatSocketAddress;
 
 /**
+ * {@link HttpServerMetricsRecorder} for Reactor Netty built-in integration with Micrometer.
+ *
  * @author Violeta Georgieva
  * @since 0.9
  */

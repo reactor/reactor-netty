@@ -18,12 +18,15 @@ package reactor.netty.http.client;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.function.Function;
 
 /**
+ * {@link AbstractHttpClientMetricsHandler} that propagates {@link ContextView}.
+ *
  * @author Violeta Georgieva
  * @since 1.0.8
  */

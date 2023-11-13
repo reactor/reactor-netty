@@ -40,6 +40,8 @@ import java.util.Arrays;
 import java.util.stream.Stream;
 
 /**
+ * This test class verifies HTTP response status handling.
+ *
  * @author Violeta Georgieva
  */
 class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {

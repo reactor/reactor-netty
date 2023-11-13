@@ -28,6 +28,8 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH             = 4096;
 	public static final int DEFAULT_MAX_HEADER_SIZE                     = 8192;
 	/**
+	 * Default max chunk size.
+	 *
 	 * @deprecated as of 1.1.0. This will be removed in 2.0.0 as Netty 5 does not support this configuration.
 	 */
 	@Deprecated

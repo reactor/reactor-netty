@@ -22,6 +22,8 @@ import java.time.Duration;
 import java.util.function.Function;
 
 /**
+ * {@link AbstractHttpServerMetricsHandler} that propagates {@link ContextView}.
+ *
  * @author Violeta Georgieva
  * @since 1.0.8
  */
