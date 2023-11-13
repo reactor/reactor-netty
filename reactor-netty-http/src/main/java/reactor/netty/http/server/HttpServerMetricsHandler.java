@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,11 @@ final class HttpServerMetricsHandler extends AbstractHttpServerMetricsHandler {
 
 	final HttpServerMetricsRecorder recorder;
 
-	HttpServerMetricsHandler(HttpServerMetricsRecorder recorder, @Nullable Function<String, String> uriTagValue) {
-		super(uriTagValue);
+	HttpServerMetricsHandler(
+			HttpServerMetricsRecorder recorder,
+			@Nullable Function<String, String> methodTagValue,
+			@Nullable Function<String, String> uriTagValue) {
+		super(methodTagValue, uriTagValue);
 		this.recorder = recorder;
 	}
 
