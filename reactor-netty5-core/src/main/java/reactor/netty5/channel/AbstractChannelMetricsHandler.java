@@ -59,10 +59,10 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
 			}
 			catch (RuntimeException e) {
+				// Allow request-response exchange to continue, unaffected by metrics problem
 				if (log.isWarnEnabled()) {
 					log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 				}
-				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
 		ctx.fireChannelActive();
@@ -78,10 +78,10 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 				}
 			}
 			catch (RuntimeException e) {
+				// Allow request-response exchange to continue, unaffected by metrics problem
 				if (log.isWarnEnabled()) {
 					log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 				}
-				// Allow request-response exchange to continue, unaffected by metrics problem
 			}
 		}
 		ctx.fireChannelInactive();
@@ -97,9 +97,9 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 		}
 		if (ctx.pipeline().get(NettyPipeline.SslHandler) != null) {
 			ctx.pipeline()
-				.addBefore(NettyPipeline.SslHandler,
-						 NettyPipeline.TlsMetricsHandler,
-						 tlsMetricsHandler());
+			   .addBefore(NettyPipeline.SslHandler,
+			             NettyPipeline.TlsMetricsHandler,
+			             tlsMetricsHandler());
 		}
 
 		ctx.fireChannelRegistered();
@@ -121,10 +121,10 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 			}
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		ctx.fireChannelRead(msg);
@@ -146,10 +146,10 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 			}
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		return ctx.write(msg);
@@ -161,10 +161,10 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 			recordException(ctx, remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress());
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		ctx.fireChannelExceptionCaught(cause);

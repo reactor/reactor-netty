@@ -99,44 +99,44 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 				int currentLastWriteSeq = lastWriteSeq;
 				SocketAddress address = ctx.channel().remoteAddress();
 				return ctx.write(msg)
-						.addListener(future -> {
-							try {
-								/**
-								 * Records write metrics information after sending the last part of the request.
-								 * There are two cases to consider:
-								 *
-								 * 1. Netty's Selector processes OP_READ operations after OP_WRITE operations, but in Netty 5,
-								 *    write listeners are invoked asynchronously. This can lead to a situation where the
-								 *    channelRead method has already read the response before write listener has been invoked.
-								 *    In such cases, the channelRead method has already called 'recordWrites' and 'reset' itself.
-								 *
-								 * 2. When sending a large POST request, it's possible that an early response has already been
-								 *    read by the channelRead method even if we are still in the process of writing the request.
-								 *    In this scenario (e.g., encountering a 400 Bad Request), the channelRead method may have
-								 *    already called 'recordWrites' and 'reset' itself.
-								 *
-								 * To determine whether the channelRead method has already invoked 'recordWrites' and 'reset',
-								 * we use the 'lastWriteSeq' and 'lastReadSeq' sequence numbers.
-								 */
-								if (currentLastWriteSeq == lastWriteSeq) {
-									lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
-									recordWrite(address);
-								}
-							}
-							catch (RuntimeException e) {
-								if (log.isWarnEnabled()) {
-									log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
-								}
-								// Allow request-response exchange to continue, unaffected by metrics problem
-							}
+				          .addListener(future -> {
+				              try {
+				                  /**
+				                   * Records write metrics information after sending the last part of the request.
+				                   * There are two cases to consider:
+				                   *
+				                   * 1. Netty's Selector processes OP_READ operations after OP_WRITE operations, but in Netty 5,
+				                   *    write listeners are invoked asynchronously. This can lead to a situation where the
+				                   *    channelRead method has already read the response before write listener has been invoked.
+				                   *    In such cases, the channelRead method has already called 'recordWrites' and 'reset' itself.
+				                   *
+				                   * 2. When sending a large POST request, it's possible that an early response has already been
+				                   *    read by the channelRead method even if we are still in the process of writing the request.
+				                   *    In this scenario (e.g., encountering a 400 Bad Request), the channelRead method may have
+				                   *    already called 'recordWrites' and 'reset' itself.
+				                   *
+				                   * To determine whether the channelRead method has already invoked 'recordWrites' and 'reset',
+				                   * we use the 'lastWriteSeq' and 'lastReadSeq' sequence numbers.
+				                   */
+				                  if (currentLastWriteSeq == lastWriteSeq) {
+				                      lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
+				                      recordWrite(address);
+				                  }
+				              }
+				              catch (RuntimeException e) {
+				                  // Allow request-response exchange to continue, unaffected by metrics problem
+				                  if (log.isWarnEnabled()) {
+				                      log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+				                  }
+				              }
 				});
 			}
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		return ctx.write(msg);
@@ -155,7 +155,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 			if (msg instanceof LastHttpContent) {
 				// Detect if we have received an early response before the write listener has been invoked.
-				// In this case, invoke recordwrite now (because next we will reset all class fields).
+				// In this case, invoke #recordWrite now (because next we will reset all class fields).
 				lastReadSeq = (lastReadSeq + 1) & 0x7F_FF_FF_FF;
 				if ((lastReadSeq > lastWriteSeq) || (lastReadSeq == 0 && lastWriteSeq == Integer.MAX_VALUE)) {
 					lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
@@ -166,10 +166,10 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 			}
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		ctx.fireChannelRead(msg);
@@ -181,10 +181,10 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 			recordException(ctx);
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 
 		ctx.fireChannelExceptionCaught(cause);
@@ -221,20 +221,17 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	protected void recordRead(Channel channel) {
 		SocketAddress address = channel.remoteAddress();
-		recorder().recordDataReceivedTime(address,
-				path, method, status,
+		recorder().recordDataReceivedTime(address, path, method, status,
 				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-		recorder().recordResponseTime(address,
-				path, method, status,
+		recorder().recordResponseTime(address, path, method, status,
 				Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 		recorder().recordDataReceived(address, path, dataReceived);
 	}
 
 	protected void recordWrite(SocketAddress address) {
-		recorder().recordDataSentTime(address,
-				path, method,
+		recorder().recordDataSentTime(address, path, method,
 				Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 		recorder().recordDataSent(address, path, dataSent);
@@ -249,7 +246,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		dataSent = 0;
 		dataReceivedTime = 0;
 		dataSentTime = 0;
-		// don't reset lastWriteSeq and lastReadSeq, which must be incremented for ever
+		// don't reset lastWriteSeq and lastReadSeq, which must be incremented forever
 	}
 
 	protected void startRead(HttpResponse msg) {

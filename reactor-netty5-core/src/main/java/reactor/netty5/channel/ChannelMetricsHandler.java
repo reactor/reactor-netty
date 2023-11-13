@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,12 +89,13 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 		@Override
 		public void channelActive(ChannelHandlerContext ctx) {
 			long tlsHandshakeTimeStart = System.nanoTime();
-			ctx.pipeline().get(SslHandler.class)
-					.handshakeFuture()
-					.addListener(f -> {
-						ctx.pipeline().remove(this);
-						recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, f.isSuccess() ? SUCCESS : ERROR);
-					});
+			ctx.pipeline()
+			   .get(SslHandler.class)
+			   .handshakeFuture()
+			   .addListener(f -> {
+			           ctx.pipeline().remove(this);
+			           recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, f.isSuccess() ? SUCCESS : ERROR);
+			   });
 			ctx.fireChannelActive();
 		}
 

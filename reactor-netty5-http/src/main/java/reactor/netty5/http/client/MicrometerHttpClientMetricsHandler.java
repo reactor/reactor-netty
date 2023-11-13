@@ -83,8 +83,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	@Override
 	protected void recordRead(Channel channel) {
 		SocketAddress address = channel.remoteAddress();
-		recorder().recordDataReceivedTime(address,
-				path, method, status,
+		recorder().recordDataReceivedTime(address, path, method, status,
 				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 		recorder().recordDataReceived(address, path, dataReceived);
