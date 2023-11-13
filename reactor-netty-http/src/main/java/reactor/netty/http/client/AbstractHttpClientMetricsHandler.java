@@ -107,19 +107,19 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 						}
 					}
 					catch (RuntimeException e) {
+						// Allow request-response exchange to continue, unaffected by metrics problem
 						if (log.isWarnEnabled()) {
 							log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 						}
-						// Allow request-response exchange to continue, unaffected by metrics problem
 					}
 				});
 			}
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 		//"FutureReturnValueIgnored" this is deliberate
 		ctx.write(msg, promise);
@@ -138,7 +138,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 			if (msg instanceof LastHttpContent) {
 				// Detect if we have received an early response before the request has been fully flushed.
-				// In this case, invoke recordwrite now (because next we will reset all class fields).
+				// In this case, invoke #recordWrite now (because next we will reset all class fields).
 				lastReadSeq = (lastReadSeq + 1) & 0x7F_FF_FF_FF;
 				if ((lastReadSeq > lastWriteSeq) || (lastReadSeq == 0 && lastWriteSeq == Integer.MAX_VALUE)) {
 					lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
@@ -149,10 +149,10 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 			}
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 		ctx.fireChannelRead(msg);
 	}
@@ -163,10 +163,10 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 			recordException(ctx);
 		}
 		catch (RuntimeException e) {
+			// Allow request-response exchange to continue, unaffected by metrics problem
 			if (log.isWarnEnabled()) {
 				log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 			}
-			// Allow request-response exchange to continue, unaffected by metrics problem
 		}
 		ctx.fireExceptionCaught(cause);
 	}
@@ -241,6 +241,6 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		dataSent = 0;
 		dataReceivedTime = 0;
 		dataSentTime = 0;
-		// don't reset lastWriteSeq and lastReadSeq, which must be incremented for ever
+		// don't reset lastWriteSeq and lastReadSeq, which must be incremented forever
 	}
 }

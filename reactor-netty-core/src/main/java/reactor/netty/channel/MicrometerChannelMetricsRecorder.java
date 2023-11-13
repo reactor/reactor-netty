@@ -42,6 +42,7 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.URI;
+import static reactor.netty.Metrics.formatSocketAddress;
 
 /**
  * A {@link ChannelMetricsRecorder} implementation for integration with Micrometer.
@@ -83,7 +84,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
-		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		String address = formatSocketAddress(remoteAddress);
 		DistributionSummary ds = MapUtils.computeIfAbsent(dataReceivedCache, address,
 				key -> filter(DistributionSummary.builder(name + DATA_RECEIVED)
 				                                 .baseUnit(BYTES_UNIT)
@@ -97,7 +98,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, long bytes) {
-		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		String address = formatSocketAddress(remoteAddress);
 		DistributionSummary ds = MapUtils.computeIfAbsent(dataSentCache, address,
 				key -> filter(DistributionSummary.builder(name + DATA_SENT)
 				                                 .baseUnit(BYTES_UNIT)
@@ -111,7 +112,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress) {
-		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		String address = formatSocketAddress(remoteAddress);
 		Counter c = MapUtils.computeIfAbsent(errorsCache, address,
 				key -> filter(Counter.builder(name + ERRORS)
 				                     .description(ERRORS_DESCRIPTION)
@@ -124,7 +125,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	@Override
 	public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
-		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, null, status);
 		Timer timer = MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
 				key -> filter(Timer.builder(name + TLS_HANDSHAKE_TIME)
@@ -138,7 +139,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	@Override
 	public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
-		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, null, status);
 		Timer timer = MapUtils.computeIfAbsent(connectTimeCache, meterKey,
 				key -> filter(Timer.builder(name + CONNECT_TIME)
@@ -152,7 +153,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	@Override
 	public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
-		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		String address = formatSocketAddress(remoteAddress);
 		MeterKey meterKey = new MeterKey(null, address, null, status);
 		Timer timer = MapUtils.computeIfAbsent(addressResolverTimeCache, meterKey,
 				key -> filter(Timer.builder(name + ADDRESS_RESOLVER)
@@ -200,14 +201,15 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	@Nullable
 	LongAdder getTotalConnectionsAdder(SocketAddress serverAddress) {
-		String address = reactor.netty.Metrics.formatSocketAddress(serverAddress);
+		String address = formatSocketAddress(serverAddress);
 		return MapUtils.computeIfAbsent(totalConnectionsCache, address,
 				key -> {
 					LongAdder totalConnectionsAdder = new LongAdder();
-					Gauge gauge = filter(Gauge.builder(name + CONNECTIONS_TOTAL, totalConnectionsAdder, LongAdder::longValue)
-							.description(TOTAL_CONNECTIONS_DESCRIPTION)
-							.tags(URI, protocol, LOCAL_ADDRESS, address)
-							.register(REGISTRY));
+					Gauge gauge = filter(
+							Gauge.builder(name + CONNECTIONS_TOTAL, totalConnectionsAdder, LongAdder::longValue)
+							     .description(TOTAL_CONNECTIONS_DESCRIPTION)
+							     .tags(URI, protocol, LOCAL_ADDRESS, address)
+							     .register(REGISTRY));
 					return gauge != null ? totalConnectionsAdder : null;
 				});
 	}

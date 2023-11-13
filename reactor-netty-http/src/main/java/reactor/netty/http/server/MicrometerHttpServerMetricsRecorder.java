@@ -44,6 +44,7 @@ import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.STREAMS_ACTIVE;
 import static reactor.netty.Metrics.URI;
+import static reactor.netty.Metrics.formatSocketAddress;
 
 /**
  * @author Violeta Georgieva
@@ -109,7 +110,8 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, uri,
 				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
 				                                 .baseUnit(BYTES_UNIT)
-				                                 .description(DATA_RECEIVED_DESCRIPTION).tags(URI, uri)
+				                                 .description(DATA_RECEIVED_DESCRIPTION)
+				                                 .tags(URI, uri)
 				                                 .register(REGISTRY)));
 		if (dataReceived != null) {
 			dataReceived.record(bytes);
@@ -205,7 +207,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Nullable
 	LongAdder getActiveStreamsAdder(SocketAddress localAddress) {
-		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		String address = formatSocketAddress(localAddress);
 		return MapUtils.computeIfAbsent(activeStreamsCache, address,
 				key -> {
 					LongAdder activeStreamsAdder = new LongAdder();
@@ -220,15 +222,15 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Nullable
 	LongAdder getServerConnectionAdder(SocketAddress localAddress) {
-		String address = reactor.netty.Metrics.formatSocketAddress(localAddress);
+		String address = formatSocketAddress(localAddress);
 		return MapUtils.computeIfAbsent(activeConnectionsCache, address,
 				key -> {
 					LongAdder activeConnectionsAdder = new LongAdder();
-					Gauge gauge = filter(Gauge.builder(reactor.netty.Metrics.HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE,
-							activeConnectionsAdder, LongAdder::longValue)
-							.tags(URI, PROTOCOL_VALUE_HTTP, LOCAL_ADDRESS, address)
-							.description(ACTIVE_CONNECTIONS_DESCRIPTION)
-							.register(REGISTRY));
+					Gauge gauge = filter(
+							Gauge.builder(HTTP_SERVER_PREFIX + CONNECTIONS_ACTIVE, activeConnectionsAdder, LongAdder::longValue)
+							     .tags(URI, PROTOCOL_VALUE_HTTP, LOCAL_ADDRESS, address)
+							     .description(ACTIVE_CONNECTIONS_DESCRIPTION)
+							     .register(REGISTRY));
 					return gauge != null ? activeConnectionsAdder : null;
 				});
 	}

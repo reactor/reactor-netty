@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package reactor.netty.http.client;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tags;
-import reactor.netty.Metrics;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 
 import java.net.SocketAddress;
@@ -32,6 +31,7 @@ import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.PENDING_STREAMS;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.formatSocketAddress;
 
 final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 	static final String ACTIVE_CONNECTIONS_DESCRIPTION =
@@ -48,7 +48,7 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 	}
 
 	void registerMetrics(String poolName, String id, SocketAddress remoteAddress, InstrumentedPool.PoolMetrics metrics) {
-		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
+		String addressAsString = formatSocketAddress(remoteAddress);
 		Tags tags = Tags.of(ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName);
 
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
@@ -73,7 +73,7 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 	}
 
 	void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
-		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
+		String addressAsString = formatSocketAddress(remoteAddress);
 		Tags tags = Tags.of(ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName);
 
 		REGISTRY.remove(new Meter.Id(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tags, null, null, Meter.Type.GAUGE));
