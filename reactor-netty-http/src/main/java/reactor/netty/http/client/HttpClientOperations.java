@@ -38,6 +38,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -59,7 +60,9 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
-import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
+import io.netty.handler.codec.http.websocketx.extensions.compression.DeflateFrameClientExtensionHandshaker;
+import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateClientExtensionHandshaker;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -90,6 +93,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
+import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -870,7 +874,15 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				// Returned value is deliberately ignored
 				removeHandler(NettyPipeline.HttpDecompressor);
 				// Returned value is deliberately ignored
-				addHandlerFirst(NettyPipeline.WsCompressionHandler, WebSocketClientCompressionHandler.INSTANCE);
+				PerMessageDeflateClientExtensionHandshaker perMessageDeflateClientExtensionHandshaker =
+						new PerMessageDeflateClientExtensionHandshaker(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(),
+								MAX_WINDOW_SIZE, websocketClientSpec.compressionAllowClientNoContext(),
+								websocketClientSpec.compressionRequestedServerNoContext());
+				addHandlerFirst(NettyPipeline.WsCompressionHandler,
+						new WebSocketClientExtensionHandler(
+								perMessageDeflateClientExtensionHandshaker,
+								new DeflateFrameClientExtensionHandshaker(false),
+								new DeflateFrameClientExtensionHandshaker(true)));
 			}
 
 			if (log.isDebugEnabled()) {

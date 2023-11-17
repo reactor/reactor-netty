@@ -250,6 +250,10 @@ task japicmp(type: JapicmpTask) {
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 	methodExcludes = [
+			'reactor.netty.http.client.WebsocketClientSpec#compressionAllowClientNoContext()',
+			'reactor.netty.http.client.WebsocketClientSpec#compressionRequestedServerNoContext()',
+			'reactor.netty.http.server.WebsocketServerSpec#compressionAllowServerNoContext()',
+			'reactor.netty.http.server.WebsocketServerSpec#compressionPreferredClientNoContext()'
 	]
 }
 
