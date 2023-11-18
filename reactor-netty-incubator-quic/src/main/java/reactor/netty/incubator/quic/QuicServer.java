@@ -52,7 +52,7 @@ import java.util.function.Consumer;
  *
  * @author Violeta Georgieva
  */
-public abstract class QuicServer extends QuicTransport<QuicServer, QuicServerConfig> {
+public abstract class QuicServer extends QuicTransport<QuicServer, AbstractQuicServerConfig> {
 
 	/**
 	 * Prepare a {@link QuicServer}.
@@ -62,6 +62,10 @@ public abstract class QuicServer extends QuicTransport<QuicServer, QuicServerCon
 	public static QuicServer create() {
 		return QuicServerBind.INSTANCE;
 	}
+	public static QuicServer http3() {
+		return Http3ServerBind.INSTANCE;
+	}
+
 
 	/**
 	 * Binds the {@link QuicServer} and returns a {@link Mono} of {@link Connection}. If

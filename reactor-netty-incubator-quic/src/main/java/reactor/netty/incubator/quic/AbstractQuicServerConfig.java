@@ -53,7 +53,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Violeta Georgieva
  */
-abstract class AbstractQuicServerConfig extends QuicTransportConfig<QuicServerConfig> {
+public abstract class AbstractQuicServerConfig extends QuicTransportConfig<AbstractQuicServerConfig> {
 
 	static final QuicConnectionIdGenerator DEFAULT_CONNECTION_ID_ADDRESS_GENERATOR =
 			QuicConnectionIdGenerator.randomGenerator();

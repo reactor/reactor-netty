@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,26 +23,31 @@ import reactor.netty.Connection;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 
-/**
- * Provides the actual {@link QuicServer} instance.
- *
- * @author Violeta Georgieva
- */
-final class QuicServerBind extends QuicServer implements QuicServerConfigValidations, QuicServerConnectionProvider {
+public class Http3ServerBind extends QuicServer implements QuicServerConfigValidations, QuicServerConnectionProvider {
 
-	static final QuicServerBind INSTANCE = new QuicServerBind();
 
-	final QuicServerConfig config;
+	static final Http3ServerBind INSTANCE = new Http3ServerBind();
 
-	QuicServerBind() {
-		this.config = new QuicServerConfig(
-				Collections.emptyMap(),
+	final Http3ServerConfig config;
+
+	Http3ServerBind(Http3ServerConfig config) {
+		this.config = config;
+	}
+
+	public Http3ServerBind() {
+		this.config = new Http3ServerConfig(Collections.emptyMap(),
 				Collections.singletonMap(ChannelOption.AUTO_READ, false),
 				() -> new InetSocketAddress(NetUtil.LOCALHOST, 0));
 	}
 
-	QuicServerBind(QuicServerConfig config) {
-		this.config = config;
+	@Override
+	public AbstractQuicServerConfig configuration() {
+		return config;
+	}
+
+	@Override
+	protected QuicServer duplicate() {
+		return new Http3ServerBind(new Http3ServerConfig(config));
 	}
 
 	@Override
@@ -50,15 +55,4 @@ final class QuicServerBind extends QuicServer implements QuicServerConfigValidat
 		validate(config);
 		return getConnection(config);
 	}
-
-	@Override
-	public QuicServerConfig configuration() {
-		return config;
-	}
-
-	@Override
-	protected QuicServer duplicate() {
-		return new QuicServerBind(new QuicServerConfig(config));
-	}
-
 }
