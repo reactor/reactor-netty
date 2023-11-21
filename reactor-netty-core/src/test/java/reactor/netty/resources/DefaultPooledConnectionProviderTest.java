@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package reactor.netty.resources;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,6 +34,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.netty.channel.ChannelOption;
@@ -46,9 +49,11 @@ import io.netty.util.NetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
+import reactor.core.scheduler.Scheduler;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
@@ -62,10 +67,13 @@ import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.AddressUtils;
 import reactor.netty.transport.ClientTransportConfig;
 import reactor.netty.transport.NameResolverProvider;
+import reactor.pool.AllocationStrategy;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolAcquirePendingLimitException;
 import reactor.pool.PoolConfig;
+import reactor.pool.PoolMetricsRecorder;
 import reactor.pool.PooledRef;
+import reactor.pool.PooledRefMetadata;
 import reactor.scheduler.clock.SchedulerClock;
 import reactor.test.StepVerifier;
 import reactor.test.scheduler.VirtualTimeScheduler;
@@ -547,7 +555,7 @@ class DefaultPooledConnectionProviderTest {
 
 		@Override
 		public PoolConfig<PooledConnection> config() {
-			return null;
+			return new PoolConfigImpl();
 		}
 
 		@Override
@@ -563,6 +571,59 @@ class DefaultPooledConnectionProviderTest {
 		@Override
 		public PoolMetrics metrics() {
 			return null;
+		}
+	}
+
+	static final class PoolConfigImpl implements PoolConfig<PooledConnection> {
+
+		@Override
+		public Mono<PooledConnection> allocator() {
+			return null;
+		}
+
+		@Override
+		public AllocationStrategy allocationStrategy() {
+			return null;
+		}
+
+		@Override
+		public int maxPending() {
+			return 0;
+		}
+
+		@Override
+		public Function<PooledConnection, ? extends Publisher<Void>> releaseHandler() {
+			return null;
+		}
+
+		@Override
+		public Function<PooledConnection, ? extends Publisher<Void>> destroyHandler() {
+			return null;
+		}
+
+		@Override
+		public BiPredicate<PooledConnection, PooledRefMetadata> evictionPredicate() {
+			return null;
+		}
+
+		@Override
+		public Scheduler acquisitionScheduler() {
+			return null;
+		}
+
+		@Override
+		public PoolMetricsRecorder metricsRecorder() {
+			return null;
+		}
+
+		@Override
+		public Clock clock() {
+			return null;
+		}
+
+		@Override
+		public boolean reuseIdleResourcesInLruOrder() {
+			return false;
 		}
 	}
 
