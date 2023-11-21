@@ -15,6 +15,7 @@
  */
 package reactor.netty5.http.server;
 
+import io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker;
 import reactor.netty5.http.websocket.WebsocketSpec;
 
 /**
@@ -26,6 +27,22 @@ import reactor.netty5.http.websocket.WebsocketSpec;
 public interface WebsocketServerSpec extends WebsocketSpec {
 
 	/**
+	 * Returns whether the client is allowed to activate {@code server_no_context_takeover}.
+	 *
+	 * @return whether the client is allowed to activate {@code server_no_context_takeover}
+	 * @since 1.1.14
+	 */
+	boolean compressionAllowServerNoContext();
+
+	/**
+	 * Returns whether the server prefers to activate {@code client_no_context_takeover}.
+	 *
+	 * @return whether the server prefers to activate {@code client_no_context_takeover}
+	 * @since 1.1.14
+	 */
+	boolean compressionPreferredClientNoContext();
+
+	/**
 	 * Create builder with default properties.<br>
 	 * protocols = null
 	 * <br>
@@ -34,6 +51,10 @@ public interface WebsocketServerSpec extends WebsocketSpec {
 	 * handlePing = false
 	 * <br>
 	 * compress = false
+	 * <br>
+	 * compressionAllowServerNoContext = false
+	 * <br>
+	 * compressionPreferredClientNoContext = false
 	 *
 	 * @return {@link WebsocketServerSpec.Builder}
 	 */
@@ -43,7 +64,39 @@ public interface WebsocketServerSpec extends WebsocketSpec {
 
 	final class Builder extends WebsocketSpec.Builder<Builder> {
 
+		boolean allowServerNoContext;
+		boolean preferredClientNoContext;
+
 		private Builder() {
+		}
+
+		/**
+		 * Allows the client to activate {@code server_no_context_takeover}.
+		 * Default to false.
+		 *
+		 * @param allowServerNoContext allows the client to activate {@code server_no_context_takeover}
+		 * @return {@literal this}
+		 * @since 1.1.14
+		 * @see PerMessageDeflateServerExtensionHandshaker
+		 */
+		public final Builder compressionAllowServerNoContext(boolean allowServerNoContext) {
+			this.allowServerNoContext = allowServerNoContext;
+			return this;
+		}
+
+		/**
+		 * Indicates if the server prefers to activate {@code client_no_context_takeover} if client is compatible with.
+		 * Default to false.
+		 *
+		 * @param preferredClientNoContext indicates if the server prefers to activate
+		 * {@code client_no_context_takeover} if client is compatible with
+		 * @return {@literal this}
+		 * @since 1.1.14
+		 * @see PerMessageDeflateServerExtensionHandshaker
+		 */
+		public final Builder compressionPreferredClientNoContext(boolean preferredClientNoContext) {
+			this.preferredClientNoContext = preferredClientNoContext;
+			return this;
 		}
 
 		/**

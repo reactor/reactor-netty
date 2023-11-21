@@ -1218,21 +1218,32 @@ class WebsocketTest extends BaseHttpTest {
 
 	@Test
 	void testIssue970_WithCompress() {
-		doTestIssue970(true);
+		doTestWebsocketCompression(true);
 	}
 
 	@Test
 	void testIssue970_NoCompress() {
-		doTestIssue970(false);
+		doTestWebsocketCompression(false);
 	}
 
-	private void doTestIssue970(boolean compress) {
+	@Test
+	void testIssue2973() {
+		doTestWebsocketCompression(true, true);
+	}
+
+	private void doTestWebsocketCompression(boolean compress) {
+		doTestWebsocketCompression(compress, false);
+	}
+
+	private void doTestWebsocketCompression(boolean compress, boolean clientServerNoContextTakeover) {
+		WebsocketServerSpec.Builder serverBuilder = WebsocketServerSpec.builder().compress(compress);
+		WebsocketServerSpec websocketServerSpec = clientServerNoContextTakeover ?
+				serverBuilder.compressionAllowServerNoContext(true).compressionPreferredClientNoContext(true).build() :
+				serverBuilder.build();
 		disposableServer =
 				createServer()
 				          .handle((req, res) ->
-				              res.sendWebsocket(
-				                  (in, out) -> out.sendString(Mono.just("test")),
-				                  WebsocketServerSpec.builder().compress(compress).build()))
+				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test")), websocketServerSpec))
 				          .bindNow();
 
 		AtomicBoolean clientHandler = new AtomicBoolean();
@@ -1266,8 +1277,15 @@ class WebsocketTest extends BaseHttpTest {
 
 		if (compress) {
 			predicate = t -> "test".equals(t.getT1()) && !"null".equals(t.getT2());
+			predicate = clientServerNoContextTakeover ?
+					predicate.and(t -> t.getT2().contains("client_no_context_takeover") && t.getT2().contains("server_no_context_takeover")) :
+					predicate.and(t -> !t.getT2().contains("client_no_context_takeover") && !t.getT2().contains("server_no_context_takeover"));
 		}
-		StepVerifier.create(client.websocket(WebsocketClientSpec.builder().compress(compress).build())
+		WebsocketClientSpec.Builder clientBuilder = WebsocketClientSpec.builder().compress(compress);
+		WebsocketClientSpec websocketClientSpec = clientServerNoContextTakeover ?
+				clientBuilder.compressionAllowClientNoContext(true).compressionRequestedServerNoContext(true).build() :
+				clientBuilder.build();
+		StepVerifier.create(client.websocket(websocketClientSpec)
 		                          .uri("/")
 		                          .handle(receiver))
 		            .expectNextMatches(predicate)

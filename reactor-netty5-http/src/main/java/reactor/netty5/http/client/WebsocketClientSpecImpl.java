@@ -26,15 +26,29 @@ import reactor.netty5.http.websocket.WebsocketSpecImpl;
  */
 final class WebsocketClientSpecImpl extends WebsocketSpecImpl implements WebsocketClientSpec {
 
-	private final WebSocketVersion version;
+	@Override
+	public boolean compressionAllowClientNoContext() {
+		return allowClientNoContext;
+	}
+
+	@Override
+	public boolean compressionRequestedServerNoContext() {
+		return requestedServerNoContext;
+	}
 
 	@Override
 	public WebSocketVersion version() {
 		return version;
 	}
 
+	private final boolean allowClientNoContext;
+	private final boolean requestedServerNoContext;
+	private final WebSocketVersion version;
+
 	WebsocketClientSpecImpl(WebsocketClientSpec.Builder builder) {
 		super(builder);
+		this.allowClientNoContext = builder.allowClientNoContext;
+		this.requestedServerNoContext = builder.requestedServerNoContext;
 		this.version = builder.version;
 	}
 }
