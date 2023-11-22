@@ -39,16 +39,8 @@ final class MicrometerPoolMetricsRecorder implements Disposable, PoolMetricsReco
 	final Timer pendingErrorTimer;
 
 	MicrometerPoolMetricsRecorder(String id, String poolName, SocketAddress remoteAddress) {
-		pendingSuccessTimer =
-				Timer.builder(PENDING_CONNECTIONS_TIME.getName())
-				     .tags(Tags.of(ID.asString(), id, REMOTE_ADDRESS.asString(), formatSocketAddress(remoteAddress),
-				             NAME.asString(), poolName, STATUS.asString(), SUCCESS))
-				     .register(REGISTRY);
-		pendingErrorTimer =
-				Timer.builder(PENDING_CONNECTIONS_TIME.getName())
-				     .tags(Tags.of(ID.asString(), id, REMOTE_ADDRESS.asString(), formatSocketAddress(remoteAddress),
-				             NAME.asString(), poolName, STATUS.asString(), ERROR))
-				     .register(REGISTRY);
+		pendingSuccessTimer = buildTimer(id, poolName, remoteAddress, SUCCESS);
+		pendingErrorTimer = buildTimer(id, poolName, remoteAddress, ERROR);
 	}
 
 	@Override
@@ -110,5 +102,12 @@ final class MicrometerPoolMetricsRecorder implements Disposable, PoolMetricsReco
 	public void dispose() {
 		REGISTRY.remove(pendingSuccessTimer);
 		REGISTRY.remove(pendingErrorTimer);
+	}
+
+	static Timer buildTimer(String id, String poolName, SocketAddress remoteAddress, String status) {
+		return Timer.builder(PENDING_CONNECTIONS_TIME.getName())
+		            .tags(Tags.of(ID.asString(), id, REMOTE_ADDRESS.asString(), formatSocketAddress(remoteAddress),
+		                    NAME.asString(), poolName, STATUS.asString(), status))
+		            .register(REGISTRY);
 	}
 }
