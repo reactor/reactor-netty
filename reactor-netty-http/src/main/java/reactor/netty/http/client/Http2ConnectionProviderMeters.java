@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,6 +105,26 @@ enum Http2ConnectionProviderMeters implements MeterDocumentation {
 		public Meter.Type getType() {
 			return Meter.Type.GAUGE;
 		}
+	},
+
+	/**
+	 * Time spent in pending acquire a stream from the connection pool.
+	 */
+	PENDING_STREAMS_TIME {
+		@Override
+		public String getName() {
+			return "reactor.netty.connection.provider.pending.streams.time";
+		}
+
+		@Override
+		public KeyName[] getKeyNames() {
+			return PendingStreamsTimeTags.values();
+		}
+
+		@Override
+		public Meter.Type getType() {
+			return Meter.Type.TIMER;
+		}
 	};
 
 	enum Http2ConnectionProviderMetersTags implements KeyName {
@@ -136,6 +156,49 @@ enum Http2ConnectionProviderMeters implements MeterDocumentation {
 			@Override
 			public String asString() {
 				return "remote.address";
+			}
+		}
+	}
+
+	enum PendingStreamsTimeTags implements KeyName {
+
+		/**
+		 * ID.
+		 */
+		ID {
+			@Override
+			public String asString() {
+				return "id";
+			}
+		},
+
+		/**
+		 * NAME.
+		 */
+		NAME {
+			@Override
+			public String asString() {
+				return "name";
+			}
+		},
+
+		/**
+		 * Remote address.
+		 */
+		REMOTE_ADDRESS {
+			@Override
+			public String asString() {
+				return "remote.address";
+			}
+		},
+
+		/**
+		 * STATUS.
+		 */
+		STATUS {
+			@Override
+			public String asString() {
+				return "status";
 			}
 		}
 	}

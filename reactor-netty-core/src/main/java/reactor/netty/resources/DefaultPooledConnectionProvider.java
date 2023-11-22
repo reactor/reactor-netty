@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,6 +94,16 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 			SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup) {
 		return new PooledConnectionAllocator(config, poolFactory, remoteAddress, resolverGroup).pool;
+	}
+
+	@Override
+	protected InstrumentedPool<PooledConnection> createPool(
+			String id,
+			TransportConfig config,
+			PoolFactory<PooledConnection> poolFactory,
+			SocketAddress remoteAddress,
+			AddressResolverGroup<?> resolverGroup) {
+		return new PooledConnectionAllocator(id, name, config, poolFactory, remoteAddress, resolverGroup).pool;
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultPooledConnectionProvider.class);
@@ -502,10 +512,23 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				PoolFactory<PooledConnection> provider,
 				SocketAddress remoteAddress,
 				AddressResolverGroup<?> resolver) {
+			this(null, null, config, provider, remoteAddress, resolver);
+		}
+
+		PooledConnectionAllocator(
+				@Nullable String id,
+				@Nullable String name,
+				TransportConfig config,
+				PoolFactory<PooledConnection> provider,
+				SocketAddress remoteAddress,
+				AddressResolverGroup<?> resolver) {
 			this.config = config;
 			this.remoteAddress = remoteAddress;
 			this.resolver = resolver;
-			this.pool = provider.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE);
+			this.pool = id == null ?
+					provider.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE) :
+					provider.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
+							new MicrometerPoolMetricsRecorder(id, name, remoteAddress));
 		}
 
 		Publisher<PooledConnection> connectChannel() {

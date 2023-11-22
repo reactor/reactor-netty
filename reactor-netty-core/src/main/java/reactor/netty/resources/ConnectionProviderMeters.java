@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,6 +128,26 @@ enum ConnectionProviderMeters implements MeterDocumentation {
 	},
 
 	/**
+	 * Time spent in pending acquire a connection from the connection pool.
+	 */
+	PENDING_CONNECTIONS_TIME {
+		@Override
+		public String getName() {
+			return "reactor.netty.connection.provider.pending.connections.time";
+		}
+
+		@Override
+		public KeyName[] getKeyNames() {
+			return PendingConnectionsTimeTags.values();
+		}
+
+		@Override
+		public Meter.Type getType() {
+			return Meter.Type.TIMER;
+		}
+	},
+
+	/**
 	 * The number of all connections in the connection pool, active or idle.
 	 */
 	TOTAL_CONNECTIONS {
@@ -176,6 +196,49 @@ enum ConnectionProviderMeters implements MeterDocumentation {
 			@Override
 			public String asString() {
 				return "remote.address";
+			}
+		}
+	}
+
+	enum PendingConnectionsTimeTags implements KeyName {
+
+		/**
+		 * ID.
+		 */
+		ID {
+			@Override
+			public String asString() {
+				return "id";
+			}
+		},
+
+		/**
+		 * NAME.
+		 */
+		NAME {
+			@Override
+			public String asString() {
+				return "name";
+			}
+		},
+
+		/**
+		 * Remote address.
+		 */
+		REMOTE_ADDRESS {
+			@Override
+			public String asString() {
+				return "remote.address";
+			}
+		},
+
+		/**
+		 * STATUS.
+		 */
+		STATUS {
+			@Override
+			public String asString() {
+				return "status";
 			}
 		}
 	}
