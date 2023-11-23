@@ -18,6 +18,7 @@ package reactor.netty5.resources;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -687,10 +688,12 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 		CountDownLatch latch = new CountDownLatch(10);
 		DefaultPooledConnectionProvider provider = (DefaultPooledConnectionProvider) builder.build();
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
 		HttpClient client =
 				createClient(provider, disposableServer.port())
 				        .protocol(isHttp2 ? HttpProtocol.H2C : HttpProtocol.HTTP11)
 				        .doOnResponse((res, conn) -> {
+				            serverAddress.set(conn.channel().remoteAddress());
 				            Channel channel = conn.channel() instanceof Http2StreamChannel ?
 				                    conn.channel().parent() : conn.channel();
 				            channel.closeFuture()
@@ -710,12 +713,20 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			    .expectComplete()
 			    .verify(Duration.ofSeconds(5));
 
+			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+			String address = sa.getHostString() + ":" + sa.getPort();
+			String pendingTime = isHttp2 ? ".pending.streams.time" : ".pending.connections.time";
+
 			assertThat(provider.channelPools.size()).isEqualTo(1);
 			if (meterRegistrar != null) {
 				assertThat(meterRegistrar.registered.get()).isTrue();
 			}
 			else {
-				assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, metricsName)).isNotEqualTo(-1);
+				assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
+						REMOTE_ADDRESS, address, NAME, metricsName)).isNotEqualTo(-1);
+
+				assertThat(getTimerValue(CONNECTION_PROVIDER_PREFIX + pendingTime,
+						REMOTE_ADDRESS, address, NAME, metricsName)).isNotEqualTo(-1);
 			}
 
 			if (enableEvictInBackground) {
@@ -734,10 +745,18 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			}
 			else {
 				if (enableEvictInBackground) {
-					assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, metricsName)).isEqualTo(-1);
+					assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
+							REMOTE_ADDRESS, address, NAME, metricsName)).isEqualTo(-1);
+
+					assertThat(getTimerValue(CONNECTION_PROVIDER_PREFIX + pendingTime,
+							REMOTE_ADDRESS, address, NAME, metricsName)).isEqualTo(-1);
 				}
 				else {
-					assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, metricsName)).isNotEqualTo(-1);
+					assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
+							REMOTE_ADDRESS, address, NAME, metricsName)).isNotEqualTo(-1);
+
+					assertThat(getTimerValue(CONNECTION_PROVIDER_PREFIX + pendingTime,
+							REMOTE_ADDRESS, address, NAME, metricsName)).isNotEqualTo(-1);
 				}
 			}
 		}
@@ -791,6 +810,15 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		double result = -1;
 		if (gauge != null) {
 			result = gauge.value();
+		}
+		return result;
+	}
+
+	private double getTimerValue(String timerName, String... tags) {
+		Timer timer = registry.find(timerName).tags(tags).timer();
+		double result = -1;
+		if (timer != null) {
+			result = timer.count();
 		}
 		return result;
 	}

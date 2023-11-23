@@ -376,7 +376,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 						borrower.fail(new PoolShutdownException());
 						return;
 					}
-					borrower.stopPendingCountdown();
+					borrower.stopPendingCountdown(true);
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Channel activated"));
 					}
@@ -420,7 +420,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 								borrower.fail(new PoolShutdownException());
 								return;
 							}
-							borrower.stopPendingCountdown();
+							borrower.stopPendingCountdown(true);
 							Mono<Connection> allocator = poolConfig.allocator();
 							Mono<Connection> primary =
 									allocator.doOnEach(sig -> {
@@ -725,6 +725,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		final CoreSubscriber<? super Http2PooledRef> actual;
 		final Http2Pool pool;
 
+		long pendingAcquireStart;
+
 		Disposable timeoutTask;
 
 		Borrower(CoreSubscriber<? super Http2PooledRef> actual, Http2Pool pool, Duration acquireTimeout) {
@@ -736,7 +738,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 
 		@Override
 		public void cancel() {
-			stopPendingCountdown();
+			stopPendingCountdown(true); // this is not failure, the subscription was canceled
 			if (compareAndSet(false, true)) {
 				pool.cancelAcquire(this);
 			}
@@ -753,6 +755,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				int permits = pool.poolConfig.allocationStrategy().estimatePermitCount();
 				int pending = pool.pendingSize;
 				if (!acquireTimeout.isZero() && permits + estimateStreamsCount <= pending) {
+					pendingAcquireStart = pool.clock.millis();
 					timeoutTask = pool.poolConfig.pendingAcquireTimer().apply(this, acquireTimeout);
 				}
 				pool.doAcquire(this);
@@ -762,6 +765,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		@Override
 		public void run() {
 			if (compareAndSet(false, true)) {
+				// this is failure, a timeout was observed
+				stopPendingCountdown(false);
 				pool.cancelAcquire(Http2Pool.Borrower.this);
 				actual.onError(new PoolAcquireTimeoutException(acquireTimeout));
 			}
@@ -804,13 +809,21 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 
 		void fail(Throwable error) {
-			stopPendingCountdown();
+			stopPendingCountdown(false);
 			if (!get()) {
 				actual.onError(error);
 			}
 		}
 
-		void stopPendingCountdown() {
+		void stopPendingCountdown(boolean success) {
+			if (!timeoutTask.isDisposed()) {
+				if (success) {
+					pool.poolConfig.metricsRecorder().recordPendingSuccessAndLatency(pool.clock.millis() - pendingAcquireStart);
+				}
+				else {
+					pool.poolConfig.metricsRecorder().recordPendingFailureAndLatency(pool.clock.millis() - pendingAcquireStart);
+				}
+			}
 			timeoutTask.dispose();
 		}
 	}

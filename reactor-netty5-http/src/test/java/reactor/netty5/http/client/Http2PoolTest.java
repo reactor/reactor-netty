@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import reactor.netty5.Connection;
 import reactor.netty5.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
 import reactor.netty5.internal.shaded.reactor.pool.PoolBuilder;
 import reactor.netty5.internal.shaded.reactor.pool.PoolConfig;
+import reactor.netty5.internal.shaded.reactor.pool.PoolMetricsRecorder;
 import reactor.netty5.internal.shaded.reactor.pool.PooledRef;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
@@ -1242,6 +1243,56 @@ class Http2PoolTest {
 		}
 	}
 
+	@Test
+	void recordsPendingCountAndLatencies() {
+		EmbeddedChannel channel = new EmbeddedChannel();
+		TestPoolMetricsRecorder recorder = new TestPoolMetricsRecorder();
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .metricsRecorder(recorder)
+				           .maxPendingAcquireUnbounded()
+				           .sizeBetween(0, 1);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		try {
+			//success, acquisition happens immediately
+			List<PooledRef<Connection>> acquired = new ArrayList<>();
+			channel.executor().execute(() -> http2Pool.acquire(Duration.ofMillis(1)).subscribe(acquired::add));
+			assertThat(acquired).hasSize(1);
+
+			//success, acquisition happens after pending some time
+			channel.executor().execute(() -> http2Pool.acquire(Duration.ofMillis(50)).subscribe());
+
+			//error, timed out
+			http2Pool.acquire(Duration.ofMillis(1))
+			         .as(StepVerifier::create)
+			         .expectError(PoolAcquireTimeoutException.class)
+			         .verify(Duration.ofSeconds(1));
+
+			channel.executor().execute(() -> acquired.get(0).release().block(Duration.ofSeconds(1)));
+
+			assertThat(recorder.pendingSuccessCounter)
+					.as("pending success")
+					.isEqualTo(1);
+
+			assertThat(recorder.pendingErrorCounter)
+					.as("pending errors")
+					.isEqualTo(1);
+
+			assertThat(recorder.pendingSuccessLatency)
+					.as("pending success latency")
+					.isGreaterThanOrEqualTo(1L);
+
+			assertThat(recorder.pendingErrorLatency)
+					.as("pending error latency")
+					.isGreaterThanOrEqualTo(1L);
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
 	static final class TestChannelId implements ChannelId {
 
 		static final Random rndm = new Random();
@@ -1269,6 +1320,71 @@ class Http2PoolTest {
 				return 0;
 			}
 			return this.asShortText().compareTo(o.asShortText());
+		}
+	}
+
+	static final class TestPoolMetricsRecorder implements PoolMetricsRecorder {
+
+		int pendingSuccessCounter;
+		int pendingErrorCounter;
+		long pendingSuccessLatency;
+		long pendingErrorLatency;
+
+		@Override
+		public void recordAllocationSuccessAndLatency(long latencyMs) {
+			//noop
+		}
+
+		@Override
+		public void recordAllocationFailureAndLatency(long latencyMs) {
+			//noop
+		}
+
+		@Override
+		public void recordResetLatency(long latencyMs) {
+			//noop
+		}
+
+		@Override
+		public void recordDestroyLatency(long latencyMs) {
+			//noop
+		}
+
+		@Override
+		public void recordRecycled() {
+			//noop
+		}
+
+		@Override
+		public void recordLifetimeDuration(long millisecondsSinceAllocation) {
+			//noop
+		}
+
+		@Override
+		public void recordIdleTime(long millisecondsIdle) {
+			//noop
+		}
+
+		@Override
+		public void recordSlowPath() {
+			//noop
+		}
+
+		@Override
+		public void recordFastPath() {
+			//noop
+		}
+
+		@Override
+		public void recordPendingSuccessAndLatency(long latencyMs) {
+			this.pendingSuccessCounter++;
+			this.pendingSuccessLatency = latencyMs;
+		}
+
+		@Override
+		public void recordPendingFailureAndLatency(long latencyMs) {
+			this.pendingErrorCounter++;
+			this.pendingErrorLatency = latencyMs;
 		}
 	}
 }

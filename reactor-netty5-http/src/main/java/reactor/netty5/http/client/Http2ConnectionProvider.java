@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,6 @@ import java.time.Duration;
 import java.util.Queue;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static reactor.netty5.ReactorNetty.format;
 import static reactor.netty5.ReactorNetty.getChannelContext;
@@ -122,7 +121,17 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			PooledConnectionProvider.PoolFactory<Connection> poolFactory,
 			SocketAddress remoteAddress,
 			AddressResolverGroup<?> resolverGroup) {
-		return new PooledConnectionAllocator(parent, config, poolFactory, () -> remoteAddress, resolverGroup).pool;
+		return new PooledConnectionAllocator(parent, config, poolFactory, remoteAddress, resolverGroup).pool;
+	}
+
+	@Override
+	protected InstrumentedPool<Connection> createPool(
+			String id,
+			TransportConfig config,
+			PooledConnectionProvider.PoolFactory<Connection> poolFactory,
+			SocketAddress remoteAddress,
+			AddressResolverGroup<?> resolverGroup) {
+		return new PooledConnectionAllocator(id, name(), parent, config, poolFactory, remoteAddress, resolverGroup).pool;
 	}
 
 	@Override
@@ -501,25 +510,40 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final ConnectionProvider parent;
 		final HttpClientConfig config;
 		final InstrumentedPool<Connection> pool;
-		final Supplier<SocketAddress> remoteAddress;
+		final SocketAddress remoteAddress;
 		final AddressResolverGroup<?> resolver;
 
 		PooledConnectionAllocator(
 				ConnectionProvider parent,
 				TransportConfig config,
 				PoolFactory<Connection> poolFactory,
-				Supplier<SocketAddress> remoteAddress,
+				SocketAddress remoteAddress,
+				AddressResolverGroup<?> resolver) {
+			this(null, null, parent, config, poolFactory, remoteAddress, resolver);
+		}
+
+		PooledConnectionAllocator(
+				@Nullable String id,
+				@Nullable String name,
+				ConnectionProvider parent,
+				TransportConfig config,
+				PoolFactory<Connection> poolFactory,
+				SocketAddress remoteAddress,
 				AddressResolverGroup<?> resolver) {
 			this.parent = parent;
 			this.config = (HttpClientConfig) config;
 			this.remoteAddress = remoteAddress;
 			this.resolver = resolver;
-			this.pool = poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
-					poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy()));
+			this.pool = id == null ?
+					poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
+							poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy())) :
+					poolFactory.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
+							new MicrometerPoolMetricsRecorder(id, name, remoteAddress),
+							poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy()));
 		}
 
 		Publisher<Connection> connectChannel() {
-			return parent.acquire(config, new DelegatingConnectionObserver(), remoteAddress, resolver)
+			return parent.acquire(config, new DelegatingConnectionObserver(), () -> remoteAddress, resolver)
 				         .map(conn -> conn);
 		}
 
