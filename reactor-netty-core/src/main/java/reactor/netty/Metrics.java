@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -204,6 +204,10 @@ public class Metrics {
 	 */
 	public static final String PENDING_STREAMS = ".pending.streams";
 
+	/**
+	 * The number of HTTP/2 stream acquisitions steal count.
+	 */
+	public static final String STEAL_STREAMS = ".steal.streams";
 
 	// ByteBufAllocator Metrics
 	/**
