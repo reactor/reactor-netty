@@ -39,6 +39,9 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.internal.shaded.reactor.pool.PoolBuilder;
+import reactor.netty.internal.shaded.reactor.pool.PoolConfig;
+import reactor.netty.internal.shaded.reactor.pool.decorators.InstrumentedPoolDecorators;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.PooledConnectionProvider;
 import reactor.netty.transport.ClientTransportConfig;
@@ -51,13 +54,20 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
+import reactor.util.function.Tuples;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.getChannelContext;
@@ -565,12 +575,56 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.config = (HttpClientConfig) config;
 			this.remoteAddress = remoteAddress;
 			this.resolver = resolver;
-			this.pool = id == null ?
-					poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
-							poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy())) :
-					poolFactory.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
-							new MicrometerPoolMetricsRecorder(id, name, remoteAddress),
-							poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy()));
+
+			Http2AllocationStrategy http2Strategy = poolFactory.allocationStrategy() instanceof Http2AllocationStrategy ?
+					(Http2AllocationStrategy) poolFactory.allocationStrategy() : null;
+
+			if (http2Strategy == null || !http2Strategy.enableWorkStealing) {
+				this.pool = id == null ?
+						poolFactory.newPool(connectChannel(), null, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
+								poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy())) :
+						poolFactory.newPool(connectChannel(), DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
+								new MicrometerPoolMetricsRecorder(id, name, remoteAddress),
+								poolConfig -> new Http2Pool(poolConfig, poolFactory.allocationStrategy()));
+			}
+			else {
+				// Create one connection allocator (it will be shared by all Http2Pool instances)
+				Publisher<Connection> allocator = connectChannel();
+
+				List<Executor> execs =  StreamSupport.stream(config.loopResources().onClient(true).spliterator(), false)
+						.limit(http2Strategy.maxConnections)
+						.collect(Collectors.toList());
+				Iterator<Executor> execsIter = execs.iterator();
+
+				MicrometerPoolMetricsRecorder micrometerRecorder = id == null ? null : new MicrometerPoolMetricsRecorder(id, name, remoteAddress);
+				AtomicInteger subPoolIndex = new AtomicInteger();
+
+				this.pool = InstrumentedPoolDecorators.concurrentPools(execs.size(), allocator,
+						(PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder) -> {
+					int index = subPoolIndex.getAndIncrement();
+					int minDiv = http2Strategy.minConnections / execs.size();
+					int minMod = http2Strategy.minConnections % execs.size();
+					int maxDiv = http2Strategy.maxConnections / execs.size();
+					int maxMod = http2Strategy.maxConnections % execs.size();
+
+					int minConn = index < minMod ? minDiv + 1 : minDiv;
+					int maxConn = index < maxMod ? maxDiv + 1 : maxDiv;
+
+					Http2AllocationStrategy adaptedH2Strategy = Http2AllocationStrategy.builder(http2Strategy)
+							.minConnections(minConn)
+							.maxConnections(maxConn)
+							.build();
+
+					InstrumentedPool<Connection> pool =
+							id == null ?
+									poolFactory.newPool(poolBuilder, maxConn, adaptedH2Strategy, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
+											poolConfig -> new Http2Pool(poolConfig, adaptedH2Strategy)) :
+									poolFactory.newPool(poolBuilder, maxConn, adaptedH2Strategy, DEFAULT_DESTROY_HANDLER, DEFAULT_EVICTION_PREDICATE,
+											micrometerRecorder,
+											poolConfig -> new Http2Pool(poolConfig, adaptedH2Strategy));
+					return Tuples.of(pool, execsIter.next());
+				});
+			}
 		}
 
 		Publisher<Connection> connectChannel() {
