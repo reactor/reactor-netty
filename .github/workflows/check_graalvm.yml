@@ -44,7 +44,7 @@ jobs:
           curl -L $download_url --output $RUNNER_TEMP/java_package.tar.gz
         shell: bash
       - name: Set up GraalVM 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'jdkfile'
           jdkFile: ${{ runner.temp }}/java_package.tar.gz
