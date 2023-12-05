@@ -20,7 +20,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.ClosedChannelException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -106,6 +108,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final HttpHeaders            requestHeaders;
 	final ClientCookieEncoder    cookieEncoder;
 	final ClientCookieDecoder    cookieDecoder;
+	final List<Cookie>           cookieList;
 	final Sinks.One<HttpHeaders> trailerHeaders;
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
@@ -144,6 +147,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.requestHeaders = replaced.requestHeaders;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
+		this.cookieList = replaced.cookieList;
 		this.resourceUrl = replaced.resourceUrl;
 		this.path = replaced.path;
 		this.responseTimeout = replaced.responseTimeout;
@@ -165,14 +169,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.requestHeaders = nettyRequest.headers();
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
+		this.cookieList = new ArrayList<>();
 		this.trailerHeaders = Sinks.unsafe().one();
 	}
 
 	@Override
 	public HttpClientRequest addCookie(Cookie cookie) {
 		if (!hasSentHeaders()) {
-			this.requestHeaders.add(HttpHeaderNames.COOKIE,
-					cookieEncoder.encode(cookie));
+			this.cookieList.add(cookie);
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -587,6 +591,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	protected void beforeMarkSentHeaders() {
+		if (!cookieList.isEmpty()) {
+			requestHeaders.add(HttpHeaderNames.COOKIE, cookieEncoder.encode(cookieList));
+		}
+
 		if (redirectedFrom.length > 0) {
 			if (redirectRequestConsumer != null) {
 				redirectRequestConsumer.accept(this);
