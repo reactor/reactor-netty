@@ -17,11 +17,13 @@ package reactor.netty.http;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -161,6 +163,40 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 		        .asString()
 		        .as(StepVerifier::create)
 		        .expectNext(expectedResponse)
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void testIssue2983() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> {
+				            List<String> cookies = req.requestHeaders().getAll(HttpHeaderNames.COOKIE);
+				            return cookies.size() == 1 ? res.sendString(Mono.just(cookies.get(0))) :
+				                    res.sendString(Mono.just("ERROR"));
+				        })
+				        .bindNow();
+
+		createClient(disposableServer.port())
+		        .request(HttpMethod.GET)
+		        .uri("/")
+		        .send((req, out) -> {
+		            Cookie cookie1 = new DefaultCookie("testIssue2983_1", "1");
+		            cookie1.setPath("/");
+		            Cookie cookie2 = new DefaultCookie("testIssue2983_2", "2");
+		            cookie2.setPath("/2");
+		            Cookie cookie3 = new DefaultCookie("testIssue2983_3", "3");
+		            req.addCookie(cookie1)
+		               .addCookie(cookie2)
+		               .addCookie(cookie3);
+		            return out;
+		        })
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        .expectNext("testIssue2983_3=3; testIssue2983_2=2; testIssue2983_1=1")
 		        .expectComplete()
 		        .verify(Duration.ofSeconds(5));
 	}
