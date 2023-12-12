@@ -25,6 +25,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty.contrib.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty5.channel.internal.DelegatingChannelHandlerContext;
 import io.netty5.handler.codec.http.DefaultHttpContent;
+import io.netty5.handler.codec.http.HttpDecoderConfig;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpRequest;
@@ -606,10 +607,14 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
 			@Nullable Function<String, String> uriTagValue) {
+		HttpDecoderConfig decoderConfig = new HttpDecoderConfig();
+		decoderConfig.setMaxInitialLineLength(decoder.maxInitialLineLength())
+		             .setMaxHeaderSize(decoder.maxHeaderSize())
+		             .setValidateHeaders(decoder.validateHeaders())
+		             .setInitialBufferSize(decoder.initialBufferSize())
+		             .setAllowDuplicateContentLengths(decoder.allowDuplicateContentLengths());
 		HttpServerCodec httpServerCodec =
-				new HttpServerCodec(decoder.maxInitialLineLength(), decoder.maxHeaderSize(),
-						decoder.validateHeaders(), decoder.initialBufferSize(),
-						decoder.allowDuplicateContentLengths());
+				new HttpServerCodec(decoderConfig);
 
 		Http11OrH2CleartextCodec upgrader = new Http11OrH2CleartextCodec(accessLogEnabled, accessLog, compressPredicate,
 				 p.get(NettyPipeline.LoggingHandler) != null, enableGracefulShutdown, formDecoderProvider,
@@ -684,11 +689,15 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
 			@Nullable Function<String, String> uriTagValue) {
+		HttpDecoderConfig decoderConfig = new HttpDecoderConfig();
+		decoderConfig.setMaxInitialLineLength(decoder.maxInitialLineLength())
+		             .setMaxHeaderSize(decoder.maxHeaderSize())
+		             .setValidateHeaders(decoder.validateHeaders())
+		             .setInitialBufferSize(decoder.initialBufferSize())
+		             .setAllowDuplicateContentLengths(decoder.allowDuplicateContentLengths());
 		p.addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpCodec,
-		            new HttpServerCodec(decoder.maxInitialLineLength(), decoder.maxHeaderSize(),
-		                    decoder.validateHeaders(), decoder.initialBufferSize(),
-		                    decoder.allowDuplicateContentLengths()))
+		            new HttpServerCodec(decoderConfig))
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
 		            new HttpTrafficHandler(compressPredicate, formDecoderProvider,
