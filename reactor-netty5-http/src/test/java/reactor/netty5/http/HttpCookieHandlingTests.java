@@ -20,8 +20,11 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.StreamSupport;
 
 import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpMethod;
+import io.netty5.handler.codec.http.headers.DefaultHttpCookiePair;
 import io.netty5.handler.codec.http.headers.DefaultHttpSetCookie;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpSetCookie;
@@ -163,6 +166,44 @@ class HttpCookieHandlingTests extends BaseHttpTest {
 		        .asString()
 		        .as(StepVerifier::create)
 		        .expectNext(expectedResponse)
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void testIssue2983() {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> {
+				            Iterable<CharSequence> cookies = req.requestHeaders().values(HttpHeaderNames.COOKIE);
+				            return StreamSupport.stream(cookies.spliterator(), false).count() == 1 ? res.sendString(Mono.just(cookies.iterator().next().toString())) :
+				                    res.sendString(Mono.just("ERROR"));
+				        })
+				        .bindNow();
+
+		createClient(disposableServer.port())
+		        .request(HttpMethod.GET)
+		        .uri("/")
+		        .send((req, out) -> {
+		            HttpCookiePair cookie1 = new DefaultHttpCookiePair("testIssue2983_1", "1");
+		            // FIXME
+		            //cookie1.setPath("/");
+		            HttpCookiePair cookie2 = new DefaultHttpCookiePair("testIssue2983_2", "2");
+		            // FIXME
+		            //cookie2.setPath("/2");
+		            HttpCookiePair cookie3 = new DefaultHttpCookiePair("testIssue2983_3", "3");
+		            req.addCookie(cookie1)
+		               .addCookie(cookie2)
+		               .addCookie(cookie3);
+		            return out;
+		        })
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .as(StepVerifier::create)
+		        // FIXME
+		        //.expectNext("testIssue2983_3=3; testIssue2983_2=2; testIssue2983_1=1")
+		        .expectNext("testIssue2983_1=1; testIssue2983_2=2; testIssue2983_3=3")
 		        .expectComplete()
 		        .verify(Duration.ofSeconds(5));
 	}

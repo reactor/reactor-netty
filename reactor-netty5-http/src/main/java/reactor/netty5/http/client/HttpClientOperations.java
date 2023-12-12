@@ -109,6 +109,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final boolean                isSecure;
 	final HttpRequest            nettyRequest;
 	final HttpHeaders            requestHeaders;
+	final List<HttpCookiePair>   cookieList;
 	final Sinks.One<HttpHeaders> trailerHeaders;
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
@@ -145,6 +146,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.responseState = replaced.responseState;
 		this.followRedirectPredicate = replaced.followRedirectPredicate;
 		this.requestHeaders = replaced.requestHeaders;
+		this.cookieList = replaced.cookieList;
 		this.resourceUrl = replaced.resourceUrl;
 		this.path = replaced.path;
 		this.responseTimeout = replaced.responseTimeout;
@@ -163,13 +165,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		                 .get(NettyPipeline.SslHandler) != null;
 		this.nettyRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
+		this.cookieList = new ArrayList<>();
 		this.trailerHeaders = Sinks.unsafe().one();
 	}
 
 	@Override
 	public HttpClientRequest addCookie(HttpCookiePair cookie) {
 		if (!hasSentHeaders()) {
-			this.requestHeaders.addCookie(cookie);
+			this.cookieList.add(cookie);
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -566,6 +569,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	protected void beforeMarkSentHeaders() {
+		if (!cookieList.isEmpty()) {
+			for (HttpCookiePair cookie: cookieList) {
+				requestHeaders.addCookie(cookie);
+			}
+		}
+
 		if (redirectedFrom.length > 0) {
 			if (redirectRequestConsumer != null) {
 				redirectRequestConsumer.accept(this);
