@@ -17,4 +17,4 @@ jobs:
           distribution: 'temurin'
           java-version: '8'
       - name: Build with Gradle
-        run: ./gradlew clean check --no-daemon -PforceTransport=nio -PreactorCoreVersion='3.6.1-SNAPSHOT' -PforceContextPropagationVersion='1.1.0'
+        run: ./gradlew clean check --no-daemon -PforceTransport=nio -PreactorCoreVersion='3.6.2-SNAPSHOT' -PforceContextPropagationVersion='1.1.0'
