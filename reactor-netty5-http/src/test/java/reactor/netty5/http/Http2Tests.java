@@ -44,6 +44,7 @@ import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
+import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
@@ -56,6 +57,7 @@ import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
+import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty5.ConnectionObserver.State.CONFIGURED;
 
@@ -694,5 +696,41 @@ class Http2Tests extends BaseHttpTest {
 		    .assertNext(t -> assertThat(t.getT1()).isNotNull().hasSize(2).allMatch("doTestMaxStreams"::equals))
 		    .expectComplete()
 		    .verify(Duration.ofSeconds(5));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2cCompatibleCombinations")
+	void testEmptyDataFrameH2C(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		doTestEmptyDataFrame(createServer().protocol(serverProtocols),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testEmptyDataFrameH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
+		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
+		Http2SslContextSpec clientCtx =
+				Http2SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		doTestEmptyDataFrame(createServer().protocol(serverProtocols).secure(spec -> spec.sslContext(serverCtx)),
+				createClient(() -> disposableServer.address()).protocol(clientProtocols).secure(spec -> spec.sslContext(clientCtx)));
+	}
+
+	private void doTestEmptyDataFrame(HttpServer server, HttpClient client) {
+		disposableServer =
+				// Intentionality sends Flux with empty strings as we want to have
+				// OUTBOUND HEADERS(endStream=false) followed by OUTBOUND DATA(endStream=true length=0)
+				server.handle((req, res) -> res.sendString(Flux.just("", "")))
+				      .bindNow();
+
+		String expectation = "EMPTY";
+		client.get()
+		      .uri("/")
+		      .response((res, bytes) -> bytes.defaultIfEmpty(preferredAllocator().copyOf(expectation.getBytes(Charset.defaultCharset()))))
+		      .as(StepVerifier::create)
+		      .expectNextMatches(buf -> expectation.equals(buf.toString(Charset.defaultCharset())))
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
 	}
 }
