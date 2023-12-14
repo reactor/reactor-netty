@@ -756,7 +756,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				log.debug(format(channel(), "Received last HTTP packet"));
 			}
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
-				if (redirecting != null) {
+				// When there is HTTP/2 response with INBOUND HEADERS(endStream=false) followed by INBOUND DATA(endStream=true length=0),
+				// Netty sends LastHttpContent with empty buffer instead of EMPTY_LAST_CONTENT
+				if (redirecting != null || ((LastHttpContent) msg).content().readableBytes() == 0) {
 					ReferenceCountUtil.release(msg);
 				}
 				else {
