@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
@@ -49,7 +49,7 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 	private ChannelGroup group;
 	private static final EventExecutor executor = new DefaultEventExecutor();
 
-	@AfterClass
+	@AfterAll
 	public static void afterClass() throws Exception {
 		executor.shutdownGracefully()
 		        .get(5, TimeUnit.SECONDS);

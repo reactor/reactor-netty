@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
@@ -41,13 +41,13 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 	private ChannelGroup group;
 	private static final EventExecutor executor = new DefaultEventExecutor();
 
-	@AfterClass
+	@AfterAll
 	public static void afterClass() throws Exception {
 		executor.shutdownGracefully()
 		        .get(5, TimeUnit.SECONDS);
 	}
 
-	@After
+	@AfterEach
 	@Override
 	public void close() throws Exception {
 		if (disposableServer != null) {
@@ -125,13 +125,13 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 	}
 
 	@Override
-	@Ignore
+	@Disabled
 	public void httpStatusCodeSettable_onUncaughtException() {
 		// Reactor Netty always returns 500 ISE when an exception happens
 	}
 
 	@Override
-	@Ignore
+	@Disabled
 	public void httpStatusCodeSettable_onUncaughtException_async() {
 		// Reactor Netty always returns 500 ISE when an exception happens
 	}
