@@ -134,6 +134,7 @@ ext {
 	mockitoVersion = '4.11.0'
 	blockHoundVersion = '1.0.8.RELEASE'
 	reflectionsVersion = '0.10.2'
+	bouncycastleVersion = '1.77'
 
 	javadocLinks = ["https://docs.oracle.com/javase/8/docs/api/",
 					// Use Reactive Streams 1.0.3 version for javadoc generation

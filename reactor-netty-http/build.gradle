@@ -146,6 +146,7 @@ dependencies {
 	}
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
 
+	testRuntimeOnly "org.bouncycastle:bcpkix-jdk18on:$bouncycastleVersion"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
