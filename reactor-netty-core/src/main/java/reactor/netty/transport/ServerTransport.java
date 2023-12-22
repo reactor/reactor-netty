@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.AttributeKey;
@@ -110,9 +111,13 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 			ConnectionObserver childObs =
 					new ChildObserver(config.defaultChildObserver().then(config.childObserver()));
-			Acceptor acceptor = new Acceptor(config.childEventLoopGroup(), config.channelInitializer(childObs, null, true),
-					config.childOptions, config.childAttrs, isDomainSocket);
-			TransportConnector.bind(config, new AcceptorInitializer(acceptor), local, isDomainSocket)
+			ChannelInitializer<Channel> channelInitializer = config.channelInitializer(childObs, null, true);
+			if (!config.channelType(isDomainSocket).equals(DatagramChannel.class)) {
+				Acceptor acceptor = new Acceptor(config.childEventLoopGroup(), channelInitializer,
+						config.childOptions, config.childAttrs, isDomainSocket);
+				channelInitializer = new AcceptorInitializer(acceptor);
+			}
+			TransportConnector.bind(config, channelInitializer, local, isDomainSocket)
 			                  .subscribe(disposableServer);
 		});
 

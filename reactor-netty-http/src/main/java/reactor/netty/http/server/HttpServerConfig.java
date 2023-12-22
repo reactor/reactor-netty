@@ -23,6 +23,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpDecoderConfig;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -48,7 +51,15 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.incubator.codec.http3.Http3FrameToHttpObjectCodec;
+import io.netty.incubator.codec.http3.Http3ServerConnectionHandler;
+import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
+import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
+import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.incubator.codec.quic.QuicTokenHandler;
 import io.netty.util.AsciiString;
+import io.netty.util.AttributeKey;
 import reactor.core.publisher.Mono;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
@@ -59,6 +70,7 @@ import reactor.netty.channel.AbstractChannelMetricsHandler;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http2SettingsSpec;
+import reactor.netty.http.Http3SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
 import reactor.netty.http.logging.HttpMessageLogFactory;
@@ -86,6 +98,7 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static io.netty.incubator.codec.http3.Http3.newQuicServerCodecBuilder;
 import static reactor.netty.ReactorNetty.ACCESS_LOG_ENABLED;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
@@ -157,6 +170,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 */
 	public Http2SettingsSpec http2SettingsSpec() {
 		return http2Settings;
+	}
+
+	/**
+	 * Return the HTTP/3 configuration.
+	 *
+	 * @return the HTTP/3 configuration
+	 * @since 1.2.0
+	 */
+	public Http3SettingsSpec http3SettingsSpec() {
+		return http3Settings;
 	}
 
 	/**
@@ -299,6 +322,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	HttpServerFormDecoderProvider                           formDecoderProvider;
 	BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	Http2SettingsSpec                                       http2Settings;
+	Http3SettingsSpec                                       http3Settings;
 	HttpMessageLogFactory                                   httpMessageLogFactory;
 	Duration                                                idleTimeout;
 	BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -341,6 +365,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.formDecoderProvider = parent.formDecoderProvider;
 		this.forwardedHeaderHandler = parent.forwardedHeaderHandler;
 		this.http2Settings = parent.http2Settings;
+		this.http3Settings = parent.http3Settings;
 		this.httpMessageLogFactory = parent.httpMessageLogFactory;
 		this.idleTimeout = parent.idleTimeout;
 		this.mapHandle = parent.mapHandle;
@@ -355,6 +380,19 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.requestTimeout = parent.requestTimeout;
 		this.sslProvider = parent.sslProvider;
 		this.uriTagValue = parent.uriTagValue;
+	}
+
+	@Override
+	public ChannelInitializer<Channel> channelInitializer(ConnectionObserver connectionObserver,
+			@Nullable SocketAddress remoteAddress, boolean onServer) {
+		ChannelInitializer<Channel> channelInitializer = super.channelInitializer(connectionObserver, remoteAddress, onServer);
+		return (_protocols & h3) == h3 ? new Http3ChannelInitializer(this, channelInitializer) : channelInitializer;
+	}
+
+	@Override
+	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
+		return isDomainSocket ? ServerDomainSocketChannel.class :
+				(_protocols & h3) == h3 ? DatagramChannel.class : ServerSocketChannel.class;
 	}
 
 	@Override
@@ -401,6 +439,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			}
 			else if (p == HttpProtocol.H2C) {
 				_protocols |= h2c;
+			}
+			else if (p ==HttpProtocol.H3) {
+				_protocols |= h3;
 			}
 		}
 		this._protocols = _protocols;
@@ -551,6 +592,27 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			lengthPredicate = lengthPredicate.and(compressionPredicate);
 		}
 		return lengthPredicate;
+	}
+
+	static void configureHttp3Pipeline(
+			ChannelPipeline p,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+			ServerCookieDecoder cookieDecoder,
+			ServerCookieEncoder cookieEncoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			HttpMessageLogFactory httpMessageLogFactory,
+			ConnectionObserver listener,
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			ChannelOperations.OnSetup opsFactory,
+			@Nullable Duration readTimeout,
+			@Nullable Duration requestTimeout,
+			boolean validate) {
+		p.remove(NettyPipeline.ReactiveBridge);
+
+		p.addLast(NettyPipeline.HttpCodec, new Http3ServerConnectionHandler(
+				new Http3Codec(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider, forwardedHeaderHandler,
+						httpMessageLogFactory, listener, mapHandle, opsFactory, readTimeout, requestTimeout, validate)));
 	}
 
 	static void configureH2Pipeline(ChannelPipeline p,
@@ -783,6 +845,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final boolean ACCESS_LOG = Boolean.parseBoolean(System.getProperty(ACCESS_LOG_ENABLED, "false"));
 
+	static final int h3 = 0b1000;
+
 	static final int h2 = 0b010;
 
 	static final int h2c = 0b001;
@@ -982,6 +1046,153 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			addStreamHandlers(ch, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
 					formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder,
 					minCompressionSize, opsFactory, readTimeout, requestTimeout, uriTagValue);
+		}
+	}
+
+	static final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
+
+		final Map<AttributeKey<?>, ?>     attributes;
+		final Map<AttributeKey<?>, ?>     childAttributes;
+		final Map<ChannelOption<?>, ?>    childOptions;
+		final Duration                    idleTimeout;
+		final Http3SettingsSpec           http3Settings;
+		final ChannelHandler              loggingHandler;
+		final Map<ChannelOption<?>, ?>    options;
+		final ChannelInitializer<Channel> quicChannelInitializer;
+		final QuicSslContext              quicSslContext;
+		final QuicTokenHandler            tokenHandler;
+
+		Http3ChannelInitializer(HttpServerConfig config, ChannelInitializer<Channel> quicChannelInitializer) {
+			this.attributes = config.attributes();
+			this.childAttributes = config.childAttributes();
+			this.childOptions = config.childOptions();
+			this.idleTimeout = config.idleTimeout();
+			this.http3Settings = config.http3SettingsSpec();
+			this.loggingHandler = config.loggingHandler();
+			this.options = config.options();
+			this.quicChannelInitializer = quicChannelInitializer;
+			this.quicSslContext = (QuicSslContext) config.sslProvider.getSslContext(); //FIXME
+			this.tokenHandler = InsecureQuicTokenHandler.INSTANCE; //FIXME
+		}
+
+		@Override
+		protected void initChannel(Channel channel) {
+			QuicServerCodecBuilder quicServerCodecBuilder =
+					newQuicServerCodecBuilder().sslContext(quicSslContext)
+					                           .handler(quicChannelInitializer);
+
+			if (http3Settings != null) {
+				quicServerCodecBuilder.initialMaxData(http3Settings.maxData())
+				                      .initialMaxStreamDataBidirectionalLocal(http3Settings.maxStreamDataBidirectionalLocal())
+				                      .initialMaxStreamDataBidirectionalRemote(http3Settings.maxStreamDataBidirectionalRemote())
+				                      .initialMaxStreamsBidirectional(http3Settings.maxStreamsBidirectional());
+			}
+
+			if (idleTimeout != null) {
+				quicServerCodecBuilder.maxIdleTimeout(idleTimeout.toMillis(), TimeUnit.MILLISECONDS);
+			}
+
+			if (tokenHandler != null) {
+				quicServerCodecBuilder.tokenHandler(tokenHandler);
+			}
+
+			attributes(quicServerCodecBuilder, attributes);
+			channelOptions(quicServerCodecBuilder, options);
+			streamAttributes(quicServerCodecBuilder, childAttributes);
+			streamChannelOptions(quicServerCodecBuilder, childOptions);
+
+			if (loggingHandler != null) {
+				channel.pipeline().addLast(loggingHandler);
+			}
+
+			channel.pipeline().addLast(quicServerCodecBuilder.build());
+
+			channel.pipeline().remove(this);
+		}
+
+		@SuppressWarnings("unchecked")
+		static void attributes(QuicServerCodecBuilder quicServerCodecBuilder, Map<AttributeKey<?>, ?> attrs) {
+			for (Map.Entry<AttributeKey<?>, ?> e : attrs.entrySet()) {
+				quicServerCodecBuilder.attr((AttributeKey<Object>) e.getKey(), e.getValue());
+			}
+		}
+
+		@SuppressWarnings("unchecked")
+		static void channelOptions(QuicServerCodecBuilder quicServerCodecBuilder, Map<ChannelOption<?>, ?> options) {
+			for (Map.Entry<ChannelOption<?>, ?> e : options.entrySet()) {
+				quicServerCodecBuilder.option((ChannelOption<Object>) e.getKey(), e.getValue());
+			}
+		}
+
+		@SuppressWarnings("unchecked")
+		static void streamAttributes(QuicServerCodecBuilder quicServerCodecBuilder, Map<AttributeKey<?>, ?> attrs) {
+			for (Map.Entry<AttributeKey<?>, ?> e : attrs.entrySet()) {
+				quicServerCodecBuilder.streamAttr((AttributeKey<Object>) e.getKey(), e.getValue());
+			}
+		}
+
+		@SuppressWarnings("unchecked")
+		static void streamChannelOptions(QuicServerCodecBuilder quicServerCodecBuilder, Map<ChannelOption<?>, ?> options) {
+			for (Map.Entry<ChannelOption<?>, ?> e : options.entrySet()) {
+				quicServerCodecBuilder.streamOption((ChannelOption<Object>) e.getKey(), e.getValue());
+			}
+		}
+	}
+
+	static final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
+
+		final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+		final ServerCookieDecoder                                     cookieDecoder;
+		final ServerCookieEncoder                                     cookieEncoder;
+		final HttpServerFormDecoderProvider                           formDecoderProvider;
+		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+		final HttpMessageLogFactory                                   httpMessageLogFactory;
+		final ConnectionObserver                                      listener;
+		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+				mapHandle;
+		final ChannelOperations.OnSetup                               opsFactory;
+		final Duration                                                readTimeout;
+		final Duration                                                requestTimeout;
+		final boolean                                                 validate;
+
+		Http3Codec(
+				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+				ServerCookieDecoder decoder,
+				ServerCookieEncoder encoder,
+				HttpServerFormDecoderProvider formDecoderProvider,
+				@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+				HttpMessageLogFactory httpMessageLogFactory,
+				ConnectionObserver listener,
+				@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+				ChannelOperations.OnSetup opsFactory,
+				@Nullable Duration readTimeout,
+				@Nullable Duration requestTimeout,
+				boolean validate) {
+			this.compressPredicate = compressPredicate;
+			this.cookieDecoder = decoder;
+			this.cookieEncoder = encoder;
+			this.formDecoderProvider = formDecoderProvider;
+			this.forwardedHeaderHandler = forwardedHeaderHandler;
+			this.httpMessageLogFactory = httpMessageLogFactory;
+			this.listener = listener;
+			this.mapHandle = mapHandle;
+			this.opsFactory = opsFactory;
+			this.readTimeout = readTimeout;
+			this.requestTimeout = requestTimeout;
+			this.validate = validate;
+		}
+
+		@Override
+		protected void initChannel(QuicStreamChannel channel) {
+			channel.pipeline()
+			       .addLast(new Http3FrameToHttpObjectCodec(true, validate))
+			       .addLast(NettyPipeline.HttpTrafficHandler,
+			               new Http3StreamBridgeServerHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
+			                       forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, readTimeout, requestTimeout));
+
+			ChannelOperations.addReactiveBridge(channel, opsFactory, listener);
+
+			channel.pipeline().remove(this);
 		}
 	}
 
@@ -1214,6 +1425,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2SettingsSpec                                       http2SettingsSpec;
+		final Http3SettingsSpec                                       http3SettingsSpec;
 		final HttpMessageLogFactory                                   httpMessageLogFactory;
 		final Duration                                                idleTimeout;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -1242,6 +1454,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.formDecoderProvider = config.formDecoderProvider;
 			this.forwardedHeaderHandler = config.forwardedHeaderHandler;
 			this.http2SettingsSpec = config.http2Settings;
+			this.http3SettingsSpec = config.http3Settings;
 			this.httpMessageLogFactory = config.httpMessageLogFactory;
 			this.idleTimeout = config.idleTimeout;
 			this.mapHandle = config.mapHandle;
@@ -1265,14 +1478,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (sslProvider != null) {
 				ChannelPipeline pipeline = channel.pipeline();
-				if (redirectHttpToHttps && (protocols & h2) != h2) {
-					NonSslRedirectDetector nonSslRedirectDetector = new NonSslRedirectDetector(sslProvider,
-							remoteAddress,
-							SSL_DEBUG);
-					pipeline.addFirst(NettyPipeline.NonSslRedirectDetector, nonSslRedirectDetector);
-				}
-				else {
-					sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+				if ((protocols & h3) != h3) {
+					if (redirectHttpToHttps && (protocols & h2) != h2) {
+						NonSslRedirectDetector nonSslRedirectDetector = new NonSslRedirectDetector(sslProvider,
+								remoteAddress,
+								SSL_DEBUG);
+						pipeline.addFirst(NettyPipeline.NonSslRedirectDetector, nonSslRedirectDetector);
+					}
+					else {
+						sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+					}
 				}
 
 				if ((protocols & h11orH2) == h11orH2) {
@@ -1280,6 +1495,22 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 					       .addBefore(NettyPipeline.ReactiveBridge,
 					                  NettyPipeline.H2OrHttp11Codec,
 					                  new H2OrHttp11Codec(this, observer));
+				}
+				else if ((protocols & h3) == h3) {
+					configureHttp3Pipeline(
+							channel.pipeline(),
+							compressPredicate(compressPredicate, minCompressionSize),
+							cookieDecoder,
+							cookieEncoder,
+							formDecoderProvider,
+							forwardedHeaderHandler,
+							httpMessageLogFactory,
+							observer,
+							mapHandle,
+							opsFactory,
+							readTimeout,
+							requestTimeout,
+							decoder.validateHeaders());
 				}
 				else if ((protocols & h11) == h11) {
 					configureHttp11Pipeline(

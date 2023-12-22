@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,6 +85,10 @@ final class HttpServerBind extends HttpServer {
 						"Configured H2 protocol without TLS. " +
 								"Use a Clear-Text H2 protocol via HttpServer#protocol or configure TLS " +
 								"via HttpServer#secure"));
+			}
+			else if ((config._protocols & HttpServerConfig.h3) == HttpServerConfig.h3) {
+				return Mono.error(new IllegalArgumentException(
+						"Configured H3 protocol without TLS. Configure TLS via HttpServer#secure"));
 			}
 		}
 		return super.bind();
