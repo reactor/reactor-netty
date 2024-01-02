@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ ext {
 
 	// Testing
 	brotli4jVersion = '1.13.0'
-	jacksonDatabindVersion = '2.16.0'
+	jacksonDatabindVersion = '2.16.1'
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.24.2'
 	awaitilityVersion = '4.2.0'
