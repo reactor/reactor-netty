@@ -528,7 +528,9 @@ include::{examplesdir}/resolver/Application.java[lines=18..39]
 <1> The timeout of each DNS query performed by this resolver will be 500ms.
 ====
 
-The following listing shows the available configurations:
+The following listing shows the available configurations.
+Additionally, https://tools.ietf.org/html/rfc7766[`TCP fallback`] is enabled by default.
+
 
 [width="100%",options="header"]
 |=======
