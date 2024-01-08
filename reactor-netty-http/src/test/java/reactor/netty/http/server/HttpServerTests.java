@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -136,6 +136,7 @@ import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.PrematureCloseException;
 import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
@@ -2124,6 +2125,21 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testSniSupport() throws Exception {
+		doTestSniSupport(Function.identity(), Function.identity());
+	}
+
+	@Test
+	void testIssue3022() throws Exception {
+		TestHttpClientMetricsRecorder clientMetricsRecorder = new TestHttpClientMetricsRecorder();
+		TestHttpServerMetricsRecorder serverMetricsRecorder = new TestHttpServerMetricsRecorder();
+		doTestSniSupport(server -> server.metrics(true, () -> serverMetricsRecorder, Function.identity()),
+				client -> client.metrics(true, () -> clientMetricsRecorder, Function.identity()));
+		assertThat(clientMetricsRecorder.tlsHandshakeTime).isNotNull().isGreaterThan(Duration.ZERO);
+		assertThat(serverMetricsRecorder.tlsHandshakeTime).isNotNull().isGreaterThan(Duration.ZERO);
+	}
+
+	private void doTestSniSupport(Function<HttpServer, HttpServer> serverCustomizer,
+			Function<HttpClient, HttpClient> clientCustomizer) throws Exception {
 		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
 		Http11SslContextSpec defaultSslContextBuilder =
 				Http11SslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey());
@@ -2138,7 +2154,7 @@ class HttpServerTests extends BaseHttpTest {
 
 		AtomicReference<String> hostname = new AtomicReference<>();
 		disposableServer =
-				createServer()
+				serverCustomizer.apply(createServer())
 				          .secure(spec -> spec.sslContext(defaultSslContextBuilder)
 				                              .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(testSslContextBuilder)))
 				          .doOnChannelInit((obs, channel, remoteAddress) ->
@@ -2155,7 +2171,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
 				          .bindNow();
 
-		createClient(disposableServer::address)
+		clientCustomizer.apply(createClient(disposableServer::address))
 		          .secure(spec -> spec.sslContext(clientSslContextBuilder)
 		                              .serverNames(new SNIHostName("test.com")))
 		          .get()
@@ -3568,5 +3584,113 @@ class HttpServerTests extends BaseHttpTest {
 				.expectNextMatches(HttpResponseStatus.OK::equals)
 				.expectErrorMatches(t -> t instanceof PrematureCloseException && t.getCause() instanceof Http2Exception.HeaderListSizeException)
 				.verify(Duration.ofSeconds(30));
+	}
+
+	static final class TestHttpServerMetricsRecorder implements HttpServerMetricsRecorder {
+
+		Duration tlsHandshakeTime;
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, long bytes) {
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress) {
+		}
+
+		@Override
+		public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
+			tlsHandshakeTime = time;
+		}
+
+		@Override
+		public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+		}
+
+		@Override
+		public void recordDataReceivedTime(String uri, String method, Duration time) {
+		}
+
+		@Override
+		public void recordDataSentTime(String uri, String method, String status, Duration time) {
+		}
+
+		@Override
+		public void recordResponseTime(String uri, String method, String status, Duration time) {
+		}
+	}
+
+	static final class TestHttpClientMetricsRecorder implements HttpClientMetricsRecorder {
+
+		Duration tlsHandshakeTime;
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, long bytes) {
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress) {
+		}
+
+		@Override
+		public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
+			tlsHandshakeTime = time;
+		}
+
+		@Override
+		public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
+		}
+
+		@Override
+		public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+		}
+
+		@Override
+		public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+		}
+
+		@Override
+		public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
+		}
+
+		@Override
+		public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
+		}
+
+		@Override
+		public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
+		}
 	}
 }
