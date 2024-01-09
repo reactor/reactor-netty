@@ -18,6 +18,7 @@ package reactor.netty5.channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.handler.ssl.SniCompletionEvent;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.concurrent.Future;
 import reactor.util.annotation.Nullable;
@@ -84,21 +85,24 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
 		protected final ChannelMetricsRecorder recorder;
 
+		boolean listenerAdded;
+
 		TlsMetricsHandler(ChannelMetricsRecorder recorder) {
 			this.recorder = recorder;
 		}
 
 		@Override
 		public void channelActive(ChannelHandlerContext ctx) {
-			long tlsHandshakeTimeStart = System.nanoTime();
-			ctx.pipeline()
-			   .get(SslHandler.class)
-			   .handshakeFuture()
-			   .addListener(f -> {
-			           ctx.pipeline().remove(this);
-			           recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, f.isSuccess() ? SUCCESS : ERROR);
-			   });
+			addListener(ctx);
 			ctx.fireChannelActive();
+		}
+
+		@Override
+		public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+			if (evt instanceof SniCompletionEvent) {
+				addListener(ctx);
+			}
+			ctx.fireChannelInboundEvent(evt);
 		}
 
 		protected void recordTlsHandshakeTime(ChannelHandlerContext ctx, long tlsHandshakeTimeStart, String status) {
@@ -106,6 +110,21 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 					ctx.channel().remoteAddress(),
 					Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
 					status);
+		}
+
+		private void addListener(ChannelHandlerContext ctx) {
+			if (!listenerAdded) {
+				SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
+				if (sslHandler != null) {
+					listenerAdded = true;
+					long tlsHandshakeTimeStart = System.nanoTime();
+					sslHandler.handshakeFuture()
+					          .addListener(f -> {
+					              ctx.pipeline().remove(this);
+					              recordTlsHandshakeTime(ctx, tlsHandshakeTimeStart, f.isSuccess() ? SUCCESS : ERROR);
+					          });
+				}
+			}
 		}
 	}
 }

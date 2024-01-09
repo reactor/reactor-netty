@@ -20,6 +20,8 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.socket.DatagramPacket;
+import io.netty5.handler.ssl.AbstractSniHandler;
+import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.concurrent.Future;
 import reactor.netty5.NettyPipeline;
 import reactor.util.Logger;
@@ -95,11 +97,18 @@ public abstract class AbstractChannelMetricsHandler extends ChannelHandlerAdapte
 			             NettyPipeline.ConnectMetricsHandler,
 			             connectMetricsHandler());
 		}
-		if (ctx.pipeline().get(NettyPipeline.SslHandler) != null) {
+		ChannelHandler sslHandler = ctx.pipeline().get(NettyPipeline.SslHandler);
+		if (sslHandler instanceof SslHandler) {
 			ctx.pipeline()
 			   .addBefore(NettyPipeline.SslHandler,
 			             NettyPipeline.TlsMetricsHandler,
 			             tlsMetricsHandler());
+		}
+		else if (sslHandler instanceof AbstractSniHandler) {
+			ctx.pipeline()
+			   .addAfter(NettyPipeline.SslHandler,
+			            NettyPipeline.TlsMetricsHandler,
+			            tlsMetricsHandler());
 		}
 
 		ctx.fireChannelRegistered();
