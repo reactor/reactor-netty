@@ -44,6 +44,9 @@ updates:
   - dependency-name: org.slf4j:slf4j-api
     versions:
     - "[2.a, 3]"
+  - dependency-name: io.zipkin.brave:*
+    versions:
+    - "[6.a, 7]"
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
