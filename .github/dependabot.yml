@@ -11,33 +11,43 @@ updates:
   labels:
   - type/dependency-upgrade
   ignore:
+  # Don't update Micrometer
   - dependency-name: io.micrometer:micrometer-core
     versions:
     - "> 1.5.0"
+  # Don't update Context Propagation
   - dependency-name: io.micrometer:context-propagation
     versions:
     - "> 1.0.0"
+  # Versions > 9 require JDK11+
   - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
     versions:
     - ">= 10.0.a"
+  # Versions > 6.13 require JDK11+
   - dependency-name: com.diffplug.spotless
     versions:
     - "[6.14.a, 7.0]"
+  # Versions > 3 require JDK11+
   - dependency-name: org.asciidoctor.jvm.convert
     versions:
     - "[4.a, 5]"
+  # Versions > 3 require JDK11+
   - dependency-name: org.asciidoctor.jvm.pdf
     versions:
     - "[4.a, 5]"
+  # Versions > 6 require JDK17+
   - dependency-name: biz.aQute.bnd.builder
     versions:
     - "[7.a, 8]"
+  # Versions > 4 require JDK11+
   - dependency-name: org.jfrog.buildinfo:build-info-extractor-gradle
     versions:
     - "[5.a, 6]"
+  # Versions > 7 require Gradle8+
   - dependency-name: com.github.johnrengelman.shadow
     versions:
     - "[8.a, 9]"
+  # Versions > 4 require JDK11+
   - dependency-name: org.mockito:mockito-core
     versions:
     - "[5.a, 6]"
@@ -47,6 +57,7 @@ updates:
   - dependency-name: org.slf4j:*
     versions:
     - "[2.a, 3]"
+  # Don't update Brave
   - dependency-name: io.zipkin.brave:*
     versions:
     - "[6.a, 7]"
