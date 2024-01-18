@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -343,10 +343,10 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 
 		@Override
 		public void operationComplete(Future<Http2StreamChannel> future) {
-			Channel channel = pooledRef.poolable().channel();
-			Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(pooledRef);
-			ChannelHandlerContext frameCodec = http2PooledRef.slot.http2FrameCodecCtx();
 			if (future.isSuccess()) {
+				Channel channel = pooledRef.poolable().channel();
+				Http2Pool.Http2PooledRef http2PooledRef = http2PooledRef(pooledRef);
+				ChannelHandlerContext frameCodec = http2PooledRef.slot.http2FrameCodecCtx();
 				Http2StreamChannel ch = future.getNow();
 
 				if (!channel.isActive() || frameCodec == null ||
