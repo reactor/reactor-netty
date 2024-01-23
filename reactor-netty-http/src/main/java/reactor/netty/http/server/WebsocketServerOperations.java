@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,16 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
@@ -113,11 +116,21 @@ final class WebsocketServerOperations extends HttpServerOperations
 								perMessageDeflateServerExtensionHandshaker,
 								new DeflateFrameServerExtensionHandshaker());
 				try {
-					wsServerExtensionHandler.channelRead(channel.pipeline()
-					                                            .context(NettyPipeline.ReactiveBridge),
-							request);
+					ChannelPipeline pipeline = channel.pipeline();
+					wsServerExtensionHandler.channelRead(pipeline.context(NettyPipeline.ReactiveBridge), request);
 
-					addHandlerFirst(NettyPipeline.WsCompressionHandler, wsServerExtensionHandler);
+					String baseName = null;
+					if (pipeline.get(NettyPipeline.HttpCodec) != null) {
+						baseName = NettyPipeline.HttpCodec;
+					}
+					else {
+						ChannelHandler httpServerCodec = pipeline.get(HttpServerCodec.class);
+						if (httpServerCodec != null) {
+							baseName = pipeline.context(httpServerCodec).name();
+						}
+					}
+
+					pipeline.addAfter(baseName, NettyPipeline.WsCompressionHandler, wsServerExtensionHandler);
 				}
 				catch (Throwable e) {
 					log.error(format(channel(), ""), e);
