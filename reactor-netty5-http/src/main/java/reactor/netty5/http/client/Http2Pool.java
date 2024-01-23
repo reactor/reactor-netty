@@ -999,7 +999,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		ChannelHandlerContext http2FrameCodecCtx() {
 			ChannelHandlerContext ctx = http2FrameCodecCtx;
 			// ChannelHandlerContext.isRemoved is only meant to be called from within the EventLoop
-			if (ctx != null && connection.channel().eventLoop().inEventLoop() && !ctx.isRemoved()) {
+			if (ctx != null && connection.channel().executor().inEventLoop() && !ctx.isRemoved()) {
 				return ctx;
 			}
 			ctx = connection.channel().pipeline().context(Http2FrameCodec.class);
@@ -1011,7 +1011,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		ChannelHandlerContext http2MultiplexHandlerCtx() {
 			ChannelHandlerContext ctx = http2MultiplexHandlerCtx;
 			// ChannelHandlerContext.isRemoved is only meant to be called from within the EventLoop
-			if (ctx != null && connection.channel().eventLoop().inEventLoop() && !ctx.isRemoved()) {
+			if (ctx != null && connection.channel().executor().inEventLoop() && !ctx.isRemoved()) {
 				return ctx;
 			}
 			ctx = connection.channel().pipeline().context(Http2MultiplexHandler.class);
@@ -1023,7 +1023,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		ChannelHandlerContext h2cUpgradeHandlerCtx() {
 			ChannelHandlerContext ctx = h2cUpgradeHandlerCtx;
 			// ChannelHandlerContext.isRemoved is only meant to be called from within the EventLoop
-			if (ctx != null && connection.channel().eventLoop().inEventLoop() && !ctx.isRemoved()) {
+			if (ctx != null && connection.channel().executor().inEventLoop() && !ctx.isRemoved()) {
 				return ctx;
 			}
 			ctx = connection.channel().pipeline().context(NettyPipeline.H2CUpgradeHandler);
