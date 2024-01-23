@@ -119,6 +119,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 							baseName = pipeline.context(httpServerCodec).name();
 						}
 					}
+
 					pipeline.addAfter(baseName, NettyPipeline.WsCompressionHandler, wsServerCompressionHandler);
 				}
 				catch (Throwable e) {
