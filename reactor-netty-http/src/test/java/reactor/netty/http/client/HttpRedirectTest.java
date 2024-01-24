@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -756,6 +757,31 @@ class HttpRedirectTest extends BaseHttpTest {
 		        .asString()
 		        .as(StepVerifier::create)
 		        .expectNext("testIssue2670")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	@SuppressWarnings("CollectionUndefinedEquality")
+	void testIssue3035() {
+		disposableServer =
+				createServer()
+				        .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/2"))
+				                     .get("/2", (req, res) ->
+				                             req.cookies().containsKey("testCookie") ?
+				                                     res.status(200).sendString(Mono.just("OK")) :
+				                                     res.status(400).sendString(Mono.just("KO"))))
+				        .bindNow();
+
+		createClient(disposableServer::address)
+		        .followRedirect(
+		                (req, res) -> res.status().code() == 302,
+		                (headers, redirect) -> redirect.addCookie(new DefaultCookie("testCookie", "testCookie")))
+		        .get()
+		        .uri("/1")
+		        .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just(res.status().code())))
+		        .as(StepVerifier::create)
+		        .expectNextMatches(tuple -> "OK".equals(tuple.getT1()) && tuple.getT2() == 200)
 		        .expectComplete()
 		        .verify(Duration.ofSeconds(5));
 	}
