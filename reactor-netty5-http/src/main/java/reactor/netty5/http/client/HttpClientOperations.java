@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -569,12 +569,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	protected void beforeMarkSentHeaders() {
-		if (!cookieList.isEmpty()) {
-			for (HttpCookiePair cookie: cookieList) {
-				requestHeaders.addCookie(cookie);
-			}
-		}
-
 		if (redirectedFrom.length > 0) {
 			if (redirectRequestConsumer != null) {
 				redirectRequestConsumer.accept(this);
@@ -582,6 +576,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (redirectRequestBiConsumer != null && previousRequestHeaders != null) {
 				redirectRequestBiConsumer.accept(previousRequestHeaders, this);
 				previousRequestHeaders = null;
+			}
+		}
+
+		if (!cookieList.isEmpty()) {
+			for (HttpCookiePair cookie: cookieList) {
+				requestHeaders.addCookie(cookie);
 			}
 		}
 	}
