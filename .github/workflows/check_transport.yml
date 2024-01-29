@@ -8,10 +8,10 @@ jobs:
 #    name: preliminary sanity checks
 #    runs-on: ubuntu-20.04
 #    steps:
-#      - uses: actions/checkout@v4
+#      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 #        with:
 #          fetch-depth: 0 #needed by spotless
-#      - uses: actions/setup-java@v4
+#      - uses: actions/setup-java@387ac29b308b003ca37ba93a6cab5eb57c8f5f93
 #        with:
 #          distribution: 'temurin'
 #          java-version: 17
@@ -53,29 +53,29 @@ jobs:
           - os: macos-11
             transport: native
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           path: reactor-netty
           fetch-depth: 0 #needed by spotless
-#      - uses: actions/checkout@v4
+#      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 #        with:
 #          repository: netty-contrib/codec-haproxy
 #          path: codec-haproxy
-#      - uses: actions/checkout@v4
+#      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 #        with:
 #          repository: netty-contrib/codec-extras
 #          path: codec-extras
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           repository: netty-contrib/socks-proxy
           path: socks-proxy
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
             repository: netty-contrib/codec-multipart
             path: codec-multipart
-      - uses: gradle/wrapper-validation-action@v1
+      - uses: gradle/wrapper-validation-action@56b90f209b02bf6d1deae490e9ef18b21a389cd4
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@387ac29b308b003ca37ba93a6cab5eb57c8f5f93
         with:
           distribution: 'temurin'
           java-version: 17
