@@ -106,7 +106,7 @@ ext {
 		println "Netty version defined from command line: ${forceNettyVersion}"
 	}
 	nettyIoUringVersion = '0.0.24.Final'
-	nettyQuicVersion = '0.0.56.Final'
+	nettyQuicVersion = '0.0.57.Final'
 
 	// Testing
 	brotli4jVersion = '1.16.0'
