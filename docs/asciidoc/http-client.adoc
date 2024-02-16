@@ -564,6 +564,8 @@ Default: -1 (to determine the value from the OS on Unix or use a value of 1 othe
 | `queryTimeout` | Sets the timeout of each DNS query performed by this resolver (resolution: milliseconds). Default: 5000.
 | `resolveCache` | The cache to use to store resolved DNS entries.
 | `resolvedAddressTypes` | The list of the protocol families of the resolved address.
+| `retryTcpOnTimeout` | Specifies whether this resolver will also fallback to TCP if a timeout is detected.
+By default, the resolver will only try to use TCP if the response is marked as truncated.
 | `roundRobinSelection` | Enables an
 {nettyjavadoc}/io/netty/resolver/AddressResolverGroup.html[`AddressResolverGroup`] of
 {nettyjavadoc}/io/netty/resolver/dns/DnsNameResolver.html[`DnsNameResolver`] that supports random selection
