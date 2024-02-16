@@ -274,6 +274,14 @@ class NameResolverProviderTest {
 	}
 
 	@Test
+	void retryTcpOnTimeout() {
+		assertThat(builder.build().isRetryTcpOnTimeout()).isFalse();
+
+		builder.retryTcpOnTimeout(true);
+		assertThat(builder.build().isRetryTcpOnTimeout()).isTrue();
+	}
+
+	@Test
 	void roundRobinSelection() {
 		assertThat(builder.build().isRoundRobinSelection()).isFalse();
 
