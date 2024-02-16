@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,20 @@ class NameResolverProviderTest {
 	@BeforeEach
 	void setUp() {
 		builder = new NameResolverProvider.Build();
+	}
+
+	@Test
+	void bindAddressSupplier() {
+		assertThat(builder.build().bindAddressSupplier()).isNull();
+		Supplier<SocketAddress> addressSupplier = () -> new InetSocketAddress("localhost", 9527);
+		builder.bindAddressSupplier(addressSupplier);
+		assertThat(builder.build().bindAddressSupplier()).isEqualTo(addressSupplier);
+	}
+
+	@Test
+	void bindAddressSupplierBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.bindAddressSupplier(null));
 	}
 
 	@Test
@@ -132,15 +146,6 @@ class NameResolverProviderTest {
 	}
 
 	@Test
-	void dnsAddressResolverGroupProvider() {
-		assertThat(builder.build().dnsAddressResolverGroupProvider()).isNull();
-
-		Function<DnsNameResolverBuilder, DnsAddressResolverGroup> provider = RoundRobinDnsAddressResolverGroup::new;
-		builder.dnsAddressResolverGroupProvider(provider);
-		assertThat(builder.build().dnsAddressResolverGroupProvider()).isEqualTo(provider);
-	}
-
-	@Test
 	void disableOptionalRecord() {
 		assertThat(builder.build().isDisableOptionalRecord()).isFalse();
 
@@ -154,6 +159,15 @@ class NameResolverProviderTest {
 
 		builder.disableRecursionDesired(true);
 		assertThat(builder.build().isDisableRecursionDesired()).isTrue();
+	}
+
+	@Test
+	void dnsAddressResolverGroupProvider() {
+		assertThat(builder.build().dnsAddressResolverGroupProvider()).isNull();
+
+		Function<DnsNameResolverBuilder, DnsAddressResolverGroup> provider = RoundRobinDnsAddressResolverGroup::new;
+		builder.dnsAddressResolverGroupProvider(provider);
+		assertThat(builder.build().dnsAddressResolverGroupProvider()).isEqualTo(provider);
 	}
 
 	@Test
@@ -231,20 +245,6 @@ class NameResolverProviderTest {
 	}
 
 	@Test
-	void resolvedAddressTypes() {
-		assertThat(builder.build().resolvedAddressTypes()).isNull();
-
-		builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-		assertThat(builder.build().resolvedAddressTypes()).isEqualTo(ResolvedAddressTypes.IPV4_ONLY);
-	}
-
-	@Test
-	void resolvedAddressTypesBadValues() {
-		assertThatExceptionOfType(NullPointerException.class)
-				.isThrownBy(() -> builder.resolvedAddressTypes(null));
-	}
-
-	@Test
 	void resolveCache() {
 		assertThat(builder.build().resolveCache()).isNull();
 		TestDnsCache resolveCache = new TestDnsCache();
@@ -260,17 +260,17 @@ class NameResolverProviderTest {
 	}
 
 	@Test
-	void bindAddressSupplier() {
-		assertThat(builder.build().bindAddressSupplier()).isNull();
-		Supplier<SocketAddress> addressSupplier = () -> new InetSocketAddress("localhost", 9527);
-		builder.bindAddressSupplier(addressSupplier);
-		assertThat(builder.build().bindAddressSupplier()).isEqualTo(addressSupplier);
+	void resolvedAddressTypes() {
+		assertThat(builder.build().resolvedAddressTypes()).isNull();
+
+		builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+		assertThat(builder.build().resolvedAddressTypes()).isEqualTo(ResolvedAddressTypes.IPV4_ONLY);
 	}
 
 	@Test
-	void bindAddressSupplierBadValues() {
+	void resolvedAddressTypesBadValues() {
 		assertThatExceptionOfType(NullPointerException.class)
-				.isThrownBy(() -> builder.bindAddressSupplier(null));
+				.isThrownBy(() -> builder.resolvedAddressTypes(null));
 	}
 
 	@Test
@@ -314,15 +314,6 @@ class NameResolverProviderTest {
 	}
 
 	@Test
-	void traceBadValues() {
-		assertThatExceptionOfType(NullPointerException.class)
-				.isThrownBy(() -> builder.trace(null, LogLevel.DEBUG));
-
-		assertThatExceptionOfType(NullPointerException.class)
-				.isThrownBy(() -> builder.trace("category", null));
-	}
-
-	@Test
 	@EnabledOnOs(OS.MAC)
 	void testMacOsResolver() {
 		// MacOS binaries are not available for Netty SNAPSHOT version
@@ -331,7 +322,26 @@ class NameResolverProviderTest {
 				.isInstanceOf(MacOSDnsServerAddressStreamProvider.class);
 	}
 
+	@Test
+	void traceBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.trace(null, LogLevel.DEBUG));
+
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.trace("category", null));
+	}
+
 	private static class TestDnsCache implements DnsCache {
+
+		@Override
+		public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl, EventLoop loop) {
+			return null;
+		}
+
+		@Override
+		public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+			return null;
+		}
 
 		@Override
 		public void clear() {
@@ -344,16 +354,6 @@ class NameResolverProviderTest {
 
 		@Override
 		public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
-			return null;
-		}
-
-		@Override
-		public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl, EventLoop loop) {
-			return null;
-		}
-
-		@Override
-		public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
 			return null;
 		}
 	}
