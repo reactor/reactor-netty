@@ -389,6 +389,7 @@ Additionally, https://tools.ietf.org/html/rfc7766[`TCP fallback`] is enabled by 
 [width="100%",options="header"]
 |=======
 | Configuration name | Description
+| `bindAddressSupplier` | The supplier of the local address to bind to.
 | `cacheMaxTimeToLive` | The max time to live of the cached DNS resource records (resolution: seconds).
  If the time to live of the DNS resource record returned by the DNS server is greater
  than this max time to live, this resolver ignores the time to live from
@@ -403,11 +404,11 @@ Additionally, https://tools.ietf.org/html/rfc7766[`TCP fallback`] is enabled by 
 | `completeOncePreferredResolved` | When this setting is enabled, the resolver notifies as soon as all queries for the preferred address type are complete.
 When this setting is disabled, the resolver notifies when all possible address types are complete.
 This configuration is applicable for `DnsNameResolver#resolveAll(String)`. By default, this setting is enabled.
-| `dnsAddressResolverGroupProvider` | Sets a custom function to create a `DnsAddressResolverGroup` given a `DnsNameResolverBuilder`
 | `disableOptionalRecord` | Disables the automatic inclusion of an optional record that tries to give a hint to the remote DNS server about
  how much data the resolver can read per response. By default, this setting is enabled.
 | `disableRecursionDesired` | Specifies whether this resolver has to send a DNS query with the recursion desired (RD) flag set.
  By default, this setting is enabled.
+| `dnsAddressResolverGroupProvider` | Sets a custom function to create a `DnsAddressResolverGroup` given a `DnsNameResolverBuilder`
 | `hostsFileEntriesResolver` | Sets a custom {nettyjavadoc}/io/netty/resolver/HostsFileEntriesResolver.html[`HostsFileEntriesResolver`] to be used for hosts file entries.
 Default: {nettyjavadoc}/io/netty/resolver/DefaultHostsFileEntriesResolver.html[`DefaultHostsFileEntriesResolver`].
 | `maxPayloadSize` | Sets the capacity of the datagram packet buffer (in bytes). Default: 4096.
@@ -415,9 +416,8 @@ Default: {nettyjavadoc}/io/netty/resolver/DefaultHostsFileEntriesResolver.html[`
 | `ndots` | Sets the number of dots that must appear in a name before an initial absolute query is made.
  Default: -1 (to determine the value from the OS on Unix or use a value of 1 otherwise).
 | `queryTimeout` | Sets the timeout of each DNS query performed by this resolver (resolution: milliseconds). Default: 5000.
-| `resolvedAddressTypes` | The list of the protocol families of the resolved address.
 | `resolveCache` | The cache to use to store resolved DNS entries.
-| `bindAddressSupplier` | The supplier of the local address to bind to.
+| `resolvedAddressTypes` | The list of the protocol families of the resolved address.
 | `roundRobinSelection` | Enables an
  {nettyjavadoc}/io/netty/resolver/AddressResolverGroup.html[`AddressResolverGroup`] of
  {nettyjavadoc}/io/netty/resolver/dns/DnsNameResolver.html[`DnsNameResolver`] that supports random selection
