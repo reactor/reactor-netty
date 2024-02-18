@@ -15,6 +15,7 @@
  */
 package reactor.netty;
 
+import io.github.nettyplus.leakdetector.junit.NettyLeakDetectorExtension;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -24,6 +25,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -35,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Violeta Georgieva
  */
+@ExtendWith(NettyLeakDetectorExtension.class)
 class ReactorNettyTest {
 
 	/*
