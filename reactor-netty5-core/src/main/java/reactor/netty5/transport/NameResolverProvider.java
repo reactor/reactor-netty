@@ -211,6 +211,17 @@ public final class NameResolverProvider {
 		NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes);
 
 		/**
+		 * Specifies whether this resolver will also fallback to TCP if a timeout is detected.
+		 * By default, the resolver will only try to use TCP if the response is marked as truncated.
+		 *
+		 * @param enable if true this resolver will also fallback to TCP if a timeout is detected,
+		 * if false the resolver will only try to use TCP if the response is marked as truncated.
+		 * @return {@code this}
+		 * @since 1.1.17
+		 */
+		NameResolverSpec retryTcpOnTimeout(boolean enable);
+
+		/**
 		 * Enables an {@link AddressResolverGroup} of {@link DnsNameResolver}s that supports random selection
 		 * of destination addresses if multiple are provided by the nameserver.
 		 * See {@link RoundRobinDnsAddressResolverGroup}.
@@ -379,6 +390,16 @@ public final class NameResolverProvider {
 	}
 
 	/**
+	 * Returns {@code true} if the resolver will also fallback to TCP if a timeout is detected.
+	 *
+	 * @return {@code true} if the resolver will also fallback to TCP if a timeout is detected
+	 * @since 1.1.17
+	 */
+	public boolean isRetryTcpOnTimeout() {
+		return retryTcpOnTimeout;
+	}
+
+	/**
 	 * Returns true if {@link RoundRobinDnsAddressResolverGroup} is in use.
 	 *
 	 * @return true if {@link RoundRobinDnsAddressResolverGroup} is in use
@@ -490,6 +511,7 @@ public final class NameResolverProvider {
 				queryTimeout.equals(that.queryTimeout) &&
 				Objects.equals(resolveCache, that.resolveCache) &&
 				resolvedAddressTypes == that.resolvedAddressTypes &&
+				retryTcpOnTimeout == that.retryTcpOnTimeout &&
 				roundRobinSelection == that.roundRobinSelection &&
 				// searchDomains is List so Objects.equals is OK
 				Objects.equals(searchDomains, that.searchDomains);
@@ -515,6 +537,7 @@ public final class NameResolverProvider {
 		result = 31 * result + Objects.hashCode(queryTimeout);
 		result = 31 * result + Objects.hashCode(resolveCache);
 		result = 31 * result + Objects.hashCode(resolvedAddressTypes);
+		result = 31 * result + Boolean.hashCode(retryTcpOnTimeout);
 		result = 31 * result + Boolean.hashCode(roundRobinSelection);
 		result = 31 * result + Objects.hashCode(searchDomains);
 		return result;
@@ -550,7 +573,7 @@ public final class NameResolverProvider {
 				.queryTimeoutMillis(queryTimeout.toMillis())
 				.eventLoop(group.next())
 				.channelFactory(el -> loop.onChannel(DatagramChannel.class, el, null))
-				.socketChannelFactory(el -> loop.onChannel(SocketChannel.class, el, null));
+				.socketChannelFactory(el -> loop.onChannel(SocketChannel.class, el, null), retryTcpOnTimeout);
 		if (bindAddressSupplier != null) {
 			// There is no check for bindAddressSupplier.get() == null
 			// This is deliberate, when null value is provided Netty will use the default behaviour
@@ -595,6 +618,7 @@ public final class NameResolverProvider {
 	final Duration queryTimeout;
 	final DnsCache resolveCache;
 	final ResolvedAddressTypes resolvedAddressTypes;
+	final boolean retryTcpOnTimeout;
 	final boolean roundRobinSelection;
 	final Iterable<String> searchDomains;
 
@@ -617,6 +641,7 @@ public final class NameResolverProvider {
 		this.queryTimeout = build.queryTimeout;
 		this.resolveCache = build.resolveCache;
 		this.resolvedAddressTypes = build.resolvedAddressTypes;
+		this.retryTcpOnTimeout = build.retryTcpOnTimeout;
 		this.roundRobinSelection = build.roundRobinSelection;
 		this.searchDomains = build.searchDomains;
 	}
@@ -649,6 +674,7 @@ public final class NameResolverProvider {
 		Duration queryTimeout = DEFAULT_QUERY_TIMEOUT;
 		DnsCache resolveCache;
 		ResolvedAddressTypes resolvedAddressTypes;
+		boolean retryTcpOnTimeout;
 		boolean roundRobinSelection;
 		Iterable<String> searchDomains;
 
@@ -751,6 +777,12 @@ public final class NameResolverProvider {
 		@Override
 		public NameResolverSpec resolvedAddressTypes(ResolvedAddressTypes resolvedAddressTypes) {
 			this.resolvedAddressTypes = Objects.requireNonNull(resolvedAddressTypes);
+			return this;
+		}
+
+		@Override
+		public NameResolverSpec retryTcpOnTimeout(boolean enable) {
+			this.retryTcpOnTimeout = enable;
 			return this;
 		}
 
