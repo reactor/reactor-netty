@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,12 @@
  */
 package reactor.netty;
 
+import io.github.nettyplus.leakdetector.junit.NettyLeakDetectorExtension;
 import io.netty.buffer.ByteBuf;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -38,6 +40,7 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith(NettyLeakDetectorExtension.class)
 class ByteBufFluxTest {
 
 	private static File temporaryDirectory;
