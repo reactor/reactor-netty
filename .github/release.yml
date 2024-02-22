@@ -2,6 +2,9 @@ changelog:
   exclude:
     labels:
       - ignore-changelog
+      - type/test
+      - type/chore
+      - type/dependency-upgrade
   categories:
     - title: ":warning: Update considerations and deprecations"
       labels:
@@ -19,11 +22,6 @@ changelog:
     - title: ":book: Documentation, Tests and Build"
       labels:
         - "type/documentation"
-        - "type/test"
-        - "type/chore"
-    - title: ":up: Build/Test Dependency Upgrades"
-      labels:
-        - "type/dependency-upgrade"
     - title: ":question: Other Changes"
       labels:
         - "*"
