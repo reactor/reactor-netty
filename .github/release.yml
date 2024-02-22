@@ -19,7 +19,7 @@ changelog:
     - title: ":lady_beetle: Bug fixes"
       labels:
         - "type/bug"
-    - title: ":book: Documentation, Tests and Build"
+    - title: ":book: Documentation"
       labels:
         - "type/documentation"
     - title: ":question: Other Changes"
