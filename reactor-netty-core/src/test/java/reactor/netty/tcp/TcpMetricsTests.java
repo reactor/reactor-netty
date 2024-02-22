@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@ import static reactor.netty.Metrics.TCP_CLIENT_PREFIX;
 import static reactor.netty.Metrics.TCP_SERVER_PREFIX;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.URI;
+import static reactor.netty.micrometer.CounterAssert.assertCounter;
+import static reactor.netty.micrometer.DistributionSummaryAssert.assertDistributionSummary;
+import static reactor.netty.micrometer.GaugeAssert.assertGauge;
+import static reactor.netty.micrometer.TimerAssert.assertTimer;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -69,7 +69,7 @@ class TcpMetricsTests {
 	TcpClient tcpClient;
 	Connection connection;
 	private ConnectionProvider provider;
-	private MeterRegistry registry;
+	MeterRegistry registry;
 
 	@BeforeEach
 	void setUp() {
@@ -232,18 +232,28 @@ class TcpMetricsTests {
 		String[] totalConnectionsTags = new String[] {URI, "tcp", LOCAL_ADDRESS, serverAddress};
 
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, true);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 1, 5, true);
-		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 1, 5, true);
-		checkCounter(SERVER_ERRORS, summaryTags, 0, false);
+		assertDistributionSummary(registry, SERVER_DATA_SENT, summaryTags)
+				.hasCountEqualTo(1)
+				.hasTotalAmountGreaterThanOrEqualTo(5);
+		assertDistributionSummary(registry, SERVER_DATA_RECEIVED, summaryTags)
+				.hasCountEqualTo(1)
+				.hasTotalAmountGreaterThanOrEqualTo(5);
+		assertCounter(registry, SERVER_ERRORS, summaryTags).isNull();
 
 		timerTags = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
 		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
-		checkTimer(CLIENT_CONNECT_TIME, timerTags, true);
+		assertTimer(registry, CLIENT_CONNECT_TIME, timerTags)
+				.hasCountEqualTo(1)
+				.hasTotalTimeGreaterThanOrEqualTo(0);
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags, true);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5, true);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 1, 5, true);
-		checkCounter(CLIENT_ERRORS, summaryTags, 0, false);
-		checkGauge(SERVER_CONNECTIONS_TOTAL, totalConnectionsTags, 1, true);
+		assertDistributionSummary(registry, CLIENT_DATA_SENT, summaryTags)
+				.hasCountEqualTo(1)
+				.hasTotalAmountGreaterThanOrEqualTo(5);
+		assertDistributionSummary(registry, CLIENT_DATA_RECEIVED, summaryTags)
+				.hasCountEqualTo(1)
+				.hasTotalAmountGreaterThanOrEqualTo(5);
+		assertCounter(registry, CLIENT_ERRORS, summaryTags).isNull();
+		assertGauge(registry, SERVER_CONNECTIONS_TOTAL, totalConnectionsTags).hasValueEqualTo(1);
 	}
 
 	private void checkExpectationsNegative(int port) {
@@ -252,11 +262,13 @@ class TcpMetricsTests {
 		String[] timerTags2 = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
 		String[] summaryTags = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
 
-		checkTimer(CLIENT_CONNECT_TIME, timerTags1, true);
+		assertTimer(registry, CLIENT_CONNECT_TIME, timerTags1)
+				.hasCountEqualTo(1)
+				.hasTotalTimeGreaterThanOrEqualTo(0);
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags2, false);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 0, 0, false);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 0, 0, false);
-		checkCounter(CLIENT_ERRORS, summaryTags, 0, false);
+		assertDistributionSummary(registry, CLIENT_DATA_SENT, summaryTags).isNull();
+		assertDistributionSummary(registry, CLIENT_DATA_RECEIVED, summaryTags).isNull();
+		assertCounter(registry, CLIENT_ERRORS, summaryTags).isNull();
 	}
 
 
@@ -270,53 +282,6 @@ class TcpMetricsTests {
 
 	protected void checkTlsTimer(String name, String[] tags, boolean exists) {
 		//no-op
-	}
-
-
-	void checkTimer(String name, String[] tags, boolean exists) {
-		Timer timer = registry.find(name).tags(tags).timer();
-		if (exists) {
-			assertThat(timer).isNotNull();
-			assertThat(timer.count()).isEqualTo(1);
-			assertThat(timer.totalTime(TimeUnit.NANOSECONDS) >= 0).isTrue();
-		}
-		else {
-			assertThat(timer).isNull();
-		}
-	}
-
-	void checkDistributionSummary(String name, String[] tags, long expectedCount, int expectedAmount, boolean exists) {
-		DistributionSummary summary = registry.find(name).tags(tags).summary();
-		if (exists) {
-			assertThat(summary).isNotNull();
-			assertThat(summary.count()).isEqualTo(expectedCount);
-			assertThat(summary.totalAmount() >= expectedAmount).isTrue();
-		}
-		else {
-			assertThat(summary).isNull();
-		}
-	}
-
-	void checkCounter(String name, String[] tags, double expectedCount, boolean exists) {
-		Counter counter = registry.find(name).tags(tags).counter();
-		if (exists) {
-			assertThat(counter).isNotNull();
-			assertThat(counter.count() >= expectedCount).isTrue();
-		}
-		else {
-			assertThat(counter).isNull();
-		}
-	}
-
-	void checkGauge(String name, String[] tags, double expectedCount, boolean exists) {
-		Gauge counter = registry.find(name).tags(tags).gauge();
-		if (exists) {
-			assertThat(counter).isNotNull();
-			assertThat(counter.value() == expectedCount).isTrue();
-		}
-		else {
-			assertThat(counter).isNull();
-		}
 	}
 
 	static final String SERVER_CONNECTIONS_TOTAL = TCP_SERVER_PREFIX + CONNECTIONS_TOTAL;
