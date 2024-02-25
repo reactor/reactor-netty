@@ -15,7 +15,9 @@
  */
 package reactor.netty;
 
+import io.github.nettyplus.leakdetector.junit.NettyLeakDetectorExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -24,6 +26,7 @@ import reactor.test.StepVerifier;
 import java.nio.charset.Charset;
 import java.time.Duration;
 
+@ExtendWith(NettyLeakDetectorExtension.class)
 class ByteBufMonoTest {
 
 	@Test

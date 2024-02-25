@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
+import io.github.nettyplus.leakdetector.junit.NettyLeakDetectorExtension;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -30,6 +31,7 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.Utf8FrameValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
@@ -42,6 +44,7 @@ import static reactor.netty.NettyPipeline.RIGHT;
  * @author Simon Baslé
  * @author Violeta Georgieva
  */
+@ExtendWith(NettyLeakDetectorExtension.class)
 class ConnectionTest {
 
 	static final BiConsumer<? super ChannelHandlerContext, Object> ADD_EXTRACTOR = ChannelHandlerContext::fireChannelRead;
