@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ import static reactor.netty5.Metrics.NAME;
 import static reactor.netty5.Metrics.PENDING_STREAMS;
 import static reactor.netty5.Metrics.TOTAL_CONNECTIONS;
 import static reactor.netty5.http.client.HttpClientState.STREAM_CONFIGURED;
+import static reactor.netty5.micrometer.GaugeAssert.assertGauge;
 
 /**
  * This test class verifies {@link ConnectionProvider} metrics functionality.
@@ -208,21 +209,21 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 		assertThat(metrics.get()).isTrue();
 		if (isSecured) {
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, poolName)).isEqualTo(1);
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, poolName)).isEqualTo(1);
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, "http2." + poolName)).isEqualTo(0);
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, "http2." + poolName)).isEqualTo(1);
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_STREAMS, "http2." + poolName)).isEqualTo(0);
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, "http2." + poolName)).isEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, NAME, poolName).hasValueEqualTo(1);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, poolName).hasValueEqualTo(1);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, "http2." + poolName).hasValueEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, NAME, "http2." + poolName).hasValueEqualTo(1);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_STREAMS, NAME, "http2." + poolName).hasValueEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, NAME, "http2." + poolName).hasValueEqualTo(0);
 		}
 		else {
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, poolName)).isEqualTo(0);
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, poolName)).isEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
 		}
-		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, poolName)).isEqualTo(0);
-		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, poolName)).isEqualTo(0);
-		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + MAX_CONNECTIONS, poolName)).isEqualTo(expectedMaxConnection);
-		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + MAX_PENDING_CONNECTIONS, poolName)).isEqualTo(expectedMaxPendingAcquire);
+		assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+		assertGauge(registry, CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, NAME, poolName).hasValueEqualTo(0);
+		assertGauge(registry, CONNECTION_PROVIDER_PREFIX + MAX_CONNECTIONS, NAME, poolName).hasValueEqualTo(expectedMaxConnection);
+		assertGauge(registry, CONNECTION_PROVIDER_PREFIX + MAX_PENDING_CONNECTIONS, NAME, poolName).hasValueEqualTo(expectedMaxPendingAcquire);
 	}
 
 	@Test
@@ -285,14 +286,14 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 
 			assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, "http2.testConnectionPoolPendingAcquireSize")).isEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, NAME, "http2.testConnectionPoolPendingAcquireSize").hasValueEqualTo(0);
 		}
 		finally {
 			provider.disposeLater()
 					.block(Duration.ofSeconds(30));
 		}
 		// deRegistered
-		assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, "http2.testConnectionPoolPendingAcquireSize")).isEqualTo(-1);
+		assertGauge(registry, CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS, NAME, "http2.testConnectionPoolPendingAcquireSize").isNull();
 	}
 
 	private double getGaugeValue(String gaugeName, String poolName) {

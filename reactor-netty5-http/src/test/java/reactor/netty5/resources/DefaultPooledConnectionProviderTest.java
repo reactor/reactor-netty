@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package reactor.netty5.resources;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerAdapter;
@@ -90,6 +89,8 @@ import static reactor.netty5.Metrics.NAME;
 import static reactor.netty5.Metrics.REMOTE_ADDRESS;
 import static reactor.netty5.Metrics.TOTAL_CONNECTIONS;
 import static reactor.netty5.http.client.HttpClientState.STREAM_CONFIGURED;
+import static reactor.netty5.micrometer.GaugeAssert.assertGauge;
+import static reactor.netty5.micrometer.TimerAssert.assertTimer;
 
 class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
@@ -394,13 +395,12 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 			String address = sa.getHostString() + ":" + sa.getPort();
 
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
-					REMOTE_ADDRESS, address, NAME, "http2.testConnectionIdleWhenNoActiveStreams")).isEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
+					REMOTE_ADDRESS, address, NAME, "http2.testConnectionIdleWhenNoActiveStreams").hasValueEqualTo(0);
 			double idleConn = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS,
 					REMOTE_ADDRESS, address, NAME, "http2.testConnectionIdleWhenNoActiveStreams");
-			double totalConn = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS,
-					REMOTE_ADDRESS, address, NAME, "testConnectionIdleWhenNoActiveStreams");
-			assertThat(totalConn).isEqualTo(idleConn);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS,
+					REMOTE_ADDRESS, address, NAME, "testConnectionIdleWhenNoActiveStreams").hasValueEqualTo(idleConn);
 		}
 		finally {
 			provider.disposeLater()
@@ -558,13 +558,12 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 			String address = sa.getHostString() + ":" + sa.getPort();
 
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
-					REMOTE_ADDRESS, address, NAME, "http2.doTestIssue1982")).isEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
+					REMOTE_ADDRESS, address, NAME, "http2.doTestIssue1982").hasValueEqualTo(0);
 			double idleConn = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS,
 					REMOTE_ADDRESS, address, NAME, "http2.doTestIssue1982");
-			double totalConn = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS,
-					REMOTE_ADDRESS, address, NAME, "doTestIssue1982");
-			assertThat(totalConn).isEqualTo(idleConn);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS,
+					REMOTE_ADDRESS, address, NAME, "doTestIssue1982").hasValueEqualTo(idleConn);
 		}
 		finally {
 			provider.disposeLater()
@@ -637,14 +636,14 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 			String address = sa.getHostString() + ":" + sa.getPort();
 
-			assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
-					REMOTE_ADDRESS, address, NAME, "http2.testMinConnections")).isEqualTo(0);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
+					REMOTE_ADDRESS, address, NAME, "http2.testMinConnections").hasValueEqualTo(0);
 			double idleConn = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS,
 					REMOTE_ADDRESS, address, NAME, "http2.testMinConnections");
-			double totalConn = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS,
-					REMOTE_ADDRESS, address, NAME, "testMinConnections");
-			assertThat(totalConn).isEqualTo(idleConn);
-			assertThat(totalConn).isLessThan(10);
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS,
+					REMOTE_ADDRESS, address, NAME, "testMinConnections")
+					.hasValueLessThan(10)
+					.hasValueEqualTo(idleConn);
 		}
 		finally {
 			provider.disposeLater()
@@ -722,11 +721,11 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				assertThat(meterRegistrar.registered.get()).isTrue();
 			}
 			else {
-				assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
-						REMOTE_ADDRESS, address, NAME, metricsName)).isNotEqualTo(-1);
+				assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
+						REMOTE_ADDRESS, address, NAME, metricsName).isNotNull();
 
-				assertThat(getTimerValue(CONNECTION_PROVIDER_PREFIX + pendingTime,
-						REMOTE_ADDRESS, address, NAME, metricsName)).isNotEqualTo(-1);
+				assertTimer(registry, CONNECTION_PROVIDER_PREFIX + pendingTime,
+						REMOTE_ADDRESS, address, NAME, metricsName).isNotNull();
 			}
 
 			if (enableEvictInBackground) {
@@ -745,18 +744,18 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			}
 			else {
 				if (enableEvictInBackground) {
-					assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
-							REMOTE_ADDRESS, address, NAME, metricsName)).isEqualTo(-1);
+					assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
+							REMOTE_ADDRESS, address, NAME, metricsName).isNull();
 
-					assertThat(getTimerValue(CONNECTION_PROVIDER_PREFIX + pendingTime,
-							REMOTE_ADDRESS, address, NAME, metricsName)).isEqualTo(-1);
+					assertTimer(registry, CONNECTION_PROVIDER_PREFIX + pendingTime,
+							REMOTE_ADDRESS, address, NAME, metricsName).isNull();
 				}
 				else {
-					assertThat(getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
-							REMOTE_ADDRESS, address, NAME, metricsName)).isNotEqualTo(-1);
+					assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
+							REMOTE_ADDRESS, address, NAME, metricsName).isNotNull();
 
-					assertThat(getTimerValue(CONNECTION_PROVIDER_PREFIX + pendingTime,
-							REMOTE_ADDRESS, address, NAME, metricsName)).isNotEqualTo(-1);
+					assertTimer(registry, CONNECTION_PROVIDER_PREFIX + pendingTime,
+							REMOTE_ADDRESS, address, NAME, metricsName).isNotNull();
 				}
 			}
 		}
@@ -810,15 +809,6 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		double result = -1;
 		if (gauge != null) {
 			result = gauge.value();
-		}
-		return result;
-	}
-
-	private double getTimerValue(String timerName, String... tags) {
-		Timer timer = registry.find(timerName).tags(tags).timer();
-		double result = -1;
-		if (timer != null) {
-			result = timer.count();
 		}
 		return result;
 	}

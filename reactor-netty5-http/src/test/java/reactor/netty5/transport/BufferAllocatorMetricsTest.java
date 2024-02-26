@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ import static reactor.netty5.Metrics.SMALL_CACHE_SIZE;
 import static reactor.netty5.Metrics.THREAD_LOCAL_CACHES;
 import static reactor.netty5.Metrics.TYPE;
 import static reactor.netty5.Metrics.USED_MEMORY;
+import static reactor.netty5.micrometer.GaugeAssert.assertGauge;
 
 /**
  * This test class verifies {@link Buffer} metrics functionality.
@@ -106,14 +107,14 @@ class BufferAllocatorMetricsTest extends BaseHttpTest {
 			double currentActiveDirect = getGaugeValue(BUFFER_ALLOCATOR_PREFIX + ACTIVE_MEMORY, tags);
 
 			IntStream.range(0, 10).mapToObj(i -> alloc.allocate(102400)).forEach(buffers::add);
-			assertThat(getGaugeValue(BUFFER_ALLOCATOR_PREFIX + ACTIVE_MEMORY, tags)).isGreaterThan(currentActiveDirect);
+			assertGauge(registry, BUFFER_ALLOCATOR_PREFIX + ACTIVE_MEMORY, tags).hasValueGreaterThan(currentActiveDirect);
 
 			currentActiveDirect = getGaugeValue(BUFFER_ALLOCATOR_PREFIX + ACTIVE_MEMORY, tags);
 
 			buffers.forEach(Buffer::close);
 			releaseBufList = false;
 
-			assertThat(getGaugeValue(BUFFER_ALLOCATOR_PREFIX + ACTIVE_MEMORY, tags)).isLessThan(currentActiveDirect);
+			assertGauge(registry, BUFFER_ALLOCATOR_PREFIX + ACTIVE_MEMORY, tags).hasValueLessThan(currentActiveDirect);
 		}
 		finally {
 			if (releaseBufList) {
@@ -132,11 +133,11 @@ class BufferAllocatorMetricsTest extends BaseHttpTest {
 	}
 
 	private void checkExpectations(String name, String... tags) {
-		assertThat(getGaugeValue(name + USED_MEMORY, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + ARENAS, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + THREAD_LOCAL_CACHES, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + SMALL_CACHE_SIZE, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + NORMAL_CACHE_SIZE, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + CHUNK_SIZE, tags)).isGreaterThan(0);
+		assertGauge(registry, name + USED_MEMORY, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + ARENAS, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + THREAD_LOCAL_CACHES, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + SMALL_CACHE_SIZE, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + NORMAL_CACHE_SIZE, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + CHUNK_SIZE, tags).hasValueGreaterThan(0);
 	}
 }

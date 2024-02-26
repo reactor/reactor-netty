@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,9 @@
  */
 package reactor.netty5.udp;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.micrometer.core.tck.MeterRegistryAssert;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.socket.DatagramPacket;
 import org.junit.jupiter.api.AfterEach;
@@ -52,6 +47,9 @@ import static reactor.netty5.Metrics.STATUS;
 import static reactor.netty5.Metrics.UDP_CLIENT_PREFIX;
 import static reactor.netty5.Metrics.UDP_SERVER_PREFIX;
 import static reactor.netty5.Metrics.URI;
+import static reactor.netty5.micrometer.CounterAssert.assertCounter;
+import static reactor.netty5.micrometer.DistributionSummaryAssert.assertDistributionSummary;
+import static reactor.netty5.micrometer.TimerAssert.assertTimer;
 
 /**
  * This test class verifies UDP metrics functionality.
@@ -194,44 +192,25 @@ class UdpMetricsTests {
 		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, clientAddress, URI, "udp"};
 		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "udp"};
 
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1);
-		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1);
-		checkCounter(SERVER_ERRORS, summaryTags1, false);
+		assertDistributionSummary(registry, SERVER_DATA_SENT, summaryTags1)
+				.hasCountEqualTo(1)
+				.hasTotalAmountGreaterThanOrEqualTo(5);
+		assertDistributionSummary(registry, SERVER_DATA_RECEIVED, summaryTags1)
+				.hasCountEqualTo(1)
+				.hasTotalAmountGreaterThanOrEqualTo(5);
+		assertCounter(registry, SERVER_ERRORS, summaryTags1).isNull();
 
-		checkClientConnectTime(timerTags);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2);
-		checkCounter(CLIENT_ERRORS, summaryTags2, false);
+		assertTimer(registry, CLIENT_CONNECT_TIME, timerTags)
+				.hasCountEqualTo(1)
+				.hasTotalTimeGreaterThan(0);
+		assertDistributionSummary(registry, CLIENT_DATA_SENT, summaryTags2)
+				.hasCountEqualTo(1)
+				.hasTotalAmountGreaterThanOrEqualTo(5);
+		assertDistributionSummary(registry, CLIENT_DATA_RECEIVED, summaryTags2)
+				.hasCountEqualTo(1)
+				.hasTotalAmountGreaterThanOrEqualTo(5);
+		assertCounter(registry, CLIENT_ERRORS, summaryTags2).isNull();
 	}
-
-
-	private void checkClientConnectTime(String[] tags) {
-		MeterRegistryAssert.assertThat(registry).hasTimerWithNameAndTags(CLIENT_CONNECT_TIME, Tags.of(tags));
-
-		Timer timer = registry.find(CLIENT_CONNECT_TIME).tags(tags).timer();
-		assertThat(timer).isNotNull();
-		assertThat(timer.count()).isEqualTo(1);
-		assertThat(timer.totalTime(TimeUnit.NANOSECONDS) > 0).isTrue();
-	}
-
-	private void checkDistributionSummary(String name, String[] tags) {
-		DistributionSummary summary = registry.find(name).tags(tags).summary();
-		assertThat(summary).isNotNull();
-		assertThat(summary.count()).isEqualTo(1);
-		assertThat(summary.totalAmount() >= 5).isTrue();
-	}
-
-	private void checkCounter(String name, String[] tags, boolean exists) {
-		Counter counter = registry.find(name).tags(tags).counter();
-		if (exists) {
-			assertThat(counter).isNotNull();
-			assertThat(counter.count()).isEqualTo(0);
-		}
-		else {
-			assertThat(counter).isNull();
-		}
-	}
-
 
 	private static final String SERVER_DATA_SENT = UDP_SERVER_PREFIX + DATA_SENT;
 	private static final String SERVER_DATA_RECEIVED = UDP_SERVER_PREFIX + DATA_RECEIVED;
