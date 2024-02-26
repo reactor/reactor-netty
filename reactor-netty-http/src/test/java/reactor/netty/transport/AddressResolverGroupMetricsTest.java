@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,7 @@ package reactor.netty.transport;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.micrometer.core.tck.MeterRegistryAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.SUCCESS;
+import static reactor.netty.micrometer.TimerAssert.assertTimer;
 
 /**
  * This test class verifies name resolution metrics functionality.
@@ -84,20 +82,8 @@ class AddressResolverGroupMetricsTest extends BaseHttpTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		assertThat(getTimerValue("localhost:" + disposableServer.port())).isGreaterThan(0);
-	}
-
-
-	private double getTimerValue(String address) {
-		MeterRegistryAssert.assertThat(registry).hasTimerWithNameAndTags("reactor.netty.http.client.address.resolver",
-				Tags.of(REMOTE_ADDRESS, address, STATUS, SUCCESS));
-
-		Timer timer = registry.find("reactor.netty.http.client.address.resolver")
-		                      .tags(REMOTE_ADDRESS, address, STATUS, SUCCESS).timer();
-		double result = -1;
-		if (timer != null) {
-			result = timer.totalTime(TimeUnit.NANOSECONDS);
-		}
-		return result;
+		String address = "localhost:" + disposableServer.port();
+		assertTimer(registry, "reactor.netty.http.client.address.resolver", REMOTE_ADDRESS, address,  STATUS, SUCCESS)
+				.hasTotalTimeGreaterThan(0);
 	}
 }

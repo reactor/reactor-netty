@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ import static reactor.netty.Metrics.THREAD_LOCAL_CACHES;
 import static reactor.netty.Metrics.TYPE;
 import static reactor.netty.Metrics.USED_DIRECT_MEMORY;
 import static reactor.netty.Metrics.USED_HEAP_MEMORY;
+import static reactor.netty.micrometer.GaugeAssert.assertGauge;
 
 /**
  * This test class verifies {@link ByteBuf} metrics functionality.
@@ -112,8 +113,8 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 
 			IntStream.range(0, 10).mapToObj(i -> alloc.heapBuffer(102400)).forEach(buffers::add);
 			IntStream.range(0, 10).mapToObj(i -> alloc.directBuffer(102400)).forEach(buffers::add);
-			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags)).isGreaterThan(currentActiveHeap);
-			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags)).isGreaterThan(currentActiveDirect);
+			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags).hasValueGreaterThan(currentActiveHeap);
+			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags).hasValueGreaterThan(currentActiveDirect);
 
 			currentActiveHeap = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags);
 			currentActiveDirect = getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags);
@@ -121,8 +122,8 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 			buffers.forEach(ByteBuf::release);
 			releaseBufList = false;
 
-			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags)).isLessThan(currentActiveHeap);
-			assertThat(getGaugeValue(BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags)).isLessThan(currentActiveDirect);
+			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_HEAP_MEMORY, tags).hasValueLessThan(currentActiveHeap);
+			assertGauge(registry, BYTE_BUF_ALLOCATOR_PREFIX + ACTIVE_DIRECT_MEMORY, tags).hasValueLessThan(currentActiveDirect);
 		}
 		finally {
 			if (releaseBufList) {
@@ -141,13 +142,13 @@ class ByteBufAllocatorMetricsTest extends BaseHttpTest {
 	}
 
 	private void checkExpectations(String name, String... tags) {
-		assertThat(getGaugeValue(name + USED_HEAP_MEMORY, tags)).isEqualTo(0);
-		assertThat(getGaugeValue(name + USED_DIRECT_MEMORY, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + HEAP_ARENAS, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + DIRECT_ARENAS, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + THREAD_LOCAL_CACHES, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + SMALL_CACHE_SIZE, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + NORMAL_CACHE_SIZE, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + CHUNK_SIZE, tags)).isGreaterThan(0);
+		assertGauge(registry, name + USED_HEAP_MEMORY, tags).hasValueEqualTo(0);
+		assertGauge(registry, name + USED_DIRECT_MEMORY, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + HEAP_ARENAS, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + DIRECT_ARENAS, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + THREAD_LOCAL_CACHES, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + SMALL_CACHE_SIZE, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + NORMAL_CACHE_SIZE, tags).hasValueGreaterThan(0);
+		assertGauge(registry, name + CHUNK_SIZE, tags).hasValueGreaterThan(0);
 	}
 }

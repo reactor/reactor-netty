@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package reactor.netty.transport;
 
-import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -41,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.EVENT_LOOP_PREFIX;
 import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.PENDING_TASKS;
+import static reactor.netty.micrometer.GaugeAssert.assertGauge;
 
 /**
  * Tests for event loop metrics.
@@ -86,7 +86,7 @@ class TransportEventLoopMetricsTest {
 							String[] tags = new String[]{
 									NAME, singleThreadEventExecutor.threadProperties().name(),
 							};
-							assertThat(getGaugeValue(EVENT_LOOP_PREFIX + PENDING_TASKS, tags)).isEqualTo(10);
+							assertGauge(registry, EVENT_LOOP_PREFIX + PENDING_TASKS, tags).hasValueEqualTo(10);
 							latch.countDown();
 						}
 					})
@@ -162,14 +162,4 @@ class TransportEventLoopMetricsTest {
 			}
 		}
 	}
-
-	private double getGaugeValue(String name, String... tags) {
-		Gauge gauge = registry.find(name).tags(tags).gauge();
-		double result = -1;
-		if (gauge != null) {
-			result = gauge.value();
-		}
-		return result;
-	}
-
 }

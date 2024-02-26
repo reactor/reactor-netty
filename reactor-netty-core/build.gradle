@@ -137,14 +137,17 @@ dependencies {
 	testImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
 	testImplementation "io.micrometer:micrometer-core:$micrometerVersion"
-	testImplementation "io.micrometer:micrometer-test:$micrometerVersion"
 	testImplementation "org.reflections:reflections:$reflectionsVersion"
 
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformLauncherVersion"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 
+	// JSR-305 annotations
+	testFixturesCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 	testFixturesApi("ch.qos.logback:logback-classic:$logbackVersion")
+	testFixturesApi("io.micrometer:micrometer-core:$micrometerVersion")
+	testFixturesApi("org.assertj:assertj-core:$assertJVersion")
 
 	for (dependency in project.configurations.shaded.dependencies) {
 		compileOnly(dependency)
