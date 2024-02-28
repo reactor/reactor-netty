@@ -104,6 +104,18 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			InstrumentedPool<Connection> pool,
 			MonoSink<Connection> sink,
 			Context currentContext) {
+		return createDisposableAcquire(config, connectionObserver, pendingAcquireTimeout, pool, null, sink, currentContext);
+	}
+
+	@Override
+	protected CoreSubscriber<PooledRef<Connection>> createDisposableAcquire(
+			TransportConfig config,
+			ConnectionObserver connectionObserver,
+			long pendingAcquireTimeout,
+			InstrumentedPool<Connection> pool,
+			SocketAddress remoteAddress,
+			MonoSink<Connection> sink,
+			Context currentContext) {
 		boolean acceptGzip = false;
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
 		Function<String, String> uriTagValue = null;
@@ -112,7 +124,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			uriTagValue = ((HttpClientConfig) config).uriTagValue;
 		}
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, sink, currentContext, uriTagValue);
+				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, remoteAddress, sink, currentContext, uriTagValue);
 	}
 
 	@Override
@@ -231,6 +243,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final Function<String, String> uriTagValue;
 
 		PooledRef<Connection> pooledRef;
+		SocketAddress remoteAddress;
 		Subscription subscription;
 
 		DisposableAcquire(
@@ -240,6 +253,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				long pendingAcquireTimeout,
 				InstrumentedPool<Connection> pool,
+				@Nullable SocketAddress remoteAddress,
 				MonoSink<Connection> sink,
 				Context currentContext,
 				@Nullable Function<String, String> uriTagValue) {
@@ -251,6 +265,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.metricsRecorder = metricsRecorder;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
 			this.pool = pool;
+			this.remoteAddress = remoteAddress;
 			this.retried = false;
 			this.sink = sink;
 			this.uriTagValue = uriTagValue;
@@ -265,6 +280,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.metricsRecorder = parent.metricsRecorder;
 			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
 			this.pool = parent.pool;
+			this.remoteAddress = parent.remoteAddress;
 			this.retried = true;
 			this.sink = parent.sink;
 			this.uriTagValue = parent.uriTagValue;
@@ -294,6 +310,12 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		public void onNext(PooledRef<Connection> pooledRef) {
 			this.pooledRef = pooledRef;
 			Channel channel = pooledRef.poolable().channel();
+
+			if (remoteAddress == null) {
+				// This can happen only if there is a custom implementation of PooledConnectionProvider.createDisposableAcquire(...),
+				// with the default implementation, remoteAddress is always initialized.
+				remoteAddress = channel.remoteAddress();
+			}
 
 			ConnectionObserver current = channel.attr(OWNER)
 			                                    .getAndSet(this);
@@ -383,7 +405,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 						setChannelContext(ch, currentContext());
 					}
 					HttpClientConfig.addStreamHandlers(ch, obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
-							opsFactory, acceptGzip, metricsRecorder, -1, uriTagValue);
+							opsFactory, acceptGzip, metricsRecorder, remoteAddress, -1, uriTagValue);
 
 					ChannelOperations<?, ?> ops = ChannelOperations.get(ch);
 					if (ops != null) {
