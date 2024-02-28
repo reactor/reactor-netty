@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	private static final Logger log = Loggers.getLogger(AbstractHttpClientMetricsHandler.class);
 
+	final SocketAddress remoteAddress;
+
 	String path;
 
 	String method;
@@ -70,7 +72,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 	int lastWriteSeq;
 
-	protected AbstractHttpClientMetricsHandler(@Nullable Function<String, String> uriTagValue) {
+	protected AbstractHttpClientMetricsHandler(SocketAddress remoteAddress, @Nullable Function<String, String> uriTagValue) {
+		this.remoteAddress = remoteAddress;
 		this.uriTagValue = uriTagValue;
 	}
 
@@ -82,6 +85,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		this.dataSentTime = copy.dataSentTime;
 		this.method = copy.method;
 		this.path = copy.path;
+		this.remoteAddress = copy.remoteAddress;
 		this.status = copy.status;
 		this.uriTagValue = copy.uriTagValue;
 		this.lastWriteSeq = copy.lastWriteSeq;
@@ -99,7 +103,6 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 
 			if (msg instanceof LastHttpContent) {
 				int currentLastWriteSeq = lastWriteSeq;
-				SocketAddress address = ctx.channel().remoteAddress();
 				return ctx.write(msg)
 				          .addListener(future -> {
 				              try {
@@ -122,7 +125,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 				                   */
 				                  if (currentLastWriteSeq == lastWriteSeq) {
 				                      lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
-				                      recordWrite(address);
+				                      recordWrite(remoteAddress);
 				                  }
 				              }
 				              catch (RuntimeException e) {
@@ -161,9 +164,9 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 				lastReadSeq = (lastReadSeq + 1) & 0x7F_FF_FF_FF;
 				if ((lastReadSeq > lastWriteSeq) || (lastReadSeq == 0 && lastWriteSeq == Integer.MAX_VALUE)) {
 					lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
-					recordWrite(ctx.channel().remoteAddress());
+					recordWrite(remoteAddress);
 				}
-				recordRead(ctx.channel());
+				recordRead(ctx.channel(), remoteAddress);
 				reset();
 			}
 		}
@@ -201,7 +204,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 			contextView = ops.currentContextView();
 		}
 
-		startWrite(request, ctx.channel());
+		startWrite(request, ctx.channel(), remoteAddress);
 	}
 
 	private long extractProcessedDataFromBuffer(Object msg) {
@@ -217,12 +220,10 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 	protected abstract HttpClientMetricsRecorder recorder();
 
 	protected void recordException(ChannelHandlerContext ctx) {
-		recorder().incrementErrorsCount(ctx.channel().remoteAddress(),
-				path != null ? path : resolveUri(ctx));
+		recorder().incrementErrorsCount(remoteAddress, path != null ? path : resolveUri(ctx));
 	}
 
-	protected void recordRead(Channel channel) {
-		SocketAddress address = channel.remoteAddress();
+	protected void recordRead(Channel channel, SocketAddress address) {
 		recorder().recordDataReceivedTime(address, path, method, status,
 				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
@@ -255,7 +256,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelHandlerAdapter {
 		dataReceivedTime = System.nanoTime();
 	}
 
-	protected void startWrite(HttpRequest msg, Channel channel) {
+	protected void startWrite(HttpRequest msg, Channel channel, SocketAddress address) {
 		dataSentTime = System.nanoTime();
 	}
 

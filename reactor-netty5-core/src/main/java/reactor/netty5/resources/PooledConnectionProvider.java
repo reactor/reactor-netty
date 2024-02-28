@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -183,7 +183,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				}
 			}
 			mono.subscribe(createDisposableAcquire(config, connectionObserver,
-					poolFactory.pendingAcquireTimeout, pool, sink, currentContext));
+					poolFactory.pendingAcquireTimeout, pool, remoteAddress, sink, currentContext));
 		});
 	}
 
@@ -313,6 +313,17 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			InstrumentedPool<T> pool,
 			MonoSink<Connection> sink,
 			Context currentContext);
+
+	protected CoreSubscriber<PooledRef<T>> createDisposableAcquire(
+			TransportConfig config,
+			ConnectionObserver connectionObserver,
+			long pendingAcquireTimeout,
+			InstrumentedPool<T> pool,
+			SocketAddress remoteAddress,
+			MonoSink<Connection> sink,
+			Context currentContext) {
+		return createDisposableAcquire(config, connectionObserver, pendingAcquireTimeout, pool, sink, currentContext);
+	}
 
 	protected abstract InstrumentedPool<T> createPool(
 			TransportConfig config,

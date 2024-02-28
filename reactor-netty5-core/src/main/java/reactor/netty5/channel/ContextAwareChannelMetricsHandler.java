@@ -53,7 +53,7 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 
 	@Override
 	public ChannelHandler tlsMetricsHandler() {
-		return new TlsMetricsHandler(recorder);
+		return new TlsMetricsHandler(recorder, remoteAddress);
 	}
 
 	@Override
@@ -133,8 +133,8 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 
 	static final class TlsMetricsHandler extends ChannelMetricsHandler.TlsMetricsHandler {
 
-		TlsMetricsHandler(ContextAwareChannelMetricsRecorder recorder) {
-			super(recorder);
+		TlsMetricsHandler(ContextAwareChannelMetricsRecorder recorder, @Nullable SocketAddress remoteAddress) {
+			super(recorder, remoteAddress);
 		}
 
 		@Override
@@ -143,7 +143,7 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 			if (connection instanceof ConnectionObserver connectionObserver) {
 				((ContextAwareChannelMetricsRecorder) recorder).recordTlsHandshakeTime(
 						connectionObserver.currentContext(),
-						ctx.channel().remoteAddress(),
+						remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress(),
 						Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
 						status);
 			}

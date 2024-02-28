@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,8 +63,9 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	ContextView parentContextView;
 
 	MicrometerHttpClientMetricsHandler(MicrometerHttpClientMetricsRecorder recorder,
+			SocketAddress remoteAddress,
 			@Nullable Function<String, String> uriTagValue) {
-		super(uriTagValue);
+		super(remoteAddress, uriTagValue);
 		this.recorder = recorder;
 	}
 
@@ -83,8 +84,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	}
 
 	@Override
-	protected void recordRead(Channel channel) {
-		SocketAddress address = channel.remoteAddress();
+	protected void recordRead(Channel channel, SocketAddress address) {
 		recorder().recordDataReceivedTime(address, path, method, status,
 				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
@@ -119,10 +119,10 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 	// writing the request
 	@Override
-	protected void startWrite(HttpRequest msg, Channel channel) {
-		super.startWrite(msg, channel);
+	protected void startWrite(HttpRequest msg, Channel channel, SocketAddress address) {
+		super.startWrite(msg, channel, address);
 
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, path, channel.remoteAddress());
+		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, path, address);
 		responseTimeObservation = Observation.createNotStarted(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		parentContextView = updateChannelContext(channel, responseTimeObservation);
 		responseTimeObservation.start();

@@ -50,7 +50,7 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
 	@Override
 	public ChannelHandler tlsMetricsHandler() {
-		return new TlsMetricsHandler(recorder);
+		return new TlsMetricsHandler(recorder, remoteAddress);
 	}
 
 	@Override
@@ -84,11 +84,13 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 	static class TlsMetricsHandler extends ChannelHandlerAdapter {
 
 		protected final ChannelMetricsRecorder recorder;
+		protected final SocketAddress remoteAddress;
 
 		boolean listenerAdded;
 
-		TlsMetricsHandler(ChannelMetricsRecorder recorder) {
+		TlsMetricsHandler(ChannelMetricsRecorder recorder, @Nullable SocketAddress remoteAddress) {
 			this.recorder = recorder;
+			this.remoteAddress = remoteAddress;
 		}
 
 		@Override
@@ -107,7 +109,7 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
 		protected void recordTlsHandshakeTime(ChannelHandlerContext ctx, long tlsHandshakeTimeStart, String status) {
 			recorder.recordTlsHandshakeTime(
-					ctx.channel().remoteAddress(),
+					remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress(),
 					Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
 					status);
 		}

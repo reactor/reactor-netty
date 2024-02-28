@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -509,6 +509,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			ChannelOperations.OnSetup opsFactory,
 			boolean acceptGzip,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
+			SocketAddress remoteAddress,
 			long responseTimeoutMillis,
 			@Nullable Function<String, String> uriTagValue) {
 
@@ -546,13 +547,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				}
 				else {
 					if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder micrometerHttpClientMetricsRecorder) {
-						handler = new MicrometerHttpClientMetricsHandler(micrometerHttpClientMetricsRecorder, uriTagValue);
+						handler = new MicrometerHttpClientMetricsHandler(micrometerHttpClientMetricsRecorder, remoteAddress, uriTagValue);
 					}
 					else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder contextAwareHttpClientMetricsRecorder) {
-						handler = new ContextAwareHttpClientMetricsHandler(contextAwareHttpClientMetricsRecorder, uriTagValue);
+						handler = new ContextAwareHttpClientMetricsHandler(contextAwareHttpClientMetricsRecorder, remoteAddress, uriTagValue);
 					}
 					else {
-						handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+						handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, remoteAddress, uriTagValue);
 					}
 				}
 				pipeline.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
@@ -600,6 +601,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			ConnectionObserver observer,
 			ChannelOperations.OnSetup opsFactory,
+			SocketAddress remoteAddress,
 			@Nullable Function<String, String> uriTagValue) {
 		HttpDecoderConfig decoderConfig = new HttpDecoderConfig();
 		decoderConfig.setMaxInitialLineLength(decoder.maxInitialLineLength())
@@ -623,7 +625,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		Http2FrameCodec http2FrameCodec = http2FrameCodecBuilder.build();
 
 		Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(http2FrameCodec,
-				new H2CleartextCodec(http2FrameCodec, opsFactory, acceptGzip, metricsRecorder, uriTagValue));
+				new H2CleartextCodec(http2FrameCodec, opsFactory, acceptGzip, metricsRecorder, remoteAddress, uriTagValue));
 
 		ReactorNettyHttpClientUpgradeHandler upgradeHandler = new ReactorNettyHttpClientUpgradeHandler(
 				http2FrameCodec, httpClientCodec, upgradeCodec, decoder.h2cMaxContentLength());
@@ -640,13 +642,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			if (metricsRecorder instanceof HttpClientMetricsRecorder) {
 				ChannelHandler handler;
 				if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder micrometerHttpClientMetricsRecorder) {
-					handler = new MicrometerHttpClientMetricsHandler(micrometerHttpClientMetricsRecorder, uriTagValue);
+					handler = new MicrometerHttpClientMetricsHandler(micrometerHttpClientMetricsRecorder, remoteAddress, uriTagValue);
 				}
 				else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder contextAwareHttpClientMetricsRecorder) {
-					handler = new ContextAwareHttpClientMetricsHandler(contextAwareHttpClientMetricsRecorder, uriTagValue);
+					handler = new ContextAwareHttpClientMetricsHandler(contextAwareHttpClientMetricsRecorder, remoteAddress, uriTagValue);
 				}
 				else {
-					handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+					handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, remoteAddress, uriTagValue);
 				}
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
@@ -658,6 +660,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			boolean acceptGzip,
 			HttpResponseDecoderSpec decoder,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
+			SocketAddress remoteAddress,
 			@Nullable Function<String, String> uriTagValue) {
 		HttpDecoderConfig decoderConfig = new HttpDecoderConfig();
 		decoderConfig.setMaxInitialLineLength(decoder.maxInitialLineLength())
@@ -677,13 +680,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			if (metricsRecorder instanceof HttpClientMetricsRecorder) {
 				ChannelHandler handler;
 				if (metricsRecorder instanceof MicrometerHttpClientMetricsRecorder micrometerHttpClientMetricsRecorder) {
-					handler = new MicrometerHttpClientMetricsHandler(micrometerHttpClientMetricsRecorder, uriTagValue);
+					handler = new MicrometerHttpClientMetricsHandler(micrometerHttpClientMetricsRecorder, remoteAddress, uriTagValue);
 				}
 				else if (metricsRecorder instanceof ContextAwareHttpClientMetricsRecorder contextAwareHttpClientMetricsRecorder) {
-					handler = new ContextAwareHttpClientMetricsHandler(contextAwareHttpClientMetricsRecorder, uriTagValue);
+					handler = new ContextAwareHttpClientMetricsHandler(contextAwareHttpClientMetricsRecorder, remoteAddress, uriTagValue);
 				}
 				else {
-					handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, uriTagValue);
+					handler = new HttpClientMetricsHandler((HttpClientMetricsRecorder) metricsRecorder, remoteAddress, uriTagValue);
 				}
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
 			}
@@ -731,6 +734,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final Http2FrameCodec http2FrameCodec;
 		final ChannelMetricsRecorder metricsRecorder;
 		final ChannelOperations.OnSetup opsFactory;
+		final SocketAddress remoteAddress;
 		final Function<String, String> uriTagValue;
 
 		H2CleartextCodec(
@@ -738,11 +742,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
+				SocketAddress remoteAddress,
 				@Nullable Function<String, String> uriTagValue) {
 			this.acceptGzip = acceptGzip;
 			this.http2FrameCodec = http2FrameCodec;
 			this.metricsRecorder = metricsRecorder;
 			this.opsFactory = opsFactory;
+			this.remoteAddress = remoteAddress;
 			this.uriTagValue = uriTagValue;
 		}
 
@@ -763,11 +769,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				pipeline.remove(NettyPipeline.ResponseTimeoutHandler);
 				http2MultiplexHandler = new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE,
 						new H2Codec(owner, obs, opsFactory, acceptGzip, metricsRecorder,
-								responseTimeoutHandler.getReaderIdleTimeInMillis(), uriTagValue));
+								remoteAddress, responseTimeoutHandler.getReaderIdleTimeInMillis(), uriTagValue));
 			}
 			else {
 				http2MultiplexHandler = new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE,
-						new H2Codec(owner, obs, opsFactory, acceptGzip, metricsRecorder, uriTagValue));
+						new H2Codec(owner, obs, opsFactory, acceptGzip, metricsRecorder, remoteAddress, uriTagValue));
 			}
 			pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, http2FrameCodec)
 			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, http2MultiplexHandler);
@@ -787,6 +793,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final ChannelOperations.OnSetup opsFactory;
 		final Http2ConnectionProvider.DisposableAcquire owner;
 		final long responseTimeoutMillis;
+		final SocketAddress remoteAddress;
 		final Function<String, String> uriTagValue;
 
 		H2Codec(
@@ -795,9 +802,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
+				SocketAddress remoteAddress,
 				@Nullable Function<String, String> uriTagValue) {
 			// Handle outbound and upgrade streams
-			this(owner, observer, opsFactory, acceptGzip, metricsRecorder, -1, uriTagValue);
+			this(owner, observer, opsFactory, acceptGzip, metricsRecorder, remoteAddress, -1, uriTagValue);
 		}
 
 		H2Codec(
@@ -806,6 +814,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
+				SocketAddress remoteAddress,
 				long responseTimeoutMillis,
 				@Nullable Function<String, String> uriTagValue) {
 			// Handle outbound and upgrade streams
@@ -815,6 +824,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			this.opsFactory = opsFactory;
 			this.owner = owner;
 			this.responseTimeoutMillis = responseTimeoutMillis;
+			this.remoteAddress = remoteAddress;
 			this.uriTagValue = uriTagValue;
 		}
 
@@ -826,7 +836,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					setChannelContext(ch, owner.currentContext());
 				}
 				addStreamHandlers(ch, observer.then(new StreamConnectionObserver(owner.currentContext())), opsFactory,
-						acceptGzip, metricsRecorder, responseTimeoutMillis, uriTagValue);
+						acceptGzip, metricsRecorder, remoteAddress, responseTimeoutMillis, uriTagValue);
 			}
 			else {
 				// Handle server pushes (inbound streams)
@@ -854,14 +864,16 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final Http2Settings                              http2Settings;
 		final ChannelMetricsRecorder                     metricsRecorder;
 		final ConnectionObserver                         observer;
+		final SocketAddress                              remoteAddress;
 		final Function<String, String>                   uriTagValue;
 
-		H2OrHttp11Codec(HttpClientChannelInitializer initializer, ConnectionObserver observer) {
+		H2OrHttp11Codec(HttpClientChannelInitializer initializer, ConnectionObserver observer, SocketAddress remoteAddress) {
 			this.acceptGzip = initializer.acceptGzip;
 			this.decoder = initializer.decoder;
 			this.http2Settings = initializer.http2Settings;
 			this.metricsRecorder = initializer.metricsRecorder;
 			this.observer = observer;
+			this.remoteAddress = remoteAddress;
 			this.uriTagValue = initializer.uriTagValue;
 		}
 
@@ -877,7 +889,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					configureHttp2Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, http2Settings, observer);
 				}
 				else if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
-					configureHttp11Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, metricsRecorder, uriTagValue);
+					configureHttp11Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, metricsRecorder, remoteAddress, uriTagValue);
 				}
 				else {
 					throw new IllegalStateException("unknown protocol: " + protocol);
@@ -923,10 +935,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				if ((protocols & h11orH2) == h11orH2) {
 					channel.pipeline()
 					       .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2OrHttp11Codec,
-					               new H2OrHttp11Codec(this, observer));
+					               new H2OrHttp11Codec(this, observer, remoteAddress));
 				}
 				else if ((protocols & h11) == h11) {
-					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, uriTagValue);
+					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, remoteAddress, uriTagValue);
 				}
 				else if ((protocols & h2) == h2) {
 					configureHttp2Pipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, observer);
@@ -934,10 +946,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			}
 			else {
 				if ((protocols & h11orH2C) == h11orH2C) {
-					configureHttp11OrH2CleartextPipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, metricsRecorder, observer, opsFactory, uriTagValue);
+					configureHttp11OrH2CleartextPipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, metricsRecorder, observer, opsFactory, remoteAddress, uriTagValue);
 				}
 				else if ((protocols & h11) == h11) {
-					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, uriTagValue);
+					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, remoteAddress, uriTagValue);
 				}
 				else if ((protocols & h2c) == h2c) {
 					configureHttp2Pipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, observer);

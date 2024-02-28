@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 	}
 	@Override
 	public ChannelHandler tlsMetricsHandler() {
-		return new TlsMetricsHandler(recorder, onServer);
+		return new TlsMetricsHandler(recorder, onServer, remoteAddress);
 	}
 
 	@Override
@@ -164,6 +164,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		static final String TYPE_SERVER = "server";
 
 		final MicrometerChannelMetricsRecorder recorder;
+		final SocketAddress remoteAddress;
 		final String type;
 		Observation observation;
 
@@ -173,21 +174,22 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		String status = UNKNOWN;
 		ContextView parentContextView;
 
-		TlsMetricsHandler(MicrometerChannelMetricsRecorder recorder, boolean onServer) {
+		TlsMetricsHandler(MicrometerChannelMetricsRecorder recorder, boolean onServer, @Nullable SocketAddress remoteAddress) {
 			this.recorder = recorder;
+			this.remoteAddress = remoteAddress;
 			this.type = onServer ? TYPE_SERVER : TYPE_CLIENT;
 		}
 
 		@Override
 		@SuppressWarnings("try")
 		public void channelActive(ChannelHandlerContext ctx) {
-			SocketAddress remoteAddress = ctx.channel().remoteAddress();
-			if (remoteAddress instanceof InetSocketAddress address) {
+			SocketAddress rАddr = remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress();
+			if (rАddr instanceof InetSocketAddress address) {
 				this.netPeerName = address.getHostString();
 				this.netPeerPort = address.getPort() + "";
 			}
 			else {
-				this.netPeerName = remoteAddress.toString();
+				this.netPeerName = rАddr.toString();
 				this.netPeerPort = "";
 			}
 			observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);

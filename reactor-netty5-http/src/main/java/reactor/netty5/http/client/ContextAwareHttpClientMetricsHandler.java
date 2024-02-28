@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,8 +35,9 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 	final ContextAwareHttpClientMetricsRecorder recorder;
 
 	ContextAwareHttpClientMetricsHandler(ContextAwareHttpClientMetricsRecorder recorder,
+			SocketAddress remoteAddress,
 			@Nullable Function<String, String> uriTagValue) {
-		super(uriTagValue);
+		super(remoteAddress, uriTagValue);
 		this.recorder = recorder;
 	}
 
@@ -53,7 +54,7 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 	@Override
 	protected void recordException(ChannelHandlerContext ctx) {
 		if (contextView != null) {
-			recorder().incrementErrorsCount(contextView, ctx.channel().remoteAddress(), path);
+			recorder().incrementErrorsCount(contextView, remoteAddress, path);
 		}
 		else {
 			super.recordException(ctx);
@@ -74,9 +75,8 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 	}
 
 	@Override
-	protected void recordRead(Channel channel) {
+	protected void recordRead(Channel channel, SocketAddress address) {
 		if (contextView != null) {
-			SocketAddress address = channel.remoteAddress();
 			recorder.recordDataReceivedTime(contextView, address, path, method, status,
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
@@ -86,7 +86,7 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 			recorder.recordDataReceived(contextView, address, path, dataReceived);
 		}
 		else {
-			super.recordRead(channel);
+			super.recordRead(channel, address);
 		}
 	}
 }
