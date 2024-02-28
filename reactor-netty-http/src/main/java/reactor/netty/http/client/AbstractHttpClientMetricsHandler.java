@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	private static final Logger log = Loggers.getLogger(AbstractHttpClientMetricsHandler.class);
 
+	final SocketAddress remoteAddress;
+
 	String path;
 
 	String method;
@@ -69,7 +71,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	int lastWriteSeq;
 
-	protected AbstractHttpClientMetricsHandler(@Nullable Function<String, String> uriTagValue) {
+	protected AbstractHttpClientMetricsHandler(SocketAddress remoteAddress, @Nullable Function<String, String> uriTagValue) {
+		this.remoteAddress = remoteAddress;
 		this.uriTagValue = uriTagValue;
 	}
 
@@ -81,6 +84,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		this.dataSentTime = copy.dataSentTime;
 		this.method = copy.method;
 		this.path = copy.path;
+		this.remoteAddress = copy.remoteAddress;
 		this.status = copy.status;
 		this.uriTagValue = copy.uriTagValue;
 		this.lastWriteSeq = copy.lastWriteSeq;
@@ -99,13 +103,12 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 			if (msg instanceof LastHttpContent) {
 				int currentLastWriteSeq = lastWriteSeq;
-				SocketAddress address = ctx.channel().remoteAddress();
 				promise.addListener(future -> {
 					try {
 						// Record write, unless channelRead has already done it (because an early full response has been received)
 						if (currentLastWriteSeq == lastWriteSeq) {
 							lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
-							recordWrite(address);
+							recordWrite(remoteAddress);
 						}
 					}
 					catch (RuntimeException e) {
@@ -144,9 +147,9 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 				lastReadSeq = (lastReadSeq + 1) & 0x7F_FF_FF_FF;
 				if ((lastReadSeq > lastWriteSeq) || (lastReadSeq == 0 && lastWriteSeq == Integer.MAX_VALUE)) {
 					lastWriteSeq = (lastWriteSeq + 1) & 0x7F_FF_FF_FF;
-					recordWrite(ctx.channel().remoteAddress());
+					recordWrite(remoteAddress);
 				}
-				recordRead(ctx.channel().remoteAddress());
+				recordRead(remoteAddress);
 				reset();
 			}
 		}

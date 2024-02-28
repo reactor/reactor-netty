@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
  */
 package reactor.netty.http.client;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -47,6 +50,29 @@ import static io.specto.hoverfly.junit.core.SimulationSource.dsl;
 import static io.specto.hoverfly.junit.dsl.HoverflyDsl.service;
 import static io.specto.hoverfly.junit.dsl.ResponseCreators.success;
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
+import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
+import static reactor.netty.Metrics.CONNECT_TIME;
+import static reactor.netty.Metrics.DATA_RECEIVED;
+import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
+import static reactor.netty.Metrics.DATA_SENT;
+import static reactor.netty.Metrics.DATA_SENT_TIME;
+import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
+import static reactor.netty.Metrics.IDLE_CONNECTIONS;
+import static reactor.netty.Metrics.MAX_CONNECTIONS;
+import static reactor.netty.Metrics.MAX_PENDING_CONNECTIONS;
+import static reactor.netty.Metrics.METHOD;
+import static reactor.netty.Metrics.NAME;
+import static reactor.netty.Metrics.PENDING_CONNECTIONS;
+import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.RESPONSE_TIME;
+import static reactor.netty.Metrics.STATUS;
+import static reactor.netty.Metrics.SUCCESS;
+import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
+import static reactor.netty.Metrics.URI;
+import static reactor.netty.micrometer.DistributionSummaryAssert.assertDistributionSummary;
+import static reactor.netty.micrometer.GaugeAssert.assertGauge;
+import static reactor.netty.micrometer.TimerAssert.assertTimer;
 
 /**
  * This test class verifies {@link HttpClient} proxy functionality.
@@ -319,5 +345,62 @@ class HttpClientProxyTest extends BaseHttpTest {
 
 		assertThat(resolver.get()).isNotNull();
 		assertThat(resolver.get()).isInstanceOf(NoopAddressResolverGroup.class);
+	}
+
+	@Test
+	void testIssue3060(Hoverfly hoverfly) {
+		MeterRegistry registry = new SimpleMeterRegistry();
+		Metrics.addRegistry(registry);
+
+		try {
+			StepVerifier.create(
+					sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+					                      .host("localhost")
+					                      .port(hoverfly.getHoverflyConfig().getProxyPort()),
+					            disposableServer::address,
+					            "/",
+					            true,
+					            true,
+					            false))
+					    .expectNextMatches(t ->
+					            t.getT2().contains("Hoverfly") &&
+					                "FOUND".equals(t.getT2().get("Logging-Handler")) &&
+					                "test".equals(t.getT1()))
+					    .expectComplete()
+					    .verify(Duration.ofSeconds(30));
+
+			String serverAddress = disposableServer.host() + ":" + disposableServer.port();
+
+			String[] summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "/"};
+			assertDistributionSummary(registry, HTTP_CLIENT_PREFIX + DATA_RECEIVED, summaryTags1).isNotNull();
+			assertDistributionSummary(registry, HTTP_CLIENT_PREFIX + DATA_SENT, summaryTags1).isNotNull();
+
+			String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
+			assertDistributionSummary(registry, HTTP_CLIENT_PREFIX + DATA_RECEIVED, summaryTags2).isNotNull();
+			assertDistributionSummary(registry, HTTP_CLIENT_PREFIX + DATA_SENT, summaryTags2).isNotNull();
+
+			String[] timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, SUCCESS};
+			assertTimer(registry, HTTP_CLIENT_PREFIX + CONNECT_TIME, timerTags1).isNotNull();
+
+			String[] timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "200", URI, "/", METHOD, "GET"};
+			assertTimer(registry, HTTP_CLIENT_PREFIX + DATA_RECEIVED_TIME, timerTags2).isNotNull();
+			assertTimer(registry, HTTP_CLIENT_PREFIX + RESPONSE_TIME, timerTags2).isNotNull();
+
+			String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "/", METHOD, "GET"};
+			assertTimer(registry, HTTP_CLIENT_PREFIX + DATA_SENT_TIME, timerTags3).isNotNull();
+
+			String[] gaugeTags = new String[] {REMOTE_ADDRESS, serverAddress, NAME, "http"};
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, gaugeTags).isNotNull();
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, gaugeTags).isNotNull();
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, gaugeTags).isNotNull();
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, gaugeTags).isNotNull();
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + MAX_CONNECTIONS, gaugeTags).isNotNull();
+			assertGauge(registry, CONNECTION_PROVIDER_PREFIX + MAX_PENDING_CONNECTIONS, gaugeTags).isNotNull();
+		}
+		finally {
+			Metrics.removeRegistry(registry);
+			registry.clear();
+			registry.close();
+		}
 	}
 }
