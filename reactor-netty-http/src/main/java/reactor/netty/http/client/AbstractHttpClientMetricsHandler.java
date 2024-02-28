@@ -202,7 +202,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 	protected abstract HttpClientMetricsRecorder recorder();
 
 	protected void recordException(ChannelHandlerContext ctx) {
-		recorder().incrementErrorsCount(ctx.channel().remoteAddress(),
+		recorder().incrementErrorsCount(remoteAddress,
 				path != null ? path : resolveUri(ctx));
 	}
 
