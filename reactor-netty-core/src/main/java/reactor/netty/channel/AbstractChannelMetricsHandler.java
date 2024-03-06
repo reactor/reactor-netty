@@ -94,9 +94,9 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	@Override
 	public void channelRegistered(ChannelHandlerContext ctx) {
 		if (!onServer) {
-			ProxyHandler proxyHandler = ctx.pipeline().get(ProxyHandler.class);
+			ChannelHandler proxyHandler = ctx.pipeline().get(NettyPipeline.ProxyHandler);
 			if (proxyHandler != null) {
-				proxyAddress = proxyHandler.proxyAddress();
+				proxyAddress = ((ProxyHandler) proxyHandler).proxyAddress();
 			}
 
 			ctx.pipeline()
