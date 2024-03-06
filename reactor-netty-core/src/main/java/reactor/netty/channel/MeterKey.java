@@ -34,7 +34,7 @@ public final class MeterKey {
 	private final String status;
 
 	/**
-	 * Creates new meter key.
+	 * Creates a new meter key.
 	 *
 	 * @param uri the requested URI
 	 * @param remoteAddress the remote address
@@ -50,7 +50,7 @@ public final class MeterKey {
 	}
 
 	/**
-	 * Creates new meter key.
+	 * Creates a new meter key.
 	 *
 	 * @param uri the requested URI
 	 * @param remoteAddress the remote address
