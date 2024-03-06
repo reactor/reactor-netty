@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.ssl.AbstractSniHandler;
 import io.netty.handler.ssl.SslHandler;
 import reactor.netty.NettyPipeline;
@@ -47,6 +48,7 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	final boolean onServer;
 
 	boolean channelOpened;
+	SocketAddress proxyAddress;
 
 	protected AbstractChannelMetricsHandler(@Nullable SocketAddress remoteAddress, boolean onServer) {
 		this.remoteAddress = remoteAddress;
@@ -92,6 +94,11 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	@Override
 	public void channelRegistered(ChannelHandlerContext ctx) {
 		if (!onServer) {
+			ProxyHandler proxyHandler = ctx.pipeline().get(ProxyHandler.class);
+			if (proxyHandler != null) {
+				proxyAddress = proxyHandler.proxyAddress();
+			}
+
 			ctx.pipeline()
 			   .addAfter(NettyPipeline.ChannelMetricsHandler,
 			             NettyPipeline.ConnectMetricsHandler,
@@ -192,14 +199,29 @@ public abstract class AbstractChannelMetricsHandler extends ChannelDuplexHandler
 	public abstract ChannelMetricsRecorder recorder();
 
 	protected void recordException(ChannelHandlerContext ctx, SocketAddress address) {
-		recorder().incrementErrorsCount(address);
+		if (proxyAddress == null) {
+			recorder().incrementErrorsCount(address);
+		}
+		else {
+			recorder().incrementErrorsCount(address, proxyAddress);
+		}
 	}
 
 	protected void recordRead(ChannelHandlerContext ctx, SocketAddress address, long bytes) {
-		recorder().recordDataReceived(address, bytes);
+		if (proxyAddress == null) {
+			recorder().recordDataReceived(address, bytes);
+		}
+		else {
+			recorder().recordDataReceived(address, proxyAddress, bytes);
+		}
 	}
 
 	protected void recordWrite(ChannelHandlerContext ctx, SocketAddress address, long bytes) {
-		recorder().recordDataSent(address, bytes);
+		if (proxyAddress == null) {
+			recorder().recordDataSent(address, bytes);
+		}
+		else {
+			recorder().recordDataSent(address, proxyAddress, bytes);
+		}
 	}
 }

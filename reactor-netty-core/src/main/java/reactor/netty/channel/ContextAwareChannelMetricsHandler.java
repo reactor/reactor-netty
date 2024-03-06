@@ -48,12 +48,12 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 
 	@Override
 	public ChannelHandler connectMetricsHandler() {
-		return new ContextAwareConnectMetricsHandler(recorder());
+		return new ContextAwareConnectMetricsHandler(recorder(), proxyAddress);
 	}
 
 	@Override
 	public ChannelHandler tlsMetricsHandler() {
-		return new TlsMetricsHandler(recorder, remoteAddress);
+		return new TlsMetricsHandler(recorder, remoteAddress, proxyAddress);
 	}
 
 	@Override
@@ -66,10 +66,20 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 		Connection connection = Connection.from(ctx.channel());
 		ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
 		if (ops != null) {
-			recorder().incrementErrorsCount(ops.currentContext(), address);
+			if (proxyAddress == null) {
+				recorder().incrementErrorsCount(ops.currentContext(), address);
+			}
+			else {
+				recorder().incrementErrorsCount(ops.currentContext(), address, proxyAddress);
+			}
 		}
 		else if (connection instanceof ConnectionObserver) {
-			recorder().incrementErrorsCount(((ConnectionObserver) connection).currentContext(), address);
+			if (proxyAddress == null) {
+				recorder().incrementErrorsCount(((ConnectionObserver) connection).currentContext(), address);
+			}
+			else {
+				recorder().incrementErrorsCount(((ConnectionObserver) connection).currentContext(), address, proxyAddress);
+			}
 		}
 		else {
 			super.recordException(ctx, address);
@@ -80,7 +90,12 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 	protected void recordRead(ChannelHandlerContext ctx, SocketAddress address, long bytes) {
 		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 		if (ops != null) {
-			recorder().recordDataReceived(ops.currentContext(), address, bytes);
+			if (proxyAddress == null) {
+				recorder().recordDataReceived(ops.currentContext(), address, bytes);
+			}
+			else {
+				recorder().recordDataReceived(ops.currentContext(), address, proxyAddress, bytes);
+			}
 		}
 		else {
 			super.recordRead(ctx, address, bytes);
@@ -91,7 +106,12 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 	protected void recordWrite(ChannelHandlerContext ctx, SocketAddress address, long bytes) {
 		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 		if (ops != null) {
-			recorder().recordDataSent(ops.currentContext(), address, bytes);
+			if (proxyAddress == null) {
+				recorder().recordDataSent(ops.currentContext(), address, bytes);
+			}
+			else {
+				recorder().recordDataSent(ops.currentContext(), address, proxyAddress, bytes);
+			}
 		}
 		else {
 			super.recordWrite(ctx, address, bytes);
@@ -100,9 +120,11 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 
 	static final class ContextAwareConnectMetricsHandler extends ChannelOutboundHandlerAdapter {
 
+		final SocketAddress proxyAddress;
 		final ContextAwareChannelMetricsRecorder recorder;
 
-		ContextAwareConnectMetricsHandler(ContextAwareChannelMetricsRecorder recorder) {
+		ContextAwareConnectMetricsHandler(ContextAwareChannelMetricsRecorder recorder, @Nullable SocketAddress proxyAddress) {
+			this.proxyAddress = proxyAddress;
 			this.recorder = recorder;
 		}
 
@@ -120,33 +142,59 @@ final class ContextAwareChannelMetricsHandler extends AbstractChannelMetricsHand
 		void recordConnectTime(ChannelHandlerContext ctx, SocketAddress address, long connectTimeStart, String status) {
 			Connection connection = Connection.from(ctx.channel());
 			if (connection instanceof ConnectionObserver) {
-				recorder.recordConnectTime(
-						((ConnectionObserver) connection).currentContext(),
-						address,
-						Duration.ofNanos(System.nanoTime() - connectTimeStart),
-						status);
+				if (proxyAddress == null) {
+					recorder.recordConnectTime(
+							((ConnectionObserver) connection).currentContext(),
+							address,
+							Duration.ofNanos(System.nanoTime() - connectTimeStart),
+							status);
+				}
+				else {
+					recorder.recordConnectTime(
+							((ConnectionObserver) connection).currentContext(),
+							address,
+							proxyAddress,
+							Duration.ofNanos(System.nanoTime() - connectTimeStart),
+							status);
+				}
 			}
 			else {
-				recorder.recordConnectTime(address, Duration.ofNanos(System.nanoTime() - connectTimeStart), status);
+				if (proxyAddress == null) {
+					recorder.recordConnectTime(address, Duration.ofNanos(System.nanoTime() - connectTimeStart), status);
+				}
+				else {
+					recorder.recordConnectTime(address, proxyAddress, Duration.ofNanos(System.nanoTime() - connectTimeStart), status);
+				}
 			}
 		}
 	}
 
 	static final class TlsMetricsHandler extends ChannelMetricsHandler.TlsMetricsHandler {
 
-		TlsMetricsHandler(ContextAwareChannelMetricsRecorder recorder, @Nullable SocketAddress remoteAddress) {
-			super(recorder, remoteAddress);
+		TlsMetricsHandler(ContextAwareChannelMetricsRecorder recorder, @Nullable SocketAddress remoteAddress,
+				@Nullable SocketAddress proxyAddress) {
+			super(recorder, remoteAddress, proxyAddress);
 		}
 
 		@Override
 		protected void recordTlsHandshakeTime(ChannelHandlerContext ctx, long tlsHandshakeTimeStart, String status) {
 			Connection connection = Connection.from(ctx.channel());
 			if (connection instanceof ConnectionObserver) {
-				((ContextAwareChannelMetricsRecorder) recorder).recordTlsHandshakeTime(
-						((ConnectionObserver) connection).currentContext(),
-						remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress(),
-						Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
-						status);
+				if (proxyAddress == null) {
+					((ContextAwareChannelMetricsRecorder) recorder).recordTlsHandshakeTime(
+							((ConnectionObserver) connection).currentContext(),
+							remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress(),
+							Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
+							status);
+				}
+				else {
+					((ContextAwareChannelMetricsRecorder) recorder).recordTlsHandshakeTime(
+							((ConnectionObserver) connection).currentContext(),
+							remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress(),
+							proxyAddress,
+							Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
+							status);
+				}
 			}
 		}
 	}

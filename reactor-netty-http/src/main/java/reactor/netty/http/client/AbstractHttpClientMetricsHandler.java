@@ -46,6 +46,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	private static final Logger log = Loggers.getLogger(AbstractHttpClientMetricsHandler.class);
 
+	final SocketAddress proxyAddress;
 	final SocketAddress remoteAddress;
 
 	String path;
@@ -72,7 +73,8 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	int lastWriteSeq;
 
-	protected AbstractHttpClientMetricsHandler(SocketAddress remoteAddress, @Nullable Function<String, String> uriTagValue) {
+	protected AbstractHttpClientMetricsHandler(SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress, @Nullable Function<String, String> uriTagValue) {
+		this.proxyAddress = proxyAddress;
 		this.remoteAddress = remoteAddress;
 		this.uriTagValue = uriTagValue;
 	}
@@ -85,6 +87,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		this.dataSentTime = copy.dataSentTime;
 		this.method = copy.method;
 		this.path = copy.path;
+		this.proxyAddress = copy.proxyAddress;
 		this.remoteAddress = copy.remoteAddress;
 		this.status = copy.status;
 		this.uriTagValue = copy.uriTagValue;
@@ -206,24 +209,48 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 	protected abstract HttpClientMetricsRecorder recorder();
 
 	protected void recordException(ChannelHandlerContext ctx) {
-		recorder().incrementErrorsCount(remoteAddress, path != null ? path : resolveUri(ctx));
+		if (proxyAddress == null) {
+			recorder().incrementErrorsCount(remoteAddress, path != null ? path : resolveUri(ctx));
+		}
+		else {
+			recorder().incrementErrorsCount(remoteAddress, proxyAddress, path != null ? path : resolveUri(ctx));
+		}
 	}
 
 	protected void recordRead(Channel channel, SocketAddress address) {
-		recorder().recordDataReceivedTime(address, path, method, status,
-				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+		if (proxyAddress == null) {
+			recorder().recordDataReceivedTime(address, path, method, status,
+					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-		recorder().recordResponseTime(address, path, method, status,
-				Duration.ofNanos(System.nanoTime() - dataSentTime));
+			recorder().recordResponseTime(address, path, method, status,
+					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-		recorder().recordDataReceived(address, path, dataReceived);
+			recorder().recordDataReceived(address, path, dataReceived);
+		}
+		else {
+			recorder().recordDataReceivedTime(address, proxyAddress, path, method, status,
+					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+
+			recorder().recordResponseTime(address, proxyAddress, path, method, status,
+					Duration.ofNanos(System.nanoTime() - dataSentTime));
+
+			recorder().recordDataReceived(address, proxyAddress, path, dataReceived);
+		}
 	}
 
 	protected void recordWrite(SocketAddress address) {
-		recorder().recordDataSentTime(address, path, method,
-				Duration.ofNanos(System.nanoTime() - dataSentTime));
+		if (proxyAddress == null) {
+			recorder().recordDataSentTime(address, path, method,
+					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-		recorder().recordDataSent(address, path, dataSent);
+			recorder().recordDataSent(address, path, dataSent);
+		}
+		else {
+			recorder().recordDataSentTime(address, proxyAddress, path, method,
+					Duration.ofNanos(System.nanoTime() - dataSentTime));
+
+			recorder().recordDataSent(address, proxyAddress, path, dataSent);
+		}
 	}
 
 	protected void reset() {

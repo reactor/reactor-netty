@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataReceivedTime(String uri, String method, Duration time) {
-		MeterKey meterKey = new MeterKey(uri, null, method, null);
+		MeterKey meterKey = new MeterKey(uri, null, null, method, null);
 		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
 				                   .tags(HttpServerMeters.DataReceivedTimeTags.URI.asString(), uri,
@@ -80,7 +80,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSentTime(String uri, String method, String status, Duration time) {
-		MeterKey meterKey = new MeterKey(uri, null, method, status);
+		MeterKey meterKey = new MeterKey(uri, null, null, method, status);
 		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
 				                   .tags(HttpServerMeters.DataSentTimeTags.URI.asString(), uri,
@@ -102,7 +102,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Nullable
 	final Timer getResponseTimeTimer(String name, String uri, String method, String status) {
-		MeterKey meterKey = new MeterKey(uri, null, method, status);
+		MeterKey meterKey = new MeterKey(uri, null, null, method, status);
 		return MapUtils.computeIfAbsent(responseTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
 				                   .tags(URI, uri, METHOD, method, STATUS, status)
