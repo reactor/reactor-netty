@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -175,7 +175,7 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 	 *
 	 * @param loopResources a new loop resources
 	 * @param preferNative should prefer running on epoll, kqueue or similar instead of java NIO
-	 * @return a new {@link UdpServer} reference
+	 * @return a new {@link UdpClient} reference
 	 */
 	@Override
 	public final UdpClient runOn(LoopResources loopResources, boolean preferNative) {
