@@ -48,6 +48,8 @@ include::{examplesdir}/address/Application.java[lines=18..34]
 <2> Configures the `UDP` server port
 ====
 
+NOTE: The port can be specified also with *PORT* environment variable.
+
 == Eager Initialization
 
 By default, the initialization of the `UdpServer` resources happens on demand. This means that the `bind

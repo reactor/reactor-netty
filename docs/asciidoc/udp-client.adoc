@@ -48,6 +48,8 @@ include::{examplesdir}/address/Application.java[lines=18..34]
 <2> Configures the `port` to which this client should connect
 ====
 
+NOTE: The port can be specified also with *PORT* environment variable.
+
 == Eager Initialization
 
 By default, the initialization of the `UdpClient` resources happens on demand. This means that the `connect

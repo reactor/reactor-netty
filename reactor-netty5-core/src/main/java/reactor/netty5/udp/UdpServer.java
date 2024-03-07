@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -214,6 +214,8 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 
 	/**
 	 * The port to which this server should bind.
+	 * If a port is not specified, the default port {@code 12012} is used.
+	 * <p><strong>Note:</strong> The port can be specified also with {@code PORT} environment variable.
 	 *
 	 * @param port The port to bind to.
 	 * @return a new {@link UdpServer} reference

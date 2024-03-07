@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -629,9 +629,25 @@ class HttpClientConnect extends HttpClient {
 
 	static final AsciiString ALL = new AsciiString("*/*");
 
-	static final int DEFAULT_PORT = System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 80;
-
 	static final Logger log = Loggers.getLogger(HttpClientConnect.class);
 
 	static final BiFunction<String, Integer, InetSocketAddress> URI_ADDRESS_MAPPER = AddressUtils::createUnresolved;
+
+	/**
+	 * The default port for reactor-netty HTTP clients. Defaults to 80 but can be tuned via
+	 * the {@code PORT} <b>environment variable</b>.
+	 */
+	static final int DEFAULT_PORT;
+	static {
+		int port;
+		String portStr = null;
+		try {
+			portStr = System.getenv("PORT");
+			port = portStr != null ? Integer.parseInt(portStr) : 80;
+		}
+		catch (NumberFormatException e) {
+			throw new IllegalArgumentException("Invalid environment variable [PORT=" + portStr + "].", e);
+		}
+		DEFAULT_PORT = port;
+	}
 }

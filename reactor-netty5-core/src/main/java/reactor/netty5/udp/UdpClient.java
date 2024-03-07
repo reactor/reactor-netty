@@ -147,6 +147,14 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 		return super.option(key, value);
 	}
 
+	/**
+	 * The port to which this client should connect.
+	 * If a port is not specified, the default port {@code 12012} is used.
+	 * <p><strong>Note:</strong> The port can be specified also with {@code PORT} environment variable.
+	 *
+	 * @param port the port to connect to
+	 * @return a new {@link UdpClient} reference
+	 */
 	@Override
 	public final UdpClient port(int port) {
 		return super.port(port);
