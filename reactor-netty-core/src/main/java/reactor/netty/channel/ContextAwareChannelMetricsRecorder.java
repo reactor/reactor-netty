@@ -30,7 +30,7 @@ import java.time.Duration;
 public abstract class ContextAwareChannelMetricsRecorder implements ChannelMetricsRecorder {
 
 	/**
-	 * Increments the number of the errors that are occurred.
+	 * Increments the number of the errors that have occurred.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux pipeline
 	 * @param remoteAddress The remote peer
@@ -38,7 +38,7 @@ public abstract class ContextAwareChannelMetricsRecorder implements ChannelMetri
 	public abstract void incrementErrorsCount(ContextView contextView, SocketAddress remoteAddress);
 
 	/**
-	 * Increments the number of the errors that are occurred.
+	 * Increments the number of the errors that have occurred.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux pipeline
 	 * @param remoteAddress The remote peer

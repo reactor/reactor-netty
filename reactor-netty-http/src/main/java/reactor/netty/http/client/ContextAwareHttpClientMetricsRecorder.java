@@ -120,7 +120,7 @@ public abstract class ContextAwareHttpClientMetricsRecorder extends ContextAware
 	}
 
 	/**
-	 * Increments the number of the errors that are occurred.
+	 * Increments the number of the errors that have occurred.
 	 *
 	 * @param contextView The current {@link ContextView} associated with the Mono/Flux
 	 * @param remoteAddress The remote peer

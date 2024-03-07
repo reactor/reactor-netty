@@ -66,14 +66,14 @@ public interface ChannelMetricsRecorder {
 	}
 
 	/**
-	 * Increments the number of the errors that are occurred.
+	 * Increments the number of the errors that have occurred.
 	 *
 	 * @param remoteAddress The remote peer
 	 */
 	void incrementErrorsCount(SocketAddress remoteAddress);
 
 	/**
-	 * Increments the number of the errors that are occurred.
+	 * Increments the number of the errors that have occurred.
 	 *
 	 * @param remoteAddress The remote peer
 	 * @param proxyAddress The proxy address

@@ -130,7 +130,7 @@ public interface HttpClientMetricsRecorder extends HttpMetricsRecorder {
 	}
 
 	/**
-	 * Increments the number of the errors that are occurred.
+	 * Increments the number of the errors that have occurred.
 	 *
 	 * @param remoteAddress The remote peer
 	 * @param proxyAddress the proxy address
