@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import static reactor.netty5.Metrics.CONNECT_TIME;
 import static reactor.netty5.Metrics.DATA_RECEIVED;
 import static reactor.netty5.Metrics.DATA_SENT;
 import static reactor.netty5.Metrics.ERRORS;
+import static reactor.netty5.Metrics.PROXY_ADDRESS;
 import static reactor.netty5.Metrics.REGISTRY;
 import static reactor.netty5.Metrics.REMOTE_ADDRESS;
 import static reactor.netty5.Metrics.STATUS;
@@ -49,11 +50,14 @@ import static reactor.netty5.Metrics.formatSocketAddress;
  * @since 0.9
  */
 public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder {
-	final ConcurrentMap<String, DistributionSummary> dataReceivedCache = new ConcurrentHashMap<>();
+	final ConcurrentMap<String, DistributionSummary> dataReceivedCacheNoProxy = new ConcurrentHashMap<>();
+	final ConcurrentMap<MeterKey, DistributionSummary> dataReceivedCache = new ConcurrentHashMap<>();
 
-	final ConcurrentMap<String, DistributionSummary> dataSentCache = new ConcurrentHashMap<>();
+	final ConcurrentMap<String, DistributionSummary> dataSentCacheNoProxy = new ConcurrentHashMap<>();
+	final ConcurrentMap<MeterKey, DistributionSummary> dataSentCache = new ConcurrentHashMap<>();
 
-	final ConcurrentMap<String, Counter> errorsCache = new ConcurrentHashMap<>();
+	final ConcurrentMap<String, Counter> errorsCacheNoProxy = new ConcurrentHashMap<>();
+	final ConcurrentMap<MeterKey, Counter> errorsCache = new ConcurrentHashMap<>();
 
 	final ConcurrentMap<MeterKey, Timer> connectTimeCache = new ConcurrentHashMap<>();
 
@@ -74,7 +78,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
 		String address = formatSocketAddress(remoteAddress);
-		DistributionSummary ds = MapUtils.computeIfAbsent(dataReceivedCache, address,
+		DistributionSummary ds = MapUtils.computeIfAbsent(dataReceivedCacheNoProxy, address,
 				key -> filter(DistributionSummary.builder(name + DATA_RECEIVED)
 				                                 .baseUnit(ChannelMeters.DATA_RECEIVED.getBaseUnit())
 				                                 .tags(ChannelMeters.ChannelMetersTags.URI.asString(), protocol,
@@ -86,9 +90,26 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	@Override
+	public void recordDataReceived(SocketAddress remoteAddress, SocketAddress proxyAddress, long bytes) {
+		String address = formatSocketAddress(remoteAddress);
+		String proxyAddr = formatSocketAddress(proxyAddress);
+		MeterKey meterKey = new MeterKey(null, address, proxyAddr, null, null);
+		DistributionSummary ds = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
+				key -> filter(DistributionSummary.builder(name + DATA_RECEIVED)
+				                                 .baseUnit(ChannelMeters.DATA_RECEIVED.getBaseUnit())
+				                                 .tags(ChannelMeters.ChannelMetersTags.URI.asString(), protocol,
+				                                       ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address,
+				                                       ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddr)
+				                                 .register(REGISTRY)));
+		if (ds != null) {
+			ds.record(bytes);
+		}
+	}
+
+	@Override
 	public void recordDataSent(SocketAddress remoteAddress, long bytes) {
 		String address = formatSocketAddress(remoteAddress);
-		DistributionSummary ds = MapUtils.computeIfAbsent(dataSentCache, address,
+		DistributionSummary ds = MapUtils.computeIfAbsent(dataSentCacheNoProxy, address,
 				key -> filter(DistributionSummary.builder(name + DATA_SENT)
 				                                 .baseUnit(ChannelMeters.DATA_SENT.getBaseUnit())
 				                                 .tags(ChannelMeters.ChannelMetersTags.URI.asString(), protocol,
@@ -100,12 +121,45 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	@Override
+	public void recordDataSent(SocketAddress remoteAddress, SocketAddress proxyAddress, long bytes) {
+		String address = formatSocketAddress(remoteAddress);
+		String proxyAddr = formatSocketAddress(proxyAddress);
+		MeterKey meterKey = new MeterKey(null, address, proxyAddr, null, null);
+		DistributionSummary ds = MapUtils.computeIfAbsent(dataSentCache, meterKey,
+				key -> filter(DistributionSummary.builder(name + DATA_SENT)
+				                                 .baseUnit(ChannelMeters.DATA_SENT.getBaseUnit())
+				                                 .tags(ChannelMeters.ChannelMetersTags.URI.asString(), protocol,
+				                                       ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address,
+				                                       ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddr)
+				                                 .register(REGISTRY)));
+		if (ds != null) {
+			ds.record(bytes);
+		}
+	}
+
+	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress) {
 		String address = formatSocketAddress(remoteAddress);
-		Counter c = MapUtils.computeIfAbsent(errorsCache, address,
+		Counter c = MapUtils.computeIfAbsent(errorsCacheNoProxy, address,
 				key -> filter(Counter.builder(name + ERRORS)
 				                     .tags(ChannelMeters.ChannelMetersTags.URI.asString(), protocol,
 				                           ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address)
+				                     .register(REGISTRY)));
+		if (c != null) {
+			c.increment();
+		}
+	}
+
+	@Override
+	public void incrementErrorsCount(SocketAddress remoteAddress, SocketAddress proxyAddress) {
+		String address = formatSocketAddress(remoteAddress);
+		String proxyAddr = formatSocketAddress(proxyAddress);
+		MeterKey meterKey = new MeterKey(null, address, proxyAddr, null, null);
+		Counter c = MapUtils.computeIfAbsent(errorsCache, meterKey,
+				key -> filter(Counter.builder(name + ERRORS)
+				                     .tags(ChannelMeters.ChannelMetersTags.URI.asString(), protocol,
+				                           ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address,
+				                           ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddr)
 				                     .register(REGISTRY)));
 		if (c != null) {
 			c.increment();
@@ -123,10 +177,29 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	@Nullable
 	public final Timer getTlsHandshakeTimer(String name, String address, String status) {
-		MeterKey meterKey = new MeterKey(null, address, null, status);
+		MeterKey meterKey = new MeterKey(null, address, null, null, status);
 		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
 				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
+				                   .register(REGISTRY)));
+	}
+
+	@Override
+	public void recordTlsHandshakeTime(SocketAddress remoteAddress, SocketAddress proxyAddress, Duration time, String status) {
+		String address = formatSocketAddress(remoteAddress);
+		String proxyAddr = formatSocketAddress(proxyAddress);
+		Timer timer = getTlsHandshakeTimer(name + TLS_HANDSHAKE_TIME, address, proxyAddr, status);
+		if (timer != null) {
+			timer.record(time);
+		}
+	}
+
+	@Nullable
+	public final Timer getTlsHandshakeTimer(String name, String address, String proxyAddr, String status) {
+		MeterKey meterKey = new MeterKey(null, address, proxyAddr, null, status);
+		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
+				key -> filter(Timer.builder(name)
+				                   .tags(REMOTE_ADDRESS, address, PROXY_ADDRESS, proxyAddr, STATUS, status)
 				                   .register(REGISTRY)));
 	}
 
@@ -141,10 +214,29 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	@Nullable
 	final Timer getConnectTimer(String name, String address, String status) {
-		MeterKey meterKey = new MeterKey(null, address, null, status);
+		MeterKey meterKey = new MeterKey(null, address, null, null, status);
 		return MapUtils.computeIfAbsent(connectTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
 				                   .tags(REMOTE_ADDRESS, address, STATUS, status)
+				                   .register(REGISTRY)));
+	}
+
+	@Override
+	public void recordConnectTime(SocketAddress remoteAddress, SocketAddress proxyAddress, Duration time, String status) {
+		String address = formatSocketAddress(remoteAddress);
+		String proxyAddr = formatSocketAddress(proxyAddress);
+		Timer timer = getConnectTimer(name + CONNECT_TIME, address, proxyAddr, status);
+		if (timer != null) {
+			timer.record(time);
+		}
+	}
+
+	@Nullable
+	final Timer getConnectTimer(String name, String address, String proxyAddr, String status) {
+		MeterKey meterKey = new MeterKey(null, address, proxyAddr, null, status);
+		return MapUtils.computeIfAbsent(connectTimeCache, meterKey,
+				key -> filter(Timer.builder(name)
+				                   .tags(REMOTE_ADDRESS, address, PROXY_ADDRESS, proxyAddr, STATUS, status)
 				                   .register(REGISTRY)));
 	}
 
@@ -159,7 +251,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	@Nullable
 	public final Timer getResolveAddressTimer(String name, String address, String status) {
-		MeterKey meterKey = new MeterKey(null, address, null, status);
+		MeterKey meterKey = new MeterKey(null, address, null, null, status);
 		return MapUtils.computeIfAbsent(addressResolverTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
 				                   .tags(REMOTE_ADDRESS, address, STATUS, status)

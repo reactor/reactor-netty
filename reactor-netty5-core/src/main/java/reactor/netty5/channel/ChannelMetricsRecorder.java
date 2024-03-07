@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,18 @@ public interface ChannelMetricsRecorder {
 	void recordDataReceived(SocketAddress remoteAddress, long bytes);
 
 	/**
+	 * Records the amount of the data that is received, in bytes.
+	 *
+	 * @param remoteAddress The remote peer
+	 * @param proxyAddress The proxy address
+	 * @param bytes The amount of the data that is received, in bytes
+	 * @since 1.1.17
+	 */
+	default void recordDataReceived(SocketAddress remoteAddress, SocketAddress proxyAddress, long bytes) {
+		recordDataReceived(remoteAddress, bytes);
+	}
+
+	/**
 	 * Records the amount of the data that is sent, in bytes.
 	 *
 	 * @param remoteAddress The remote peer
@@ -42,11 +54,34 @@ public interface ChannelMetricsRecorder {
 	void recordDataSent(SocketAddress remoteAddress, long bytes);
 
 	/**
-	 * Increments the number of the errors that are occurred.
+	 * Records the amount of the data that is sent, in bytes.
+	 *
+	 * @param remoteAddress The remote peer
+	 * @param proxyAddress The proxy address
+	 * @param bytes The amount of the data that is sent, in bytes
+	 * @since 1.1.17
+	 */
+	default void recordDataSent(SocketAddress remoteAddress, SocketAddress proxyAddress, long bytes) {
+		recordDataSent(remoteAddress, bytes);
+	}
+
+	/**
+	 * Increments the number of the errors that have occurred.
 	 *
 	 * @param remoteAddress The remote peer
 	 */
 	void incrementErrorsCount(SocketAddress remoteAddress);
+
+	/**
+	 * Increments the number of the errors that have occurred.
+	 *
+	 * @param remoteAddress The remote peer
+	 * @param proxyAddress The proxy address
+	 * @since 1.1.17
+	 */
+	default void incrementErrorsCount(SocketAddress remoteAddress, SocketAddress proxyAddress) {
+		incrementErrorsCount(remoteAddress);
+	}
 
 	/**
 	 * Records the time that is spent for TLS handshake.
@@ -58,6 +93,19 @@ public interface ChannelMetricsRecorder {
 	void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status);
 
 	/**
+	 * Records the time that is spent for TLS handshake.
+	 *
+	 * @param remoteAddress The remote peer
+	 * @param proxyAddress The proxy address
+	 * @param time the time in nanoseconds that is spent for TLS handshake
+	 * @param status the status of the operation
+	 * @since 1.1.17
+	 */
+	default void recordTlsHandshakeTime(SocketAddress remoteAddress, SocketAddress proxyAddress, Duration time, String status) {
+		recordTlsHandshakeTime(remoteAddress, time, status);
+	}
+
+	/**
 	 * Records the time that is spent for connecting to the remote address.
 	 * Relevant only when on the client
 	 *
@@ -66,6 +114,20 @@ public interface ChannelMetricsRecorder {
 	 * @param status the status of the operation
 	 */
 	void recordConnectTime(SocketAddress remoteAddress, Duration time, String status);
+
+	/**
+	 * Records the time that is spent for connecting to the remote address.
+	 * Relevant only when on the client
+	 *
+	 * @param remoteAddress The remote peer
+	 * @param proxyAddress The proxy address
+	 * @param time the time in nanoseconds that is spent for connecting to the remote address
+	 * @param status the status of the operation
+	 * @since 1.1.17
+	 */
+	default void recordConnectTime(SocketAddress remoteAddress, SocketAddress proxyAddress, Duration time, String status) {
+		recordConnectTime(remoteAddress, time, status);
+	}
 
 	/**
 	 * Records the time that is spent for resolving the remote address.

@@ -31,8 +31,9 @@ final class HttpClientMetricsHandler extends AbstractHttpClientMetricsHandler {
 
 	HttpClientMetricsHandler(HttpClientMetricsRecorder recorder,
 			SocketAddress remoteAddress,
+			@Nullable SocketAddress proxyAddress,
 			@Nullable Function<String, String> uriTagValue) {
-		super(remoteAddress, uriTagValue);
+		super(remoteAddress, proxyAddress, uriTagValue);
 		this.recorder = recorder;
 	}
 
