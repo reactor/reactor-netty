@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,13 +113,6 @@ final class QuicClientConnect extends QuicClient {
 		Objects.requireNonNull(config.remoteAddress, "remoteAddress");
 		Objects.requireNonNull(config.sslEngineProvider, "sslEngineProvider");
 	}
-
-	/**
-	 * The default port for reactor-netty QUIC clients. Defaults to 12012 but can be tuned via
-	 * the {@code QUIC_PORT} <b>environment variable</b>.
-	 */
-	static final int DEFAULT_PORT =
-			System.getenv("QUIC_PORT") != null ? Integer.parseInt(System.getenv("QUIC_PORT")) : 12012;
 
 	static final class DisposableConnect implements CoreSubscriber<Channel>, Disposable {
 
@@ -278,5 +271,23 @@ final class QuicClientConnect extends QuicClient {
 			sink.error(error);
 			childObs.onUncaughtException(connection, error);
 		}
+	}
+
+	/**
+	 * The default port for reactor-netty QUIC clients. Defaults to 12012 but can be tuned via
+	 * the {@code QUIC_PORT} <b>environment variable</b>.
+	 */
+	static final int DEFAULT_PORT;
+	static {
+		int port;
+		String portStr = null;
+		try {
+			portStr = System.getenv("QUIC_PORT");
+			port = portStr != null ? Integer.parseInt(portStr) : 12012;
+		}
+		catch (NumberFormatException e) {
+			throw new IllegalArgumentException("Invalid environment variable [QUIC_PORT=" + portStr + "].", e);
+		}
+		DEFAULT_PORT = port;
 	}
 }
