@@ -175,7 +175,7 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 	 *
 	 * @param loopResources a new loop resources
 	 * @param preferNative should prefer running on epoll, kqueue or similar instead of java NIO
-	 * @return a new {@link UdpServer} reference
+	 * @return a new {@link UdpClient} reference
 	 */
 	@Override
 	public final UdpClient runOn(LoopResources loopResources, boolean preferNative) {
