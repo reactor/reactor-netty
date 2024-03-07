@@ -130,12 +130,15 @@ Issues related to TCP keep-alive configuration on various load balancers were re
 *** https://github.com/reactor/reactor-netty/issues/764#issuecomment-1011373248
 *** https://github.com/reactor/reactor-netty/issues/1510
 *** https://github.com/reactor/reactor-netty/issues/1843
-* Check the target server. Are there configurations related to any of the following?
-** idle timeout (the connection is closed when there is no incoming data for a certain period of time)
-** limit for buffering data in memory
-** multipart exceeds the max file size limit
-** bad request
-** max keep alive requests (the connection is closed when the requests reach the configured maximum number)
+* Check the target server.
+** Are there configurations related to any of the following?
+*** idle timeout (the connection is closed when there is no incoming data for a certain period of time)
+*** limit for buffering data in memory
+*** multipart exceeds the max file size limit
+*** bad request
+*** max keep alive requests (the connection is closed when the requests reach the configured maximum number)
+*** rate limit configuration
+** Is the target server in a shutting down state?
 
 Consider checking <<timeout-configuration>>. The section describes various timeout configuration options that are available for Reactor Netty clients.
 Configuring a proper timeout may improve or solve issues in the communication process.
