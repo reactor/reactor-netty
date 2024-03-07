@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(uri, address, null, null);
+		MeterKey meterKey = new MeterKey(uri, address, null, null, null);
 		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
 				                                 .baseUnit(ChannelMeters.DATA_RECEIVED.getBaseUnit())
@@ -75,7 +75,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(uri, address, null, null);
+		MeterKey meterKey = new MeterKey(uri, address, null, null, null);
 		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_SENT)
 				                                 .baseUnit(ChannelMeters.DATA_SENT.getBaseUnit())
@@ -89,7 +89,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(uri, address, null, null);
+		MeterKey meterKey = new MeterKey(uri, address, null, null, null);
 		Counter errors = MapUtils.computeIfAbsent(errorsCache, meterKey,
 				key -> filter(Counter.builder(name() + ERRORS)
 				                     .tags(REMOTE_ADDRESS.asString(), address, URI.asString(), uri)

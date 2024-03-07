@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -119,6 +119,16 @@ public enum ChannelMeters implements MeterDocumentation {
 	};
 
 	public enum ChannelMetersTags implements KeyName {
+
+		/**
+		 * Proxy address, when there is a proxy configured.
+		 */
+		PROXY_ADDRESS {
+			@Override
+			public String asString() {
+				return "proxy.address";
+			}
+		},
 
 		/**
 		 * Remote address.

@@ -41,6 +41,7 @@ import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.PooledConnectionProvider;
+import reactor.netty.transport.ClientTransportConfig;
 import reactor.netty.transport.TransportConfig;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
 import reactor.netty.internal.shaded.reactor.pool.PooledRef;
@@ -118,13 +119,15 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			Context currentContext) {
 		boolean acceptGzip = false;
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
+		SocketAddress proxyAddress = ((ClientTransportConfig<?>) config).proxyProvider() != null ?
+				((ClientTransportConfig<?>) config).proxyProvider().getAddress().get() : null;
 		Function<String, String> uriTagValue = null;
 		if (config instanceof HttpClientConfig) {
 			acceptGzip = ((HttpClientConfig) config).acceptGzip;
 			uriTagValue = ((HttpClientConfig) config).uriTagValue;
 		}
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, remoteAddress, sink, currentContext, uriTagValue);
+				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, proxyAddress, remoteAddress, sink, currentContext, uriTagValue);
 	}
 
 	@Override
@@ -238,6 +241,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final ChannelMetricsRecorder metricsRecorder;
 		final long pendingAcquireTimeout;
 		final InstrumentedPool<Connection> pool;
+		final SocketAddress proxyAddress;
 		final boolean retried;
 		final MonoSink<Connection> sink;
 		final Function<String, String> uriTagValue;
@@ -253,6 +257,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				long pendingAcquireTimeout,
 				InstrumentedPool<Connection> pool,
+				@Nullable SocketAddress proxyAddress,
 				@Nullable SocketAddress remoteAddress,
 				MonoSink<Connection> sink,
 				Context currentContext,
@@ -265,6 +270,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.metricsRecorder = metricsRecorder;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
 			this.pool = pool;
+			this.proxyAddress = proxyAddress;
 			this.remoteAddress = remoteAddress;
 			this.retried = false;
 			this.sink = sink;
@@ -280,6 +286,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.metricsRecorder = parent.metricsRecorder;
 			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
 			this.pool = parent.pool;
+			this.proxyAddress = parent.proxyAddress;
 			this.remoteAddress = parent.remoteAddress;
 			this.retried = true;
 			this.sink = parent.sink;
@@ -405,7 +412,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 						setChannelContext(ch, currentContext());
 					}
 					HttpClientConfig.addStreamHandlers(ch, obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
-							opsFactory, acceptGzip, metricsRecorder, remoteAddress, -1, uriTagValue);
+							opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
 
 					ChannelOperations<?, ?> ops = ChannelOperations.get(ch);
 					if (ops != null) {

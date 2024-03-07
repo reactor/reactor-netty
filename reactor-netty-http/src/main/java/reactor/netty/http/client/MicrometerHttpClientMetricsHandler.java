@@ -36,6 +36,7 @@ import java.util.function.Supplier;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.UNKNOWN;
+import static reactor.netty.Metrics.formatSocketAddress;
 import static reactor.netty.Metrics.updateChannelContext;
 import static reactor.netty.ReactorNetty.setChannelContext;
 import static reactor.netty.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.HTTP_STATUS_CODE;
@@ -44,6 +45,7 @@ import static reactor.netty.http.client.HttpClientObservations.ResponseTimeHighC
 import static reactor.netty.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.NET_PEER_PORT;
 import static reactor.netty.http.client.HttpClientObservations.ResponseTimeHighCardinalityTags.REACTOR_NETTY_TYPE;
 import static reactor.netty.http.client.HttpClientObservations.ResponseTimeLowCardinalityTags.METHOD;
+import static reactor.netty.http.client.HttpClientObservations.ResponseTimeLowCardinalityTags.PROXY_ADDRESS;
 import static reactor.netty.http.client.HttpClientObservations.ResponseTimeLowCardinalityTags.REMOTE_ADDRESS;
 import static reactor.netty.http.client.HttpClientObservations.ResponseTimeLowCardinalityTags.STATUS;
 import static reactor.netty.http.client.HttpClientObservations.ResponseTimeLowCardinalityTags.URI;
@@ -64,8 +66,9 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 	MicrometerHttpClientMetricsHandler(MicrometerHttpClientMetricsRecorder recorder,
 			SocketAddress remoteAddress,
+			@Nullable SocketAddress proxyAddress,
 			@Nullable Function<String, String> uriTagValue) {
-		super(remoteAddress, uriTagValue);
+		super(remoteAddress, proxyAddress, uriTagValue);
 		this.recorder = recorder;
 	}
 
@@ -85,10 +88,18 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 	@Override
 	protected void recordRead(Channel channel, SocketAddress address) {
-		recorder().recordDataReceivedTime(address, path, method, status,
-				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+		if (proxyAddress == null) {
+			recorder().recordDataReceivedTime(address, path, method, status,
+					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-		recorder().recordDataReceived(address, path, dataReceived);
+			recorder().recordDataReceived(address, path, dataReceived);
+		}
+		else {
+			recorder().recordDataReceivedTime(address, proxyAddress, path, method, status,
+					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+
+			recorder().recordDataReceived(address, proxyAddress, path, dataReceived);
+		}
 
 		// Cannot invoke the recorder anymore:
 		// 1. The recorder is one instance only, it is invoked for all requests that can happen
@@ -122,7 +133,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	protected void startWrite(HttpRequest msg, Channel channel, SocketAddress address) {
 		super.startWrite(msg, channel, address);
 
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, path, address);
+		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, path, address, proxyAddress);
 		responseTimeObservation = Observation.createNotStarted(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		parentContextView = updateChannelContext(channel, responseTimeObservation);
 		responseTimeObservation.start();
@@ -144,12 +155,14 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		final String netPeerName;
 		final String netPeerPort;
 		final String path;
+		final String proxyAddress;
 		final MicrometerHttpClientMetricsRecorder recorder;
 
 		// status might not be known beforehand
 		String status = UNKNOWN;
 
-		ResponseTimeHandlerContext(MicrometerHttpClientMetricsRecorder recorder, HttpRequest request, String path, SocketAddress remoteAddress) {
+		ResponseTimeHandlerContext(MicrometerHttpClientMetricsRecorder recorder, HttpRequest request, String path,
+				SocketAddress remoteAddress, SocketAddress proxyAddress) {
 			super((carrier, key, value) -> Objects.requireNonNull(carrier).headers().set(key, value));
 			this.recorder = recorder;
 			this.method = request.method().name();
@@ -163,6 +176,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 				this.netPeerPort = "";
 			}
 			this.path = path;
+			this.proxyAddress = formatSocketAddress(proxyAddress);
 			setCarrier(request);
 			setContextualName(HTTP_PREFIX + this.method);
 		}
@@ -174,7 +188,12 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public Timer getTimer() {
-			return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, path, method, status);
+			if (proxyAddress == null) {
+				return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, path, method, status);
+			}
+			else {
+				return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress, path, method, status);
+			}
 		}
 
 		@Override
@@ -186,8 +205,15 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
-					STATUS.asString(), status, URI.asString(), path);
+			if (proxyAddress == null) {
+				return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
+						STATUS.asString(), status, URI.asString(), path);
+			}
+			else {
+				return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
+						PROXY_ADDRESS.asString(), proxyAddress,
+						STATUS.asString(), status, URI.asString(), path);
+			}
 		}
 	}
 }

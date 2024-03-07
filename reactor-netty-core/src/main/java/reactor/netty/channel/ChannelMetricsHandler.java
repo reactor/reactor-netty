@@ -46,12 +46,12 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
 	@Override
 	public ChannelHandler connectMetricsHandler() {
-		return new ConnectMetricsHandler(recorder());
+		return new ConnectMetricsHandler(recorder(), proxyAddress);
 	}
 
 	@Override
 	public ChannelHandler tlsMetricsHandler() {
-		return new TlsMetricsHandler(recorder, remoteAddress);
+		return new TlsMetricsHandler(recorder, remoteAddress, proxyAddress);
 	}
 
 	@Override
@@ -61,9 +61,11 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 
 	static final class ConnectMetricsHandler extends ChannelOutboundHandlerAdapter {
 
+		final SocketAddress proxyAddress;
 		final ChannelMetricsRecorder recorder;
 
-		ConnectMetricsHandler(ChannelMetricsRecorder recorder) {
+		ConnectMetricsHandler(ChannelMetricsRecorder recorder, @Nullable SocketAddress proxyAddress) {
+			this.proxyAddress = proxyAddress;
 			this.recorder = recorder;
 		}
 
@@ -75,22 +77,34 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 			promise.addListener(future -> {
 				ctx.pipeline().remove(this);
 
-				recorder.recordConnectTime(
-						remoteAddress,
-						Duration.ofNanos(System.nanoTime() - connectTimeStart),
-						future.isSuccess() ? SUCCESS : ERROR);
+				if (proxyAddress == null) {
+					recorder.recordConnectTime(
+							remoteAddress,
+							Duration.ofNanos(System.nanoTime() - connectTimeStart),
+							future.isSuccess() ? SUCCESS : ERROR);
+				}
+				else {
+					recorder.recordConnectTime(
+							remoteAddress,
+							proxyAddress,
+							Duration.ofNanos(System.nanoTime() - connectTimeStart),
+							future.isSuccess() ? SUCCESS : ERROR);
+				}
 			});
 		}
 	}
 
 	static class TlsMetricsHandler extends ChannelInboundHandlerAdapter {
 
+		protected final SocketAddress proxyAddress;
 		protected final ChannelMetricsRecorder recorder;
 		protected final SocketAddress remoteAddress;
 
 		boolean listenerAdded;
 
-		TlsMetricsHandler(ChannelMetricsRecorder recorder, @Nullable SocketAddress remoteAddress) {
+		TlsMetricsHandler(ChannelMetricsRecorder recorder, @Nullable SocketAddress remoteAddress,
+				@Nullable SocketAddress proxyAddress) {
+			this.proxyAddress = proxyAddress;
 			this.recorder = recorder;
 			this.remoteAddress = remoteAddress;
 		}
@@ -110,10 +124,19 @@ public class ChannelMetricsHandler extends AbstractChannelMetricsHandler {
 		}
 
 		protected void recordTlsHandshakeTime(ChannelHandlerContext ctx, long tlsHandshakeTimeStart, String status) {
-			recorder.recordTlsHandshakeTime(
-					remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress(),
-					Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
-					status);
+			if (proxyAddress == null) {
+				recorder.recordTlsHandshakeTime(
+						remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress(),
+						Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
+						status);
+			}
+			else {
+				recorder.recordTlsHandshakeTime(
+						remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress(),
+						proxyAddress,
+						Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
+						status);
+			}
 		}
 
 		private void addListener(ChannelHandlerContext ctx) {

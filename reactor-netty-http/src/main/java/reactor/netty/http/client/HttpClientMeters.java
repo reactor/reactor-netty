@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,6 +80,16 @@ enum HttpClientMeters implements MeterDocumentation {
 		},
 
 		/**
+		 * Proxy address, when there is a proxy configured.
+		 */
+		PROXY_ADDRESS {
+			@Override
+			public String asString() {
+				return "proxy.address";
+			}
+		},
+
+		/**
 		 * Remote address.
 		 */
 		REMOTE_ADDRESS {
@@ -119,6 +129,16 @@ enum HttpClientMeters implements MeterDocumentation {
 			@Override
 			public String asString() {
 				return "method";
+			}
+		},
+
+		/**
+		 * Proxy address, when there is a proxy configured.
+		 */
+		PROXY_ADDRESS {
+			@Override
+			public String asString() {
+				return "proxy.address";
 			}
 		},
 

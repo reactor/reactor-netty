@@ -64,6 +64,7 @@ import static reactor.netty.Metrics.MAX_PENDING_CONNECTIONS;
 import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.PENDING_CONNECTIONS;
+import static reactor.netty.Metrics.PROXY_ADDRESS;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
@@ -370,23 +371,24 @@ class HttpClientProxyTest extends BaseHttpTest {
 					    .verify(Duration.ofSeconds(30));
 
 			String serverAddress = disposableServer.host() + ":" + disposableServer.port();
+			String proxyAddress = "localhost:" + hoverfly.getHoverflyConfig().getProxyPort();
 
-			String[] summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "/"};
+			String[] summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, proxyAddress, URI, "/"};
 			assertDistributionSummary(registry, HTTP_CLIENT_PREFIX + DATA_RECEIVED, summaryTags1).isNotNull();
 			assertDistributionSummary(registry, HTTP_CLIENT_PREFIX + DATA_SENT, summaryTags1).isNotNull();
 
-			String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
+			String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, proxyAddress, URI, "http"};
 			assertDistributionSummary(registry, HTTP_CLIENT_PREFIX + DATA_RECEIVED, summaryTags2).isNotNull();
 			assertDistributionSummary(registry, HTTP_CLIENT_PREFIX + DATA_SENT, summaryTags2).isNotNull();
 
-			String[] timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, SUCCESS};
+			String[] timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, proxyAddress, STATUS, SUCCESS};
 			assertTimer(registry, HTTP_CLIENT_PREFIX + CONNECT_TIME, timerTags1).isNotNull();
 
-			String[] timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "200", URI, "/", METHOD, "GET"};
+			String[] timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, proxyAddress, STATUS, "200", URI, "/", METHOD, "GET"};
 			assertTimer(registry, HTTP_CLIENT_PREFIX + DATA_RECEIVED_TIME, timerTags2).isNotNull();
 			assertTimer(registry, HTTP_CLIENT_PREFIX + RESPONSE_TIME, timerTags2).isNotNull();
 
-			String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "/", METHOD, "GET"};
+			String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, proxyAddress, URI, "/", METHOD, "GET"};
 			assertTimer(registry, HTTP_CLIENT_PREFIX + DATA_SENT_TIME, timerTags3).isNotNull();
 
 			String[] gaugeTags = new String[] {REMOTE_ADDRESS, serverAddress, NAME, "http"};

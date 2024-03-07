@@ -39,12 +39,14 @@ import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.UNKNOWN;
+import static reactor.netty.Metrics.formatSocketAddress;
 import static reactor.netty.Metrics.updateChannelContext;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeHighCardinalityTags.NET_PEER_NAME;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeHighCardinalityTags.NET_PEER_PORT;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_PROTOCOL;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_STATUS;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeHighCardinalityTags.REACTOR_NETTY_TYPE;
+import static reactor.netty.channel.ConnectObservations.ConnectTimeLowCardinalityTags.PROXY_ADDRESS;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeLowCardinalityTags.REMOTE_ADDRESS;
 import static reactor.netty.channel.ConnectObservations.ConnectTimeLowCardinalityTags.STATUS;
 
@@ -67,11 +69,11 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 	@Override
 	public ChannelHandler connectMetricsHandler() {
-		return new ConnectMetricsHandler(recorder);
+		return new ConnectMetricsHandler(recorder, proxyAddress);
 	}
 	@Override
 	public ChannelHandler tlsMetricsHandler() {
-		return new TlsMetricsHandler(recorder, onServer, remoteAddress);
+		return new TlsMetricsHandler(recorder, onServer, remoteAddress, proxyAddress);
 	}
 
 	@Override
@@ -87,6 +89,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		static final String CONTEXTUAL_NAME = "connect";
 		static final String TYPE = "client";
 
+		final String proxyAddress;
 		final MicrometerChannelMetricsRecorder recorder;
 
 		// remote address and status are not known beforehand
@@ -95,7 +98,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		String status = UNKNOWN;
 		ContextView parentContextView;
 
-		ConnectMetricsHandler(MicrometerChannelMetricsRecorder recorder) {
+		ConnectMetricsHandler(MicrometerChannelMetricsRecorder recorder, @Nullable SocketAddress proxyAddress) {
+			this.proxyAddress = formatSocketAddress(proxyAddress);
 			this.recorder = recorder;
 		}
 
@@ -106,7 +110,12 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public Timer getTimer() {
-			return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, status);
+			if (proxyAddress == null) {
+				return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, status);
+			}
+			else {
+				return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress, status);
+			}
 		}
 
 		@Override
@@ -196,7 +205,13 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort, STATUS.asString(), status);
+			if (proxyAddress == null) {
+				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort, STATUS.asString(), status);
+			}
+			else {
+				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
+						PROXY_ADDRESS.asString(), proxyAddress, STATUS.asString(), status);
+			}
 		}
 
 		@Override
@@ -228,6 +243,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		static final String TYPE_CLIENT = "client";
 		static final String TYPE_SERVER = "server";
 
+		final String proxyAddress;
 		final MicrometerChannelMetricsRecorder recorder;
 		final SocketAddress remoteAddress;
 		final String type;
@@ -239,7 +255,9 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		String status = UNKNOWN;
 		ContextView parentContextView;
 
-		TlsMetricsHandler(MicrometerChannelMetricsRecorder recorder, boolean onServer, @Nullable SocketAddress remoteAddress) {
+		TlsMetricsHandler(MicrometerChannelMetricsRecorder recorder, boolean onServer,
+				@Nullable SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress) {
+			this.proxyAddress = formatSocketAddress(proxyAddress);
 			this.recorder = recorder;
 			this.remoteAddress = remoteAddress;
 			this.type = onServer ? TYPE_SERVER : TYPE_CLIENT;
@@ -331,7 +349,13 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ':' + netPeerPort, STATUS.asString(), status);
+			if (proxyAddress == null) {
+				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ':' + netPeerPort, STATUS.asString(), status);
+			}
+			else {
+				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ':' + netPeerPort,
+						PROXY_ADDRESS.asString(), proxyAddress, STATUS.asString(), status);
+			}
 		}
 
 		@Override
@@ -351,7 +375,12 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public Timer getTimer() {
-			return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, status);
+			if (proxyAddress == null) {
+				return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, status);
+			}
+			else {
+				return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, proxyAddress, status);
+			}
 		}
 	}
 }
