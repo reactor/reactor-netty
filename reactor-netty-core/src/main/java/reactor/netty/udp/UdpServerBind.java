@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,8 +72,20 @@ final class UdpServerBind extends UdpServer {
 	}
 
 	/**
-	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
+	 * The default port for reactor-netty UDP servers. Defaults to 12012 but can be tuned via
 	 * the {@code PORT} <b>environment variable</b>.
 	 */
-	static final int DEFAULT_PORT = System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 12012;
+	static final int DEFAULT_PORT;
+	static {
+		int port;
+		String portStr = null;
+		try {
+			portStr = System.getenv("PORT");
+			port = portStr != null ? Integer.parseInt(portStr) : 12012;
+		}
+		catch (NumberFormatException e) {
+			throw new IllegalArgumentException("Invalid environment variable [PORT=" + portStr + "].", e);
+		}
+		DEFAULT_PORT = port;
+	}
 }
