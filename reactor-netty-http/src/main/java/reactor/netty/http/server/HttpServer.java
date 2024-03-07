@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -787,6 +787,13 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		return this;
 	}
 
+	/**
+	 * The port to which this server should bind.
+	 * If a port is not specified, the system picks up an ephemeral port.
+	 *
+	 * @param port The port to bind to.
+	 * @return a new {@link HttpServer}
+	 */
 	@Override
 	public final HttpServer port(int port) {
 		return super.port(port);
