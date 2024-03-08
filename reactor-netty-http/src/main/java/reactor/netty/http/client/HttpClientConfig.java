@@ -42,6 +42,7 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpContentDecompressor;
+import io.netty.handler.codec.http.HttpDecoderConfig;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
@@ -634,16 +635,15 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			@Nullable SocketAddress proxyAddress,
 			SocketAddress remoteAddress,
 			@Nullable Function<String, String> uriTagValue) {
+		HttpDecoderConfig decoderConfig = new HttpDecoderConfig();
+		decoderConfig.setMaxInitialLineLength(decoder.maxInitialLineLength())
+		             .setMaxHeaderSize(decoder.maxHeaderSize())
+		             .setMaxChunkSize(decoder.maxChunkSize())
+		             .setValidateHeaders(decoder.validateHeaders())
+		             .setInitialBufferSize(decoder.initialBufferSize())
+		             .setAllowDuplicateContentLengths(decoder.allowDuplicateContentLengths());
 		HttpClientCodec httpClientCodec =
-				new HttpClientCodec(
-						decoder.maxInitialLineLength(),
-						decoder.maxHeaderSize(),
-						decoder.maxChunkSize(),
-						decoder.failOnMissingResponse,
-						decoder.validateHeaders(),
-						decoder.initialBufferSize(),
-						decoder.parseHttpAfterConnectRequest,
-						decoder.allowDuplicateContentLengths());
+				new HttpClientCodec(decoderConfig, decoder.failOnMissingResponse, decoder.parseHttpAfterConnectRequest);
 
 		Http2FrameCodecBuilder http2FrameCodecBuilder =
 				Http2FrameCodecBuilder.forClient()
@@ -697,17 +697,16 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			@Nullable SocketAddress proxyAddress,
 			SocketAddress remoteAddress,
 			@Nullable Function<String, String> uriTagValue) {
+		HttpDecoderConfig decoderConfig = new HttpDecoderConfig();
+		decoderConfig.setMaxInitialLineLength(decoder.maxInitialLineLength())
+		             .setMaxHeaderSize(decoder.maxHeaderSize())
+		             .setMaxChunkSize(decoder.maxChunkSize())
+		             .setValidateHeaders(decoder.validateHeaders())
+		             .setInitialBufferSize(decoder.initialBufferSize())
+		             .setAllowDuplicateContentLengths(decoder.allowDuplicateContentLengths());
 		p.addBefore(NettyPipeline.ReactiveBridge,
 				NettyPipeline.HttpCodec,
-				new HttpClientCodec(
-						decoder.maxInitialLineLength(),
-						decoder.maxHeaderSize(),
-						decoder.maxChunkSize(),
-						decoder.failOnMissingResponse,
-						decoder.validateHeaders(),
-						decoder.initialBufferSize(),
-						decoder.parseHttpAfterConnectRequest,
-						decoder.allowDuplicateContentLengths()));
+				new HttpClientCodec(decoderConfig, decoder.failOnMissingResponse, decoder.parseHttpAfterConnectRequest));
 
 		if (acceptGzip) {
 			p.addAfter(NettyPipeline.HttpCodec, NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
