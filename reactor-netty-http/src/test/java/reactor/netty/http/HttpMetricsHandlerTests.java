@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -98,6 +99,7 @@ import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.DATA_SENT_TIME;
+import static reactor.netty.Metrics.ERROR;
 import static reactor.netty.Metrics.ERRORS;
 import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
 import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
@@ -730,12 +732,16 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
 			assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
 			assertGauge(registry, SERVER_CONNECTIONS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
+			// https://github.com/reactor/reactor-netty/issues/3060
+			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/6").hasCountGreaterThanOrEqualTo(1);
 		}
 		else {
 			// make sure the client stream is closed on the server side before checking server metrics
 			assertThat(StreamCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
 			assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(1);
 			assertGauge(registry, SERVER_STREAMS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
+			// https://github.com/reactor/reactor-netty/issues/3060
+			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/6").hasCountGreaterThanOrEqualTo(1);
 			// in case of H2, the tearDown method will ensure client socket is closed on the server side
 		}
 	}
@@ -828,6 +834,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
 			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
+			// https://github.com/reactor/reactor-netty/issues/3060
+			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/7").hasCountGreaterThanOrEqualTo(1);
 		}
 		else {
 			assertThat(StreamCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
@@ -835,6 +843,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
 			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
+			// https://github.com/reactor/reactor-netty/issues/3060
+			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/7").hasCountGreaterThanOrEqualTo(1);
 			// in case of H2, the tearDown method will ensure client socket is closed on the server side
 		}
 	}
@@ -965,6 +975,27 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			String[] tags = new String[]{URI, HTTP, LOCAL_ADDRESS, serverAddress};
 			assertGauge(registry, SERVER_CONNECTIONS_TOTAL, tags).isNull();
 		}
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testIssue3060ConnectTimeoutException(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		customizeClientOptions(httpClient, clientCtx, clientProtocols)
+		        .remoteAddress(() -> new InetSocketAddress("1.1.1.1", 11111))
+		        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10)
+		        .doOnChannelInit((o, c, address) -> c.closeFuture().addListener(f -> latch.countDown()))
+		        .post()
+		        .uri("/1")
+		        .send(ByteBufFlux.fromString(Mono.just("hello")))
+		        .responseContent()
+		        .subscribe();
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+		String[] summaryTags = new String[]{REMOTE_ADDRESS, "1.1.1.1:11111", STATUS, ERROR};
+		assertTimer(registry, CLIENT_CONNECT_TIME, summaryTags).hasCountEqualTo(1);
 	}
 
 	static Stream<Arguments> combinationsIssue2956() {
