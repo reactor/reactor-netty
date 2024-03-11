@@ -643,8 +643,19 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		listener().onStateChange(this, HttpClientState.REQUEST_SENT);
 		if (responseTimeout != null) {
-			addHandlerFirst(NettyPipeline.ResponseTimeoutHandler,
-					new ReadTimeoutHandler(responseTimeout.toMillis(), TimeUnit.MILLISECONDS));
+			if (channel().pipeline().get(NettyPipeline.HttpMetricsHandler) != null) {
+				if (channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) == null) {
+					channel().pipeline().addBefore(NettyPipeline.HttpMetricsHandler, NettyPipeline.ResponseTimeoutHandler,
+							new ReadTimeoutHandler(responseTimeout.toMillis(), TimeUnit.MILLISECONDS));
+					if (isPersistent()) {
+						onTerminate().subscribe(null, null, () -> removeHandler(NettyPipeline.ResponseTimeoutHandler));
+					}
+				}
+			}
+			else {
+				addHandlerFirst(NettyPipeline.ResponseTimeoutHandler,
+						new ReadTimeoutHandler(responseTimeout.toMillis(), TimeUnit.MILLISECONDS));
+			}
 		}
 		channel().read();
 		if (channel().parent() != null) {
