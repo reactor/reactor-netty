@@ -562,8 +562,20 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		if (responseTimeoutMillis > -1) {
-			Connection.from(ch).addHandlerFirst(NettyPipeline.ResponseTimeoutHandler,
-					new ReadTimeoutHandler(responseTimeoutMillis, TimeUnit.MILLISECONDS));
+			Connection conn = Connection.from(ch);
+			if (ch.pipeline().get(NettyPipeline.HttpMetricsHandler) != null) {
+				if (ch.pipeline().get(NettyPipeline.ResponseTimeoutHandler) == null) {
+					ch.pipeline().addBefore(NettyPipeline.HttpMetricsHandler, NettyPipeline.ResponseTimeoutHandler,
+							new ReadTimeoutHandler(responseTimeoutMillis, TimeUnit.MILLISECONDS));
+					if (conn.isPersistent()) {
+						conn.onTerminate().subscribe(null, null, () -> conn.removeHandler(NettyPipeline.ResponseTimeoutHandler));
+					}
+				}
+			}
+			else {
+				conn.addHandlerFirst(NettyPipeline.ResponseTimeoutHandler,
+						new ReadTimeoutHandler(responseTimeoutMillis, TimeUnit.MILLISECONDS));
+			}
 		}
 
 		if (log.isDebugEnabled()) {
