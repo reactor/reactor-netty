@@ -83,6 +83,17 @@ include::{examplesdir}/pool/Application.java[lines=18..49]
 ----
 ====
 
+=== Disposing Connection Pool
+
+- If you use the default `ConnectionProvider` provided by Reactor Netty, invoke
+{javadoc}/reactor/netty/http/HttpResources.html[`HttpResources`]`#disposeLoopsAndConnections`/`#disposeLoopsAndConnectionsLater` method.
+
+NOTE: Disposing `HttpResources` means that every client that is using it, will not be able to use it anymore!
+
+- If you use custom `ConnectionProvider`, invoke {javadoc}/reactor/netty/resources/ConnectionProvider.html[`ConnectionProvider`]`#dispose`/`#disposeLater`/`#disposeWhen` method.
+
+NOTE: Disposing the custom `ConnectionProvider` means that every client that is configured to use it, will not be able to use it anymore!
+
 === Metrics
 The pooled `ConnectionProvider` supports built-in integration with https://micrometer.io/[`Micrometer`].
 It exposes all metrics with a prefix of `reactor.netty.connection.provider`.
