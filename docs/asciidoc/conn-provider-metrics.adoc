@@ -13,6 +13,8 @@ See <<observability-metrics-max-connections>>
 See <<observability-metrics-idle-connections>>
 | reactor.netty.connection.provider.pending.connections | Gauge | The number of requests that are waiting for a connection.
 See <<observability-metrics-pending-connections>>
+| reactor.netty.connection.provider.pending.connections.time | Timer | Time spent in pending acquire a connection from the connection pool.
+See <<observability-metrics-pending-connections-time>>
 | reactor.netty.connection.provider.max.pending.connections | Gauge | The maximum number of requests that will be queued while waiting for a ready connection.
 See <<observability-metrics-max-pending-connections>>
 |=======
