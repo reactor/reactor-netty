@@ -4,7 +4,7 @@
 
 By default `Reactor Netty` uses an "`Event Loop Group`", where the number of the worker threads equals the number of
 processors available to the runtime on initialization (but with a minimum value of 4). When you need a different configuration,
-you can use one of the {javadoc}/reactor/netty5/resources/LoopResources.html[`LoopResource`]`#create`
+you can use one of the {javadoc}/reactor/netty5/resources/LoopResources.html[`LoopResources`]`#create`
 methods.
 
 The following listing shows the default configuration for the Event Loop Group:
@@ -26,3 +26,14 @@ If you need changes to these settings, you can apply the following configuration
 include::{examplesdir}/eventloop/Application.java[lines=18..38]
 ----
 ====
+
+==== Disposing Event Loop Group
+
+- If you use the default `Event Loop Group` provided by Reactor Netty, invoke
+{javadoc}/reactor/netty5/http/HttpResources.html[`HttpResources`]`#disposeLoopsAndConnections`/`#disposeLoopsAndConnectionsLater` method.
+
+NOTE: Disposing `HttpResources` means that every server/client that is using it, will not be able to use it anymore!
+
+- If you use custom `LoopResources`, invoke {javadoc}/reactor/netty5/resources/LoopResources.html[`LoopResources`]`#dispose`/`#disposeLater` method.
+
+NOTE: Disposing the custom `LoopResources` means that every server/client that is configured to use it, will not be able to use it anymore!
