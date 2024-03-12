@@ -243,8 +243,6 @@ task japicmp(type: JapicmpTask) {
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 
 	methodExcludes = [
-			'reactor.netty.transport.NameResolverProvider#retryTcpOnTimeout()',
-			'reactor.netty.transport.NameResolverProvider$NameResolverSpec#retryTcpOnTimeout(boolean)'
 	]
 }
 
