@@ -108,6 +108,7 @@ dependencies {
 	else {
 		//classic build to be distributed
 		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
+		api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-aarch_64"
 		compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
 		compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
 	}
