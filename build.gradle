@@ -127,7 +127,7 @@ ext {
 	jacksonDatabindVersion = '2.17.0'
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.25.3'
-	awaitilityVersion = '4.2.0'
+	awaitilityVersion = '4.2.1'
 	hoverflyJavaVersion = '0.17.0'
 	tomcatVersion = '9.0.87'
 	boringSslVersion = '2.0.65.Final'
