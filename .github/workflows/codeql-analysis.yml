@@ -15,12 +15,14 @@ on:
   push:
     branches:
       - main
+      - 1.1.x
       - 1.0.x
 #      - netty5
   pull_request:
     # The branches below must be a subset of the branches above
     branches:
       - main
+      - 1.1.x
       - 1.0.x
 #      - netty5
   schedule:
