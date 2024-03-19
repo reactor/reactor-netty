@@ -1,0 +1,27 @@
+name: 'Close stale issues and PRs'
+
+on:
+  schedule:
+  - cron: '20 6 * * *'
+
+permissions: read-all
+jobs:
+  stale:
+
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+    - uses: actions/stale@28ca1036281a5e5922ead5184a1bbf96e5fc984e
+      with:
+        stale-issue-message: 'If you would like us to look at this issue, please provide the requested information. If the information is not provided within the next 7 days this issue will be closed.'
+        stale-pr-message: 'If you would like us to look at this PR, please provide the requested information. If the information is not provided within the next 7 days this PR will be closed.'
+        close-issue-message: 'Closing due to lack of requested feedback. If you would like us to look at this issue, please provide the requested information and we will re-open.'
+        close-pr-message: 'Closing due to lack of requested feedback. If you would like us to look at this PR, please provide the requested information and we will re-open.'
+        stale-issue-label: 'for/user-attention'
+        stale-pr-label: 'for/user-attention'
+        only-labels: 'for/user-attention'
+        days-before-stale: 7
+        days-before-close: 7
