@@ -118,16 +118,18 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			MonoSink<Connection> sink,
 			Context currentContext) {
 		boolean acceptGzip = false;
+		boolean acceptBrotli = false;
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
 		SocketAddress proxyAddress = ((ClientTransportConfig<?>) config).proxyProvider() != null ?
 				((ClientTransportConfig<?>) config).proxyProvider().getAddress().get() : null;
 		Function<String, String> uriTagValue = null;
 		if (config instanceof HttpClientConfig) {
 			acceptGzip = ((HttpClientConfig) config).acceptGzip;
+			acceptBrotli = ((HttpClientConfig) config).acceptBrotli;
 			uriTagValue = ((HttpClientConfig) config).uriTagValue;
 		}
 		return new DisposableAcquire(connectionObserver, config.channelOperationsProvider(),
-				acceptGzip, metricsRecorder, pendingAcquireTimeout, pool, proxyAddress, remoteAddress, sink, currentContext, uriTagValue);
+				acceptGzip, acceptBrotli, metricsRecorder, pendingAcquireTimeout, pool, proxyAddress, remoteAddress, sink, currentContext, uriTagValue);
 	}
 
 	@Override
@@ -238,6 +240,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		final ConnectionObserver obs;
 		final ChannelOperations.OnSetup opsFactory;
 		final boolean acceptGzip;
+		final boolean acceptBrotli;
 		final ChannelMetricsRecorder metricsRecorder;
 		final long pendingAcquireTimeout;
 		final InstrumentedPool<Connection> pool;
@@ -254,6 +257,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				ConnectionObserver obs,
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
+				boolean acceptBrotli,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				long pendingAcquireTimeout,
 				InstrumentedPool<Connection> pool,
@@ -267,6 +271,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.acceptGzip = acceptGzip;
+			this.acceptBrotli = acceptBrotli;
 			this.metricsRecorder = metricsRecorder;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
 			this.pool = pool;
@@ -283,6 +288,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			this.obs = parent.obs;
 			this.opsFactory = parent.opsFactory;
 			this.acceptGzip = parent.acceptGzip;
+			this.acceptBrotli = parent.acceptBrotli;
 			this.metricsRecorder = parent.metricsRecorder;
 			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
 			this.pool = parent.pool;
@@ -412,7 +418,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 						setChannelContext(ch, currentContext());
 					}
 					HttpClientConfig.addStreamHandlers(ch, obs.then(new HttpClientConfig.StreamConnectionObserver(currentContext())),
-							opsFactory, acceptGzip, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
+							opsFactory, acceptGzip, acceptBrotli, metricsRecorder, proxyAddress, remoteAddress, -1, uriTagValue);
 
 					ChannelOperations<?, ?> ops = ChannelOperations.get(ch);
 					if (ops != null) {
