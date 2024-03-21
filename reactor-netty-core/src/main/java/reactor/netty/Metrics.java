@@ -204,6 +204,10 @@ public class Metrics {
 	 */
 	public static final String PENDING_STREAMS = ".pending.streams";
 
+	/**
+	 * The number of HTTP/2 stream acquisitions steal count.
+	 */
+	public static final String STEAL_STREAMS = ".steal.streams";
 
 	// ByteBufAllocator Metrics
 	/**
