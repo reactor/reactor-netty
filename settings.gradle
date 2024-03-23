@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,4 +20,15 @@ include 'reactor-netty-http-brave'
 include 'reactor-netty-incubator-quic'
 include 'reactor-netty-examples'
 include 'reactor-netty-graalvm-smoke-tests'
+
+// check if jdk17 is available
+def javaVersion = System.getProperty("java.specification.version");
+def jdkFeature = Double.parseDouble(javaVersion);
+
+if (jdkFeature >= 17) {
+	include 'docs'
+} else {
+	logger.warn("The current JDK version (${jdkFeature}) is not compatible with Java 17. Documentation won't be built.")
+}
+
 include 'reactor-netty'
