@@ -1,4 +1,5 @@
-:eventloopsourcedir: ./../../reactor-netty-core/src/main/java
+:eventloopsourcedir: {core}/src/main/java
+:javadoc: https://projectreactor.io/docs/netty/{project-version}/api
 
 === Event Loop Group
 
@@ -9,23 +10,21 @@ methods.
 
 The following listing shows the default configuration for the Event Loop Group:
 
-====
 [source,java,indent=0]
 .{eventloopsourcedir}/reactor/netty/ReactorNetty.java
+[%unbreakable]
 ----
 include::{eventloopsourcedir}/reactor/netty/ReactorNetty.java[lines=86..120]
 ----
-====
 
 If you need changes to these settings, you can apply the following configuration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/eventloop/Application.java
+.{examples-dir}/eventloop/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/eventloop/Application.java[lines=18..38]
+include::{examples-dir}/eventloop/Application.java[lines=18..38]
 ----
-====
 
 ==== Disposing Event Loop Group
 
@@ -37,3 +36,5 @@ NOTE: Disposing `HttpResources` means that every server/client that is using it,
 - If you use custom `LoopResources`, invoke {javadoc}/reactor/netty/resources/LoopResources.html[`LoopResources`]`#dispose`/`#disposeLater` method.
 
 NOTE: Disposing the custom `LoopResources` means that every server/client that is configured to use it, will not be able to use it anymore!
+
+

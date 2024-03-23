@@ -1,4 +1,5 @@
 == Connection Pool
+
 By default, `HttpClient` uses a "`fixed`" connection pool with `500` as the maximum number of active channels
 and `1000` as the maximum number of further channel acquisition attempts allowed to be kept in a pending state
 (for the rest of the configurations check the system properties or the builder configurations below).
@@ -8,27 +9,25 @@ When the maximum number of channels in the pool is reached, up to `1000` new att
 acquire a channel are delayed (pending) until a channel is returned to the pool again,
 and further attempts are declined with an error.
 
-====
 [source,java,indent=0]
 ../../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
+[%unbreakable]
 ----
-include::./../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java[lines=123..171]
+include::{core}/src/main/java/reactor/netty/ReactorNetty.java[lines=123..171]
 ----
-====
 
 When you need to change the default settings, you can configure the `ConnectionProvider` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/pool/config/Application.java
+.{examples-dir}/pool/config/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/pool/config/Application.java[lines=18..50]
+include::{examples-dir}/pool/config/Application.java[lines=18..50]
 ----
 <1> Configures the maximum time for a connection to stay idle to 20 seconds.
 <2> Configures the maximum time for a connection to stay alive to 60 seconds.
 <3> Configures the maximum time for the pending acquire operation to 60 seconds.
 <4> Every two minutes, the connection pool is regularly checked for connections that are applicable for removal.
-====
 
 NOTE: Notice that only the default `HttpClient` (`HttpClient.create()`) uses `500` as the maximum number of active channels. In the example above, when
 instantiating a custom `ConnectionProvider`, we are changing this value to `50` using `maxConnections`. Also, if you don't set this parameter the
@@ -75,20 +74,19 @@ to too many concurrent connections opened/acquired.
 
 If you need to disable the connection pool, you can apply the following configuration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/pool/Application.java
+.{examples-dir}/pool/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/pool/Application.java[lines=18..49]
+include::{examples-dir}/pool/Application.java[lines=18..49]
 ----
-====
 
 === Disposing Connection Pool
 
 - If you use the default `ConnectionProvider` provided by Reactor Netty, invoke
 {javadoc}/reactor/netty/http/HttpResources.html[`HttpResources`]`#disposeLoopsAndConnections`/`#disposeLoopsAndConnectionsLater` method.
 
-NOTE: Disposing `HttpResources` means that every client that is using it, will not be able to use it anymore!
+NOTE: Disposing `Httpresources` means that every client that is using it, will not be able to use it anymore!
 
 - If you use custom `ConnectionProvider`, invoke {javadoc}/reactor/netty/resources/ConnectionProvider.html[`ConnectionProvider`]`#dispose`/`#disposeLater`/`#disposeWhen` method.
 
@@ -98,7 +96,7 @@ NOTE: Disposing the custom `ConnectionProvider` means that every client that is 
 The pooled `ConnectionProvider` supports built-in integration with https://micrometer.io/[`Micrometer`].
 It exposes all metrics with a prefix of `reactor.netty.connection.provider`.
 
-include::conn-provider-metrics.adoc[]
+include::partial$conn-provider-metrics.adoc[]
 
 The following table provides information for the HTTP client metrics when it is configured to serve `HTTP/2` traffic:
 
@@ -106,18 +104,17 @@ The following table provides information for the HTTP client metrics when it is 
 |=======
 | metric name | type | description
 | reactor.netty.connection.provider.active.streams | Gauge | The number of the active HTTP/2 streams.
-See <<observability-metrics-active-streams>>
+See xref:observability.adoc#observability-metrics-active-streams[]
 | reactor.netty.connection.provider.pending.streams | Gauge | The number of requests that are waiting for opening HTTP/2 stream.
-See <<observability-metrics-pending-streams>>
+See xref:observability.adoc#observability-metrics-pending-streams[]
 |=======
 
 The following example enables that integration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/pool/metrics/Application.java
+.{examples-dir}/pool/metrics/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/pool/metrics/Application.java[lines=18..45]
+include::{examples-dir}/pool/metrics/Application.java[lines=18..45]
 ----
 <1> Enables the built-in integration with Micrometer
-====

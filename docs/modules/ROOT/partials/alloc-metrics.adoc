@@ -4,23 +4,23 @@
 |=======
 | metric name | type | description
 | reactor.netty.bytebuf.allocator.used.heap.memory | Gauge | The number of bytes reserved by heap buffer allocator.
-See <<observability-metrics-used-heap-memory>>
+See xref:observability.adoc#observability-metrics-used-heap-memory[]
 | reactor.netty.bytebuf.allocator.used.direct.memory | Gauge | The number of bytes reserved by direct buffer allocator.
-See <<observability-metrics-used-direct-memory>>
+See xref:observability.adoc#observability-metrics-used-direct-memory[]
 | reactor.netty.bytebuf.allocator.heap.arenas | Gauge | The number of heap arenas (when `PooledByteBufAllocator`).
-See <<observability-metrics-heap-arenas>>
+See xref:observability.adoc#observability-metrics-heap-arenas[]
 | reactor.netty.bytebuf.allocator.direct.arenas | Gauge | The number of direct arenas (when `PooledByteBufAllocator`).
-See <<observability-metrics-direct-arenas>>
+See xref:observability.adoc#observability-metrics-direct-arenas[]
 | reactor.netty.bytebuf.allocator.threadlocal.caches | Gauge | The number of thread local caches (when `PooledByteBufAllocator`).
-See <<observability-metrics-thread-local-caches>>
+See xref:observability.adoc#observability-metrics-thread-local-caches[]
 | reactor.netty.bytebuf.allocator.small.cache.size | Gauge | The size of the small cache (when `PooledByteBufAllocator`).
-See <<observability-metrics-small-cache-size>>
+See xref:observability.adoc#observability-metrics-small-cache-size[]
 | reactor.netty.bytebuf.allocator.normal.cache.size | Gauge | The size of the normal cache (when `PooledByteBufAllocator`).
-See <<observability-metrics-normal-cache-size>>
+See xref:observability.adoc#observability-metrics-normal-cache-size[]
 | reactor.netty.bytebuf.allocator.chunk.size | Gauge | The chunk size for an arena (when `PooledByteBufAllocator`).
-See <<observability-metrics-chunk-size>>
+See xref:observability.adoc#observability-metrics-chunk-size[]
 | reactor.netty.bytebuf.allocator.active.heap.memory | Gauge | The actual bytes consumed by in-use buffers allocated from heap buffer pools (when `PooledByteBufAllocator`).
-See <<observability-metrics-active-heap-memory>>
+See xref:observability.adoc#observability-metrics-active-heap-memory[]
 | reactor.netty.bytebuf.allocator.active.direct.memory | Gauge | The actual bytes consumed by in-use buffers allocated from direct buffer pools (when `PooledByteBufAllocator`).
-See <<observability-metrics-active-direct-memory>>
+See xref:observability.adoc#observability-metrics-active-direct-memory[]
 |=======
