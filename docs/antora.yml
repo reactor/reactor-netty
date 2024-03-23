@@ -1,0 +1,24 @@
+name: reactor-netty
+version: true
+title: Reactor Netty Reference Guide
+start_page: about-doc.adoc
+author:
+    - Stephane Maldini <https://twitter.com/smaldini[@smaldini]>
+    - Violeta Georgieva <https://twitter.com/violeta_g_g[@violeta_g_g]>
+nav:
+  - modules/ROOT/nav.adoc
+ext:
+  collector:
+    run:
+      command: gradlew -q "-Dorg.gradle.jvmargs=-Xmx3g -XX:+HeapDumpOnOutOfMemoryError" :docs:generateAntoraResources
+      local: true
+    scan:
+      dir: ./build/generated-antora-resources
+
+asciidoc:
+  attributes:
+    attribute-missing: 'warn'
+    chomp: 'all'
+    examples: 'example$reactor-netty-examples'
+    http: 'example$reactor-netty-http'
+    core: 'example$reactor-netty-core'
