@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -143,7 +143,9 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		}
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest request) {
-			IdleTimeoutHandler.removeIdleTimeoutHandler(ctx.pipeline());
+			if (idleTimeout != null) {
+				IdleTimeoutHandler.removeIdleTimeoutHandler(ctx.pipeline());
+			}
 
 			if (persistentConnection) {
 				pendingResponses += 1;
