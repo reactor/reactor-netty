@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ final class IdleTimeoutHandler extends IdleStateHandler {
 	}
 
 	static void addIdleTimeoutHandler(ChannelPipeline pipeline, @Nullable Duration idleTimeout) {
-		if (pipeline.get(NettyPipeline.IdleTimeoutHandler) == null && idleTimeout != null) {
+		if (idleTimeout != null && pipeline.get(NettyPipeline.IdleTimeoutHandler) == null) {
 			String baseName = null;
 			if (pipeline.get(NettyPipeline.HttpCodec) != null) {
 				baseName = NettyPipeline.HttpCodec;
