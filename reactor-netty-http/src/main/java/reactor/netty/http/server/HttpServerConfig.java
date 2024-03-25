@@ -1481,9 +1481,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		void stopTimeouts(ChannelHandlerContext ctx) {
-			ChannelHandler handler = ctx.channel().pipeline().get(NettyPipeline.ReadTimeoutHandler);
-			if (handler != null) {
-				ctx.channel().pipeline().remove(handler);
+			if (readTimeout != null) {
+				ChannelHandler handler = ctx.channel().pipeline().get(NettyPipeline.ReadTimeoutHandler);
+				if (handler != null) {
+					ctx.channel().pipeline().remove(handler);
+				}
 			}
 			if (requestTimeoutFuture != null) {
 				requestTimeoutFuture.cancel(false);
