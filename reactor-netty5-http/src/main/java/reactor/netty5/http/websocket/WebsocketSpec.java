@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ public interface WebsocketSpec {
 
 	/**
 	 * Returns the configured maximum allowable frame payload length.
+	 * <p>Note: When a websocket compression extension is enabled, this setting is applied on the compressed data.
 	 *
 	 * @return returns the configured maximum allowable frame payload length.
 	 */
@@ -81,8 +82,9 @@ public interface WebsocketSpec {
 		}
 
 		/**
-		 * Sets specifies a custom maximum allowable frame payload length.
+		 * Sets a custom maximum allowable frame payload length.
 		 * 65536 by default.
+		 * <p>Note: When a websocket compression extension is enabled, this setting is applied on the compressed data.
 		 *
 		 * @param maxFramePayloadLength maximum allowable frame payload length
 		 * @return {@literal this}
