@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -677,7 +677,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				super.onInboundNext(ctx, msg);
 			}
 			if (msg instanceof LastHttpContent) {
-				removeHandler(NettyPipeline.ReadTimeoutHandler);
+				if (readTimeout != null) {
+					removeHandler(NettyPipeline.ReadTimeoutHandler);
+				}
 				if (requestTimeoutFuture != null) {
 					requestTimeoutFuture.cancel(false);
 					requestTimeoutFuture = null;
