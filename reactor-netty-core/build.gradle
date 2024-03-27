@@ -133,6 +133,7 @@ dependencies {
 	testImplementation "org.awaitility:awaitility:$awaitilityVersion"
 	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
+	testImplementation "io.github.nettyplus:netty-leak-detector-junit-extension:$nettyLeakDetectorJunitExtensionVersion"
 	testImplementation "org.mockito:mockito-core:$mockitoVersion"
 	testImplementation "ch.qos.logback:logback-classic:$logbackVersion"
 	testImplementation "io.projectreactor.tools:blockhound-junit-platform:$blockHoundVersion"
