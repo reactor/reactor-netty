@@ -29,8 +29,6 @@ buildscript {
 
 plugins {
 	id "com.diffplug.spotless" version "6.13.0"
-	id 'org.asciidoctor.jvm.convert' version '3.3.2' apply false
-	id 'org.asciidoctor.jvm.pdf' version '3.3.2' apply false
 	id 'com.google.osdetector' version '1.7.3'
 	id 'org.gradle.test-retry' version '1.5.8'
 	id 'io.spring.nohttp' version '0.0.11'
@@ -42,6 +40,7 @@ plugins {
 	id 'io.spring.javadoc-aggregate' version '0.0.1' apply false
 	id 'biz.aQute.bnd.builder' version '6.4.0' apply false
 	id 'org.graalvm.buildtools.native' version '0.9.25' apply false
+	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
 }
 
 description = 'Reactive Streams Netty driver'
@@ -134,6 +133,16 @@ ext {
 	blockHoundVersion = '1.0.8.RELEASE'
 	reflectionsVersion = '0.10.2'
 
+	// Antora
+	antoraPluginVersion = '1.0.0'
+	antoraVersion = '3.2.0-alpha.4'
+	antoraAtlasExtensionVersion = '1.0.0-alpha.1'
+	antoraPdfExtensionVersion = '1.0.0-alpha.7'
+	antoraCollectorExtensionVersion = '1.0.0-alpha.3'
+	asciiDocTabVersion = '1.0.0-beta.6'
+	springIoAntoraExtensionsVersion = '1.8.2'
+	springIoAsciidoctorExtensionsVersion = '1.0.0-alpha.9'
+
 	javadocLinks = ["https://docs.oracle.com/javase/8/docs/api/",
 					// Use Reactive Streams 1.0.3 version for javadoc generation
 					// With Reactive Streams 1.0.4 version there is
@@ -145,8 +154,9 @@ ext {
 }
 
 nohttp {
-	source.exclude "docs/asciidoc/highlight/**"
+	source.exclude "docs/modules/ROOT/assets/highlight/**"
 	source.exclude "**/build/**"
+	source.exclude "docs/.gradle/**"
 }
 
 spotless {

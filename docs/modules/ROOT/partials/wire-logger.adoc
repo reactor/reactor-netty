@@ -1,4 +1,4 @@
-:formattersourcedir: ./../../reactor-netty-core/src/main/java
+:formattersourcedir: {core}/src/main/java
 
 === Wire Logger
 
@@ -7,58 +7,54 @@ By default, wire logging is disabled.
 To enable it, you must set the logger `{wirelogger}` level to `DEBUG`
 and apply the following configuration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/wiretap/Application.java
+.{examples-dir}/wiretap/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/wiretap/Application.java[lines=18..35]
+include::{examples-dir}/wiretap/Application.java[lines=18..35]
 ----
 <1> Enables the wire logging
-====
 
-==== Wire Logger formatters
+[[wire-logger-formatters]]
+== Wire Logger formatters
 Reactor Netty supports 3 different formatters:
 
 - {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP] - the default
 
-====
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
+[%unbreakable]
 ----
 include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java[lines=47..75]
 ----
-====
 
 - {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
 
-====
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
+[%unbreakable]
 ----
 include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java[lines=34..45]
 ----
-====
 
 - {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL]
 
-====
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
+[%unbreakable]
 ----
 include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java[lines=77..93]
 ----
-====
 
 
 When you need to change the default formatter you can configure it as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/wiretap/custom/Application.java
+.{examples-dir}/wiretap/custom/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/wiretap/custom/Application.java[lines=18..38]
+include::{examples-dir}/wiretap/custom/Application.java[lines=18..38]
 ----
 <1> Enables the wire logging,
 {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL] is used for
 printing the content.
-====

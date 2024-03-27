@@ -1,4 +1,5 @@
 == Proxy Support
+:page-section-summary-toc: 1
 
 Reactor Netty supports the proxy functionality provided by Netty and provides a way
 to specify `non proxy hosts` through the {javadoc}/reactor/netty/tcp/ProxyProvider.html[`ProxyProvider`] builder.
@@ -13,11 +14,10 @@ whether it supports or needs an additional configuration in order to support `CO
 
 The following example uses `ProxyProvider`:
 
-====
 [source,java,indent=0]
-.{examplesdir}/proxy/Application.java
+.{examples-dir}/proxy/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/proxy/Application.java[lines=18..42]
+include::{examples-dir}/proxy/Application.java[lines=18..42]
 ----
 <1> Configures the connection establishment timeout to 20 seconds.
-====

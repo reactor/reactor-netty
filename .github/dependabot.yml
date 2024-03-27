@@ -27,14 +27,6 @@ updates:
   - dependency-name: com.diffplug.spotless
     versions:
     - "[6.14.a, 7.0]"
-  # Versions > 3 require JDK11+
-  - dependency-name: org.asciidoctor.jvm.convert
-    versions:
-    - "[4.a, 5]"
-  # Versions > 3 require JDK11+
-  - dependency-name: org.asciidoctor.jvm.pdf
-    versions:
-    - "[4.a, 5]"
   # Versions > 6 require JDK17+
   - dependency-name: biz.aQute.bnd.builder
     versions:
