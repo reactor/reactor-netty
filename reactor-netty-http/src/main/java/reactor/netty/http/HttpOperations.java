@@ -17,6 +17,8 @@ package reactor.netty.http;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -227,6 +229,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	protected abstract void beforeMarkSentHeaders();
+
+	protected Map<String, List<String>> parseQueryParams(String uri) {
+		return QueryStringDecoder.decodeParams(uri);
+	}
 
 	protected abstract void afterMarkSentHeaders();
 
