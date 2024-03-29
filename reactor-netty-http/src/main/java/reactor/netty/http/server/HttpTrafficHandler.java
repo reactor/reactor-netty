@@ -370,6 +370,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				   .execute(this);
 			}
 			else {
+				IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
+
 				ctx.read();
 			}
 			return;
@@ -470,8 +472,6 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				        "Last HTTP packet was sent, terminating the channel"));
 			}
 		}
-
-		IdleTimeoutHandler.addIdleTimeoutHandler(future.channel().pipeline(), idleTimeout);
 
 		HttpServerOperations.cleanHandlerTerminate(future.channel());
 	}
