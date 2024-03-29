@@ -364,6 +364,8 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 				   .execute(this);
 			}
 			else {
+				IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
+
 				ctx.read();
 			}
 			return future;
@@ -469,8 +471,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 				        "Last HTTP packet was sent, terminating the channel"));
 			}
 		}
-
-		IdleTimeoutHandler.addIdleTimeoutHandler(channel.pipeline(), idleTimeout);
 
 		HttpServerOperations.cleanHandlerTerminate(channel);
 	}
