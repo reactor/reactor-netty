@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,6 +70,12 @@ class SslProviderTests extends BaseHttpTest {
 	private SslContext localhostSslContext;
 	private SslContext anotherSslContext;
 	private Http11SslContextSpec clientSslContextBuilder;
+
+	@BeforeAll
+	static void validateOpenSsl() {
+		assertThat(OpenSsl.isAvailable()).isTrue();
+		assertThat(OpenSsl.versionString()).isEqualTo("BoringSSL");
+	}
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws Exception {
