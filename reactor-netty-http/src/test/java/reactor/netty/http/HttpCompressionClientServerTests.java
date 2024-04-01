@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import com.aayushatharva.brotli4j.decoder.DirectDecompress;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -221,6 +222,37 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		DirectDecompress directDecompress = DirectDecompress.decompress(compressedData);
 		assertThat(directDecompress.getResultStatus()).isEqualTo(DecoderJNI.Status.DONE);
 		final byte[] decompressedData = directDecompress.getDecompressedData();
+		assertThat(decompressedData).isNotEmpty();
+		assertThat(new String(decompressedData, Charset.defaultCharset())).isEqualTo("reply");
+	}
+
+	@ParameterizedCompressionTest
+	void zstdServerCompressionEnabled(HttpServer server, HttpClient client) throws Exception {
+		assertThat(Zstd.isAvailable()).isTrue();
+		disposableServer =
+				server.compress(true)
+						.handle((in, out) -> out.sendString(Mono.just("reply")))
+						.bindNow(Duration.ofSeconds(10));
+
+		//don't activate compression on the client options to avoid auto-handling (which removes the header)
+		Tuple2<byte[], HttpHeaders> resp =
+				//edit the header manually to attempt to trigger compression on server side
+				client.port(disposableServer.port())
+						.compress(false)
+						.headers(h -> h.add("Accept-Encoding", "zstd, gzip"))
+						.get()
+						.uri("/test")
+						.responseSingle((res, buf) -> buf.asByteArray()
+								.zipWith(Mono.just(res.responseHeaders())))
+						.block(Duration.ofSeconds(10));
+
+		assertThat(resp).isNotNull();
+		assertThat(resp.getT2().get("content-encoding")).isEqualTo("zstd");
+
+		final byte[] compressedData = resp.getT1();
+		assertThat(new String(compressedData, Charset.defaultCharset())).isNotEqualTo("reply");
+
+		final byte[] decompressedData = com.github.luben.zstd.Zstd.decompress(compressedData, 1_000);
 		assertThat(decompressedData).isNotEmpty();
 		assertThat(new String(decompressedData, Charset.defaultCharset())).isEqualTo("reply");
 	}
