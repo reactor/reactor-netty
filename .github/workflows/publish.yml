@@ -6,6 +6,10 @@ on:
       - 1.1.x
       - 1.0.x
 permissions: read-all
+
+env:
+  DOCS_BUILD_ARTIFACT: docs-build
+
 jobs:
   # General job notes: we DON'T want to cancel any previous runs, especially in the case of a "back to snapshots" build right after a release push
   # We specify the ubuntu version to minimize the chances we have to deal with a migration during a release
@@ -75,6 +79,37 @@ jobs:
         id: reactor-netty-incubator-quic-checks
         run: ./gradlew reactor-netty-incubator-quic:check
 
+  # build antora doc for the current branch, and upload docs/build results to workflow run.
+  # Each deploy jobs can then download it, in order to let the docs-zip be built properly
+  # (see reactor-netty/build.gradle which includes docs/build/site and optionally docs/assembly/.../pdf into the target docs.zip)
+  build-branch-doc:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - name: Set up Ruby for asciidoctor-pdf
+        uses: ruby/setup-ruby@5f19ec79cedfadb78ab837f95b87734d0003c899 # v1
+        with:
+          ruby-version: 3.3.0
+      - name: Install asciidoctor-pdf / rouge
+        run: gem install asciidoctor-pdf rouge
+      - name: Setup java 17 for antora
+        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Build antora doc for the current branch
+        run: ./gradlew antora
+      - name: Copy the cache to be included in the site
+        run: |-
+          [ -d docs/build/antora/inject-collector-cache-config-extension/.cache ] && cp -rf docs/build/antora/inject-collector-cache-config-extension/.cache docs/build/site/
+      - name: Upload docs/build to current workflow run
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4
+        with:
+          name: ${{ env.DOCS_BUILD_ARTIFACT }}
+          retention-days: 1
+          if-no-files-found: error
+          path: docs/build
+
   #deploy the snapshot artifacts to Artifactory
   deploySnapshot:
     name: deploySnapshot
@@ -88,6 +123,11 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '8'
+      - name: download antora docs/build
+        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4
+        with:
+            name: ${{ env.DOCS_BUILD_ARTIFACT }}
+            path: docs/build
       - name: deploy
         env:
           ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_SNAPSHOT_USERNAME}}
@@ -108,6 +148,11 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '8'
+      - name: download antora docs/build
+        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4
+        with:
+            name: ${{ env.DOCS_BUILD_ARTIFACT }}
+            path: docs/build
       - name: deploy
         env:
           ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_USERNAME}}
@@ -130,6 +175,11 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '8'
+      - name: download antora docs/build
+        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4
+        with:
+            name: ${{ env.DOCS_BUILD_ARTIFACT }}
+            path: docs/build
       - name: deploy
         env:
           ORG_GRADLE_PROJECT_artifactory_publish_username: ${{secrets.ARTIFACTORY_USERNAME}}
@@ -170,6 +220,22 @@ jobs:
           git config --local user.email '32325210+reactorbot@users.noreply.github.com'
           git tag -m "Release version ${{ needs.reactor-netty-core.outputs.fullVersion }}" v${{ needs.reactor-netty-core.outputs.fullVersion }} ${{ github.sha }}
           git push --tags
+
+  cleanup:
+    needs: [ reactor-netty-core, tagRelease, tagMilestone, deploySnapshot ]
+    if: always() # cleanup always run after all needed jobs, regardless of whether they were successful
+    runs-on: ubuntu-20.04
+    permissions: write-all
+    steps:
+      - name: delete antora docs-build artifact
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          ARTIFACTS_URL="/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts"
+          ARTIFACT_ID=$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' $ARTIFACTS_URL | jq -r '.artifacts[] | select(.name == "'$DOCS_BUILD_ARTIFACT'") | .id // ""')
+          if [ -n "$ARTIFACT_ID" ]; then
+            gh api --method DELETE -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' /repos/${{github.repository}}/actions/artifacts/$ARTIFACT_ID}
+          fi
 
 # For Gradle configuration of signing, see https://docs.gradle.org/current/userguide/signing_plugin.html#sec:in-memory-keys
 # publishMavenJavaPublicationToSonatypeRepository only sends to a staging repository

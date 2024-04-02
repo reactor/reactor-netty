@@ -1,9 +1,0 @@
-:root-target: ./../../build/
-
-= Observability
-
-== Observability metadata
-
-include::{root-target}_metrics.adoc[]
-
-include::{root-target}_spans.adoc[]

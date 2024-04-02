@@ -1,5 +1,5 @@
-:sourcedir: ./../../reactor-netty-core/src/main/java
-:examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client
+:sourcedir: {core}/src/main/java
+:examples-dir: {examples}/src/main/java/reactor/netty/examples/documentation/tcp/client
 :javadoc: https://projectreactor.io/docs/netty/{project-version}/api
 :nettyjavadoc: https://netty.io/4.1/api
 :wirelogger: reactor.netty.tcp.TcpClient
@@ -12,6 +12,7 @@ Reactor Netty provides the easy-to-use and easy-to-configure
 It hides most of the Netty functionality that is needed in order to create a `TCP` client
 and adds Reactive Streams backpressure.
 
+[[connect-and-disconnect]]
 == Connect and Disconnect
 
 To connect the `TCP` client to a given endpoint, you must create and configure a
@@ -19,38 +20,38 @@ To connect the `TCP` client to a given endpoint, you must create and configure a
 By default, the `host` is `localhost` and the `port` is `12012`.
 The following example shows how to create a `TcpClient`:
 
-====
 [source,java,indent=0]
-.{examplesdir}/create/Application.java
+.{examples-dir}/create/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/create/Application.java[lines=18..31]
+include::{examples-dir}/create/Application.java[lines=18..31]
 ----
 <1> Creates a {javadoc}/reactor/netty/tcp/TcpClient.html[`TcpClient`]
 instance that is ready for configuring.
 <2> Connects the client in a blocking fashion and waits for it to finish initializing.
-====
 
 The returned {javadoc}/reactor/netty/Connection.html[`Connection`]
 offers a simple connection API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
 which shuts the client down in a blocking fashion.
 
+[[host-and-port]]
 === Host and Port
 
 To connect to a specific `host` and `port`, you can apply the following configuration to the `TCP` client.
 The following example shows how to do so:
 
-====
 [source,java,indent=0]
-.{examplesdir}/address/Application.java
+.{examples-dir}/address/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/address/Application.java[lines=18..33]
+include::{examples-dir}/address/Application.java[lines=18..33]
 ----
 <1> Configures the `TCP` host
 <2> Configures the `TCP` port
-====
 
 NOTE: The port can be specified also with *PORT* environment variable.
 
+[[eager-initialization]]
 == Eager Initialization
 
 By default, the initialization of the `TcpClient` resources happens on demand. This means that the `connect
@@ -63,31 +64,30 @@ operation` absorbs the extra time needed to initialize and load:
 
 When you need to preload these resources, you can configure the `TcpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/warmup/Application.java
+.{examples-dir}/warmup/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/warmup/Application.java[lines=18..39]
+include::{examples-dir}/warmup/Application.java[lines=18..39]
 ----
 <1> Initialize and load the event loop group, the host name resolver, the native transport libraries and
 the native libraries for the security
 <2> Host name resolution happens when connecting to the remote peer
-====
 
+[[writing-data]]
 == Writing Data
 
 To send data to a given endpoint, you must attach an I/O handler.
 The I/O handler has access to {javadoc}/reactor/netty/NettyOutbound.html[`NettyOutbound`]
 to be able to write data.
 
-====
 [source,java,indent=0]
-.{examplesdir}/send/Application.java
+.{examples-dir}/send/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/send/Application.java[lines=18..35]
+include::{examples-dir}/send/Application.java[lines=18..35]
 ----
 <1> Sends `hello` string to the endpoint.
-====
 
 When you need more control over the writing process, as an alternative for I/O handler you may use
 {javadoc}/reactor/netty/Connection.html#outbound--[`Connection#outbound`]. As opposed to I/O handler
@@ -95,31 +95,30 @@ where the connection is closed when the provided `Publisher` finishes (in case o
 when using {javadoc}/reactor/netty/Connection.html#outbound--[`Connection#outbound`], you have to invoke explicitly
 `Connection#dispose` in order to close the connection.
 
-====
 [source,java,indent=0]
-.{examplesdir}/send/connection/Application.java
+.{examples-dir}/send/connection/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/send/connection/Application.java[lines=18..44]
+include::{examples-dir}/send/connection/Application.java[lines=18..44]
 ----
 <1> Sends `hello 1` string to the endpoint.
 <2> Sends `hello 2` string to the endpoint.
 <3> Closes the connection once the message is sent to the endpoint.
-====
 
+[[consuming-data]]
 == Consuming Data
 
 To receive data from a given endpoint, you must attach an I/O handler.
 The I/O handler has access to {javadoc}/reactor/netty/NettyInbound.html[`NettyInbound`]
 to be able to read data. The following example shows how to do so:
 
-====
 [source,java,indent=0]
-.{examplesdir}/read/Application.java
+.{examples-dir}/read/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/read/Application.java[lines=18..34]
+include::{examples-dir}/read/Application.java[lines=18..34]
 ----
 <1> Receives data from a given endpoint
-====
 
 When you need more control over the reading process, as an alternative for I/O handler you may use
 {javadoc}/reactor/netty/Connection.html#inbound--[`Connection#inbound`]. As opposed to I/O handler
@@ -127,15 +126,15 @@ where the connection is closed when the provided `Publisher` finishes (in case o
 when using {javadoc}/reactor/netty/Connection.html#inbound--[`Connection#inbound`], you have to invoke explicitly
 `Connection#dispose` in order to close the connection.
 
-====
 [source,java,indent=0]
-.{examplesdir}/read/connection/Application.java
+.{examples-dir}/read/connection/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/read/connection/Application.java[lines=18..38]
+include::{examples-dir}/read/connection/Application.java[lines=18..38]
 ----
 <1> Receives data from a given endpoint.
-====
 
+[[lifecycle-callbacks]]
 == Lifecycle Callbacks
 
 The following lifecycle callbacks are provided to let you extend the `TcpClient`.
@@ -154,46 +153,43 @@ The following lifecycle callbacks are provided to let you extend the `TcpClient`
 
 The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
 
-====
 [source,java,indent=0]
-.{examplesdir}/lifecycle/Application.java
+.{examples-dir}/lifecycle/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/lifecycle/Application.java[lines=18..41]
+include::{examples-dir}/lifecycle/Application.java[lines=18..41]
 ----
 <1> `Netty` pipeline is extended with `ReadTimeoutHandler` when the channel has been connected.
 <2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
-====
 
+[[tcp-level-configurations]]
 == TCP-level Configurations
 
 This section describes three kinds of configuration that you can use at the TCP level:
 
-* <<client-tcp-level-configurations-channel-options>>
-* <<client-tcp-level-configurations-event-wire-logger>>
-* <<client-tcp-level-configurations-event-loop-group>>
+* xref:tcp-client.adoc#client-tcp-level-configurations-channel-options[Channel Options]
+* xref:tcp-client.adoc#client-tcp-level-configurations-event-wire-logger[Wire Logger]
+* xref:tcp-client.adoc#client-tcp-level-configurations-event-loop-group[Event Loop Group]
 
 [[client-tcp-level-configurations-channel-options]]
 === Channel Options
 
 By default, the `TCP` client is configured with the following options:
 
-====
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/tcp/TcpClientConnect.java
 ----
 include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[lines=36..41]
 ----
-====
 
 If additional options are necessary or changes to the current options are needed, you can apply the following configuration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/channeloptions/Application.java
+.{examples-dir}/channeloptions/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/channeloptions/Application.java[lines=18..35]
+include::{examples-dir}/channeloptions/Application.java[lines=18..35]
 ----
-====
 
 You can find more about `Netty` channel options at the following links:
 
@@ -203,13 +199,14 @@ You can find more about `Netty` channel options at the following links:
 * https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[Socket Options]
 
 [[client-tcp-level-configurations-event-wire-logger]]
-include::wire-logger.adoc[]
+include::partial$wire-logger.adoc[]
 
 [[client-tcp-level-configurations-event-loop-group]]
-include::eventloop.adoc[]
+include::partial$eventloop.adoc[]
 
-include::tcp-client-conn-provider.adoc[]
+include::partial$tcp-client-conn-provider.adoc[]
 
+[[ssl-and-tls]]
 == SSL and TLS
 
 When you need SSL or TLS, you can apply the following configuration.
@@ -223,28 +220,28 @@ or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 
 The following example uses `SslContextBuilder`:
 
-====
 [source,java,indent=0]
-.{examplesdir}/security/Application.java
+.{examples-dir}/security/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/security/Application.java[lines=18..37]
+include::{examples-dir}/security/Application.java[lines=18..37]
 ----
-====
 
+[[server-name-indication]]
 === Server Name Indication
 By default, the `TCP` client sends the remote host name as `SNI` server name.
 When you need to change this default setting, you can configure the `TCP` client as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/sni/Application.java
+.{examples-dir}/sni/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/sni/Application.java[lines=18..41]
+include::{examples-dir}/sni/Application.java[lines=18..41]
 ----
-====
 
-include::proxy.adoc[]
+include::partial$proxy.adoc[]
 
+[[metrics]]
 == Metrics
 The TCP client supports built-in integration with https://micrometer.io/[`Micrometer`].
 It exposes all metrics with a prefix of `reactor.netty.tcp.client`.
@@ -255,49 +252,48 @@ The following table provides information for the TCP client metrics:
 |=======
 | metric name | type | description
 | reactor.netty.tcp.client.data.received | DistributionSummary | Amount of the data received, in bytes.
-See <<observability-metrics-data-received>>
+See xref:observability.adoc#observability-metrics-data-received[]
 | reactor.netty.tcp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
-See <<observability-metrics-data-sent>>
+See xref:observability.adoc#observability-metrics-data-sent[]
 | reactor.netty.tcp.client.errors | Counter | Number of errors that occurred.
-See <<observability-metrics-errors-count>>
+See xref:observability.adoc#observability-metrics-errors-count[]
 | reactor.netty.tcp.client.tls.handshake.time | Timer | Time spent for TLS handshake.
-See <<observability-metrics-tls-handshake-time>>
+See xref:observability.adoc#observability-metrics-tls-handshake-time[]
 | reactor.netty.tcp.client.connect.time | Timer | Time spent for connecting to the remote address.
-See <<observability-metrics-connect-time>>
+See xref:observability.adoc#observability-metrics-connect-time[]
 | reactor.netty.tcp.client.address.resolver | Timer | Time spent for resolving the address.
-See <<observability-metrics-hostname-resolution-time>>
+See xref:observability.adoc#observability-metrics-hostname-resolution-time[]
 |=======
 
 These additional metrics are also available:
 
-include::conn-provider-metrics.adoc[]
+include::partial$conn-provider-metrics.adoc[]
 
-include::alloc-metrics.adoc[]
-include::eventloop-metrics.adoc[]
+include::partial$alloc-metrics.adoc[]
+include::partial$eventloop-metrics.adoc[]
 
 The following example enables that integration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/metrics/Application.java
+.{examples-dir}/metrics/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/metrics/Application.java[lines=18..34]
+include::{examples-dir}/metrics/Application.java[lines=18..34]
 ----
 <1> Enables the built-in integration with Micrometer
-====
 
 When TCP client metrics are needed for an integration with a system other than `Micrometer` or you want
 to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/metrics/custom/Application.java
+.{examples-dir}/metrics/custom/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/metrics/custom/Application.java[lines=18..37]
+include::{examples-dir}/metrics/custom/Application.java[lines=18..37]
 ----
 <1> Enables TCP client metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
-====
 
+[[tracing]]
 == Tracing
 The TCP client supports built-in integration with https://micrometer.io/docs/tracing[`Micrometer Tracing`].
 
@@ -307,41 +303,41 @@ The following table provides information for the TCP client spans:
 |=======
 | contextual name | description
 | hostname resolution | Information and time spent for resolving the address.
-See <<observability-spans-hostname-resolution-span>>.
+See xref:observability.adoc#observability-spans-hostname-resolution-span[].
 | connect | Information and time spent for connecting to the remote address.
-See <<observability-spans-connect-span>>.
+See xref:observability.adoc#observability-spans-connect-span[].
 | tls handshake | Information and time spent for TLS handshake.
-See <<observability-spans-tls-handshake-span>>.
+See xref:observability.adoc#observability-spans-tls-handshake-span[].
 |=======
 
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
 See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup.
 
-====
 [source,java,indent=0]
-.{examplesdir}/tracing/Application.java
+.{examples-dir}/tracing/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/tracing/Application.java[lines=18..81]
+include::{examples-dir}/tracing/Application.java[lines=18..81]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Enables the built-in integration with Micrometer.
-====
 
 The result in `Zipkin` looks like:
 
-image::images/tcp-client-tracing.png[]
+image::tcp-client-tracing.png[]
 
+[[access-current-observation]]
 === Access Current Observation
 Project Micrometer provides https://micrometer.io/docs/contextPropagation[`a library`] that assists with context propagation across
 different types of context mechanisms such as `ThreadLocal`, `Reactor Context` and others.
 
 The following example shows how to use this library in a custom `ChannelHandler`:
 
-====
 [source,java,indent=0]
-.{examplesdir}/tracing/custom/Application.java
+.{examples-dir}/tracing/custom/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/tracing/custom/Application.java[lines=18..80]
+include::{examples-dir}/tracing/custom/Application.java[lines=18..80]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Enables the built-in integration with Micrometer.
@@ -350,40 +346,39 @@ include::{examplesdir}/tracing/custom/Application.java[lines=18..80]
 Also, this concrete example sets all `ThreadLocal` values for which there is a value in the given `Channel`,
 if another behaviour is needed please check https://micrometer.io/docs/contextPropagation[`context propagation library API`].
 For example, you may want to set only some of the `ThreadLocal` values.
-====
 
 NOTE: When you enable Reactor Netty tracing within a framework, you may need to let Reactor Netty use the `ObservationRegistry` created by this framework.
 For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry-io.micrometer.observation.ObservationRegistry-[`reactor.netty.Metrics#observationRegistry`].
 You may also need to configure the Reactor Netty `ObservationHandlers` using the API provided by the framework.
 
+[[unix-domain-sockets]]
 == Unix Domain Sockets
 The `TCP` client supports Unix Domain Sockets (UDS) when native transport is in use.
 
 The following example shows how to use UDS support:
 
-====
 [source,java,indent=0]
-.{examplesdir}/uds/Application.java
+.{examples-dir}/uds/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/uds/Application.java[lines=18..33]
+include::{examples-dir}/uds/Application.java[lines=18..33]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
-====
 
+[[host-name-resolution]]
 == Host Name Resolution
 By default, the `TcpClient` uses Netty's domain name lookup mechanism that resolves a domain name asynchronously.
 This is as an alternative of the JVM's built-in blocking resolver.
 
 When you need to change the default settings, you can configure the `TcpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/resolver/Application.java
+.{examples-dir}/resolver/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/resolver/Application.java[lines=18..36]
+include::{examples-dir}/resolver/Application.java[lines=18..36]
 ----
 <1> The timeout of each DNS query performed by this resolver will be 500ms.
-====
 
 The following listing shows the available configurations.
 Additionally, https://tools.ietf.org/html/rfc7766[`TCP fallback`] is enabled by default.
@@ -439,11 +434,10 @@ By default, the resolver will only try to use TCP if the response is marked as t
 
 Sometimes, you may want to switch to the JVM built-in resolver. To do so, you can configure the `TcpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/resolver/custom/Application.java
+.{examples-dir}/resolver/custom/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/resolver/custom/Application.java[lines=18..37]
+include::{examples-dir}/resolver/custom/Application.java[lines=18..37]
 ----
 <1> Sets the JVM built-in resolver.
-====

@@ -1,0 +1,124 @@
+/*
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+apply plugin: 'io.spring.antora.generate-antora-yml'
+
+def isCommandAvailable(String command) {
+	def result = exec {
+		commandLine 'which', command
+		ignoreExitValue true
+		standardOutput = new ByteArrayOutputStream()
+		errorOutput = new ByteArrayOutputStream()
+	}
+	return result.exitValue == 0
+}
+
+antora {
+	version = "$antoraVersion"
+	playbook = findProperty('antora.playbook') ?: "antora-playbook.yml"
+	options = ['--clean', '--stacktrace']
+
+	def version = project.version
+	def forcePdf = project.hasProperty('forcePdf')
+
+	if (!version.endsWith("-SNAPSHOT") || forcePdf) {
+		if (isCommandAvailable('asciidoctor-pdf')) {
+			logger.log(LogLevel.DEBUG, "enabling antora pdf-extension")
+			options.add('--extension=pdf-extension')
+		} else {
+			logger.lifecycle("PDF not generated, asciidoctor-pdf not found from the PATH.")
+		}
+	}
+
+	environment = [
+			'ALGOLIA_API_KEY'   : 'da671ceec1f84f80f280884a6a91bde5',
+			'ALGOLIA_APP_ID'    : 'TGS4XRGX3V',
+			'ALGOLIA_INDEX_NAME': 'reactor'
+	]
+
+	dependencies = [
+			'@antora/atlas-extension'         : "$antoraAtlasExtensionVersion",
+			'@antora/pdf-extension'           : "$antoraPdfExtensionVersion",
+			'@antora/collector-extension'     : "$antoraCollectorExtensionVersion",
+			'@asciidoctor/tabs'               : "$asciiDocTabVersion",
+			'@springio/antora-extensions'     : "$springIoAntoraExtensionsVersion",
+			'@springio/asciidoctor-extensions': "$springIoAsciidoctorExtensionsVersion"
+	]
+}
+
+jar {
+	enabled = false
+}
+
+javadoc {
+	enabled = false
+}
+
+tasks.withType(AbstractPublishToMaven).configureEach {
+	enabled = false
+}
+
+configurations {
+	adoc
+}
+
+dependencies {
+	adoc "io.micrometer:micrometer-docs-generator:$micrometerDocsVersion"
+}
+
+task generateObservabilityDocs(type: JavaExec) {
+	def observationsOutputDir = file("${buildDir}/docs/generated/observation/").absolutePath
+	mainClass = "io.micrometer.docs.DocsGeneratorCommand"
+	classpath configurations.adoc
+	outputs.dir(observationsOutputDir)
+	args project.rootDir.getAbsolutePath(), ".*", observationsOutputDir
+}
+
+tasks.create(name: 'createAntoraPartials', type: Sync) {
+	from { project(":docs").tasks.generateObservabilityDocs.outputs }
+	// Download and include SUPPORT.adoc
+	doLast {
+		def url = 'https://raw.githubusercontent.com/reactor/.github/main/SUPPORT.adoc'
+		def outputFile = file("${buildDir}/generated-antora-resources/modules/ROOT/partials/SUPPORT.adoc")
+
+		ant.get(src: url, dest: outputFile)
+
+		// Structure the content properly
+		def supportContent = outputFile.text
+		def structuredContent = """
+= Support Documentation
+${supportContent}
+"""
+		outputFile.write(structuredContent)
+	}
+	into layout.buildDirectory.dir('generated-antora-resources/modules/ROOT/partials')
+}
+
+tasks.named("generateAntoraYml") {
+	asciidocAttributes = project.provider( { generateAttributes() } )
+	baseAntoraYmlFile = file("antora.yml")
+}
+
+tasks.create('generateAntoraResources') {
+	dependsOn 'createAntoraPartials'
+	dependsOn 'generateAntoraYml'
+}
+
+def generateAttributes() {
+	return ['is-snapshot-version': project.version.endsWith("-SNAPSHOT"),
+	        'project-version': project.version,
+	        'reactorReleaseTrain': bomVersion
+	]
+}
