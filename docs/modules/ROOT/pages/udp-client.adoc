@@ -1,5 +1,5 @@
-:sourcedir: ./../../reactor-netty5-core/src/main/java
-:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty5/examples/documentation/udp/client
+:sourcedir: {core}/src/main/java
+:examples-dir: {examples}/src/main/java/reactor/netty5/examples/documentation/udp/client
 :javadoc: https://projectreactor.io/docs/netty/{project-version}/api
 :nettyjavadoc: https://netty.io/5.0/api
 :wirelogger: reactor.netty5.udp.UdpClient
@@ -12,6 +12,7 @@ Reactor Netty provides the easy-to-use and easy-to-configure
 It hides most of the Netty functionality that is required to create a `UDP` client
 and adds Reactive Streams backpressure.
 
+[[connecting-and-disconnecting]]
 == Connecting and Disconnecting
 
 To connect the UDP client to a given endpoint, you must create and configure a
@@ -19,37 +20,37 @@ To connect the UDP client to a given endpoint, you must create and configure a
 By default, the host is configured for `localhost` and the port is `12012`.
 The following example shows how to create and connect a UDP client:
 
-====
 [source,java,indent=0]
-.{examplesdir}/create/Application.java
+.{examples-dir}/create/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/create/Application.java[lines=18..32]
+include::{examples-dir}/create/Application.java[lines=18..32]
 ----
 <1> Creates a {javadoc}/reactor/netty5/udp/UdpClient.html[`UdpClient`]
 instance that is ready for configuring.
 <2> Connects the client in a blocking fashion and waits for it to finish initializing.
-====
 
 The returned {javadoc}/reactor/netty5/Connection.html[`Connection`]
 offers a simple connection API, including {javadoc}/reactor/netty5/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
 which shuts the client down in a blocking fashion.
 
+[[host-and-port]]
 === Host and Port
 
 To connect to a specific `host` and `port`, you can apply the following configuration to the `UDP` client:
 
-====
 [source,java,indent=0]
-.{examplesdir}/address/Application.java
+.{examples-dir}/address/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/address/Application.java[lines=18..34]
+include::{examples-dir}/address/Application.java[lines=18..34]
 ----
 <1> Configures the `host` to which this client should connect
 <2> Configures the `port` to which this client should connect
-====
 
 NOTE: The port can be specified also with *PORT* environment variable.
 
+[[eager-initialization]]
 == Eager Initialization
 
 By default, the initialization of the `UdpClient` resources happens on demand. This means that the `connect
@@ -61,16 +62,16 @@ operation` absorbs the extra time needed to initialize and load:
 
 When you need to preload these resources, you can configure the `UdpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/warmup/Application.java
+.{examples-dir}/warmup/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/warmup/Application.java[lines=18..40]
+include::{examples-dir}/warmup/Application.java[lines=18..40]
 ----
 <1> Initialize and load the event loop group, the host name resolver, and the native transport libraries
 <2> Host name resolution happens when connecting to the remote peer
-====
 
+[[writing-data]]
 == Writing Data
 
 To send data to a given peer, you must attach an I/O handler.
@@ -79,15 +80,15 @@ to be able to write data.
 
 The following example shows how to send `hello`:
 
-====
 [source,java,indent=0]
-.{examplesdir}/send/Application.java
+.{examples-dir}/send/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/send/Application.java[lines=18..37]
+include::{examples-dir}/send/Application.java[lines=18..37]
 ----
 <1> Sends `hello` string to the remote peer.
-====
 
+[[consuming-data]]
 == Consuming Data
 
 To receive data from a given peer, you must attach an I/O handler.
@@ -95,15 +96,15 @@ The I/O handler has access to {javadoc}/reactor/netty5/udp/UdpInbound.html[`UdpI
 to be able to read data.
 The following example shows how to consume data:
 
-====
 [source,java,indent=0]
-.{examplesdir}/read/Application.java
+.{examples-dir}/read/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/read/Application.java[lines=18..35]
+include::{examples-dir}/read/Application.java[lines=18..35]
 ----
 <1> Receives data from a given peer
-====
 
+[[lifecycle-callbacks]]
 == Lifecycle Callbacks
 
 The following lifecycle callbacks are provided to let you extend the `UdpClient`:
@@ -122,46 +123,44 @@ The following lifecycle callbacks are provided to let you extend the `UdpClient`
 
 The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
 
-====
 [source,java,indent=0]
-.{examplesdir}/lifecycle/Application.java
+.{examples-dir}/lifecycle/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/lifecycle/Application.java[lines=18..40]
+include::{examples-dir}/lifecycle/Application.java[lines=18..40]
 ----
 <1> `Netty` pipeline is extended with `LineBasedFrameDecoder` when the channel has been connected.
 <2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
-====
 
+[[connection-configuration]]
 == Connection Configuration
 
 This section describes three kinds of configuration that you can use at the UDP level:
 
-* <<client-udp-connection-configurations-channel-options>>
-* <<client-udp-connection-configurations-wire-logger>>
-* <<client-udp-connection-configurations-event-loop-group>>
+* xref:udp-client.adoc#client-udp-connection-configurations-channel-options[Channel Options]
+* xref:udp-client.adoc#client-udp-connection-configurations-wire-logger[Wire Logger]
+* xref:udp-client.adoc#client-udp-connection-configurations-event-loop-group[Event Loop Group]
 
 [[client-udp-connection-configurations-channel-options]]
 === Channel Options
 
 By default, the `UDP` client is configured with the following options:
 
-====
 [source,java,indent=0]
 .{sourcedir}/reactor/netty5/udp/UdpClientConnect.java
+[%unbreakable]
 ----
 include::{sourcedir}/reactor/netty5/udp/UdpClientConnect.java[lines=37..42]
 ----
-====
 
 If you need additional options or need to change the current options, you can apply the following configuration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/channeloptions/Application.java
+.{examples-dir}/channeloptions/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/channeloptions/Application.java[lines=18..36]
+include::{examples-dir}/channeloptions/Application.java[lines=18..36]
 ----
-====
 
 You can find more about Netty channel options at the following links:
 
@@ -172,11 +171,12 @@ You can find more about Netty channel options at the following links:
 * https://docs.oracle.com/en/java/javase/17/docs/api/jdk.net/jdk/net/ExtendedSocketOptions.html[Extended Socket Options]
 
 [[client-udp-connection-configurations-wire-logger]]
-include::wire-logger.adoc[]
+include::partial$wire-logger.adoc[]
 
 [[client-udp-connection-configurations-event-loop-group]]
-include::eventloop.adoc[]
+include::partial$eventloop.adoc[]
 
+[[metrics]]
 == Metrics
 The UDP client supports built-in integration with https://micrometer.io/[`Micrometer`].
 It exposes all metrics with a prefix of `reactor.netty5.udp.client`.
@@ -187,55 +187,53 @@ The following table provides information for the UDP client metrics:
 |=======
 | metric name | type | description
 | reactor.netty5.udp.client.data.received | DistributionSummary | Amount of the data received, in bytes.
-See <<observability-metrics-data-received>>
+See xref:observability.adoc#observability-metrics-data-received[]
 | reactor.netty5.udp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
-See <<observability-metrics-data-sent>>
+See xref:observability.adoc#observability-metrics-data-sent[]
 | reactor.netty5.udp.client.errors | Counter | Number of errors that occurred.
-See <<observability-metrics-errors-count>>
+See xref:observability.adoc#observability-metrics-errors-count[]
 | reactor.netty5.udp.client.connect.time | Timer | Time spent for connecting to the remote address.
-See <<observability-metrics-connect-time>>
+See xref:observability.adoc#observability-metrics-connect-time[]
 | reactor.netty5.udp.client.address.resolver | Timer | Time spent for resolving the address.
-See <<observability-metrics-hostname-resolution-time>>
+See xref:observability.adoc#observability-metrics-hostname-resolution-time[]
 |=======
 
 These additional metrics are also available:
 
-include::alloc-metrics.adoc[]
-include::eventloop-metrics.adoc[]
+include::partial$alloc-metrics.adoc[]
+include::partial$eventloop-metrics.adoc[]
 
 The following example enables that integration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/metrics/Application.java
+.{examples-dir}/metrics/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/metrics/Application.java[lines=18..36]
+include::{examples-dir}/metrics/Application.java[lines=18..36]
 ----
 <1> Enables the built-in integration with Micrometer
-====
 
 When UDP client metrics are needed for an integration with a system other than `Micrometer` or you want
 to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/metrics/custom/Application.java
+.{examples-dir}/metrics/custom/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/metrics/custom/Application.java[lines=18..37]
+include::{examples-dir}/metrics/custom/Application.java[lines=18..37]
 ----
 <1> Enables UDP client metrics and provides {javadoc}/reactor/netty5/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
-====
 
+[[unix-domain-sockets]]
 == Unix Domain Sockets
 The `UdpClient` supports Unix Domain Datagram Sockets (UDS) when native transport is in use.
 
 The following example shows how to use UDS support:
 
-====
 [source,java,indent=0]
-.{examplesdir}/uds/Application.java
+.{examples-dir}/uds/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/uds/Application.java[lines=18..42]
+include::{examples-dir}/uds/Application.java[lines=18..42]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
-====

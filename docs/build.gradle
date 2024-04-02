@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-rootProject.name = 'reactor-netty5'
-include 'reactor-netty5-core'
-include 'reactor-netty5-http'
-//include 'reactor-netty-incubator-quic'
-include 'reactor-netty5-examples'
-include 'reactor-netty5-graalvm-smoke-tests'
-include 'docs'
-include 'reactor-netty5'
+plugins {
+	id 'org.antora' version "$antoraPluginVersion"
+}
 
+apply from: "${rootDir}/gradle/antora-docs.gradle"
+
+description = "Reactor Netty Antora Docs"
+
+build.dependsOn(':docs:antora')

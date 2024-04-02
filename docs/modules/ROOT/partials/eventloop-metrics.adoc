@@ -4,5 +4,5 @@
 |=======
 | metric name | type | description
 | reactor.netty5.eventloop.pending.tasks | Gauge | The number of tasks that are pending for processing on an event loop.
-See <<observability-metrics-pending-tasks>>
+See xref:observability.adoc#observability-metrics-pending-tasks[]
 |=======

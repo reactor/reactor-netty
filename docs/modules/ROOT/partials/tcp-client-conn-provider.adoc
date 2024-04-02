@@ -1,4 +1,6 @@
+[[connection-pool]]
 == Connection Pool
+
 By default, `TcpClient` uses a "`fixed`" connection pool with `500` as the maximum number of active channels
 and `1000` as the maximum number of further channel acquisition attempts allowed to be kept in a pending state
 (for the rest of the configurations check the system properties or the builder configurations below).
@@ -13,24 +15,22 @@ in the pool and thus a new connection can be opened when needed. This behaviour 
 and is intentional because only the user/framework knows if the actual protocol is compatible with reusing connections.
 (opposed to `HttpClient` where the protocol is known and Reactor Netty can return the connection to the pool when this is possible)
 
-====
 [source,java,indent=0]
-../../../reactor-netty5-core/src/main/java/reactor/netty5/ReactorNetty.java
+.{core}/src/main/java/reactor/netty5/ReactorNetty.java
+[%unbreakable]
 ----
-include::./../../reactor-netty5-core/src/main/java/reactor/netty5/ReactorNetty.java[lines=122..132]
+include::{core}/src/main/java/reactor/netty5/ReactorNetty.java[lines=123..133]
 ----
-====
 
 When you need to change the default settings, you can configure the `ConnectionProvider` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/pool/config/Application.java
+.{examples-dir}/pool/config/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/pool/config/Application.java[lines=18..41]
+include::{examples-dir}/pool/config/Application.java[lines=18..41]
 ----
 <1> Configures the maximum time for the pending acquire operation to 60 seconds.
-====
 
 The following listing shows the available configurations:
 [width="100%",options="header"]
@@ -59,14 +59,14 @@ thrown (resolution: ms). If -1 is specified, no such timeout is applied. Default
 
 If you need to disable the connection pool, you can apply the following configuration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/pool/Application.java
+.{examples-dir}/pool/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/pool/Application.java[lines=18..35]
+include::{examples-dir}/pool/Application.java[lines=18..35]
 ----
-====
 
+[[tcp-client-conn-provider-disposing-connection-pool]]
 === Disposing Connection Pool
 
 - If you use the default `ConnectionProvider` provided by Reactor Netty, invoke
@@ -78,19 +78,19 @@ NOTE: Disposing `HttpResources` means that every client that is using it, will n
 
 NOTE: Disposing the custom `ConnectionProvider` means that every client that is configured to use it, will not be able to use it anymore!
 
+[[tcp-client-conn-provider-metrics]]
 === Metrics
 The pooled `ConnectionProvider` supports built-in integration with https://micrometer.io/[`Micrometer`].
 It exposes all metrics with a prefix of `reactor.netty5.connection.provider`.
 
-include::conn-provider-metrics.adoc[]
+include::partial$conn-provider-metrics.adoc[]
 
 The following example enables that integration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/pool/metrics/Application.java
+.{examples-dir}/pool/metrics/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/pool/metrics/Application.java[lines=18..45]
+include::{examples-dir}/pool/metrics/Application.java[lines=18..45]
 ----
 <1> Enables the built-in integration with Micrometer
-====

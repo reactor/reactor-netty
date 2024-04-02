@@ -1,5 +1,5 @@
-:sourcedir: ./../../reactor-netty5-http/src/main/java
-:examplesdir: ./../../reactor-netty5-examples/src/main/java/reactor/netty5/examples/documentation/http/client
+:sourcedir: {http}/src/main/java
+:examples-dir: {examples}/src/main/java/reactor/netty5/examples/documentation/http/client
 :javadoc: https://projectreactor.io/docs/netty/{project-version}/api
 :nettyjavadoc: https://netty.io/5.0/api
 :wirelogger: reactor.netty5.http.client.HttpClient
@@ -12,6 +12,7 @@ Reactor Netty provides the easy-to-use and easy-to-configure
 It hides most of the Netty functionality that is required to create an `HTTP` client
 and adds Reactive Streams backpressure.
 
+[[connect]]
 == Connect
 
 To connect the `HTTP` client to a given `HTTP` endpoint, you must create and configure a
@@ -19,46 +20,45 @@ To connect the `HTTP` client to a given `HTTP` endpoint, you must create and con
 By default, the host is configured for `localhost` and the port is `80`.
 The following example shows how to do so:
 
-====
 [source,java,indent=0]
-.{examplesdir}/connect/Application.java
+.{examples-dir}/connect/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/connect/Application.java[lines=18..30]
+include::{examples-dir}/connect/Application.java[lines=18..30]
 ----
 <1> Creates a {javadoc}/reactor/netty5/http/client/HttpClient.html[HttpClient]
 instance ready for configuring.
 <2> Specifies that `GET` method will be used.
 <3> Specifies the path.
 <4> Obtains the response {javadoc}/reactor/netty5/http/client/HttpClientResponse.html[HttpClientResponse]
-====
 
 
 The following example uses `WebSocket`:
 
-====
 [source,java,indent=0]
-.{examplesdir}/websocket/Application.java
+.{examples-dir}/websocket/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/websocket/Application.java[lines=18..42]
+include::{examples-dir}/websocket/Application.java[lines=18..42]
 ----
-====
 
+[[host-and-port]]
 === Host and Port
 
 In order to connect to a specific host and port, you can apply the following configuration to the `HTTP` client:
 
-====
 [source,java,indent=0]
-.{examplesdir}/address/Application.java
+.{examples-dir}/address/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/address/Application.java[lines=18..33]
+include::{examples-dir}/address/Application.java[lines=18..33]
 ----
 <1> Configures the `HTTP` host
 <2> Configures the `HTTP` port
-====
 
 NOTE: The port can be specified also with *PORT* environment variable.
 
+[[eager-initialization]]
 == Eager Initialization
 
 By default, the initialization of the `HttpClient` resources happens on demand. This means that the `first
@@ -71,19 +71,19 @@ request` absorbs the extra time needed to initialize and load:
 
 When you need to preload these resources, you can configure the `HttpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/warmup/Application.java
+.{examples-dir}/warmup/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/warmup/Application.java[lines=18..36]
+include::{examples-dir}/warmup/Application.java[lines=18..36]
 ----
 <1> Initialize and load the event loop group, the host name resolver, the native transport libraries and
 the native libraries for the security
 <2> Host name resolution happens with the first request.
 In this example, a connection pool is used, so with the first request the connection to the URL is established,
 the subsequent requests to the same URL reuse the connections from the pool.
-====
 
+[[writing-data]]
 == Writing Data
 
 To send data to a given `HTTP` endpoint, you can provide a `Publisher` by using the
@@ -92,42 +92,42 @@ By default, `Transfer-Encoding: chunked` is applied for those `HTTP` methods for
 a request body is expected. `Content-Length` provided through request headers disables `Transfer-Encoding: chunked`,
 if necessary. The following example sends `hello`:
 
-====
 [source,java,indent=0]
-.{examplesdir}/send/Application.java
+.{examples-dir}/send/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/send/Application.java[lines=18..33]
+include::{examples-dir}/send/Application.java[lines=18..33]
 ----
 <1> Sends a `hello` string to the given `HTTP` endpoint
-====
 
+[[adding-headers-and-other-metadata]]
 === Adding Headers and Other Metadata
 
 When sending data to a given `HTTP` endpoint, you may need to send additional headers, cookies and other metadata.
 You can use the following configuration to do so:
 
-====
 [source,java,indent=0]
-.{examplesdir}/send/headers/Application.java
+.{examples-dir}/send/headers/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/send/headers/Application.java[lines=18..36]
+include::{examples-dir}/send/headers/Application.java[lines=18..36]
 ----
 <1> Disables `Transfer-Encoding: chunked` and provides `Content-Length` header.
-====
 
+[[compression]]
 ==== Compression
 
 You can enable compression on the `HTTP` client, which means the request header
 `Accept-Encoding` is added to the request headers. The following example shows how to do so:
 
-====
 [source,java,indent=0]
-.{examplesdir}/compression/Application.java
+.{examples-dir}/compression/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/compression/Application.java[lines=18..32]
+include::{examples-dir}/compression/Application.java[lines=18..32]
 ----
-====
 
+[[auto-redirect-support]]
 ==== Auto-Redirect Support
 
 You can configure the `HTTP` client to enable auto-redirect support.
@@ -141,31 +141,31 @@ predicate matches.
 
 The following example uses `followRedirect(true)`:
 
-====
 [source,java,indent=0]
-.{examplesdir}/redirect/Application.java
+.{examples-dir}/redirect/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/redirect/Application.java[lines=18..32]
+include::{examples-dir}/redirect/Application.java[lines=18..32]
 ----
-====
 
+[[consuming-data]]
 == Consuming Data
 
 To receive data from a given `HTTP` endpoint, you can use one of the methods from
 {javadoc}/reactor/netty5/http/client/HttpClient.ResponseReceiver.html[`HttpClient.ResponseReceiver`].
 The following example uses the `responseContent` method:
 
-====
 [source,java,indent=0]
-.{examplesdir}/read/Application.java
+.{examples-dir}/read/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/read/Application.java[lines=18..33]
+include::{examples-dir}/read/Application.java[lines=18..33]
 ----
 <1> Receives data from a given `HTTP` endpoint
 <2> Aggregates the data
 <3> Transforms the data as string
-====
 
+[[reading-headers-and-other-metadata]]
 === Reading Headers and Other Metadata
 
 When receiving data from a given `HTTP` endpoint, you can check response headers, status code, and other metadata.
@@ -173,15 +173,15 @@ You can obtain this additional metadata by using
 {javadoc}/reactor/netty5/http/client/HttpClientResponse.html[`HttpClientResponse`].
 The following example shows how to do so.
 
-====
 [source,java,indent=0]
-.{examplesdir}/read/status/Application.java
+.{examples-dir}/read/status/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/read/status/Application.java[lines=18..34]
+include::{examples-dir}/read/status/Application.java[lines=18..34]
 ----
 <1> Obtains the status code.
-====
 
+[[http-response-decoder]]
 === HTTP Response Decoder
 
 By default, `Netty` configures some restrictions for the incoming responses, such as:
@@ -194,35 +194,33 @@ For more information, see {nettyjavadoc}/io.netty5.codec.http/io/netty5/handler/
 
 By default, the `HTTP` client is configured with the following settings:
 
-====
 [source,java,indent=0]
 .{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java
+[%unbreakable]
 ----
 include::{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java[lines=28..32]
 ----
-====
-====
 [source,java,indent=0]
 .{sourcedir}/reactor/netty5/http/client/HttpResponseDecoderSpec.java
+[%unbreakable]
 ----
 include::{sourcedir}/reactor/netty5/http/client/HttpResponseDecoderSpec.java[lines=44..52]
 ----
-====
 
 When you need to change these default settings, you can configure the `HTTP` client as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/responsedecoder/Application.java
+.{examples-dir}/responsedecoder/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/responsedecoder/Application.java[lines=18..35]
+include::{examples-dir}/responsedecoder/Application.java[lines=18..35]
 ----
 <1> The maximum length of all headers will be `16384`.
 When this value is exceeded, a
 {nettyjavadoc}/io.netty5.codec/io/netty5/handler/codec/TooLongFrameException.html[TooLongFrameException]
 is raised.
-====
 
+[[lifecycle-callbacks]]
 == Lifecycle Callbacks
 
 The following lifecycle callbacks are provided to let you extend the `HttpClient`.
@@ -249,42 +247,42 @@ The following lifecycle callbacks are provided to let you extend the `HttpClient
 
 The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
 
-====
 [source,java,indent=0]
-.{examplesdir}/lifecycle/Application.java
+.{examples-dir}/lifecycle/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/lifecycle/Application.java[lines=18..39]
+include::{examples-dir}/lifecycle/Application.java[lines=18..39]
 ----
 <1> `Netty` pipeline is extended with `ReadTimeoutHandler` when the channel has been connected.
 <2> `Netty` pipeline is extended with `LoggingHandler` when initializing the channel.
-====
 
+[[tcp-level-configuration]]
 == TCP-level Configuration
 
 When you need configurations on a TCP level, you can use the following snippet
 to extend the default `TCP` client configuration (add an option, bind address etc.):
 
-====
 [source,java,indent=0]
-.{examplesdir}/channeloptions/Application.java
+.{examples-dir}/channeloptions/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/channeloptions/Application.java[lines=18..54]
+include::{examples-dir}/channeloptions/Application.java[lines=18..54]
 ----
 <1> Configures the connection establishment timeout to 10 seconds.
 <2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
 <3> The connection needs to remain idle for 5 minutes before TCP starts sending `keepalive` probes.
 <4> Configures the time between individual `keepalive` probes to 1 minute.
 <5> Configures the maximum number of TCP `keepalive` probes to 8.
-====
 
-See <<tcp-client>> for more about `TCP` level configurations.
+See xref:tcp-client.adoc[TCP Client] for more about `TCP` level configurations.
 
-include::wire-logger.adoc[]
+include::partial$wire-logger.adoc[]
 
-include::eventloop.adoc[]
+include::partial$eventloop.adoc[]
 
-include::http-client-conn-provider.adoc[]
+include::partial$http-client-conn-provider.adoc[]
 
+[[ssl-and-tls]]
 == SSL and TLS
 When you need SSL or TLS, you can apply the configuration shown in the next example.
 By default, if `OpenSSL` is available, a
@@ -296,29 +294,30 @@ You can switch the provider by using
 or by setting `-Dio.netty5.handler.ssl.noOpenSsl=true`.
 The following example uses `SslContextBuilder`:
 
-====
 [source,java,indent=0]
-.{examplesdir}/security/Application.java
+.{examples-dir}/security/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/security/Application.java[lines=18..35]
+include::{examples-dir}/security/Application.java[lines=18..35]
 ----
-====
 
+[[server-name-indication]]
 === Server Name Indication
 By default, the `HTTP` client sends the remote host name as `SNI` server name.
 When you need to change this default setting, you can configure the `HTTP` client as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/sni/Application.java
+.{examples-dir}/sni/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/sni/Application.java[lines=18..39]
+include::{examples-dir}/sni/Application.java[lines=18..39]
 ----
-====
 
+[[retry-strategies]]
 == Retry Strategies
 By default, the `HTTP` client retries the request once if it was aborted on the `TCP` level.
 
+[[HTTP2]]
 == HTTP/2
 
 By default, the `HTTP` client supports `HTTP/1.1`. If you need `HTTP/2`, you can get it through configuration.
@@ -326,38 +325,37 @@ In addition to the protocol configuration, if you need `H2` but not `H2C (cleart
 
 The following listing presents a simple `H2` example:
 
-====
 [source,java,indent=0]
-.{examplesdir}/http2/H2Application.java
+.{examples-dir}/http2/H2Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/http2/H2Application.java[lines=18..42]
+include::{examples-dir}/http2/H2Application.java[lines=18..42]
 ----
 <1> Configures the client to support only `HTTP/2`
 <2> Configures `SSL`
-====
 
 The following listing presents a simple `H2C` example:
 
-====
 [source,java,indent=0]
-.{examplesdir}/http2/H2CApplication.java
+.{examples-dir}/http2/H2CApplication.java
+[%unbreakable]
 ----
-include::{examplesdir}/http2/H2CApplication.java[lines=18..41]
+include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
 ----
-====
 
+[[protocol-selection]]
 === Protocol Selection
 
-====
 [source,java,indent=0]
 .{sourcedir}/reactor/netty5/http/HttpProtocol.java
+[%unbreakable]
 ----
 include::{sourcedir}/reactor/netty5/http/HttpProtocol.java[lines=24..52]
 ----
-====
 
-include::proxy.adoc[]
+include::partial$proxy.adoc[]
 
+[[metrics]]
 == Metrics
 The HTTP client supports built-in integration with https://micrometer.io/[`Micrometer`].
 It exposes all metrics with a prefix of `reactor.netty5.http.client`.
@@ -368,28 +366,28 @@ The following table provides information for the HTTP client metrics:
 |=======
 | metric name | type | description
 | reactor.netty5.http.client.data.received | DistributionSummary | Amount of the data received, in bytes.
-See <<observability-metrics-data-received>>
+See xref:observability.adoc#observability-metrics-data-received[]
 | reactor.netty5.http.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
-See <<observability-metrics-data-sent>>
+See xref:observability.adoc#observability-metrics-data-sent[]
 | reactor.netty5.http.client.errors | Counter | Number of errors that occurred.
-See <<observability-metrics-errors-count>>
+See xref:observability.adoc#observability-metrics-errors-count[]
 | reactor.netty5.http.client.tls.handshake.time | Timer | Time spent for TLS handshake.
-See <<observability-metrics-tls-handshake-time>>
+See xref:observability.adoc#observability-metrics-tls-handshake-time[]
 | reactor.netty5.http.client.connect.time | Timer | Time spent for connecting to the remote address.
-See <<observability-metrics-connect-time>>
+See xref:observability.adoc#observability-metrics-connect-time[]
 | reactor.netty5.http.client.address.resolver | Timer | Time spent for resolving the address.
-See <<observability-metrics-hostname-resolution-time>>
+See xref:observability.adoc#observability-metrics-hostname-resolution-time[]
 | reactor.netty5.http.client.data.received.time | Timer | Time spent in consuming incoming data.
-See <<observability-metrics-http-client-data-received-time>>
+See xref:observability.adoc#observability-metrics-http-client-data-received-time[]
 | reactor.netty5.http.client.data.sent.time | Timer | Time spent in sending outgoing data.
-See <<observability-metrics-http-client-data-sent-time>>
+See xref:observability.adoc#observability-metrics-http-client-data-sent-time[]
 | reactor.netty5.http.client.response.time | Timer | Total time for the request/response
-See <<observability-metrics-http-client-response-time>>
+See xref:observability.adoc#observability-metrics-http-client-response-time[]
 |=======
 
 These additional metrics are also available:
 
-include::conn-provider-metrics.adoc[]
+include::partial$conn-provider-metrics.adoc[]
 
 The following table provides information for the HTTP client metrics when it is configured to serve `HTTP/2` traffic:
 
@@ -397,27 +395,26 @@ The following table provides information for the HTTP client metrics when it is 
 |=======
 | metric name | type | description
 | reactor.netty5.connection.provider.active.streams | Gauge | The number of the active HTTP/2 streams.
-See <<observability-metrics-active-streams>>
+See xref:observability.adoc#observability-metrics-active-streams[]
 | reactor.netty5.connection.provider.pending.streams | Gauge | The number of requests that are waiting for opening HTTP/2 stream.
-See <<observability-metrics-pending-streams>>
+See xref:observability.adoc#observability-metrics-pending-streams[]
 |=======
 
-include::alloc-metrics.adoc[]
-include::eventloop-metrics.adoc[]
+include::partial$alloc-metrics.adoc[]
+include::partial$eventloop-metrics.adoc[]
 
 
 The following example enables that integration:
 
-====
 [source,java,indent=0]
-.{examplesdir}/metrics/Application.java
+.{examples-dir}/metrics/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/metrics/Application.java[lines=18..51]
+include::{examples-dir}/metrics/Application.java[lines=18..51]
 ----
 <1> Applies upper limit for the meters with `URI` tag
 <2> Templated URIs will be used as a URI tag value when possible
 <3> Enables the built-in integration with Micrometer
-====
 
 NOTE: In order to avoid a memory and CPU overhead of the enabled metrics, it is important to convert the real URIs to templated URIs when possible.
 Without a conversion to a template-like form, each distinct URI leads to the creation of a distinct tag, which takes a lot of memory for the metrics.
@@ -428,15 +425,15 @@ You can find more information at https://micrometer.io/docs/concepts#_denyaccept
 When HTTP client metrics are needed for an integration with a system other than `Micrometer` or you want
 to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/metrics/custom/Application.java
+.{examples-dir}/metrics/custom/Application.java
+[%unbreakable]
 ----
-include::{examplesdir}/metrics/custom/Application.java[lines=18..35]
+include::{examples-dir}/metrics/custom/Application.java[lines=18..35]
 ----
 <1> Enables HTTP client metrics and provides {javadoc}/reactor/netty5/http/client/HttpClientMetricsRecorder.html[`HttpClientMetricsRecorder`] implementation.
-====
 
+[[tracing]]
 == Tracing
 The HTTP client supports built-in integration with https://micrometer.io/docs/tracing[`Micrometer Tracing`].
 
@@ -446,44 +443,42 @@ The following table provides information for the HTTP client spans:
 |=======
 | contextual name | description
 | HTTP <HTTP METHOD> | Information and total time for the request.
-See <<observability-spans-http-client-response-span>>.
+See xref:observability.adoc#observability-spans-http-client-response-span[].
 | hostname resolution | Information and time spent for resolving the address.
-See <<observability-spans-hostname-resolution-span>>.
+See xref:observability.adoc#observability-spans-hostname-resolution-span[].
 | connect | Information and time spent for connecting to the remote address.
-See <<observability-spans-connect-span>>.
+See xref:observability.adoc#observability-spans-connect-span[].
 | tls handshake | Information and time spent for TLS handshake.
-See <<observability-spans-tls-handshake-span>>.
+See xref:observability.adoc#observability-spans-tls-handshake-span[].
 |=======
 
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
 See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup.
 
-====
 [source,java,indent=0]
-.{examplesdir}/tracing/Application.java
+.{examples-dir}/tracing/Application.java
 ----
-include::{examplesdir}/tracing/Application.java[lines=18..90]
+include::{examples-dir}/tracing/Application.java[lines=18..90]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Templated URIs are used as an URI tag value when possible.
 <3> Enables the built-in integration with Micrometer.
-====
 
 The result in `Zipkin` looks like:
 
-image::images/http-client-tracing.png[]
+image::http-client-tracing.png[]
 
+[[access-current-observation]]
 === Access Current Observation
 Project Micrometer provides https://micrometer.io/docs/contextPropagation[`a library`] that assists with context propagation across
 different types of context mechanisms such as `ThreadLocal`, `Reactor Context` and others.
 
 The following example shows how to use this library in a custom `ChannelHandler`:
 
-====
 [source,java,indent=0]
-.{examplesdir}/tracing/custom/Application.java
+.{examples-dir}/tracing/custom/Application.java
 ----
-include::{examplesdir}/tracing/custom/Application.java[lines=18..85]
+include::{examples-dir}/tracing/custom/Application.java[lines=18..85]
 ----
 <1> Initializes Brave, Zipkin, and the Observation registry.
 <2> Templated URIs are used as an URI tag value when possible.
@@ -493,40 +488,37 @@ include::{examplesdir}/tracing/custom/Application.java[lines=18..85]
 Also, this concrete example sets all `ThreadLocal` values for which there is a value in the given `Channel`,
 if another behaviour is needed please check https://micrometer.io/docs/contextPropagation[`context propagation library API`].
 For example, you may want to set only some of the `ThreadLocal` values.
-====
 
 NOTE: When you enable Reactor Netty tracing within a framework, you may need to let Reactor Netty use the `ObservationRegistry` created by this framework.
 For this purpose you need to invoke {javadoc}/reactor/netty/Metrics.html#observationRegistry-io.micrometer.observation.ObservationRegistry-[`reactor.netty.Metrics#observationRegistry`].
 You may also need to configure the Reactor Netty `ObservationHandlers` using the API provided by the framework.
 
+[[unix-domain-sockets]]
 == Unix Domain Sockets
 The `HTTP` client supports Unix Domain Sockets (UDS) for all transports (native and NIO).
 
 The following example shows how to use UDS support:
 
-====
 [source,java,indent=0]
-.{examplesdir}/uds/Application.java
+.{examples-dir}/uds/Application.java
 ----
-include::{examplesdir}/uds/Application.java[lines=18..33]
+include::{examples-dir}/uds/Application.java[lines=18..33]
 ----
 <1> Specifies `DomainSocketAddress` that will be used
-====
 
+[[host-name-resolution]]
 == Host Name Resolution
 By default, the `HttpClient` uses Netty's domain name lookup mechanism that resolves a domain name asynchronously.
 This is as an alternative of the JVM's built-in blocking resolver.
 
 When you need to change the default settings, you can configure the `HttpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/resolver/Application.java
+.{examples-dir}/resolver/Application.java
 ----
-include::{examplesdir}/resolver/Application.java[lines=18..39]
+include::{examples-dir}/resolver/Application.java[lines=18..39]
 ----
 <1> The timeout of each DNS query performed by this resolver will be 500ms.
-====
 
 The following listing shows the available configurations.
 Additionally, https://tools.ietf.org/html/rfc7766[`TCP fallback`] is enabled by default.
@@ -583,14 +575,12 @@ information in case of resolution failure.
 
 Sometimes, you may want to switch to the JVM built-in resolver. To do so, you can configure the `HttpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/resolver/custom/Application.java
+.{examples-dir}/resolver/custom/Application.java
 ----
-include::{examplesdir}/resolver/custom/Application.java[lines=18..38]
+include::{examples-dir}/resolver/custom/Application.java[lines=18..38]
 ----
 <1> Sets the JVM built-in resolver.
-====
 
 [[timeout-configuration]]
 == Timeout Configuration
@@ -598,13 +588,13 @@ This section describes various timeout configuration options that can be used in
 Configuring a proper timeout may improve or solve issues in the communication process.
 The configuration options can be grouped as follows:
 
-* <<connection-pool-timeout>>
-* <<http-client-timeout>>
-** <<response-timeout>>
-** <<connection-timeout>>
-** <<ssl-tls-timeout>>
-** <<proxy-timeout>>
-** <<dns-timeout>>
+* xref:http-client.adoc#connection-pool-timeout[Connection Pool Timeout]
+* xref:http-client.adoc#http-client-timeout[HttpClient Timeout]
+** xref:http-client.adoc#response-timeout[Response Timeout]
+** xref:http-server.adoc#http-server-connection-timeout[Connection Timeout]
+** xref:http-client.adoc#ssl-tls-timeout[SSL/TLS Timeout]
+** xref:http-client.adoc#proxy-timeout[Proxy Timeout]
+** xref:http-client.adoc#dns-timeout[Host Name Resolution Timeout]
 
 [[connection-pool-timeout]]
 === Connection Pool Timeout
@@ -631,17 +621,15 @@ However, you can also configure the connection pool, by setting `evictInBackgrou
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/pool/Application.java
+.{examples-dir}/pool/Application.java
 ----
-include::{examplesdir}/pool/config/Application.java[lines=18..50]
+include::{examples-dir}/pool/config/Application.java[lines=18..50]
 ----
 <1> Configures the maximum time for a connection to stay idle to 20 seconds.
 <2> Configures the maximum time for a connection to stay alive to 60 seconds.
 <3> Configures the maximum time for the pending acquire operation to 60 seconds.
 <4> Every two minutes, the connection pool is regularly checked for connections that are applicable for removal.
-====
 
 [[http-client-timeout]]
 === HttpClient Timeout
@@ -661,15 +649,13 @@ NOTE: It is always a good practice to configure a response timeout.
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/read/timeout/Application.java
+.{examples-dir}/read/timeout/Application.java
 ----
-include::{examplesdir}/read/timeout/Application.java[lines=18..55]
+include::{examples-dir}/read/timeout/Application.java[lines=18..55]
 ----
 <1> Configures the default response timeout to 1 second.
 <2> Configures a response timeout for a specific request to 2 seconds.
-====
 
 [[connection-timeout]]
 ==== Connection Timeout
@@ -693,18 +679,16 @@ https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/StandardSo
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/channeloptions/Application.java
+.{examples-dir}/channeloptions/Application.java
 ----
-include::{examplesdir}/channeloptions/Application.java[lines=18..54]
+include::{examples-dir}/channeloptions/Application.java[lines=18..54]
 ----
 <1> Configures the connection establishment timeout to 10 seconds.
 <2> Enables TCP `keepalive`. This means that TCP starts sending `keepalive` probes when a connection is idle for some time.
 <3> The connection needs to remain idle for 5 minutes before TCP starts sending `keepalive` probes.
 <4> Configures the time between individual `keepalive` probes to 1 minute.
 <5> Configures the maximum number of TCP `keepalive` probes to 8.
-====
 
 [[ssl-tls-timeout]]
 ==== SSL/TLS Timeout
@@ -721,16 +705,14 @@ NOTE: You should consider increasing the SSL handshake timeout when expecting sl
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/security/custom/Application.java
+.{examples-dir}/security/custom/Application.java
 ----
-include::{examplesdir}/security/custom/Application.java[lines=18..45]
+include::{examples-dir}/security/custom/Application.java[lines=18..45]
 ----
 <1> Configures the SSL handshake timeout to 30 seconds.
 <2> Configures the SSL `close_notify` flush timeout to 10 seconds.
 <3> Configures the SSL `close_notify` read timeout to 10 seconds.
-====
 
 [[proxy-timeout]]
 ==== Proxy Timeout
@@ -741,14 +723,12 @@ the connection establishment attempt fails. Default: 10s.
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/proxy/Application.java
+.{examples-dir}/proxy/Application.java
 ----
-include::{examplesdir}/proxy/Application.java[lines=18..42]
+include::{examples-dir}/proxy/Application.java[lines=18..42]
 ----
 <1> Configures the connection establishment timeout to 20 seconds.
-====
 
 [[dns-timeout]]
 ==== Host Name Resolution Timeout
@@ -769,11 +749,9 @@ the DNS server and uses this minimum time to live. Default: 0s.
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-====
 [source,java,indent=0]
-.{examplesdir}/resolver/Application.java
+.{examples-dir}/resolver/Application.java
 ----
-include::{examplesdir}/resolver/Application.java[lines=18..39]
+include::{examples-dir}/resolver/Application.java[lines=18..39]
 ----
 <1> The timeout of each DNS query performed by this resolver will be 500ms.
-====
