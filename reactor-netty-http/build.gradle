@@ -150,6 +150,9 @@ dependencies {
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 
+	// Needed for zstd compression
+	testImplementation "com.github.luben:zstd-jni:$zstdJniVersion"
+
 	// Needed for Brotli compression
 	testImplementation "com.aayushatharva.brotli4j:brotli4j:$brotli4jVersion"
 	if (osdetector.classifier == "linux-aarch_64" || osdetector.classifier == "osx-aarch_64") {
