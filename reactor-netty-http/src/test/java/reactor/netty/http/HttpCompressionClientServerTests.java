@@ -198,20 +198,20 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		assertThat(Brotli.isAvailable()).isTrue();
 		disposableServer =
 				server.compress(true)
-						.handle((in, out) -> out.sendString(Mono.just("reply")))
-						.bindNow(Duration.ofSeconds(10));
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
+				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		Tuple2<byte[], HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.port(disposableServer.port())
-						.compress(false)
-						.headers(h -> h.add("Accept-Encoding", "br, gzip"))
-						.get()
-						.uri("/test")
-						.responseSingle((res, buf) -> buf.asByteArray()
-								.zipWith(Mono.just(res.responseHeaders())))
-						.block(Duration.ofSeconds(10));
+				      .compress(false)
+				      .headers(h -> h.add("Accept-Encoding", "br, gzip"))
+				      .get()
+				      .uri("/test")
+				      .responseSingle((res, buf) -> buf.asByteArray()
+				                                       .zipWith(Mono.just(res.responseHeaders())))
+				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isEqualTo("br");
@@ -227,24 +227,24 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@ParameterizedCompressionTest
-	void zstdServerCompressionEnabled(HttpServer server, HttpClient client) throws Exception {
+	void zstdServerCompressionEnabled(HttpServer server, HttpClient client) {
 		assertThat(Zstd.isAvailable()).isTrue();
 		disposableServer =
 				server.compress(true)
-						.handle((in, out) -> out.sendString(Mono.just("reply")))
-						.bindNow(Duration.ofSeconds(10));
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
+				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		Tuple2<byte[], HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.port(disposableServer.port())
-						.compress(false)
-						.headers(h -> h.add("Accept-Encoding", "zstd, gzip"))
-						.get()
-						.uri("/test")
-						.responseSingle((res, buf) -> buf.asByteArray()
-								.zipWith(Mono.just(res.responseHeaders())))
-						.block(Duration.ofSeconds(10));
+				      .compress(false)
+				      .headers(h -> h.add("Accept-Encoding", "zstd, gzip"))
+				      .get()
+				      .uri("/test")
+				      .responseSingle((res, buf) -> buf.asByteArray()
+				                                       .zipWith(Mono.just(res.responseHeaders())))
+				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isEqualTo("zstd");
