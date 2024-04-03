@@ -16,7 +16,7 @@ include::{examples-dir}/wiretap/Application.java[lines=18..35]
 <1> Enables the wire logging
 
 [[wire-logger-formatters]]
-== Wire Logger formatters
+==== Wire Logger formatters
 Reactor Netty supports 3 different formatters:
 
 - {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP] - the default
