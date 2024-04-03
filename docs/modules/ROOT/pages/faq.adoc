@@ -75,7 +75,7 @@ Format
 == How can I extract all log records for a particular HTTP request?
 Reactor Netty adds information for the connection at the beginning of every log record (when this is possible).
 Use the id of the connection in order to extract all log records for a particular HTTP request.
-For more information see xref:faq.adoc#faq.logging-prefix[What is it meaning of the information that is prepended to every log record?]
+For more information see xref:faq.adoc#faq.logging-prefix[What is the meaning of the information that is prepended to every log record?]
 
 [[faq.memory-leaks]]
 == How can I debug a memory leak?
