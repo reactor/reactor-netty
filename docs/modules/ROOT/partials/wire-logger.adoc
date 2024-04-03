@@ -7,8 +7,7 @@ By default, wire logging is disabled.
 To enable it, you must set the logger `{wirelogger}` level to `DEBUG`
 and apply the following configuration:
 
-[source,java,indent=0]
-.{examples-dir}/wiretap/Application.java
+{examples-link}/wiretap/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/wiretap/Application.java[lines=18..35]
@@ -21,8 +20,7 @@ Reactor Netty supports 3 different formatters:
 
 - {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#HEX_DUMP[AdvancedByteBufFormat#HEX_DUMP] - the default
 
-[source,java,indent=0]
-.{sourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
+{core-source-link}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
 [%unbreakable]
 ----
 include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java[lines=47..75]
@@ -30,8 +28,7 @@ include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFor
 
 - {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#SIMPLE[AdvancedByteBufFormat#SIMPLE]
 
-[source,java,indent=0]
-.{sourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
+{core-source-link}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
 [%unbreakable]
 ----
 include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java[lines=34..45]
@@ -39,8 +36,7 @@ include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFor
 
 - {javadoc}/reactor/netty/transport/logging/AdvancedByteBufFormat.html#TEXTUAL[AdvancedByteBufFormat#TEXTUAL]
 
-[source,java,indent=0]
-.{sourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
+{core-source-link}/reactor/netty/transport/logging/AdvancedByteBufFormat.java
 [%unbreakable]
 ----
 include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFormat.java[lines=77..93]
@@ -49,8 +45,7 @@ include::{formattersourcedir}/reactor/netty/transport/logging/AdvancedByteBufFor
 
 When you need to change the default formatter you can configure it as follows:
 
-[source,java,indent=0]
-.{examples-dir}/wiretap/custom/Application.java
+{examples-link}/wiretap/custom/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/wiretap/custom/Application.java[lines=18..38]
