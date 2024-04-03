@@ -125,8 +125,8 @@ include::{examples-dir}/lifecycle/Application.java[lines=18..39]
 This section describes three kinds of configuration that you can use at the UDP level:
 
 * xref:udp-server.adoc#server-udp-connection-configurations-channel-options[Channel Options]
-* xref:udp-server.adoc#server-udp-connection-configurations-wire-logger[null]
-* xref:udp-server.adoc#server-udp-connection-configurations-event-loop-group[null]
+* xref:udp-server.adoc#server-udp-connection-configurations-wire-logger[Wire Logger]
+* xref:udp-server.adoc#server-udp-connection-configurations-event-loop-group[Event Loop Group]
 
 [[server-udp-connection-configurations-channel-options]]
 === Channel Options
@@ -171,11 +171,11 @@ The following table provides information for the UDP server metrics:
 |=======
 | metric name | type | description
 | reactor.netty.udp.server.data.received | DistributionSummary | Amount of the data received, in bytes.
-See xref:observability.adoc#observability-metrics-data-received[]
+See xref:observability.adoc#observability-metrics-data-received[Data Received]
 | reactor.netty.udp.server.data.sent | DistributionSummary | Amount of the data sent, in bytes.
-See xref:observability.adoc#observability-metrics-data-sent[]
+See xref:observability.adoc#observability-metrics-data-sent[Data Sent]
 | reactor.netty.udp.server.errors | Counter | Number of errors that occurred.
-See xref:observability.adoc#observability-metrics-errors-count[]
+See xref:observability.adoc#observability-metrics-errors-count[Errors Count]
 |=======
 
 These additional metrics are also available:
