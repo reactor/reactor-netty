@@ -591,7 +591,7 @@ The configuration options can be grouped as follows:
 * xref:http-client.adoc#connection-pool-timeout[Connection Pool Timeout]
 * xref:http-client.adoc#http-client-timeout[HttpClient Timeout]
 ** xref:http-client.adoc#response-timeout[Response Timeout]
-** xref:http-server.adoc#http-server-connection-timeout[Connection Timeout]
+** xref:http-client.adoc#connection-timeout[Connection Timeout]
 ** xref:http-client.adoc#ssl-tls-timeout[SSL/TLS Timeout]
 ** xref:http-client.adoc#proxy-timeout[Proxy Timeout]
 ** xref:http-client.adoc#dns-timeout[Host Name Resolution Timeout]
