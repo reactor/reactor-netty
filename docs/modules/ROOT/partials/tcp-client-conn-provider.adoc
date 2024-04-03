@@ -15,8 +15,7 @@ in the pool and thus a new connection can be opened when needed. This behaviour 
 and is intentional because only the user/framework knows if the actual protocol is compatible with reusing connections.
 (opposed to `HttpClient` where the protocol is known and Reactor Netty can return the connection to the pool when this is possible)
 
-[source,java,indent=0]
-.{core}/src/main/java/reactor/netty/ReactorNetty.java
+{reactor-netty-github-repo}/reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
 [%unbreakable]
 ----
 include::{core}/src/main/java/reactor/netty/ReactorNetty.java[lines=123..133]
@@ -24,8 +23,7 @@ include::{core}/src/main/java/reactor/netty/ReactorNetty.java[lines=123..133]
 
 When you need to change the default settings, you can configure the `ConnectionProvider` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/pool/config/Application.java
+{examples-link}/pool/config/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/pool/config/Application.java[lines=18..41]
@@ -59,8 +57,7 @@ thrown (resolution: ms). If -1 is specified, no such timeout is applied. Default
 
 If you need to disable the connection pool, you can apply the following configuration:
 
-[source,java,indent=0]
-.{examples-dir}/pool/Application.java
+{examples-link}/pool/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/pool/Application.java[lines=18..35]
@@ -87,8 +84,7 @@ include::partial$conn-provider-metrics.adoc[]
 
 The following example enables that integration:
 
-[source,java,indent=0]
-.{examples-dir}/pool/metrics/Application.java
+{examples-link}/pool/metrics/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/pool/metrics/Application.java[lines=18..45]

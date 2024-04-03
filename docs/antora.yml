@@ -22,3 +22,4 @@ asciidoc:
     examples: 'example$reactor-netty-examples'
     http: 'example$reactor-netty-http'
     core: 'example$reactor-netty-core'
+    reactor-netty-github-repo: 'https://github.com/reactor/reactor-netty/tree/main'

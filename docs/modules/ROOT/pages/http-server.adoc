@@ -1,4 +1,7 @@
+:source-language: java
+:source-link: {reactor-netty-github-repo}/reactor-netty-http/src/main/java
 :sourcedir: {http}/src/main/java
+:examples-link: {reactor-netty-github-repo}/reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server
 :examples-dir: {examples}/src/main/java/reactor/netty/examples/documentation/http/server
 :javadoc: https://projectreactor.io/docs/netty/{project-version}/api
 :nettyjavadoc: https://netty.io/4.1/api
@@ -21,8 +24,7 @@ By default, the `host` is configured for any local address, and the system picks
 when the `bind` operation is invoked.
 The following example shows how to create an `HttpServer` instance:
 
-[source,java,indent=0]
-.{examples-dir}/create/Application.java
+{examples-link}/create/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/create/Application.java[lines=18..31]
@@ -40,8 +42,7 @@ which shuts the server down in a blocking fashion.
 
 To serve on a specific `host` and `port`, you can apply the following configuration to the `HTTP` server:
 
-[source,java,indent=0]
-.{examples-dir}/address/Application.java
+{examples-link}/address/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/address/Application.java[lines=18..33]
@@ -52,8 +53,7 @@ include::{examples-dir}/address/Application.java[lines=18..33]
 To serve on multiple addresses, after having configured the `HttpServer` you can bind it multiple times to obtain separate `DisposableServer`s.
 All created servers will share resources such as `LoopResources` because they use the same configuration instance under the hood.
 
-[source,java,indent=0]
-.{examples-dir}/address/MultiAddressApplication.java
+{examples-link}/address/MultiAddressApplication.java
 [%unbreakable]
 ----
 include::{examples-dir}/address/MultiAddressApplication.java[lines=18..41]
@@ -75,8 +75,7 @@ operation` absorbs the extra time needed to initialize and load:
 
 When you need to preload these resources, you can configure the `HttpServer` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/warmup/Application.java
+{examples-link}/warmup/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/warmup/Application.java[lines=18..36]
@@ -90,8 +89,7 @@ Defining routes for the `HTTP` server requires configuring the provided
 {javadoc}/reactor/netty/http/server/HttpServerRoutes.html[`HttpServerRoutes`] builder.
 The following example shows how to do so:
 
-[source,java,indent=0]
-.{examples-dir}/routing/Application.java
+{examples-link}/routing/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/routing/Application.java[lines=18..41]
@@ -108,8 +106,7 @@ NOTE: The server routes are unique and only the first matching in order of decla
 
 The following code shows how you can configure the `HTTP` server to serve `Server-Sent Events`:
 
-[source,java,indent=0]
-.{examples-dir}/sse/Application.java
+{examples-link}/sse/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/sse/Application.java[lines=18..76]
@@ -120,8 +117,7 @@ include::{examples-dir}/sse/Application.java[lines=18..76]
 
 The following code shows how you can configure the `HTTP` server to serve static resources:
 
-[source,java,indent=0]
-.{examples-dir}/staticresources/Application.java
+{examples-link}/staticresources/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/staticresources/Application.java[lines=18..37]
@@ -136,8 +132,7 @@ To send data to a connected client, you must attach an I/O handler by using eith
 The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerResponse.html[`HttpServerResponse`],
 to be able to write data. The following example uses the `handle(...)` method:
 
-[source,java,indent=0]
-.{examples-dir}/send/Application.java
+{examples-link}/send/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/send/Application.java[lines=18..33]
@@ -153,8 +148,7 @@ You can provide this additional metadata by using
 {javadoc}/reactor/netty/http/server/HttpServerResponse.html[`HttpServerResponse`].
 The following example shows how to do so:
 
-[source,java,indent=0]
-.{examples-dir}/send/headers/Application.java
+{examples-link}/send/headers/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/send/headers/Application.java[lines=18..40]
@@ -175,8 +169,7 @@ the predicate returns `true`.
 
 The following example uses the `compress` method (set to `true`) to enable compression:
 
-[source,java,indent=0]
-.{examples-dir}/compression/Application.java
+{examples-link}/compression/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/compression/Application.java[lines=18..38]
@@ -193,8 +186,7 @@ to be able to read data.
 
 The following example uses the `handle(...)` method:
 
-[source,java,indent=0]
-.{examples-dir}/read/Application.java
+{examples-link}/read/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/read/Application.java[lines=18..32]
@@ -209,8 +201,7 @@ parameters, and other metadata. You can obtain this additional metadata by using
 {javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`].
 The following example shows how to do so:
 
-[source,java,indent=0]
-.{examples-dir}/read/headers/Application.java
+{examples-link}/read/headers/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/read/headers/Application.java[lines=18..40]
@@ -223,8 +214,7 @@ When you receive data from the connected clients, you might want to access `POST
 `multipart` (`multipart/form-data`) data. You can obtain this data by using
 {javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`].
 
-[source,java,indent=0]
-.{examples-dir}/multipart/Application.java
+{examples-link}/multipart/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/multipart/Application.java[lines=18..36]
@@ -233,8 +223,7 @@ include::{examples-dir}/multipart/Application.java[lines=18..36]
 
 When you need to change the default settings, you can configure the `HttpServer` or you can provide a configuration per request:
 
-[source,java,indent=0]
-.{examples-dir}/multipart/custom/Application.java
+{examples-link}/multipart/custom/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/multipart/custom/Application.java[lines=18..37]
@@ -273,8 +262,7 @@ chosen factory method, you can retrieve the information directly from the channe
 using the `Forwarded` or `X-Forwarded-*` `HTTP` request headers.
 The following example shows how to do so:
 
-[source,java,indent=0]
-.{examples-dir}/clientaddress/Application.java
+{examples-link}/clientaddress/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/clientaddress/Application.java[lines=18..38]
@@ -286,8 +274,7 @@ include::{examples-dir}/clientaddress/Application.java[lines=18..38]
 It is also possible to customize the behavior of the `Forwarded` or `X-Forwarded-*` header handler.
 The following example shows how to do so:
 
-[source,java,indent=0]
-.{examples-dir}/clientaddress/CustomForwardedHeaderHandlerApplication.java
+{examples-link}/clientaddress/CustomForwardedHeaderHandlerApplication.java
 [%unbreakable]
 ----
 include::{examples-dir}/clientaddress/CustomForwardedHeaderHandlerApplication.java[lines=18..52]
@@ -309,14 +296,13 @@ and {nettyjavadoc}/io/netty/handler/codec/http/HttpServerUpgradeHandler.html[`Ht
 
 By default, the `HTTP` server is configured with the following settings:
 
-[source,java,indent=0]
-.{sourcedir}/reactor/netty/http/HttpDecoderSpec.java
+{source-link}/reactor/netty/http/HttpDecoderSpec.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..39]
 ----
-[source,java,indent=0]
-.{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java
+
+{source-link}/reactor/netty/http/server/HttpRequestDecoderSpec.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=41..46]
@@ -324,8 +310,7 @@ include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines
 
 When you need to change these default settings, you can configure the `HTTP` server as follows:
 
-[source,java,indent=0]
-.{examples-dir}/requestdecoder/Application.java
+{examples-link}/requestdecoder/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/requestdecoder/Application.java[lines=18..34]
@@ -352,8 +337,7 @@ The following lifecycle callbacks are provided to let you extend the `HttpServer
 
 The following example uses the `doOnConnection` and `doOnChannelInit` callbacks:
 
-[source,java,indent=0]
-.{examples-dir}/lifecycle/Application.java
+{examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/lifecycle/Application.java[lines=18..39]
@@ -367,8 +351,7 @@ include::{examples-dir}/lifecycle/Application.java[lines=18..39]
 When you need to change configuration on the TCP level, you can use the following snippet
 to extend the default `TCP` server configuration:
 
-[source,java,indent=0]
-.{examples-dir}/channeloptions/Application.java
+{examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/channeloptions/Application.java[lines=18..33]
@@ -394,8 +377,7 @@ or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 
 The following example uses `SslContextBuilder`:
 
-[source,java,indent=0]
-.{examples-dir}/security/Application.java
+{examples-link}/security/Application.java
 ----
 include::{examples-dir}/security/Application.java[lines=18..39]
 ----
@@ -407,8 +389,7 @@ An exact domain name or a domain name containing a wildcard can be used when con
 
 The following example uses a domain name containing a wildcard:
 
-[source,java,indent=0]
-.{examples-dir}/sni/Application.java
+{examples-link}/sni/Application.java
 ----
 include::{examples-dir}/sni/Application.java[lines=18..47]
 ----
@@ -441,8 +422,8 @@ You can use the following configuration (for Logback or similar logging framewor
 ----
 
 The following example enables it programmatically:
-[source,java,indent=0]
-.{examples-dir}/accessLog/Application.java
+
+{examples-link}/accessLog/Application.java
 ----
 include::{examples-dir}/accessLog/Application.java[lines=18..32]
 ----
@@ -451,22 +432,22 @@ Calling this method takes precedence over the system property configuration.
 
 By default, the logging format is https://en.wikipedia.org/wiki/Common_Log_Format[Common Log Format], but you can
 specify a custom one as a parameter, as in the following example:
-[source,java,indent=0]
-.{examples-dir}/accessLog/CustomLogAccessFormatApplication.java
+
+{examples-link}/accessLog/CustomLogAccessFormatApplication.java
 ----
 include::{examples-dir}/accessLog/CustomLogAccessFormatApplication.java[lines=18..33]
 ----
 
 You can also filter `HTTP` access logs by using the `AccessLogFactory#createFilter` method, as in the following example:
-[source,java,indent=0]
-.{examples-dir}/accessLog/FilterLogAccessApplication.java
+
+{examples-link}/accessLog/FilterLogAccessApplication.java
 ----
 include::{examples-dir}/accessLog/FilterLogAccessApplication.java[lines=18..34]
 ----
 
 Note that this method can take a custom format parameter too, as in this example:
-[source,java,indent=0]
-.{examples-dir}/accessLog/CustomFormatAndFilterAccessLogApplication.java.java
+
+{examples-link}/accessLog/CustomFormatAndFilterAccessLogApplication.java.java
 ----
 include::{examples-dir}/accessLog/CustomFormatAndFilterAccessLogApplication.java[lines=18..35]
 ----
@@ -485,8 +466,7 @@ supports it -- for example, https://netty.io/wiki/forked-tomcat-native.html[`net
 
 The following listing presents a simple `H2` example:
 
-[source,java,indent=0]
-.{examples-dir}/http2/H2Application.java
+{examples-link}/http2/H2Application.java
 ----
 include::{examples-dir}/http2/H2Application.java[lines=18..44]
 ----
@@ -505,8 +485,7 @@ hello
 
 The following listing presents a simple `H2C` example:
 
-[source,java,indent=0]
-.{examples-dir}/http2/H2CApplication.java
+{examples-link}/http2/H2CApplication.java
 ----
 include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
 ----
@@ -524,8 +503,7 @@ hello
 [[protocol-selection]]
 === Protocol Selection
 
-[source,java,indent=0]
-.{sourcedir}/reactor/netty/http/HttpProtocol.java
+{source-link}/reactor/netty/http/HttpProtocol.java
 ----
 include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..52]
 ----
@@ -567,8 +545,7 @@ include::partial$eventloop-metrics.adoc[]
 
 The following example enables that integration:
 
-[source,java,indent=0]
-.{examples-dir}/metrics/Application.java
+{examples-link}/metrics/Application.java
 ----
 include::{examples-dir}/metrics/Application.java[lines=18..52]
 ----
@@ -585,8 +562,7 @@ You can find more information at https://micrometer.io/docs/concepts#_denyaccept
 When HTTP server metrics are needed for an integration with a system other than `Micrometer` or you want
 to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
 
-[source,java,indent=0]
-.{examples-dir}/metrics/custom/Application.java
+{examples-link}/metrics/custom/Application.java
 ----
 include::{examples-dir}/metrics/custom/Application.java[lines=18..41]
 ----
@@ -608,8 +584,7 @@ See xref:observability.adoc#observability-spans-http-server-response-span[].
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
 See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup.
 
-[source,java,indent=0]
-.{examples-dir}/tracing/Application.java
+{examples-link}/tracing/Application.java
 ----
 include::{examples-dir}/tracing/Application.java[lines=18..91]
 ----
@@ -628,8 +603,7 @@ different types of context mechanisms such as `ThreadLocal`, `Reactor Context` a
 
 The following example shows how to use this library in a custom `ChannelHandler`:
 
-[source,java,indent=0]
-.{examples-dir}/tracing/custom/Application.java
+{examples-link}/tracing/custom/Application.java
 ----
 include::{examples-dir}/tracing/custom/Application.java[lines=18..85]
 ----
@@ -652,8 +626,7 @@ The `HTTP` server supports Unix Domain Sockets (UDS) when native transport is in
 
 The following example shows how to use UDS support:
 
-[source,java,indent=0]
-.{examples-dir}/uds/Application.java
+{examples-link}/uds/Application.java
 ----
 include::{examples-dir}/uds/Application.java[lines=18..33]
 ----
@@ -680,8 +653,7 @@ NOTE: It is always a good practice to configure a read/request timeout.
 
 To customize the default settings, you can configure `HttpServer` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/read/timeout/Application.java
+{examples-link}/read/timeout/Application.java
 ----
 include::{examples-dir}/read/timeout/Application.java[lines=18..36]
 ----
@@ -701,8 +673,7 @@ NOTE: It is always a good practice to configure an idle timeout.
 
 To customize the default settings, you can configure `HttpServer` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/idle/timeout/Application.java
+{examples-link}/idle/timeout/Application.java
 ----
 include::{examples-dir}/idle/timeout/Application.java[lines=18..35]
 ----
@@ -723,8 +694,7 @@ NOTE: You should consider increasing the SSL handshake timeout when expecting sl
 
 To customize the default settings, you can configure `HttpServer` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/security/custom/Application.java
+{examples-link}/security/custom/Application.java
 ----
 include::{examples-dir}/security/custom/Application.java[lines=18..44]
 ----

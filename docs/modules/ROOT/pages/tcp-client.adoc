@@ -1,4 +1,7 @@
+:source-language: java
+:source-link: {reactor-netty-github-repo}/reactor-netty-core/src/main/java
 :sourcedir: {core}/src/main/java
+:examples-link: {reactor-netty-github-repo}/reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client
 :examples-dir: {examples}/src/main/java/reactor/netty/examples/documentation/tcp/client
 :javadoc: https://projectreactor.io/docs/netty/{project-version}/api
 :nettyjavadoc: https://netty.io/4.1/api
@@ -20,8 +23,7 @@ To connect the `TCP` client to a given endpoint, you must create and configure a
 By default, the `host` is `localhost` and the `port` is `12012`.
 The following example shows how to create a `TcpClient`:
 
-[source,java,indent=0]
-.{examples-dir}/create/Application.java
+{examples-link}/create/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/create/Application.java[lines=18..31]
@@ -40,8 +42,7 @@ which shuts the client down in a blocking fashion.
 To connect to a specific `host` and `port`, you can apply the following configuration to the `TCP` client.
 The following example shows how to do so:
 
-[source,java,indent=0]
-.{examples-dir}/address/Application.java
+{examples-link}/address/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/address/Application.java[lines=18..33]
@@ -64,8 +65,7 @@ operation` absorbs the extra time needed to initialize and load:
 
 When you need to preload these resources, you can configure the `TcpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/warmup/Application.java
+{examples-link}/warmup/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/warmup/Application.java[lines=18..39]
@@ -81,8 +81,7 @@ To send data to a given endpoint, you must attach an I/O handler.
 The I/O handler has access to {javadoc}/reactor/netty/NettyOutbound.html[`NettyOutbound`]
 to be able to write data.
 
-[source,java,indent=0]
-.{examples-dir}/send/Application.java
+{examples-link}/send/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/send/Application.java[lines=18..35]
@@ -95,8 +94,7 @@ where the connection is closed when the provided `Publisher` finishes (in case o
 when using {javadoc}/reactor/netty/Connection.html#outbound--[`Connection#outbound`], you have to invoke explicitly
 `Connection#dispose` in order to close the connection.
 
-[source,java,indent=0]
-.{examples-dir}/send/connection/Application.java
+{examples-link}/send/connection/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/send/connection/Application.java[lines=18..44]
@@ -112,8 +110,7 @@ To receive data from a given endpoint, you must attach an I/O handler.
 The I/O handler has access to {javadoc}/reactor/netty/NettyInbound.html[`NettyInbound`]
 to be able to read data. The following example shows how to do so:
 
-[source,java,indent=0]
-.{examples-dir}/read/Application.java
+{examples-link}/read/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/read/Application.java[lines=18..34]
@@ -126,8 +123,7 @@ where the connection is closed when the provided `Publisher` finishes (in case o
 when using {javadoc}/reactor/netty/Connection.html#inbound--[`Connection#inbound`], you have to invoke explicitly
 `Connection#dispose` in order to close the connection.
 
-[source,java,indent=0]
-.{examples-dir}/read/connection/Application.java
+{examples-link}/read/connection/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/read/connection/Application.java[lines=18..38]
@@ -153,8 +149,7 @@ The following lifecycle callbacks are provided to let you extend the `TcpClient`
 
 The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
 
-[source,java,indent=0]
-.{examples-dir}/lifecycle/Application.java
+{examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/lifecycle/Application.java[lines=18..41]
@@ -176,16 +171,14 @@ This section describes three kinds of configuration that you can use at the TCP 
 
 By default, the `TCP` client is configured with the following options:
 
-[source,java,indent=0]
-.{sourcedir}/reactor/netty/tcp/TcpClientConnect.java
+{source-link}/reactor/netty/tcp/TcpClientConnect.java
 ----
 include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[lines=36..41]
 ----
 
 If additional options are necessary or changes to the current options are needed, you can apply the following configuration:
 
-[source,java,indent=0]
-.{examples-dir}/channeloptions/Application.java
+{examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/channeloptions/Application.java[lines=18..35]
@@ -220,8 +213,7 @@ or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 
 The following example uses `SslContextBuilder`:
 
-[source,java,indent=0]
-.{examples-dir}/security/Application.java
+{examples-link}/security/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/security/Application.java[lines=18..37]
@@ -232,8 +224,7 @@ include::{examples-dir}/security/Application.java[lines=18..37]
 By default, the `TCP` client sends the remote host name as `SNI` server name.
 When you need to change this default setting, you can configure the `TCP` client as follows:
 
-[source,java,indent=0]
-.{examples-dir}/sni/Application.java
+{examples-link}/sni/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/sni/Application.java[lines=18..41]
@@ -274,8 +265,7 @@ include::partial$eventloop-metrics.adoc[]
 
 The following example enables that integration:
 
-[source,java,indent=0]
-.{examples-dir}/metrics/Application.java
+{examples-link}/metrics/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/metrics/Application.java[lines=18..34]
@@ -285,8 +275,7 @@ include::{examples-dir}/metrics/Application.java[lines=18..34]
 When TCP client metrics are needed for an integration with a system other than `Micrometer` or you want
 to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
 
-[source,java,indent=0]
-.{examples-dir}/metrics/custom/Application.java
+{examples-link}/metrics/custom/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/metrics/custom/Application.java[lines=18..37]
@@ -313,8 +302,7 @@ See xref:observability.adoc#observability-spans-tls-handshake-span[].
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
 See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup.
 
-[source,java,indent=0]
-.{examples-dir}/tracing/Application.java
+{examples-link}/tracing/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/tracing/Application.java[lines=18..81]
@@ -333,8 +321,7 @@ different types of context mechanisms such as `ThreadLocal`, `Reactor Context` a
 
 The following example shows how to use this library in a custom `ChannelHandler`:
 
-[source,java,indent=0]
-.{examples-dir}/tracing/custom/Application.java
+{examples-link}/tracing/custom/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/tracing/custom/Application.java[lines=18..80]
@@ -357,8 +344,7 @@ The `TCP` client supports Unix Domain Sockets (UDS) when native transport is in 
 
 The following example shows how to use UDS support:
 
-[source,java,indent=0]
-.{examples-dir}/uds/Application.java
+{examples-link}/uds/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/uds/Application.java[lines=18..33]
@@ -372,8 +358,7 @@ This is as an alternative of the JVM's built-in blocking resolver.
 
 When you need to change the default settings, you can configure the `TcpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/resolver/Application.java
+{examples-link}/resolver/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/resolver/Application.java[lines=18..36]
@@ -434,8 +419,7 @@ By default, the resolver will only try to use TCP if the response is marked as t
 
 Sometimes, you may want to switch to the JVM built-in resolver. To do so, you can configure the `TcpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/resolver/custom/Application.java
+{examples-link}/resolver/custom/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/resolver/custom/Application.java[lines=18..37]
