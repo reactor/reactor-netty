@@ -9,8 +9,7 @@ When the maximum number of channels in the pool is reached, up to `1000` new att
 acquire a channel are delayed (pending) until a channel is returned to the pool again,
 and further attempts are declined with an error.
 
-[source,java,indent=0]
-../../../reactor-netty5-core/src/main/java/reactor/netty5/ReactorNetty.java
+{core-source-link}/reactor/netty5/ReactorNetty.java
 [%unbreakable]
 ----
 include::{core}/src/main/java/reactor/netty5/ReactorNetty.java[lines=122..170]
@@ -18,8 +17,7 @@ include::{core}/src/main/java/reactor/netty5/ReactorNetty.java[lines=122..170]
 
 When you need to change the default settings, you can configure the `ConnectionProvider` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/pool/config/Application.java
+{examples-link}/pool/config/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/pool/config/Application.java[lines=18..50]
@@ -74,8 +72,7 @@ to too many concurrent connections opened/acquired.
 
 If you need to disable the connection pool, you can apply the following configuration:
 
-[source,java,indent=0]
-.{examples-dir}/pool/Application.java
+{examples-link}/pool/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/pool/Application.java[lines=18..49]
@@ -111,8 +108,7 @@ See xref:observability.adoc#observability-metrics-pending-streams[]
 
 The following example enables that integration:
 
-[source,java,indent=0]
-.{examples-dir}/pool/metrics/Application.java
+{examples-link}/pool/metrics/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/pool/metrics/Application.java[lines=18..45]

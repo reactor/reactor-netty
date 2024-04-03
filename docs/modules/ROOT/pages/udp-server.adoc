@@ -1,7 +1,6 @@
 :sourcedir: {core}/src/main/java
+:examples-link: {reactor-netty-github-repo}/reactor-netty5-examples/src/main/java/reactor/netty5/examples/documentation/udp/server
 :examples-dir: {examples}/src/main/java/reactor/netty5/examples/documentation/udp/server
-:javadoc: https://projectreactor.io/docs/netty/{project-version}/api
-:nettyjavadoc: https://netty.io/5.0/api
 :wirelogger: reactor.netty5.udp.UdpServer
 
 [[udp-server]]
@@ -20,8 +19,7 @@ instance has to be created and configured.
 By default, the host is configured to be `localhost` and the port is `12012`.
 The following example shows how to create and start a UDP server:
 
-[source,java,indent=0]
-.{examples-dir}/create/Application.java
+{examples-link}/create/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/create/Application.java[lines=18..32]
@@ -39,8 +37,7 @@ which shuts the server down in a blocking fashion.
 
 In order to serve on a specific host and port, you can apply the following configuration to the `UDP` server:
 
-[source,java,indent=0]
-.{examples-dir}/address/Application.java
+{examples-link}/address/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/address/Application.java[lines=18..34]
@@ -61,8 +58,7 @@ operation` absorbs the extra time needed to initialize and load:
 
 When you need to preload these resources, you can configure the `UdpServer` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/warmup/Application.java
+{examples-link}/warmup/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/warmup/Application.java[lines=18..51]
@@ -77,8 +73,7 @@ The I/O handler has access to {javadoc}/reactor/netty5/udp/UdpOutbound.html[`Udp
 to be able to write data.
 The following example shows how to send `hello`:
 
-[source,java,indent=0]
-.{examples-dir}/send/Application.java
+{examples-link}/send/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/send/Application.java[lines=18..51]
@@ -93,8 +88,7 @@ The I/O handler has access to {javadoc}/reactor/netty5/udp/UdpInbound.html[`UdpI
 to be able to read data.
 The following example shows how to consume data:
 
-[source,java,indent=0]
-.{examples-dir}/read/Application.java
+{examples-link}/read/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/read/Application.java[lines=18..47]
@@ -117,8 +111,7 @@ The following lifecycle callbacks are provided to let you extend the `UdpServer`
 
 The following example uses the `doOnBound` and `doOnChannelInit` callbacks:
 
-[source,java,indent=0]
-.{examples-dir}/lifecycle/Application.java
+{examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/lifecycle/Application.java[lines=18..39]
@@ -140,8 +133,7 @@ This section describes three kinds of configuration that you can use at the UDP 
 
 By default, the `UDP` server is configured with the following options:
 
-[source,java,indent=0]
-.{sourcedir}/reactor/netty5/udp/UdpServerBind.java
+{core-source-link}/reactor/netty5/udp/UdpServerBind.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty5/udp/UdpServerBind.java[lines=40..44]
@@ -149,8 +141,7 @@ include::{sourcedir}/reactor/netty5/udp/UdpServerBind.java[lines=40..44]
 
 If you need additional options or need to change the current options, you can apply the following configuration:
 
-[source,java,indent=0]
-.{examples-dir}/channeloptions/Application.java
+{examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/channeloptions/Application.java[lines=18..34]
@@ -197,8 +188,7 @@ include::partial$eventloop-metrics.adoc[]
 
 The following example enables that integration:
 
-[source,java,indent=0]
-.{examples-dir}/metrics/Application.java
+{examples-link}/metrics/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/metrics/Application.java[lines=18..34]
@@ -208,8 +198,7 @@ include::{examples-dir}/metrics/Application.java[lines=18..34]
 When UDP server metrics are needed for an integration with a system other than `Micrometer` or you want
 to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
 
-[source,java,indent=0]
-.{examples-dir}/metrics/custom/Application.java
+{examples-link}/metrics/custom/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/metrics/custom/Application.java[lines=18..35]
@@ -222,8 +211,7 @@ The `UdpServer` supports Unix Domain Datagram Sockets (UDS) when native transpor
 
 The following example shows how to use UDS support:
 
-[source,java,indent=0]
-.{examples-dir}/uds/Application.java
+{examples-link}/uds/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/uds/Application.java[lines=18..48]

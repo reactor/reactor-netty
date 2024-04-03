@@ -1,7 +1,6 @@
 :sourcedir: {http}/src/main/java
+:examples-link: {reactor-netty-github-repo}/reactor-netty5-examples/src/main/java/reactor/netty5/examples/documentation/http/client
 :examples-dir: {examples}/src/main/java/reactor/netty5/examples/documentation/http/client
-:javadoc: https://projectreactor.io/docs/netty/{project-version}/api
-:nettyjavadoc: https://netty.io/5.0/api
 :wirelogger: reactor.netty5.http.client.HttpClient
 
 [[http-client]]
@@ -20,8 +19,7 @@ To connect the `HTTP` client to a given `HTTP` endpoint, you must create and con
 By default, the host is configured for `localhost` and the port is `80`.
 The following example shows how to do so:
 
-[source,java,indent=0]
-.{examples-dir}/connect/Application.java
+{examples-link}/connect/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/connect/Application.java[lines=18..30]
@@ -35,8 +33,7 @@ instance ready for configuring.
 
 The following example uses `WebSocket`:
 
-[source,java,indent=0]
-.{examples-dir}/websocket/Application.java
+{examples-link}/websocket/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/websocket/Application.java[lines=18..42]
@@ -47,8 +44,7 @@ include::{examples-dir}/websocket/Application.java[lines=18..42]
 
 In order to connect to a specific host and port, you can apply the following configuration to the `HTTP` client:
 
-[source,java,indent=0]
-.{examples-dir}/address/Application.java
+{examples-link}/address/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/address/Application.java[lines=18..33]
@@ -71,8 +67,7 @@ request` absorbs the extra time needed to initialize and load:
 
 When you need to preload these resources, you can configure the `HttpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/warmup/Application.java
+{examples-link}/warmup/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/warmup/Application.java[lines=18..36]
@@ -92,8 +87,7 @@ By default, `Transfer-Encoding: chunked` is applied for those `HTTP` methods for
 a request body is expected. `Content-Length` provided through request headers disables `Transfer-Encoding: chunked`,
 if necessary. The following example sends `hello`:
 
-[source,java,indent=0]
-.{examples-dir}/send/Application.java
+{examples-link}/send/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/send/Application.java[lines=18..33]
@@ -106,8 +100,7 @@ include::{examples-dir}/send/Application.java[lines=18..33]
 When sending data to a given `HTTP` endpoint, you may need to send additional headers, cookies and other metadata.
 You can use the following configuration to do so:
 
-[source,java,indent=0]
-.{examples-dir}/send/headers/Application.java
+{examples-link}/send/headers/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/send/headers/Application.java[lines=18..36]
@@ -120,8 +113,7 @@ include::{examples-dir}/send/headers/Application.java[lines=18..36]
 You can enable compression on the `HTTP` client, which means the request header
 `Accept-Encoding` is added to the request headers. The following example shows how to do so:
 
-[source,java,indent=0]
-.{examples-dir}/compression/Application.java
+{examples-link}/compression/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/compression/Application.java[lines=18..32]
@@ -141,8 +133,7 @@ predicate matches.
 
 The following example uses `followRedirect(true)`:
 
-[source,java,indent=0]
-.{examples-dir}/redirect/Application.java
+{examples-link}/redirect/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/redirect/Application.java[lines=18..32]
@@ -155,8 +146,7 @@ To receive data from a given `HTTP` endpoint, you can use one of the methods fro
 {javadoc}/reactor/netty5/http/client/HttpClient.ResponseReceiver.html[`HttpClient.ResponseReceiver`].
 The following example uses the `responseContent` method:
 
-[source,java,indent=0]
-.{examples-dir}/read/Application.java
+{examples-link}/read/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/read/Application.java[lines=18..33]
@@ -173,8 +163,7 @@ You can obtain this additional metadata by using
 {javadoc}/reactor/netty5/http/client/HttpClientResponse.html[`HttpClientResponse`].
 The following example shows how to do so.
 
-[source,java,indent=0]
-.{examples-dir}/read/status/Application.java
+{examples-link}/read/status/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/read/status/Application.java[lines=18..34]
@@ -194,14 +183,13 @@ For more information, see {nettyjavadoc}/io.netty5.codec.http/io/netty5/handler/
 
 By default, the `HTTP` client is configured with the following settings:
 
-[source,java,indent=0]
-.{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java
+{http-source-link}/reactor/netty5/http/HttpDecoderSpec.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java[lines=28..32]
 ----
-[source,java,indent=0]
-.{sourcedir}/reactor/netty5/http/client/HttpResponseDecoderSpec.java
+
+{http-source-link}/reactor/netty5/http/client/HttpResponseDecoderSpec.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty5/http/client/HttpResponseDecoderSpec.java[lines=44..52]
@@ -209,8 +197,7 @@ include::{sourcedir}/reactor/netty5/http/client/HttpResponseDecoderSpec.java[lin
 
 When you need to change these default settings, you can configure the `HTTP` client as follows:
 
-[source,java,indent=0]
-.{examples-dir}/responsedecoder/Application.java
+{examples-link}/responsedecoder/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/responsedecoder/Application.java[lines=18..35]
@@ -247,8 +234,7 @@ The following lifecycle callbacks are provided to let you extend the `HttpClient
 
 The following example uses the `doOnConnected` and `doOnChannelInit` callbacks:
 
-[source,java,indent=0]
-.{examples-dir}/lifecycle/Application.java
+{examples-link}/lifecycle/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/lifecycle/Application.java[lines=18..39]
@@ -262,8 +248,7 @@ include::{examples-dir}/lifecycle/Application.java[lines=18..39]
 When you need configurations on a TCP level, you can use the following snippet
 to extend the default `TCP` client configuration (add an option, bind address etc.):
 
-[source,java,indent=0]
-.{examples-dir}/channeloptions/Application.java
+{examples-link}/channeloptions/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/channeloptions/Application.java[lines=18..54]
@@ -294,8 +279,7 @@ You can switch the provider by using
 or by setting `-Dio.netty5.handler.ssl.noOpenSsl=true`.
 The following example uses `SslContextBuilder`:
 
-[source,java,indent=0]
-.{examples-dir}/security/Application.java
+{examples-link}/security/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/security/Application.java[lines=18..35]
@@ -306,8 +290,7 @@ include::{examples-dir}/security/Application.java[lines=18..35]
 By default, the `HTTP` client sends the remote host name as `SNI` server name.
 When you need to change this default setting, you can configure the `HTTP` client as follows:
 
-[source,java,indent=0]
-.{examples-dir}/sni/Application.java
+{examples-link}/sni/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/sni/Application.java[lines=18..39]
@@ -325,8 +308,7 @@ In addition to the protocol configuration, if you need `H2` but not `H2C (cleart
 
 The following listing presents a simple `H2` example:
 
-[source,java,indent=0]
-.{examples-dir}/http2/H2Application.java
+{examples-link}/http2/H2Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/http2/H2Application.java[lines=18..42]
@@ -336,8 +318,7 @@ include::{examples-dir}/http2/H2Application.java[lines=18..42]
 
 The following listing presents a simple `H2C` example:
 
-[source,java,indent=0]
-.{examples-dir}/http2/H2CApplication.java
+{examples-link}/http2/H2CApplication.java
 [%unbreakable]
 ----
 include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
@@ -346,8 +327,7 @@ include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
 [[protocol-selection]]
 === Protocol Selection
 
-[source,java,indent=0]
-.{sourcedir}/reactor/netty5/http/HttpProtocol.java
+{http-source-link}/reactor/netty5/http/HttpProtocol.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty5/http/HttpProtocol.java[lines=24..52]
@@ -406,8 +386,7 @@ include::partial$eventloop-metrics.adoc[]
 
 The following example enables that integration:
 
-[source,java,indent=0]
-.{examples-dir}/metrics/Application.java
+{examples-link}/metrics/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/metrics/Application.java[lines=18..51]
@@ -425,8 +404,7 @@ You can find more information at https://micrometer.io/docs/concepts#_denyaccept
 When HTTP client metrics are needed for an integration with a system other than `Micrometer` or you want
 to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
 
-[source,java,indent=0]
-.{examples-dir}/metrics/custom/Application.java
+{examples-link}/metrics/custom/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/metrics/custom/Application.java[lines=18..35]
@@ -455,8 +433,7 @@ See xref:observability.adoc#observability-spans-tls-handshake-span[].
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
 See the https://micrometer.io/docs/tracing#_micrometer_tracing_opentelemetry_setup[`Micrometer Tracing`] documentation for `OpenTelemetry` setup.
 
-[source,java,indent=0]
-.{examples-dir}/tracing/Application.java
+{examples-link}/tracing/Application.java
 ----
 include::{examples-dir}/tracing/Application.java[lines=18..90]
 ----
@@ -475,8 +452,7 @@ different types of context mechanisms such as `ThreadLocal`, `Reactor Context` a
 
 The following example shows how to use this library in a custom `ChannelHandler`:
 
-[source,java,indent=0]
-.{examples-dir}/tracing/custom/Application.java
+{examples-link}/tracing/custom/Application.java
 ----
 include::{examples-dir}/tracing/custom/Application.java[lines=18..85]
 ----
@@ -499,8 +475,7 @@ The `HTTP` client supports Unix Domain Sockets (UDS) for all transports (native 
 
 The following example shows how to use UDS support:
 
-[source,java,indent=0]
-.{examples-dir}/uds/Application.java
+{examples-link}/uds/Application.java
 ----
 include::{examples-dir}/uds/Application.java[lines=18..33]
 ----
@@ -513,8 +488,7 @@ This is as an alternative of the JVM's built-in blocking resolver.
 
 When you need to change the default settings, you can configure the `HttpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/resolver/Application.java
+{examples-link}/resolver/Application.java
 ----
 include::{examples-dir}/resolver/Application.java[lines=18..39]
 ----
@@ -575,8 +549,7 @@ information in case of resolution failure.
 
 Sometimes, you may want to switch to the JVM built-in resolver. To do so, you can configure the `HttpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/resolver/custom/Application.java
+{examples-link}/resolver/custom/Application.java
 ----
 include::{examples-dir}/resolver/custom/Application.java[lines=18..38]
 ----
@@ -621,8 +594,7 @@ However, you can also configure the connection pool, by setting `evictInBackgrou
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/pool/Application.java
+{examples-link}/pool/Application.java
 ----
 include::{examples-dir}/pool/config/Application.java[lines=18..50]
 ----
@@ -649,8 +621,7 @@ NOTE: It is always a good practice to configure a response timeout.
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/read/timeout/Application.java
+{examples-link}/read/timeout/Application.java
 ----
 include::{examples-dir}/read/timeout/Application.java[lines=18..55]
 ----
@@ -679,8 +650,7 @@ https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/StandardSo
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/channeloptions/Application.java
+{examples-link}/channeloptions/Application.java
 ----
 include::{examples-dir}/channeloptions/Application.java[lines=18..54]
 ----
@@ -705,8 +675,7 @@ NOTE: You should consider increasing the SSL handshake timeout when expecting sl
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/security/custom/Application.java
+{examples-link}/security/custom/Application.java
 ----
 include::{examples-dir}/security/custom/Application.java[lines=18..45]
 ----
@@ -723,8 +692,7 @@ the connection establishment attempt fails. Default: 10s.
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/proxy/Application.java
+{examples-link}/proxy/Application.java
 ----
 include::{examples-dir}/proxy/Application.java[lines=18..42]
 ----
@@ -749,8 +717,7 @@ the DNS server and uses this minimum time to live. Default: 0s.
 
 To customize the default settings, you can configure `HttpClient` as follows:
 
-[source,java,indent=0]
-.{examples-dir}/resolver/Application.java
+{examples-link}/resolver/Application.java
 ----
 include::{examples-dir}/resolver/Application.java[lines=18..39]
 ----

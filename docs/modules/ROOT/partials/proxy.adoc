@@ -14,8 +14,7 @@ whether it supports or needs an additional configuration in order to support `CO
 
 The following example uses `ProxyProvider`:
 
-[source,java,indent=0]
-.{examples-dir}/proxy/Application.java
+{examples-link}/proxy/Application.java
 [%unbreakable]
 ----
 include::{examples-dir}/proxy/Application.java[lines=18..42]
