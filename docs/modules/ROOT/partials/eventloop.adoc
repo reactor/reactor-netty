@@ -9,7 +9,7 @@ methods.
 
 The following listing shows the default configuration for the Event Loop Group:
 
-{reactor-netty-github-repo}/reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
+{core-source-link}/reactor/netty/ReactorNetty.java
 [%unbreakable]
 ----
 include::{eventloopsourcedir}/reactor/netty/ReactorNetty.java[lines=86..120]

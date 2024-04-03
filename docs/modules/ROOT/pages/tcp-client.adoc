@@ -1,10 +1,6 @@
-:source-language: java
-:source-link: {reactor-netty-github-repo}/reactor-netty-core/src/main/java
 :sourcedir: {core}/src/main/java
 :examples-link: {reactor-netty-github-repo}/reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client
 :examples-dir: {examples}/src/main/java/reactor/netty/examples/documentation/tcp/client
-:javadoc: https://projectreactor.io/docs/netty/{project-version}/api
-:nettyjavadoc: https://netty.io/4.1/api
 :wirelogger: reactor.netty.tcp.TcpClient
 
 [[tcp-client]]
@@ -171,7 +167,7 @@ This section describes three kinds of configuration that you can use at the TCP 
 
 By default, the `TCP` client is configured with the following options:
 
-{source-link}/reactor/netty/tcp/TcpClientConnect.java
+{core-source-link}/reactor/netty/tcp/TcpClientConnect.java
 ----
 include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[lines=36..41]
 ----

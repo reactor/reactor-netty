@@ -1,10 +1,6 @@
-:source-language: java
-:source-link: {reactor-netty-github-repo}/reactor-netty-core/src/main/java
 :sourcedir: {core}/src/main/java
 :examples-link: {reactor-netty-github-repo}/reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/udp/server
 :examples-dir: {examples}/src/main/java/reactor/netty/examples/documentation/udp/server
-:javadoc: https://projectreactor.io/docs/netty/{project-version}/api
-:nettyjavadoc: https://netty.io/4.1/api
 :wirelogger: reactor.netty.udp.UdpServer
 
 [[udp-server]]
@@ -137,7 +133,7 @@ This section describes three kinds of configuration that you can use at the UDP 
 
 By default, the `UDP` server is configured with the following options:
 
-{source-link}/reactor/netty/udp/UdpServerBind.java
+{core-source-link}/reactor/netty/udp/UdpServerBind.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty/udp/UdpServerBind.java[lines=40..44]

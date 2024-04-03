@@ -19,7 +19,12 @@ asciidoc:
   attributes:
     attribute-missing: 'warn'
     chomp: 'all'
+    source-language: java
     examples: 'example$reactor-netty-examples'
     http: 'example$reactor-netty-http'
     core: 'example$reactor-netty-core'
     reactor-netty-github-repo: 'https://github.com/reactor/reactor-netty/tree/main'
+    core-source-link: '{reactor-netty-github-repo}/reactor-netty-core/src/main/java'
+    http-source-link: '{reactor-netty-github-repo}/reactor-netty-http/src/main/java'
+    javadoc: 'https://projectreactor.io/docs/netty/{project-version}/api'
+    nettyjavadoc: 'https://netty.io/4.1/api'

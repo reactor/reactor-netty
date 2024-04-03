@@ -15,7 +15,7 @@ in the pool and thus a new connection can be opened when needed. This behaviour 
 and is intentional because only the user/framework knows if the actual protocol is compatible with reusing connections.
 (opposed to `HttpClient` where the protocol is known and Reactor Netty can return the connection to the pool when this is possible)
 
-{reactor-netty-github-repo}/reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
+{core-source-link}/reactor/netty/ReactorNetty.java
 [%unbreakable]
 ----
 include::{core}/src/main/java/reactor/netty/ReactorNetty.java[lines=123..133]

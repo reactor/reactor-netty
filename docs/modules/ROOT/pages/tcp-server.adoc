@@ -1,10 +1,6 @@
-:source-language: java
-:source-link: {reactor-netty-github-repo}/reactor-netty-core/src/main/java
 :sourcedir: {core}/src/main/java
 :examples-link: {reactor-netty-github-repo}/reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server
 :examples-dir: {examples}/src/main/java/reactor/netty/examples/documentation/tcp/server
-:javadoc: https://projectreactor.io/docs/netty/{project-version}/api
-:nettyjavadoc: https://netty.io/4.1/api
 :wirelogger: reactor.netty.tcp.TcpServer
 
 [[tcp-server]]
@@ -149,7 +145,7 @@ This section describes three kinds of configuration that you can use at the TCP 
 
 By default, the `TCP` server is configured with the following options:
 
-{source-link}/reactor/netty/tcp/TcpServerBind.java
+{core-source-link}/reactor/netty/tcp/TcpServerBind.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=40..48]

@@ -1,10 +1,6 @@
-:source-language: java
-:source-link: {reactor-netty-github-repo}/reactor-netty-http/src/main/java
 :sourcedir: {http}/src/main/java
 :examples-link: {reactor-netty-github-repo}/reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client
 :examples-dir: {examples}/src/main/java/reactor/netty/examples/documentation/http/client
-:javadoc: https://projectreactor.io/docs/netty/{project-version}/api
-:nettyjavadoc: https://netty.io/4.1/api
 :wirelogger: reactor.netty.http.client.HttpClient
 
 [[http-client]]
@@ -187,13 +183,13 @@ For more information, see {nettyjavadoc}/io/netty/handler/codec/http/HttpRespons
 
 By default, the `HTTP` client is configured with the following settings:
 
-{source-link}/reactor/netty/http/HttpDecoderSpec.java
+{http-source-link}/reactor/netty/http/HttpDecoderSpec.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..39]
 ----
 
-{source-link}/reactor/netty/http/client/HttpResponseDecoderSpec.java
+{http-source-link}/reactor/netty/http/client/HttpResponseDecoderSpec.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java[lines=44..52]
@@ -334,7 +330,7 @@ include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
 [[protocol-selection]]
 === Protocol Selection
 
-{source-link}/reactor/netty/http/HttpProtocol.java
+{http-source-link}/reactor/netty/http/HttpProtocol.java
 [%unbreakable]
 ----
 include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..52]
