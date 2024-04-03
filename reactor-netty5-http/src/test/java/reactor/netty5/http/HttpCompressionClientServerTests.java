@@ -27,6 +27,7 @@ import java.util.zip.GZIPInputStream;
 
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import com.aayushatharva.brotli4j.decoder.DirectDecompress;
+import com.github.luben.zstd.util.Native;
 import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.compression.Zstd;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
@@ -228,6 +229,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	@ParameterizedCompressionTest
 	void zstdServerCompressionEnabled(HttpServer server, HttpClient client) throws Exception {
 		assertThat(Zstd.isAvailable()).isTrue();
+		Native.load();
 		disposableServer =
 				server.compress(true)
 						.handle((in, out) -> out.sendString(Mono.just("reply")))
