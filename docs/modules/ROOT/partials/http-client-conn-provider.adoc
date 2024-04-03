@@ -83,7 +83,7 @@ include::{examples-dir}/pool/Application.java[lines=18..49]
 - If you use the default `ConnectionProvider` provided by Reactor Netty, invoke
 {javadoc}/reactor/netty5/http/HttpResources.html[`HttpResources`]`#disposeLoopsAndConnections`/`#disposeLoopsAndConnectionsLater` method.
 
-NOTE: Disposing `Httpresources` means that every client that is using it, will not be able to use it anymore!
+NOTE: Disposing `HttpResources` means that every client that is using it, will not be able to use it anymore!
 
 - If you use custom `ConnectionProvider`, invoke {javadoc}/reactor/netty5/resources/ConnectionProvider.html[`ConnectionProvider`]`#dispose`/`#disposeLater`/`#disposeWhen` method.
 

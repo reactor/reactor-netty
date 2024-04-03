@@ -155,8 +155,6 @@ For more information about Netty channel options, see the following links:
 * https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/StandardSocketOptions.html[Standard Socket Options]
 * https://docs.oracle.com/en/java/javase/17/docs/api/jdk.net/jdk/net/ExtendedSocketOptions.html[Extended Socket Options]
 
-
-
 [[server-udp-connection-configurations-wire-logger]]
 include::partial$wire-logger.adoc[]
 
