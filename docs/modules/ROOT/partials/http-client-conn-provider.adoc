@@ -101,9 +101,9 @@ The following table provides information for the HTTP client metrics when it is 
 |=======
 | metric name | type | description
 | reactor.netty.connection.provider.active.streams | Gauge | The number of the active HTTP/2 streams.
-See xref:observability.adoc#observability-metrics-active-streams[]
+See xref:observability.adoc#observability-metrics-active-streams[Active Streams]
 | reactor.netty.connection.provider.pending.streams | Gauge | The number of requests that are waiting for opening HTTP/2 stream.
-See xref:observability.adoc#observability-metrics-pending-streams[]
+See xref:observability.adoc#observability-metrics-pending-streams[Pending Streams]
 |=======
 
 The following example enables that integration:

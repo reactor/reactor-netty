@@ -4,17 +4,17 @@ Pooled `ConnectionProvider` metrics
 |=======
 | metric name | type | description
 | reactor.netty.connection.provider.total.connections | Gauge | The number of all connections, active or idle.
-See xref:observability.adoc#observability-metrics-total-connections[]
+See xref:observability.adoc#observability-metrics-total-connections[Total Connections]
 | reactor.netty.connection.provider.active.connections | Gauge | The number of the connections that have been successfully acquired and are in active use.
-See xref:observability.adoc#observability-metrics-active-connections[]
+See xref:observability.adoc#observability-metrics-active-connections[Active Connections]
 | reactor.netty.connection.provider.max.connections | Gauge | The maximum number of active connections that are allowed.
-See xref:observability.adoc#observability-metrics-max-connections[]
+See xref:observability.adoc#observability-metrics-max-connections[Max Connections]
 | reactor.netty.connection.provider.idle.connections | Gauge | The number of the idle connections.
-See xref:observability.adoc#observability-metrics-idle-connections[]
+See xref:observability.adoc#observability-metrics-idle-connections[Idle Connections]
 | reactor.netty.connection.provider.pending.connections | Gauge | The number of requests that are waiting for a connection.
-See xref:observability.adoc#observability-metrics-pending-connections[]
+See xref:observability.adoc#observability-metrics-pending-connections[Pending Connections]
 | reactor.netty.connection.provider.pending.connections.time | Timer | Time spent in pending acquire a connection from the connection pool.
-See xref:observability.adoc#observability-metrics-pending-connections-time[]
+See xref:observability.adoc#observability-metrics-pending-connections-time[Pending Connections Time]
 | reactor.netty.connection.provider.max.pending.connections | Gauge | The maximum number of requests that will be queued while waiting for a ready connection.
-See xref:observability.adoc#observability-metrics-max-pending-connections[]
+See xref:observability.adoc#observability-metrics-max-pending-connections[Max Pending Connections]
 |=======

@@ -515,23 +515,23 @@ The following table provides information for the HTTP server metrics:
 |=======
 | metric name | type | description
 | reactor.netty.http.server.streams.active | Gauge | The number of active HTTP/2 streams.
-See xref:observability.adoc#observability-metrics-streams-active[]
+See xref:observability.adoc#observability-metrics-streams-active[Streams Active]
 | reactor.netty.http.server.connections.active | Gauge | The number of http connections currently processing requests.
-See xref:observability.adoc#observability-metrics-connections-active[]
+See xref:observability.adoc#observability-metrics-connections-active[Connections Active]
 | reactor.netty.http.server.connections.total | Gauge | The number of all opened connections.
-See xref:observability.adoc#observability-metrics-connections-total[]
+See xref:observability.adoc#observability-metrics-connections-total[Connections Total]
 | reactor.netty.http.server.data.received | DistributionSummary | Amount of the data received, in bytes.
-See xref:observability.adoc#observability-metrics-data-received[]
+See xref:observability.adoc#observability-metrics-data-received[Data Received]
 | reactor.netty.http.server.data.sent | DistributionSummary | Amount of the data sent, in bytes.
-See xref:observability.adoc#observability-metrics-data-sent[]
+See xref:observability.adoc#observability-metrics-data-sent[Data Sent]
 | reactor.netty.http.server.errors | Counter | Number of errors that occurred.
-See xref:observability.adoc#observability-metrics-errors-count[]
+See xref:observability.adoc#observability-metrics-errors-count[Errors Count]
 | reactor.netty.http.server.data.received.time | Timer | Time spent in consuming incoming data.
-See xref:observability.adoc#observability-metrics-http-server-data-received-time[]
+See xref:observability.adoc#observability-metrics-http-server-data-received-time[Http Server Data Received Time]
 | reactor.netty.http.server.data.sent.time | Timer | Time spent in sending outgoing data.
-See xref:observability.adoc#observability-metrics-http-server-data-sent-time[]
+See xref:observability.adoc#observability-metrics-http-server-data-sent-time[Http Server Data Sent Time]
 | reactor.netty.http.server.response.time | Timer | Total time for the request/response
-See xref:observability.adoc#observability-metrics-http-server-response-time[]
+See xref:observability.adoc#observability-metrics-http-server-response-time[Http Server Response Time]
 |=======
 
 These additional metrics are also available:
@@ -574,7 +574,7 @@ The following table provides information for the HTTP server spans:
 |=======
 | contextual name | description
 | <HTTP METHOD>_<URI> | Information and total time for the request.
-See xref:observability.adoc#observability-spans-http-server-response-span[].
+See xref:observability.adoc#observability-spans-http-server-response-span[Http Server Response Span].
 |=======
 
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
