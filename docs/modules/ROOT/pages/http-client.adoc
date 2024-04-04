@@ -346,23 +346,23 @@ The following table provides information for the HTTP client metrics:
 |=======
 | metric name | type | description
 | reactor.netty5.http.client.data.received | DistributionSummary | Amount of the data received, in bytes.
-See xref:observability.adoc#observability-metrics-data-received[]
+See xref:observability.adoc#observability-metrics-data-received[Data Received]
 | reactor.netty5.http.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
-See xref:observability.adoc#observability-metrics-data-sent[]
+See xref:observability.adoc#observability-metrics-data-sent[Data Sent]
 | reactor.netty5.http.client.errors | Counter | Number of errors that occurred.
-See xref:observability.adoc#observability-metrics-errors-count[]
+See xref:observability.adoc#observability-metrics-errors-count[Errors Count]
 | reactor.netty5.http.client.tls.handshake.time | Timer | Time spent for TLS handshake.
-See xref:observability.adoc#observability-metrics-tls-handshake-time[]
+See xref:observability.adoc#observability-metrics-tls-handshake-time[Tls Handshake Time]
 | reactor.netty5.http.client.connect.time | Timer | Time spent for connecting to the remote address.
-See xref:observability.adoc#observability-metrics-connect-time[]
+See xref:observability.adoc#observability-metrics-connect-time[Connect Time]
 | reactor.netty5.http.client.address.resolver | Timer | Time spent for resolving the address.
-See xref:observability.adoc#observability-metrics-hostname-resolution-time[]
+See xref:observability.adoc#observability-metrics-hostname-resolution-time[Hostname Resolution Time]
 | reactor.netty5.http.client.data.received.time | Timer | Time spent in consuming incoming data.
-See xref:observability.adoc#observability-metrics-http-client-data-received-time[]
+See xref:observability.adoc#observability-metrics-http-client-data-received-time[Http Client Data Received Time]
 | reactor.netty5.http.client.data.sent.time | Timer | Time spent in sending outgoing data.
-See xref:observability.adoc#observability-metrics-http-client-data-sent-time[]
+See xref:observability.adoc#observability-metrics-http-client-data-sent-time[Http Client Data Sent Time]
 | reactor.netty5.http.client.response.time | Timer | Total time for the request/response
-See xref:observability.adoc#observability-metrics-http-client-response-time[]
+See xref:observability.adoc#observability-metrics-http-client-response-time[Http Client Response Time]
 |=======
 
 These additional metrics are also available:
@@ -375,9 +375,9 @@ The following table provides information for the HTTP client metrics when it is 
 |=======
 | metric name | type | description
 | reactor.netty5.connection.provider.active.streams | Gauge | The number of the active HTTP/2 streams.
-See xref:observability.adoc#observability-metrics-active-streams[]
+See xref:observability.adoc#observability-metrics-active-streams[Active Streams]
 | reactor.netty5.connection.provider.pending.streams | Gauge | The number of requests that are waiting for opening HTTP/2 stream.
-See xref:observability.adoc#observability-metrics-pending-streams[]
+See xref:observability.adoc#observability-metrics-pending-streams[Pending Streams]
 |=======
 
 include::partial$alloc-metrics.adoc[]
@@ -421,13 +421,13 @@ The following table provides information for the HTTP client spans:
 |=======
 | contextual name | description
 | HTTP <HTTP METHOD> | Information and total time for the request.
-See xref:observability.adoc#observability-spans-http-client-response-span[].
+See xref:observability.adoc#observability-spans-http-client-response-span[Http Client Response Span].
 | hostname resolution | Information and time spent for resolving the address.
-See xref:observability.adoc#observability-spans-hostname-resolution-span[].
+See xref:observability.adoc#observability-spans-hostname-resolution-span[Hostname Resolution Span].
 | connect | Information and time spent for connecting to the remote address.
-See xref:observability.adoc#observability-spans-connect-span[].
+See xref:observability.adoc#observability-spans-connect-span[Connect Span].
 | tls handshake | Information and time spent for TLS handshake.
-See xref:observability.adoc#observability-spans-tls-handshake-span[].
+See xref:observability.adoc#observability-spans-tls-handshake-span[Tls Handshake Span].
 |=======
 
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.

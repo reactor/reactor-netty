@@ -217,15 +217,15 @@ The following table provides information for the TCP server metrics:
 |=======
 | metric name | type | description
 | reactor.netty5.tcp.server.connections.total | Gauge | The number of all opened connections.
-See xref:observability.adoc#observability-metrics-connections-total[]
+See xref:observability.adoc#observability-metrics-connections-total[Connections Total]
 | reactor.netty5.tcp.server.data.received | DistributionSummary | Amount of the data received, in bytes.
-See xref:observability.adoc#observability-metrics-data-received[]
+See xref:observability.adoc#observability-metrics-data-received[Data Received]
 | reactor.netty5.tcp.server.data.sent | DistributionSummary | Amount of the data sent, in bytes.
-See xref:observability.adoc#observability-metrics-data-sent[]
+See xref:observability.adoc#observability-metrics-data-sent[Data Sent]
 | reactor.netty5.tcp.server.errors | Counter | Number of errors that occurred.
-See xref:observability.adoc#observability-metrics-errors-count[]
+See xref:observability.adoc#observability-metrics-errors-count[Errors Count]
 | reactor.netty5.tcp.server.tls.handshake.time | Timer | Time spent for TLS handshake.
-See xref:observability.adoc#observability-metrics-tls-handshake-time[]
+See xref:observability.adoc#observability-metrics-tls-handshake-time[Tls Handshake Time]
 |=======
 
 These additional metrics are also available:
@@ -262,7 +262,7 @@ The following table provides information for the TCP server spans:
 |=======
 | contextual name | description
 | tls handshake | Information and time spent for TLS handshake.
-See xref:observability.adoc#observability-spans-tls-handshake-span[].
+See xref:observability.adoc#observability-spans-tls-handshake-span[Tls Handshake Span].
 |=======
 
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.

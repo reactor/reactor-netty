@@ -240,17 +240,17 @@ The following table provides information for the TCP client metrics:
 |=======
 | metric name | type | description
 | reactor.netty5.tcp.client.data.received | DistributionSummary | Amount of the data received, in bytes.
-See xref:observability.adoc#observability-metrics-data-received[]
+See xref:observability.adoc#observability-metrics-data-received[Data Received]
 | reactor.netty5.tcp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes.
-See xref:observability.adoc#observability-metrics-data-sent[]
+See xref:observability.adoc#observability-metrics-data-sent[Data Sent]
 | reactor.netty5.tcp.client.errors | Counter | Number of errors that occurred.
-See xref:observability.adoc#observability-metrics-errors-count[]
+See xref:observability.adoc#observability-metrics-errors-count[Errors Count]
 | reactor.netty5.tcp.client.tls.handshake.time | Timer | Time spent for TLS handshake.
-See xref:observability.adoc#observability-metrics-tls-handshake-time[]
+See xref:observability.adoc#observability-metrics-tls-handshake-time[Tls Handshake Time]
 | reactor.netty5.tcp.client.connect.time | Timer | Time spent for connecting to the remote address.
-See xref:observability.adoc#observability-metrics-connect-time[]
+See xref:observability.adoc#observability-metrics-connect-time[Connect Time]
 | reactor.netty5.tcp.client.address.resolver | Timer | Time spent for resolving the address.
-See xref:observability.adoc#observability-metrics-hostname-resolution-time[]
+See xref:observability.adoc#observability-metrics-hostname-resolution-time[Hostname Resolution Time]
 |=======
 
 These additional metrics are also available:
@@ -289,11 +289,11 @@ The following table provides information for the TCP client spans:
 |=======
 | contextual name | description
 | hostname resolution | Information and time spent for resolving the address.
-See xref:observability.adoc#observability-spans-hostname-resolution-span[].
+See xref:observability.adoc#observability-spans-hostname-resolution-span[Hostname Resolution Span].
 | connect | Information and time spent for connecting to the remote address.
-See xref:observability.adoc#observability-spans-connect-span[].
+See xref:observability.adoc#observability-spans-connect-span[Connect Span].
 | tls handshake | Information and time spent for TLS handshake.
-See xref:observability.adoc#observability-spans-tls-handshake-span[].
+See xref:observability.adoc#observability-spans-tls-handshake-span[Tls Handshake Span].
 |=======
 
 The following example enables that integration. This concrete example uses `Brave` and reports the information to `Zipkin`.
