@@ -64,7 +64,6 @@ task docsZip(type: Zip) {
 	group = 'Distribution'
 	archiveBaseName.set("reactor-netty5")
 	archiveClassifier = 'docs'
-	description = "Builds docs archive containing reference for deployment at static.spring.io/reactor-netty5/docs."
 	duplicatesStrategy "fail"
 	def docsDir = file('../docs/build/site')
 
