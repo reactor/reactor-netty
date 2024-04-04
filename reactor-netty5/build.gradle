@@ -41,31 +41,16 @@ jar {
 
 description = "Reactor Netty with all modules"
 
-task includePdf {
-	dependsOn ":docs:antora"
-
-	doLast {
-		// Include the generated PDF file in the zip file if it exists
-		def version = project.version.takeWhile { it != '-' }
-		def pdfFile = file("../docs/build/assembler/reactor-netty/${version}/reactor-netty-reference-guide.pdf")
-		if (pdfFile.exists()) {
-			docsZip.from(pdfFile) {
-				rename { fileName ->
-					"docs/reactor-netty5-reference-guide-${project.version}.pdf"
-				}
-			}
-		}
-	}
-}
-
 task docsZip(type: Zip) {
-	dependsOn "includePdf"
-
+	dependsOn(':docs:antora')
 	group = 'Distribution'
 	archiveBaseName.set("reactor-netty5")
 	archiveClassifier = 'docs'
 	duplicatesStrategy "fail"
 	def docsDir = file('../docs/build/site')
+	def isSnapshot = project.version.endsWith('-SNAPSHOT')
+	def version = isSnapshot ? project.version.takeWhile { it != '-' } : project.version
+	boolean forcePdf = project.hasProperty('forcePdf')
 
 	doFirst {
 		if (!docsDir.exists() || !Files.list(docsDir.toPath()).findFirst().isPresent()) {
@@ -76,6 +61,16 @@ task docsZip(type: Zip) {
 
 	from ('../docs/build/site') {
 		into 'docs'
+	}
+
+	if (!isSnapshot || forcePdf) {
+		def pdfFile = file("../docs/build/assembler/reactor-netty/${version}/reactor-netty-reference-guide.pdf")
+		logger.lifecycle("${pdfFile} will be included in docs zip")
+		from(pdfFile) {
+			rename { fileName ->
+				"docs/reactor-netty5-reference-guide-${project.version}.pdf"
+			}
+		}
 	}
 }
 
