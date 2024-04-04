@@ -44,7 +44,6 @@ description = "Reactor Netty with all modules"
 task docsZip(type: Zip) {
 	group = 'Distribution'
 	archiveClassifier = 'docs'
-	description = "Builds docs archive containing reference for deployment at static.spring.io/reactor-netty/docs."
 	duplicatesStrategy "fail"
 
 	def docsDir = file('../docs/build/site')
