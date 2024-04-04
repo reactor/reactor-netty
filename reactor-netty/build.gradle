@@ -48,7 +48,7 @@ task docsZip(type: Zip) {
 
 	def docsDir = file('../docs/build/site')
 	def isSnapshot = project.version.endsWith('-SNAPSHOT')
-	def version = project.version.takeWhile { it != '-' }
+	def version = isSnapshot ? project.version.takeWhile { it != '-' } : project.version
 	def pdfFile = file("../docs/build/assembler/reactor-netty/${version}/reactor-netty-reference-guide.pdf")
 	boolean forcePdf = project.hasProperty('forcePdf')
 
