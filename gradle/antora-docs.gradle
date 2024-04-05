@@ -92,16 +92,7 @@ tasks.create(name: 'createAntoraPartials', type: Sync) {
 	doLast {
 		def url = 'https://raw.githubusercontent.com/reactor/.github/main/SUPPORT.adoc'
 		def outputFile = file("${buildDir}/generated-antora-resources/modules/ROOT/partials/SUPPORT.adoc")
-
 		ant.get(src: url, dest: outputFile)
-
-		// Structure the content properly
-		def supportContent = outputFile.text
-		def structuredContent = """
-= Support Documentation
-${supportContent}
-"""
-		outputFile.write(structuredContent)
 	}
 	into layout.buildDirectory.dir('generated-antora-resources/modules/ROOT/partials')
 }
