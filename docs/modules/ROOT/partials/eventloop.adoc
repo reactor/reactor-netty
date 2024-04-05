@@ -33,5 +33,3 @@ NOTE: Disposing `HttpResources` means that every server/client that is using it,
 - If you use custom `LoopResources`, invoke {javadoc}/reactor/netty/resources/LoopResources.html[`LoopResources`]`#dispose`/`#disposeLater` method.
 
 NOTE: Disposing the custom `LoopResources` means that every server/client that is configured to use it, will not be able to use it anymore!
-
-
