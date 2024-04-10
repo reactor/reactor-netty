@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,27 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-buildscript {
-	repositories {
-		maven {
-			url "https://plugins.gradle.org/m2/"
-		}
-	}
-	dependencies {
-		classpath "net.ltgt.gradle:gradle-errorprone-plugin:2.0.2"
-	}
-}
-
-apply plugin: net.ltgt.gradle.errorprone.ErrorPronePlugin
-
-ext {
-	errorproneCoreVersion = "2.7.1"
-	errorproneJavacVersion = "9+181-r4173-1"
-	guavaVersion = "30.0-jre"
-}
+apply plugin: 'net.ltgt.errorprone'
 
 dependencies {
 	errorprone "com.google.errorprone:error_prone_core:$errorproneCoreVersion"
-	errorprone "com.google.guava:guava:$guavaVersion" // prevents conflicts with guava versions of other gradle plugins
-	errorproneJavac "com.google.errorprone:javac:$errorproneJavacVersion"
+	errorprone "com.google.guava:guava:$errorproneGuavaVersion" // prevents conflicts with guava versions of other gradle plugins
 }
