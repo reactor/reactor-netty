@@ -43,10 +43,6 @@ updates:
   - dependency-name: org.jfrog.buildinfo:build-info-extractor-gradle
     versions:
     - "[5.a, 6]"
-  # Versions > 7 require Gradle8+
-  - dependency-name: com.github.johnrengelman.shadow
-    versions:
-    - "[8.a, 9]"
   # Versions > 4 require JDK11+
   - dependency-name: org.mockito:mockito-core
     versions:
