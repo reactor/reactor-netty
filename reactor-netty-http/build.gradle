@@ -132,7 +132,12 @@ dependencies {
 	// JSR-305 annotations
 	testCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	testImplementation "org.mockito:mockito-core:$mockitoVersion"
+	testImplementation ("org.mockito:mockito-core") {
+		// Workaround for https://github.com/micrometer-metrics/micrometer/issues/4968
+		version {
+			strictly "$mockitoVersion"
+		}
+	}
 	testImplementation "io.specto:hoverfly-java-junit5:$hoverflyJavaVersion"
 	testImplementation "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
 	testImplementation "io.projectreactor:reactor-test:$testAddonVersion"

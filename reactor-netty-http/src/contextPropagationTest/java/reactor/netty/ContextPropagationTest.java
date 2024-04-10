@@ -122,13 +122,6 @@ class ContextPropagationTest {
 	@ParameterizedTest
 	@MethodSource("httpClientCombinations")
 	void testAutomaticContextPropagation(HttpClient client) {
-		String reactorCoreVersionMinor = System.getProperty("reactorCoreVersionMinor");
-		String contextPropagationVersionMicro =  System.getProperty("contextPropagationVersionMicro");
-
-		boolean enableAutomaticContextPropagation =
-				reactorCoreVersionMinor != null && !reactorCoreVersionMinor.isEmpty() && Integer.parseInt(reactorCoreVersionMinor) >= 6 && // 3.6.x
-						contextPropagationVersionMicro != null && !contextPropagationVersionMicro.isEmpty() && Integer.parseInt(contextPropagationVersionMicro) >= 5; // 1.0.5 or above
-
 		HttpServer server = client.configuration().sslProvider() != null ?
 				baseServer.secure(spec -> spec.sslContext(serverCtx)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2) :
 				baseServer.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C);
@@ -136,9 +129,7 @@ class ContextPropagationTest {
 		disposableServer = server.bindNow();
 
 		try {
-			if (enableAutomaticContextPropagation) {
-				Hooks.enableAutomaticContextPropagation();
-			}
+			Hooks.enableAutomaticContextPropagation();
 
 			registry.registerThreadLocalAccessor(new TestThreadLocalAccessor());
 
@@ -151,17 +142,15 @@ class ContextPropagationTest {
 					      .uri("/")
 					      .send(ByteBufMono.fromString(Mono.just("test")));
 
-			response(responseReceiver, enableAutomaticContextPropagation);
-			responseConnection(responseReceiver, enableAutomaticContextPropagation);
-			responseContent(responseReceiver, enableAutomaticContextPropagation);
-			responseSingle(responseReceiver, enableAutomaticContextPropagation);
+			response(responseReceiver);
+			responseConnection(responseReceiver);
+			responseContent(responseReceiver);
+			responseSingle(responseReceiver);
 		}
 		finally {
 			TestThreadLocalHolder.reset();
 			registry.removeThreadLocalAccessor(TestThreadLocalAccessor.KEY);
-			if (enableAutomaticContextPropagation) {
-				Hooks.disableAutomaticContextPropagation();
-			}
+			Hooks.disableAutomaticContextPropagation();
 			disposableServer.disposeNow();
 		}
 	}
@@ -206,36 +195,26 @@ class ContextPropagationTest {
 		};
 	}
 
-	static void response(HttpClient.ResponseReceiver<?> responseReceiver, boolean enableAutomaticContextPropagation) {
+	static void response(HttpClient.ResponseReceiver<?> responseReceiver) {
 		AtomicReference<String> threadLocal = new AtomicReference<>();
 		responseReceiver.response()
 		                .doOnNext(s -> threadLocal.set(TestThreadLocalHolder.value()))
 		                .block(Duration.ofSeconds(5));
 
-		if (enableAutomaticContextPropagation) {
-			assertThat(threadLocal.get()).isNotNull().isEqualTo("First");
-		}
-		else {
-			assertThat(threadLocal.get()).isNull();
-		}
+		assertThat(threadLocal.get()).isNotNull().isEqualTo("First");
 	}
 
-	static void responseConnection(HttpClient.ResponseReceiver<?> responseReceiver, boolean enableAutomaticContextPropagation) {
+	static void responseConnection(HttpClient.ResponseReceiver<?> responseReceiver) {
 		AtomicReference<String> threadLocal = new AtomicReference<>();
 		responseReceiver.responseConnection((res, conn) -> conn.inbound().receive().aggregate().asString())
 		                .next()
 		                .doOnNext(s -> threadLocal.set(TestThreadLocalHolder.value()))
 		                .block(Duration.ofSeconds(5));
 
-		if (enableAutomaticContextPropagation) {
-			assertThat(threadLocal.get()).isNotNull().isEqualTo("First");
-		}
-		else {
-			assertThat(threadLocal.get()).isNull();
-		}
+		assertThat(threadLocal.get()).isNotNull().isEqualTo("First");
 	}
 
-	static void responseContent(HttpClient.ResponseReceiver<?> responseReceiver, boolean enableAutomaticContextPropagation) {
+	static void responseContent(HttpClient.ResponseReceiver<?> responseReceiver) {
 		AtomicReference<String> threadLocal = new AtomicReference<>();
 		responseReceiver.responseContent()
 		                .aggregate()
@@ -243,26 +222,16 @@ class ContextPropagationTest {
 		                .doOnNext(s -> threadLocal.set(TestThreadLocalHolder.value()))
 		                .block(Duration.ofSeconds(5));
 
-		if (enableAutomaticContextPropagation) {
-			assertThat(threadLocal.get()).isNotNull().isEqualTo("First");
-		}
-		else {
-			assertThat(threadLocal.get()).isNull();
-		}
+		assertThat(threadLocal.get()).isNotNull().isEqualTo("First");
 	}
 
-	static void responseSingle(HttpClient.ResponseReceiver<?> responseReceiver, boolean enableAutomaticContextPropagation) {
+	static void responseSingle(HttpClient.ResponseReceiver<?> responseReceiver) {
 		AtomicReference<String> threadLocal = new AtomicReference<>();
 		responseReceiver.responseSingle((res, bytes) -> bytes.asString())
 		                .doOnNext(s -> threadLocal.set(TestThreadLocalHolder.value()))
 		                .block(Duration.ofSeconds(5));
 
-		if (enableAutomaticContextPropagation) {
-			assertThat(threadLocal.get()).isNotNull().isEqualTo("First");
-		}
-		else {
-			assertThat(threadLocal.get()).isNull();
-		}
+		assertThat(threadLocal.get()).isNotNull().isEqualTo("First");
 	}
 
 	static void sendRequest(HttpClient client, String expectation) {
