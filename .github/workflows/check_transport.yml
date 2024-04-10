@@ -73,7 +73,7 @@ jobs:
         with:
             repository: netty-contrib/codec-multipart
             path: codec-multipart
-      - uses: gradle/wrapper-validation-action@b231772637bb498f11fdbc86052b6e8a8dc9fc92
+      - uses: gradle/wrapper-validation-action@b5418f5a58f5fd2eb486dd7efb368fe7be7eae45
       - name: Set up JDK 17
         uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9
         with:
