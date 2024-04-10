@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package reactor.netty5.examples.documentation.http.server.tracing;
 
 import brave.Tracing;
-import brave.handler.SpanHandler;
 import brave.propagation.StrictCurrentTraceContext;
 import brave.sampler.Sampler;
 import io.micrometer.tracing.CurrentTraceContext;
@@ -30,8 +29,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty5.DisposableServer;
 import reactor.netty5.http.observability.ReactorNettyPropagatingReceiverTracingObservationHandler;
 import reactor.netty5.http.server.HttpServer;
-import zipkin2.reporter.AsyncReporter;
-import zipkin2.reporter.brave.ZipkinSpanHandler;
+import zipkin2.reporter.brave.AsyncZipkinSpanHandler;
 import zipkin2.reporter.urlconnection.URLConnectionSender;
 
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
@@ -62,8 +60,8 @@ public class Application {
 	 * <a href="https://micrometer.io/docs/tracing#_micrometer_tracing_brave_setup">Micrometer Tracing Brave Setup</a>.
 	 */
 	static void init() {
-		SpanHandler spanHandler = ZipkinSpanHandler
-				.create(AsyncReporter.create(URLConnectionSender.create("http://localhost:9411/api/v2/spans")));
+		AsyncZipkinSpanHandler spanHandler = AsyncZipkinSpanHandler
+				.create(URLConnectionSender.create("http://localhost:9411/api/v2/spans"));
 
 		StrictCurrentTraceContext braveCurrentTraceContext = StrictCurrentTraceContext.create();
 

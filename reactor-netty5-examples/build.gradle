@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ dependencies {
 	api "io.micrometer:micrometer-tracing:$micrometerTracingVersion"
 	api "io.micrometer:micrometer-tracing-bridge-brave:$micrometerTracingVersion"
 	api "io.zipkin.brave:brave:$braveVersion"
+	api "io.zipkin.reporter2:zipkin-reporter-brave:$zipkinSenderVersion"
 	api "io.zipkin.reporter2:zipkin-sender-urlconnection:$zipkinSenderVersion"
 
 	api "io.netty:netty5-transport-native-epoll:$nettyVersion:linux-x86_64"
