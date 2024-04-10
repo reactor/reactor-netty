@@ -428,7 +428,9 @@ shadowJar {
 	}
 	bnd(bndOptions)
 
-	archiveClassifier.set(null)
+	enableRelocation true
+	relocationPrefix "reactor.netty.internal.shaded"
+	archiveClassifier.set('')
 
 	dependsOn(project.tasks.jar)
 
@@ -459,13 +461,6 @@ shadowJar {
 
 	exclude 'META-INF/maven*/**'
 }
-
-task relocateShadowJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation) {
-	target = tasks.shadowJar
-	prefix = "reactor.netty5.internal.shaded"
-}
-
-tasks.shadowJar.dependsOn(relocateShadowJar)
 
 //delay the maven publishing so that the OSGi metadata is generated
 //then add shadowJar to the publication
