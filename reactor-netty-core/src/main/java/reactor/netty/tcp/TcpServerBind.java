@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 package reactor.netty.tcp;
 
 import io.netty.channel.ChannelOption;
-import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
 import reactor.netty.internal.util.MapUtils;
 
 import java.net.InetSocketAddress;
@@ -49,15 +47,6 @@ final class TcpServerBind extends TcpServer {
 
 	TcpServerBind(TcpServerConfig config) {
 		this.config = config;
-	}
-
-	@Override
-	@SuppressWarnings("deprecation")
-	public Mono<? extends DisposableServer> bind() {
-		if (config.sslProvider != null && config.sslProvider.getDefaultConfigurationType() == null) {
-			config.sslProvider = SslProvider.updateDefaultConfiguration(config.sslProvider, SslProvider.DefaultConfigurationType.TCP);
-		}
-		return super.bind();
 	}
 
 	@Override
