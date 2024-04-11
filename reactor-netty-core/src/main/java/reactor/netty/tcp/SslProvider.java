@@ -412,7 +412,7 @@ public final class SslProvider {
 	@Override
 	public String toString() {
 		return "SslProvider {" +
-				", handshakeTimeoutMillis=" + handshakeTimeoutMillis +
+				"handshakeTimeoutMillis=" + handshakeTimeoutMillis +
 				", closeNotifyFlushTimeoutMillis=" + closeNotifyFlushTimeoutMillis +
 				", closeNotifyReadTimeoutMillis=" + closeNotifyReadTimeoutMillis +
 				'}';
