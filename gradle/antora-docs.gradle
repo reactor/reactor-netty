@@ -43,9 +43,9 @@ antora {
 	}
 
 	environment = [
-			'ALGOLIA_API_KEY'   : 'da671ceec1f84f80f280884a6a91bde5',
-			'ALGOLIA_APP_ID'    : 'TGS4XRGX3V',
-			'ALGOLIA_INDEX_NAME': 'reactor'
+			'ALGOLIA_API_KEY'   : 'd4bf9918bfc7d63ae68fbf92d69c2f49',
+			'ALGOLIA_APP_ID'    : '82SNR5M8HE',
+			'ALGOLIA_INDEX_NAME': 'projectreactor'
 	]
 
 	dependencies = [
