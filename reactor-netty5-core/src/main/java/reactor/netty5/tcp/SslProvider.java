@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -271,7 +271,6 @@ public final class SslProvider {
 	}
 
 	final SslContext                   sslContext;
-	final SslContextBuilder            sslContextBuilder;
 	final long                         handshakeTimeoutMillis;
 	final long                         closeNotifyFlushTimeoutMillis;
 	final long                         closeNotifyReadTimeoutMillis;
@@ -282,17 +281,8 @@ public final class SslProvider {
 	final AsyncMapping<String, SslProvider> sniMappings;
 
 	SslProvider(SslProvider.Build builder) {
-		this.sslContextBuilder = builder.sslCtxBuilder;
 		if (builder.sslContext == null) {
-			if (sslContextBuilder != null) {
-				try {
-					this.sslContext = sslContextBuilder.build();
-				}
-				catch (SSLException e) {
-					throw Exceptions.propagate(e);
-				}
-			}
-			else if (builder.protocolSslContextSpec != null) {
+			if (builder.protocolSslContextSpec != null) {
 				try {
 					this.sslContext = builder.protocolSslContextSpec.sslContext();
 				}
@@ -340,7 +330,6 @@ public final class SslProvider {
 
 	SslProvider(SslProvider from, Consumer<? super SslHandler> handlerConfigurator) {
 		this.sslContext = from.sslContext;
-		this.sslContextBuilder = from.sslContextBuilder;
 		if (from.handlerConfigurator == null) {
 			this.handlerConfigurator = handlerConfigurator;
 		}
@@ -422,7 +411,7 @@ public final class SslProvider {
 	@Override
 	public String toString() {
 		return "SslProvider {" +
-				", handshakeTimeoutMillis=" + handshakeTimeoutMillis +
+				"handshakeTimeoutMillis=" + handshakeTimeoutMillis +
 				", closeNotifyFlushTimeoutMillis=" + closeNotifyFlushTimeoutMillis +
 				", closeNotifyReadTimeoutMillis=" + closeNotifyReadTimeoutMillis +
 				'}';
@@ -467,7 +456,6 @@ public final class SslProvider {
 						ReactorNetty.SSL_HANDSHAKE_TIMEOUT,
 						"10000"));
 
-		SslContextBuilder sslCtxBuilder;
 		ProtocolSslContextSpec protocolSslContextSpec;
 		SslContext sslContext;
 		Consumer<? super SslHandler> handlerConfigurator;
@@ -603,7 +591,6 @@ public final class SslProvider {
 			return handshakeTimeoutMillis == build.handshakeTimeoutMillis &&
 					closeNotifyFlushTimeoutMillis == build.closeNotifyFlushTimeoutMillis &&
 					closeNotifyReadTimeoutMillis == build.closeNotifyReadTimeoutMillis &&
-					Objects.equals(sslCtxBuilder, build.sslCtxBuilder) &&
 					Objects.equals(sslContext, build.sslContext) &&
 					Objects.equals(handlerConfigurator, build.handlerConfigurator) &&
 					Objects.equals(serverNames, build.serverNames) &&
@@ -614,7 +601,6 @@ public final class SslProvider {
 		@Override
 		public int hashCode() {
 			int result = 1;
-			result = 31 * result + Objects.hashCode(sslCtxBuilder);
 			result = 31 * result + Objects.hashCode(sslContext);
 			result = 31 * result + Objects.hashCode(handlerConfigurator);
 			result = 31 * result + Long.hashCode(handshakeTimeoutMillis);
