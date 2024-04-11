@@ -231,6 +231,17 @@ public final class SslProvider {
 		 *
 		 * @param spec SslContext builder that provides, specific for the protocol, default configuration
 		 * @return {@literal this}
+		 * @since 1.2.0
+		 */
+		Builder sslContext(GenericSslContextSpec<?> spec);
+
+		/**
+		 * SslContext builder that provides, specific for the protocol, default configuration
+		 * e.g. {@link DefaultSslContextSpec}, {@link TcpSslContextSpec} etc.
+		 * The default configuration is applied before any other custom configuration.
+		 *
+		 * @param spec SslContext builder that provides, specific for the protocol, default configuration
+		 * @return {@literal this}
 		 * @since 1.0.6
 		 */
 		Builder sslContext(ProtocolSslContextSpec spec);
@@ -246,20 +257,21 @@ public final class SslProvider {
 	}
 
 	/**
-	 * SslContext builder that provides, specific for the protocol, default configuration.
+	 * Generic SslContext builder that provides, specific for the protocol, default configuration.
 	 * The default configuration is applied prior any other custom configuration.
 	 *
-	 * @since 1.0.6
+	 * @param <B> specific for the protocol SslContext builder
+	 * @since 1.2.0
 	 */
-	public interface ProtocolSslContextSpec {
+	public interface GenericSslContextSpec<B> {
 
 		/**
-		 * Configures the underlying {@link SslContextBuilder}.
+		 * Configures the underlying {@link SslContext}.
 		 *
-		 * @param sslCtxBuilder a callback for configuring the underlying {@link SslContextBuilder}
+		 * @param sslCtxBuilder a callback for configuring the underlying {@link SslContext}
 		 * @return {@code this}
 		 */
-		ProtocolSslContextSpec configure(Consumer<SslContextBuilder> sslCtxBuilder);
+		GenericSslContextSpec<B> configure(Consumer<B> sslCtxBuilder);
 
 		/**
 		 * Create a new {@link SslContext} instance with the configured settings.
@@ -268,6 +280,18 @@ public final class SslProvider {
 		 * @throws SSLException thrown when {@link SslContext} instance cannot be created
 		 */
 		SslContext sslContext() throws SSLException;
+	}
+
+	/**
+	 * SslContext builder that provides, specific for the protocol, default configuration.
+	 * The default configuration is applied prior any other custom configuration.
+	 *
+	 * @since 1.0.6
+	 */
+	public interface ProtocolSslContextSpec extends GenericSslContextSpec<SslContextBuilder> {
+
+		@Override
+		ProtocolSslContextSpec configure(Consumer<SslContextBuilder> sslCtxBuilder);
 	}
 
 	final SslContext                   sslContext;
@@ -282,9 +306,9 @@ public final class SslProvider {
 
 	SslProvider(SslProvider.Build builder) {
 		if (builder.sslContext == null) {
-			if (builder.protocolSslContextSpec != null) {
+			if (builder.genericSslContextSpec != null) {
 				try {
-					this.sslContext = builder.protocolSslContextSpec.sslContext();
+					this.sslContext = builder.genericSslContextSpec.sslContext();
 				}
 				catch (SSLException e) {
 					throw Exceptions.propagate(e);
@@ -457,7 +481,7 @@ public final class SslProvider {
 						ReactorNetty.SSL_HANDSHAKE_TIMEOUT,
 						"10000"));
 
-		ProtocolSslContextSpec protocolSslContextSpec;
+		GenericSslContextSpec<?> genericSslContextSpec;
 		SslContext sslContext;
 		Consumer<? super SslHandler> handlerConfigurator;
 		long handshakeTimeoutMillis = DEFAULT_SSL_HANDSHAKE_TIMEOUT;
@@ -470,8 +494,14 @@ public final class SslProvider {
 		// SslContextSpec
 
 		@Override
+		public Builder sslContext(GenericSslContextSpec<?> genericSslContextSpec) {
+			this.genericSslContextSpec = genericSslContextSpec;
+			return this;
+		}
+
+		@Override
 		public Builder sslContext(ProtocolSslContextSpec protocolSslContextSpec) {
-			this.protocolSslContextSpec = protocolSslContextSpec;
+			this.genericSslContextSpec = protocolSslContextSpec;
 			return this;
 		}
 
@@ -597,7 +627,7 @@ public final class SslProvider {
 					Objects.equals(handlerConfigurator, build.handlerConfigurator) &&
 					Objects.equals(serverNames, build.serverNames) &&
 					confPerDomainName.equals(build.confPerDomainName) &&
-					Objects.equals(protocolSslContextSpec, build.protocolSslContextSpec);
+					Objects.equals(genericSslContextSpec, build.genericSslContextSpec);
 		}
 
 		@Override
@@ -610,7 +640,7 @@ public final class SslProvider {
 			result = 31 * result + Long.hashCode(closeNotifyReadTimeoutMillis);
 			result = 31 * result + Objects.hashCode(serverNames);
 			result = 31 * result + Objects.hashCode(confPerDomainName);
-			result = 31 * result + Objects.hashCode(protocolSslContextSpec);
+			result = 31 * result + Objects.hashCode(genericSslContextSpec);
 			return result;
 		}
 
