@@ -41,6 +41,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.Http2SettingsSpec;
+import reactor.netty.http.Http3SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
@@ -451,6 +452,26 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 		HttpServer dup = duplicate();
 		dup.configuration().http2Settings = settings;
+		return dup;
+	}
+
+	/**
+	 * Apply HTTP/3 configuration.
+	 *
+	 * @param http3Settings configures {@link Http3SettingsSpec} before requesting
+	 * @return a new {@link HttpServer}
+	 * @since 1.2.0
+	 */
+	public final HttpServer http3Settings(Consumer<Http3SettingsSpec.Builder> http3Settings) {
+		Objects.requireNonNull(http3Settings, "http3Settings");
+		Http3SettingsSpec.Builder builder = Http3SettingsSpec.builder();
+		http3Settings.accept(builder);
+		Http3SettingsSpec settings = builder.build();
+		if (settings.equals(configuration().http3Settings)) {
+			return this;
+		}
+		HttpServer dup = duplicate();
+		dup.configuration().http3Settings = settings;
 		return dup;
 	}
 

@@ -59,6 +59,7 @@ import reactor.netty.channel.AbstractChannelMetricsHandler;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http2SettingsSpec;
+import reactor.netty.http.Http3SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
 import reactor.netty.http.logging.HttpMessageLogFactory;
@@ -157,6 +158,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 */
 	public Http2SettingsSpec http2SettingsSpec() {
 		return http2Settings;
+	}
+
+	/**
+	 * Return the HTTP/3 configuration.
+	 *
+	 * @return the HTTP/3 configuration
+	 * @since 1.2.0
+	 */
+	public Http3SettingsSpec http3SettingsSpec() {
+		return http3Settings;
 	}
 
 	/**
@@ -299,6 +310,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	HttpServerFormDecoderProvider                           formDecoderProvider;
 	BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	Http2SettingsSpec                                       http2Settings;
+	Http3SettingsSpec                                       http3Settings;
 	HttpMessageLogFactory                                   httpMessageLogFactory;
 	Duration                                                idleTimeout;
 	BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -341,6 +353,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.formDecoderProvider = parent.formDecoderProvider;
 		this.forwardedHeaderHandler = parent.forwardedHeaderHandler;
 		this.http2Settings = parent.http2Settings;
+		this.http3Settings = parent.http3Settings;
 		this.httpMessageLogFactory = parent.httpMessageLogFactory;
 		this.idleTimeout = parent.idleTimeout;
 		this.mapHandle = parent.mapHandle;
@@ -1214,6 +1227,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2SettingsSpec                                       http2SettingsSpec;
+		final Http3SettingsSpec                                       http3SettingsSpec;
 		final HttpMessageLogFactory                                   httpMessageLogFactory;
 		final Duration                                                idleTimeout;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -1242,6 +1256,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.formDecoderProvider = config.formDecoderProvider;
 			this.forwardedHeaderHandler = config.forwardedHeaderHandler;
 			this.http2SettingsSpec = config.http2Settings;
+			this.http3SettingsSpec = config.http3Settings;
 			this.httpMessageLogFactory = config.httpMessageLogFactory;
 			this.idleTimeout = config.idleTimeout;
 			this.mapHandle = config.mapHandle;
