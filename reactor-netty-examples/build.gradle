@@ -31,6 +31,7 @@ dependencies {
 	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 	// Needed for proxy testing
 	runtimeOnly "io.netty:netty-handler-proxy:$nettyVersion"
+	runtimeOnly "io.netty.incubator:netty-incubator-codec-http3:$nettyHttp3Version"
 }
 
 description = "Examples for the Reactor Netty library"

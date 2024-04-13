@@ -23,6 +23,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpDecoderConfig;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -89,6 +92,7 @@ import java.util.function.Supplier;
 
 import static reactor.netty.ReactorNetty.ACCESS_LOG_ENABLED;
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.http.server.Http3Codec.newHttp3ServerConnectionHandler;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 
 /**
@@ -371,6 +375,19 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	@Override
+	public ChannelInitializer<Channel> channelInitializer(ConnectionObserver connectionObserver,
+			@Nullable SocketAddress remoteAddress, boolean onServer) {
+		ChannelInitializer<Channel> channelInitializer = super.channelInitializer(connectionObserver, remoteAddress, onServer);
+		return (_protocols & h3) == h3 ? new Http3ChannelInitializer(this, channelInitializer) : channelInitializer;
+	}
+
+	@Override
+	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
+		return isDomainSocket ? ServerDomainSocketChannel.class :
+				(_protocols & h3) == h3 ? DatagramChannel.class : ServerSocketChannel.class;
+	}
+
+	@Override
 	protected LoggingHandler defaultLoggingHandler() {
 		return LOGGING_HANDLER;
 	}
@@ -567,6 +584,27 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			lengthPredicate = lengthPredicate.and(compressionPredicate);
 		}
 		return lengthPredicate;
+	}
+
+	static void configureHttp3Pipeline(
+			ChannelPipeline p,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+			ServerCookieDecoder cookieDecoder,
+			ServerCookieEncoder cookieEncoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			HttpMessageLogFactory httpMessageLogFactory,
+			ConnectionObserver listener,
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			ChannelOperations.OnSetup opsFactory,
+			@Nullable Duration readTimeout,
+			@Nullable Duration requestTimeout,
+			boolean validate) {
+		p.remove(NettyPipeline.ReactiveBridge);
+
+		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(compressPredicate, cookieDecoder, cookieEncoder,
+				formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, opsFactory,
+				readTimeout, requestTimeout, validate));
 	}
 
 	static void configureH2Pipeline(ChannelPipeline p,
@@ -1285,14 +1323,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (sslProvider != null) {
 				ChannelPipeline pipeline = channel.pipeline();
-				if (redirectHttpToHttps && (protocols & h2) != h2) {
-					NonSslRedirectDetector nonSslRedirectDetector = new NonSslRedirectDetector(sslProvider,
-							remoteAddress,
-							SSL_DEBUG);
-					pipeline.addFirst(NettyPipeline.NonSslRedirectDetector, nonSslRedirectDetector);
-				}
-				else {
-					sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+				if ((protocols & h3) != h3) {
+					if (redirectHttpToHttps && (protocols & h2) != h2) {
+						NonSslRedirectDetector nonSslRedirectDetector = new NonSslRedirectDetector(sslProvider,
+								remoteAddress,
+								SSL_DEBUG);
+						pipeline.addFirst(NettyPipeline.NonSslRedirectDetector, nonSslRedirectDetector);
+					}
+					else {
+						sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+					}
 				}
 
 				if ((protocols & h11orH2) == h11orH2) {
@@ -1348,6 +1388,22 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							readTimeout,
 							requestTimeout,
 							uriTagValue,
+							decoder.validateHeaders());
+				}
+				else if ((protocols & h3) == h3) {
+					configureHttp3Pipeline(
+							channel.pipeline(),
+							compressPredicate(compressPredicate, minCompressionSize),
+							cookieDecoder,
+							cookieEncoder,
+							formDecoderProvider,
+							forwardedHeaderHandler,
+							httpMessageLogFactory,
+							observer,
+							mapHandle,
+							opsFactory,
+							readTimeout,
+							requestTimeout,
 							decoder.validateHeaders());
 				}
 			}
