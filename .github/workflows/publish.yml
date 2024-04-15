@@ -225,7 +225,8 @@ jobs:
     needs: [ reactor-netty-core, tagRelease, tagMilestone, deploySnapshot ]
     if: always() # cleanup always run after all needed jobs, regardless of whether they were successful
     runs-on: ubuntu-20.04
-    permissions: write-all
+    permissions:
+        contents: write
     steps:
       - name: delete antora docs-build artifact
         env:
