@@ -58,6 +58,8 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.http.internal.Http3.isHttp3Available;
+import static reactor.netty.http.server.HttpServerConfig.h3;
 
 /**
  * An HttpServer allows building in a safe immutable way an HTTP server that is
@@ -836,6 +838,11 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		Objects.requireNonNull(supportedProtocols, "supportedProtocols");
 		HttpServer dup = duplicate();
 		dup.configuration().protocols(supportedProtocols);
+		if ((dup.configuration()._protocols & h3) == h3 && !isHttp3Available()) {
+			throw new UnsupportedOperationException(
+					"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
+							" to the class path first");
+		}
 		return dup;
 	}
 
