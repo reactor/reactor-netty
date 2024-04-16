@@ -46,10 +46,14 @@ task docsZip(type: Zip) {
 	archiveClassifier = 'docs'
 	duplicatesStrategy "fail"
 
+	if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
+		logger.lifecycle("Adding dependency on :docs:antora (JDK version is >= 17)")
+		dependsOn(':docs:antora')
+	}
+
 	def docsDir = file('../docs/build/site')
 	def isSnapshot = project.version.endsWith('-SNAPSHOT')
 	def version = isSnapshot ? project.version.takeWhile { it != '-' } : project.version
-	def pdfFile = file("../docs/build/assembler/reactor-netty/${version}/reactor-netty-reference-guide.pdf")
 	boolean forcePdf = project.hasProperty('forcePdf')
 
 	doFirst {
@@ -63,14 +67,12 @@ task docsZip(type: Zip) {
 		into 'docs'
 	}
 
-	if (pdfFile.exists()) {
-		if (!isSnapshot || forcePdf) {
-			logger.lifecycle("pdf ${pdfFile} included in docs zip")
-
-			from(pdfFile) {
-				rename { fileName ->
-					"docs/reactor-netty-reference-guide-${project.version}.pdf"
-				}
+	if (!isSnapshot || forcePdf) {
+		def pdfFile = file("../docs/build/assembler/reactor-netty/${version}/reactor-netty-reference-guide.pdf")
+		logger.lifecycle("${pdfFile} will be included in docs zip")
+		from(pdfFile) {
+			rename { fileName ->
+				"docs/reactor-netty-reference-guide-${project.version}.pdf"
 			}
 		}
 	}
