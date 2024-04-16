@@ -78,10 +78,6 @@ task docsZip(type: Zip) {
 	}
 }
 
-artifacts {
-	archives docsZip
-}
-
 javadoc.dependsOn(aggregateJavadoc)
 
 //add docs.zip to the publication
