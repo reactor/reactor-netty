@@ -243,7 +243,10 @@ public final class SslProvider {
 		 * @param spec SslContext builder that provides, specific for the protocol, default configuration
 		 * @return {@literal this}
 		 * @since 1.0.6
+		 * @deprecated as of 1.2.0. Prefer using {@link #sslContext(SslProvider.GenericSslContextSpec)}.
+		 * This method will be removed in version 1.3.0.
 		 */
+		@Deprecated
 		Builder sslContext(ProtocolSslContextSpec spec);
 
 		/**
