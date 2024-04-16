@@ -246,7 +246,10 @@ task japicmp(type: JapicmpTask) {
 			// Deprecated methods are removed
 			'reactor.netty.tcp.SslProvider$SslContextSpec#sslContext(io.netty.handler.ssl.SslContextBuilder)',
 			'reactor.netty.tcp.SslProvider#getDefaultConfigurationType()',
-			'reactor.netty.tcp.SslProvider#updateDefaultConfiguration(reactor.netty.tcp.SslProvider, reactor.netty.tcp.SslProvider$DefaultConfigurationType)'
+			'reactor.netty.tcp.SslProvider#updateDefaultConfiguration(reactor.netty.tcp.SslProvider, reactor.netty.tcp.SslProvider$DefaultConfigurationType)',
+
+			// New method is added
+			'reactor.netty.tcp.SslProvider$SslContextSpec#sslContext(reactor.netty.tcp.SslProvider$GenericSslContextSpec)'
 	]
 
 	classExcludes = [

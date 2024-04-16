@@ -118,6 +118,7 @@ ext {
 	}
 	nettyIoUringVersion = '0.0.25.Final'
 	nettyQuicVersion = '0.0.62.Final'
+	nettyHttp3Version = '0.0.28.Final'
 
 	// Testing
 	brotli4jVersion = '1.16.0'
