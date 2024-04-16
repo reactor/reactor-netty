@@ -429,7 +429,7 @@ shadowJar {
 	bnd(bndOptions)
 
 	enableRelocation true
-	relocationPrefix "reactor.netty.internal.shaded"
+	relocationPrefix "reactor.netty5.internal.shaded"
 	archiveClassifier.set('')
 
 	dependsOn(project.tasks.jar)
