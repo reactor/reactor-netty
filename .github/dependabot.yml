@@ -50,6 +50,56 @@ updates:
     versions:
     - "[6.a, 7]"
   rebase-strategy: disabled
+- package-ecosystem: gradle
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  assignees:
+  - violetagg
+  target-branch: "main"
+  labels:
+  - type/dependency-upgrade
+  ignore:
+  # Don't update Micrometer
+  - dependency-name: io.micrometer:micrometer-core
+    versions:
+    - "> 1.13.0"
+  # Don't update Context Propagation
+  - dependency-name: io.micrometer:context-propagation
+    versions:
+    - "> 1.1.0"
+  # Versions > 9 require JDK11+
+  - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
+    versions:
+    - ">= 10.0.a"
+  # Versions > 6.13 require JDK11+
+  - dependency-name: com.diffplug.spotless
+    versions:
+    - "[6.14.a, 7.0]"
+  # Versions > 6 require JDK17+
+  - dependency-name: biz.aQute.bnd.builder
+    versions:
+    - "[7.a, 8]"
+  # Versions > 4 require JDK11+
+  - dependency-name: org.jfrog.buildinfo:build-info-extractor-gradle
+    versions:
+    - "[5.a, 6]"
+  # Versions > 4 require JDK11+
+  - dependency-name: org.mockito:mockito-core
+    versions:
+    - "[5.a, 6]"
+  - dependency-name: ch.qos.logback:logback-classic
+    versions:
+    - "[1.3.a, 1.6]"
+  - dependency-name: org.slf4j:*
+    versions:
+    - "[2.a, 3]"
+  # Versions > 0.9.25 require JDK11+
+  - dependency-name: org.graalvm.buildtools.native
+    versions:
+    - "> 0.9.25"
+  rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
@@ -58,6 +108,17 @@ updates:
   assignees:
       - violetagg
   target-branch: "1.0.x"
+  labels:
+      - type/dependency-upgrade
+  rebase-strategy: disabled
+- package-ecosystem: github-actions
+  directory: "/"
+  schedule:
+      interval: daily
+  open-pull-requests-limit: 10
+  assignees:
+      - violetagg
+  target-branch: "main"
   labels:
       - type/dependency-upgrade
   rebase-strategy: disabled
