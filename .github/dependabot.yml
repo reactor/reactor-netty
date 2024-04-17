@@ -95,6 +95,10 @@ updates:
   - dependency-name: org.slf4j:*
     versions:
     - "[2.a, 3]"
+  # Versions > 0.9.25 require JDK11+
+  - dependency-name: org.graalvm.buildtools.native
+    versions:
+    - "> 0.9.25"
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
