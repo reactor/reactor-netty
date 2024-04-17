@@ -85,11 +85,11 @@ ext {
 	}
 
 	//Metrics
-	micrometerVersion = '1.10.0' //optional baseline
-	micrometerTracingVersion = '1.0.0' //optional baseline
-	micrometerDocsVersion = '1.0.0' //optional baseline
+	micrometerVersion = '1.13.0-SNAPSHOT' //optional baseline
+	micrometerTracingVersion = '1.3.0-SNAPSHOT' //optional baseline
+	micrometerDocsVersion = '1.0.2' //optional baseline
 
-	contextPropagationDefaultVersion = '1.0.0' //optional baseline
+	contextPropagationDefaultVersion = '1.1.0' //optional baseline
 	if (!project.hasProperty("forceContextPropagationVersion")) {
 		contextPropagationVersion = contextPropagationDefaultVersion
 	}
@@ -287,8 +287,6 @@ subprojects {
 		if (project.hasProperty("forceTransport")) {
 			systemProperty("forceTransport", forceTransport)
 		}
-		systemProperty("reactorCoreVersionMinor", VersionNumber.parse(reactorCoreVersion.toString()).minor)
-		systemProperty("contextPropagationVersionMicro", VersionNumber.parse(contextPropagationVersion.toString()).micro)
 		scanForTestClasses = false
 		include '**/*Tests.*'
 		include '**/*Test.*'

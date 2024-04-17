@@ -19,6 +19,7 @@ import brave.Tracing;
 import brave.propagation.StrictCurrentTraceContext;
 import brave.sampler.Sampler;
 import io.micrometer.context.ContextSnapshot;
+import io.micrometer.context.ContextSnapshotFactory;
 import io.micrometer.tracing.CurrentTraceContext;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.brave.bridge.BraveBaggageManager;
@@ -70,7 +71,7 @@ public class Application {
 		@Override
 		@SuppressWarnings("try")
 		public void channelActive(ChannelHandlerContext ctx) {
-			try (ContextSnapshot.Scope scope = ContextSnapshot.setAllThreadLocalsFrom(ctx.channel())) {
+			try (ContextSnapshot.Scope scope = ContextSnapshotFactory.builder().build().setThreadLocalsFrom(ctx.channel())) {
 				System.out.println("Current Observation in Scope: " + OBSERVATION_REGISTRY.getCurrentObservation());
 			}
 			System.out.println("Current Observation: " + OBSERVATION_REGISTRY.getCurrentObservation());
