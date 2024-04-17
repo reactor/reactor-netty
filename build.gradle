@@ -281,7 +281,6 @@ subprojects {
 		if (project.hasProperty("forceTransport")) {
 			systemProperty("forceTransport", forceTransport)
 		}
-		systemProperty("nettyVersionMicro", VersionNumber.parse(nettyVersion.toString()).micro)
 		systemProperty("reactorCoreVersionMinor", VersionNumber.parse(reactorCoreVersion.toString()).minor)
 		systemProperty("contextPropagationVersionMicro", VersionNumber.parse(contextPropagationVersion.toString()).micro)
 		scanForTestClasses = false

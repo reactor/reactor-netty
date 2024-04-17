@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -396,15 +396,7 @@ class SslProviderTests extends BaseHttpTest {
 
 		final OpenSslSessionContext sessionContext = clientContext.sessionContext();
 		assertThat(sessionContext.getSessionTimeout()).isEqualTo(300);
-		String nettyVersionMicro = System.getProperty("nettyVersionMicro");
-		// https://github.com/netty/netty/pull/13562
-		// This change enables client side session cache when using native SSL by default
-		if (nettyVersionMicro != null && !nettyVersionMicro.isEmpty() && Integer.parseInt(nettyVersionMicro) >= 98) {
-			assertThat(sessionContext.isSessionCacheEnabled()).isTrue();
-		}
-		else {
-			assertThat(sessionContext.isSessionCacheEnabled()).isFalse();
-		}
+		assertThat(sessionContext.isSessionCacheEnabled()).isTrue();
 	}
 
 	@Test
