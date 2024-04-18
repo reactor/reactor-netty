@@ -1,6 +1,5 @@
 = Appendices
 :sectnums:
-:toc:
 
 [appendix]
 include::faq.adoc[leveloffset=1]
