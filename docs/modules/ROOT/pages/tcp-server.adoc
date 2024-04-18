@@ -148,7 +148,7 @@ By default, the `TCP` server is configured with the following options:
 {core-source-link}/reactor/netty/tcp/TcpServerBind.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=40..48]
+include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=38..46]
 ----
 
 If additional options are necessary or changes to the current options are needed, you can apply the following configuration:
