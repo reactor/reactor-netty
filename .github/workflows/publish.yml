@@ -103,7 +103,7 @@ jobs:
         run: |-
           [ -d docs/build/antora/inject-collector-cache-config-extension/.cache ] && cp -rf docs/build/antora/inject-collector-cache-config-extension/.cache docs/build/site/
       - name: Upload docs/build to current workflow run
-        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4
+        uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4
         with:
           name: ${{ env.DOCS_BUILD_ARTIFACT }}
           retention-days: 1
