@@ -54,6 +54,7 @@ import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ServerTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Incubating;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
@@ -464,6 +465,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @return a new {@link HttpServer}
 	 * @since 1.2.0
 	 */
+	@Incubating
 	public final HttpServer http3Settings(Consumer<Http3SettingsSpec.Builder> http3Settings) {
 		Objects.requireNonNull(http3Settings, "http3Settings");
 		if (!isHttp3Available()) {

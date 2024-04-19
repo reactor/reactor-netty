@@ -76,6 +76,7 @@ import reactor.netty.transport.ServerTransportConfig;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Incubating;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -170,6 +171,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * @return the HTTP/3 configuration
 	 * @since 1.2.0
 	 */
+	@Incubating
 	public Http3SettingsSpec http3SettingsSpec() {
 		return http3Settings;
 	}

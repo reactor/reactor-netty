@@ -18,6 +18,7 @@ package reactor.netty.http;
 import io.netty.handler.ssl.SslContext;
 import io.netty.incubator.codec.quic.QuicSslContextBuilder;
 import reactor.netty.tcp.SslProvider;
+import reactor.util.annotation.Incubating;
 import reactor.util.annotation.Nullable;
 
 import javax.net.ssl.KeyManager;
@@ -42,6 +43,7 @@ import static io.netty.incubator.codec.http3.Http3.supportedApplicationProtocols
  * @since 1.2.0
  * @see io.netty.incubator.codec.http3.Http3#supportedApplicationProtocols()
  */
+@Incubating
 public final class Http3SslContextSpec implements SslProvider.GenericSslContextSpec<QuicSslContextBuilder> {
 
 	/**
