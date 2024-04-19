@@ -15,6 +15,11 @@
  */
 package reactor.netty.http;
 
+import io.netty.incubator.codec.quic.QuicTokenHandler;
+import reactor.util.annotation.Nullable;
+
+import java.util.Objects;
+
 /**
  * A configuration builder to fine tune the HTTP/3 settings.
  *
@@ -78,6 +83,16 @@ public final class Http3SettingsSpec {
 		 * @return {@code this}
 		 */
 		Builder maxStreamsBidirectional(long maxStreamsBidirectional);
+
+		/**
+		 * Set the {@link QuicTokenHandler} that is used to generate and validate tokens or
+		 * {@code null} if no tokens should be used at all.
+		 * Default to {@code null}.
+		 *
+		 * @param tokenHandler  the {@link QuicTokenHandler} to use.
+		 * @return {@code this}
+		 */
+		Builder tokenHandler(QuicTokenHandler tokenHandler);
 	}
 
 	/**
@@ -125,6 +140,16 @@ public final class Http3SettingsSpec {
 		return maxStreamsBidirectional;
 	}
 
+	/**
+	 * Return the configured {@link QuicTokenHandler} or null.
+	 *
+	 * @return the configured {@link QuicTokenHandler} or null
+	 */
+	@Nullable
+	public QuicTokenHandler tokenHandler() {
+		return tokenHandler;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -137,7 +162,8 @@ public final class Http3SettingsSpec {
 		return maxData == that.maxData &&
 				maxStreamDataBidirectionalLocal == that.maxStreamDataBidirectionalLocal &&
 				maxStreamDataBidirectionalRemote == that.maxStreamDataBidirectionalRemote &&
-				maxStreamsBidirectional == that.maxStreamsBidirectional;
+				maxStreamsBidirectional == that.maxStreamsBidirectional &&
+				Objects.equals(tokenHandler, that.tokenHandler);
 	}
 
 	@Override
@@ -147,6 +173,7 @@ public final class Http3SettingsSpec {
 		result = 31 * result + Long.hashCode(maxStreamDataBidirectionalLocal);
 		result = 31 * result + Long.hashCode(maxStreamDataBidirectionalRemote);
 		result = 31 * result + Long.hashCode(maxStreamsBidirectional);
+		result = 31 * result + Objects.hashCode(tokenHandler);
 		return result;
 	}
 
@@ -154,12 +181,14 @@ public final class Http3SettingsSpec {
 	final long maxStreamDataBidirectionalLocal;
 	final long maxStreamDataBidirectionalRemote;
 	final long maxStreamsBidirectional;
+	final QuicTokenHandler tokenHandler;
 
 	Http3SettingsSpec(Build build) {
 		this.maxData = build.maxData;
 		this.maxStreamDataBidirectionalLocal = build.maxStreamDataBidirectionalLocal;
 		this.maxStreamDataBidirectionalRemote = build.maxStreamDataBidirectionalRemote;
 		this.maxStreamsBidirectional = build.maxStreamsBidirectional;
+		this.tokenHandler = build.tokenHandler;
 	}
 
 	static final class Build implements Builder {
@@ -172,6 +201,7 @@ public final class Http3SettingsSpec {
 		long maxStreamDataBidirectionalLocal = DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_LOCAL;
 		long maxStreamDataBidirectionalRemote = DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_REMOTE;
 		long maxStreamsBidirectional = DEFAULT_MAX_STREAMS_BIDIRECTIONAL;
+		QuicTokenHandler tokenHandler;
 
 		@Override
 		public Http3SettingsSpec build() {
@@ -211,6 +241,12 @@ public final class Http3SettingsSpec {
 				throw new IllegalArgumentException("maxStreamsBidirectional must be positive or zero");
 			}
 			this.maxStreamsBidirectional = maxStreamsBidirectional;
+			return this;
+		}
+
+		@Override
+		public Builder tokenHandler(QuicTokenHandler tokenHandler) {
+			this.tokenHandler = tokenHandler;
 			return this;
 		}
 	}

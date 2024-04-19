@@ -466,6 +466,11 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 */
 	public final HttpServer http3Settings(Consumer<Http3SettingsSpec.Builder> http3Settings) {
 		Objects.requireNonNull(http3Settings, "http3Settings");
+		if (!isHttp3Available()) {
+			throw new UnsupportedOperationException(
+					"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
+							" to the class path first");
+		}
 		Http3SettingsSpec.Builder builder = Http3SettingsSpec.builder();
 		http3Settings.accept(builder);
 		Http3SettingsSpec settings = builder.build();

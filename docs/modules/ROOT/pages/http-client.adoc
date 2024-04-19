@@ -333,7 +333,7 @@ include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
 {http-source-link}/reactor/netty/http/HttpProtocol.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..52]
+include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..58]
 ----
 
 include::partial$proxy.adoc[]
