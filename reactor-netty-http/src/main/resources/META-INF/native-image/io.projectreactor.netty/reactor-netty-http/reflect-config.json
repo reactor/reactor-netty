@@ -162,13 +162,6 @@
 	},
 	{
 		"condition": {
-			"typeReachable": "reactor.netty.http.server.Http3FrameLoggingHandler"
-		},
-		"name": "reactor.netty.http.server.Http3FrameLoggingHandler",
-		"queryAllPublicMethods": true
-	},
-	{
-		"condition": {
 			"typeReachable": "reactor.netty.http.server.Http3StreamBridgeServerHandler"
 		},
 		"name": "reactor.netty.http.server.Http3StreamBridgeServerHandler",

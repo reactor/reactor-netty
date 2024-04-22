@@ -42,8 +42,6 @@ import static reactor.netty.ReactorNetty.format;
 
 final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
-	static final ChannelHandler FRAME_LOGGING_HANDLER = new Http3FrameLoggingHandler();
-
 	static final Logger log = Loggers.getLogger(Http3Codec.class);
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
@@ -53,7 +51,6 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final HttpMessageLogFactory                                   httpMessageLogFactory;
 	final ConnectionObserver                                      listener;
-	final ChannelHandler                                          loggingHandler;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 	                                                              mapHandle;
 	final ChannelOperations.OnSetup                               opsFactory;
@@ -69,7 +66,6 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
-			@Nullable ChannelHandler loggingHandler,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
@@ -82,7 +78,6 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.httpMessageLogFactory = httpMessageLogFactory;
 		this.listener = listener;
-		this.loggingHandler = loggingHandler;
 		this.mapHandle = mapHandle;
 		this.opsFactory = opsFactory;
 		this.readTimeout = readTimeout;
@@ -93,9 +88,6 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	@Override
 	protected void initChannel(QuicStreamChannel channel) {
 		ChannelPipeline p = channel.pipeline();
-		if (loggingHandler != null && p.context("Http3FrameCodec#0") != null) {
-			p.addAfter(channel.pipeline().context("Http3FrameCodec#0").name(), NettyPipeline.LoggingHandler, loggingHandler);
-		}
 		p.addLast(new Http3FrameToHttpObjectCodec(true, validate))
 		 .addLast(NettyPipeline.HttpTrafficHandler,
 		         new Http3StreamBridgeServerHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
@@ -114,7 +106,6 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
-			boolean enableLogging,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
@@ -124,10 +115,8 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
 			boolean validate) {
-		ChannelHandler loggingHandler = enableLogging ? FRAME_LOGGING_HANDLER : null;
 		return new Http3ServerConnectionHandler(
 				new Http3Codec(compressPredicate, decoder, encoder, formDecoderProvider, forwardedHeaderHandler,
-						httpMessageLogFactory, listener, loggingHandler, mapHandle, opsFactory, readTimeout, requestTimeout, validate),
-				loggingHandler, null, null, true);
+						httpMessageLogFactory, listener, mapHandle, opsFactory, readTimeout, requestTimeout, validate));
 	}
 }

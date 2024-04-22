@@ -85,6 +85,7 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 
 		if (loggingHandler != null) {
 			channel.pipeline().addLast(NettyPipeline.LoggingHandler, loggingHandler);
+			quicServerCodecBuilder.streamHandler(loggingHandler);
 		}
 		channel.pipeline().addLast(quicServerCodecBuilder.build());
 
