@@ -16,11 +16,13 @@
 package reactor.netty.http.server;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
 import io.netty.incubator.codec.quic.QuicSslContext;
 import io.netty.util.AttributeKey;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.Http3SettingsSpec;
 
 import java.time.Duration;
@@ -36,6 +38,7 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 	final Map<ChannelOption<?>, ?>    childOptions;
 	final Duration                    idleTimeout;
 	final Http3SettingsSpec           http3Settings;
+	final ChannelHandler              loggingHandler;
 	final Map<ChannelOption<?>, ?>    options;
 	final ChannelInitializer<Channel> quicChannelInitializer;
 	final QuicSslContext              quicSslContext;
@@ -46,6 +49,7 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 		this.childOptions = config.childOptions();
 		this.idleTimeout = config.idleTimeout();
 		this.http3Settings = config.http3SettingsSpec();
+		this.loggingHandler = config.loggingHandler();
 		this.options = config.options();
 		this.quicChannelInitializer = quicChannelInitializer;
 		if (config.sslProvider.getSslContext() instanceof QuicSslContext) {
@@ -79,6 +83,9 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 		streamAttributes(quicServerCodecBuilder, childAttributes);
 		streamChannelOptions(quicServerCodecBuilder, childOptions);
 
+		if (loggingHandler != null) {
+			channel.pipeline().addLast(NettyPipeline.LoggingHandler, loggingHandler);
+		}
 		channel.pipeline().addLast(quicServerCodecBuilder.build());
 
 		channel.pipeline().remove(this);

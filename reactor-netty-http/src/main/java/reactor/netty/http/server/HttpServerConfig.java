@@ -604,9 +604,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			boolean validate) {
 		p.remove(NettyPipeline.ReactiveBridge);
 
-		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(compressPredicate, cookieDecoder, cookieEncoder,
-				formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, opsFactory,
-				readTimeout, requestTimeout, validate));
+		p.addFirst(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(compressPredicate, cookieDecoder, cookieEncoder,
+				p.get(NettyPipeline.LoggingHandler) != null, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory,
+				listener, mapHandle, opsFactory, readTimeout, requestTimeout, validate));
 	}
 
 	static void configureH2Pipeline(ChannelPipeline p,
