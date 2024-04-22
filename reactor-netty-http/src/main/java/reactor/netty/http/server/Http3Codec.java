@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -29,13 +30,19 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.logging.HttpMessageLogFactory;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
+import static reactor.netty.ReactorNetty.format;
+
 final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
+
+	static final Logger log = Loggers.getLogger(Http3Codec.class);
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 	final ServerCookieDecoder                                     cookieDecoder;
@@ -80,15 +87,19 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
 	@Override
 	protected void initChannel(QuicStreamChannel channel) {
-		channel.pipeline()
-		       .addLast(new Http3FrameToHttpObjectCodec(true, validate))
-		       .addLast(NettyPipeline.HttpTrafficHandler,
-		               new Http3StreamBridgeServerHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
-		                       forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, readTimeout, requestTimeout));
+		ChannelPipeline p = channel.pipeline();
+		p.addLast(new Http3FrameToHttpObjectCodec(true, validate))
+		 .addLast(NettyPipeline.HttpTrafficHandler,
+		         new Http3StreamBridgeServerHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
+		                 forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, readTimeout, requestTimeout));
 
 		ChannelOperations.addReactiveBridge(channel, opsFactory, listener);
 
 		channel.pipeline().remove(this);
+
+		if (log.isDebugEnabled()) {
+			log.debug(format(channel, "Initialized HTTP/3 stream pipeline {}"), p);
+		}
 	}
 
 	static ChannelHandler newHttp3ServerConnectionHandler(
