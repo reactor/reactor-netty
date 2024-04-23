@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.publisher.Mono;
@@ -105,8 +106,10 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
+		assert ctx.channel().parent() instanceof QuicChannel;
+		QuicChannel parent = (QuicChannel) ctx.channel().parent();
 		if (remoteAddress == null) {
-			remoteAddress = ctx.channel().parent().remoteAddress();
+			remoteAddress = parent.remoteSocketAddress();
 		}
 		if (msg instanceof HttpRequest) {
 			HttpRequest request = (HttpRequest) msg;
@@ -115,12 +118,13 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			ConnectionInfo connectionInfo = null;
 			try {
 				pendingResponse = true;
-				connectionInfo = ConnectionInfo.from(ctx.channel(),
+				connectionInfo = ConnectionInfo.from(
 						request,
 						true,
+						parent.localSocketAddress(),
 						remoteAddress,
 						forwardedHeaderHandler);
-				ops = new HttpServerOperations(Connection.from(ctx.channel()),
+				ops = new Http3ServerOperations(Connection.from(ctx.channel()),
 						listener,
 						request,
 						compress,

@@ -208,9 +208,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				ZonedDateTime timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
 				ConnectionInfo connectionInfo = null;
 				try {
-					connectionInfo = ConnectionInfo.from(ctx.channel(),
+					connectionInfo = ConnectionInfo.from(
 							request,
 							secure,
+							ctx.channel().localAddress(),
 							remoteAddress,
 							forwardedHeaderHandler);
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
@@ -418,9 +419,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				HttpServerOperations ops;
 				ConnectionInfo connectionInfo = null;
 				try {
-					connectionInfo = ConnectionInfo.from(ctx.channel(),
+					connectionInfo = ConnectionInfo.from(
 							nextRequest,
 							secure,
+							ctx.channel().localAddress(),
 							remoteAddress,
 							forwardedHeaderHandler);
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),

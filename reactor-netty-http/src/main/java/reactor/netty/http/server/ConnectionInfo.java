@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.function.BiFunction;
 
-import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import reactor.util.annotation.Nullable;
@@ -57,7 +56,7 @@ public final class ConnectionInfo {
 
 	final boolean isInetAddress;
 
-	static ConnectionInfo from(Channel channel, HttpRequest request, boolean secured, SocketAddress remoteAddress,
+	static ConnectionInfo from(HttpRequest request, boolean secured, SocketAddress localAddress, SocketAddress remoteAddress,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
 		String hostName = DEFAULT_HOST_NAME;
 		int hostPort = -1;
@@ -76,11 +75,11 @@ public final class ConnectionInfo {
 		}
 
 		if (!(remoteAddress instanceof InetSocketAddress)) {
-			return new ConnectionInfo(channel.localAddress(), hostName, hostPort, remoteAddress, scheme, false);
+			return new ConnectionInfo(localAddress, hostName, hostPort, remoteAddress, scheme, false);
 		}
 		else {
 			ConnectionInfo connectionInfo =
-					new ConnectionInfo(channel.localAddress(), hostName, hostPort, remoteAddress, scheme, true);
+					new ConnectionInfo(localAddress, hostName, hostPort, remoteAddress, scheme, true);
 			if (forwardedHeaderHandler != null) {
 				return forwardedHeaderHandler.apply(connectionInfo, request);
 			}

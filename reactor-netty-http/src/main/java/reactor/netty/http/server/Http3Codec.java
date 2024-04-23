@@ -28,6 +28,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
+import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.server.logging.AccessLog;
@@ -59,10 +60,13 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	final ConnectionObserver                                      listener;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 	                                                              mapHandle;
+	final Function<String, String>                                methodTagValue;
+	final ChannelMetricsRecorder                                  metricsRecorder;
 	final int                                                     minCompressionSize;
 	final ChannelOperations.OnSetup                               opsFactory;
 	final Duration                                                readTimeout;
 	final Duration                                                requestTimeout;
+	final Function<String, String>                                uriTagValue;
 	final boolean                                                 validate;
 
 	Http3Codec(
@@ -76,10 +80,13 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			@Nullable Function<String, String> methodTagValue,
+			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
+			@Nullable Function<String, String> uriTagValue,
 			boolean validate) {
 		this.accessLogEnabled = accessLogEnabled;
 		this.accessLog = accessLog;
@@ -91,10 +98,13 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		this.httpMessageLogFactory = httpMessageLogFactory;
 		this.listener = listener;
 		this.mapHandle = mapHandle;
+		this.methodTagValue = methodTagValue;
+		this.metricsRecorder = metricsRecorder;
 		this.minCompressionSize = minCompressionSize;
 		this.opsFactory = opsFactory;
 		this.readTimeout = readTimeout;
 		this.requestTimeout = requestTimeout;
+		this.uriTagValue = uriTagValue;
 		this.validate = validate;
 	}
 
@@ -119,6 +129,22 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
 		ChannelOperations.addReactiveBridge(channel, opsFactory, listener);
 
+		if (metricsRecorder != null) {
+			if (metricsRecorder instanceof HttpServerMetricsRecorder) {
+				ChannelHandler handler;
+				if (metricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
+					handler = new MicrometerHttpServerMetricsHandler((MicrometerHttpServerMetricsRecorder) metricsRecorder, methodTagValue, uriTagValue);
+				}
+				else if (metricsRecorder instanceof ContextAwareHttpServerMetricsRecorder) {
+					handler = new ContextAwareHttpServerMetricsHandler((ContextAwareHttpServerMetricsRecorder) metricsRecorder, methodTagValue, uriTagValue);
+				}
+				else {
+					handler = new HttpServerMetricsHandler((HttpServerMetricsRecorder) metricsRecorder, methodTagValue, uriTagValue);
+				}
+				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, handler);
+			}
+		}
+
 		channel.pipeline().remove(this);
 
 		if (log.isDebugEnabled()) {
@@ -137,13 +163,17 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			@Nullable Function<String, String> methodTagValue,
+			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
+			@Nullable Function<String, String> uriTagValue,
 			boolean validate) {
 		return new Http3ServerConnectionHandler(
 				new Http3Codec(accessLogEnabled, accessLog, compressPredicate, decoder, encoder, formDecoderProvider, forwardedHeaderHandler,
-						httpMessageLogFactory, listener, mapHandle, minCompressionSize, opsFactory, readTimeout, requestTimeout, validate));
+						httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize,
+						opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
 	}
 }
