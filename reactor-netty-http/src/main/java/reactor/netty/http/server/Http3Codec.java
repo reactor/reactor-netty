@@ -59,6 +59,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	final ConnectionObserver                                      listener;
 	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
 	                                                              mapHandle;
+	final int                                                     minCompressionSize;
 	final ChannelOperations.OnSetup                               opsFactory;
 	final Duration                                                readTimeout;
 	final Duration                                                requestTimeout;
@@ -75,6 +76,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -89,6 +91,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		this.httpMessageLogFactory = httpMessageLogFactory;
 		this.listener = listener;
 		this.mapHandle = mapHandle;
+		this.minCompressionSize = minCompressionSize;
 		this.opsFactory = opsFactory;
 		this.readTimeout = readTimeout;
 		this.requestTimeout = requestTimeout;
@@ -107,6 +110,12 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		 .addLast(NettyPipeline.HttpTrafficHandler,
 		         new Http3StreamBridgeServerHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
 		                 forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, readTimeout, requestTimeout));
+
+		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
+
+		if (alwaysCompress) {
+			p.addLast(NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
+		}
 
 		ChannelOperations.addReactiveBridge(channel, opsFactory, listener);
 
@@ -128,12 +137,13 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
 			boolean validate) {
 		return new Http3ServerConnectionHandler(
 				new Http3Codec(accessLogEnabled, accessLog, compressPredicate, decoder, encoder, formDecoderProvider, forwardedHeaderHandler,
-						httpMessageLogFactory, listener, mapHandle, opsFactory, readTimeout, requestTimeout, validate));
+						httpMessageLogFactory, listener, mapHandle, minCompressionSize, opsFactory, readTimeout, requestTimeout, validate));
 	}
 }

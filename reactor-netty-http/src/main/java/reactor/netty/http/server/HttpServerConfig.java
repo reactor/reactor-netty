@@ -600,6 +600,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -608,7 +609,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(accessLogEnabled, accessLog, compressPredicate,
 				cookieDecoder, cookieEncoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory,
-				listener, mapHandle, opsFactory, readTimeout, requestTimeout, validate));
+				listener, mapHandle, minCompressionSize, opsFactory, readTimeout, requestTimeout, validate));
 	}
 
 	static void configureH2Pipeline(ChannelPipeline p,
@@ -1407,6 +1408,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							httpMessageLogFactory,
 							observer,
 							mapHandle,
+							minCompressionSize,
 							opsFactory,
 							readTimeout,
 							requestTimeout,
