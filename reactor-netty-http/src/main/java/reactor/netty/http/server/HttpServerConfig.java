@@ -590,6 +590,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static void configureHttp3Pipeline(
 			ChannelPipeline p,
+			boolean accessLogEnabled,
+			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
@@ -604,9 +606,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			boolean validate) {
 		p.remove(NettyPipeline.ReactiveBridge);
 
-		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(compressPredicate, cookieDecoder, cookieEncoder,
-				formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, opsFactory,
-				readTimeout, requestTimeout, validate));
+		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(accessLogEnabled, accessLog, compressPredicate,
+				cookieDecoder, cookieEncoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory,
+				listener, mapHandle, opsFactory, readTimeout, requestTimeout, validate));
 	}
 
 	static void configureH2Pipeline(ChannelPipeline p,
@@ -1395,6 +1397,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				else if ((protocols & h3) == h3) {
 					configureHttp3Pipeline(
 							channel.pipeline(),
+							accessLogEnabled,
+							accessLog,
 							compressPredicate(compressPredicate, minCompressionSize),
 							cookieDecoder,
 							cookieEncoder,
