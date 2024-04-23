@@ -104,6 +104,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabledHttp2() throws Exception {
 		// by default, when the max number of pending acquire is not specified, it will bet set to 2 * max-connection
 		// (see PoolFactory from PoolConnectionProvider.java)
@@ -142,6 +143,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabledHttp2() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -231,6 +233,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testConnectionPoolPendingAcquireSize() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
