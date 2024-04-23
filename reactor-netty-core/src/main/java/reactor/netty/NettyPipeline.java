@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,6 +67,7 @@ import io.netty.channel.ChannelInboundHandler;
  * -> http access log ? [AccessLogHandler]
  * -> http/1.1 compression ? [CompressionHandler]
  * -> h2 to http/1.1 codec ? [H2ToHttp11Codec]
+ * -> h3 to http/1.1 codec ? [H3ToHttp11Codec]
  * -> http traffic handler ? [HttpTrafficHandler]
  * -> http metrics ? [HttpMetricsHandler]
  * -> http send file ? [ChunkedWriter]
@@ -97,6 +98,7 @@ public interface NettyPipeline {
 	String H2MultiplexHandler    = LEFT + "h2MultiplexHandler";
 	String H2OrHttp11Codec       = LEFT + "h2OrHttp11Codec";
 	String H2ToHttp11Codec       = LEFT + "h2ToHttp11Codec";
+	String H3ToHttp11Codec       = LEFT + "h3ToHttp11Codec";
 	String HttpAggregator        = LEFT + "httpAggregator";
 	String HttpCodec             = LEFT + "httpCodec";
 	String HttpDecompressor      = LEFT + "httpDecompressor";
