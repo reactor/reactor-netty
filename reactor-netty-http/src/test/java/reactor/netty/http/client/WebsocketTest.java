@@ -1485,6 +1485,7 @@ class WebsocketTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("http11CompatibleProtocols")
+	@SuppressWarnings("deprecation")
 	public void testIssue3036(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) {
 		WebsocketServerSpec websocketServerSpec = WebsocketServerSpec.builder().compress(true).build();

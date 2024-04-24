@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,6 +108,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public SampleTestRunnerConsumer yourCode() {
 		return (bb, meterRegistry) -> {
 			Http2SslContextSpec serverCtxHttp = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
@@ -181,6 +182,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 		};
 	}
 
+	@SuppressWarnings("deprecation")
 	static void sendHttp2Request(HttpClient client) throws Exception {
 		Http2SslContextSpec clientCtxHttp2 =
 				Http2SslContextSpec.forClient()
@@ -189,6 +191,7 @@ class ObservabilitySmokeTest extends SampleTestRunner {
 		sendRequest(client.secure(spec -> spec.sslContext(clientCtxHttp2)).protocol(HttpProtocol.H2));
 	}
 
+	@SuppressWarnings("deprecation")
 	static void sendHttp11Request(HttpClient client) throws Exception {
 		Http11SslContextSpec clientCtxHttp11 =
 				Http11SslContextSpec.forClient()
