@@ -600,16 +600,25 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			HttpMessageLogFactory httpMessageLogFactory,
 			ConnectionObserver listener,
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			@Nullable Function<String, String> methodTagValue,
+			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
+			@Nullable Function<String, String> uriTagValue,
 			boolean validate) {
 		p.remove(NettyPipeline.ReactiveBridge);
 
 		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(accessLogEnabled, accessLog, compressPredicate,
 				cookieDecoder, cookieEncoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory,
-				listener, mapHandle, minCompressionSize, opsFactory, readTimeout, requestTimeout, validate));
+				listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize, opsFactory, readTimeout,
+				requestTimeout, uriTagValue, validate));
+
+		if (metricsRecorder != null) {
+			// Connection metrics are not applicable
+			p.remove(NettyPipeline.ChannelMetricsHandler);
+		}
 	}
 
 	static void configureH2Pipeline(ChannelPipeline p,
@@ -1408,10 +1417,13 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							httpMessageLogFactory,
 							observer,
 							mapHandle,
+							methodTagValue,
+							metricsRecorder,
 							minCompressionSize,
 							opsFactory,
 							readTimeout,
 							requestTimeout,
+							uriTagValue,
 							decoder.validateHeaders());
 				}
 			}

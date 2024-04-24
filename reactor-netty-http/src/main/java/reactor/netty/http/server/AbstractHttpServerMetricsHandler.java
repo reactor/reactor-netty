@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -121,7 +122,12 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			}
 		}
 
-		recordInactiveConnectionOrStream(ctx.channel());
+		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+		HttpServerOperations ops = null;
+		if (channelOps instanceof HttpServerOperations) {
+			ops = (HttpServerOperations) channelOps;
+		}
+		recordInactiveConnectionOrStream(ctx.channel(), ops);
 
 		ctx.fireChannelInactive();
 	}
@@ -162,9 +168,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 								log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 							}
 						}
-					}
 
-					recordInactiveConnectionOrStream(ctx.channel());
+						recordInactiveConnectionOrStream(ctx.channel(), ops);
+					}
 
 					dataSent = 0;
 				});
@@ -190,16 +196,20 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				if (channelOps instanceof HttpServerOperations) {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
 					startRead(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), methodTagValue.apply(ops.method().name()));
-				}
 
-				channelActivated = true;
-				if (ctx.channel() instanceof Http2StreamChannel) {
-					// Always use the real connection local address without any proxy information
-					recordOpenStream(ctx.channel().localAddress());
-				}
-				else {
-					// Always use the real connection local address without any proxy information
-					recordActiveConnection(ctx.channel().localAddress());
+					channelActivated = true;
+					if (ctx.channel() instanceof Http2StreamChannel) {
+						// Always use the real connection local address without any proxy information
+						recordOpenStream(ops.connectionHostAddress());
+					}
+					else if (ctx.channel() instanceof SocketChannel) {
+						// Always use the real connection local address without any proxy information
+						recordActiveConnection(ops.connectionHostAddress());
+					}
+					else {
+						// Always use the real connection local address without any proxy information
+						recordOpenStream(ops.connectionHostAddress());
+					}
 				}
 			}
 
@@ -311,17 +321,22 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		dataSentTime = System.nanoTime();
 	}
 
-	void recordInactiveConnectionOrStream(Channel channel) {
+	void recordInactiveConnectionOrStream(Channel channel, @Nullable HttpServerOperations ops) {
 		if (channelActivated) {
 			channelActivated = false;
 			try {
+				SocketAddress localAddress = ops != null ? ops.connectionHostAddress() : channel.localAddress();
 				if (channel instanceof Http2StreamChannel) {
 					// Always use the real connection local address without any proxy information
-					recordClosedStream(channel.localAddress());
+					recordClosedStream(localAddress);
+				}
+				else if (channel instanceof SocketChannel) {
+					// Always use the real connection local address without any proxy information
+					recordInactiveConnection(localAddress);
 				}
 				else {
 					// Always use the real connection local address without any proxy information
-					recordInactiveConnection(channel.localAddress());
+					recordClosedStream(localAddress);
 				}
 			}
 			catch (RuntimeException e) {

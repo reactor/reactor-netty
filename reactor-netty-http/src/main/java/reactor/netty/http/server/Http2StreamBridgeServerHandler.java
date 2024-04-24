@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,9 +128,10 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			ConnectionInfo connectionInfo = null;
 			try {
 				pendingResponse = true;
-				connectionInfo = ConnectionInfo.from(ctx.channel(),
+				connectionInfo = ConnectionInfo.from(
 						request,
 						secured,
+						ctx.channel().localAddress(),
 						remoteAddress,
 						forwardedHeaderHandler);
 				ops = new HttpServerOperations(Connection.from(ctx.channel()),
