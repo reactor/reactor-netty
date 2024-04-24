@@ -30,6 +30,7 @@ dependencies {
 	compileOnly "io.netty:netty-codec-haproxy:$nettyVersion"
 	compileOnly "io.netty:netty-transport-native-kqueue:$nettyVersion"
 	compileOnly "io.netty.incubator:netty-incubator-transport-native-io_uring:$nettyIoUringVersion"
+	compileOnly "io.netty.incubator:netty-incubator-codec-http3:$nettyHttp3Version"
 	compileOnly "io.projectreactor.addons:reactor-pool:$reactorPoolVersion"
 }
 

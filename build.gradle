@@ -155,7 +155,8 @@ ext {
 					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
 					"https://netty.io/4.1/api/",
-					"https://projectreactor.io/docs/netty/release/api/",] as String[]
+					"https://projectreactor.io/docs/netty/release/api/",
+					"https://javadoc.io/doc/io.netty.incubator/netty-incubator-codec-classes-quic/latest/"] as String[]
 }
 
 nohttp {
