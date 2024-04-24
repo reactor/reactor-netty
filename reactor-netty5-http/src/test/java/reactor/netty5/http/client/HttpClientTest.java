@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -915,6 +915,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testIssue473() {
 		Http11SslContextSpec serverSslContextBuilder =
 				Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
@@ -934,6 +935,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testIssue407_1() {
 		disposableServer =
 				createServer()
@@ -995,6 +997,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testIssue407_2() {
 		disposableServer =
 				createServer()
@@ -1822,6 +1825,7 @@ class HttpClientTest extends BaseHttpTest {
 				h -> h.set("Content-Length", "0"), true);
 	}
 
+	@SuppressWarnings("deprecation")
 	private void doTestIssue719(Publisher<Buffer> clientSend,
 			Consumer<HttpHeaders> clientSendHeaders, boolean ssl) {
 		HttpServer server =
@@ -2047,6 +2051,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testConnectionLifeTimeFixedPoolHttp2_1() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2089,6 +2094,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testConnectionLifeTimeElasticPoolHttp2() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2130,6 +2136,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testConnectionNoLifeTimeFixedPoolHttp2() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2168,6 +2175,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testConnectionNoLifeTimeElasticPoolHttp2() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -2214,6 +2222,7 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testConnectionLifeTimeFixedPoolHttp2_2() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =

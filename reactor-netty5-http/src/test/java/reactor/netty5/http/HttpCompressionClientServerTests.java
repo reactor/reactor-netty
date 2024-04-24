@@ -65,6 +65,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	@interface ParameterizedCompressionTest {
 	}
 
+	@SuppressWarnings("deprecation")
 	static Object[][] data() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(cert.certificate(), cert.privateKey());

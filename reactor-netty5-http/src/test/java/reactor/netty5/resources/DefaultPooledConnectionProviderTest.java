@@ -117,6 +117,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testIssue903() {
 		Http11SslContextSpec serverCtx = Http11SslContextSpec.forServer(ssc.key(), ssc.cert());
 		disposableServer =
@@ -334,6 +335,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testConnectionIdleWhenNoActiveStreams() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -500,6 +502,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		doTestIssue1982(serverProtocols, clientProtocols, serverCtx, clientCtx);
 	}
 
+	@SuppressWarnings("deprecation")
 	private void doTestIssue1982(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) throws Exception {
 		HttpServer server = serverCtx != null ?
@@ -573,6 +576,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	//https://github.com/reactor/reactor-netty/issues/1808
 	@Test
+	@SuppressWarnings("deprecation")
 	void testMinConnections() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -814,6 +818,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testHttp2PoolAndGoAway() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =

@@ -849,6 +849,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testIssue896() throws Exception {
 		disposableServer = httpServer.noSSL()
 		                             .bindNow();
@@ -946,6 +947,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("combinationsIssue2956")
+	@SuppressWarnings("deprecation")
 	void testIssue2956(boolean isCustomRecorder, boolean isHttp2) throws Exception {
 		HttpServer server =
 				httpServer.secure(spec -> spec.sslContext(isHttp2 ? serverCtx2 : serverCtx11))
@@ -1277,10 +1279,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertCounter(registry, CLIENT_ERRORS, summaryTags2).isNull();
 	}
 
+	@SuppressWarnings("deprecation")
 	HttpServer customizeServerOptions(HttpServer httpServer, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
 		return ctx == null ? httpServer.protocol(protocols) : httpServer.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
 
+	@SuppressWarnings("deprecation")
 	HttpClient customizeClientOptions(HttpClient httpClient, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
 		return ctx == null ? httpClient.protocol(protocols) : httpClient.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}

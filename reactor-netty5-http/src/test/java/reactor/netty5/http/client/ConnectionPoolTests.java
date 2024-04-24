@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,6 +75,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	HttpClient client;
 
 	@BeforeAll
+	@SuppressWarnings("deprecation")
 	static void prepare() throws CertificateException {
 		HttpServer server = createServer();
 
@@ -359,6 +360,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testClientWithProtocols() {
 		Http11SslContextSpec http11SslContextSpec =
 				Http11SslContextSpec.forClient()
@@ -381,6 +383,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testClientWithSecurity_1() {
 		Http11SslContextSpec http11SslContextSpec1 =
 				Http11SslContextSpec.forClient()
@@ -402,6 +405,7 @@ class ConnectionPoolTests extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testClientWithSecurity_2() {
 		HttpClient localClient1 =
 				client.port(server4.port())

@@ -226,6 +226,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void shouldUseDifferentResolvers(Hoverfly hoverfly) {
 		Http11SslContextSpec http11SslContextSpec =
 				Http11SslContextSpec.forClient()
@@ -278,6 +279,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 		return sendRequest(proxyOptions, connectAddressSupplier, uri, wiretap, false, false);
 	}
 
+	@SuppressWarnings("deprecation")
 	private Mono<Tuple2<String, HttpHeaders>>  sendRequest(
 			Consumer<? super ProxyProvider.TypeSpec> proxyOptions,
 			@Nullable Supplier<? extends SocketAddress> connectAddressSupplier,

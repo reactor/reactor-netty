@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,6 +71,7 @@ class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("httpCompatibleCombinations")
+	@SuppressWarnings("deprecation")
 	void noContentStatusCodes(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 
