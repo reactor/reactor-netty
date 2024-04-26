@@ -30,7 +30,7 @@ buildscript {
 plugins {
 	id "com.diffplug.spotless" version "6.13.0"
 	id 'com.google.osdetector' version '1.7.3'
-	id 'org.gradle.test-retry' version '1.5.8'
+	id 'org.gradle.test-retry' version '1.5.9'
 	id 'io.spring.nohttp' version '0.0.11'
 	id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
 	//we now need version of Artifactory gradle plugin deployed on Maven Central, see above
