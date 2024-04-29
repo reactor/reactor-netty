@@ -55,11 +55,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	boolean channelOpened;
 
 	long dataReceived;
-
-	long dataSent;
-
 	long dataReceivedTime;
 
+	long dataSent;
 	long dataSentTime;
 
 	final Function<String, String> methodTagValue;
@@ -255,7 +253,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		ctx.fireExceptionCaught(cause);
 	}
 
-	private long extractProcessedDataFromBuffer(Object msg) {
+	private static long extractProcessedDataFromBuffer(Object msg) {
 		if (msg instanceof ByteBufHolder) {
 			return ((ByteBufHolder) msg).content().readableBytes();
 		}
