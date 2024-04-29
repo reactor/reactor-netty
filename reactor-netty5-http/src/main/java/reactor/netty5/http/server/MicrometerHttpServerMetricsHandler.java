@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,8 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		recorder().recordDataSentTime(path, method, status, dataSentTimeDuration);
 
 		// Always take the remote address from the operations in order to consider proxy information
-		recorder().recordDataSent(ops.remoteAddress(), path, dataSent);
+		// Use remoteSocketAddress() in order to obtain UDS info
+		recorder().recordDataSent(ops.remoteSocketAddress(), path, dataSent);
 
 		// Cannot invoke the recorder anymore:
 		// 1. The recorder is one instance only, it is invoked for all requests that can happen
