@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,8 @@ final class ContextAwareHttpServerMetricsHandler extends AbstractHttpServerMetri
 	@Override
 	protected void recordException(HttpServerOperations ops, String path) {
 		// Always take the remote address from the operations in order to consider proxy information
-		recorder().incrementErrorsCount(ops.currentContext(), ops.remoteAddress(), path);
+		// Use remoteSocketAddress() in order to obtain UDS info
+		recorder().incrementErrorsCount(ops.currentContext(), ops.remoteSocketAddress(), path);
 	}
 
 	@Override
@@ -62,7 +63,8 @@ final class ContextAwareHttpServerMetricsHandler extends AbstractHttpServerMetri
 				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 		// Always take the remote address from the operations in order to consider proxy information
-		recorder().recordDataReceived(contextView, ops.remoteAddress(), path, dataReceived);
+		// Use remoteSocketAddress() in order to obtain UDS info
+		recorder().recordDataReceived(contextView, ops.remoteSocketAddress(), path, dataReceived);
 	}
 
 	@Override
@@ -80,6 +82,7 @@ final class ContextAwareHttpServerMetricsHandler extends AbstractHttpServerMetri
 		}
 
 		// Always take the remote address from the operations in order to consider proxy information
-		recorder().recordDataSent(contextView, ops.remoteAddress(), path, dataSent);
+		// Use remoteSocketAddress() in order to obtain UDS info
+		recorder().recordDataSent(contextView, ops.remoteSocketAddress(), path, dataSent);
 	}
 }
