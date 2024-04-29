@@ -54,11 +54,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	boolean channelOpened;
 
 	long dataReceived;
-
-	long dataSent;
-
 	long dataReceivedTime;
 
+	long dataSent;
 	long dataSentTime;
 
 	final Function<String, String> methodTagValue;
@@ -238,7 +236,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 		ctx.fireChannelExceptionCaught(cause);
 	}
 
-	private long extractProcessedDataFromBuffer(Object msg) {
+	private static long extractProcessedDataFromBuffer(Object msg) {
 		if (msg instanceof Buffer buffer) {
 			return buffer.readableBytes();
 		}
