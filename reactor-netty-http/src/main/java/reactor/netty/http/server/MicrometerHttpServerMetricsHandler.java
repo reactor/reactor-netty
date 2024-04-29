@@ -85,13 +85,13 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	}
 
 	@Override
-	protected void recordWrite(HttpServerOperations ops, String path, String method, String status) {
+	protected void recordWrite(HttpServerOperations ops) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(path, method, status, dataSentTimeDuration);
 
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().recordDataSent(ops.remoteSocketAddress(), path, dataSent);
+		recorder().recordDataSent(remoteSocketAddress, path, dataSent);
 
 		// Cannot invoke the recorder anymore:
 		// 1. The recorder is one instance only, it is invoked for all requests that can happen
@@ -108,8 +108,8 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	}
 
 	@Override
-	protected void startRead(HttpServerOperations ops, String path, String method) {
-		super.startRead(ops, path, method);
+	protected void startRead(HttpServerOperations ops) {
+		super.startRead(ops);
 
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, method, path, ops);
 		responseTimeObservation = Observation.createNotStarted(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
@@ -119,8 +119,8 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 	// response
 	@Override
-	protected void startWrite(HttpServerOperations ops, String path, String method, String status) {
-		super.startWrite(ops, path, method, status);
+	protected void startWrite(HttpServerOperations ops) {
+		super.startWrite(ops);
 
 		if (responseTimeObservation == null) {
 			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, method, path, ops);

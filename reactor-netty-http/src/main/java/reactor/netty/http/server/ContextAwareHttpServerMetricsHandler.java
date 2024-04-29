@@ -50,26 +50,24 @@ final class ContextAwareHttpServerMetricsHandler extends AbstractHttpServerMetri
 	}
 
 	@Override
-	protected void recordException(HttpServerOperations ops, String path) {
+	protected void recordException() {
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().incrementErrorsCount(ops.currentContext(), ops.remoteSocketAddress(), path);
+		recorder().incrementErrorsCount(contextView, remoteSocketAddress, path);
 	}
 
 	@Override
-	protected void recordRead(HttpServerOperations ops, String path, String method) {
-		ContextView contextView = ops.currentContext();
+	protected void recordRead() {
 		recorder().recordDataReceivedTime(contextView, path, method,
 				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().recordDataReceived(contextView, ops.remoteSocketAddress(), path, dataReceived);
+		recorder().recordDataReceived(contextView, remoteSocketAddress, path, dataReceived);
 	}
 
 	@Override
-	protected void recordWrite(HttpServerOperations ops, String path, String method, String status) {
-		ContextView contextView = ops.currentContext();
+	protected void recordWrite(HttpServerOperations ops) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(contextView, path, method, status, dataSentTimeDuration);
 
@@ -83,6 +81,6 @@ final class ContextAwareHttpServerMetricsHandler extends AbstractHttpServerMetri
 
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().recordDataSent(contextView, ops.remoteSocketAddress(), path, dataSent);
+		recorder().recordDataSent(contextView, remoteSocketAddress, path, dataSent);
 	}
 }
