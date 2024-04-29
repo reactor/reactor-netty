@@ -212,14 +212,12 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
 					ops = (HttpServerOperations) channelOps;
-					if (!initialized) {
-						method = methodTagValue.apply(ops.method().name());
-						path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
-						// Always take the remote address from the operations in order to consider proxy information
-						// Use remoteSocketAddress() in order to obtain UDS info
-						remoteSocketAddress = ops.remoteSocketAddress();
-						initialized = true;
-					}
+					method = methodTagValue.apply(ops.method().name());
+					path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
+					// Always take the remote address from the operations in order to consider proxy information
+					// Use remoteSocketAddress() in order to obtain UDS info
+					remoteSocketAddress = ops.remoteSocketAddress();
+					initialized = true;
 					startRead(ops);
 				}
 
