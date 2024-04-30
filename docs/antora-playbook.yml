@@ -35,8 +35,6 @@ asciidoc:
     toc2: true
     sectnums: true
     sectanchors: true
-    stylesdir: stylesheets/
-    stylesheet: reactor.css
     source-highlighter: highlightjs
     highlightjsdir: modules/ROOT/assets/highlight
     highlightjs-theme: railscasts
