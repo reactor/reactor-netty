@@ -50,6 +50,11 @@ final class ContextAwareHttpServerMetricsHandler extends AbstractHttpServerMetri
 	}
 
 	@Override
+	protected void contextView(HttpServerOperations ops) {
+		this.contextView = ops.currentContext();
+	}
+
+	@Override
 	protected void recordException() {
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info

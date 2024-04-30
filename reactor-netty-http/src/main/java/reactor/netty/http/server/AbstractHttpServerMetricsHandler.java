@@ -30,6 +30,7 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
@@ -163,7 +164,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 						initialized = true;
 					}
 					if (contextView == null) {
-						contextView = ops.currentContext();
+						contextView(ops);
 					}
 					status = ops.status().codeAsText().toString();
 					startWrite(ops);
@@ -249,7 +250,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 		if (ops != null) {
 			// ContextView is available only when a subscription to the I/O Handler happens
-			contextView = ops.currentContext();
+			contextView(ops);
 		}
 	}
 
@@ -279,6 +280,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	}
 
 	protected abstract HttpServerMetricsRecorder recorder();
+
+	protected void contextView(HttpServerOperations ops) {
+		this.contextView = Context.empty();
+	}
 
 	protected void recordException() {
 		// Always take the remote address from the operations in order to consider proxy information
