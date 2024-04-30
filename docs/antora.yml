@@ -2,9 +2,6 @@ name: reactor-netty
 version: true
 title: Reactor Netty Reference Guide
 start_page: about-doc.adoc
-author:
-    - Stephane Maldini <https://twitter.com/smaldini[@smaldini]>
-    - Violeta Georgieva <https://twitter.com/violeta_g_g[@violeta_g_g]>
 nav:
   - modules/ROOT/nav.adoc
 ext:
@@ -28,3 +25,6 @@ asciidoc:
     http-source-link: '{reactor-netty-github-repo}/reactor-netty-http/src/main/java'
     javadoc: 'https://projectreactor.io/docs/netty/{project-version}/api'
     nettyjavadoc: 'https://netty.io/4.1/api'
+    author:
+        - Stephane Maldini
+        - Violeta Georgieva
