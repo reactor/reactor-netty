@@ -30,6 +30,8 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
+import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -53,11 +55,20 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	boolean channelActivated;
 	boolean channelOpened;
 
+	ContextView contextView;
+
 	long dataReceived;
 	long dataReceivedTime;
 
 	long dataSent;
 	long dataSentTime;
+
+	boolean initialized;
+
+	String method;
+	String path;
+	SocketAddress remoteSocketAddress;
+	String status;
 
 	final Function<String, String> methodTagValue;
 	final Function<String, String> uriTagValue;
@@ -72,10 +83,16 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	protected AbstractHttpServerMetricsHandler(AbstractHttpServerMetricsHandler copy) {
 		this.channelActivated = copy.channelActivated;
 		this.channelOpened = copy.channelOpened;
+		this.contextView = copy.contextView;
 		this.dataReceived = copy.dataReceived;
 		this.dataReceivedTime = copy.dataReceivedTime;
 		this.dataSent = copy.dataSent;
 		this.dataSentTime = copy.dataSentTime;
+		this.initialized = copy.initialized;
+		this.method = copy.method;
+		this.path = copy.path;
+		this.remoteSocketAddress = copy.remoteSocketAddress;
+		this.status = copy.status;
 		this.methodTagValue = copy.methodTagValue;
 		this.uriTagValue = copy.uriTagValue;
 	}
@@ -138,8 +155,19 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
-					startWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-							methodTagValue.apply(ops.method().name()), ops.status().codeAsText().toString());
+					if (!initialized) {
+						method = methodTagValue.apply(ops.method().name());
+						path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
+						// Always take the remote address from the operations in order to consider proxy information
+						// Use remoteSocketAddress() in order to obtain UDS info
+						remoteSocketAddress = ops.remoteSocketAddress();
+						initialized = true;
+					}
+					if (contextView == null) {
+						contextView(ops);
+					}
+					status = ops.status().codeAsText().toString();
+					startWrite(ops);
 				}
 			}
 
@@ -149,10 +177,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				promise.addListener(future -> {
 					ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 					if (channelOps instanceof HttpServerOperations) {
-						HttpServerOperations ops = (HttpServerOperations) channelOps;
 						try {
-							recordWrite(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path),
-									methodTagValue.apply(ops.method().name()), ops.status().codeAsText().toString());
+							recordWrite((HttpServerOperations) channelOps);
 						}
 						catch (RuntimeException e) {
 							// Allow request-response exchange to continue, unaffected by metrics problem
@@ -163,8 +189,6 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 					}
 
 					recordInactiveConnectionOrStream(ctx.channel());
-
-					dataSent = 0;
 				});
 			}
 		}
@@ -182,12 +206,20 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
+		HttpServerOperations ops = null;
 		try {
 			if (msg instanceof HttpRequest) {
+				reset();
 				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
-					HttpServerOperations ops = (HttpServerOperations) channelOps;
-					startRead(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), methodTagValue.apply(ops.method().name()));
+					ops = (HttpServerOperations) channelOps;
+					method = methodTagValue.apply(ops.method().name());
+					path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
+					// Always take the remote address from the operations in order to consider proxy information
+					// Use remoteSocketAddress() in order to obtain UDS info
+					remoteSocketAddress = ops.remoteSocketAddress();
+					initialized = true;
+					startRead(ops);
 				}
 
 				channelActivated = true;
@@ -204,13 +236,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			dataReceived += extractProcessedDataFromBuffer(msg);
 
 			if (msg instanceof LastHttpContent) {
-				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-				if (channelOps instanceof HttpServerOperations) {
-					HttpServerOperations ops = (HttpServerOperations) channelOps;
-					recordRead(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path), methodTagValue.apply(ops.method().name()));
-				}
-
-				dataReceived = 0;
+				recordRead();
 			}
 		}
 		catch (RuntimeException e) {
@@ -221,17 +247,17 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		}
 
 		ctx.fireChannelRead(msg);
+
+		if (ops != null) {
+			// ContextView is available only when a subscription to the I/O Handler happens
+			contextView(ops);
+		}
 	}
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		try {
-			ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
-			if (channelOps instanceof HttpServerOperations) {
-				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				// Always take the remote address from the operations in order to consider proxy information
-				recordException(ops, uriTagValue == null ? ops.path : uriTagValue.apply(ops.path));
-			}
+			recordException();
 		}
 		catch (RuntimeException e) {
 			// Allow request-response exchange to continue, unaffected by metrics problem
@@ -255,21 +281,25 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	protected abstract HttpServerMetricsRecorder recorder();
 
-	protected void recordException(HttpServerOperations ops, String path) {
-		// Always take the remote address from the operations in order to consider proxy information
-		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().incrementErrorsCount(ops.remoteSocketAddress(), path);
+	protected void contextView(HttpServerOperations ops) {
+		this.contextView = Context.empty();
 	}
 
-	protected void recordRead(HttpServerOperations ops, String path, String method) {
+	protected void recordException() {
+		// Always take the remote address from the operations in order to consider proxy information
+		// Use remoteSocketAddress() in order to obtain UDS info
+		recorder().incrementErrorsCount(remoteSocketAddress, path);
+	}
+
+	protected void recordRead() {
 		recorder().recordDataReceivedTime(path, method, Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().recordDataReceived(ops.remoteSocketAddress(), path, dataReceived);
+		recorder().recordDataReceived(remoteSocketAddress, path, dataReceived);
 	}
 
-	protected void recordWrite(HttpServerOperations ops, String path, String method, String status) {
+	protected void recordWrite(HttpServerOperations ops) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(path, method, status, dataSentTimeDuration);
 
@@ -282,7 +312,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().recordDataSent(ops.remoteSocketAddress(), path, dataSent);
+		recorder().recordDataSent(remoteSocketAddress, path, dataSent);
 	}
 
 	protected void recordActiveConnection(SocketAddress localAddress) {
@@ -301,11 +331,11 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordStreamClosed(localAddress);
 	}
 
-	protected void startRead(HttpServerOperations ops, String path, String method) {
+	protected void startRead(HttpServerOperations ops) {
 		dataReceivedTime = System.nanoTime();
 	}
 
-	protected void startWrite(HttpServerOperations ops, String path, String method, String status) {
+	protected void startWrite(HttpServerOperations ops) {
 		dataSentTime = System.nanoTime();
 	}
 
@@ -329,6 +359,20 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 				}
 			}
 		}
+	}
+
+	void reset() {
+		// There is no need to reset 'channelActivated' and 'channelOpened'
+		contextView = null;
+		dataReceived = 0;
+		dataReceivedTime = 0;
+		dataSent = 0;
+		dataSentTime = 0;
+		initialized = false;
+		method = null;
+		path = null;
+		remoteSocketAddress = null;
+		status = null;
 	}
 
 	static final Set<String> STANDARD_METHODS;
