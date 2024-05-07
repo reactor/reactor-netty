@@ -173,18 +173,15 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 				// The listeners are now invoked asynchronously (see https://github.com/netty/netty/pull/9489),
 				// and it seems we need to first obtain the channelOps, which may not be present anymore
 				// when the listener will be invoked.
-				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				return ctx.write(msg)
 				          .addListener(future -> {
-				              if (channelOps instanceof HttpServerOperations ops) {
-				                  try {
-				                      recordWrite(ops);
-				                  }
-				                  catch (RuntimeException e) {
-				                      // Allow request-response exchange to continue, unaffected by metrics problem
-				                      if (log.isWarnEnabled()) {
-				                          log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
-				                      }
+				              try {
+				                  recordWrite(ctx.channel());
+				              }
+				              catch (RuntimeException e) {
+				                  // Allow request-response exchange to continue, unaffected by metrics problem
+				                  if (log.isWarnEnabled()) {
+				                      log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
 				                  }
 				              }
 
@@ -296,7 +293,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 		recorder().recordDataReceived(remoteSocketAddress, path, dataReceived);
 	}
 
-	protected void recordWrite(HttpServerOperations ops) {
+	protected void recordWrite(Channel channel) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(path, method, status, dataSentTimeDuration);
 

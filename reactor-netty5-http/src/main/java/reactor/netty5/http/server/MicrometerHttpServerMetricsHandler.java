@@ -19,6 +19,7 @@ import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.transport.RequestReplyReceiverContext;
+import io.netty5.channel.Channel;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
@@ -85,7 +86,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	}
 
 	@Override
-	protected void recordWrite(HttpServerOperations ops) {
+	protected void recordWrite(Channel channel) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(path, method, status, dataSentTimeDuration);
 
@@ -100,7 +101,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		// Move the implementation from the recorder here
 		responseTimeObservation.stop();
 
-		setChannelContext(ops.channel(), parentContextView);
+		setChannelContext(channel, parentContextView);
 
 		responseTimeHandlerContext = null;
 		responseTimeObservation = null;
