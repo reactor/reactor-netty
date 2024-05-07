@@ -162,7 +162,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		String status = UNKNOWN;
 
 		ResponseTimeHandlerContext(MicrometerHttpClientMetricsRecorder recorder, HttpRequest request, String path,
-				SocketAddress remoteAddress, SocketAddress proxyAddress) {
+				SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress) {
 			super((carrier, key, value) -> Objects.requireNonNull(carrier).headers().set(key, value));
 			this.recorder = recorder;
 			this.method = request.method().name();
