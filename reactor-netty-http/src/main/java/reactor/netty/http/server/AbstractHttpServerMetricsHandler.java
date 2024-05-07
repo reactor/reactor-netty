@@ -185,7 +185,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 					if (channelOps instanceof HttpServerOperations) {
 						HttpServerOperations ops = (HttpServerOperations) channelOps;
 						try {
-							recordWrite(ops);
+							recordWrite(ctx.channel());
 						}
 						catch (RuntimeException e) {
 							// Allow request-response exchange to continue, unaffected by metrics problem
@@ -310,7 +310,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		recorder().recordDataReceived(remoteSocketAddress, path, dataReceived);
 	}
 
-	protected void recordWrite(HttpServerOperations ops) {
+	protected void recordWrite(Channel channel) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(path, method, status, dataSentTimeDuration);
 
