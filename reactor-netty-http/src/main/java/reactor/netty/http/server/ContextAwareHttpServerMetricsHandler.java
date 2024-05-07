@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.server;
 
+import io.netty.channel.Channel;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
@@ -72,7 +73,7 @@ final class ContextAwareHttpServerMetricsHandler extends AbstractHttpServerMetri
 	}
 
 	@Override
-	protected void recordWrite(HttpServerOperations ops) {
+	protected void recordWrite(Channel channel) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(contextView, path, method, status, dataSentTimeDuration);
 
