@@ -24,6 +24,8 @@ import static reactor.netty5.Metrics.DATA_RECEIVED;
 import static reactor.netty5.Metrics.DATA_SENT;
 import static reactor.netty5.Metrics.ERRORS;
 import static reactor.netty5.Metrics.LOCAL_ADDRESS;
+import static reactor.netty5.Metrics.NA;
+import static reactor.netty5.Metrics.PROXY_ADDRESS;
 import static reactor.netty5.Metrics.REMOTE_ADDRESS;
 import static reactor.netty5.Metrics.STATUS;
 import static reactor.netty5.Metrics.TCP_CLIENT_PREFIX;
@@ -247,8 +249,8 @@ class TcpMetricsTests {
 				.hasTotalAmountGreaterThanOrEqualTo(5);
 		assertCounter(registry, SERVER_ERRORS, summaryTags).isNull();
 
-		timerTags = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
-		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
+		timerTags = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, STATUS, "SUCCESS"};
+		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "tcp"};
 		assertTimer(registry, CLIENT_CONNECT_TIME, timerTags)
 				.hasCountEqualTo(1)
 				.hasTotalTimeGreaterThanOrEqualTo(0);
@@ -265,9 +267,9 @@ class TcpMetricsTests {
 
 	private void checkExpectationsNegative(int port) {
 		String address = "127.0.0.1:" + port;
-		String[] timerTags1 = new String[] {REMOTE_ADDRESS, address, STATUS, "ERROR"};
-		String[] timerTags2 = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
-		String[] summaryTags = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
+		String[] timerTags1 = new String[] {REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, STATUS, "ERROR"};
+		String[] timerTags2 = new String[] {REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, STATUS, "SUCCESS"};
+		String[] summaryTags = new String[] {REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, URI, "tcp"};
 
 		assertTimer(registry, CLIENT_CONNECT_TIME, timerTags1)
 				.hasCountEqualTo(1)

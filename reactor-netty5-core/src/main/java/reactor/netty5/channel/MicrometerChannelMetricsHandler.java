@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 
 import static reactor.netty5.Metrics.CONNECT_TIME;
 import static reactor.netty5.Metrics.ERROR;
+import static reactor.netty5.Metrics.NA;
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty5.Metrics.SUCCESS;
 import static reactor.netty5.Metrics.TLS_HANDSHAKE_TIME;
@@ -108,12 +109,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public Timer getTimer() {
-			if (proxyAddress == null) {
-				return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, status);
-			}
-			else {
-				return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress, status);
-			}
+			return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
 		}
 
 		@Override
@@ -162,13 +158,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			if (proxyAddress == null) {
-				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort, STATUS.asString(), status);
-			}
-			else {
-				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
-						PROXY_ADDRESS.asString(), proxyAddress, STATUS.asString(), status);
-			}
+			return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
+					PROXY_ADDRESS.asString(), proxyAddress == null ? NA : proxyAddress, STATUS.asString(), status);
 		}
 	}
 
@@ -247,23 +238,18 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			if (proxyAddress == null) {
+			if (recorder.onServer) {
 				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ':' + netPeerPort, STATUS.asString(), status);
 			}
 			else {
 				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ':' + netPeerPort,
-						PROXY_ADDRESS.asString(), proxyAddress, STATUS.asString(), status);
+						PROXY_ADDRESS.asString(), proxyAddress == null ? NA : proxyAddress, STATUS.asString(), status);
 			}
 		}
 
 		@Override
 		public Timer getTimer() {
-			if (proxyAddress == null) {
-				return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, status);
-			}
-			else {
-				return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, proxyAddress, status);
-			}
+			return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
 		}
 	}
 }

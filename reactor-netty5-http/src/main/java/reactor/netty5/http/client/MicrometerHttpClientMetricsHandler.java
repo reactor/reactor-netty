@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static reactor.netty5.Metrics.NA;
 import static reactor.netty5.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty5.Metrics.RESPONSE_TIME;
 import static reactor.netty5.Metrics.UNKNOWN;
@@ -187,12 +188,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public Timer getTimer() {
-			if (proxyAddress == null) {
-				return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, path, method, status);
-			}
-			else {
-				return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress, path, method, status);
-			}
+			return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, path, method, status);
 		}
 
 		@Override
@@ -204,15 +200,9 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			if (proxyAddress == null) {
-				return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
-						STATUS.asString(), status, URI.asString(), path);
-			}
-			else {
-				return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
-						PROXY_ADDRESS.asString(), proxyAddress,
-						STATUS.asString(), status, URI.asString(), path);
-			}
+			return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
+					PROXY_ADDRESS.asString(), proxyAddress == null ? NA : proxyAddress,
+					STATUS.asString(), status, URI.asString(), path);
 		}
 	}
 }

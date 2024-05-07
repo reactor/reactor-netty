@@ -104,6 +104,8 @@ import static reactor.netty5.Metrics.HTTP_CLIENT_PREFIX;
 import static reactor.netty5.Metrics.HTTP_SERVER_PREFIX;
 import static reactor.netty5.Metrics.LOCAL_ADDRESS;
 import static reactor.netty5.Metrics.METHOD;
+import static reactor.netty5.Metrics.NA;
+import static reactor.netty5.Metrics.PROXY_ADDRESS;
 import static reactor.netty5.Metrics.REMOTE_ADDRESS;
 import static reactor.netty5.Metrics.RESPONSE_TIME;
 import static reactor.netty5.Metrics.STATUS;
@@ -739,7 +741,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
 			assertGauge(registry, SERVER_CONNECTIONS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
 			// https://github.com/reactor/reactor-netty/issues/3060
-			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/6").hasCountGreaterThanOrEqualTo(1);
+			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, URI, "/6").hasCountGreaterThanOrEqualTo(1);
 		}
 		else {
 			// make sure the client stream is closed on the server side before checking server metrics
@@ -747,7 +749,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(1);
 			assertGauge(registry, SERVER_STREAMS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
 			// https://github.com/reactor/reactor-netty/issues/3060
-			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/6").hasCountGreaterThanOrEqualTo(1);
+			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, URI, "/6").hasCountGreaterThanOrEqualTo(1);
 			// in case of H2, the tearDown method will ensure client socket is closed on the server side
 		}
 	}
@@ -863,7 +865,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
 			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
 			// https://github.com/reactor/reactor-netty/issues/3060
-			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/7").hasCountGreaterThanOrEqualTo(1);
+			assertCounter(registry, CLIENT_ERRORS, PROXY_ADDRESS, NA, REMOTE_ADDRESS, address, URI, "/7").hasCountGreaterThanOrEqualTo(1);
 		}
 		else {
 			assertThat(StreamCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
@@ -872,7 +874,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
 			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
 			// https://github.com/reactor/reactor-netty/issues/3060
-			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/7").hasCountGreaterThanOrEqualTo(1);
+			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, URI, "/7").hasCountGreaterThanOrEqualTo(1);
 			// in case of H2, the tearDown method will ensure client socket is closed on the server side
 		}
 	}
@@ -923,7 +925,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
-		String[] summaryTags = new String[]{REMOTE_ADDRESS, serverAddress, URI, "unknown"};
+		String[] summaryTags = new String[]{REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "unknown"};
 		assertCounter(registry, CLIENT_ERRORS, summaryTags).hasCountGreaterThanOrEqualTo(2);
 	}
 
@@ -1068,7 +1070,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		String[] summaryTags = new String[]{REMOTE_ADDRESS, "1.1.1.1:11111", STATUS, ERROR};
+		String[] summaryTags = new String[]{REMOTE_ADDRESS, "1.1.1.1:11111", PROXY_ADDRESS, NA, STATUS, ERROR};
 		assertTimer(registry, CLIENT_CONNECT_TIME, summaryTags).hasCountEqualTo(1);
 	}
 
@@ -1223,11 +1225,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.hasTotalAmountGreaterThanOrEqualTo(12);
 		assertCounter(registry, SERVER_ERRORS, summaryTags1).isNull();
 
-		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST", STATUS, "200"};
-		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST"};
-		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
-		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "POST", STATUS, "200"};
+		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "POST"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, STATUS, "SUCCESS"};
+		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "http"};
 
 		assertTimer(registry, CLIENT_RESPONSE_TIME, timerTags1)
 				.hasCountEqualTo(1)
@@ -1283,11 +1285,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.hasTotalAmountGreaterThanOrEqualTo(0);
 		assertCounter(registry, SERVER_ERRORS, summaryTags1).isNull();
 
-		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "404"};
-		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET"};
-		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
-		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "GET", STATUS, "404"};
+		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "GET"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, STATUS, "SUCCESS"};
+		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "http"};
 
 		assertTimer(registry, CLIENT_RESPONSE_TIME, timerTags1)
 				.hasCountEqualTo(index)
@@ -1334,11 +1336,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.hasTotalAmountGreaterThanOrEqualTo(0);
 		assertCounter(registry, SERVER_ERRORS, summaryTags1).isNull();
 
-		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "431"};
-		String[] timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET"};
-		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
-		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "GET", STATUS, "431"};
+		String[] timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "GET"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, STATUS, "SUCCESS"};
+		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "http"};
 
 		assertTimer(registry, CLIENT_RESPONSE_TIME, timerTags1)
 				.hasCountEqualTo(1)
