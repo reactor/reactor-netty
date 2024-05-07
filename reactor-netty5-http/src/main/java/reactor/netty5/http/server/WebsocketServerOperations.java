@@ -93,7 +93,11 @@ final class WebsocketServerOperations extends HttpServerOperations
 		else {
 			removeHandler(NettyPipeline.HttpTrafficHandler);
 			removeHandler(NettyPipeline.AccessLogHandler);
-			removeHandler(NettyPipeline.HttpMetricsHandler);
+			ChannelHandler handler = channel.pipeline().get(NettyPipeline.HttpMetricsHandler);
+			if (handler != null) {
+				replaceHandler(NettyPipeline.HttpMetricsHandler,
+						new WebsocketHttpServerMetricsHandler((AbstractHttpServerMetricsHandler) handler));
+			}
 
 			FullHttpRequest request = new DefaultFullHttpRequest(replaced.version(), replaced.method(), replaced.uri(),
 					channel.bufferAllocator().allocate(0));
@@ -301,4 +305,70 @@ final class WebsocketServerOperations extends HttpServerOperations
 	static final AtomicIntegerFieldUpdater<WebsocketServerOperations> CLOSE_SENT =
 			AtomicIntegerFieldUpdater.newUpdater(WebsocketServerOperations.class,
 					"closeSent");
+
+	static final class WebsocketHttpServerMetricsHandler extends AbstractHttpServerMetricsHandler {
+
+		final HttpServerMetricsRecorder recorder;
+
+		WebsocketHttpServerMetricsHandler(AbstractHttpServerMetricsHandler copy) {
+			super(copy);
+			this.recorder = copy.recorder();
+		}
+
+		@Override
+		public void channelActive(ChannelHandlerContext ctx) {
+			ctx.fireChannelActive();
+		}
+
+		@Override
+		public void channelInactive(ChannelHandlerContext ctx) {
+			try {
+				if (channelOpened && recorder instanceof MicrometerHttpServerMetricsRecorder) {
+					// For custom user recorders, we don't propagate the channelInactive event, because this will be done
+					// by the ChannelMetricsHandler itself. ChannelMetricsHandler is only present when the recorder is
+					// not our MicrometerHttpServerMetricsRecorder. See HttpServerConfig class.
+					channelOpened = false;
+					// Always use the real connection local address without any proxy information
+					recorder.recordServerConnectionClosed(ctx.channel().localAddress());
+				}
+
+				if (channelActivated) {
+					channelActivated = false;
+					// Always use the real connection local address without any proxy information
+					recorder.recordServerConnectionInactive(ctx.channel().localAddress());
+				}
+			}
+			catch (RuntimeException e) {
+				// Allow request-response exchange to continue, unaffected by metrics problem
+				if (log.isWarnEnabled()) {
+					log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+				}
+			}
+			finally {
+				ctx.fireChannelInactive();
+			}
+		}
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) {
+			ctx.fireChannelRead(msg);
+		}
+
+		@Override
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireExceptionCaught(cause);
+		}
+
+		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
+		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+			//"FutureReturnValueIgnored" this is deliberate
+			ctx.write(msg, promise);
+		}
+
+		@Override
+		public HttpServerMetricsRecorder recorder() {
+			return recorder;
+		}
+	}
 }
