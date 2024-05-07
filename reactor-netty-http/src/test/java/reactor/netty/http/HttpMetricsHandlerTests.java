@@ -172,6 +172,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 *  <li> /5 is used by testServerConnectionsRecorder test</li>
 	 *  <li> /6 is used by testServerConnectionsMicrometerConnectionClose test</li>
 	 *  <li> /7 is used by testServerConnectionsRecorderConnectionClose test</li>
+	 *  <li> /8 is used by testServerConnectionsWebsocketMicrometer test</li>
+	 *  <li> /9 is used by testServerConnectionsWebsocketRecorder test</li>
 	 * </ul>
 	 */
 	@BeforeEach
@@ -201,7 +203,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				             .get("/7", (req, res) -> {
 				                 checkServerConnectionsRecorder(req);
 				                 return Mono.delay(Duration.ofMillis(200)).then(res.send());
-				             }));
+				             })
+				             .get("/8", (req, res) -> res.sendWebsocket((in, out) ->
+				                     out.sendString(Mono.just("Hello World!").doOnNext(b -> checkServerConnectionsMicrometer(req)))))
+				             .get("/9", (req, res) -> res.sendWebsocket((in, out) ->
+				                     out.sendString(Mono.just("Hello World!").doOnNext(b -> checkServerConnectionsRecorder(req)))))
+				);
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
 		httpClient = createClient(provider, () -> disposableServer.address())
@@ -747,6 +754,28 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		}
 	}
 
+	@Test
+	void testServerConnectionsWebsocketMicrometer() throws Exception {
+		disposableServer = httpServer
+				.doOnConnection(cnx -> ServerCloseHandler.INSTANCE.register(cnx.channel()))
+				.bindNow();
+
+		String address = formatSocketAddress(disposableServer.address());
+
+		httpClient.websocket()
+		          .uri("/8")
+		          .handle((in, out) -> in.receive().aggregate().asString())
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		// make sure the client socket is closed on the server side before checking server metrics
+		assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+		assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
+		assertGauge(registry, SERVER_CONNECTIONS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
+	}
+
 	@ParameterizedTest
 	@MethodSource("httpCompatibleProtocols")
 	void testServerConnectionsRecorder(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
@@ -848,6 +877,32 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/7").hasCountGreaterThanOrEqualTo(1);
 			// in case of H2, the tearDown method will ensure client socket is closed on the server side
 		}
+	}
+
+	@Test
+	void testServerConnectionsWebsocketRecorder() throws Exception {
+		ServerRecorder.INSTANCE.reset();
+		disposableServer = httpServer.metrics(true, ServerRecorder.supplier(), Function.identity())
+				.doOnConnection(cnx -> ServerCloseHandler.INSTANCE.register(cnx.channel()))
+				.bindNow();
+
+		String address = formatSocketAddress(disposableServer.address());
+
+		httpClient.websocket()
+		          .uri("/9")
+		          .handle((in, out) -> in.receive().aggregate().asString())
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		// make sure the client socket is closed on the server side before checking server metrics
+		assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+		assertThat(ServerRecorder.INSTANCE.error.get()).isNull();
+		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
 	}
 
 	@Test
