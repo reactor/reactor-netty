@@ -55,7 +55,11 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	private final ConcurrentMap<MeterKey, Counter> errorsCache = new ConcurrentHashMap<>();
 
 	protected MicrometerHttpMetricsRecorder(String name, String protocol) {
-		super(name, protocol);
+		this(name, protocol, true);
+	}
+
+	protected MicrometerHttpMetricsRecorder(String name, String protocol, boolean onServer) {
+		super(name, protocol, onServer);
 	}
 
 	@Override
