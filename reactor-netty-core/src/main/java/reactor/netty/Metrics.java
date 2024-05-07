@@ -293,6 +293,8 @@ public class Metrics {
 
 	public static final String UNKNOWN = "UNKNOWN";
 
+	public static final String NA = "na";
+
 	@Nullable
 	public static Observation currentObservation(ContextView contextView) {
 		if (contextView.hasKey(OBSERVATION_KEY)) {
