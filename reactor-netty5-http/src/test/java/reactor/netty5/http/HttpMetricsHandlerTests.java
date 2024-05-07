@@ -1091,7 +1091,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 					.as("awaitClose timeout")
 					.isTrue();
 
-			assertThat(ContextAwareServerRecorderBadUri.INSTANCE.nullMethodParams.size() == 0)
+			assertThat(ContextAwareServerRecorderBadUri.INSTANCE.nullMethodParams.isEmpty())
 					.as("some method got null parameters: %s", ContextAwareServerRecorderBadUri.INSTANCE.nullMethodParams)
 					.isTrue();
 
@@ -1105,7 +1105,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 					.as("awaitClose timeout")
 					.isTrue();
 
-			assertThat(ServerRecorderBadUri.INSTANCE.nullMethodParams.size() == 0)
+			assertThat(ServerRecorderBadUri.INSTANCE.nullMethodParams.isEmpty())
 					.as("some method got null parameters: %s", ServerRecorderBadUri.INSTANCE.nullMethodParams)
 					.isTrue();
 

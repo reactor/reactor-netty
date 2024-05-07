@@ -176,7 +176,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	@Nullable
-	public final Timer getTlsHandshakeTimer(String name, String address, String status) {
+	public final Timer getTlsHandshakeTimer(String name, @Nullable String address, String status) {
 		MeterKey meterKey = new MeterKey(null, address, null, null, status);
 		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
@@ -195,7 +195,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	@Nullable
-	public final Timer getTlsHandshakeTimer(String name, String address, String proxyAddr, String status) {
+	public final Timer getTlsHandshakeTimer(String name, @Nullable String address, @Nullable String proxyAddr, String status) {
 		MeterKey meterKey = new MeterKey(null, address, proxyAddr, null, status);
 		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
@@ -213,7 +213,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	@Nullable
-	final Timer getConnectTimer(String name, String address, String status) {
+	final Timer getConnectTimer(String name, @Nullable String address, String status) {
 		MeterKey meterKey = new MeterKey(null, address, null, null, status);
 		return MapUtils.computeIfAbsent(connectTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
@@ -232,7 +232,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	@Nullable
-	final Timer getConnectTimer(String name, String address, String proxyAddr, String status) {
+	final Timer getConnectTimer(String name, @Nullable String address, @Nullable String proxyAddr, String status) {
 		MeterKey meterKey = new MeterKey(null, address, proxyAddr, null, status);
 		return MapUtils.computeIfAbsent(connectTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
@@ -250,7 +250,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	}
 
 	@Nullable
-	public final Timer getResolveAddressTimer(String name, String address, String status) {
+	public final Timer getResolveAddressTimer(String name, @Nullable String address, String status) {
 		MeterKey meterKey = new MeterKey(null, address, null, null, status);
 		return MapUtils.computeIfAbsent(addressResolverTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
