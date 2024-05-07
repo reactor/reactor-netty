@@ -31,6 +31,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty.Metrics.NA;
+import static reactor.netty.Metrics.PROXY_ADDRESS;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
@@ -127,8 +129,8 @@ class TcpSecureMetricsTests extends TcpMetricsTests {
 
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
-		timerTags = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
-		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
+		timerTags = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, STATUS, "SUCCESS"};
+		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "tcp"};
 
 		assertTimer(registry, CLIENT_CONNECT_TIME, timerTags)
 				.hasCountEqualTo(1)

@@ -37,6 +37,7 @@ import static reactor.netty.Metrics.DATA_SENT_TIME;
 import static reactor.netty.Metrics.ERRORS;
 import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
 import static reactor.netty.Metrics.METHOD;
+import static reactor.netty.Metrics.NA;
 import static reactor.netty.Metrics.PROXY_ADDRESS;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
@@ -62,34 +63,26 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	private final ConcurrentMap<MeterKey, Counter> errorsCache = new ConcurrentHashMap<>();
 
 	private MicrometerHttpClientMetricsRecorder() {
-		super(HTTP_CLIENT_PREFIX, "http");
+		super(HTTP_CLIENT_PREFIX, "http", false);
 	}
 
 	@Override
 	public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-		String address = formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(uri, address, null, method, status);
-		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
-				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
-				                   .tags(HttpClientMeters.DataReceivedTimeTags.REMOTE_ADDRESS.asString(), address,
-				                         HttpClientMeters.DataReceivedTimeTags.URI.asString(), uri,
-				                         HttpClientMeters.DataReceivedTimeTags.METHOD.asString(), method,
-				                         HttpClientMeters.DataReceivedTimeTags.STATUS.asString(), status)
-				                   .register(REGISTRY)));
-		if (dataReceivedTime != null) {
-			dataReceivedTime.record(time);
-		}
+		recordDataReceivedTime(remoteAddress, NA, uri, method, status, time);
 	}
 
 	@Override
 	public void recordDataReceivedTime(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, String method, String status, Duration time) {
+		recordDataReceivedTime(remoteAddress, formatSocketAddress(proxyAddress), uri, method, status, time);
+	}
+
+	void recordDataReceivedTime(SocketAddress remoteAddress, @Nullable String proxyAddress, String uri, String method, String status, Duration time) {
 		String address = formatSocketAddress(remoteAddress);
-		String proxyAddr = formatSocketAddress(proxyAddress);
-		MeterKey meterKey = new MeterKey(uri, address, proxyAddr, method, status);
+		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, method, status);
 		Timer dataReceivedTime = MapUtils.computeIfAbsent(dataReceivedTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_RECEIVED_TIME)
 				                   .tags(HttpClientMeters.DataReceivedTimeTags.REMOTE_ADDRESS.asString(), address,
-				                         HttpClientMeters.DataReceivedTimeTags.PROXY_ADDRESS.asString(), proxyAddr,
+				                         HttpClientMeters.DataReceivedTimeTags.PROXY_ADDRESS.asString(), proxyAddress,
 				                         HttpClientMeters.DataReceivedTimeTags.URI.asString(), uri,
 				                         HttpClientMeters.DataReceivedTimeTags.METHOD.asString(), method,
 				                         HttpClientMeters.DataReceivedTimeTags.STATUS.asString(), status)
@@ -101,28 +94,21 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
-		String address = formatSocketAddress(remoteAddress);
-		MeterKey meterKey = new MeterKey(uri, address, null, method, null);
-		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
-				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
-				                   .tags(HttpClientMeters.DataSentTimeTags.REMOTE_ADDRESS.asString(), address,
-				                         HttpClientMeters.DataSentTimeTags.URI.asString(), uri,
-				                         HttpClientMeters.DataSentTimeTags.METHOD.asString(), method)
-				                   .register(REGISTRY)));
-		if (dataSentTime != null) {
-			dataSentTime.record(time);
-		}
+		recordDataSentTime(remoteAddress, NA, uri, method, time);
 	}
 
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, String method, Duration time) {
+		recordDataSentTime(remoteAddress, formatSocketAddress(proxyAddress), uri, method, time);
+	}
+
+	void recordDataSentTime(SocketAddress remoteAddress, @Nullable String proxyAddress, String uri, String method, Duration time) {
 		String address = formatSocketAddress(remoteAddress);
-		String proxyAddr = formatSocketAddress(proxyAddress);
-		MeterKey meterKey = new MeterKey(uri, address, proxyAddr, method, null);
+		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, method, null);
 		Timer dataSentTime = MapUtils.computeIfAbsent(dataSentTimeCache, meterKey,
 				key -> filter(Timer.builder(name() + DATA_SENT_TIME)
 				                   .tags(HttpClientMeters.DataSentTimeTags.REMOTE_ADDRESS.asString(), address,
-				                         HttpClientMeters.DataSentTimeTags.PROXY_ADDRESS.asString(), proxyAddr,
+				                         HttpClientMeters.DataSentTimeTags.PROXY_ADDRESS.asString(), proxyAddress,
 				                         HttpClientMeters.DataSentTimeTags.URI.asString(), uri,
 				                         HttpClientMeters.DataSentTimeTags.METHOD.asString(), method)
 				                   .register(REGISTRY)));
@@ -133,51 +119,47 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-		String address = formatSocketAddress(remoteAddress);
-		Timer responseTime = getResponseTimeTimer(name() + RESPONSE_TIME, address, uri, method, status);
+		Timer responseTime = getResponseTimeTimer(name() + RESPONSE_TIME, formatSocketAddress(remoteAddress), NA, uri, method, status);
 		if (responseTime != null) {
 			responseTime.record(time);
 		}
-	}
-
-	@Nullable
-	final Timer getResponseTimeTimer(String name, @Nullable String address, String uri, String method, String status) {
-		MeterKey meterKey = new MeterKey(uri, address, null, method, status);
-		return MapUtils.computeIfAbsent(responseTimeCache, meterKey,
-				key -> filter(Timer.builder(name)
-				                   .tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
-				                   .register(REGISTRY)));
 	}
 
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, String method, String status, Duration time) {
-		String address = formatSocketAddress(remoteAddress);
-		String proxyAddr = formatSocketAddress(proxyAddress);
-		Timer responseTime = getResponseTimeTimer(name() + RESPONSE_TIME, address, proxyAddr, uri, method, status);
+		Timer responseTime = getResponseTimeTimer(name() + RESPONSE_TIME, formatSocketAddress(remoteAddress), formatSocketAddress(proxyAddress), uri, method, status);
 		if (responseTime != null) {
 			responseTime.record(time);
 		}
 	}
 
 	@Nullable
-	final Timer getResponseTimeTimer(String name, @Nullable String address, @Nullable String proxyAddress, String uri, String method, String status) {
-		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, method, status);
+	Timer getResponseTimeTimer(String name, @Nullable String remoteAddress, @Nullable String proxyAddress, String uri, String method, String status) {
+		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, method, status);
 		return MapUtils.computeIfAbsent(responseTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
-				                   .tags(REMOTE_ADDRESS, address, PROXY_ADDRESS, proxyAddress, URI, uri, METHOD, method, STATUS, status)
+				                   .tags(REMOTE_ADDRESS, remoteAddress, PROXY_ADDRESS, proxyAddress, URI, uri, METHOD, method, STATUS, status)
 				                   .register(REGISTRY)));
 	}
 
 	@Override
+	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+		recordDataReceived(remoteAddress, NA, uri, bytes);
+	}
+
+	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, long bytes) {
+		recordDataReceived(remoteAddress, formatSocketAddress(proxyAddress), uri, bytes);
+	}
+
+	void recordDataReceived(SocketAddress remoteAddress, @Nullable String proxyAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		String proxyAddr = formatSocketAddress(proxyAddress);
-		MeterKey meterKey = new MeterKey(uri, address, proxyAddr, null, null);
+		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, null, null);
 		DistributionSummary dataReceived = MapUtils.computeIfAbsent(dataReceivedCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_RECEIVED)
 				                                 .baseUnit(ChannelMeters.DATA_RECEIVED.getBaseUnit())
 				                                 .tags(ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address,
-				                                       ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddr,
+				                                       ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddress,
 				                                       ChannelMeters.ChannelMetersTags.URI.asString(), uri)
 				                                 .register(REGISTRY)));
 		if (dataReceived != null) {
@@ -186,15 +168,23 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	}
 
 	@Override
+	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+		recordDataSent(remoteAddress, NA, uri, bytes);
+	}
+
+	@Override
 	public void recordDataSent(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri, long bytes) {
+		recordDataSent(remoteAddress, formatSocketAddress(proxyAddress), uri, bytes);
+	}
+
+	void recordDataSent(SocketAddress remoteAddress, @Nullable String proxyAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		String proxyAddr = formatSocketAddress(proxyAddress);
-		MeterKey meterKey = new MeterKey(uri, address, proxyAddr, null, null);
+		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, null, null);
 		DistributionSummary dataSent = MapUtils.computeIfAbsent(dataSentCache, meterKey,
 				key -> filter(DistributionSummary.builder(name() + DATA_SENT)
 				                                 .baseUnit(ChannelMeters.DATA_SENT.getBaseUnit())
 				                                 .tags(ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address,
-				                                       ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddr,
+				                                       ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddress,
 				                                       ChannelMeters.ChannelMetersTags.URI.asString(), uri)
 				                                 .register(REGISTRY)));
 		if (dataSent != null) {
@@ -203,14 +193,22 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	}
 
 	@Override
+	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+		incrementErrorsCount(remoteAddress, NA, uri);
+	}
+
+	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress, SocketAddress proxyAddress, String uri) {
+		incrementErrorsCount(remoteAddress, formatSocketAddress(proxyAddress), uri);
+	}
+
+	void incrementErrorsCount(SocketAddress remoteAddress, @Nullable String proxyAddress, String uri) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		String proxyAddr = formatSocketAddress(proxyAddress);
-		MeterKey meterKey = new MeterKey(uri, address, proxyAddr, null, null);
+		MeterKey meterKey = new MeterKey(uri, address, proxyAddress, null, null);
 		Counter errors = MapUtils.computeIfAbsent(errorsCache, meterKey,
 				key -> filter(Counter.builder(name() + ERRORS)
 				                     .tags(ChannelMeters.ChannelMetersTags.REMOTE_ADDRESS.asString(), address,
-				                           ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddr,
+				                           ChannelMeters.ChannelMetersTags.PROXY_ADDRESS.asString(), proxyAddress,
 				                           ChannelMeters.ChannelMetersTags.URI.asString(), uri)
 				                     .register(REGISTRY)));
 		if (errors != null) {
