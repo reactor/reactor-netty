@@ -669,12 +669,20 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		}
 
 		MeterRegistrarImpl meterRegistrar;
-		String metricsName = "";
+		CountDownLatch meterRemoved = new CountDownLatch(1);
+		String metricsName = CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS;
+		String metricsTagName = "";
 		if (isBuiltInMetrics) {
 			meterRegistrar = null;
 			builder.metrics(true);
 
-			metricsName = isHttp2 ? "http2.testDisposeInactivePoolsInBackground" : "testDisposeInactivePoolsInBackground";
+			metricsTagName = isHttp2 ? "http2.testDisposeInactivePoolsInBackground" : "testDisposeInactivePoolsInBackground";
+
+			registry.config().onMeterRemoved(meter -> {
+				if (metricsName.equals(meter.getId().getName())) {
+					meterRemoved.countDown();
+				}
+			});
 		}
 		else {
 			meterRegistrar = new MeterRegistrarImpl();
@@ -711,10 +719,14 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 				assertThat(meterRegistrar.registered.get()).isTrue();
 			}
 			else {
-				assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, metricsName).isNotNull();
+				assertGauge(registry, metricsName, NAME, metricsTagName).isNotNull();
 			}
 
 			if (enableEvictInBackground) {
+				if (meterRegistrar != null) {
+					provider.onDispose.subscribe(null, null, meterRemoved::countDown);
+				}
+
 				assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 			}
 
@@ -726,14 +738,18 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 			assertThat(provider.isDisposed()).isEqualTo(enableEvictInBackground);
 			if (meterRegistrar != null) {
+				if (enableEvictInBackground) {
+					assertThat(meterRemoved.await(30, TimeUnit.SECONDS)).isTrue();
+				}
 				assertThat(meterRegistrar.deRegistered.get()).isEqualTo(enableEvictInBackground);
 			}
 			else {
 				if (enableEvictInBackground) {
-					assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, metricsName).isNull();
+					assertThat(meterRemoved.await(30, TimeUnit.SECONDS)).isTrue();
+					assertGauge(registry, metricsName, NAME, metricsTagName).isNull();
 				}
 				else {
-					assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, NAME, metricsName).isNotNull();
+					assertGauge(registry, metricsName, NAME, metricsTagName).isNotNull();
 				}
 			}
 		}
