@@ -723,10 +723,6 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			}
 
 			if (enableEvictInBackground) {
-				if (meterRegistrar != null) {
-					provider.onDispose.subscribe(null, null, meterRemoved::countDown);
-				}
-
 				assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 			}
 
@@ -739,7 +735,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 			assertThat(provider.isDisposed()).isEqualTo(enableEvictInBackground);
 			if (meterRegistrar != null) {
 				if (enableEvictInBackground) {
-					assertThat(meterRemoved.await(30, TimeUnit.SECONDS)).isTrue();
+					assertThat(meterRegistrar.latch.await(30, TimeUnit.SECONDS)).isTrue();
 				}
 				assertThat(meterRegistrar.deRegistered.get()).isEqualTo(enableEvictInBackground);
 			}
@@ -885,6 +881,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
 		AtomicBoolean registered = new AtomicBoolean();
 		AtomicBoolean deRegistered = new AtomicBoolean();
+		final CountDownLatch latch = new CountDownLatch(1);
 
 		MeterRegistrarImpl() {
 		}
@@ -897,6 +894,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		@Override
 		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
 			deRegistered.compareAndSet(false, true);
+			latch.countDown();
 		}
 	}
 }
