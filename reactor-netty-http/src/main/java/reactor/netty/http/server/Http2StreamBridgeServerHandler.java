@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -167,6 +167,16 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof ByteBuf) {
+			if (!pendingResponse) {
+				if (HttpServerOperations.log.isDebugEnabled()) {
+					HttpServerOperations.log.debug(
+							format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"), msg);
+				}
+				((ByteBuf) msg).release();
+				promise.setSuccess();
+				return;
+			}
+
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
 		}
