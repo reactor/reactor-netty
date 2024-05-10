@@ -165,7 +165,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			if (persistentConnection) {
 				pendingResponses += 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(), "Increasing pending responses, now {}"),
+					HttpServerOperations.log.debug(format(ctx.channel(), "Increasing pending responses count: {}"),
 							pendingResponses);
 				}
 				persistentConnection = isKeepAlive(request);
@@ -181,7 +181,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			if (pendingResponses > 1) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug(format(ctx.channel(), "Buffering pipelined HTTP request, " +
-									"pending response count: {}, queue: {}"),
+									"pending responses count: {}, queue: {}"),
 							pendingResponses,
 							pipelined != null ? pipelined.size() : 0);
 				}
@@ -259,7 +259,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		else if (overflow) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
 				HttpServerOperations.log.debug(format(ctx.channel(), "Buffering pipelined HTTP content, " +
-								"pending response count: {}, pending pipeline:{}"),
+								"pending responses count: {}, queue: {}"),
 						pendingResponses,
 						pipelined != null ? pipelined.size() : 0);
 			}
@@ -327,7 +327,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			if (!shouldKeepAlive()) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug(format(ctx.channel(), "Detected non persistent http " +
-									"connection, preparing to close"),
+									"connection, preparing to close. Pending responses count: {}"),
 							pendingResponses);
 				}
 				ctx.write(msg, promise.unvoid())
@@ -347,7 +347,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				nonInformationalResponse = false;
 				pendingResponses -= 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(), "Decreasing pending responses, now {}"),
+					HttpServerOperations.log.debug(format(ctx.channel(), "Decreasing pending responses count: {}"),
 							pendingResponses);
 				}
 			}
@@ -355,7 +355,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			if (pipelined != null && !pipelined.isEmpty()) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug(format(ctx.channel(), "Draining next pipelined " +
-									"request, pending response count: {}, queued: {}"),
+									"HTTP request, pending responses count: {}, queued: {}"),
 							pendingResponses, pipelined.size());
 				}
 				ctx.executor()
