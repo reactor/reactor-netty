@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpClientConfig;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -36,13 +37,13 @@ class TransportConnectorTest {
 				transportConfig,
 				new RecordingChannelInitializer(),
 				new InetSocketAddress("localhost", 0),
-				false).block();
+				false).block(Duration.ofSeconds(5));
 		final RecordingChannelInitializer channelInitializer = new RecordingChannelInitializer();
 		assertThatThrownBy(() -> TransportConnector.bind(
 				transportConfig,
 				channelInitializer,
 				new InetSocketAddress("localhost", ((InetSocketAddress) channel1.localAddress()).getPort()),
-				false).block());
+				false).block(Duration.ofSeconds(5)));
 		final Channel channel2 = channelInitializer.channel;
 		assertThat(channel1.isRegistered()).isTrue();
 		assertThat(channel2.isRegistered()).isFalse();
