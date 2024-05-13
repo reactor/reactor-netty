@@ -177,6 +177,16 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof ByteBuf) {
+			if (!pendingResponse) {
+				if (HttpServerOperations.log.isDebugEnabled()) {
+					HttpServerOperations.log.debug(
+							format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"), msg);
+				}
+				((ByteBuf) msg).release();
+				promise.setSuccess();
+				return;
+			}
+
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
 		}
