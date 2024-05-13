@@ -66,7 +66,8 @@ class HttpResponseStatusCodesHandlingTests extends BaseHttpTest {
 
 		StepVerifier.create(content)
 				    .expectNext(404)
-				    .verifyComplete();
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(5));
 	}
 
 	@ParameterizedTest

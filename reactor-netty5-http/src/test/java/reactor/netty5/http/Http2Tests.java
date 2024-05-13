@@ -201,7 +201,7 @@ class Http2Tests extends BaseHttpTest {
 		ConnectionProvider provider = builder.build();
 		doTestMaxActiveStreams(HttpClient.create(provider), 1, 1, 1);
 		provider.disposeLater()
-		        .block();
+		        .block(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -214,7 +214,7 @@ class Http2Tests extends BaseHttpTest {
 		ConnectionProvider provider = ConnectionProvider.create("testMaxActiveStreams_2", 1);
 		doTestMaxActiveStreams(HttpClient.create(provider), 2, 2, 0);
 		provider.disposeLater()
-		        .block();
+		        .block(Duration.ofSeconds(5));
 	}
 
 	@Test

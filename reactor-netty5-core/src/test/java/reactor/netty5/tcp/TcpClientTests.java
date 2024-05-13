@@ -1203,7 +1203,7 @@ public class TcpClientTests {
 		finally {
 			disposableServer.disposeNow();
 			loop.disposeLater()
-			    .block();
+			    .block(Duration.ofSeconds(5));
 		}
 	}
 

@@ -317,7 +317,7 @@ class HttpServerTests extends BaseHttpTest {
 		                              .send(src)
 		                              .responseSingle((res, buf) -> Mono.just(res.status().code())))
 		    .collectList()
-		    .block();
+		    .block(Duration.ofSeconds(5));
 	}
 
 	//from https://github.com/reactor/reactor-netty/issues/90
@@ -349,7 +349,7 @@ class HttpServerTests extends BaseHttpTest {
 			                 .responseContent()
 			                 .aggregate()
 			                 .asString()
-			                 .block();
+			                 .block(Duration.ofSeconds(5));
 
 			// checking the response status, OK
 			assertThat(response).isEqualTo("200");
@@ -371,7 +371,7 @@ class HttpServerTests extends BaseHttpTest {
 			                 .responseContent()
 			                 .aggregate()
 			                 .asString()
-			                 .block();
+			                 .block(Duration.ofSeconds(5));
 
 			assertThat(response).isEqualTo("201");
 		}
@@ -394,7 +394,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .get()
 				          .uri("/return")
 				          .responseSingle((res, buf) -> Mono.just(res.status().code()))
-				          .block();
+				          .block(Duration.ofSeconds(5));
 		assertThat(code).isEqualTo(500);
 	}
 
@@ -585,14 +585,14 @@ class HttpServerTests extends BaseHttpTest {
 				          .get()
 				          .uri("/hello")
 				          .responseSingle((res, buf) -> Mono.just(res.status().code()))
-				          .block();
+				          .block(Duration.ofSeconds(5));
 		assertThat(code).isEqualTo(200);
 
 		code = createClient(disposableServer.port())
 		                 .get()
 		                 .uri("/helloMan")
 		                 .responseSingle((res, buf) -> Mono.just(res.status().code()))
-		                 .block();
+		                 .block(Duration.ofSeconds(5));
 		assertThat(code).isEqualTo(404);
 	}
 
@@ -938,7 +938,7 @@ class HttpServerTests extends BaseHttpTest {
 		StepVerifier.create(status)
 		            .expectNextMatches(HttpResponseStatus.REQUEST_URI_TOO_LONG::equals)
 		            .expectComplete()
-		            .verify();
+		            .verify(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -960,7 +960,7 @@ class HttpServerTests extends BaseHttpTest {
 		StepVerifier.create(status)
 		            .expectNextMatches(HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE::equals)
 		            .expectComplete()
-		            .verify();
+		            .verify(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -994,7 +994,7 @@ class HttpServerTests extends BaseHttpTest {
 		          .responseContent()
 		          .aggregate()
 		          .asString()
-		          .block();
+		          .block(Duration.ofSeconds(5));
 
 		assertThat(channelRef.get()).isNotNull();
 		assertThat(validate).as("validate headers").isFalse();
@@ -1256,7 +1256,8 @@ class HttpServerTests extends BaseHttpTest {
 				          .get()
 				          .uri("/")
 				          .responseContent())
-				    .verifyError(PrematureCloseException.class);
+				    .expectError(PrematureCloseException.class)
+				    .verify(Duration.ofSeconds(5));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(error.get()).isInstanceOf(AbortedException.class);
@@ -1306,7 +1307,7 @@ class HttpServerTests extends BaseHttpTest {
 			                   .doFinally(sig -> latch.countDown())
 			                   .then(Mono.delay(Duration.ofMillis(500)));
 		          })
-		          .blockLast();
+		          .blockLast(Duration.ofSeconds(5));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(receiver.get()).containsAll(test);
@@ -1345,7 +1346,7 @@ class HttpServerTests extends BaseHttpTest {
 		                                              statusClient.set(o);
 		                                              latch.countDown();
 		                                          })))
-		          .blockLast();
+		          .blockLast(Duration.ofSeconds(5));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(statusClient.get()).isNotNull()
@@ -2707,7 +2708,8 @@ class HttpServerTests extends BaseHttpTest {
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
 				.responseSingle((response, bufferMono) -> bufferMono.asString()))
 				.expectNext("/yes/{value}")
-				.verifyComplete();
+				.expectComplete()
+				.verify(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -2721,7 +2723,8 @@ class HttpServerTests extends BaseHttpTest {
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
 				.responseSingle((response, bufferMono) -> bufferMono.asString()))
 				.expectNext("/yes/value")
-				.verifyComplete();
+				.expectComplete()
+				.verify(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -2736,7 +2739,8 @@ class HttpServerTests extends BaseHttpTest {
 			StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
 					.responseSingle((response, bufferMono) -> bufferMono.asString()))
 					.expectNext("/yes/value")
-					.verifyComplete();
+					.expectComplete()
+					.verify(Duration.ofSeconds(5));
 		}
 		finally {
 			if (disposableServer != null) {
@@ -2750,7 +2754,8 @@ class HttpServerTests extends BaseHttpTest {
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
 				.responseSingle((response, bufferMono) -> bufferMono.asString()))
 				.expectNext("/yes/{value}")
-				.verifyComplete();
+				.expectComplete()
+				.verify(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -2765,7 +2770,8 @@ class HttpServerTests extends BaseHttpTest {
 			StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
 					.responseSingle((response, bufferMono) -> bufferMono.asString()))
 					.expectNext("/yes/value")
-					.verifyComplete();
+					.expectComplete()
+					.verify(Duration.ofSeconds(5));
 		}
 		finally {
 			if (disposableServer != null) {
@@ -2779,7 +2785,8 @@ class HttpServerTests extends BaseHttpTest {
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/yes/value")
 				.responseSingle((response, bufferMono) -> bufferMono.asString()))
 				.expectNext("/yes/{value}")
-				.verifyComplete();
+				.expectComplete()
+				.verify(Duration.ofSeconds(5));
 	}
 
 	private static final Comparator<HttpRouteHandlerMetadata> comparator = (o1, o2) -> {
@@ -2842,12 +2849,14 @@ class HttpServerTests extends BaseHttpTest {
 			StepVerifier.create(createClient(disposableServer.port()).get().uri("/route1")
 					.responseSingle((response, bufferMono) -> bufferMono.asString()))
 					.expectNext("/route1")
-					.verifyComplete();
+					.expectComplete()
+					.verify(Duration.ofSeconds(5));
 
 			StepVerifier.create(createClient(disposableServer.port()).get().uri("/route2")
 					.responseSingle((response, bufferMono) -> bufferMono.asString()))
 					.expectNext("/route2")
-					.verifyComplete();
+					.expectComplete()
+					.verify(Duration.ofSeconds(5));
 		}
 		finally {
 			if (disposableServer != null) {
@@ -2864,12 +2873,14 @@ class HttpServerTests extends BaseHttpTest {
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/route1")
 				.response())
 				.expectNextMatches(response -> response.status().equals(HttpResponseStatus.NOT_FOUND))
-				.verifyComplete();
+				.expectComplete()
+				.verify(Duration.ofSeconds(5));
 
 		StepVerifier.create(createClient(disposableServer.port()).get().uri("/route2")
 				.responseSingle((response, bufferMono) -> bufferMono.asString()))
 				.expectNext("/route2")
-				.verifyComplete();
+				.expectComplete()
+				.verify(Duration.ofSeconds(5));
 	}
 
 	@ParameterizedTest(name = "{displayName}({arguments})")

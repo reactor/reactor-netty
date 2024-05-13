@@ -659,7 +659,8 @@ class HttpProtocolsTests extends BaseHttpTest {
 		                          .asString()
 		                          .timeout(Duration.ofSeconds(10)))
 		            .expectNext("Hello world!")
-		            .verifyComplete();
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(5));
 
 		try {
 			// Wait till all logs are flushed
