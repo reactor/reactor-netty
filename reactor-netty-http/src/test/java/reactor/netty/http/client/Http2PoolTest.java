@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -154,7 +154,7 @@ class Http2PoolTest {
 
 		Connection connection = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -174,13 +174,13 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			acquired1.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			PooledRef<Connection> acquired2 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -192,7 +192,7 @@ class Http2PoolTest {
 
 			assertThat(id1).isNotEqualTo(id2);
 
-			acquired2.invalidate().block();
+			acquired2.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
@@ -232,7 +232,7 @@ class Http2PoolTest {
 
 		Connection connection = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -252,7 +252,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(Integer.MAX_VALUE);
 
-			PooledRef<Connection> acquired2 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
 			assertThat(acquired2).isNotNull();
 
 			AtomicReference<PooledRef<Connection>> acquired3 = new AtomicReference<>();
@@ -277,14 +277,14 @@ class Http2PoolTest {
 			ChannelId id2 = connection.channel().id();
 			assertThat(id1).isNotEqualTo(id2);
 
-			acquired1.invalidate().block();
-			acquired2.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
+			acquired2.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(Integer.MAX_VALUE);
 
-			acquired3.get().invalidate().block();
+			acquired3.get().invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			if (closeSecond) {
@@ -320,7 +320,7 @@ class Http2PoolTest {
 
 		Connection connection = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -348,7 +348,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			acquired1.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(0);
@@ -379,7 +379,7 @@ class Http2PoolTest {
 
 		Connection connection = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -399,7 +399,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			acquired1.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
 
 			http2Pool.evictInBackground();
 
@@ -407,7 +407,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			PooledRef<Connection> acquired2 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -419,7 +419,7 @@ class Http2PoolTest {
 
 			assertThat(id1).isNotEqualTo(id2);
 
-			acquired2.invalidate().block();
+			acquired2.invalidate().block(Duration.ofSeconds(1));
 
 			http2Pool.evictInBackground();
 
@@ -454,7 +454,7 @@ class Http2PoolTest {
 		Connection connection1 = null;
 		Connection connection2 = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -464,7 +464,7 @@ class Http2PoolTest {
 			connection1 = acquired1.poolable();
 			ChannelId id1 = connection1.channel().id();
 
-			acquired1.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
 
 			Thread.sleep(15);
 
@@ -474,7 +474,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			PooledRef<Connection> acquired2 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -486,7 +486,7 @@ class Http2PoolTest {
 
 			assertThat(id1).isNotEqualTo(id2);
 
-			acquired2.invalidate().block();
+			acquired2.invalidate().block(Duration.ofSeconds(1));
 
 			Thread.sleep(15);
 
@@ -527,7 +527,7 @@ class Http2PoolTest {
 		Connection connection1 = null;
 		Connection connection2 = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -543,7 +543,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			acquired1.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
 
 			http2Pool.evictInBackground();
 
@@ -551,7 +551,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			PooledRef<Connection> acquired2 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -563,7 +563,7 @@ class Http2PoolTest {
 
 			assertThat(id1).isNotEqualTo(id2);
 
-			acquired2.invalidate().block();
+			acquired2.invalidate().block(Duration.ofSeconds(1));
 
 			Thread.sleep(10);
 
@@ -605,7 +605,7 @@ class Http2PoolTest {
 		Connection connection1 = null;
 		Connection connection2 = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -621,7 +621,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			acquired1.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
 
 			http2Pool.evictInBackground();
 
@@ -631,7 +631,7 @@ class Http2PoolTest {
 
 			shouldEvict.set(false);
 
-			PooledRef<Connection> acquired2 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -643,7 +643,7 @@ class Http2PoolTest {
 
 			assertThat(id1).isNotEqualTo(id2);
 
-			acquired2.invalidate().block();
+			acquired2.invalidate().block(Duration.ofSeconds(1));
 
 			shouldEvict.set(true);
 
@@ -683,7 +683,7 @@ class Http2PoolTest {
 		Connection connection1 = null;
 		Connection connection2 = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -693,11 +693,11 @@ class Http2PoolTest {
 			connection1 = acquired1.poolable();
 			ChannelId id1 = connection1.channel().id();
 
-			acquired1.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
 
 			Thread.sleep(15);
 
-			PooledRef<Connection> acquired2 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -709,7 +709,7 @@ class Http2PoolTest {
 
 			assertThat(id1).isNotEqualTo(id2);
 
-			acquired2.invalidate().block();
+			acquired2.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
@@ -756,7 +756,7 @@ class Http2PoolTest {
 			connection1 = acquired.get(0).poolable();
 			ChannelId id1 = connection1.channel().id();
 
-			acquired.get(0).invalidate().block();
+			acquired.get(0).invalidate().block(Duration.ofSeconds(1));
 
 			Thread.sleep(15);
 
@@ -769,7 +769,7 @@ class Http2PoolTest {
 
 			assertThat(id1).isEqualTo(id2);
 
-			acquired.get(1).invalidate().block();
+			acquired.get(1).invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
@@ -805,7 +805,7 @@ class Http2PoolTest {
 		Connection connection1 = null;
 		Connection connection2 = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -821,13 +821,13 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			acquired1.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			PooledRef<Connection> acquired2 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -839,7 +839,7 @@ class Http2PoolTest {
 
 			assertThat(id1).isNotEqualTo(id2);
 
-			acquired2.invalidate().block();
+			acquired2.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
@@ -876,7 +876,7 @@ class Http2PoolTest {
 		Connection connection1 = null;
 		Connection connection2 = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -892,7 +892,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			acquired1.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(0);
@@ -900,7 +900,7 @@ class Http2PoolTest {
 
 			shouldEvict.set(false);
 
-			PooledRef<Connection> acquired2 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -912,7 +912,7 @@ class Http2PoolTest {
 
 			assertThat(id1).isNotEqualTo(id2);
 
-			acquired2.invalidate().block();
+			acquired2.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
@@ -948,7 +948,7 @@ class Http2PoolTest {
 		Connection connection1 = null;
 		Connection connection2 = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -964,7 +964,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			PooledRef<Connection> acquired2 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired2 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired2).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(2);
@@ -976,8 +976,8 @@ class Http2PoolTest {
 
 			assertThat(id1).isNotEqualTo(id2);
 
-			acquired1.invalidate().block();
-			acquired2.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
+			acquired2.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
@@ -1034,7 +1034,7 @@ class Http2PoolTest {
 
 		Connection connection = null;
 		try {
-			PooledRef<Connection> acquired1 = http2Pool.acquire().block();
+			PooledRef<Connection> acquired1 = http2Pool.acquire().block(Duration.ofSeconds(1));
 
 			assertThat(acquired1).isNotNull();
 			assertThat(http2Pool.activeStreams()).isEqualTo(1);
@@ -1058,7 +1058,7 @@ class Http2PoolTest {
 			assertThat(http2Pool.connections.size()).isEqualTo(1);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
 
-			acquired1.invalidate().block();
+			acquired1.invalidate().block(Duration.ofSeconds(1));
 
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(0);

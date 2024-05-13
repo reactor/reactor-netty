@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
 
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -51,7 +52,7 @@ class ClientTransportResolverHooksTest {
 				.doAfterResolve((conn, socketAddress) -> doAfterResolve.set(conn.channel().attr(TRACE_ID_KEY).get()))
 				.doOnResolveError((conn, th) -> doOnResolveError.set(conn.channel().attr(TRACE_ID_KEY).get()))
 				.connect()
-				.block();
+				.block(Duration.ofSeconds(5));
 
 		assertThat(doOnResolve).hasValue(TRACE_ID_VALUE);
 		assertThat(doAfterResolve).hasValue(TRACE_ID_VALUE);
@@ -81,7 +82,8 @@ class ClientTransportResolverHooksTest {
 				})
 				.connect()
 				.as(StepVerifier::create)
-				.verifyError(UnknownHostException.class);
+				.expectError(UnknownHostException.class)
+				.verify(Duration.ofSeconds(5));
 
 			assertThat(doOnResolve).hasValue(TRACE_ID_VALUE);
 			assertThat(doAfterResolve).hasValue(0);

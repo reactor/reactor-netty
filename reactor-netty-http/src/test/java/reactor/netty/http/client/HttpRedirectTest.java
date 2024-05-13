@@ -393,7 +393,7 @@ class HttpRedirectTest extends BaseHttpTest {
 		          .get()
 		          .uri("/")
 		          .responseContent()
-		          .blockLast();
+		          .blockLast(Duration.ofSeconds(5));
 
 		assertThat(followRedirects.get()).isEqualTo(4);
 	}
