@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ class ContextPropagationTest {
 					      .wiretap(true)
 					      .connect()
 					      .contextWrite(ctx -> ContextSnapshot.captureAll(registry).updateContext(ctx))
-					      .block();
+					      .block(Duration.ofSeconds(5));
 
 			assertThat(connection).isNotNull();
 
