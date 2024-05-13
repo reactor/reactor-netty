@@ -140,7 +140,7 @@ class TcpResourcesTest {
 		                               	try {
 			                                out.sendString(Flux.just("Hello World!"))
 			                                   .then()
-			                                   .block();
+			                                   .block(Duration.ofSeconds(5));
 		                                }
 		                                catch (RuntimeException e) {
 			                                latch.countDown();
