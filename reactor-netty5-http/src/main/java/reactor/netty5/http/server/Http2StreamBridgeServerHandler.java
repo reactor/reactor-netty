@@ -164,6 +164,15 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter impleme
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof Buffer buffer) {
+			if (!pendingResponse) {
+				if (HttpServerOperations.log.isDebugEnabled()) {
+					HttpServerOperations.log.debug(
+							format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"), msg);
+				}
+				((Buffer) msg).close();
+				return ctx.newSucceededFuture();
+			}
+
 			return ctx.write(new DefaultHttpContent(buffer));
 		}
 		else if (msg instanceof HttpResponse && CONTINUE.equals(((HttpResponse) msg).status())) {

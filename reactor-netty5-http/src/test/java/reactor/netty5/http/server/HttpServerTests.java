@@ -109,6 +109,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
@@ -1036,7 +1037,8 @@ class HttpServerTests extends BaseHttpTest {
 				(req, out) -> {
 					req.addHeader("Connection", "close");
 					return out;
-				});
+				},
+				HttpProtocol.HTTP11);
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(data.isAccessible()).isFalse();
 		assertThat(data1.isAccessible()).isFalse();
@@ -1052,12 +1054,14 @@ class HttpServerTests extends BaseHttpTest {
 				(req, out) -> {
 					req.addHeader("Connection", "close");
 					return out;
-				});
+				},
+				HttpProtocol.HTTP11);
 		assertThat(data.isAccessible()).isFalse();
 	}
 
-	@Test
-	void testDropPublisher_1() throws Exception {
+	@ParameterizedTest
+	@EnumSource(value = HttpProtocol.class, names = {"HTTP11", "H2C"})
+	void testDropPublisher_1(HttpProtocol protocol) throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		Buffer data = preferredAllocator().copyOf("test".getBytes(Charset.defaultCharset())).makeReadOnly();
 		Buffer data1 = data.copy(0, data.readableBytes(), true);
@@ -1067,7 +1071,8 @@ class HttpServerTests extends BaseHttpTest {
 				                 .send(Flux.defer(() -> Flux.just(data, data1, data2))
 				                           .doFinally(s -> latch.countDown()))
 				                 .then(),
-				(req, out) -> out);
+				(req, out) -> out,
+				protocol);
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(data.isAccessible()).isFalse();
 		assertThat(data1.isAccessible()).isFalse();
@@ -1081,7 +1086,8 @@ class HttpServerTests extends BaseHttpTest {
 				(req, res) -> res.header("Content-Length", "0")
 				                 .send(Mono.just(data))
 				                 .then(),
-				(req, out) -> out);
+				(req, out) -> out,
+				HttpProtocol.HTTP11);
 		assertThat(data.isAccessible()).isFalse();
 	}
 
@@ -1091,23 +1097,27 @@ class HttpServerTests extends BaseHttpTest {
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .sendObject(data),
-				(req, out) -> out);
+				(req, out) -> out,
+				HttpProtocol.HTTP11);
 		assertThat(data.isAccessible()).isFalse();
 	}
 
 	private void doTestDropData(
 			BiFunction<? super HttpServerRequest, ? super
 					HttpServerResponse, ? extends Publisher<Void>> serverFn,
-			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> clientFn)
+			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> clientFn,
+			HttpProtocol protocol)
 			throws Exception {
 		disposableServer =
 				createServer()
+				          .protocol(protocol)
 				          .handle(serverFn)
 				          .bindNow(Duration.ofSeconds(30));
 
 		CountDownLatch latch = new CountDownLatch(1);
 		String response =
 				createClient(disposableServer.port())
+				          .protocol(protocol)
 				          .doOnRequest((req, conn) -> conn.onTerminate()
 				                                          .subscribe(null, null, latch::countDown))
 				          .request(HttpMethod.GET)
