@@ -612,7 +612,7 @@ public final class ProxyProvider {
 		 *
 		 * @param address The address to connect to.
 		 * @return {@code this}
-		 * @deprecated as of 1.2.0 Prefer using {@link #socketAddress(SocketAddress)}.
+		 * @deprecated as of 1.2.0. Prefer using {@link #socketAddress(SocketAddress)}.
 		 * This method will be removed in 1.3.0.
 		 */
 		@Deprecated
@@ -633,7 +633,7 @@ public final class ProxyProvider {
 		 *
 		 * @param addressSupplier The supplier for the address to connect to.
 		 * @return {@code this}
-		 * @deprecated as of 1.2.0 Prefer using {@link #socketAddress(SocketAddress)}.
+		 * @deprecated as of 1.2.0. Prefer using {@link #socketAddress(SocketAddress)}.
 		 * This method will be removed in 1.3.0.
 		 */
 		@Deprecated
