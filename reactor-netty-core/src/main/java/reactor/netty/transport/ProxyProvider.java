@@ -102,7 +102,8 @@ public final class ProxyProvider {
 	 * The supplier for the address to connect to.
 	 *
 	 * @return The supplier for the address to connect to.
-	 * @deprecated Use {@link #getSocketAddress()} instead
+	 * @deprecated as of 1.2.0. Prefer using {@link #getSocketAddress()}.
+	 * This method will be removed in 1.3.0.
 	 */
 	@Deprecated
 	public final Supplier<? extends InetSocketAddress> getAddress() {
