@@ -424,6 +424,11 @@ public final class ProxyProvider {
 		}
 
 		@Override
+		public final Builder address(InetSocketAddress address) {
+			return socketAddress(address);
+		}
+
+		@Override
 		public final Builder port(int port) {
 			this.port = port;
 			return this;
@@ -441,6 +446,11 @@ public final class ProxyProvider {
 				}
 			};
 			return this;
+		}
+
+		@Override
+		public final Builder address(Supplier<? extends InetSocketAddress> addressSupplier) {
+			return socketAddress(addressSupplier);
 		}
 
 		@Override
@@ -601,12 +611,11 @@ public final class ProxyProvider {
 		 *
 		 * @param address The address to connect to.
 		 * @return {@code this}
-		 * @deprecated Use {@link #socketAddress(SocketAddress)} instead
+		 * @deprecated as of 1.2.0 Prefer using {@link #socketAddress(SocketAddress)}.
+		 * This method will be removed in 1.3.0.
 		 */
 		@Deprecated
-		default Builder address(InetSocketAddress address) {
-			return socketAddress(address);
-		}
+		Builder address(InetSocketAddress address);
 
 		/**
 		 * The address to connect to.
@@ -614,18 +623,8 @@ public final class ProxyProvider {
 		 * @param address The address to connect to.
 		 * @return {@code this}
 		 */
-		Builder socketAddress(SocketAddress address);
-
-		/**
-		 * The supplier for the address to connect to.
-		 *
-		 * @param addressSupplier The supplier for the address to connect to.
-		 * @return {@code this}
-		 * @deprecated Use {@link #socketAddress(SocketAddress)} instead
-		 */
-		@Deprecated
-		default Builder address(Supplier<? extends InetSocketAddress> addressSupplier) {
-			return socketAddress(addressSupplier);
+		default Builder socketAddress(SocketAddress address) {
+			throw new UnsupportedOperationException();
 		}
 
 		/**
@@ -633,8 +632,21 @@ public final class ProxyProvider {
 		 *
 		 * @param addressSupplier The supplier for the address to connect to.
 		 * @return {@code this}
+		 * @deprecated as of 1.2.0 Prefer using {@link #socketAddress(SocketAddress)}.
+		 * This method will be removed in 1.3.0.
 		 */
-		Builder socketAddress(Supplier<? extends SocketAddress> addressSupplier);
+		@Deprecated
+		Builder address(Supplier<? extends InetSocketAddress> addressSupplier);
+
+		/**
+		 * The supplier for the address to connect to.
+		 *
+		 * @param addressSupplier The supplier for the address to connect to.
+		 * @return {@code this}
+		 */
+		default Builder socketAddress(Supplier<? extends SocketAddress> addressSupplier) {
+			throw new UnsupportedOperationException();
+		}
 	}
 
 	public interface Builder {
