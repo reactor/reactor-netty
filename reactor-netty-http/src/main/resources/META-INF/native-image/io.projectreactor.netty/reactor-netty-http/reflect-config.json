@@ -225,6 +225,13 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.server.WebsocketServerOperations$WebsocketHttpServerMetricsHandler"
+		},
+		"name": "reactor.netty.http.server.WebsocketServerOperations$WebsocketHttpServerMetricsHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.server.logging.AccessLogHandlerH1"
 		},
 		"name": "reactor.netty.http.server.logging.AccessLogHandlerH1",

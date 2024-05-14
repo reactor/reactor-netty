@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static reactor.netty.Metrics.NA;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.UNKNOWN;
@@ -162,7 +163,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		String status = UNKNOWN;
 
 		ResponseTimeHandlerContext(MicrometerHttpClientMetricsRecorder recorder, HttpRequest request, String path,
-				SocketAddress remoteAddress, SocketAddress proxyAddress) {
+				SocketAddress remoteAddress, @Nullable SocketAddress proxyAddress) {
 			super((carrier, key, value) -> Objects.requireNonNull(carrier).headers().set(key, value));
 			this.recorder = recorder;
 			this.method = request.method().name();
@@ -188,12 +189,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public Timer getTimer() {
-			if (proxyAddress == null) {
-				return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, path, method, status);
-			}
-			else {
-				return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress, path, method, status);
-			}
+			return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, path, method, status);
 		}
 
 		@Override
@@ -205,15 +201,9 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			if (proxyAddress == null) {
-				return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
-						STATUS.asString(), status, URI.asString(), path);
-			}
-			else {
-				return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
-						PROXY_ADDRESS.asString(), proxyAddress,
-						STATUS.asString(), status, URI.asString(), path);
-			}
+			return KeyValues.of(METHOD.asString(), method, REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
+					PROXY_ADDRESS.asString(), proxyAddress == null ? NA : proxyAddress,
+					STATUS.asString(), status, URI.asString(), path);
 		}
 	}
 }

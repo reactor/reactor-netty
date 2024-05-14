@@ -35,6 +35,7 @@ import java.util.function.Supplier;
 
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.ERROR;
+import static reactor.netty.Metrics.NA;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
@@ -110,12 +111,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public Timer getTimer() {
-			if (proxyAddress == null) {
-				return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, status);
-			}
-			else {
-				return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress, status);
-			}
+			return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
 		}
 
 		@Override
@@ -205,13 +201,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			if (proxyAddress == null) {
-				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort, STATUS.asString(), status);
-			}
-			else {
-				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
-						PROXY_ADDRESS.asString(), proxyAddress, STATUS.asString(), status);
-			}
+			return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ":" + netPeerPort,
+					PROXY_ADDRESS.asString(), proxyAddress == null ? NA : proxyAddress, STATUS.asString(), status);
 		}
 
 		@Override
@@ -266,14 +257,14 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		@Override
 		@SuppressWarnings("try")
 		public void channelActive(ChannelHandlerContext ctx) {
-			SocketAddress rАddr = remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress();
-			if (rАddr instanceof InetSocketAddress) {
-				InetSocketAddress address = (InetSocketAddress) rАddr;
+			SocketAddress rAddr = remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress();
+			if (rAddr instanceof InetSocketAddress) {
+				InetSocketAddress address = (InetSocketAddress) rAddr;
 				this.netPeerName = address.getHostString();
 				this.netPeerPort = address.getPort() + "";
 			}
 			else {
-				this.netPeerName = rАddr.toString();
+				this.netPeerName = rAddr.toString();
 				this.netPeerPort = "";
 			}
 			observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
@@ -349,12 +340,12 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public KeyValues getLowCardinalityKeyValues() {
-			if (proxyAddress == null) {
+			if (recorder.onServer) {
 				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ':' + netPeerPort, STATUS.asString(), status);
 			}
 			else {
 				return KeyValues.of(REMOTE_ADDRESS.asString(), netPeerName + ':' + netPeerPort,
-						PROXY_ADDRESS.asString(), proxyAddress, STATUS.asString(), status);
+						PROXY_ADDRESS.asString(), proxyAddress == null ? NA : proxyAddress, STATUS.asString(), status);
 			}
 		}
 
@@ -375,12 +366,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public Timer getTimer() {
-			if (proxyAddress == null) {
-				return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, status);
-			}
-			else {
-				return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, proxyAddress, status);
-			}
+			return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
 		}
 	}
 }

@@ -126,7 +126,7 @@ class WebsocketTest extends BaseHttpTest {
 				          .handle((i, o) -> i.receive().asString())
 				          .log("client")
 				          .collectList()
-				          .block();
+				          .block(Duration.ofSeconds(5));
 
 		assertThat(res).isNotNull();
 		assertThat(res.get(0)).isEqualTo("test");
@@ -187,7 +187,7 @@ class WebsocketTest extends BaseHttpTest {
 		                      .log())
 		            .expectNextSequence(expected)
 		            .expectComplete()
-		            .verify();
+		            .verify(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -240,7 +240,7 @@ class WebsocketTest extends BaseHttpTest {
 		StepVerifier.create(response)
 		            .expectNextMatches(list -> "1000 World!".equals(list.get(999)))
 		            .expectComplete()
-		            .verify();
+		            .verify(Duration.ofSeconds(5));
 
 		log.debug("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
 	}
@@ -274,7 +274,7 @@ class WebsocketTest extends BaseHttpTest {
 		                      .log())
 		            .expectNextSequence(expected)
 		            .expectComplete()
-		            .verify();
+		            .verify(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -587,7 +587,7 @@ class WebsocketTest extends BaseHttpTest {
 				                      .log()))
 		            .expectNextSequence(expected)
 		            .expectComplete()
-		            .verify();
+		            .verify(Duration.ofSeconds(5));
 
 		pr.dispose();
 	}
@@ -953,7 +953,7 @@ class WebsocketTest extends BaseHttpTest {
 				          .get()
 				          .uri("/ws")
 				          .response()
-				          .block();
+				          .block(Duration.ofSeconds(5));
 		assertThat(res).isNotNull();
 		assertThat(res.status()).isEqualTo(HttpResponseStatus.SWITCHING_PROTOCOLS);
 	}
@@ -986,7 +986,7 @@ class WebsocketTest extends BaseHttpTest {
 				          .uri("/ws")
 				          .receive()
 				          .asString()
-				          .blockLast();
+				          .blockLast(Duration.ofSeconds(5));
 
 		assertThat(res).isNotNull()
 		               .isEqualTo("test");
