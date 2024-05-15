@@ -983,7 +983,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			this.metricsRecorder = config.metricsRecorderInternal();
 			this.opsFactory = config.channelOperationsProvider();
 			this.protocols = config._protocols;
-			this.proxyAddress = config.proxyProvider() != null ? config.proxyProvider().getAddress().get() : null;
+			this.proxyAddress = config.proxyProvider() != null ? config.proxyProvider().getSocketAddress().get() : null;
 			this.sslProvider = config.sslProvider;
 			this.uriTagValue = config.uriTagValue;
 		}

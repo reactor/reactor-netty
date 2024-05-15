@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ public final class ProxyProvider {
 
 	final String username;
 	final Function<? super String, ? extends String> password;
-	final Supplier<? extends InetSocketAddress> address;
+	final Supplier<? extends SocketAddress> address;
 	final Predicate<SocketAddress> nonProxyHostPredicate;
 	final Supplier<? extends HttpHeaders> httpHeaders;
 	final Proxy type;
@@ -102,8 +102,20 @@ public final class ProxyProvider {
 	 * The supplier for the address to connect to.
 	 *
 	 * @return The supplier for the address to connect to.
+	 * @deprecated as of 1.2.0. Prefer using {@link #getSocketAddress()}.
+	 * This method will be removed in 1.3.0.
 	 */
+	@Deprecated
 	public final Supplier<? extends InetSocketAddress> getAddress() {
+		return () -> (InetSocketAddress) address.get();
+	}
+
+	/**
+	 * The supplier for the address to connect to.
+	 *
+	 * @return The supplier for the address to connect to.
+	 */
+	public final Supplier<? extends SocketAddress> getSocketAddress() {
 		return this.address;
 	}
 
@@ -125,7 +137,7 @@ public final class ProxyProvider {
 	 * @return a new eventual {@link ProxyHandler}
 	 */
 	public final ProxyHandler newProxyHandler() {
-		InetSocketAddress proxyAddr = this.address.get();
+		SocketAddress proxyAddr = this.address.get();
 
 		final boolean b = Objects.nonNull(username) && Objects.nonNull(password);
 
@@ -212,7 +224,7 @@ public final class ProxyProvider {
 		ProxyProvider that = (ProxyProvider) o;
 		return Objects.equals(username, that.username) &&
 				Objects.equals(getPasswordValue(), that.getPasswordValue()) &&
-				Objects.equals(getAddress().get(), that.getAddress().get()) &&
+				Objects.equals(getSocketAddress().get(), that.getSocketAddress().get()) &&
 				getNonProxyHostsValue() == that.getNonProxyHostsValue() &&
 				Objects.equals(httpHeaders.get(), that.httpHeaders.get()) &&
 				getType() == that.getType() &&
@@ -224,7 +236,7 @@ public final class ProxyProvider {
 		int result = 1;
 		result = 31 * result + Objects.hashCode(username);
 		result = 31 * result + Objects.hashCode(getPasswordValue());
-		result = 31 * result + Objects.hashCode(getAddress().get());
+		result = 31 * result + Objects.hashCode(getSocketAddress().get());
 		result = 31 * result + Boolean.hashCode(getNonProxyHostsValue());
 		result = 31 * result + Objects.hashCode(httpHeaders.get());
 		result = 31 * result + Objects.hashCode(getType());
@@ -233,7 +245,7 @@ public final class ProxyProvider {
 	}
 
 	private boolean getNonProxyHostsValue() {
-		return nonProxyHostPredicate.test(getAddress().get());
+		return nonProxyHostPredicate.test(getSocketAddress().get());
 	}
 
 	@Nullable
@@ -385,7 +397,7 @@ public final class ProxyProvider {
 		Function<? super String, ? extends String> password;
 		String host;
 		int port;
-		Supplier<? extends InetSocketAddress> address;
+		Supplier<? extends SocketAddress> address;
 		Predicate<SocketAddress> nonProxyHostPredicate = ALWAYS_PROXY;
 		Supplier<? extends HttpHeaders> httpHeaders = NO_HTTP_HEADERS;
 		Proxy type;
@@ -413,20 +425,37 @@ public final class ProxyProvider {
 		}
 
 		@Override
+		public final Builder address(InetSocketAddress address) {
+			return socketAddress(address);
+		}
+
+		@Override
 		public final Builder port(int port) {
 			this.port = port;
 			return this;
 		}
 
 		@Override
-		public final Builder address(InetSocketAddress address) {
+		public final Builder socketAddress(SocketAddress address) {
 			Objects.requireNonNull(address, "address");
-			this.address = () -> AddressUtils.replaceWithResolved(address);
+			this.address = () -> {
+				if (address instanceof InetSocketAddress) {
+					return AddressUtils.replaceWithResolved((InetSocketAddress) address);
+				}
+				else {
+					return address;
+				}
+			};
 			return this;
 		}
 
 		@Override
 		public final Builder address(Supplier<? extends InetSocketAddress> addressSupplier) {
+			return socketAddress(addressSupplier);
+		}
+
+		@Override
+		public final Builder socketAddress(Supplier<? extends SocketAddress> addressSupplier) {
 			this.address = Objects.requireNonNull(addressSupplier, "addressSupplier");
 			return this;
 		}
@@ -583,8 +612,32 @@ public final class ProxyProvider {
 		 *
 		 * @param address The address to connect to.
 		 * @return {@code this}
+		 * @deprecated as of 1.2.0. Prefer using {@link #socketAddress(SocketAddress)}.
+		 * This method will be removed in 1.3.0.
 		 */
+		@Deprecated
 		Builder address(InetSocketAddress address);
+
+		/**
+		 * The address to connect to.
+		 *
+		 * @param address The address to connect to.
+		 * @return {@code this}
+		 */
+		default Builder socketAddress(SocketAddress address) {
+			throw new UnsupportedOperationException();
+		}
+
+		/**
+		 * The supplier for the address to connect to.
+		 *
+		 * @param addressSupplier The supplier for the address to connect to.
+		 * @return {@code this}
+		 * @deprecated as of 1.2.0. Prefer using {@link #socketAddress(SocketAddress)}.
+		 * This method will be removed in 1.3.0.
+		 */
+		@Deprecated
+		Builder address(Supplier<? extends InetSocketAddress> addressSupplier);
 
 		/**
 		 * The supplier for the address to connect to.
@@ -592,7 +645,9 @@ public final class ProxyProvider {
 		 * @param addressSupplier The supplier for the address to connect to.
 		 * @return {@code this}
 		 */
-		Builder address(Supplier<? extends InetSocketAddress> addressSupplier);
+		default Builder socketAddress(Supplier<? extends SocketAddress> addressSupplier) {
+			throw new UnsupportedOperationException();
+		}
 	}
 
 	public interface Builder {
