@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.uring.IOUring;
 import io.netty5.channel.uring.IOUringDatagramChannel;
+import io.netty5.channel.uring.IOUringHandler;
 import io.netty5.channel.uring.IOUringServerSocketChannel;
 import io.netty5.channel.uring.IOUringSocketChannel;
 import reactor.util.Logger;
@@ -78,7 +79,7 @@ final class DefaultLoopIOUring implements DefaultLoop {
 
 	@Override
 	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		return new MultithreadEventLoopGroup(threads, factory, IOUring.newFactory());
+		return new MultithreadEventLoopGroup(threads, factory, IOUringHandler.newFactory());
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultLoopIOUring.class);
