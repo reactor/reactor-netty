@@ -355,15 +355,13 @@ final class WebsocketServerOperations extends HttpServerOperations
 		}
 
 		@Override
-		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-			ctx.fireExceptionCaught(cause);
+		public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireChannelExceptionCaught(cause);
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(msg, promise);
+		public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+			return ctx.write(msg);
 		}
 
 		@Override
