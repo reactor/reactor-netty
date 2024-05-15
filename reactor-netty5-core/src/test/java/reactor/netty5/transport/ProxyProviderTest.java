@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ class ProxyProviderTest {
 	void connectTimeoutWithDefault() {
 		ProxyProvider provider = ProxyProvider.builder()
 		                                      .type(ProxyProvider.Proxy.SOCKS5)
-		                                      .address(ADDRESS_1)
+		                                      .socketAddress(ADDRESS_1)
 		                                      .build();
 		assertThat(provider.connectTimeoutMillis).isEqualTo(10000);
 	}
@@ -204,7 +204,7 @@ class ProxyProviderTest {
 
 		assertThat(provider).isNotNull();
 		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.SOCKS5);
-		assertThat(provider.getAddress().get().getHostString()).isEqualTo("host");
+		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getHostString()).isEqualTo("host");
 	}
 
 	@Test
@@ -239,7 +239,7 @@ class ProxyProviderTest {
 		ProxyProvider provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getPort()).isEqualTo(1080);
+		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(1080);
 	}
 
 	@Test
@@ -251,7 +251,7 @@ class ProxyProviderTest {
 		ProxyProvider provider = ProxyProvider.createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getPort()).isEqualTo(2080);
+		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(2080);
 	}
 
 	@Test
@@ -308,7 +308,7 @@ class ProxyProviderTest {
 	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.SOCKS5)
-		                    .address(address)
+		                    .socketAddress(address)
 		                    .username("netty")
 		                    .password(passwordFunc)
 		                    .nonProxyHosts(NON_PROXY_HOSTS)
@@ -318,7 +318,7 @@ class ProxyProviderTest {
 	private ProxyProvider createNoAuthProxy(InetSocketAddress address) {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.SOCKS5)
-		                    .address(address)
+		                    .socketAddress(address)
 		                    .nonProxyHosts(NON_PROXY_HOSTS)
 		                    .build();
 	}
@@ -326,7 +326,7 @@ class ProxyProviderTest {
 	private ProxyProvider createConnectTimeoutProxy(long connectTimeoutMillis) {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.SOCKS5)
-		                    .address(ADDRESS_1)
+		                    .socketAddress(ADDRESS_1)
 		                    .connectTimeoutMillis(connectTimeoutMillis)
 		                    .build();
 	}
@@ -334,7 +334,7 @@ class ProxyProviderTest {
 	private ProxyProvider createNonProxyHostsProxy(String nonProxyHosts) {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.HTTP)
-		                    .address(ADDRESS_1)
+		                    .socketAddress(ADDRESS_1)
 		                    .nonProxyHosts(NON_PROXY_HOSTS)
 		                    .nonProxyHosts(nonProxyHosts)
 		                    .build();

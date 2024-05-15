@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,8 +71,8 @@ public final class HttpClientProxyProvider extends ProxyProvider {
 		String username = getUsername();
 		String password = getPasswordValue();
 		ProxyHandler proxyHandler = username != null && password != null ?
-				new HttpProxyHandler(getAddress().get(), username, password, this.httpHeaders.get()) :
-				new HttpProxyHandler(getAddress().get(), this.httpHeaders.get());
+				new HttpProxyHandler(getSocketAddress().get(), username, password, this.httpHeaders.get()) :
+				new HttpProxyHandler(getSocketAddress().get(), this.httpHeaders.get());
 		proxyHandler.setConnectTimeoutMillis(getConnectTimeoutMillis());
 		return proxyHandler;
 	}

@@ -219,7 +219,7 @@ class HttpClientProxyProviderTest {
 		ProxyProvider provider = createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getHostString()).isEqualTo("https");
+		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getHostString()).isEqualTo("https");
 	}
 
 	@Test
@@ -255,7 +255,7 @@ class HttpClientProxyProviderTest {
 		ProxyProvider provider = createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getPort()).isEqualTo(8080);
+		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(8080);
 	}
 
 	@Test
@@ -267,7 +267,7 @@ class HttpClientProxyProviderTest {
 		ProxyProvider provider = createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getPort()).isEqualTo(8443);
+		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(8443);
 	}
 
 	@Test
@@ -278,7 +278,7 @@ class HttpClientProxyProviderTest {
 		ProxyProvider provider = createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getPort()).isEqualTo(80);
+		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(80);
 	}
 
 	@Test
@@ -289,7 +289,7 @@ class HttpClientProxyProviderTest {
 		ProxyProvider provider = createFrom(properties);
 
 		assertThat(provider).isNotNull();
-		assertThat(provider.getAddress().get().getPort()).isEqualTo(443);
+		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getPort()).isEqualTo(443);
 	}
 
 	@Test
@@ -301,7 +301,7 @@ class HttpClientProxyProviderTest {
 
 		assertThat(provider).isNotNull();
 		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
-		assertThat(provider.getAddress().get().getHostString()).isEqualTo("host");
+		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getHostString()).isEqualTo("host");
 	}
 
 	@Test
@@ -313,7 +313,7 @@ class HttpClientProxyProviderTest {
 
 		assertThat(provider).isNotNull();
 		assertThat(provider.getType()).isEqualTo(ProxyProvider.Proxy.HTTP);
-		assertThat(provider.getAddress().get().getHostString()).isEqualTo("host");
+		assertThat(((InetSocketAddress) provider.getSocketAddress().get()).getHostString()).isEqualTo("host");
 	}
 
 	private ProxyProvider createHeaderProxy(InetSocketAddress address, Consumer<HttpHeaders> authHeader) {
