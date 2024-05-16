@@ -565,6 +565,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		int port2 = SocketUtils.findAvailableTcpPort();
 
 		AtomicReference<Throwable> error = new AtomicReference<>();
+		AtomicReference<Throwable> bufferReleasedError = new AtomicReference<>();
 		DisposableServer server1 = null;
 		DisposableServer server2 = null;
 		Sinks.Empty<Void> bufferReleased = Sinks.empty();
@@ -601,6 +602,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 					                        .uri("/")
 					                        .responseContent()
 					                        .retain()
+					                        .doOnError(bufferReleasedError::set)
 					                        .flatMap(b -> serverFn.apply(b, out))
 					                        .doOnError(error::set))
 					          .bindNow();
@@ -626,6 +628,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 
 			assertThat(error.get()).isNotNull()
 			                       .isInstanceOf(RuntimeException.class);
+			assertThat(bufferReleasedError.get()).isNull();
 		}
 		finally {
 			if (server1 != null) {
