@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
@@ -159,13 +160,9 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			if (markSentHeaderAndBody(b)) {
 				HttpMessage msg = prepareHttpMessage(b);
 
-				try {
-					afterMarkSentHeaders();
-				}
-				catch (RuntimeException e) {
-					b.close();
-					throw e;
-				}
+				// If afterMarkSentHeaders throws an exception there is no need to release the ByteBuf here.
+				// It will be released by PostHeadersNettyOutbound as there are on error/cancel hooks
+				afterMarkSentHeaders();
 
 				return channel().writeAndFlush(msg);
 			}
@@ -510,7 +507,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	static final Pattern SCHEME_PATTERN = Pattern.compile("^(https?|wss?)://.*$");
 
-	protected static final class PostHeadersNettyOutbound implements NettyOutbound, Consumer<Throwable>, Runnable {
+	protected static final class PostHeadersNettyOutbound extends AtomicBoolean implements NettyOutbound, Consumer<Throwable>, Runnable {
 
 		final Mono<Void> source;
 		final HttpOperations<?, ?> parent;
@@ -530,14 +527,14 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 		@Override
 		public void run() {
-			if (msg != null && msg.isAccessible()) {
+			if (msg != null && msg.isAccessible() && compareAndSet(false, true)) {
 				msg.close();
 			}
 		}
 
 		@Override
 		public void accept(Throwable throwable) {
-			if (msg != null && msg.isAccessible()) {
+			if (msg != null && msg.isAccessible() && compareAndSet(false, true)) {
 				msg.close();
 			}
 		}

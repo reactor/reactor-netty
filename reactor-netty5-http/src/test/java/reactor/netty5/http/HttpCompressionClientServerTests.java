@@ -23,31 +23,40 @@ import java.lang.annotation.Target;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.zip.GZIPInputStream;
 
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import com.aayushatharva.brotli4j.decoder.DirectDecompress;
 import com.github.luben.zstd.util.Native;
+import io.netty5.buffer.Buffer;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.compression.Zstd;
+import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.DisposableServer;
 import reactor.netty5.SocketUtils;
 import reactor.netty5.http.client.HttpClient;
 import reactor.netty5.http.server.HttpServer;
+import reactor.netty5.http.server.HttpServerResponse;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty5.NettyPipeline.HttpCodec;
 
 /**
  * This test class verifies HTTP compression.
@@ -576,13 +585,24 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue825_2() {
+	void testIssue825SendMono() {
+		doTestIssue825_2((b, out) -> out.send(Mono.just(b)));
+	}
+
+	@Test
+	void testIssue825SendObject() {
+		doTestIssue825_2((b, out) -> out.sendObject(b));
+	}
+
+	private void doTestIssue825_2(BiFunction<Buffer, HttpServerResponse, Publisher<Void>> serverFn) {
 		int port1 = SocketUtils.findAvailableTcpPort();
 		int port2 = SocketUtils.findAvailableTcpPort();
 
 		AtomicReference<Throwable> error = new AtomicReference<>();
+		AtomicReference<Throwable> bufferReleasedError = new AtomicReference<>();
 		DisposableServer server1 = null;
 		DisposableServer server2 = null;
+		Sinks.Empty<Void> bufferReleased = Sinks.empty();
 		try {
 			server1 =
 					createServer(port1)
@@ -591,11 +611,27 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 					          })
 					          .handle((in, out) ->
 					              createClient(port2)
+					                        .doOnChannelInit((obs, ch, addr) ->
+					                            ch.pipeline().addAfter(HttpCodec, "doTestIssue825_2", new ChannelHandlerAdapter() {
+					                                @Override
+					                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+					                                    ctx.fireChannelRead(msg);
+					                                    if (msg instanceof LastHttpContent<?> last) {
+					                                        if (!last.isAccessible()) {
+					                                            bufferReleased.tryEmitEmpty();
+					                                        }
+					                                        else {
+					                                            bufferReleased.tryEmitError(new RuntimeException("The buffer is not released!"));
+					                                        }
+					                                    }
+					                                }
+					                            }))
 					                        .get()
 					                        .uri("/")
 					                        .responseContent()
 					                        .transferOwnership()
-					                        .flatMap(b -> out.send(Mono.just(b)))
+					                        .doOnError(bufferReleasedError::set)
+					                        .flatMap(b -> serverFn.apply(b, out))
 					                        .doOnError(error::set))
 					          .bindNow();
 
@@ -613,8 +649,14 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 			            .expectError()
 			            .verify(Duration.ofSeconds(30));
 
+			bufferReleased.asMono()
+			              .as(StepVerifier::create)
+			              .expectComplete()
+			              .verify(Duration.ofSeconds(5));
+
 			assertThat(error.get()).isNotNull()
 			                       .isInstanceOf(RuntimeException.class);
+			assertThat(bufferReleasedError.get()).isNull();
 		}
 		finally {
 			if (server1 != null) {
