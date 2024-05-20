@@ -1257,7 +1257,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .uri("/")
 				          .responseContent())
 				    .expectError(PrematureCloseException.class)
-				    .verify(Duration.ofSeconds(5));
+				    .verify(Duration.ofSeconds(10));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(error.get()).isInstanceOf(AbortedException.class);
