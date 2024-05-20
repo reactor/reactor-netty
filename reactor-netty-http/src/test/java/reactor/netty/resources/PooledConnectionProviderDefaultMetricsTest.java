@@ -45,6 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.ACTIVE_STREAMS;
 import static reactor.netty.Metrics.ERROR;
@@ -307,6 +308,11 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 					.blockLast(Duration.ofSeconds(30));
 
 			assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+			await().atMost(1000, TimeUnit.MILLISECONDS)
+			       .with()
+			       .pollInterval(50, TimeUnit.MILLISECONDS)
+			       .untilAsserted(() -> assertGauge(registry, name, NAME, "http2.testConnectionPoolPendingAcquireSize").hasValueEqualTo(0));
 
 			assertGauge(registry, name, NAME, "http2.testConnectionPoolPendingAcquireSize").hasValueEqualTo(0);
 		}
