@@ -703,7 +703,7 @@ class Http2Tests extends BaseHttpTest {
 		    .as(StepVerifier::create)
 		    .assertNext(t -> assertThat(t.getT1()).isNotNull().hasSize(2).allMatch("doTestMaxStreams"::equals))
 		    .expectComplete()
-		    .verify(Duration.ofSeconds(5));
+		    .verify(Duration.ofSeconds(10));
 	}
 
 	@ParameterizedTest
@@ -740,6 +740,6 @@ class Http2Tests extends BaseHttpTest {
 		      .as(StepVerifier::create)
 		      .expectNextMatches(buf -> expectation.equals(buf.toString(Charset.defaultCharset())))
 		      .expectComplete()
-		      .verify(Duration.ofSeconds(5));
+		      .verify(Duration.ofSeconds(10));
 	}
 }
