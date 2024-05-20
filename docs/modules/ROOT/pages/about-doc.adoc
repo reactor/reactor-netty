@@ -35,7 +35,7 @@ ifeval::["{backend}" == "html5"]
 TIP: To facilitate documentation edits, you can edit the current page from the `Edit this Page` link located in the upper right corner sidebar. The link opens
 an edit `UI` directly on `GitHub` for the main source file for the current page. These links are
 only present in the `HTML5` version of this reference guide. They look like the following link:
-link:https://github.com/reactor/reactor-netty/edit/netty5/docs/modules/ROOT/pages/about-doc.adoc[Edit this Page^, role="fa fa-edit"] to xref:about-doc.adoc[About the Documentation].
+link:https://github.com/reactor/reactor-netty/edit/netty5/docs/modules/ROOT/pages/about-doc.adoc[Edit this Page^, role="fa fa-edit"] to make changes to xref:about-doc.adoc[About the Documentation] page.
 endif::[]
 
 [[getting-help]]

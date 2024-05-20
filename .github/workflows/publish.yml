@@ -68,7 +68,7 @@ jobs:
 #        run: ./gradlew reactor-netty-incubator-quic:check
 
   # build antora doc for the current branch, and upload docs/build results to workflow run.
-  # Each deploy jobs can then download it, in order to let the docs-zip be built properly
+  # Each deploy job can then download it, in order to let the docs-zip be built properly
   # (see reactor-netty/build.gradle which includes docs/build/site and optionally docs/assembly/.../pdf into the target docs.zip)
   build-branch-doc:
     runs-on: ubuntu-20.04
