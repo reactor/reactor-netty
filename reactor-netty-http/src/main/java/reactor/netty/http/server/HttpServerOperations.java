@@ -543,7 +543,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 							return Mono.<Void>empty();
 						}
 
-						log.debug(format(channel(), "Dropped HTTP content, since response has been sent already: {}"), b);
+						if (log.isDebugEnabled()) {
+							log.debug(format(channel(), "Dropped HTTP content, since response has been sent already: {}"), b);
+						}
 						b.release();
 						return Mono.empty();
 					})
@@ -580,7 +582,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					sink.success();
 				}
 				else {
-					log.debug(format(channel(), "Dropped HTTP content, since response has been sent already: {}"), b);
+					if (log.isDebugEnabled()) {
+						log.debug(format(channel(), "Dropped HTTP content, since response has been sent already: {}"), b);
+					}
 					b.release();
 					sink.success();
 				}
@@ -597,7 +601,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				sink.success();
 			}
 			else {
-				log.debug(format(channel(), "Response has been sent already."));
+				if (log.isDebugEnabled()) {
+					log.debug(format(channel(), "Response has been sent already."));
+				}
 				sink.success();
 			}
 		});
