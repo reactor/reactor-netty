@@ -793,10 +793,13 @@ class HttpProtocolsTests extends BaseHttpTest {
 				      })
 				      .handle((req, res) ->
 				          res.withConnection(conn -> {
-				                  ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ReadTimeoutHandler);
-				                  if (handler != null) {
-				                      handlerAvailable.get().add(true);
-				                      timeout.get().add(((ReadTimeoutHandler) handler).getReaderIdleTimeInMillis());
+				                  if (!((serverProtocols.length == 2 && serverProtocols[1] == HttpProtocol.H2C) &&
+				                          (clientProtocols.length == 2 && clientProtocols[1] == HttpProtocol.H2C))) {
+				                      ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ReadTimeoutHandler);
+				                      if (handler != null) {
+				                          handlerAvailable.get().add(true);
+				                          timeout.get().add(((ReadTimeoutHandler) handler).getReaderIdleTimeInMillis());
+				                      }
 				                  }
 				                  conn.onTerminate().subscribe(null, null, () -> {
 				                      onTerminate.get().add(conn.channel().isActive() &&
@@ -1030,8 +1033,6 @@ class HttpProtocolsTests extends BaseHttpTest {
 		final AtomicReference<List<Long>> timeout;
 		final CountDownLatch latch;
 
-		boolean added;
-
 		RequestTimeoutTestChannelInboundHandler(
 				AtomicReference<List<Boolean>> handlerAvailable,
 				AtomicReference<List<Boolean>> onTerminate,
@@ -1044,16 +1045,15 @@ class HttpProtocolsTests extends BaseHttpTest {
 		}
 		@Override
 		public void channelRead(ChannelHandlerContext ctx, Object msg) {
-			if (!added && msg instanceof HttpContent) {
+			ctx.fireChannelRead(msg);
+
+			if (msg instanceof HttpRequest) {
 				ChannelHandler handler = ctx.channel().pipeline().get(NettyPipeline.ReadTimeoutHandler);
 				if (handler != null) {
 					handlerAvailable.get().add(true);
 					timeout.get().add(((ReadTimeoutHandler) handler).getReaderIdleTimeInMillis());
 				}
-				added = true;
 			}
-
-			ctx.fireChannelRead(msg);
 		}
 
 		@Override
