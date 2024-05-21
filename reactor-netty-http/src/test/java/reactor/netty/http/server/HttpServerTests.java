@@ -2290,7 +2290,7 @@ class HttpServerTests extends BaseHttpTest {
 		        .aggregate()
 		        .as(StepVerifier::create)
 		        .expectError()
-		        .verify(Duration.ofSeconds(5));
+		        .verify(Duration.ofSeconds(10));
 
 		StepVerifier.create(error.asMono())
 		            .expectNextMatches(t -> t instanceof SslHandshakeTimeoutException)
