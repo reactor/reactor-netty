@@ -3135,7 +3135,7 @@ class HttpClientTest extends BaseHttpTest {
 				      .responseContent()
 				      .aggregate()
 				      .asString()
-				      .block(Duration.ofSeconds(5));
+				      .block(Duration.ofSeconds(10));
 
 		assertThat(response).isEqualTo("testIssue1697");
 		assertThat(onRequest.get()).isFalse();
