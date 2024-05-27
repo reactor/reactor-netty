@@ -1407,9 +1407,11 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	static String reactorNettyVersion() {
-		return Optional.ofNullable(HttpClient.class.getPackage()
-		                                           .getImplementationVersion())
-		               .orElse("dev");
+		Package pac = HttpClient.class.getPackage();
+		if (pac == null) {
+			return "dev";
+		}
+		return Optional.ofNullable(pac.getImplementationVersion()).orElse("dev");
 	}
 
 	static final Logger log = Loggers.getLogger(HttpClient.class);
