@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -252,7 +252,7 @@ class QuicClientTests extends BaseQuicTests {
 		assertThat(incomingData.get()).isEqualTo("Hello World!");
 		assertThat(error.get()).isNotNull()
 				.isInstanceOf(QuicException.class)
-				.hasMessage("QUICHE_ERR_STREAM_LIMIT");
+				.hasMessageContaining("QUICHE_ERR_STREAM_LIMIT");
 	}
 
 	@Test

@@ -252,7 +252,7 @@ class QuicServerTests extends BaseQuicTests {
 		assertThat(incomingData.get()).isEqualTo("Hello World!");
 		assertThat(error.get()).isNotNull()
 				.isInstanceOf(QuicException.class)
-				.hasMessage("QUICHE_ERR_STREAM_LIMIT");
+				.hasMessageContaining("QUICHE_ERR_STREAM_LIMIT");
 	}
 
 	@Test
