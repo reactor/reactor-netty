@@ -440,7 +440,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 */
 	protected abstract HttpMessage outboundHttpMessage();
 
-	HttpMessage prepareHttpMessage(Buffer buffer) {
+	protected HttpMessage prepareHttpMessage(Buffer buffer) {
 		HttpMessage msg;
 		if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0 ||
 				isContentAlwaysEmpty()) {

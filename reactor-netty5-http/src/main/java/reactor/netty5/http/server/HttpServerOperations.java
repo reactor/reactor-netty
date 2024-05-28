@@ -71,6 +71,7 @@ import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.AsciiString;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.FutureContextListener;
 import io.netty5.util.concurrent.FutureListener;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
@@ -107,7 +108,7 @@ import static reactor.netty5.http.server.HttpServerState.REQUEST_DECODING_FAILED
  * @author Stephane Maldini1
  */
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
-		implements HttpServerRequest, HttpServerResponse {
+		implements HttpServerRequest, HttpServerResponse, FutureContextListener<Channel, Void> {
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse> configuredCompressionPredicate;
 	final ConnectionInfo connectionInfo;
@@ -129,6 +130,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	String path;
 	Future<Void> requestTimeoutFuture;
 	Consumer<? super HttpHeaders> trailerHeadersConsumer;
+	HttpMessage fullHttpResponse;
 
 	volatile Context currentContext;
 
@@ -142,6 +144,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.formDecoderProvider = replaced.formDecoderProvider;
 		this.is100ContinueExpected = replaced.is100ContinueExpected;
 		this.isHttp2 = replaced.isHttp2;
+		this.fullHttpResponse = replaced.fullHttpResponse;
 		this.mapHandle = replaced.mapHandle;
 		this.nettyRequest = replaced.nettyRequest;
 		this.nettyResponse = replaced.nettyResponse;
@@ -358,7 +361,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public HttpServerResponse keepAlive(boolean keepAlive) {
-		HttpUtil.setKeepAlive(nettyResponse, keepAlive);
+		if (fullHttpResponse == null) {
+			HttpUtil.setKeepAlive(nettyResponse, keepAlive);
+		}
+		else {
+			HttpUtil.setKeepAlive(fullHttpResponse, keepAlive);
+		}
 		return this;
 	}
 
@@ -504,10 +512,90 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
+	public NettyOutbound send(Publisher<? extends Buffer> source) {
+		if (!channel().isActive()) {
+			return then(Mono.error(AbortedException.beforeSend()));
+		}
+		if (source instanceof Mono) {
+			return new PostHeadersNettyOutbound(((Mono<Buffer>) source)
+					.flatMap(b -> {
+						if (!hasSentHeaders()) {
+							try {
+								fullHttpResponse = prepareHttpMessage(b);
+
+								afterMarkSentHeaders();
+							}
+							catch (RuntimeException e) {
+								b.close();
+								return Mono.error(e);
+							}
+
+							onComplete();
+							return Mono.<Void>empty();
+						}
+
+						if (log.isDebugEnabled()) {
+							log.debug(format(channel(), "Dropped HTTP content, since response has been sent already: {}"), b);
+						}
+						b.close();
+						return Mono.empty();
+					})
+					.doOnDiscard(Buffer.class, Buffer::close), this, null);
+		}
+		return super.send(source);
+	}
+
+	@Override
+	public NettyOutbound sendObject(Object message) {
+		if (!channel().isActive()) {
+			ReactorNetty.safeRelease(message);
+			return then(Mono.error(AbortedException.beforeSend()));
+		}
+		if (message instanceof Buffer b) {
+			return new PostHeadersNettyOutbound(Mono.create(sink -> {
+				if (!hasSentHeaders()) {
+					try {
+						fullHttpResponse = prepareHttpMessage(b);
+
+						afterMarkSentHeaders();
+					}
+					catch (RuntimeException e) {
+						// If afterMarkSentHeaders throws an exception there is no need to release the ByteBuf here.
+						// It will be released by PostHeadersNettyOutbound as there are on error/cancel hooks
+						sink.error(e);
+						return;
+					}
+
+					onComplete();
+					sink.success();
+				}
+				else {
+					if (log.isDebugEnabled()) {
+						log.debug(format(channel(), "Dropped HTTP content, since response has been sent already: {}"), b);
+					}
+					b.close();
+					sink.success();
+				}
+			}), this, b);
+		}
+		return super.sendObject(message);
+	}
+
+	@Override
 	public Mono<Void> send() {
-		return FutureMono.deferFuture(() -> markSentHeaderAndBody() ?
-				channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0))) :
-				channel().newSucceededFuture());
+		return Mono.create(sink -> {
+			if (!hasSentHeaders()) {
+				onComplete();
+				sink.success();
+			}
+			else {
+				if (log.isDebugEnabled()) {
+					log.debug(format(channel(), "Response has been sent already."));
+				}
+				sink.success();
+			}
+		});
 	}
 
 	@Override
@@ -562,6 +650,46 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			throw new IllegalStateException("Status and headers already sent");
 		}
 		return this;
+	}
+
+	@Override
+	public Mono<Void> then() {
+		if (!channel().isActive()) {
+			return Mono.error(AbortedException.beforeSend());
+		}
+
+		if (hasSentHeaders()) {
+			return Mono.empty();
+		}
+
+		return FutureMono.deferFuture(() -> {
+			if (!hasSentHeaders()) {
+				beforeMarkSentHeaders();
+
+				HttpMessage msg = outboundHttpMessage();
+				boolean last = false;
+				int contentLength = HttpUtil.getContentLength(msg, -1);
+				if (contentLength == 0 || isContentAlwaysEmpty()) {
+					last = true;
+					msg = newFullBodyMessage(channel().bufferAllocator().allocate(0));
+				}
+				else if (contentLength > 0) {
+					responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+				}
+
+				afterMarkSentHeaders();
+
+				if (!last) {
+					return markSentHeaders() ? channel().writeAndFlush(msg) : channel().newSucceededFuture();
+				}
+				else {
+					return markSentHeaderAndBody() ? channel().writeAndFlush(msg) : channel().newSucceededFuture();
+				}
+			}
+			else {
+				return channel().newSucceededFuture();
+			}
+		});
 	}
 
 	@Override
@@ -741,11 +869,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		if (markSentHeaderAndBody()) {
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel(), "No sendHeaders() called before complete, sending " +
-						"zero-length header"));
+				log.debug(format(channel(), "Headers are not sent before onComplete()."));
 			}
 
-			f = channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0)));
+			f = channel().writeAndFlush(fullHttpResponse != null ? fullHttpResponse : newFullBodyMessage(channel().bufferAllocator().allocate(0)));
 		}
 		else if (markSentBody()) {
 			HttpHeaders trailerHeaders = null;
@@ -782,35 +909,29 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		else {
 			discard();
+			terminate();
 			return;
 		}
-		f.addListener(s -> {
-			discard();
-			if (!s.isSuccess() && log.isDebugEnabled()) {
-				log.debug(format(channel(), "Failed flushing last frame"), s.cause());
-			}
-		});
-
+		f.addListener(channel(), this);
 	}
 
-	static void cleanHandlerTerminate(Channel ch) {
-		ChannelOperations<?, ?> ops = get(ch);
-
-		if (ops == null) {
-			return;
-		}
-
-		ops.discard();
-
-		//Try to defer the disposing to leave a chance for any synchronous complete following this callback
-		if (!ops.isSubscriptionDisposed()) {
-			ch.executor()
-			  .execute(((HttpServerOperations) ops)::terminate);
+	@Override
+	public void operationComplete(Channel channel, Future<? extends Void> future) {
+		if (!future.isSuccess()) {
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel, "Sending last HTTP packet was not successful, terminating the channel"),
+						future.cause());
+			}
 		}
 		else {
-			//if already disposed, we can immediately call terminate
-			((HttpServerOperations) ops).terminate();
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel, "Last HTTP packet was sent, terminating the channel"));
+			}
 		}
+
+		discard();
+
+		terminate();
 	}
 
 	static long requestsCounter(Channel channel) {
@@ -889,7 +1010,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 		}
 
-		ctx.channel().writeAndFlush(response);
+		if (ops instanceof HttpServerOperations) {
+			HttpServerOperations serverOps = (HttpServerOperations) ops;
+			serverOps.fullHttpResponse = response;
+			serverOps.onComplete();
+		}
+		else {
+			ctx.channel().writeAndFlush(response);
+		}
 
 		listener.onStateChange(ops, REQUEST_DECODING_FAILED);
 	}
@@ -914,6 +1042,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			nettyResponse.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
 			responseHeaders.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 			channel().writeAndFlush(newFullBodyMessage(channel().bufferAllocator().allocate(0)))
+			         .addListener(channel(), this)
 			         .addListener(channel(), ChannelFutureListeners.CLOSE);
 			return;
 		}
@@ -921,6 +1050,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		markSentBody();
 		log.error(format(channel(), "Error finishing response. Closing connection"), err);
 		channel().writeAndFlush(channel().bufferAllocator().allocate(0))
+		         .addListener(channel(), this)
 		         .addListener(channel(), ChannelFutureListeners.CLOSE);
 	}
 

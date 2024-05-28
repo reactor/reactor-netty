@@ -23,7 +23,6 @@ import java.util.Queue;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
@@ -40,7 +39,6 @@ import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.FutureContextListener;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
@@ -62,7 +60,7 @@ import static reactor.netty5.channel.ChannelOperations.get;
  * Replace {@link io.netty5.handler.codec.http.HttpServerKeepAliveHandler} with extra
  * handler management.
  */
-final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable, FutureContextListener<Channel, Void> {
+final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable {
 
 	static final String MULTIPART_PREFIX = "multipart";
 
@@ -333,13 +331,10 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 									"connection, preparing to close. Pending responses count: {}"),
 							pendingResponses);
 				}
-				return ctx.write(msg)
-				          .addListener(ctx.channel(), this)
-				          .addListener(ctx, ChannelFutureListeners.CLOSE);
+				return ctx.write(msg).addListener(ctx, ChannelFutureListeners.CLOSE);
 			}
 
-			Future<Void> future = ctx.write(msg)
-			                         .addListener(ctx.channel(), this);
+			Future<Void> future = ctx.write(msg);
 
 			if (!persistentConnection) {
 				return future;
@@ -454,25 +449,6 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			}
 		}
 		overflow = false;
-	}
-
-	@Override
-	public void operationComplete(Channel channel, Future<? extends Void> future) {
-		if (!future.isSuccess()) {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(channel,
-				        "Sending last HTTP packet was not successful, terminating the channel"),
-				        future.cause());
-			}
-		}
-		else {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(channel,
-				        "Last HTTP packet was sent, terminating the channel"));
-			}
-		}
-
-		HttpServerOperations.cleanHandlerTerminate(channel);
 	}
 
 	@Override
