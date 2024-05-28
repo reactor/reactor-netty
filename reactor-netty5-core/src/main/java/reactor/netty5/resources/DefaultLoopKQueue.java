@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.kqueue.KQueue;
 import io.netty5.channel.kqueue.KQueueDatagramChannel;
-import io.netty5.channel.kqueue.KQueueHandler;
+import io.netty5.channel.kqueue.KQueueIoHandler;
 import io.netty5.channel.kqueue.KQueueServerSocketChannel;
 import io.netty5.channel.kqueue.KQueueSocketChannel;
 import io.netty5.channel.socket.DatagramChannel;
@@ -77,7 +77,7 @@ final class DefaultLoopKQueue implements DefaultLoop {
 
 	@Override
 	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		return new MultithreadEventLoopGroup(threads, factory, KQueueHandler.newFactory());
+		return new MultithreadEventLoopGroup(threads, factory, KQueueIoHandler.newFactory());
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultLoopKQueue.class);

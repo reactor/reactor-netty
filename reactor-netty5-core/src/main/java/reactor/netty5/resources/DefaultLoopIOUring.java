@@ -25,7 +25,7 @@ import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.uring.IOUring;
 import io.netty5.channel.uring.IOUringDatagramChannel;
-import io.netty5.channel.uring.IOUringHandler;
+import io.netty5.channel.uring.IOUringIoHandler;
 import io.netty5.channel.uring.IOUringServerSocketChannel;
 import io.netty5.channel.uring.IOUringSocketChannel;
 import reactor.util.Logger;
@@ -79,7 +79,7 @@ final class DefaultLoopIOUring implements DefaultLoop {
 
 	@Override
 	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		return new MultithreadEventLoopGroup(threads, factory, IOUringHandler.newFactory());
+		return new MultithreadEventLoopGroup(threads, factory, IOUringIoHandler.newFactory());
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultLoopIOUring.class);

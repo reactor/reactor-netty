@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.epoll.Epoll;
 import io.netty5.channel.epoll.EpollDatagramChannel;
-import io.netty5.channel.epoll.EpollHandler;
+import io.netty5.channel.epoll.EpollIoHandler;
 import io.netty5.channel.epoll.EpollServerSocketChannel;
 import io.netty5.channel.epoll.EpollSocketChannel;
 import io.netty5.channel.socket.DatagramChannel;
@@ -78,7 +78,7 @@ final class DefaultLoopEpoll implements DefaultLoop {
 
 	@Override
 	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		return new MultithreadEventLoopGroup(threads, factory, EpollHandler.newFactory());
+		return new MultithreadEventLoopGroup(threads, factory, EpollIoHandler.newFactory());
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultLoopEpoll.class);
