@@ -374,7 +374,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public HttpServerResponse keepAlive(boolean keepAlive) {
-		HttpUtil.setKeepAlive(nettyResponse, keepAlive);
+		if (fullHttpResponse == null) {
+			HttpUtil.setKeepAlive(nettyResponse, keepAlive);
+		}
+		else {
+			HttpUtil.setKeepAlive(fullHttpResponse, keepAlive);
+		}
 		return this;
 	}
 
@@ -528,8 +533,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					.flatMap(b -> {
 						if (!hasSentHeaders()) {
 							try {
-								beforeMarkSentHeaders();
-
 								fullHttpResponse = prepareHttpMessage(b);
 
 								afterMarkSentHeaders();
@@ -565,8 +568,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return new PostHeadersNettyOutbound(Mono.create(sink -> {
 				if (!hasSentHeaders()) {
 					try {
-						beforeMarkSentHeaders();
-
 						fullHttpResponse = prepareHttpMessage(b);
 
 						afterMarkSentHeaders();
