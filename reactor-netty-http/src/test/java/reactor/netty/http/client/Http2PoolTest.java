@@ -1208,22 +1208,36 @@ class Http2PoolTest {
 
 	@Test
 	void recordsPendingCountAndLatencies() {
-		EmbeddedChannel channel = new EmbeddedChannel();
+		EmbeddedChannel channel = new EmbeddedChannel(new TestChannelId(),
+				Http2FrameCodecBuilder.forClient().build(), new Http2MultiplexHandler(new ChannelHandlerAdapter() {}));
 		TestPoolMetricsRecorder recorder = new TestPoolMetricsRecorder();
 		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
 				PoolBuilder.from(Mono.just(Connection.from(channel)))
 				           .metricsRecorder(recorder)
 				           .maxPendingAcquireUnbounded()
 				           .sizeBetween(0, 1);
-		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+		Http2AllocationStrategy strategy = Http2AllocationStrategy.builder()
+				.maxConnections(1)
+				.maxConcurrentStreams(2)
+				.build();
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, strategy));
 
 		try {
+			List<PooledRef<Connection>> acquired = new ArrayList<>();
 			//success, acquisition happens immediately
-			PooledRef<Connection> pooledRef = http2Pool.acquire(Duration.ofMillis(1)).block(Duration.ofSeconds(1));
-			assertThat(pooledRef).isNotNull();
+			http2Pool.acquire(Duration.ofMillis(1)).subscribe(acquired::add);
+			// success, acquisition happens immediately without timeout
+			http2Pool.acquire().subscribe(acquired::add);
+
+			channel.runPendingTasks();
+
+			assertThat(acquired).hasSize(2);
 
 			//success, acquisition happens after pending some time
 			http2Pool.acquire(Duration.ofMillis(50)).subscribe();
+
+			// success, acquisition happens after pending some time without timeout
+			http2Pool.acquire().subscribe();
 
 			//error, timed out
 			http2Pool.acquire(Duration.ofMillis(1))
@@ -1231,11 +1245,14 @@ class Http2PoolTest {
 			         .expectError(PoolAcquireTimeoutException.class)
 			         .verify(Duration.ofSeconds(1));
 
-			pooledRef.release().block(Duration.ofSeconds(1));
+			acquired.get(0).release().block(Duration.ofSeconds(1));
+			acquired.get(1).release().block(Duration.ofSeconds(1));
+
+			channel.runPendingTasks();
 
 			assertThat(recorder.pendingSuccessCounter)
 					.as("pending success")
-					.isEqualTo(1);
+					.isEqualTo(2);
 
 			assertThat(recorder.pendingErrorCounter)
 					.as("pending errors")
