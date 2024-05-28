@@ -754,9 +754,11 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				long estimateStreamsCount = pool.totalMaxConcurrentStreams - pool.acquired;
 				int permits = pool.poolConfig.allocationStrategy().estimatePermitCount();
 				int pending = pool.pendingSize;
-				if (!acquireTimeout.isZero() && permits + estimateStreamsCount <= pending) {
+				if (permits + estimateStreamsCount <= pending) {
 					pendingAcquireStart = pool.clock.millis();
-					timeoutTask = pool.poolConfig.pendingAcquireTimer().apply(this, acquireTimeout);
+					if (!acquireTimeout.isZero()) {
+						timeoutTask = pool.poolConfig.pendingAcquireTimer().apply(this, acquireTimeout);
+					}
 				}
 				pool.doAcquire(this);
 			}
@@ -816,13 +818,15 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 
 		void stopPendingCountdown(boolean success) {
-			if (!timeoutTask.isDisposed()) {
+			if (pendingAcquireStart > 0) {
 				if (success) {
 					pool.poolConfig.metricsRecorder().recordPendingSuccessAndLatency(pool.clock.millis() - pendingAcquireStart);
 				}
 				else {
 					pool.poolConfig.metricsRecorder().recordPendingFailureAndLatency(pool.clock.millis() - pendingAcquireStart);
 				}
+
+				pendingAcquireStart = 0;
 			}
 			timeoutTask.dispose();
 		}
