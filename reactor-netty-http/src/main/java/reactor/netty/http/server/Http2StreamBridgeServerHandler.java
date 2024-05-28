@@ -24,8 +24,6 @@ import java.util.function.BiPredicate;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.DecoderResult;
@@ -57,7 +55,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Violeta Georgieva
  */
-final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implements ChannelFutureListener {
+final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieDecoder                                     cookieDecoder;
@@ -196,31 +194,11 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 		}
 		else {
 			//"FutureReturnValueIgnored" this is deliberate
-			ChannelFuture f = ctx.write(msg, promise);
+			ctx.write(msg, promise);
 			if (msg instanceof LastHttpContent) {
 				pendingResponse = false;
-				f.addListener(this);
 				ctx.read();
 			}
 		}
-	}
-
-	@Override
-	public void operationComplete(ChannelFuture future) {
-		if (!future.isSuccess()) {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(future.channel(),
-						"Sending last HTTP packet was not successful, terminating the channel"),
-						future.cause());
-			}
-		}
-		else {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(future.channel(),
-						"Last HTTP packet was sent, terminating the channel"));
-			}
-		}
-
-		HttpServerOperations.cleanHandlerTerminate(future.channel());
 	}
 }

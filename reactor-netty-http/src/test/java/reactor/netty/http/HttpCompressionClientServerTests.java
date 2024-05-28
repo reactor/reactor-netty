@@ -34,6 +34,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.Zstd;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -276,12 +277,14 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				                   .get("/2", (in, out) -> out.sendString(Mono.just("reply")))
 				                   .get("/3", (in, out) -> out.header("content-length", "5") //explicit 'content-length'
 				                                              .sendObject(Unpooled.wrappedBuffer("reply".getBytes(Charset.defaultCharset()))))
-				                   .get("/4", (in, out) -> out.sendObject(Unpooled.wrappedBuffer("reply".getBytes(Charset.defaultCharset())))))
+				                   .get("/4", (in, out) -> out.sendObject(Unpooled.wrappedBuffer("reply".getBytes(Charset.defaultCharset()))))
+				                   .get("/5", (in, out) -> out.header("content-length", "5") //explicit 'content-length'))
+				                                              .sendString(Flux.just("r", "e", "p", "l", "y"))))
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		//edit the header manually to attempt to trigger compression on server side
-		Flux.range(1, 4)
+		Flux.range(1, 5)
 		    .flatMap(i ->
 		            client.port(disposableServer.port())
 		                  .headers(h -> h.add("Accept-Encoding", "gzip"))
@@ -593,6 +596,14 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		doTestIssue825_2((b, out) -> out.sendObject(b));
 	}
 
+	@Test
+	void testIssue825SendHeaders() {
+		doTestIssue825_2((b, out) -> {
+			b.release();
+			return out.header(HttpHeaderNames.CONTENT_LENGTH, "0").sendHeaders();
+		});
+	}
+
 	private void doTestIssue825_2(BiFunction<ByteBuf, HttpServerResponse, Publisher<Void>> serverFn) {
 		int port1 = SocketUtils.findAvailableTcpPort();
 		int port2 = SocketUtils.findAvailableTcpPort();
@@ -650,8 +661,9 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 			                  .compress(true)
 			                  .get()
 			                  .uri("/")
-			                  .responseContent())
-			            .expectError()
+			                  .response((res, bytes) -> Mono.just(res.status().code())))
+			            .expectNext(500)
+			            .expectComplete()
 			            .verify(Duration.ofSeconds(30));
 
 			bufferReleased.asMono()
