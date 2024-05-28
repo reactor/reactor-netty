@@ -3171,7 +3171,7 @@ class HttpClientTest extends BaseHttpTest {
 	@Test
 	void testHttpClientCancelled() throws InterruptedException {
 		// logged by the server when last http packet is sent and channel is terminated
-		String serverCancelledLog = "[HttpServer] Channel inbound receiver cancelled (operation cancelled).";
+		String serverCancelledLog = "[HttpServer] Channel inbound receiver cancelled (subscription disposed).";
 		// logged by client when cancelled while receiving response
 		String clientCancelledLog = HttpClientOperations.INBOUND_CANCEL_LOG;
 

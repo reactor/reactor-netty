@@ -24,7 +24,6 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -62,8 +61,7 @@ import static reactor.netty.ReactorNetty.format;
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra
  * handler management.
  */
-final class HttpTrafficHandler extends ChannelDuplexHandler
-		implements Runnable, ChannelFutureListener {
+final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable {
 
 	static final String MULTIPART_PREFIX = "multipart";
 
@@ -339,13 +337,11 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							pendingResponses);
 				}
 				ctx.write(msg, promise.unvoid())
-				   .addListener(this)
 				   .addListener(ChannelFutureListener.CLOSE);
 				return;
 			}
 
-			ctx.write(msg, promise.unvoid())
-			   .addListener(this);
+			ctx.write(msg, promise);
 
 			if (!persistentConnection) {
 				return;
@@ -455,25 +451,6 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			}
 		}
 		overflow = false;
-	}
-
-	@Override
-	public void operationComplete(ChannelFuture future) {
-		if (!future.isSuccess()) {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(future.channel(),
-				        "Sending last HTTP packet was not successful, terminating the channel"),
-				        future.cause());
-			}
-		}
-		else {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(future.channel(),
-				        "Last HTTP packet was sent, terminating the channel"));
-			}
-		}
-
-		HttpServerOperations.cleanHandlerTerminate(future.channel());
 	}
 
 	@Override
