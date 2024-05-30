@@ -25,7 +25,9 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.reactivestreams.Publisher;
@@ -33,12 +35,15 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
 import reactor.netty.BaseHttpTest;
+import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 
+import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Arrays;
@@ -250,6 +255,108 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 		assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(2);
 	}
 
+	@Test
+	void httpPipeliningGetRespondsSendObject() throws Exception {
+		String oldValue = System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false");
+		System.setProperty("reactor.netty.http.server.lastFlushWhenNoRead", "true");
+		try {
+			CountDownLatch latch = new CountDownLatch(64);
+			EventsRecorder recorder = new EventsRecorder(latch);
+			disposableServer = createServer(recorder, HttpProtocol.HTTP11,
+					r -> r.get("/1", (req, res) -> res.sendObject(Unpooled.wrappedBuffer(REPEAT.getBytes(Charset.defaultCharset())))
+							.then().doOnEach(recorder).doOnCancel(recorder)));
+
+			Connection client =
+					TcpClient.create()
+							.port(disposableServer.port())
+							.wiretap(true)
+							.connectNow();
+
+			int port = disposableServer.port();
+			String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
+			String request = repeatString("GET /1 HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
+			client.outbound()
+					.sendObject(Unpooled.wrappedBuffer(request.getBytes(Charset.defaultCharset())))
+					.then()
+					.subscribe();
+
+			CountDownLatch responses = new CountDownLatch(16);
+			client.inbound()
+					.receive()
+					.asString()
+					.doOnNext(s -> {
+						int ind = 0;
+						while ((ind = s.indexOf("200", ind)) != -1) {
+							responses.countDown();
+							ind += 3;
+						}
+					})
+					.subscribe();
+
+			assertThat(responses.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(recorder.bufferIsReleased.get()).isEqualTo(16);
+			assertThat(recorder.fullResponseIsSent.get()).isEqualTo(16);
+			assertThat(recorder.onCompleteIsReceived.get()).isEqualTo(16);
+			assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(16);
+		}
+		finally {
+			System.setProperty("reactor.netty.http.server.lastFlushWhenNoRead", oldValue);
+		}
+	}
+
+	@Test
+	void httpPipeliningGetRespondsSendMono() throws Exception {
+		String oldValue = System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false");
+		System.setProperty("reactor.netty.http.server.lastFlushWhenNoRead", "true");
+		try {
+			CountDownLatch latch = new CountDownLatch(64);
+			EventsRecorder recorder = new EventsRecorder(latch);
+			disposableServer = createServer(recorder, HttpProtocol.HTTP11,
+					r -> r.get("/1", (req, res) -> res.sendString(Mono.just(REPEAT).delayElement(Duration.ofMillis(10))
+							.doOnEach(recorder).doOnCancel(recorder))));
+
+			Connection client =
+					TcpClient.create()
+							.port(disposableServer.port())
+							.wiretap(true)
+							.connectNow();
+
+			int port = disposableServer.port();
+			String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
+			String request = repeatString("GET /1 HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
+			client.outbound()
+					.sendObject(Unpooled.wrappedBuffer(request.getBytes(Charset.defaultCharset())))
+					.then()
+					.subscribe();
+
+			CountDownLatch responses = new CountDownLatch(16);
+			client.inbound()
+					.receive()
+					.asString()
+					.doOnNext(s -> {
+						int ind = 0;
+						while ((ind = s.indexOf("200", ind)) != -1) {
+							responses.countDown();
+							ind += 3;
+						}
+					})
+					.subscribe();
+
+			assertThat(responses.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(recorder.bufferIsReleased.get()).isEqualTo(16);
+			assertThat(recorder.fullResponseIsSent.get()).isEqualTo(16);
+			assertThat(recorder.onCompleteIsReceived.get()).isEqualTo(16);
+			assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(16);
+		}
+		finally {
+			System.setProperty("reactor.netty.http.server.lastFlushWhenNoRead", oldValue);
+		}
+	}
+
 	@ParameterizedTest
 	@EnumSource(value = HttpProtocol.class, names = {"HTTP11", "H2C"})
 	void httpPostRespondsSendFlux(HttpProtocol protocol) throws Exception {
@@ -384,6 +491,14 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 		char[] chars = new char[length];
 		Arrays.fill(chars, 'm');
 		return new String(chars);
+	}
+
+	static String repeatString(String s) {
+		StringBuilder sb = new StringBuilder(16 * s.length());
+		for (int i = 0; i < 16; i++) {
+			sb.append(s);
+		}
+		return sb.toString();
 	}
 
 	static Mono<List<String>> sendGetRequest(int port, HttpProtocol protocol) {
