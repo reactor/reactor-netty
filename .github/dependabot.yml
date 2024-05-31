@@ -69,10 +69,6 @@ updates:
   - dependency-name: io.micrometer:context-propagation
     versions:
     - "> 1.1.0"
-  # Versions > 9 require JDK11+
-  - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
-    versions:
-    - ">= 10.0.a"
   # Versions > 6.13 require JDK11+
   - dependency-name: com.diffplug.spotless
     versions:
@@ -81,10 +77,6 @@ updates:
   - dependency-name: biz.aQute.bnd.builder
     versions:
     - "[7.a, 8]"
-  # Versions > 4 require JDK11+
-  - dependency-name: org.jfrog.buildinfo:build-info-extractor-gradle
-    versions:
-    - "[5.a, 6]"
   # Versions > 4 require JDK11+
   - dependency-name: org.mockito:mockito-core
     versions:
@@ -99,6 +91,14 @@ updates:
   - dependency-name: org.graalvm.buildtools.native
     versions:
     - "> 0.9.25"
+  # Dependencies updated by forward merging 1.0.x branch
+  - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
+  - dependency-name: org.jfrog.buildinfo:build-info-extractor-gradle
+  - dependency-name: org.assertj:assertj-core
+  - dependency-name: com.fasterxml.jackson.core:jackson-databind
+  - dependency-name: io.specto:hoverfly-java-junit5
+  - dependency-name: org.gradle.test-retry
+  - dependency-name: io.projectreactor.tools:blockhound-junit-platform
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
@@ -121,4 +121,8 @@ updates:
   target-branch: "main"
   labels:
       - type/dependency-upgrade
+  ignore:
+  # Dependencies updated by forward merging 1.0.x branch
+  - dependency-name: actions/checkout
+  - dependency-name: gradle/actions
   rebase-strategy: disabled
