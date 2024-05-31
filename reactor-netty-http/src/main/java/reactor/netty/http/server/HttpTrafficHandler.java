@@ -324,7 +324,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	@Override
 	public void flush(ChannelHandlerContext ctx) {
 		if (LAST_FLUSH_WHEN_NO_READ && finalizingResponse) {
-			if (needsFlush) {
+			if (needsFlush || !ctx.channel().isWritable()) {
 				needsFlush = false;
 				ctx.flush();
 			}
