@@ -929,8 +929,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 		}
 
-		discard();
+		terminateInternal();
+	}
 
+	void terminateInternal() {
+		discard();
 		terminate();
 	}
 

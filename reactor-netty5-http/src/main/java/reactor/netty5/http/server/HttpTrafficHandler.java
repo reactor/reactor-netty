@@ -44,6 +44,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.ReactorNetty;
+import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.util.annotation.Nullable;
@@ -65,6 +66,9 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	static final String MULTIPART_PREFIX = "multipart";
 
 	static final HttpVersion H2 = HttpVersion.valueOf("HTTP/2.0");
+
+	static final boolean LAST_FLUSH_WHEN_NO_READ = Boolean.parseBoolean(
+			System.getProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "false"));
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
@@ -92,6 +96,10 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	SocketAddress remoteAddress;
 
 	Boolean secure;
+
+	boolean read;
+	boolean needsFlush;
+	boolean finalizingResponse;
 
 	HttpTrafficHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
@@ -131,6 +139,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
+		read = true;
 		if (secure == null) {
 			secure = ctx.channel().pipeline().get(SslHandler.class) != null;
 		}
@@ -141,6 +150,8 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		}
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest request) {
+			finalizingResponse = false;
+
 			if (idleTimeout != null) {
 				IdleTimeoutHandler.removeIdleTimeoutHandler(ctx.pipeline());
 			}
@@ -183,6 +194,16 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			}
 			else {
 				overflow = false;
+
+				if (LAST_FLUSH_WHEN_NO_READ) {
+					ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+					if (ops instanceof HttpServerOperations) {
+						if (HttpServerOperations.log.isDebugEnabled()) {
+							HttpServerOperations.log.debug(format(ctx.channel(), "Last HTTP packet was sent, terminating the channel"));
+						}
+						((HttpServerOperations) ops).terminateInternal();
+					}
+				}
 
 				DecoderResult decoderResult = request.decoderResult();
 				if (decoderResult.isFailure()) {
@@ -280,6 +301,38 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		ctx.read();
 	}
 
+	@Override
+	public void channelReadComplete(ChannelHandlerContext ctx) {
+		endReadAndFlush();
+		ctx.fireChannelReadComplete();
+	}
+
+	void endReadAndFlush() {
+		if (read) {
+			read = false;
+			if (LAST_FLUSH_WHEN_NO_READ && needsFlush) {
+				needsFlush = false;
+				ctx.flush();
+			}
+		}
+	}
+
+	@Override
+	public void flush(ChannelHandlerContext ctx) {
+		if (LAST_FLUSH_WHEN_NO_READ && finalizingResponse) {
+			if (needsFlush || !ctx.channel().isWritable()) {
+				needsFlush = false;
+				ctx.flush();
+			}
+			else {
+				needsFlush = true;
+			}
+		}
+		else {
+			ctx.flush();
+		}
+	}
+
 	void sendDecodingFailures(Throwable t, Object msg) {
 		sendDecodingFailures(t, msg, null, null);
 	}
@@ -325,6 +378,12 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			}
 		}
 		if (msg instanceof LastHttpContent) {
+			finalizingResponse = true;
+
+			if (LAST_FLUSH_WHEN_NO_READ) {
+				needsFlush = !read;
+			}
+
 			if (!shouldKeepAlive()) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug(format(ctx.channel(), "Detected non persistent http " +
@@ -403,6 +462,18 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 
 				HttpRequestHolder holder = (HttpRequestHolder) next;
 				nextRequest = holder.request;
+
+				finalizingResponse = false;
+
+				if (LAST_FLUSH_WHEN_NO_READ) {
+					ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+					if (ops instanceof HttpServerOperations) {
+						if (HttpServerOperations.log.isDebugEnabled()) {
+							HttpServerOperations.log.debug(format(ctx.channel(), "Last HTTP packet was sent, terminating the channel"));
+						}
+						((HttpServerOperations) ops).terminateInternal();
+					}
+				}
 
 				DecoderResult decoderResult = nextRequest.decoderResult();
 				if (decoderResult.isFailure()) {
