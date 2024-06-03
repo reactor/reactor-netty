@@ -41,7 +41,7 @@ plugins {
 	id 'biz.aQute.bnd.builder' version '6.4.0' apply false
 	id 'org.graalvm.buildtools.native' version '0.9.25' apply false
 	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
-	id 'net.ltgt.errorprone' version '3.1.0' apply false
+	id 'net.ltgt.errorprone' version '4.0.0' apply false
 }
 
 description = 'Reactive Streams Netty driver'
