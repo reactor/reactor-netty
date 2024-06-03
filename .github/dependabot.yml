@@ -99,6 +99,7 @@ updates:
   - dependency-name: io.specto:hoverfly-java-junit5
   - dependency-name: org.gradle.test-retry
   - dependency-name: io.projectreactor.tools:blockhound-junit-platform
+  - dependency-name: net.ltgt.errorprone
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
