@@ -233,26 +233,55 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 		assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(1);
 	}
 
-	@ParameterizedTest
-	@EnumSource(value = HttpProtocol.class, names = {"HTTP11", "H2C"})
-	void httpPostRespondsSend(HttpProtocol protocol) throws Exception {
-		CountDownLatch latch = new CountDownLatch(8);
-		EventsRecorder recorder = new EventsRecorder(latch);
-		disposableServer = createServer(recorder, protocol,
-				r -> r.post("/1", (req, res) -> res.send().doOnEach(recorder).doOnCancel(recorder))
-						.post("/2", (req, res) -> req.receive().then(res.send().doOnEach(recorder).doOnCancel(recorder))));
+	@Test
+	void httpPipeliningGetRespondsSendMono() throws Exception {
+		String oldValue = System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false");
+		System.setProperty("reactor.netty.http.server.lastFlushWhenNoRead", "true");
+		try {
+			CountDownLatch latch = new CountDownLatch(64);
+			EventsRecorder recorder = new EventsRecorder(latch);
+			disposableServer = createServer(recorder, HttpProtocol.HTTP11,
+					r -> r.get("/1", (req, res) -> res.sendString(Mono.just(REPEAT).delayElement(Duration.ofMillis(10))
+							.doOnEach(recorder).doOnCancel(recorder))));
 
-		sendPostRequest(disposableServer.port(), protocol)
-				.as(StepVerifier::create)
-				.expectNext(Collections.emptyList())
-				.expectComplete()
-				.verify(Duration.ofSeconds(5));
+			Connection client =
+					TcpClient.create()
+							.port(disposableServer.port())
+							.wiretap(true)
+							.connectNow();
 
-		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
-		assertThat(recorder.bufferIsReleased.get()).isEqualTo(2);
-		assertThat(recorder.fullResponseIsSent.get()).isEqualTo(2);
-		assertThat(recorder.onCompleteIsReceived.get()).isEqualTo(2);
-		assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(2);
+			int port = disposableServer.port();
+			String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
+			String request = repeatString("GET /1 HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
+			client.outbound()
+					.sendObject(Unpooled.wrappedBuffer(request.getBytes(Charset.defaultCharset())))
+					.then()
+					.subscribe();
+
+			CountDownLatch responses = new CountDownLatch(16);
+			client.inbound()
+					.receive()
+					.asString()
+					.doOnNext(s -> {
+						int ind = 0;
+						while ((ind = s.indexOf("200", ind)) != -1) {
+							responses.countDown();
+							ind += 3;
+						}
+					})
+					.subscribe();
+
+			assertThat(responses.await(5, TimeUnit.SECONDS)).isTrue();
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(recorder.bufferIsReleased.get()).isEqualTo(16);
+			assertThat(recorder.fullResponseIsSent.get()).isEqualTo(16);
+			assertThat(recorder.onCompleteIsReceived.get()).isEqualTo(16);
+			assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(16);
+		}
+		finally {
+			System.setProperty("reactor.netty.http.server.lastFlushWhenNoRead", oldValue);
+		}
 	}
 
 	@Test
@@ -306,55 +335,26 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 		}
 	}
 
-	@Test
-	void httpPipeliningGetRespondsSendMono() throws Exception {
-		String oldValue = System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false");
-		System.setProperty("reactor.netty.http.server.lastFlushWhenNoRead", "true");
-		try {
-			CountDownLatch latch = new CountDownLatch(64);
-			EventsRecorder recorder = new EventsRecorder(latch);
-			disposableServer = createServer(recorder, HttpProtocol.HTTP11,
-					r -> r.get("/1", (req, res) -> res.sendString(Mono.just(REPEAT).delayElement(Duration.ofMillis(10))
-							.doOnEach(recorder).doOnCancel(recorder))));
+	@ParameterizedTest
+	@EnumSource(value = HttpProtocol.class, names = {"HTTP11", "H2C"})
+	void httpPostRespondsSend(HttpProtocol protocol) throws Exception {
+		CountDownLatch latch = new CountDownLatch(8);
+		EventsRecorder recorder = new EventsRecorder(latch);
+		disposableServer = createServer(recorder, protocol,
+				r -> r.post("/1", (req, res) -> res.send().doOnEach(recorder).doOnCancel(recorder))
+						.post("/2", (req, res) -> req.receive().then(res.send().doOnEach(recorder).doOnCancel(recorder))));
 
-			Connection client =
-					TcpClient.create()
-							.port(disposableServer.port())
-							.wiretap(true)
-							.connectNow();
+		sendPostRequest(disposableServer.port(), protocol)
+				.as(StepVerifier::create)
+				.expectNext(Collections.emptyList())
+				.expectComplete()
+				.verify(Duration.ofSeconds(5));
 
-			int port = disposableServer.port();
-			String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
-			String request = repeatString("GET /1 HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
-			client.outbound()
-					.sendObject(Unpooled.wrappedBuffer(request.getBytes(Charset.defaultCharset())))
-					.then()
-					.subscribe();
-
-			CountDownLatch responses = new CountDownLatch(16);
-			client.inbound()
-					.receive()
-					.asString()
-					.doOnNext(s -> {
-						int ind = 0;
-						while ((ind = s.indexOf("200", ind)) != -1) {
-							responses.countDown();
-							ind += 3;
-						}
-					})
-					.subscribe();
-
-			assertThat(responses.await(5, TimeUnit.SECONDS)).isTrue();
-
-			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
-			assertThat(recorder.bufferIsReleased.get()).isEqualTo(16);
-			assertThat(recorder.fullResponseIsSent.get()).isEqualTo(16);
-			assertThat(recorder.onCompleteIsReceived.get()).isEqualTo(16);
-			assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(16);
-		}
-		finally {
-			System.setProperty("reactor.netty.http.server.lastFlushWhenNoRead", oldValue);
-		}
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+		assertThat(recorder.bufferIsReleased.get()).isEqualTo(2);
+		assertThat(recorder.fullResponseIsSent.get()).isEqualTo(2);
+		assertThat(recorder.onCompleteIsReceived.get()).isEqualTo(2);
+		assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(2);
 	}
 
 	@ParameterizedTest
