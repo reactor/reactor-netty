@@ -27,9 +27,9 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.util.concurrent.Future;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -37,6 +37,7 @@ import reactor.core.publisher.Signal;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.Connection;
 import reactor.netty5.DisposableServer;
+import reactor.netty5.LogTracker;
 import reactor.netty5.http.HttpProtocol;
 import reactor.netty5.http.client.HttpClient;
 import reactor.netty5.tcp.TcpClient;
@@ -232,16 +233,18 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 		assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(1);
 	}
 
-	@Test
-	void httpPipeliningGetRespondsSendMono() throws Exception {
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void httpPipeliningGetRespondsSendMono(boolean enableAccessLog) throws Exception {
 		String oldValue = System.getProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "false");
 		System.setProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "true");
-		try {
+		String message = "\"GET /1 HTTP/1.1\" 200 1024";
+		try (LogTracker logTracker = new LogTracker("reactor.netty5.http.server.AccessLog", 16, message)) {
 			CountDownLatch latch = new CountDownLatch(64);
 			EventsRecorder recorder = new EventsRecorder(latch);
 			disposableServer = createServer(recorder, HttpProtocol.HTTP11,
 					r -> r.get("/1", (req, res) -> res.sendString(Mono.just(REPEAT).delayElement(Duration.ofMillis(10))
-							.doOnEach(recorder).doOnCancel(recorder))));
+							.doOnEach(recorder).doOnCancel(recorder))), enableAccessLog);
 
 			Connection client =
 					TcpClient.create()
@@ -277,22 +280,29 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 			assertThat(recorder.fullResponseIsSent.get()).isEqualTo(16);
 			assertThat(recorder.onCompleteIsReceived.get()).isEqualTo(16);
 			assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(16);
+
+			if (enableAccessLog) {
+				assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
+				assertThat(logTracker.actualMessages).hasSize(16);
+			}
 		}
 		finally {
 			System.setProperty("reactor.netty5.http.server.lastFlushWhenNoRead", oldValue);
 		}
 	}
 
-	@Test
-	void httpPipeliningGetRespondsSendObject() throws Exception {
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void httpPipeliningGetRespondsSendObject(boolean enableAccessLog) throws Exception {
 		String oldValue = System.getProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "false");
 		System.setProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "true");
-		try {
+		String message = "\"GET /1 HTTP/1.1\" 200 1024";
+		try (LogTracker logTracker = new LogTracker("reactor.netty5.http.server.AccessLog", 16, message)) {
 			CountDownLatch latch = new CountDownLatch(64);
 			EventsRecorder recorder = new EventsRecorder(latch);
 			disposableServer = createServer(recorder, HttpProtocol.HTTP11,
 					r -> r.get("/1", (req, res) -> res.sendObject(res.alloc().copyOf(REPEAT, Charset.defaultCharset()))
-							.then().doOnEach(recorder).doOnCancel(recorder)));
+							.then().doOnEach(recorder).doOnCancel(recorder)), enableAccessLog);
 
 			Connection client =
 					TcpClient.create()
@@ -328,6 +338,11 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 			assertThat(recorder.fullResponseIsSent.get()).isEqualTo(16);
 			assertThat(recorder.onCompleteIsReceived.get()).isEqualTo(16);
 			assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(16);
+
+			if (enableAccessLog) {
+				assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
+				assertThat(logTracker.actualMessages).hasSize(16);
+			}
 		}
 		finally {
 			System.setProperty("reactor.netty5.http.server.lastFlushWhenNoRead", oldValue);
@@ -469,6 +484,10 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 	}
 
 	static DisposableServer createServer(EventsRecorder recorder, HttpProtocol protocol, Consumer<? super HttpServerRoutes> routes) {
+		return createServer(recorder, protocol, routes, false);
+	}
+
+	static DisposableServer createServer(EventsRecorder recorder, HttpProtocol protocol, Consumer<? super HttpServerRoutes> routes, boolean enableAccessLog) {
 		return createServer()
 				.protocol(protocol)
 				.doOnChannelInit((obs, ch, addr) -> {
@@ -482,6 +501,7 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 						conn.channel().pipeline().addBefore(HttpTrafficHandler, "eventsRecorderHandler", new EventsRecorderHandler(recorder));
 					}
 				})
+				.accessLog(enableAccessLog)
 				.route(routes)
 				.bindNow();
 	}

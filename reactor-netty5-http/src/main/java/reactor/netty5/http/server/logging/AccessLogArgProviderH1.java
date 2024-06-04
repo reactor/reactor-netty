@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,12 @@ final class AccessLogArgProviderH1 extends AbstractAccessLogArgProvider<AccessLo
 
 	AccessLogArgProviderH1(@Nullable SocketAddress remoteAddress) {
 		super(remoteAddress);
+	}
+
+	AccessLogArgProviderH1(AccessLogArgProviderH1 copy) {
+		super(copy);
+		this.request = copy.request;
+		this.response = copy.response;
 	}
 
 	AccessLogArgProviderH1 request(HttpServerRequest request) {
