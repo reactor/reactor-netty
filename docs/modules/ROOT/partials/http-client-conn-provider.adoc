@@ -1,8 +1,12 @@
 == Connection Pool
 
-By default, `HttpClient` uses a "`fixed`" connection pool with `500` as the maximum number of active channels
-and `1000` as the maximum number of further channel acquisition attempts allowed to be kept in a pending state
-(for the rest of the configurations check the system properties or the builder configurations below).
+By default, `HttpClient` (`HttpClient.create()`) uses a shared `ConnectionProvider`. This `ConnectionProvider` is configured to create
+a "`fixed`" connection pool per remote host (a remote host implies the combination of a hostname and its associated port number) with:
+
+* `500` as the maximum number of active channels
+* `1000` as the maximum number of further channel acquisition attempts allowed to be kept in a pending state
+* The rest of the configurations are the defaults (check the system properties or the builder configurations below)
+
 This means that the implementation creates a new channel if someone tries to acquire a channel
 as long as less than `500` have been created and are managed by the pool.
 When the maximum number of channels in the pool is reached, up to `1000` new attempts to
