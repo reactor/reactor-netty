@@ -60,7 +60,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
 import static reactor.netty.Metrics.METHOD;
+import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
 import static reactor.netty.NettyPipeline.HttpTrafficHandler;
@@ -305,7 +307,7 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 		finally {
 			if (registry != null) {
 				for (int i = 0; i < 16; i++) {
-					assertTimer(registry, "reactor.netty.http.server.response.time", METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
+					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
 				}
 
 				Metrics.removeRegistry(registry);
@@ -379,7 +381,7 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 		finally {
 			if (registry != null) {
 				for (int i = 0; i < 16; i++) {
-					assertTimer(registry, "reactor.netty.http.server.response.time", METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
+					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
 				}
 
 				Metrics.removeRegistry(registry);
