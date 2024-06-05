@@ -3,9 +3,8 @@
 === Event Loop Group
 
 By default `Reactor Netty` uses an "`Event Loop Group`", where the number of the worker threads equals the number of
-processors available to the runtime on initialization (but with a minimum value of 4). When you need a different configuration,
-you can use one of the {javadoc}/reactor/netty/resources/LoopResources.html[`LoopResources`]`#create`
-methods.
+processors available to the runtime on initialization (but with a minimum value of 4). This "`Event Loop Group`" is shared between all servers and clients in one JVM.
+When you need a different configuration, you can use one of the {javadoc}/reactor/netty/resources/LoopResources.html[`LoopResources`]`#create` methods.
 
 The following listing shows the default configuration for the Event Loop Group:
 
