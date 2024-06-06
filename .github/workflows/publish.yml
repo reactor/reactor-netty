@@ -106,7 +106,7 @@ jobs:
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4
         with:
           name: ${{ env.DOCS_BUILD_ARTIFACT }}
-          retention-days: 1
+          retention-days: 3
           if-no-files-found: error
           path: docs/build
 
