@@ -39,7 +39,7 @@ import java.util.function.Function;
 final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 
 	static final boolean LAST_FLUSH_WHEN_NO_READ = Boolean.parseBoolean(
-			System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false"));
+			System.getProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "false"));
 
 	AccessLogArgProviderH1 accessLogArgProvider;
 

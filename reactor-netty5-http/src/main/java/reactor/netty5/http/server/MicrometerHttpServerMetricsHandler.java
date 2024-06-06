@@ -27,6 +27,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Function;
@@ -81,12 +82,36 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	}
 
 	@Override
+	protected MetricsArgProvider createMetricsArgProvider() {
+		return super.createMetricsArgProvider().put(Observation.class, responseTimeObservation);
+	}
+
+	@Override
 	protected HttpServerMetricsRecorder recorder() {
 		return recorder;
 	}
 
 	@Override
 	protected void recordWrite(Channel channel) {
+		recordWrite(dataSent, dataSentTime, method, path, remoteSocketAddress, responseTimeObservation, status);
+
+		setChannelContext(channel, parentContextView);
+	}
+
+	@Override
+	protected void recordWrite(Channel channel, MetricsArgProvider metricsArgProvider) {
+		recordWrite(metricsArgProvider.dataSent, metricsArgProvider.dataSentTime, metricsArgProvider.method, metricsArgProvider.path,
+				metricsArgProvider.remoteSocketAddress, metricsArgProvider.get(Observation.class), metricsArgProvider.status);
+	}
+
+	void recordWrite(
+			long dataSent,
+			long dataSentTime,
+			String method,
+			String path,
+			SocketAddress remoteSocketAddress,
+			Observation responseTimeObservation,
+			String status) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(path, method, status, dataSentTimeDuration);
 
@@ -100,12 +125,6 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		//
 		// Move the implementation from the recorder here
 		responseTimeObservation.stop();
-
-		setChannelContext(channel, parentContextView);
-
-		responseTimeHandlerContext = null;
-		responseTimeObservation = null;
-		parentContextView = null;
 	}
 
 	@Override
@@ -131,6 +150,19 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		}
 		responseTimeHandlerContext.setResponse(ops.nettyResponse);
 		responseTimeHandlerContext.status = status;
+	}
+
+	@Override
+	protected void reset(Channel channel) {
+		super.reset(channel);
+
+		if (isHttp11 && LAST_FLUSH_WHEN_NO_READ) {
+			setChannelContext(channel, parentContextView);
+		}
+
+		responseTimeHandlerContext = null;
+		responseTimeObservation = null;
+		parentContextView = null;
 	}
 
 	/*

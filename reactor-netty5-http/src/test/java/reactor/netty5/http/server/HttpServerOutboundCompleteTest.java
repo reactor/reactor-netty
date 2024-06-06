@@ -15,6 +15,9 @@
  */
 package reactor.netty5.http.server;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
@@ -54,9 +57,16 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
+import static reactor.netty5.Metrics.HTTP_SERVER_PREFIX;
+import static reactor.netty5.Metrics.METHOD;
+import static reactor.netty5.Metrics.RESPONSE_TIME;
+import static reactor.netty5.Metrics.STATUS;
+import static reactor.netty5.Metrics.URI;
 import static reactor.netty5.NettyPipeline.HttpTrafficHandler;
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty5.micrometer.TimerAssert.assertTimer;
 
 class HttpServerOutboundCompleteTest extends BaseHttpTest {
 	static final String REPEAT = createString(1024);
@@ -235,16 +245,23 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
-	void httpPipeliningGetRespondsSendMono(boolean enableAccessLog) throws Exception {
+	void httpPipeliningGetRespondsSendMono(boolean enableMetricsAndAccessLog) throws Exception {
 		String oldValue = System.getProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "false");
 		System.setProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "true");
-		String message = "\"GET /1 HTTP/1.1\" 200 1024";
+
+		MeterRegistry registry = null;
+		if (enableMetricsAndAccessLog) {
+			registry = new SimpleMeterRegistry();
+			Metrics.addRegistry(registry);
+		}
+
+		String message = "HTTP/1.1\" 200 1024";
 		try (LogTracker logTracker = new LogTracker("reactor.netty5.http.server.AccessLog", 16, message)) {
 			CountDownLatch latch = new CountDownLatch(64);
 			EventsRecorder recorder = new EventsRecorder(latch);
 			disposableServer = createServer(recorder, HttpProtocol.HTTP11,
-					r -> r.get("/1", (req, res) -> res.sendString(Mono.just(REPEAT).delayElement(Duration.ofMillis(10))
-							.doOnEach(recorder).doOnCancel(recorder))), enableAccessLog);
+					r -> r.get("/{param}", (req, res) -> res.sendString(Mono.just(REPEAT).delayElement(Duration.ofMillis(10))
+							.doOnEach(recorder).doOnCancel(recorder))), enableMetricsAndAccessLog);
 
 			Connection client =
 					TcpClient.create()
@@ -254,7 +271,7 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 
 			int port = disposableServer.port();
 			String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
-			String request = repeatString("GET /1 HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
+			String request = repeatString("GET /%s HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 			client.outbound()
 					.sendObject(client.outbound().alloc().copyOf(request, Charset.defaultCharset()))
 					.then()
@@ -281,28 +298,44 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 			assertThat(recorder.onCompleteIsReceived.get()).isEqualTo(16);
 			assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(16);
 
-			if (enableAccessLog) {
+			if (enableMetricsAndAccessLog) {
 				assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 				assertThat(logTracker.actualMessages).hasSize(16);
 			}
 		}
 		finally {
+			if (registry != null) {
+				for (int i = 0; i < 16; i++) {
+					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
+				}
+
+				Metrics.removeRegistry(registry);
+				registry.clear();
+				registry.close();
+			}
 			System.setProperty("reactor.netty5.http.server.lastFlushWhenNoRead", oldValue);
 		}
 	}
 
 	@ParameterizedTest
 	@ValueSource(booleans = {false, true})
-	void httpPipeliningGetRespondsSendObject(boolean enableAccessLog) throws Exception {
+	void httpPipeliningGetRespondsSendObject(boolean enableMetricsAndAccessLog) throws Exception {
 		String oldValue = System.getProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "false");
 		System.setProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "true");
-		String message = "\"GET /1 HTTP/1.1\" 200 1024";
+
+		MeterRegistry registry = null;
+		if (enableMetricsAndAccessLog) {
+			registry = new SimpleMeterRegistry();
+			Metrics.addRegistry(registry);
+		}
+
+		String message = "HTTP/1.1\" 200 1024";
 		try (LogTracker logTracker = new LogTracker("reactor.netty5.http.server.AccessLog", 16, message)) {
 			CountDownLatch latch = new CountDownLatch(64);
 			EventsRecorder recorder = new EventsRecorder(latch);
 			disposableServer = createServer(recorder, HttpProtocol.HTTP11,
-					r -> r.get("/1", (req, res) -> res.sendObject(res.alloc().copyOf(REPEAT, Charset.defaultCharset()))
-							.then().doOnEach(recorder).doOnCancel(recorder)), enableAccessLog);
+					r -> r.get("/{param}", (req, res) -> res.sendObject(res.alloc().copyOf(REPEAT, Charset.defaultCharset()))
+							.then().doOnEach(recorder).doOnCancel(recorder)), enableMetricsAndAccessLog);
 
 			Connection client =
 					TcpClient.create()
@@ -312,7 +345,7 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 
 			int port = disposableServer.port();
 			String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
-			String request = repeatString("GET /1 HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
+			String request = repeatString("GET /%s HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 			client.outbound()
 					.sendObject(client.outbound().alloc().copyOf(request, Charset.defaultCharset()))
 					.then()
@@ -339,12 +372,21 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 			assertThat(recorder.onCompleteIsReceived.get()).isEqualTo(16);
 			assertThat(recorder.onTerminateIsReceived.get()).isEqualTo(16);
 
-			if (enableAccessLog) {
+			if (enableMetricsAndAccessLog) {
 				assertThat(logTracker.latch.await(5, TimeUnit.SECONDS)).isTrue();
 				assertThat(logTracker.actualMessages).hasSize(16);
 			}
 		}
 		finally {
+			if (registry != null) {
+				for (int i = 0; i < 16; i++) {
+					assertTimer(registry, HTTP_SERVER_PREFIX + RESPONSE_TIME, METHOD, "GET", STATUS, "200", URI, "/" + i).isNotNull();
+				}
+
+				Metrics.removeRegistry(registry);
+				registry.clear();
+				registry.close();
+			}
 			System.setProperty("reactor.netty5.http.server.lastFlushWhenNoRead", oldValue);
 		}
 	}
@@ -487,7 +529,7 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 		return createServer(recorder, protocol, routes, false);
 	}
 
-	static DisposableServer createServer(EventsRecorder recorder, HttpProtocol protocol, Consumer<? super HttpServerRoutes> routes, boolean enableAccessLog) {
+	static DisposableServer createServer(EventsRecorder recorder, HttpProtocol protocol, Consumer<? super HttpServerRoutes> routes, boolean enableMetricsAndAccessLog) {
 		return createServer()
 				.protocol(protocol)
 				.doOnChannelInit((obs, ch, addr) -> {
@@ -501,7 +543,8 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 						conn.channel().pipeline().addBefore(HttpTrafficHandler, "eventsRecorderHandler", new EventsRecorderHandler(recorder));
 					}
 				})
-				.accessLog(enableAccessLog)
+				.accessLog(enableMetricsAndAccessLog)
+				.metrics(enableMetricsAndAccessLog, Function.identity())
 				.route(routes)
 				.bindNow();
 	}
@@ -515,7 +558,7 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 	static String repeatString(String s) {
 		StringBuilder sb = new StringBuilder(16 * s.length());
 		for (int i = 0; i < 16; i++) {
-			sb.append(s);
+			sb.append(String.format(s, i));
 		}
 		return sb.toString();
 	}
