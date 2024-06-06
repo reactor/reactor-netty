@@ -114,7 +114,7 @@ jobs:
   deploySnapshot:
     name: deploySnapshot
     runs-on: ubuntu-20.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic ]
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'SNAPSHOT'
     environment: snapshots
     steps:
@@ -139,7 +139,7 @@ jobs:
   deployMilestone:
     name: deployMilestone
     runs-on: ubuntu-20.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic ]
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'MILESTONE'
     environment: releases
     steps:
@@ -166,7 +166,7 @@ jobs:
   deployRelease:
     name: deployRelease
     runs-on: ubuntu-20.04
-    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic ]
+    needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'RELEASE'
     environment: releases
     steps:
@@ -222,8 +222,8 @@ jobs:
           git push --tags
 
   cleanup:
-    needs: [ reactor-netty-core, tagRelease, tagMilestone, deploySnapshot ]
-    if: always() # cleanup always run after all needed jobs, regardless of whether they were successful
+    needs: [ deploySnapshot, tagRelease, tagMilestone ]
+    if: always() && (needs.deploySnapshot.result == 'success' || needs.tagRelease.result == 'success' || needs.tagMilestone.result == 'success')
     runs-on: ubuntu-20.04
     permissions:
         actions: write
