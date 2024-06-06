@@ -37,7 +37,9 @@ import reactor.util.context.ContextView;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -50,6 +52,9 @@ import static reactor.netty.ReactorNetty.format;
  * @since 1.0.8
  */
 abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
+
+	static final boolean LAST_FLUSH_WHEN_NO_READ = Boolean.parseBoolean(
+			System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false"));
 
 	private static final Logger log = Loggers.getLogger(AbstractHttpServerMetricsHandler.class);
 
@@ -65,6 +70,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	long dataSentTime;
 
 	boolean initialized;
+
+	boolean isHttp11;
 
 	String method;
 	String path;
@@ -90,6 +97,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		this.dataSent = copy.dataSent;
 		this.dataSentTime = copy.dataSentTime;
 		this.initialized = copy.initialized;
+		this.isHttp11 = copy.isHttp11;
 		this.method = copy.method;
 		this.path = copy.path;
 		this.remoteSocketAddress = copy.remoteSocketAddress;
@@ -103,16 +111,19 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		// For custom user recorders, we don't propagate the channelActive event, because this will be done
 		// by the ChannelMetricsHandler itself. ChannelMetricsHandler is only present when the recorder is
 		// not our MicrometerHttpServerMetricsRecorder. See HttpServerConfig class.
-		if (!(ctx.channel() instanceof Http2StreamChannel) && recorder() instanceof MicrometerHttpServerMetricsRecorder) {
-			try {
-				// Always use the real connection local address without any proxy information
-				channelOpened = true;
-				recorder().recordServerConnectionOpened(ctx.channel().localAddress());
-			}
-			catch (RuntimeException e) {
-				// Allow request-response exchange to continue, unaffected by metrics problem
-				if (log.isWarnEnabled()) {
-					log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+		if (!(ctx.channel() instanceof Http2StreamChannel)) {
+			isHttp11 = true;
+			if (recorder() instanceof MicrometerHttpServerMetricsRecorder) {
+				try {
+					// Always use the real connection local address without any proxy information
+					channelOpened = true;
+					recorder().recordServerConnectionOpened(ctx.channel().localAddress());
+				}
+				catch (RuntimeException e) {
+					// Allow request-response exchange to continue, unaffected by metrics problem
+					if (log.isWarnEnabled()) {
+						log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+					}
 				}
 			}
 		}
@@ -180,21 +191,38 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			dataSent += extractProcessedDataFromBuffer(msg);
 
 			if (msg instanceof LastHttpContent) {
-				promise.addListener(future -> {
+				MetricsArgProvider copy;
+				if (isHttp11 && LAST_FLUSH_WHEN_NO_READ) {
+					copy = createMetricsArgProvider();
 					ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 					if (channelOps instanceof HttpServerOperations) {
-						HttpServerOperations ops = (HttpServerOperations) channelOps;
-						try {
+						recordInactiveConnectionOrStream(ctx.channel(), (HttpServerOperations) channelOps);
+					}
+				}
+				else {
+					copy = null;
+				}
+				promise.addListener(future -> {
+					try {
+						if (copy == null) {
 							recordWrite(ctx.channel());
 						}
-						catch (RuntimeException e) {
-							// Allow request-response exchange to continue, unaffected by metrics problem
-							if (log.isWarnEnabled()) {
-								log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
-							}
+						else {
+							recordWrite(ctx.channel(), copy);
 						}
+					}
+					catch (RuntimeException e) {
+						// Allow request-response exchange to continue, unaffected by metrics problem
+						if (log.isWarnEnabled()) {
+							log.warn(format(ctx.channel(), "Exception caught while recording metrics."), e);
+						}
+					}
 
-						recordInactiveConnectionOrStream(ctx.channel(), ops);
+					if (copy == null) {
+						ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+						if (channelOps instanceof HttpServerOperations) {
+							recordInactiveConnectionOrStream(ctx.channel(), (HttpServerOperations) channelOps);
+						}
 					}
 				});
 			}
@@ -216,7 +244,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		HttpServerOperations ops = null;
 		try {
 			if (msg instanceof HttpRequest) {
-				reset();
+				reset(ctx.channel());
 				ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
 					ops = (HttpServerOperations) channelOps;
@@ -292,6 +320,10 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	protected abstract HttpServerMetricsRecorder recorder();
 
+	protected MetricsArgProvider createMetricsArgProvider() {
+		return new MetricsArgProvider(contextView, dataReceivedTime, dataSent, dataSentTime, method, path, remoteSocketAddress, status);
+	}
+
 	protected void contextView(HttpServerOperations ops) {
 		this.contextView = Context.empty();
 	}
@@ -311,6 +343,22 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	}
 
 	protected void recordWrite(Channel channel) {
+		recordWrite(dataReceivedTime, dataSent, dataSentTime, method, path, remoteSocketAddress, status);
+	}
+
+	protected void recordWrite(Channel channel, MetricsArgProvider metricsArgProvider) {
+		recordWrite(metricsArgProvider.dataReceivedTime, metricsArgProvider.dataSent, metricsArgProvider.dataSentTime,
+				metricsArgProvider.method, metricsArgProvider.path, metricsArgProvider.remoteSocketAddress, metricsArgProvider.status);
+	}
+
+	void recordWrite(
+			long dataReceivedTime,
+			long dataSent,
+			long dataSentTime,
+			String method,
+			String path,
+			SocketAddress remoteSocketAddress,
+			String status) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(path, method, status, dataSentTimeDuration);
 
@@ -377,7 +425,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 		}
 	}
 
-	void reset() {
+	protected void reset(Channel channel) {
 		// There is no need to reset 'channelActivated' and 'channelOpened'
 		contextView = null;
 		dataReceived = 0;
@@ -407,4 +455,46 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	}
 	static final String UNKNOWN_METHOD = "UNKNOWN";
 	static final Function<String, String> DEFAULT_METHOD_TAG_VALUE = m -> STANDARD_METHODS.contains(m) ? m : UNKNOWN_METHOD;
+
+	static class MetricsArgProvider {
+		final ContextView contextView;
+		final long dataReceivedTime;
+		final long dataSent;
+		final long dataSentTime;
+		final Map<Object, Object> map = new HashMap<>();
+		final String method;
+		final String path;
+		final SocketAddress remoteSocketAddress;
+		final String status;
+
+		MetricsArgProvider(
+				ContextView contextView,
+				long dataReceivedTime,
+				long dataSent,
+				long dataSentTime,
+				String method,
+				String path,
+				SocketAddress remoteSocketAddress,
+				String status) {
+			this.contextView = contextView;
+			this.dataReceivedTime = dataReceivedTime;
+			this.dataSent = dataSent;
+			this.dataSentTime = dataSentTime;
+			this.method = method;
+			this.path = path;
+			this.remoteSocketAddress = remoteSocketAddress;
+			this.status = status;
+		}
+
+		<T> MetricsArgProvider put(Object key, T object) {
+			this.map.put(key, object);
+			return this;
+		}
+
+		@Nullable
+		@SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
+		<T> T get(Object key) {
+			return (T) this.map.get(key);
+		}
+	}
 }

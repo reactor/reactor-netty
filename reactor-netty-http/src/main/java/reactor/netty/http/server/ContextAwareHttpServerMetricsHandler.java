@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.function.Function;
 
@@ -74,6 +75,24 @@ final class ContextAwareHttpServerMetricsHandler extends AbstractHttpServerMetri
 
 	@Override
 	protected void recordWrite(Channel channel) {
+		recordWrite(contextView, dataReceivedTime, dataSent, dataSentTime, method, path, remoteSocketAddress, status);
+	}
+
+	@Override
+	protected void recordWrite(Channel channel, MetricsArgProvider metricsArgProvider) {
+		recordWrite(metricsArgProvider.contextView, metricsArgProvider.dataReceivedTime, metricsArgProvider.dataSent, metricsArgProvider.dataSentTime,
+				metricsArgProvider.method, metricsArgProvider.path, metricsArgProvider.remoteSocketAddress, metricsArgProvider.status);
+	}
+
+	void recordWrite(
+			ContextView contextView,
+			long dataReceivedTime,
+			long dataSent,
+			long dataSentTime,
+			String method,
+			String path,
+			SocketAddress remoteSocketAddress,
+			String status) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(contextView, path, method, status, dataSentTimeDuration);
 
