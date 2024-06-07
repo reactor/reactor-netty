@@ -46,23 +46,20 @@ task docsZip(type: Zip) {
 	group = 'Distribution'
 	archiveClassifier = 'docs'
 	duplicatesStrategy "fail"
+	def docsDir = file('../docs/build/site')
 
 	if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
 		logger.lifecycle("Adding dependency on :docs:antora (JDK version is >= 17)")
 		dependsOn(':docs:antora')
 	}
+	else if (!docsDir.exists() || !Files.list(docsDir.toPath()).findFirst().isPresent()) {
+		logger.lifecycle("Docs directory does not exist and JDK version is lower than 17. Skipping docsZip task.")
+		enabled = false
+	}
 
-	def docsDir = file('../docs/build/site')
 	def isSnapshot = project.version.endsWith('-SNAPSHOT')
 	def version = isSnapshot ? project.version.takeWhile { it != '-' } : project.version
 	boolean forcePdf = project.hasProperty('forcePdf')
-
-	doFirst {
-		if (!docsDir.exists() || !Files.list(docsDir.toPath()).findFirst().isPresent()) {
-			logger.lifecycle("Docs directory does not exist or is empty. Skipping docsZip task.")
-			enabled = false
-		}
-	}
 
 	from ('../docs/build/site') {
 		into 'docs'
@@ -82,6 +79,13 @@ task docsZip(type: Zip) {
 javadoc.dependsOn(aggregateJavadoc)
 
 //add docs.zip to the publication
-if (tasks.docsZip.enabled) {
-	publishing.publications.mavenJava.artifact(docsZip)
+publishing.publications.mavenJava.artifact(docsZip)
+
+// If current JDK version is lower than JDK17, report errors in case user invokes documentation related tasks
+if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
+	task antora {
+		doLast {
+			throw new GradleException("antora task requires JDK 17 or higher.")
+		}
+	}
 }
