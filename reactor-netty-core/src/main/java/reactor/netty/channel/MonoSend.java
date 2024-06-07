@@ -59,7 +59,7 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 	}
 
 	static final int                    MAX_SIZE =
-			Integer.parseInt(System.getProperty("reactor.netty.channel.send.prefetch.maxSize", "128"));
+			Integer.parseInt(System.getProperty(ReactorNetty.REACTOR_NETTY_SEND_MAX_PREFETCH_SIZE, "128"));
 
 	static final int                    REFILL_SIZE = MAX_SIZE / 2;
 
