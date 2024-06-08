@@ -94,6 +94,7 @@ import io.netty.util.concurrent.EventExecutor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -3344,6 +3345,47 @@ class HttpClientTest extends BaseHttpTest {
 		finally {
 			serverLoop.disposeLater()
 			          .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	@RepeatedTest(10)
+	void testHttp2ClientWithWorkStealing() {
+		disposableServer =
+				HttpServer.create()
+						.protocol(HttpProtocol.H2C)
+						.port(0)
+						.handle((req, res) ->
+								res.sendString(Mono.just("Welcome")))
+						.bindNow();
+
+		ConnectionProvider provider = ConnectionProvider
+				.builder("http")
+				.allocationStrategy(Http2AllocationStrategy.builder()
+						.maxConcurrentStreams(100)
+						.minConnections(1)
+						.maxConnections(Runtime.getRuntime().availableProcessors())
+						.enableWorkStealing(true)
+						.build())
+				.build();
+
+		try {
+			HttpClient client = HttpClient.create(provider)
+					.protocol(HttpProtocol.H2C)
+					.port(disposableServer.port())
+					.wiretap(true);
+
+			StepVerifier.create(client
+							.headers(hdr -> hdr.set("Content-Type", "text/plain"))
+							.get()
+							.uri("/payload-size")
+							.response((r, buf) -> buf.aggregate().asString().zipWith(Mono.just(r))))
+					.expectNextMatches(tuple -> "Welcome".equals(tuple.getT1()) && tuple.getT2().status().equals(HttpResponseStatus.OK))
+					.expectComplete()
+					.verify(Duration.ofSeconds(30));
+		}
+		finally {
+			provider.disposeLater().block();
 		}
 	}
 }

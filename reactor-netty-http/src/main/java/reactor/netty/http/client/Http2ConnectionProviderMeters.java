@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,26 @@ enum Http2ConnectionProviderMeters implements MeterDocumentation {
 		@Override
 		public Meter.Type getType() {
 			return Meter.Type.GAUGE;
+		}
+	},
+
+	/**
+	 * The number of HTTP/2 stream acquisition steal count.
+	 */
+	STEAL_STREAMS {
+		@Override
+		public String getName() {
+			return "reactor.netty.connection.provider.steal.streams";
+		}
+
+		@Override
+		public KeyName[] getKeyNames() {
+			return Http2ConnectionProviderMetersTags.values();
+		}
+
+		@Override
+		public Meter.Type getType() {
+			return Meter.Type.COUNTER;
 		}
 	},
 

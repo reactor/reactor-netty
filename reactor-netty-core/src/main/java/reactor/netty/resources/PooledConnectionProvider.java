@@ -529,6 +529,20 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		}
 
 		public InstrumentedPool<T> newPool(
+		        PoolBuilder<T, PoolConfig<T>> poolBuilder,
+				int maxConnections,
+				@Nullable AllocationStrategy<?> allocationStrategy,
+				Function<T, Publisher<Void>> destroyHandler,
+				BiPredicate<T, PooledRefMetadata> defaultEvictionPredicate,
+				Function<PoolConfig<T>, InstrumentedPool<T>> poolFactory) {
+			if (disposeTimeout != null) {
+				return newPoolInternal(poolBuilder, maxConnections, allocationStrategy, destroyHandler, defaultEvictionPredicate, null)
+					.build(poolFactory.andThen(InstrumentedPoolDecorators::gracefulShutdown));
+			}
+			return newPoolInternal(poolBuilder, maxConnections, allocationStrategy, destroyHandler, defaultEvictionPredicate, null).build(poolFactory);
+		}
+
+		public InstrumentedPool<T> newPool(
 				Publisher<T> allocator,
 				Function<T, Publisher<Void>> destroyHandler,
 				BiPredicate<T, PooledRefMetadata> defaultEvictionPredicate,
@@ -539,6 +553,21 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 						.build(poolFactory.andThen(InstrumentedPoolDecorators::gracefulShutdown));
 			}
 			return newPoolInternal(allocator, destroyHandler, defaultEvictionPredicate, poolMetricsRecorder).build(poolFactory);
+		}
+
+		public InstrumentedPool<T> newPool(
+				PoolBuilder<T, PoolConfig<T>> poolBuilder,
+				int maxConnections,
+				@Nullable AllocationStrategy<?> allocationStrategy,
+				Function<T, Publisher<Void>> destroyHandler,
+				BiPredicate<T, PooledRefMetadata> defaultEvictionPredicate,
+				PoolMetricsRecorder poolMetricsRecorder,
+				Function<PoolConfig<T>, InstrumentedPool<T>> poolFactory) {
+			if (disposeTimeout != null) {
+				return newPoolInternal(poolBuilder, maxConnections, allocationStrategy, destroyHandler, defaultEvictionPredicate, poolMetricsRecorder)
+						.build(poolFactory.andThen(InstrumentedPoolDecorators::gracefulShutdown));
+			}
+			return newPoolInternal(poolBuilder, maxConnections, allocationStrategy, destroyHandler, defaultEvictionPredicate, poolMetricsRecorder).build(poolFactory);
 		}
 
 		PoolBuilder<T, PoolConfig<T>> newPoolInternal(
@@ -553,11 +582,22 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				Function<T, Publisher<Void>> destroyHandler,
 				BiPredicate<T, PooledRefMetadata> defaultEvictionPredicate,
 				@Nullable PoolMetricsRecorder poolMetricsRecorder) {
-			PoolBuilder<T, PoolConfig<T>> poolBuilder =
-					PoolBuilder.from(allocator)
-					           .destroyHandler(destroyHandler)
-					           .maxPendingAcquire(pendingAcquireMaxCount)
-					           .evictInBackground(evictionInterval);
+			return newPoolInternal(PoolBuilder.from(allocator), -1, null, destroyHandler, defaultEvictionPredicate, poolMetricsRecorder);
+		}
+
+		PoolBuilder<T, PoolConfig<T>> newPoolInternal(
+				PoolBuilder<T, PoolConfig<T>> poolBuilder,
+				int maxConnections,
+				@Nullable AllocationStrategy<?> allocationStrategy,
+				Function<T, Publisher<Void>> destroyHandler,
+				BiPredicate<T, PooledRefMetadata> defaultEvictionPredicate,
+				@Nullable PoolMetricsRecorder poolMetricsRecorder) {
+			maxConnections = (maxConnections == -1) ? this.maxConnections : maxConnections;
+			allocationStrategy = (allocationStrategy == null) ? this.allocationStrategy : allocationStrategy;
+			poolBuilder = poolBuilder
+							.destroyHandler(destroyHandler)
+							.maxPendingAcquire(pendingAcquireMaxCount)
+							.evictInBackground(evictionInterval);
 
 			if (this.evictionPredicate != null) {
 				poolBuilder = poolBuilder.evictionPredicate(
