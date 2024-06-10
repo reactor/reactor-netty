@@ -48,16 +48,15 @@ task docsZip(type: Zip) {
 	archiveClassifier = 'docs'
 	duplicatesStrategy "fail"
 	def docsDir = file('../docs/build/site')
+
+	if (!docsDir.exists() || !Files.list(docsDir.toPath()).findFirst().isPresent()) {
+		logger.lifecycle("Docs directory does not exist and JDK version is lower than 17. Skipping docsZip task.")
+		enabled = false
+	}
+
 	def isSnapshot = project.version.endsWith('-SNAPSHOT')
 	def version = isSnapshot ? project.version.takeWhile { it != '-' } : project.version
 	boolean forcePdf = project.hasProperty('forcePdf')
-
-	doFirst {
-		if (!docsDir.exists() || !Files.list(docsDir.toPath()).findFirst().isPresent()) {
-			logger.lifecycle("Docs directory does not exist or is empty. Skipping docsZip task.")
-			enabled = false
-		}
-	}
 
 	from ('../docs/build/site') {
 		into 'docs'
@@ -77,6 +76,4 @@ task docsZip(type: Zip) {
 javadoc.dependsOn(aggregateJavadoc)
 
 //add docs.zip to the publication
-if (tasks.docsZip.enabled) {
-	publishing.publications.mavenJava.artifact(docsZip)
-}
+publishing.publications.mavenJava.artifact(docsZip)
