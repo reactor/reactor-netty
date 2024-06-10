@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -196,6 +196,11 @@ public final class ReactorNetty {
 	 *  Specifies the zone id used by the access log.
 	 */
 	public static final ZoneId ZONE_ID_SYSTEM = ZoneId.systemDefault();
+
+	/**
+	 * Default prefetch size ({@link Subscription#request(long)}) for data stream Publisher, fallback to 128.
+	 */
+	public static final String REACTOR_NETTY_SEND_MAX_PREFETCH_SIZE = "reactor.netty5.send.maxPrefetchSize";
 
 	/**
 	 * Try to call {@link Resource#close()} if the specified message implements {@link Resource}.
