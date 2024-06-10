@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,21 +109,29 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			return;
 		}
 		try {
-			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+			Connection connection = Connection.from(ctx.channel());
+			ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
 			if (ops != null) {
 				ops.onInboundNext(ctx, msg);
 			}
 			else {
-				if (log.isDebugEnabled()) {
-					if (msg instanceof DecoderResultProvider) {
-						DecoderResult decoderResult = ((DecoderResultProvider) msg).decoderResult();
-						if (decoderResult.isFailure()) {
+				if (msg instanceof DecoderResultProvider) {
+					DecoderResult decoderResult = ((DecoderResultProvider) msg).decoderResult();
+					if (decoderResult.isFailure()) {
+						if (log.isDebugEnabled()) {
 							log.debug(format(ctx.channel(), "Decoding failed."), decoderResult.cause());
 						}
-					}
 
+						//"FutureReturnValueIgnored" this is deliberate
+						ctx.close();
+						listener.onUncaughtException(connection, decoderResult.cause());
+					}
+				}
+
+				if (log.isDebugEnabled()) {
 					log.debug(format(ctx.channel(), "No ChannelOperation attached."));
 				}
+
 				ReferenceCountUtil.release(msg);
 			}
 		}
