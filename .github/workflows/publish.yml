@@ -94,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4
         with:
           name: ${{ env.DOCS_BUILD_ARTIFACT }}
-          retention-days: 1
+          retention-days: 3
           if-no-files-found: error
           path: docs/build
 
@@ -103,7 +103,7 @@ jobs:
     name: deploySnapshot
     runs-on: ubuntu-20.04
     # TODO temporary disable [ reactor-netty-core, reactor-netty-http, reactor-netty-incubator-quic ]
-    needs: [ reactor-netty-core, reactor-netty-http ]
+    needs: [ reactor-netty-core, reactor-netty-http, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'SNAPSHOT'
     environment: snapshots
     steps:
@@ -129,7 +129,7 @@ jobs:
     name: deployMilestone
     runs-on: ubuntu-20.04
     # TODO temporary disable [ reactor-netty-core, reactor-netty-http, reactor-netty-incubator-quic ]
-    needs: [ reactor-netty-core, reactor-netty-http ]
+    needs: [ reactor-netty-core, reactor-netty-http, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'MILESTONE'
     environment: releases
     steps:
@@ -157,7 +157,7 @@ jobs:
     name: deployRelease
     runs-on: ubuntu-20.04
     # TODO temporary disable [ reactor-netty-core, reactor-netty-http, reactor-netty-incubator-quic ]
-    needs: [ reactor-netty-core, reactor-netty-http ]
+    needs: [ reactor-netty-core, reactor-netty-http, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'RELEASE'
     environment: releases
     steps:
@@ -213,8 +213,8 @@ jobs:
           git push --tags
 
   cleanup:
-    needs: [ reactor-netty-core, tagRelease, tagMilestone, deploySnapshot ]
-    if: always() # cleanup always run after all needed jobs, regardless of whether they were successful
+    needs: [ deploySnapshot, tagRelease, tagMilestone ]
+    if: always() && (needs.deploySnapshot.result == 'success' || needs.tagRelease.result == 'success' || needs.tagMilestone.result == 'success')
     runs-on: ubuntu-20.04
     permissions:
         actions: write
