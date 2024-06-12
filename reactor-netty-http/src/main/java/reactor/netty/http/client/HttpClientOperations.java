@@ -750,8 +750,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 
 		if (msg instanceof LastHttpContent) {
+			LastHttpContent lastHttpContent = (LastHttpContent) msg;
 			if (is100Continue) {
-				ReferenceCountUtil.release(msg);
+				lastHttpContent.release();
 				channel().read();
 				return;
 			}
@@ -760,20 +761,20 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					log.debug(format(channel(), "HttpClientOperations received an incorrect end " +
 							"delimiter (previously used connection?)"));
 				}
-				ReferenceCountUtil.release(msg);
+				lastHttpContent.release();
 				return;
 			}
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received last HTTP packet"));
 			}
-			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
+			if (lastHttpContent != LastHttpContent.EMPTY_LAST_CONTENT) {
 				// When there is HTTP/2 response with INBOUND HEADERS(endStream=false) followed by INBOUND DATA(endStream=true length=0),
 				// Netty sends LastHttpContent with empty buffer instead of EMPTY_LAST_CONTENT
-				if (redirecting != null || ((LastHttpContent) msg).content().readableBytes() == 0) {
-					ReferenceCountUtil.release(msg);
+				if (redirecting != null || lastHttpContent.content().readableBytes() == 0) {
+					lastHttpContent.release();
 				}
 				else {
-					super.onInboundNext(ctx, msg);
+					super.onInboundNext(ctx, lastHttpContent);
 				}
 			}
 
@@ -782,7 +783,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				// Whether there are subscribers or the subscriber cancels is not of interest
 				// Evaluated EmitResult: FAIL_TERMINATED, FAIL_OVERFLOW, FAIL_CANCELLED, FAIL_NON_SERIALIZED
 				// FAIL_ZERO_SUBSCRIBER
-				trailerHeaders.tryEmitValue(((LastHttpContent) msg).trailingHeaders());
+				trailerHeaders.tryEmitValue(lastHttpContent.trailingHeaders());
 			}
 
 			//force auto read to enable more accurate close selection now inbound is done
