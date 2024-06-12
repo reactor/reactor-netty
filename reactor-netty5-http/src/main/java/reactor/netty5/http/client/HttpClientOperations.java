@@ -655,11 +655,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpResponse response) {
-			if (response.decoderResult()
-			            .isFailure()) {
-				onInboundError(response.decoderResult()
-				                       .cause());
+			if (response.decoderResult().isFailure()) {
+				onInboundError(response.decoderResult().cause());
 				Resource.dispose(msg);
+				terminate();
 				return;
 			}
 			if (HttpResponseStatus.CONTINUE.equals(response.status())) {
@@ -721,6 +720,13 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 
 		if (msg instanceof LastHttpContent lastHttpContent) {
+			if (lastHttpContent.decoderResult().isFailure()) {
+				onInboundError(lastHttpContent.decoderResult().cause());
+				lastHttpContent.close();
+				terminate();
+				return;
+			}
+
 			if (is100Continue) {
 				lastHttpContent.close();
 				channel().read();
