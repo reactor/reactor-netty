@@ -8,7 +8,7 @@ jobs:
 #    name: preliminary sanity checks
 #    runs-on: ubuntu-20.04
 #    steps:
-#      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+#      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 #        with:
 #          fetch-depth: 0 #needed by spotless
 #      - uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9
@@ -53,23 +53,23 @@ jobs:
           - os: macos-12
             transport: native
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           path: reactor-netty
           fetch-depth: 0 #needed by spotless
-#      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+#      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 #        with:
 #          repository: netty-contrib/codec-haproxy
 #          path: codec-haproxy
-#      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+#      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 #        with:
 #          repository: netty-contrib/codec-extras
 #          path: codec-extras
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           repository: netty-contrib/socks-proxy
           path: socks-proxy
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
             repository: netty-contrib/codec-multipart
             path: codec-multipart
