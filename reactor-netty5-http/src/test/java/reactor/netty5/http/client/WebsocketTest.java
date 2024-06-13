@@ -34,9 +34,12 @@ import java.util.stream.Stream;
 
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CorruptedFrameException;
+import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
+import io.netty5.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty5.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -77,6 +80,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
+import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.ABNORMAL_CLOSURE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -1517,6 +1521,55 @@ class WebsocketTest extends BaseHttpTest {
 		          .block(Duration.ofSeconds(5));
 
 		assertThat(responseHeaders.get()).isNotNull().contains("permessage-deflate");
+	}
+
+	@Test
+	void testIssue3295() throws Exception {
+		AtomicReference<Throwable> serverError = new AtomicReference<>();
+		CountDownLatch serverLatch = new CountDownLatch(1);
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendWebsocket((in, out) ->
+				                in.aggregateFrames(10)
+				                  .receiveFrames()
+				                  .doOnError(t -> {
+				                      serverError.set(t);
+				                      serverLatch.countDown();
+				                  })
+				                  .cast(BinaryWebSocketFrame.class)
+				                  .map(WebSocketFrame::binaryData)
+				                  .then()))
+				        .bindNow();
+
+		AtomicReference<WebSocketCloseStatus> clientStatus = new AtomicReference<>();
+		AtomicReference<Connection> connection = new AtomicReference<>();
+		CountDownLatch clientLatch = new CountDownLatch(1);
+		byte[] content1 = "Content1".getBytes(Charset.defaultCharset());
+		byte[] content2 = "Content2".getBytes(Charset.defaultCharset());
+		byte[] content3 = "Content3".getBytes(Charset.defaultCharset());
+		createClient(disposableServer.port())
+		        .websocket()
+		        .handle((in, out) -> {
+		            in.withConnection(connection::set);
+		            in.receiveCloseStatus().subscribe(s -> {
+		                clientStatus.set(s);
+			            clientLatch.countDown();
+		            });
+		            return out.sendObject(Flux.just(
+		                    new BinaryWebSocketFrame(false, 0, out.alloc().copyOf(content1)),
+		                    new ContinuationWebSocketFrame(false, 0, out.alloc().copyOf(content2)),
+		                    new ContinuationWebSocketFrame(true, 0, out.alloc().copyOf(content3))));
+		        })
+		        .then()
+		        .block(Duration.ofSeconds(5));
+
+		assertThat(serverLatch.await(5, TimeUnit.SECONDS)).isTrue();
+		assertThat(serverError.get()).isNotNull().isInstanceOf(TooLongFrameException.class);
+
+		assertThat(clientLatch.await(5, TimeUnit.SECONDS)).isTrue();
+		assertThat(clientStatus.get()).isNotNull().isEqualTo(ABNORMAL_CLOSURE);
+		assertThat(connection.get()).isNotNull();
+		assertThat(connection.get().channel().isActive()).isFalse();
 	}
 
 	static Stream<Arguments> http11CompatibleProtocols() {
