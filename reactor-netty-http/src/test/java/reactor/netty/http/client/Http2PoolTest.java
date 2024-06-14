@@ -1218,9 +1218,9 @@ class Http2PoolTest {
 				           .sizeBetween(0, 1);
 		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
 
+		CountDownLatch latch = new CountDownLatch(3);
+		ExecutorService executorService = Executors.newFixedThreadPool(20);
 		try {
-			CountDownLatch latch = new CountDownLatch(3);
-			ExecutorService executorService = Executors.newFixedThreadPool(20);
 			CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[4];
 			for (int i = 0; i < completableFutures.length; i++) {
 				completableFutures[i] = CompletableFuture.runAsync(
@@ -1232,12 +1232,13 @@ class Http2PoolTest {
 						executorService);
 			}
 
-			Mono.fromCompletionStage(CompletableFuture.allOf(completableFutures)).block(Duration.ofSeconds(5));
+			CompletableFuture.allOf(completableFutures).join();
 			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 		}
 		finally {
 			channel.finishAndReleaseAll();
 			Connection.from(channel).dispose();
+			executorService.shutdown();
 		}
 	}
 
