@@ -40,7 +40,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
@@ -1199,6 +1202,38 @@ class Http2PoolTest {
 			assertThat(http2Pool.activeStreams()).isEqualTo(0);
 			assertThat(http2Pool.connections.size()).isEqualTo(0);
 			assertThat(http2Pool.totalMaxConcurrentStreams).isEqualTo(0);
+		}
+		finally {
+			channel.finishAndReleaseAll();
+			Connection.from(channel).dispose();
+		}
+	}
+
+	@Test
+	void pendingTimeout() throws Exception {
+		EmbeddedChannel channel = new EmbeddedChannel();
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.just(Connection.from(channel)))
+				           .maxPendingAcquire(10)
+				           .sizeBetween(0, 1);
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		try {
+			CountDownLatch latch = new CountDownLatch(3);
+			ExecutorService executorService = Executors.newFixedThreadPool(20);
+			CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[4];
+			for (int i = 0; i < completableFutures.length; i++) {
+				completableFutures[i] = CompletableFuture.runAsync(
+						() -> http2Pool.acquire(Duration.ofMillis(10))
+								.doOnEach(sig -> channel.runPendingTasks())
+								.doOnError(t -> latch.countDown())
+								.onErrorResume(PoolAcquireTimeoutException.class, t -> Mono.empty())
+								.block(),
+						executorService);
+			}
+
+			Mono.fromCompletionStage(CompletableFuture.allOf(completableFutures)).block(Duration.ofSeconds(5));
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 		}
 		finally {
 			channel.finishAndReleaseAll();
