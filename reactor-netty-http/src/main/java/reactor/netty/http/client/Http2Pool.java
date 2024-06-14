@@ -640,8 +640,8 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			}
 		}
 
-		int maxPending = poolConfig.maxPending();
 		if (WIP.getAndIncrement(this) == 0) {
+			int maxPending = poolConfig.maxPending();
 			ConcurrentLinkedQueue<Slot> ir = connections;
 			if (maxPending >= 0 && postOffer > maxPending && ir.isEmpty() && poolConfig.allocationStrategy().estimatePermitCount() == 0) {
 				Borrower toCull = pollPending(pendingQueue, false);
