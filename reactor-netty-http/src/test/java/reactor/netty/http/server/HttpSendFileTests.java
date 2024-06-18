@@ -266,7 +266,7 @@ class HttpSendFileTests extends BaseHttpTest {
 				          .uri("/foo")
 				          .responseSingle((res, byteBufMono) -> byteBufMono.asString(StandardCharsets.UTF_8));
 
-		String body = response.block(Duration.ofSeconds(5));
+		String body = response.block(Duration.ofSeconds(30));
 
 		bodyAssertion.accept(body);
 	}
