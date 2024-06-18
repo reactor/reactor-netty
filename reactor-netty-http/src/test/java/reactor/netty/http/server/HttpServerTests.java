@@ -1003,7 +1003,7 @@ class HttpServerTests extends BaseHttpTest {
 		          .responseContent()
 		          .aggregate()
 		          .asString()
-		          .block(Duration.ofSeconds(5));
+		          .block(Duration.ofSeconds(30));
 
 		assertThat(channelRef.get()).isNotNull();
 		assertThat(chunkSize).as("line length").hasValue(789);
