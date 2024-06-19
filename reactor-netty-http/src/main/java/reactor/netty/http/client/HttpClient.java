@@ -69,6 +69,7 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Incubating;
 import reactor.util.annotation.Nullable;
 
+import static reactor.netty.http.client.HttpClientConfig.h3;
 import static reactor.netty.http.internal.Http3.isHttp3Available;
 
 /**
@@ -1354,9 +1355,15 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		HttpClientConfig config = dup.configuration();
 		config.protocols(supportedProtocols);
 
+		if (config.checkProtocol(h3) && !isHttp3Available()) {
+			throw new UnsupportedOperationException(
+					"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
+							" to the class path first");
+		}
+
 		boolean isH2c = config.checkProtocol(HttpClientConfig.h2c);
 		if ((!isH2c || config._protocols > 1) && HttpClientSecure.hasDefaultSslProvider(config)) {
-			dup.configuration().sslProvider = HttpClientSecure.defaultSslProvider(config);
+			config.sslProvider = HttpClientSecure.defaultSslProvider(config);
 		}
 		return dup;
 	}

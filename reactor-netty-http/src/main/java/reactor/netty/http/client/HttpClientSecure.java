@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.tcp.SslProvider;
 
 import static reactor.netty.http.client.HttpClientSecurityUtils.HOSTNAME_VERIFICATION_CONFIGURER;
+import static reactor.netty.http.internal.Http3.isHttp3Available;
 
 /**
  * Initializes the default {@link SslProvider} for the HTTP client.
@@ -35,6 +36,9 @@ final class HttpClientSecure {
 		if (config.checkProtocol(HttpClientConfig.h2)) {
 			return DEFAULT_HTTP2_SSL_PROVIDER;
 		}
+		if (config.checkProtocol(HttpClientConfig.h3)) {
+			return DEFAULT_HTTP3_SSL_PROVIDER;
+		}
 		else {
 			return DEFAULT_HTTP_SSL_PROVIDER;
 		}
@@ -43,7 +47,9 @@ final class HttpClientSecure {
 	@SuppressWarnings("ReferenceEquality")
 	static boolean hasDefaultSslProvider(HttpClientConfig config) {
 		// Reference comparison is deliberate
-		return DEFAULT_HTTP_SSL_PROVIDER == config.sslProvider || DEFAULT_HTTP2_SSL_PROVIDER == config.sslProvider;
+		return DEFAULT_HTTP_SSL_PROVIDER == config.sslProvider ||
+				DEFAULT_HTTP2_SSL_PROVIDER == config.sslProvider ||
+				(DEFAULT_HTTP3_SSL_PROVIDER != null && DEFAULT_HTTP3_SSL_PROVIDER == config.sslProvider);
 	}
 
 	static SslProvider sslProvider(SslProvider sslProvider) {
@@ -62,6 +68,25 @@ final class HttpClientSecure {
 			sslProvider = null;
 		}
 		HTTP2_SSL_PROVIDER = sslProvider;
+	}
+
+	static final SslProvider DEFAULT_HTTP3_SSL_PROVIDER;
+	static {
+		SslProvider sslProvider;
+		try {
+			if (!isHttp3Available()) {
+				sslProvider = null;
+			}
+			else {
+				sslProvider = SslProvider.addHandlerConfigurator(
+						SslProvider.builder().sslContext(reactor.netty.http.Http3SslContextSpec.forClient()).build(),
+						HOSTNAME_VERIFICATION_CONFIGURER);
+			}
+		}
+		catch (Exception e) {
+			sslProvider = null;
+		}
+		DEFAULT_HTTP3_SSL_PROVIDER = sslProvider;
 	}
 
 	static final SslProvider DEFAULT_HTTP_SSL_PROVIDER =
