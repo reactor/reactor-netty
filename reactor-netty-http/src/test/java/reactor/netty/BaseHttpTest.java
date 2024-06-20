@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
  */
 package reactor.netty;
 
+import io.github.nettyplus.leakdetector.junit.NettyLeakDetectorExtension;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.provider.Arguments;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
@@ -34,6 +36,7 @@ import java.util.stream.Stream;
  * @author Violeta Georgieva
  * @since 1.0.3
  */
+@ExtendWith(NettyLeakDetectorExtension.class)
 public class BaseHttpTest {
 
 	protected DisposableServer disposableServer;
