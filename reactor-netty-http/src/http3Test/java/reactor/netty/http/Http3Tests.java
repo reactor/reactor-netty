@@ -15,14 +15,19 @@
  */
 package reactor.netty.http;
 
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 
@@ -39,18 +44,31 @@ class Http3Tests {
 
 	static SelfSignedCertificate ssc;
 
+	DisposableServer disposableServer;
+
 	@BeforeAll
 	static void createSelfSignedCertificate() throws Exception {
 		ssc = new SelfSignedCertificate();
 	}
 
+	@AfterEach
+	void disposeServer() {
+		if (disposableServer != null) {
+			disposableServer.disposeNow();
+		}
+	}
+
 	@Test
 	void testHttpClientNoSecurityHttp3Fails() {
-		HttpClient.create()
-		          .protocol(HttpProtocol.HTTP3)
-		          .wiretap(true)
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("Hello")))
+				        .bindNow();
+
+		createClient(disposableServer.port())
+		          .noSSL()
 		          .get()
-		          .uri("http://example.com")
+		          .uri("/")
 		          .responseContent()
 		          .aggregate()
 		          .asString()
@@ -66,6 +84,24 @@ class Http3Tests {
 		        .bind()
 		        .as(StepVerifier::create)
 		        .verifyErrorMessage(HTTP3_WITHOUT_TLS_SERVER);
+	}
+
+	static HttpClient createClient(int port) {
+		return createClient(null, port);
+	}
+
+	static HttpClient createClient(@Nullable ConnectionProvider pool, int port) {
+		Http3SslContextSpec clientCtx =
+				Http3SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+		HttpClient client = pool == null ? HttpClient.create() : HttpClient.create(pool);
+		return client.port(port)
+		             .wiretap(true)
+		             .protocol(HttpProtocol.HTTP3)
+		             .secure(spec -> spec.sslContext(clientCtx))
+		             .http3Settings(spec -> spec.idleTimeout(Duration.ofSeconds(5))
+		                                        .maxData(10000000)
+		                                        .maxStreamDataBidirectionalLocal(1000000));
 	}
 
 	static HttpServer createServer() {
