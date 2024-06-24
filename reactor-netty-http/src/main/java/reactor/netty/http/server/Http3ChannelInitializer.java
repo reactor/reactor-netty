@@ -25,7 +25,6 @@ import io.netty.util.AttributeKey;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.Http3SettingsSpec;
 
-import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -36,7 +35,6 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 	final Map<AttributeKey<?>, ?>     attributes;
 	final Map<AttributeKey<?>, ?>     childAttributes;
 	final Map<ChannelOption<?>, ?>    childOptions;
-	final Duration                    idleTimeout;
 	final Http3SettingsSpec           http3Settings;
 	final ChannelHandler              loggingHandler;
 	final Map<ChannelOption<?>, ?>    options;
@@ -47,7 +45,6 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 		this.attributes = config.attributes();
 		this.childAttributes = config.childAttributes();
 		this.childOptions = config.childOptions();
-		this.idleTimeout = config.idleTimeout();
 		this.http3Settings = config.http3SettingsSpec();
 		this.loggingHandler = config.loggingHandler();
 		this.options = config.options();
@@ -72,10 +69,10 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 			                      .initialMaxStreamDataBidirectionalRemote(http3Settings.maxStreamDataBidirectionalRemote())
 			                      .initialMaxStreamsBidirectional(http3Settings.maxStreamsBidirectional())
 			                      .tokenHandler(http3Settings.tokenHandler());
-		}
 
-		if (idleTimeout != null) {
-			quicServerCodecBuilder.maxIdleTimeout(idleTimeout.toMillis(), TimeUnit.MILLISECONDS);
+			if (http3Settings.idleTimeout() != null) {
+				quicServerCodecBuilder.maxIdleTimeout(http3Settings.idleTimeout().toMillis(), TimeUnit.MILLISECONDS);
+			}
 		}
 
 		attributes(quicServerCodecBuilder, attributes);
