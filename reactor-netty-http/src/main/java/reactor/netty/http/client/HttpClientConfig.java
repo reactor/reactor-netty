@@ -617,7 +617,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 	}
 
-	static void configureHttp2Pipeline(ChannelPipeline p, boolean acceptGzip, HttpResponseDecoderSpec decoder,
+	static void configureHttp2Pipeline(ChannelPipeline p, HttpResponseDecoderSpec decoder,
 			Http2Settings http2Settings, ConnectionObserver observer) {
 		Http2FrameCodecBuilder http2FrameCodecBuilder =
 				Http2FrameCodecBuilder.forClient()
@@ -945,7 +945,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					log.debug(format(ctx.channel(), "Negotiated application-level protocol [" + protocol + "]"));
 				}
 				if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-					configureHttp2Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, http2Settings, observer);
+					configureHttp2Pipeline(ctx.channel().pipeline(), decoder, http2Settings, observer);
 				}
 				else if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
 					configureHttp11Pipeline(ctx.channel().pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
@@ -1002,7 +1002,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
 				}
 				else if ((protocols & h2) == h2) {
-					configureHttp2Pipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, observer);
+					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
 				}
 			}
 			else {
@@ -1013,7 +1013,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
 				}
 				else if ((protocols & h2c) == h2c) {
-					configureHttp2Pipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, observer);
+					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
 				}
 			}
 		}
