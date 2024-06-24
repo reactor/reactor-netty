@@ -868,6 +868,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 		assertThat(onError).isEqualTo(2);
 	}
 
+	@ParameterizedCompatibleCombinationsTest
 	void test100Continue(HttpServer server, HttpClient client) throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		disposableServer =
