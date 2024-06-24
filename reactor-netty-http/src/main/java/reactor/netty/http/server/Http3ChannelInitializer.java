@@ -72,10 +72,10 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 			                      .initialMaxStreamDataBidirectionalRemote(http3Settings.maxStreamDataBidirectionalRemote())
 			                      .initialMaxStreamsBidirectional(http3Settings.maxStreamsBidirectional())
 			                      .tokenHandler(http3Settings.tokenHandler());
-		}
 
-		if (idleTimeout != null) {
-			quicServerCodecBuilder.maxIdleTimeout(idleTimeout.toMillis(), TimeUnit.MILLISECONDS);
+			if (http3Settings.idleTimeout() != null) {
+				quicServerCodecBuilder.maxIdleTimeout(http3Settings.idleTimeout().toMillis(), TimeUnit.MILLISECONDS);
+			}
 		}
 
 		attributes(quicServerCodecBuilder, attributes);
