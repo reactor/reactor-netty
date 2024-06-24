@@ -76,6 +76,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http2SettingsSpec;
+import reactor.netty.http.Http3SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
 import reactor.netty.http.logging.HttpMessageLogFactory;
@@ -88,6 +89,7 @@ import reactor.netty.transport.ProxyProvider;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Incubating;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
@@ -191,6 +193,18 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 */
 	public Http2SettingsSpec http2SettingsSpec() {
 		return http2Settings;
+	}
+
+	/**
+	 * Return the HTTP/3 configuration.
+	 *
+	 * @return the HTTP/3 configuration
+	 * @since 1.2.0
+	 */
+	@Incubating
+	@Nullable
+	public Http3SettingsSpec http3SettingsSpec() {
+		return http3Settings;
 	}
 
 	/**
@@ -331,6 +345,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 	HttpHeaders headers;
 	Http2SettingsSpec http2Settings;
+	Http3SettingsSpec http3Settings;
 	HttpMessageLogFactory httpMessageLogFactory;
 	HttpMethod method;
 	HttpProtocol[] protocols;
@@ -380,6 +395,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.followRedirectPredicate = parent.followRedirectPredicate;
 		this.headers = parent.headers;
 		this.http2Settings = parent.http2Settings;
+		this.http3Settings = parent.http3Settings;
 		this.httpMessageLogFactory = parent.httpMessageLogFactory;
 		this.method = parent.method;
 		this.protocols = parent.protocols;

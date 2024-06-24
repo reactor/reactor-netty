@@ -37,8 +37,8 @@ public class Application {
 				          .port(8080)
 				          .protocol(HttpProtocol.HTTP3)                 //<1>
 				          .secure(spec -> spec.sslContext(serverCtx))   //<2>
-				          .idleTimeout(Duration.ofSeconds(5))
-				          .http3Settings(spec -> spec.maxData(10000000) //<3>
+				          .http3Settings(spec -> spec.idleTimeout(Duration.ofSeconds(5)) //<3>
+				                                     .maxData(10000000)
 				                                     .maxStreamDataBidirectionalLocal(1000000)
 				                                     .maxStreamDataBidirectionalRemote(1000000)
 				                                     .maxStreamsBidirectional(100))

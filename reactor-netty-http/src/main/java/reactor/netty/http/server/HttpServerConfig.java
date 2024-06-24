@@ -172,6 +172,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * @since 1.2.0
 	 */
 	@Incubating
+	@Nullable
 	public Http3SettingsSpec http3SettingsSpec() {
 		return http3Settings;
 	}
@@ -1284,7 +1285,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2SettingsSpec                                       http2SettingsSpec;
-		final Http3SettingsSpec                                       http3SettingsSpec;
 		final HttpMessageLogFactory                                   httpMessageLogFactory;
 		final Duration                                                idleTimeout;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -1313,7 +1313,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.formDecoderProvider = config.formDecoderProvider;
 			this.forwardedHeaderHandler = config.forwardedHeaderHandler;
 			this.http2SettingsSpec = config.http2Settings;
-			this.http3SettingsSpec = config.http3Settings;
 			this.httpMessageLogFactory = config.httpMessageLogFactory;
 			this.idleTimeout = config.idleTimeout;
 			this.mapHandle = config.mapHandle;

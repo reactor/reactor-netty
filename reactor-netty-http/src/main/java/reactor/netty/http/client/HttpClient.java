@@ -53,6 +53,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.Http2SettingsSpec;
+import reactor.netty.http.Http3SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
@@ -65,7 +66,10 @@ import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.ClientTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Incubating;
 import reactor.util.annotation.Nullable;
+
+import static reactor.netty.http.internal.Http3.isHttp3Available;
 
 /**
  * An HttpClient allows building in a safe immutable way an http client that is
@@ -1081,6 +1085,32 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		}
 		HttpClient dup = duplicate();
 		dup.configuration().http2Settings = settings;
+		return dup;
+	}
+
+	/**
+	 * Apply HTTP/3 configuration.
+	 *
+	 * @param http3Settings configures {@link Http3SettingsSpec} before requesting
+	 * @return a new {@link HttpClient}
+	 * @since 1.2.0
+	 */
+	@Incubating
+	public final HttpClient http3Settings(Consumer<Http3SettingsSpec.Builder> http3Settings) {
+		Objects.requireNonNull(http3Settings, "http3Settings");
+		if (!isHttp3Available()) {
+			throw new UnsupportedOperationException(
+					"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
+							" to the class path first");
+		}
+		Http3SettingsSpec.Builder builder = Http3SettingsSpec.builder();
+		http3Settings.accept(builder);
+		Http3SettingsSpec settings = builder.build();
+		if (settings.equals(configuration().http3Settings)) {
+			return this;
+		}
+		HttpClient dup = duplicate();
+		dup.configuration().http3Settings = settings;
 		return dup;
 	}
 
