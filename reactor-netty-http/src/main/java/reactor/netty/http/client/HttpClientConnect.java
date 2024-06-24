@@ -245,6 +245,10 @@ class HttpClientConnect extends HttpClient {
 							return;
 						}
 					}
+					else if (_config.checkProtocol(HttpClientConfig.h3)) {
+						sink.error(new IllegalArgumentException("Configured HTTP/3 protocol without TLS. Check URL scheme"));
+						return;
+					}
 				}
 
 				ConnectionObserver observer =

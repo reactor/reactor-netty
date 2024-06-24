@@ -504,6 +504,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			else if (p == HttpProtocol.H2C) {
 				_protocols |= h2c;
 			}
+			else if (p == HttpProtocol.HTTP3) {
+				_protocols |= h3;
+			}
 		}
 
 		this._protocols = _protocols;
@@ -763,6 +766,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			(req, res) -> FOLLOW_REDIRECT_CODES.matcher(res.status()
 			                                               .codeAsText())
 			                                   .matches();
+
+	static final int h3 = 0b1000;
 
 	static final int h2 = 0b010;
 

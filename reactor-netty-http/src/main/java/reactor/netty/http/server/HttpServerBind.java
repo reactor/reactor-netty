@@ -73,7 +73,7 @@ final class HttpServerBind extends HttpServer {
 			}
 			else if ((config._protocols & HttpServerConfig.h3) == HttpServerConfig.h3) {
 				return Mono.error(new IllegalArgumentException(
-						"Configured H3 protocol without TLS. Configure TLS via HttpServer#secure"));
+						"Configured HTTP/3 protocol without TLS. Configure TLS via HttpServer#secure"));
 			}
 		}
 		return super.bind();
