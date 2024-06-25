@@ -1357,7 +1357,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		config.protocols(supportedProtocols);
 
 		if (config.checkProtocol(h3)) {
-			if(!isHttp3Available()) {
+			if (!isHttp3Available()) {
 				throw new UnsupportedOperationException(
 						"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
 								" to the class path first");
