@@ -122,7 +122,6 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		Objects.requireNonNull(config, "config");
 		Objects.requireNonNull(connectionObserver, "connectionObserver");
 		Objects.requireNonNull(remote, "remoteAddress");
-		Objects.requireNonNull(resolverGroup, "resolverGroup");
 		return Mono.create(sink -> {
 			SocketAddress remoteAddress = Objects.requireNonNull(remote.get(), "Remote Address supplier returned null");
 			PoolKey holder = new PoolKey(remoteAddress, config.channelHash());
@@ -307,14 +306,14 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			TransportConfig config,
 			PoolFactory<T> poolFactory,
 			SocketAddress remoteAddress,
-			AddressResolverGroup<?> resolverGroup);
+			@Nullable AddressResolverGroup<?> resolverGroup);
 
 	protected InstrumentedPool<T> createPool(
 			String id,
 			TransportConfig config,
 			PoolFactory<T> poolFactory,
 			SocketAddress remoteAddress,
-			AddressResolverGroup<?> resolverGroup) {
+			@Nullable AddressResolverGroup<?> resolverGroup) {
 		return createPool(config, poolFactory, remoteAddress, resolverGroup);
 	}
 

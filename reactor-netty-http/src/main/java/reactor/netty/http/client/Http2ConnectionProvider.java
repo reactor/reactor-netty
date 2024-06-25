@@ -135,7 +135,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			TransportConfig config,
 			PooledConnectionProvider.PoolFactory<Connection> poolFactory,
 			SocketAddress remoteAddress,
-			AddressResolverGroup<?> resolverGroup) {
+			@Nullable AddressResolverGroup<?> resolverGroup) {
 		return new PooledConnectionAllocator(parent, config, poolFactory, remoteAddress, resolverGroup).pool;
 	}
 
@@ -145,7 +145,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			TransportConfig config,
 			PooledConnectionProvider.PoolFactory<Connection> poolFactory,
 			SocketAddress remoteAddress,
-			AddressResolverGroup<?> resolverGroup) {
+			@Nullable AddressResolverGroup<?> resolverGroup) {
 		return new PooledConnectionAllocator(id, name(), parent, config, poolFactory, remoteAddress, resolverGroup).pool;
 	}
 
@@ -549,7 +549,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				TransportConfig config,
 				PoolFactory<Connection> poolFactory,
 				SocketAddress remoteAddress,
-				AddressResolverGroup<?> resolver) {
+				@Nullable AddressResolverGroup<?> resolver) {
 			this(null, null, parent, config, poolFactory, remoteAddress, resolver);
 		}
 
@@ -560,7 +560,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				TransportConfig config,
 				PoolFactory<Connection> poolFactory,
 				SocketAddress remoteAddress,
-				AddressResolverGroup<?> resolver) {
+				@Nullable AddressResolverGroup<?> resolver) {
 			this.parent = parent;
 			this.config = (HttpClientConfig) config;
 			this.remoteAddress = remoteAddress;
