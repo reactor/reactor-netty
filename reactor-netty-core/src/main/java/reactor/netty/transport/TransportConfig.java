@@ -249,6 +249,10 @@ public abstract class TransportConfig {
 		this.preferNative = parent.preferNative;
 	}
 
+	protected void bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		this.bindAddress = bindAddressSupplier;
+	}
+
 	/**
 	 * Return the channel type this configuration is associated with, it can be one of the following.
 	 * <ul>
