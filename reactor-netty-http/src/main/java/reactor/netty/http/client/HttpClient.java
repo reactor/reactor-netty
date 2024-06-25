@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.time.Duration;
@@ -1355,10 +1356,17 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		HttpClientConfig config = dup.configuration();
 		config.protocols(supportedProtocols);
 
-		if (config.checkProtocol(h3) && !isHttp3Available()) {
-			throw new UnsupportedOperationException(
-					"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
-							" to the class path first");
+		if (config.checkProtocol(h3)) {
+			if(!isHttp3Available()) {
+				throw new UnsupportedOperationException(
+						"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
+								" to the class path first");
+			}
+
+			Supplier<? extends SocketAddress> bindAddressSupplier = config.bindAddress();
+			if ((bindAddressSupplier == null || bindAddressSupplier.get() == null)) {
+				config.bindAddress(() -> new InetSocketAddress(0));
+			}
 		}
 
 		boolean isH2c = config.checkProtocol(HttpClientConfig.h2c);

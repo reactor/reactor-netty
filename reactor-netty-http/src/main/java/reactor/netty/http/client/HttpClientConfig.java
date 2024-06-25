@@ -424,6 +424,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	@Override
+	protected void bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		super.bindAddress(bindAddressSupplier);
+	}
+
+	@Override
 	protected ConnectionObserver defaultConnectionObserver() {
 		if (doAfterRequest == null && doAfterResponseSuccess == null && doOnRedirect == null &&
 					doOnRequest == null && doOnRequestError == null && doOnResponse == null && doOnResponseError == null) {
