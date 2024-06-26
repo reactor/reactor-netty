@@ -106,7 +106,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Violeta Georgieva
  */
-final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMetrics {
+class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMetrics {
 
 	static final Logger log = Loggers.getLogger(Http2Pool.class);
 
@@ -291,44 +291,52 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
+	Slot createSlot(Connection connection) {
+		return new Slot(this, connection);
+	}
+
 	Mono<Void> destroyPoolable(Http2PooledRef ref) {
 		assert ref.slot.connection.channel().eventLoop().inEventLoop();
 		Mono<Void> mono = Mono.empty();
 		try {
 			// By default, check the connection for removal on acquire and invalidate (only if there are no active streams)
 			if (ref.slot.decrementConcurrencyAndGet() == 0) {
-				// not HTTP/2 request
-				if (ref.slot.http2FrameCodecCtx() == null) {
-					ref.slot.invalidate();
-					removeSlot(ref.slot);
-				}
-				// If there is eviction in background, the background process will remove this connection
-				else if (poolConfig.evictInBackgroundInterval().isZero()) {
-					// not active
-					if (!ref.poolable().channel().isActive()) {
-						ref.slot.invalidate();
-						removeSlot(ref.slot);
-					}
-					// received GO_AWAY
-					if (ref.slot.goAwayReceived()) {
-						ref.slot.invalidate();
-						removeSlot(ref.slot);
-					}
-					// eviction predicate evaluates to true
-					else if (testEvictionPredicate(ref.slot)) {
-						//"FutureReturnValueIgnored" this is deliberate
-						ref.slot.connection.channel().close();
-						ref.slot.invalidate();
-						removeSlot(ref.slot);
-					}
-				}
+				destroyPoolableInternal(ref);
 			}
 		}
 		catch (Throwable destroyFunctionError) {
 			mono = Mono.error(destroyFunctionError);
 		}
 		return mono;
+	}
+
+	@SuppressWarnings("FutureReturnValueIgnored")
+	void destroyPoolableInternal(Http2PooledRef ref) {
+		// not HTTP/2 request
+		if (ref.slot.http2FrameCodecCtx() == null) {
+			ref.slot.invalidate();
+			removeSlot(ref.slot);
+		}
+		// If there is eviction in background, the background process will remove this connection
+		else if (poolConfig.evictInBackgroundInterval().isZero()) {
+			// not active
+			if (!ref.poolable().channel().isActive()) {
+				ref.slot.invalidate();
+				removeSlot(ref.slot);
+			}
+			// received GO_AWAY
+			if (ref.slot.goAwayReceived()) {
+				ref.slot.invalidate();
+				removeSlot(ref.slot);
+			}
+			// eviction predicate evaluates to true
+			else if (testEvictionPredicate(ref.slot)) {
+				//"FutureReturnValueIgnored" this is deliberate
+				ref.slot.connection.channel().close();
+				ref.slot.invalidate();
+				removeSlot(ref.slot);
+			}
+		}
 	}
 
 	void doAcquire(Borrower borrower) {
@@ -429,7 +437,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 									             if (sig.isOnNext()) {
 									                 Connection newInstance = sig.get();
 									                 assert newInstance != null;
-									                 Slot newSlot = new Slot(this, newInstance);
+									                 Slot newSlot = createSlot(newInstance);
 									                 if (log.isDebugEnabled()) {
 									                     log.debug(format(newInstance.channel(), "Channel activated"));
 									                 }
@@ -926,7 +934,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 	}
 
-	static final class Slot extends AtomicBoolean implements PooledRefMetadata {
+	static class Slot extends AtomicBoolean implements PooledRefMetadata {
 
 		volatile int concurrency;
 		static final AtomicIntegerFieldUpdater<Slot> CONCURRENCY =
@@ -956,13 +964,17 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			else {
 				this.applicationProtocol = null;
 			}
+			initMaxConcurrentStreams();
+			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, this.maxConcurrentStreams);
+		}
+
+		void initMaxConcurrentStreams() {
 			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
 			if (frameCodec != null && http2MultiplexHandlerCtx() != null) {
 				this.maxConcurrentStreams = ((Http2FrameCodec) frameCodec.handler()).connection().local().maxActiveStreams();
 				this.maxConcurrentStreams = pool.maxConcurrentStreams == -1 ? maxConcurrentStreams :
 						Math.min(pool.maxConcurrentStreams, maxConcurrentStreams);
 			}
-			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, this.maxConcurrentStreams);
 		}
 
 		boolean canOpenStream() {
