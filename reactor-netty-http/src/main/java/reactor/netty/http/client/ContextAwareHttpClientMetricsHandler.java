@@ -36,7 +36,7 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 
 	ContextAwareHttpClientMetricsHandler(ContextAwareHttpClientMetricsRecorder recorder,
 			SocketAddress remoteAddress,
-			SocketAddress proxyAddress,
+			@Nullable SocketAddress proxyAddress,
 			@Nullable Function<String, String> uriTagValue) {
 		super(remoteAddress, proxyAddress, uriTagValue);
 		this.recorder = recorder;
