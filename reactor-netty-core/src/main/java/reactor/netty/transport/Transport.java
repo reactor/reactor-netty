@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -231,8 +231,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @return a new {@link Transport} reference
 	 */
 	public T runOn(EventLoopGroup eventLoopGroup) {
-		Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
-		return runOn(preferNative -> eventLoopGroup);
+		return runOn(new EventLoopGroupLoopResources(eventLoopGroup));
 	}
 
 	/**
@@ -389,4 +388,38 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	protected abstract T duplicate();
 
 	static final Logger log = Loggers.getLogger(Transport.class);
+
+	static final class EventLoopGroupLoopResources implements LoopResources {
+
+		final EventLoopGroup eventLoopGroup;
+
+		EventLoopGroupLoopResources(EventLoopGroup eventLoopGroup) {
+			Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
+			this.eventLoopGroup = eventLoopGroup;
+		}
+
+		@Override
+		public EventLoopGroup onServer(boolean useNative) {
+			return eventLoopGroup;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+			EventLoopGroupLoopResources that = (EventLoopGroupLoopResources) o;
+			return Objects.equals(eventLoopGroup, that.eventLoopGroup);
+		}
+
+		@Override
+		public int hashCode() {
+			int result = 1;
+			result = 31 * result + Objects.hashCode(eventLoopGroup);
+			return result;
+		}
+	}
 }
