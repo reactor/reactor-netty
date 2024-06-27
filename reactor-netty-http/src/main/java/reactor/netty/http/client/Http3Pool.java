@@ -15,6 +15,9 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.incubator.codec.http3.Http3ClientConnectionHandler;
 import reactor.netty.Connection;
 import reactor.netty.internal.shaded.reactor.pool.PoolConfig;
 import reactor.netty.resources.ConnectionProvider;
@@ -33,12 +36,19 @@ final class Http3Pool extends Http2Pool {
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
+	void closeChannel(Channel channel) {
+		//"FutureReturnValueIgnored" this is deliberate
+		channel.close();
+		channel.parent().close();
+	}
+
+	@Override
 	Slot createSlot(Connection connection) {
 		return new Slot(this, connection);
 	}
 
 	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void destroyPoolableInternal(Http2PooledRef ref) {
 		// If there is eviction in background, the background process will remove this connection
 		if (poolConfig.evictInBackgroundInterval().isZero()) {
@@ -54,8 +64,7 @@ final class Http3Pool extends Http2Pool {
 			}
 			// eviction predicate evaluates to true
 			else if (testEvictionPredicate(ref.slot)) {
-				//"FutureReturnValueIgnored" this is deliberate
-				ref.slot.connection.channel().close();
+				closeChannel(ref.slot.connection.channel());
 				ref.slot.invalidate();
 				removeSlot(ref.slot);
 			}
@@ -63,6 +72,7 @@ final class Http3Pool extends Http2Pool {
 	}
 
 	static final class Slot extends Http2Pool.Slot {
+		volatile ChannelHandlerContext http3ClientConnectionHandlerCtx;
 
 		Slot(Http2Pool pool, Connection connection) {
 			super(pool, connection);
@@ -80,8 +90,20 @@ final class Http3Pool extends Http2Pool {
 
 		@Override
 		boolean goAwayReceived() {
-			// TODO
-			return false;
+			ChannelHandlerContext connectionHandlerCtx = http3ClientConnectionHandlerCtx();
+			return connectionHandlerCtx != null && ((Http3ClientConnectionHandler) connectionHandlerCtx.handler()).isGoAwayReceived();
+		}
+
+		@Nullable
+		ChannelHandlerContext http3ClientConnectionHandlerCtx() {
+			ChannelHandlerContext ctx = http3ClientConnectionHandlerCtx;
+			// ChannelHandlerContext.isRemoved is only meant to be called from within the EventLoop
+			if (ctx != null && connection.channel().eventLoop().inEventLoop() && !ctx.isRemoved()) {
+				return ctx;
+			}
+			ctx = connection.channel().pipeline().context(Http3ClientConnectionHandler.class);
+			http3ClientConnectionHandlerCtx = ctx;
+			return ctx;
 		}
 	}
 }

@@ -22,6 +22,34 @@
 	},
 	{
 		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http3ChannelInitializer"
+		},
+		"name": "reactor.netty.http.client.Http3ChannelInitializer",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http3ChannelInitializer$HttpTrafficHandler"
+		},
+		"name": "reactor.netty.http.client.Http3ChannelInitializer$HttpTrafficHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http3Codec"
+		},
+		"name": "reactor.netty.http.client.Http3Codec",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
+			"typeReachable": "reactor.netty.http.client.Http3StreamBridgeClientHandler"
+		},
+		"name": "reactor.netty.http.client.Http3StreamBridgeClientHandler",
+		"queryAllPublicMethods": true
+	},
+	{
+		"condition": {
 			"typeReachable": "reactor.netty.http.client.HttpClientConfig$H2CleartextCodec"
 		},
 		"name": "reactor.netty.http.client.HttpClientConfig$H2CleartextCodec",

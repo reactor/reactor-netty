@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpResources;
 
 import static java.util.Objects.requireNonNull;
+import static reactor.netty.http.internal.Http3.isHttp3Available;
 
 /**
  * Hold the default HTTP/1.x resources.
@@ -48,9 +49,13 @@ public final class HttpResources extends TcpResources {
 	public static void disposeLoopsAndConnections() {
 		HttpResources resources = httpResources.getAndSet(null);
 		if (resources != null) {
-			ConnectionProvider provider = resources.http2ConnectionProvider.get();
-			if (provider != null) {
-				provider.dispose();
+			ConnectionProvider providerHttp2 = resources.http2ConnectionProvider.get();
+			if (providerHttp2 != null) {
+				providerHttp2.dispose();
+			}
+			ConnectionProvider providerHttp3 = resources.http3ConnectionProvider.get();
+			if (providerHttp3 != null) {
+				providerHttp3.dispose();
 			}
 			resources._dispose();
 		}
@@ -89,12 +94,17 @@ public final class HttpResources extends TcpResources {
 		return Mono.defer(() -> {
 			HttpResources resources = httpResources.getAndSet(null);
 			if (resources != null) {
-				ConnectionProvider provider = resources.http2ConnectionProvider.get();
-				Mono<Void> disposeProvider = Mono.empty();
-				if (provider != null) {
-					disposeProvider = provider.disposeLater();
+				ConnectionProvider providerHttp2 = resources.http2ConnectionProvider.get();
+				Mono<Void> disposeProviderHttp2 = Mono.empty();
+				if (providerHttp2 != null) {
+					disposeProviderHttp2 = providerHttp2.disposeLater();
 				}
-				return Mono.when(disposeProvider, resources._disposeLater(quietPeriod, timeout));
+				ConnectionProvider providerHttp3 = resources.http3ConnectionProvider.get();
+				Mono<Void> disposeProviderHttp3 = Mono.empty();
+				if (providerHttp3 != null) {
+					disposeProviderHttp3 = providerHttp3.disposeLater();
+				}
+				return Mono.when(disposeProviderHttp2, disposeProviderHttp3, resources._disposeLater(quietPeriod, timeout));
 			}
 			return Mono.empty();
 		});
@@ -143,16 +153,23 @@ public final class HttpResources extends TcpResources {
 
 	final AtomicReference<ConnectionProvider> http2ConnectionProvider;
 
+	final AtomicReference<ConnectionProvider> http3ConnectionProvider;
+
 	HttpResources(LoopResources loops, ConnectionProvider provider) {
 		super(loops, provider);
 		http2ConnectionProvider = new AtomicReference<>();
+		http3ConnectionProvider = new AtomicReference<>();
 	}
 
 	@Override
 	public void disposeWhen(SocketAddress remoteAddress) {
-		ConnectionProvider provider = http2ConnectionProvider.get();
-		if (provider != null) {
-			provider.disposeWhen(remoteAddress);
+		ConnectionProvider providerHttp2 = http2ConnectionProvider.get();
+		if (providerHttp2 != null) {
+			providerHttp2.disposeWhen(remoteAddress);
+		}
+		ConnectionProvider providerHttp3 = http3ConnectionProvider.get();
+		if (providerHttp3 != null) {
+			providerHttp3.disposeWhen(remoteAddress);
 		}
 		super.disposeWhen(remoteAddress);
 	}
@@ -179,6 +196,32 @@ public final class HttpResources extends TcpResources {
 				newProvider.dispose();
 			}
 			provider = getOrCreateHttp2ConnectionProvider(create);
+		}
+		return provider;
+	}
+
+	/**
+	 * Safely checks whether a {@link ConnectionProvider} for HTTP/3 traffic exists
+	 * and proceed with a creation if it does not exist.
+	 *
+	 * @param create the create function provides the current {@link ConnectionProvider} for HTTP/1.1 traffic
+	 * in case some {@link ConnectionProvider} configuration is needed.
+	 * @return an existing or new {@link ConnectionProvider} for HTTP/3 traffic
+	 * @since 1.2.0
+	 */
+	public ConnectionProvider getOrCreateHttp3ConnectionProvider(Function<ConnectionProvider, ConnectionProvider> create) {
+		if (!isHttp3Available()) {
+			throw new UnsupportedOperationException(
+					"To enable HTTP/3 support, you must add the dependency `io.netty.incubator:netty-incubator-codec-http3`" +
+							" to the class path first");
+		}
+		ConnectionProvider provider = http3ConnectionProvider.get();
+		if (provider == null) {
+			ConnectionProvider newProvider = create.apply(this);
+			if (!http3ConnectionProvider.compareAndSet(null, newProvider)) {
+				newProvider.dispose();
+			}
+			provider = getOrCreateHttp3ConnectionProvider(create);
 		}
 		return provider;
 	}
