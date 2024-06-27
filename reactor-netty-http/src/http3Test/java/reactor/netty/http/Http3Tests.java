@@ -397,7 +397,12 @@ class Http3Tests {
 		Metrics.addRegistry(registry);
 		try {
 			AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
-			CountDownLatch latch = new CountDownLatch(1);
+			CountDownLatch latch = new CountDownLatch(2);
+			registry.config().onMeterAdded(meter -> {
+				if (CLIENT_RESPONSE_TIME.equals(meter.getId().getName())) {
+					latch.countDown();
+				}
+			});
 			createClient(disposableServer.port())
 			        .doAfterRequest((req, conn) -> {
 			            serverAddress.set(((QuicChannel) conn.channel().parent()).remoteSocketAddress());
