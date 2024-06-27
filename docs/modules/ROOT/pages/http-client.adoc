@@ -336,6 +336,21 @@ include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
 include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..58]
 ----
 
+[[HTTP3]]
+== HTTP/3
+By default, the `HTTP` client supports `HTTP/1.1`. If you need `HTTP/3`, you can get it through configuration.
+In addition to the protocol configuration, you need to add dependency to `io.netty.incubator:netty-incubator-codec-http3`.
+
+The following listing presents a simple `HTTP3` example:
+
+{examples-link}/http3/Application.java
+----
+include::{examples-dir}/http3/Application.java[lines=18..49]
+----
+<1> Configures the client to support only `HTTP/3`
+<2> Configures `SSL`
+<3> Configures `HTTP/3` settings
+
 include::partial$proxy.adoc[]
 
 [[metrics]]

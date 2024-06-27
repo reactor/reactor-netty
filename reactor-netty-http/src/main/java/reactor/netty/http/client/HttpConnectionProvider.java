@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,15 +44,24 @@ final class HttpConnectionProvider implements ConnectionProvider {
 			ConnectionObserver connectionObserver,
 			@Nullable Supplier<? extends SocketAddress> remoteAddress,
 			@Nullable AddressResolverGroup<?> resolverGroup) {
+		boolean isHttp3 = ((HttpClientConfig) config)._protocols == HttpClientConfig.h3;
 		if (((HttpClientConfig) config)._protocols == HttpClientConfig.h11) {
 			return http1ConnectionProvider().acquire(config, connectionObserver, remoteAddress, resolverGroup);
 		}
 		else if (http1ConnectionProvider == null) {
-			return HttpResources.get().getOrCreateHttp2ConnectionProvider(HTTP2_CONNECTION_PROVIDER_FACTORY)
-					.acquire(config, connectionObserver, remoteAddress, resolverGroup);
+			if (isHttp3) {
+				return HttpResources.get().getOrCreateHttp3ConnectionProvider(HTTP3_CONNECTION_PROVIDER_FACTORY)
+						.acquire(config, connectionObserver, remoteAddress, resolverGroup);
+			}
+			else {
+				return HttpResources.get().getOrCreateHttp2ConnectionProvider(HTTP2_CONNECTION_PROVIDER_FACTORY)
+						.acquire(config, connectionObserver, remoteAddress, resolverGroup);
+			}
 		}
 		else {
-			return getOrCreate().acquire(config, connectionObserver, remoteAddress, resolverGroup);
+			return isHttp3 ?
+					getOrCreateHttp3().acquire(config, connectionObserver, remoteAddress, resolverGroup) :
+					getOrCreateHttp2().acquire(config, connectionObserver, remoteAddress, resolverGroup);
 		}
 	}
 
@@ -73,7 +82,9 @@ final class HttpConnectionProvider implements ConnectionProvider {
 
 	final ConnectionProvider http1ConnectionProvider;
 
-	final AtomicReference<ConnectionProvider> h2ConnectionProvider = new AtomicReference<>();
+	final AtomicReference<ConnectionProvider> http2ConnectionProvider = new AtomicReference<>();
+
+	final AtomicReference<ConnectionProvider> http3ConnectionProvider = new AtomicReference<>();
 
 	HttpConnectionProvider() {
 		this(null);
@@ -83,14 +94,26 @@ final class HttpConnectionProvider implements ConnectionProvider {
 		this.http1ConnectionProvider = http1ConnectionProvider;
 	}
 
-	ConnectionProvider getOrCreate() {
-		ConnectionProvider provider = h2ConnectionProvider.get();
+	ConnectionProvider getOrCreateHttp2() {
+		ConnectionProvider provider = http2ConnectionProvider.get();
 		if (provider == null) {
 			ConnectionProvider newProvider = HTTP2_CONNECTION_PROVIDER_FACTORY.apply(http1ConnectionProvider);
-			if (!h2ConnectionProvider.compareAndSet(null, newProvider)) {
+			if (!http2ConnectionProvider.compareAndSet(null, newProvider)) {
 				newProvider.dispose();
 			}
-			provider = getOrCreate();
+			provider = getOrCreateHttp2();
+		}
+		return provider;
+	}
+
+	ConnectionProvider getOrCreateHttp3() {
+		ConnectionProvider provider = http3ConnectionProvider.get();
+		if (provider == null) {
+			ConnectionProvider newProvider = HTTP3_CONNECTION_PROVIDER_FACTORY.apply(http1ConnectionProvider);
+			if (!http3ConnectionProvider.compareAndSet(null, newProvider)) {
+				newProvider.dispose();
+			}
+			provider = getOrCreateHttp3();
 		}
 		return provider;
 	}
@@ -101,4 +124,7 @@ final class HttpConnectionProvider implements ConnectionProvider {
 
 	static final Function<ConnectionProvider, ConnectionProvider> HTTP2_CONNECTION_PROVIDER_FACTORY =
 			Http2ConnectionProvider::new;
+
+	static final Function<ConnectionProvider, ConnectionProvider> HTTP3_CONNECTION_PROVIDER_FACTORY =
+			Http3ConnectionProvider::new;
 }

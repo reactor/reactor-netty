@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
@@ -310,7 +311,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		return mono;
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void destroyPoolableInternal(Http2PooledRef ref) {
 		// not HTTP/2 request
 		if (ref.slot.http2FrameCodecCtx() == null) {
@@ -331,8 +331,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			}
 			// eviction predicate evaluates to true
 			else if (testEvictionPredicate(ref.slot)) {
-				//"FutureReturnValueIgnored" this is deliberate
-				ref.slot.connection.channel().close();
+				closeChannel(ref.slot.connection.channel());
 				ref.slot.invalidate();
 				removeSlot(ref.slot);
 			}
@@ -466,7 +465,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void evictInBackground() {
 		@SuppressWarnings("unchecked")
 		ConcurrentLinkedQueue<Slot> resources = CONNECTIONS.get(this);
@@ -507,8 +505,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 							if (log.isDebugEnabled()) {
 								log.debug(format(slot.connection.channel(), "Eviction predicate was true, remove from pool"));
 							}
-							//"FutureReturnValueIgnored" this is deliberate
-							slot.connection.channel().close();
+							closeChannel(slot.connection.channel());
 							recordInteractionTimestamp();
 							slots.remove();
 							IDLE_SIZE.decrementAndGet(this);
@@ -527,7 +524,6 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 	}
 
 	@Nullable
-	@SuppressWarnings("FutureReturnValueIgnored")
 	Slot findConnection(ConcurrentLinkedQueue<Slot> resources) {
 		int resourcesCount = idleSize;
 		while (resourcesCount > 0) {
@@ -590,8 +586,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Eviction predicate was true, remove from pool"));
 					}
-					//"FutureReturnValueIgnored" this is deliberate
-					slot.connection.channel().close();
+					closeChannel(slot.connection.channel());
 					slot.invalidate();
 				}
 				continue;
@@ -694,6 +689,12 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			borrowers.offerLast(borrower);
 		}
 		return PENDING_SIZE.incrementAndGet(this);
+	}
+
+	@SuppressWarnings("FutureReturnValueIgnored")
+	void closeChannel(Channel channel) {
+		//"FutureReturnValueIgnored" this is deliberate
+		channel.close();
 	}
 
 	void offerSlot(@Nullable ConcurrentLinkedQueue<Slot> slots, Slot slot) {

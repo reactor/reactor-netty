@@ -38,6 +38,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
@@ -96,6 +99,7 @@ import reactor.util.context.Context;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.setChannelContext;
 import static reactor.netty.http.client.Http2ConnectionProvider.OWNER;
+import static reactor.netty.http.client.Http3Codec.newHttp3ClientConnectionHandler;
 
 /**
  * Encapsulate all necessary configuration for HTTP client transport. The public API is read-only.
@@ -411,6 +415,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.websocketClientSpec = parent.websocketClientSpec;
 	}
 
+	@Override
+	public ChannelInitializer<Channel> channelInitializer(ConnectionObserver connectionObserver,
+			@Nullable SocketAddress remoteAddress, boolean onServer) {
+		ChannelInitializer<Channel> channelInitializer = super.channelInitializer(connectionObserver, remoteAddress, onServer);
+		return (_protocols & h3) == h3 ? new Http3ChannelInitializer(this, channelInitializer, connectionObserver) : channelInitializer;
+	}
+
 	/**
 	 * Provides a global {@link AddressResolverGroup} from {@link HttpResources}
 	 * that is shared amongst all HTTP clients. {@link AddressResolverGroup} uses the global
@@ -426,6 +437,12 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Override
 	protected void bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
 		super.bindAddress(bindAddressSupplier);
+	}
+
+	@Override
+	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
+		return isDomainSocket ? DomainSocketChannel.class :
+				(_protocols & h3) == h3 ? DatagramChannel.class : SocketChannel.class;
 	}
 
 	@Override
@@ -657,6 +674,21 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(H2InboundStreamHandler.INSTANCE))
 		 .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(observer));
+	}
+
+	static void configureHttp3Pipeline(ChannelPipeline p, boolean removeMetricsRecorder, boolean removeProxyProvider) {
+		p.remove(NettyPipeline.ReactiveBridge);
+
+		p.addLast(NettyPipeline.HttpCodec, newHttp3ClientConnectionHandler());
+
+		if (removeMetricsRecorder) {
+			// Connection metrics are not applicable
+			p.remove(NettyPipeline.ChannelMetricsHandler);
+		}
+
+		if (removeProxyProvider) {
+			p.remove(NettyPipeline.ProxyHandler);
+		}
 	}
 
 	@SuppressWarnings("deprecation")
@@ -1017,7 +1049,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		@Override
 		public void onChannelInit(ConnectionObserver observer, Channel channel, @Nullable SocketAddress remoteAddress) {
 			if (sslProvider != null) {
-				sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+				if ((protocols & h3) != h3) {
+					sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+				}
 
 				if ((protocols & h11orH2) == h11orH2) {
 					channel.pipeline()
@@ -1029,6 +1063,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				}
 				else if ((protocols & h2) == h2) {
 					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
+				}
+				else if ((protocols & h3) == h3) {
+					configureHttp3Pipeline(channel.pipeline(), metricsRecorder != null, proxyAddress != null);
 				}
 			}
 			else {
