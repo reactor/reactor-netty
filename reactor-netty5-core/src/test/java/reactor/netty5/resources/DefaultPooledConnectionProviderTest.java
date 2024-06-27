@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +57,7 @@ import reactor.core.publisher.Signal;
 import reactor.core.scheduler.Scheduler;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
+import reactor.netty5.DisposableChannel;
 import reactor.netty5.DisposableServer;
 import reactor.netty5.SocketUtils;
 import reactor.netty5.channel.ChannelMetricsRecorder;
@@ -534,6 +535,39 @@ class DefaultPooledConnectionProviderTest {
 			disposableServer.disposeNow();
 			provider.disposeLater()
 			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testIssue3316() throws Exception {
+		DisposableServer disposableServer =
+				TcpServer.create()
+				         .port(0)
+				         .handle((in, out) -> out.send(in.receive().transferOwnership()))
+				         .bindNow();
+
+		DefaultPooledConnectionProvider provider =
+				(DefaultPooledConnectionProvider) ConnectionProvider.create("testIssue3316", 400);
+		EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+		try {
+			Flux.range(0, 400)
+			    .flatMap(i ->
+			        TcpClient.create(provider)
+			                 .port(disposableServer.port())
+			                 .runOn(group)
+			                 .connect())
+			    .doOnNext(DisposableChannel::dispose)
+			    .blockLast(Duration.ofSeconds(5));
+
+			assertThat(provider.channelPools.size()).isEqualTo(1);
+		}
+		finally {
+			disposableServer.disposeNow();
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+			group.shutdownGracefully()
+			     .asStage()
+			     .get(5, TimeUnit.SECONDS);
 		}
 	}
 
