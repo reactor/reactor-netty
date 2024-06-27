@@ -386,7 +386,7 @@ class Http3Tests {
 	}
 
 	@Test
-	void testMetrics() {
+	void testMetrics() throws Exception {
 		disposableServer =
 				createServer()
 				        .metrics(true, Function.identity())
@@ -397,8 +397,12 @@ class Http3Tests {
 		Metrics.addRegistry(registry);
 		try {
 			AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+			CountDownLatch latch = new CountDownLatch(1);
 			createClient(disposableServer.port())
-			        .doAfterRequest((req, conn) -> serverAddress.set(((QuicChannel) conn.channel().parent()).remoteSocketAddress()))
+			        .doAfterRequest((req, conn) -> {
+			            serverAddress.set(((QuicChannel) conn.channel().parent()).remoteSocketAddress());
+			            conn.channel().closeFuture().addListener(f -> latch.countDown());
+			        })
 			        .metrics(true, Function.identity())
 			        .post()
 			        .uri("/")
@@ -410,6 +414,8 @@ class Http3Tests {
 			        .expectNext("Hello World!")
 			        .expectComplete()
 			        .verify(Duration.ofSeconds(5));
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 
 			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 			String[] timerTags1 = new String[]{URI, "/", METHOD, "POST", STATUS, "200"};
