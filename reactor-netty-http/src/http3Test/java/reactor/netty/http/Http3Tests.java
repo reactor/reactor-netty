@@ -422,6 +422,7 @@ class Http3Tests {
 
 			assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
 
+			Thread.sleep(1000);
 			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 			String[] timerTags1 = new String[]{URI, "/", METHOD, "POST", STATUS, "200"};
 			String[] timerTags2 = new String[]{URI, "/", METHOD, "POST"};
