@@ -105,6 +105,8 @@ updates:
   - dependency-name: io.projectreactor.tools:blockhound-junit-platform
   - dependency-name: net.ltgt.errorprone
   - dependency-name: me.champeau.gradle.japicmp
+  - dependency-name: org.junit.platform:junit-platform-launcher
+  - dependency-name: org.junit.jupiter:*
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
