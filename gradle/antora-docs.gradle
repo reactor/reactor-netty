@@ -26,9 +26,7 @@ def isCommandAvailable(String command) {
 }
 
 antora {
-	version = "$antoraVersion"
-	playbook = findProperty('antora.playbook') ?: "antora-playbook.yml"
-	options = ['--clean', '--stacktrace']
+	options = [clean: true, fetch: !project.gradle.startParameter.offline, stacktrace: true]
 
 	def version = project.version
 	def forcePdf = project.hasProperty('forcePdf')
@@ -46,15 +44,6 @@ antora {
 			'ALGOLIA_API_KEY'   : 'd4bf9918bfc7d63ae68fbf92d69c2f49',
 			'ALGOLIA_APP_ID'    : '82SNR5M8HE',
 			'ALGOLIA_INDEX_NAME': 'projectreactor'
-	]
-
-	dependencies = [
-			'@antora/atlas-extension'         : "$antoraAtlasExtensionVersion",
-			'@antora/pdf-extension'           : "$antoraPdfExtensionVersion",
-			'@antora/collector-extension'     : "$antoraCollectorExtensionVersion",
-			'@asciidoctor/tabs'               : "$asciiDocTabVersion",
-			'@springio/antora-extensions'     : "$springIoAntoraExtensionsVersion",
-			'@springio/asciidoctor-extensions': "$springIoAsciidoctorExtensionsVersion"
 	]
 }
 
