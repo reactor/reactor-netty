@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,5 +41,33 @@ javadoc.dependsOn(aggregateJavadoc)
 
 //add docs.zip to the publication
 publishing.publications.mavenJava.artifact(docsZip)
+
+// Define a task to create a reactor-netty apidocs zip classifier which includes both javadoc, reference doc, and reference pdf if any.
+// this classifier will be published to artifactory using some special artifactory properties so it will be also
+// published to https://docs.spring.io/projectreactor/netty/docs/<version>/ directory.
+// (see releaser.gradle which adds the specific properties metadata (zip.name / zip.deployed=false)
+task apidocsZip(type: Zip, dependsOn: [asciidoctor, asciidoctorPdf]) {
+	archiveBaseName.set("reactor-netty")
+	archiveClassifier.set("apidocs")
+
+	afterEvaluate() {
+		//we copy the pdf late, when a potential customVersion has been applied to rootProject
+		from(asciidoctorPdf) {
+			into("reference/pdf/")
+			rename("index.pdf", "reactor-netty-reference-guide-${rootProject.version}.pdf")
+		}
+	}
+	from(asciidoctor) {
+		includeEmptyDirs = false
+		exclude "**/index.pdf"
+		into("reference/html/")
+	}
+	from(aggregateJavadoc) {
+		into "api"
+	}
+}
+
+//add apidocs.zip to the publication
+publishing.publications.mavenJava.artifact(apidocsZip)
 
 description = "Reactor Netty with all modules"

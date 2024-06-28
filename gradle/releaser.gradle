@@ -1,9 +1,5 @@
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import java.time.temporal.ChronoField
-
 /*
- * Copyright (c) 2019-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +13,9 @@ import java.time.temporal.ChronoField
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoField
 
 if (project.hasProperty("releaserDryRun") && project.findProperty("releaserDryRun") != "false") {
 	println "Adding MavenLocal() for benefit of releaser dry run"
@@ -95,6 +93,12 @@ if (project.hasProperty("artifactory_publish_password")) {
 					repoKey = "${artifactory_publish_repoKey}"
 					username = "${artifactory_publish_username}"
 					password = "${artifactory_publish_password}"
+				}
+				defaults {
+					properties {
+						// Add artifactory metadata properties to deploy reactor-netty apidocs zip in docs.spring.io
+						all 'io.projectreactor.netty:reactor-netty:*:apidocs@zip', 'zip.name': 'reactor-netty', 'zip.displayname': 'Reactor Netty', 'zip.type': 'docs', 'zip.deployed': 'false'
+					}
 				}
 			}
 			clientConfig.setIncludeEnvVars(false)
