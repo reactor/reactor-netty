@@ -106,6 +106,8 @@ import static reactor.netty.Metrics.HTTP_CLIENT_PREFIX;
 import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
 import static reactor.netty.Metrics.LOCAL_ADDRESS;
 import static reactor.netty.Metrics.METHOD;
+import static reactor.netty.Metrics.NA;
+import static reactor.netty.Metrics.PROXY_ADDRESS;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.STATUS;
@@ -172,6 +174,8 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	 *  <li> /5 is used by testServerConnectionsRecorder test</li>
 	 *  <li> /6 is used by testServerConnectionsMicrometerConnectionClose test</li>
 	 *  <li> /7 is used by testServerConnectionsRecorderConnectionClose test</li>
+	 *  <li> /8 is used by testServerConnectionsWebsocketMicrometer test</li>
+	 *  <li> /9 is used by testServerConnectionsWebsocketRecorder test</li>
 	 * </ul>
 	 */
 	@BeforeEach
@@ -201,7 +205,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				             .get("/7", (req, res) -> {
 				                 checkServerConnectionsRecorder(req);
 				                 return Mono.delay(Duration.ofMillis(200)).then(res.send());
-				             }));
+				             })
+				             .get("/8", (req, res) -> res.sendWebsocket((in, out) ->
+				                     out.sendString(Mono.just("Hello World!").doOnNext(b -> checkServerConnectionsMicrometer(req)))))
+				             .get("/9", (req, res) -> res.sendWebsocket((in, out) ->
+				                     out.sendString(Mono.just("Hello World!").doOnNext(b -> checkServerConnectionsRecorder(req)))))
+				);
 
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
 		httpClient = createClient(provider, () -> disposableServer.address())
@@ -734,7 +743,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
 			assertGauge(registry, SERVER_CONNECTIONS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
 			// https://github.com/reactor/reactor-netty/issues/3060
-			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/6").hasCountGreaterThanOrEqualTo(1);
+			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, URI, "/6").hasCountGreaterThanOrEqualTo(1);
 		}
 		else {
 			// make sure the client stream is closed on the server side before checking server metrics
@@ -742,9 +751,31 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(1);
 			assertGauge(registry, SERVER_STREAMS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
 			// https://github.com/reactor/reactor-netty/issues/3060
-			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/6").hasCountGreaterThanOrEqualTo(1);
+			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, URI, "/6").hasCountGreaterThanOrEqualTo(1);
 			// in case of H2, the tearDown method will ensure client socket is closed on the server side
 		}
+	}
+
+	@Test
+	void testServerConnectionsWebsocketMicrometer() throws Exception {
+		disposableServer = httpServer
+				.doOnConnection(cnx -> ServerCloseHandler.INSTANCE.register(cnx.channel()))
+				.bindNow();
+
+		String address = formatSocketAddress(disposableServer.address());
+
+		httpClient.websocket()
+		          .uri("/8")
+		          .handle((in, out) -> in.receive().aggregate().asString())
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		// make sure the client socket is closed on the server side before checking server metrics
+		assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+		assertGauge(registry, SERVER_CONNECTIONS_TOTAL, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
+		assertGauge(registry, SERVER_CONNECTIONS_ACTIVE, URI, HTTP, LOCAL_ADDRESS, address).hasValueEqualTo(0);
 	}
 
 	@ParameterizedTest
@@ -836,7 +867,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
 			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
 			// https://github.com/reactor/reactor-netty/issues/3060
-			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/7").hasCountGreaterThanOrEqualTo(1);
+			assertCounter(registry, CLIENT_ERRORS, PROXY_ADDRESS, NA, REMOTE_ADDRESS, address, URI, "/7").hasCountGreaterThanOrEqualTo(1);
 		}
 		else {
 			assertThat(StreamCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
@@ -845,12 +876,39 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
 			assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
 			// https://github.com/reactor/reactor-netty/issues/3060
-			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, URI, "/7").hasCountGreaterThanOrEqualTo(1);
+			assertCounter(registry, CLIENT_ERRORS, REMOTE_ADDRESS, address, PROXY_ADDRESS, NA, URI, "/7").hasCountGreaterThanOrEqualTo(1);
 			// in case of H2, the tearDown method will ensure client socket is closed on the server side
 		}
 	}
 
 	@Test
+	void testServerConnectionsWebsocketRecorder() throws Exception {
+		ServerRecorder.INSTANCE.reset();
+		disposableServer = httpServer.metrics(true, ServerRecorder.supplier(), Function.identity())
+				.doOnConnection(cnx -> ServerCloseHandler.INSTANCE.register(cnx.channel()))
+				.bindNow();
+
+		String address = formatSocketAddress(disposableServer.address());
+
+		httpClient.websocket()
+		          .uri("/9")
+		          .handle((in, out) -> in.receive().aggregate().asString())
+		          .as(StepVerifier::create)
+		          .expectNext("Hello World!")
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+
+		// make sure the client socket is closed on the server side before checking server metrics
+		assertThat(ServerCloseHandler.INSTANCE.awaitClientClosedOnServer()).as("awaitClientClosedOnServer timeout").isTrue();
+		assertThat(ServerRecorder.INSTANCE.error.get()).isNull();
+		assertThat(ServerRecorder.INSTANCE.onServerConnectionsAmount.get()).isEqualTo(0);
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsAmount.get()).isEqualTo(0);
+		assertThat(ServerRecorder.INSTANCE.onActiveConnectionsLocalAddr.get()).isEqualTo(address);
+		assertThat(ServerRecorder.INSTANCE.onInactiveConnectionsLocalAddr.get()).isEqualTo(address);
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
 	void testIssue896() throws Exception {
 		disposableServer = httpServer.noSSL()
 		                             .bindNow();
@@ -869,7 +927,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
-		String[] summaryTags = new String[]{REMOTE_ADDRESS, serverAddress, URI, "unknown"};
+		String[] summaryTags = new String[]{REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "unknown"};
 		assertCounter(registry, CLIENT_ERRORS, summaryTags).hasCountGreaterThanOrEqualTo(2);
 	}
 
@@ -918,7 +976,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 	void testServerConnectionsRecorderBadUri(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx,
 			@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
-		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1,
+		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1, false,
 				Function.identity(), Function.identity());
 	}
 
@@ -928,7 +986,19 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			@Nullable ProtocolSslContextSpec serverCtx,
 			@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		assumeThat(LoopResources.hasNativeSupport()).isTrue();
-		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1,
+		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1, false,
+				client -> client.bindAddress(() -> new DomainSocketAddress("/tmp/test.sockclient"))
+						.remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock")),
+				server -> server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock")));
+	}
+
+	@ParameterizedTest
+	@MethodSource("httpCompatibleProtocols")
+	void testServerConnectionsRecorderBadUriUDSContextAware(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
+			@Nullable ProtocolSslContextSpec serverCtx,
+			@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
+		assumeThat(LoopResources.hasNativeSupport()).isTrue();
+		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx, null, -1, true,
 				client -> client.bindAddress(() -> new DomainSocketAddress("/tmp/test.sockclient"))
 						.remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock")),
 				server -> server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock")));
@@ -940,7 +1010,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 			@Nullable ProtocolSslContextSpec serverCtx,
 			@Nullable ProtocolSslContextSpec clientCtx) throws Exception {
 		testServerConnectionsRecorderBadUri(serverProtocols, clientProtocols, serverCtx, clientCtx,
-				"192.168.0.1", 8080,
+				"192.168.0.1", 8080, false,
 				Function.identity(),
 				Function.identity());
 	}
@@ -948,6 +1018,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("combinationsIssue2956")
+	@SuppressWarnings("deprecation")
 	void testIssue2956(boolean isCustomRecorder, boolean isHttp2) throws Exception {
 		HttpServer server =
 				httpServer.secure(spec -> spec.sslContext(isHttp2 ? serverCtx2 : serverCtx11))
@@ -1001,7 +1072,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 
-		String[] summaryTags = new String[]{REMOTE_ADDRESS, "1.1.1.1:11111", STATUS, ERROR};
+		String[] summaryTags = new String[]{REMOTE_ADDRESS, "1.1.1.1:11111", PROXY_ADDRESS, NA, STATUS, ERROR};
 		assertTimer(registry, CLIENT_CONNECT_TIME, summaryTags).hasCountEqualTo(1);
 	}
 
@@ -1017,14 +1088,19 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 
 	private void testServerConnectionsRecorderBadUri(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable ProtocolSslContextSpec serverCtx, @Nullable ProtocolSslContextSpec clientCtx,
-			@Nullable String xForwardedFor, int xForwardedPort,
+			@Nullable String xForwardedFor, int xForwardedPort, boolean contextAware,
 			Function<HttpClient, HttpClient> bindClient,
 			Function<HttpServer, HttpServer> bindServer) throws Exception {
-		ServerRecorderBadUri.INSTANCE.init();
+		if (contextAware) {
+			ContextAwareServerRecorderBadUri.INSTANCE.init();
+		}
+		else {
+			ServerRecorderBadUri.INSTANCE.init();
+		}
 
 		AtomicReference<SocketAddress> clientSA = new AtomicReference<>();
 		disposableServer = bindServer.apply(customizeServerOptions(httpServer, serverCtx, serverProtocols))
-				.metrics(true, () -> ServerRecorderBadUri.INSTANCE, Function.identity())
+				.metrics(true, () -> contextAware ? ContextAwareServerRecorderBadUri.INSTANCE : ServerRecorderBadUri.INSTANCE, Function.identity())
 				.forwarded(xForwardedFor != null || xForwardedPort != -1)
 				.childObserve((conn, state) -> {
 					if (state == ConnectionObserver.State.CONNECTED) {
@@ -1069,18 +1145,34 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		provider.disposeLater()
 				.block(Duration.ofSeconds(30));
 
-		assertThat(ServerRecorderBadUri.INSTANCE.closed.await(30, TimeUnit.SECONDS))
-				.as("awaitClose timeout")
-				.isTrue();
+		if (contextAware) {
+			assertThat(ContextAwareServerRecorderBadUri.INSTANCE.closed.await(30, TimeUnit.SECONDS))
+					.as("awaitClose timeout")
+					.isTrue();
 
-		assertThat(ServerRecorderBadUri.INSTANCE.nullMethodParams.size() == 0)
-				.as("some method got null parameters: %s", ServerRecorderBadUri.INSTANCE.nullMethodParams)
-				.isTrue();
+			assertThat(ContextAwareServerRecorderBadUri.INSTANCE.nullMethodParams.isEmpty())
+					.as("some method got null parameters: %s", ContextAwareServerRecorderBadUri.INSTANCE.nullMethodParams)
+					.isTrue();
 
-		SocketAddress recordedClientSA = ServerRecorderBadUri.INSTANCE.clientAddr;
-		assertThat(recordedClientSA)
-				.as("recorded client remote socket address %s is different from expected client socket address %s", recordedClientSA, clientSA.get())
-				.isEqualTo(clientSA.get());
+			SocketAddress recordedClientSA = ContextAwareServerRecorderBadUri.INSTANCE.clientAddr;
+			assertThat(recordedClientSA)
+					.as("recorded client remote socket address %s is different from expected client socket address %s", recordedClientSA, clientSA.get())
+					.isEqualTo(clientSA.get());
+		}
+		else {
+			assertThat(ServerRecorderBadUri.INSTANCE.closed.await(30, TimeUnit.SECONDS))
+					.as("awaitClose timeout")
+					.isTrue();
+
+			assertThat(ServerRecorderBadUri.INSTANCE.nullMethodParams.isEmpty())
+					.as("some method got null parameters: %s", ServerRecorderBadUri.INSTANCE.nullMethodParams)
+					.isTrue();
+
+			SocketAddress recordedClientSA = ServerRecorderBadUri.INSTANCE.clientAddr;
+			assertThat(recordedClientSA)
+					.as("recorded client remote socket address %s is different from expected client socket address %s", recordedClientSA, clientSA.get())
+					.isEqualTo(clientSA.get());
+		}
 	}
 
 	private void checkServerConnectionsMicrometer(HttpServerRequest request) {
@@ -1135,11 +1227,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.hasTotalAmountGreaterThanOrEqualTo(12);
 		assertCounter(registry, SERVER_ERRORS, summaryTags1).isNull();
 
-		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST", STATUS, "200"};
-		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST"};
-		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
-		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "POST", STATUS, "200"};
+		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "POST"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, STATUS, "SUCCESS"};
+		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "http"};
 
 		assertTimer(registry, CLIENT_RESPONSE_TIME, timerTags1)
 				.hasCountEqualTo(1)
@@ -1195,11 +1287,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.hasTotalAmountGreaterThanOrEqualTo(0);
 		assertCounter(registry, SERVER_ERRORS, summaryTags1).isNull();
 
-		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "404"};
-		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET"};
-		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
-		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "GET", STATUS, "404"};
+		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "GET"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, STATUS, "SUCCESS"};
+		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "http"};
 
 		assertTimer(registry, CLIENT_RESPONSE_TIME, timerTags1)
 				.hasCountEqualTo(index)
@@ -1246,11 +1338,11 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				.hasTotalAmountGreaterThanOrEqualTo(0);
 		assertCounter(registry, SERVER_ERRORS, summaryTags1).isNull();
 
-		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "431"};
-		String[] timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET"};
-		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
-		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "GET", STATUS, "431"};
+		String[] timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri, METHOD, "GET"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, STATUS, "SUCCESS"};
+		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, PROXY_ADDRESS, NA, URI, "http"};
 
 		assertTimer(registry, CLIENT_RESPONSE_TIME, timerTags1)
 				.hasCountEqualTo(1)
@@ -1279,10 +1371,12 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertCounter(registry, CLIENT_ERRORS, summaryTags2).isNull();
 	}
 
+	@SuppressWarnings("deprecation")
 	HttpServer customizeServerOptions(HttpServer httpServer, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
 		return ctx == null ? httpServer.protocol(protocols) : httpServer.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
 
+	@SuppressWarnings("deprecation")
 	HttpClient customizeClientOptions(HttpClient httpClient, @Nullable ProtocolSslContextSpec ctx, HttpProtocol[] protocols) {
 		return ctx == null ? httpClient.protocol(protocols) : httpClient.protocol(protocols).secure(spec -> spec.sslContext(ctx));
 	}
@@ -1682,6 +1776,122 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		@Override
 		public void recordConnectTime(SocketAddress socketAddress, Duration duration, String s) {
 			checkNullParam("recordConnectTime", socketAddress, duration, s);
+		}
+
+		@Override
+		public void recordResolveAddressTime(SocketAddress socketAddress, Duration duration, String s) {
+			checkNullParam("recordResolveAddressTime", socketAddress, duration, s);
+		}
+	}
+
+	/**
+	 * Server metrics recorder used to verify that HttpServerMetricsRecorder method parameters
+	 * are not null when a bad request URI is received.
+	 */
+	static final class ContextAwareServerRecorderBadUri extends ContextAwareHttpServerMetricsRecorder {
+
+		static final ContextAwareServerRecorderBadUri INSTANCE = new ContextAwareServerRecorderBadUri();
+		final ConcurrentLinkedQueue<String> nullMethodParams = new ConcurrentLinkedQueue<>();
+		volatile CountDownLatch closed;
+		volatile SocketAddress clientAddr;
+
+		void init() {
+			nullMethodParams.clear();
+			closed = new CountDownLatch(1);
+			clientAddr = null;
+		}
+
+		void checkNullParam(String method, Object... params) {
+			if (Arrays.stream(params).anyMatch(Objects::isNull)) {
+				nullMethodParams.add(method);
+			}
+		}
+
+		@Override
+		public void recordServerConnectionOpened(SocketAddress localAddress) {
+			checkNullParam("recordServerConnectionOpened", localAddress);
+		}
+
+		@Override
+		public void recordServerConnectionClosed(SocketAddress localAddress) {
+			checkNullParam("recordServerConnectionClosed", localAddress);
+			closed.countDown();
+		}
+
+		@Override
+		public void recordServerConnectionActive(SocketAddress localAddress) {
+			checkNullParam("recordServerConnectionActive", localAddress);
+		}
+
+		@Override
+		public void recordServerConnectionInactive(SocketAddress localAddress) {
+			checkNullParam("recordServerConnectionInactive", localAddress);
+		}
+
+		@Override
+		public void recordStreamOpened(SocketAddress localAddress) {
+			checkNullParam("recordStreamOpened", localAddress);
+		}
+
+		@Override
+		public void recordStreamClosed(SocketAddress localAddress) {
+			checkNullParam("recordStreamClosed", localAddress);
+		}
+
+		@Override
+		public void recordDataReceived(ContextView contextView, SocketAddress remoteAddress, String uri, long bytes) {
+			checkNullParam("recordDataReceived", contextView, remoteAddress, uri);
+		}
+
+		@Override
+		public void recordDataSent(ContextView contextView, SocketAddress remoteAddress, String uri, long bytes) {
+			checkNullParam("recordDataSent", contextView, remoteAddress, uri);
+			clientAddr = remoteAddress;
+		}
+
+		@Override
+		public void incrementErrorsCount(ContextView contextView, SocketAddress remoteAddress, String uri) {
+			checkNullParam("incrementErrorsCount", contextView, remoteAddress, uri);
+		}
+
+		@Override
+		public void recordDataReceivedTime(ContextView contextView, String uri, String method, Duration time) {
+			checkNullParam("recordDataReceivedTime", contextView, uri, method, time);
+		}
+
+		@Override
+		public void recordDataSentTime(ContextView contextView, String uri, String method, String status, Duration time) {
+			checkNullParam("recordDataSentTime", contextView, uri, method, status, time);
+		}
+
+		@Override
+		public void recordResponseTime(ContextView contextView, String uri, String method, String status, Duration time) {
+			checkNullParam("recordResponseTime", contextView, uri, method, status, time);
+		}
+
+		@Override
+		public void recordDataReceived(ContextView contextView, SocketAddress socketAddress, long l) {
+			checkNullParam("recordDataReceived", contextView, socketAddress);
+		}
+
+		@Override
+		public void recordDataSent(ContextView contextView, SocketAddress socketAddress, long l) {
+			checkNullParam("recordDataSent", contextView, socketAddress);
+		}
+
+		@Override
+		public void incrementErrorsCount(ContextView contextView, SocketAddress socketAddress) {
+			checkNullParam("incrementErrorsCount", contextView, socketAddress);
+		}
+
+		@Override
+		public void recordTlsHandshakeTime(ContextView contextView, SocketAddress socketAddress, Duration duration, String s) {
+			checkNullParam("recordTlsHandshakeTime", contextView, socketAddress, duration, s);
+		}
+
+		@Override
+		public void recordConnectTime(ContextView contextView, SocketAddress socketAddress, Duration duration, String s) {
+			checkNullParam("recordConnectTime", contextView, socketAddress, duration, s);
 		}
 
 		@Override

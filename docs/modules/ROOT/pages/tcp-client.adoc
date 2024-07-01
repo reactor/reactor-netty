@@ -169,7 +169,7 @@ By default, the `TCP` client is configured with the following options:
 
 {core-source-link}/reactor/netty/tcp/TcpClientConnect.java
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[lines=36..41]
+include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[lines=35..40]
 ----
 
 If additional options are necessary or changes to the current options are needed, you can apply the following configuration:

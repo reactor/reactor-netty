@@ -26,9 +26,7 @@ def isCommandAvailable(String command) {
 }
 
 antora {
-	version = "$antoraVersion"
-	playbook = findProperty('antora.playbook') ?: "antora-playbook.yml"
-	options = ['--clean', '--stacktrace']
+	options = [clean: true, fetch: !project.gradle.startParameter.offline, stacktrace: true]
 
 	def version = project.version
 	def forcePdf = project.hasProperty('forcePdf')
@@ -38,7 +36,7 @@ antora {
 			logger.log(LogLevel.DEBUG, "enabling antora pdf-extension")
 			options.add('--extension=pdf-extension')
 		} else {
-			logger.lifecycle("PDF not generated, asciidoctor-pdf not found from the PATH.")
+			throw new GradleException("PDF cannot be generated, asciidoctor-pdf not found from the PATH.")
 		}
 	}
 
@@ -46,15 +44,6 @@ antora {
 			'ALGOLIA_API_KEY'   : 'd4bf9918bfc7d63ae68fbf92d69c2f49',
 			'ALGOLIA_APP_ID'    : '82SNR5M8HE',
 			'ALGOLIA_INDEX_NAME': 'projectreactor'
-	]
-
-	dependencies = [
-			'@antora/atlas-extension'         : "$antoraAtlasExtensionVersion",
-			'@antora/pdf-extension'           : "$antoraPdfExtensionVersion",
-			'@antora/collector-extension'     : "$antoraCollectorExtensionVersion",
-			'@asciidoctor/tabs'               : "$asciiDocTabVersion",
-			'@springio/antora-extensions'     : "$springIoAntoraExtensionsVersion",
-			'@springio/asciidoctor-extensions': "$springIoAsciidoctorExtensionsVersion"
 	]
 }
 

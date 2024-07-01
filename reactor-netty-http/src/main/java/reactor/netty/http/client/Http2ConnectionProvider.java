@@ -121,7 +121,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		boolean acceptBrotli = false;
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
 		SocketAddress proxyAddress = ((ClientTransportConfig<?>) config).proxyProvider() != null ?
-				((ClientTransportConfig<?>) config).proxyProvider().getAddress().get() : null;
+				((ClientTransportConfig<?>) config).proxyProvider().getSocketAddress().get() : null;
 		Function<String, String> uriTagValue = null;
 		if (config instanceof HttpClientConfig) {
 			acceptGzip = ((HttpClientConfig) config).acceptGzip;
@@ -137,7 +137,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			TransportConfig config,
 			PooledConnectionProvider.PoolFactory<Connection> poolFactory,
 			SocketAddress remoteAddress,
-			AddressResolverGroup<?> resolverGroup) {
+			@Nullable AddressResolverGroup<?> resolverGroup) {
 		return new PooledConnectionAllocator(parent, config, poolFactory, remoteAddress, resolverGroup).pool;
 	}
 
@@ -147,7 +147,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 			TransportConfig config,
 			PooledConnectionProvider.PoolFactory<Connection> poolFactory,
 			SocketAddress remoteAddress,
-			AddressResolverGroup<?> resolverGroup) {
+			@Nullable AddressResolverGroup<?> resolverGroup) {
 		return new PooledConnectionAllocator(id, name(), parent, config, poolFactory, remoteAddress, resolverGroup).pool;
 	}
 
@@ -555,7 +555,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				TransportConfig config,
 				PoolFactory<Connection> poolFactory,
 				SocketAddress remoteAddress,
-				AddressResolverGroup<?> resolver) {
+				@Nullable AddressResolverGroup<?> resolver) {
 			this(null, null, parent, config, poolFactory, remoteAddress, resolver);
 		}
 
@@ -566,7 +566,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				TransportConfig config,
 				PoolFactory<Connection> poolFactory,
 				SocketAddress remoteAddress,
-				AddressResolverGroup<?> resolver) {
+				@Nullable AddressResolverGroup<?> resolver) {
 			this.parent = parent;
 			this.config = (HttpClientConfig) config;
 			this.remoteAddress = remoteAddress;

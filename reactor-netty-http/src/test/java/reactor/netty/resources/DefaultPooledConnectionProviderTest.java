@@ -116,6 +116,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testIssue903() {
 		Http11SslContextSpec serverCtx = Http11SslContextSpec.forServer(ssc.key(), ssc.cert());
 		disposableServer =
@@ -331,6 +332,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testConnectionIdleWhenNoActiveStreams() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -497,6 +499,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		doTestIssue1982(serverProtocols, clientProtocols, serverCtx, clientCtx);
 	}
 
+	@SuppressWarnings("deprecation")
 	private void doTestIssue1982(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
 			@Nullable Http2SslContextSpec serverCtx, @Nullable Http2SslContextSpec clientCtx) throws Exception {
 		HttpServer server = serverCtx != null ?
@@ -570,6 +573,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 	//https://github.com/reactor/reactor-netty/issues/1808
 	@Test
+	@SuppressWarnings("deprecation")
 	void testMinConnections() throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -670,12 +674,23 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		}
 
 		MeterRegistrarImpl meterRegistrar;
-		String metricsName = "";
+		CountDownLatch meterRemoved = new CountDownLatch(2);
+		String pendingTime = isHttp2 ? ".pending.streams.time" : ".pending.connections.time";
+		String metricsName1 = CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS;
+		String metricsName2 = CONNECTION_PROVIDER_PREFIX + pendingTime;
+		String metricsTagName = "";
 		if (isBuiltInMetrics) {
 			meterRegistrar = null;
 			builder.metrics(true);
 
-			metricsName = isHttp2 ? "http2.testDisposeInactivePoolsInBackground" : "testDisposeInactivePoolsInBackground";
+			metricsTagName = isHttp2 ? "http2.testDisposeInactivePoolsInBackground" : "testDisposeInactivePoolsInBackground";
+
+			registry.config().onMeterRemoved(meter -> {
+				if (metricsName1.equals(meter.getId().getName()) ||
+						metricsName2.equals(meter.getId().getName())) {
+					meterRemoved.countDown();
+				}
+			});
 		}
 		else {
 			meterRegistrar = new MeterRegistrarImpl();
@@ -711,18 +726,15 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 			InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 			String address = sa.getHostString() + ":" + sa.getPort();
-			String pendingTime = isHttp2 ? ".pending.streams.time" : ".pending.connections.time";
 
 			assertThat(provider.channelPools.size()).isEqualTo(1);
 			if (meterRegistrar != null) {
 				assertThat(meterRegistrar.registered.get()).isTrue();
 			}
 			else {
-				assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
-						REMOTE_ADDRESS, address, NAME, metricsName).isNotNull();
+				assertGauge(registry, metricsName1, REMOTE_ADDRESS, address, NAME, metricsTagName).isNotNull();
 
-				assertTimer(registry, CONNECTION_PROVIDER_PREFIX + pendingTime,
-						REMOTE_ADDRESS, address, NAME, metricsName).isNotNull();
+				assertTimer(registry, metricsName2, REMOTE_ADDRESS, address, NAME, metricsTagName).isNotNull();
 			}
 
 			if (enableEvictInBackground) {
@@ -737,22 +749,23 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 
 			assertThat(provider.isDisposed()).isEqualTo(enableEvictInBackground);
 			if (meterRegistrar != null) {
+				if (enableEvictInBackground) {
+					assertThat(meterRegistrar.latch.await(30, TimeUnit.SECONDS)).isTrue();
+				}
 				assertThat(meterRegistrar.deRegistered.get()).isEqualTo(enableEvictInBackground);
 			}
 			else {
 				if (enableEvictInBackground) {
-					assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
-							REMOTE_ADDRESS, address, NAME, metricsName).isNull();
+					assertThat(meterRemoved.await(30, TimeUnit.SECONDS)).isTrue();
 
-					assertTimer(registry, CONNECTION_PROVIDER_PREFIX + pendingTime,
-							REMOTE_ADDRESS, address, NAME, metricsName).isNull();
+					assertGauge(registry, metricsName1, REMOTE_ADDRESS, address, NAME, metricsTagName).isNull();
+
+					assertTimer(registry, metricsName2, REMOTE_ADDRESS, address, NAME, metricsTagName).isNull();
 				}
 				else {
-					assertGauge(registry, CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS,
-							REMOTE_ADDRESS, address, NAME, metricsName).isNotNull();
+					assertGauge(registry, metricsName1, REMOTE_ADDRESS, address, NAME, metricsTagName).isNotNull();
 
-					assertTimer(registry, CONNECTION_PROVIDER_PREFIX + pendingTime,
-							REMOTE_ADDRESS, address, NAME, metricsName).isNotNull();
+					assertTimer(registry, metricsName2, REMOTE_ADDRESS, address, NAME, metricsTagName).isNotNull();
 				}
 			}
 		}
@@ -817,7 +830,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("FutureReturnValueIgnored")
+	@SuppressWarnings({"FutureReturnValueIgnored", "deprecation"})
 	void testHttp2PoolAndGoAway() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -888,6 +901,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 	static final class MeterRegistrarImpl implements ConnectionProvider.MeterRegistrar {
 		AtomicBoolean registered = new AtomicBoolean();
 		AtomicBoolean deRegistered = new AtomicBoolean();
+		final CountDownLatch latch = new CountDownLatch(1);
 
 		MeterRegistrarImpl() {
 		}
@@ -900,6 +914,7 @@ class DefaultPooledConnectionProviderTest extends BaseHttpTest {
 		@Override
 		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
 			deRegistered.compareAndSet(false, true);
+			latch.countDown();
 		}
 	}
 }

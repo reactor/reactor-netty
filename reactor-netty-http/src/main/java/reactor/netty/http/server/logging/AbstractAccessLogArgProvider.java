@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,13 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.netty.ReactorNetty;
 import reactor.netty.http.server.ConnectionInformation;
+import reactor.netty.internal.util.MapUtils;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -55,6 +57,21 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 
 	AbstractAccessLogArgProvider(@Nullable SocketAddress remoteAddress) {
 		this.remoteAddress = remoteAddress;
+	}
+
+	AbstractAccessLogArgProvider(AbstractAccessLogArgProvider<?> copy) {
+		this.remoteAddress = copy.remoteAddress;
+		this.connectionInfo = copy.connectionInfo;
+		this.zonedDateTime = copy.zonedDateTime;
+		this.accessDateTime = copy.accessDateTime;
+		this.method = copy.method;
+		this.uri = copy.uri;
+		this.protocol = copy.protocol;
+		this.chunked = copy.chunked;
+		this.contentLength = copy.contentLength;
+		this.startTime = copy.startTime;
+		this.cookies = new HashMap<>(MapUtils.calculateInitialCapacity(copy.cookies.size()));
+		this.cookies.putAll(copy.cookies);
 	}
 
 	@Override

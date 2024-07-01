@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ class HttpResourcesTest {
 			HttpResources.disposeLoopsAndConnectionsLater();
 			assertThat(newHttpResources.isDisposed()).isFalse();
 
-			HttpResources.disposeLoopsAndConnectionsLater().block();
+			HttpResources.disposeLoopsAndConnectionsLater().block(Duration.ofSeconds(5));
 			assertThat(newHttpResources.isDisposed()).as("disposeLoopsAndConnectionsLater completion").isTrue();
 
 			assertThat(HttpResources.httpResources.get()).isNull();
@@ -123,7 +123,7 @@ class HttpResourcesTest {
 
 		HttpResources current = HttpResources.httpResources.get();
 		HttpResources.disposeLoopsAndConnectionsLater()
-		             .block();
+		             .block(Duration.ofSeconds(5));
 		assertThat(current.isDisposed()).isTrue();
 	}
 }

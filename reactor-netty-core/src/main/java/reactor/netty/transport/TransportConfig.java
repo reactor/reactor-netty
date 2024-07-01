@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ public abstract class TransportConfig {
 	 * @param onServer channel initializer for the server or for the client
 	 * @return the {@link ChannelInitializer} that will be used for initializing the channel pipeline
 	 */
-	public final ChannelInitializer<Channel> channelInitializer(ConnectionObserver connectionObserver,
+	public ChannelInitializer<Channel> channelInitializer(ConnectionObserver connectionObserver,
 			@Nullable SocketAddress remoteAddress, boolean onServer) {
 		requireNonNull(connectionObserver, "connectionObserver");
 		return new TransportChannelInitializer(this, connectionObserver, remoteAddress, onServer);
@@ -247,6 +247,10 @@ public abstract class TransportConfig {
 		this.observer = parent.observer;
 		this.options = parent.options;
 		this.preferNative = parent.preferNative;
+	}
+
+	protected void bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		this.bindAddress = bindAddressSupplier;
 	}
 
 	/**

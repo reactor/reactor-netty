@@ -24,7 +24,6 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -47,6 +46,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.util.annotation.Nullable;
@@ -62,12 +62,14 @@ import static reactor.netty.ReactorNetty.format;
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra
  * handler management.
  */
-final class HttpTrafficHandler extends ChannelDuplexHandler
-		implements Runnable, ChannelFutureListener {
+final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable {
 
 	static final String MULTIPART_PREFIX = "multipart";
 
 	static final HttpVersion H2 = HttpVersion.valueOf("HTTP/2.0");
+
+	static final boolean LAST_FLUSH_WHEN_NO_READ = Boolean.parseBoolean(
+			System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false"));
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieDecoder                                     cookieDecoder;
@@ -97,6 +99,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	SocketAddress remoteAddress;
 
 	Boolean secure;
+
+	boolean read;
+	boolean needsFlush;
+	boolean finalizingResponse;
 
 	HttpTrafficHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
@@ -144,6 +150,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
+		read = true;
 		if (secure == null) {
 			secure = ctx.channel().pipeline().get(SslHandler.class) != null;
 		}
@@ -154,6 +161,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		}
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest) {
+			finalizingResponse = false;
+
 			if (idleTimeout != null) {
 				IdleTimeoutHandler.removeIdleTimeoutHandler(ctx.pipeline());
 			}
@@ -171,7 +180,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			if (persistentConnection) {
 				pendingResponses += 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(), "Increasing pending responses, now {}"),
+					HttpServerOperations.log.debug(format(ctx.channel(), "Increasing pending responses count: {}"),
 							pendingResponses);
 				}
 				persistentConnection = isKeepAlive(request);
@@ -187,7 +196,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			if (pendingResponses > 1) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug(format(ctx.channel(), "Buffering pipelined HTTP request, " +
-									"pending response count: {}, queue: {}"),
+									"pending responses count: {}, queue: {}"),
 							pendingResponses,
 							pipelined != null ? pipelined.size() : 0);
 				}
@@ -197,6 +206,16 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			}
 			else {
 				overflow = false;
+
+				if (LAST_FLUSH_WHEN_NO_READ) {
+					ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+					if (ops instanceof HttpServerOperations) {
+						if (HttpServerOperations.log.isDebugEnabled()) {
+							HttpServerOperations.log.debug(format(ctx.channel(), "Last HTTP packet was sent, terminating the channel"));
+						}
+						((HttpServerOperations) ops).terminateInternal();
+					}
+				}
 
 				DecoderResult decoderResult = request.decoderResult();
 				if (decoderResult.isFailure()) {
@@ -208,9 +227,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				ZonedDateTime timestamp = ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM);
 				ConnectionInfo connectionInfo = null;
 				try {
-					connectionInfo = ConnectionInfo.from(ctx.channel(),
+					connectionInfo = ConnectionInfo.from(
 							request,
 							secure,
+							ctx.channel().localAddress(),
 							remoteAddress,
 							forwardedHeaderHandler);
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
@@ -267,7 +287,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		else if (overflow) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
 				HttpServerOperations.log.debug(format(ctx.channel(), "Buffering pipelined HTTP content, " +
-								"pending response count: {}, pending pipeline:{}"),
+								"pending responses count: {}, queue: {}"),
 						pendingResponses,
 						pipelined != null ? pipelined.size() : 0);
 			}
@@ -284,6 +304,38 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		}
 
 		ctx.fireChannelRead(msg);
+	}
+
+	@Override
+	public void channelReadComplete(ChannelHandlerContext ctx) {
+		endReadAndFlush();
+		ctx.fireChannelReadComplete();
+	}
+
+	void endReadAndFlush() {
+		if (read) {
+			read = false;
+			if (LAST_FLUSH_WHEN_NO_READ && needsFlush) {
+				needsFlush = false;
+				ctx.flush();
+			}
+		}
+	}
+
+	@Override
+	public void flush(ChannelHandlerContext ctx) {
+		if (LAST_FLUSH_WHEN_NO_READ && finalizingResponse) {
+			if (needsFlush || !ctx.channel().isWritable()) {
+				needsFlush = false;
+				ctx.flush();
+			}
+			else {
+				needsFlush = true;
+			}
+		}
+		else {
+			ctx.flush();
+		}
 	}
 
 	void sendDecodingFailures(Throwable t, Object msg) {
@@ -332,20 +384,24 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			}
 		}
 		if (msg instanceof LastHttpContent) {
+			finalizingResponse = true;
+
+			if (LAST_FLUSH_WHEN_NO_READ) {
+				needsFlush = !read;
+			}
+
 			if (!shouldKeepAlive()) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug(format(ctx.channel(), "Detected non persistent http " +
-									"connection, preparing to close"),
+									"connection, preparing to close. Pending responses count: {}"),
 							pendingResponses);
 				}
 				ctx.write(msg, promise.unvoid())
-				   .addListener(this)
 				   .addListener(ChannelFutureListener.CLOSE);
 				return;
 			}
 
-			ctx.write(msg, promise.unvoid())
-			   .addListener(this);
+			ctx.write(msg, promise);
 
 			if (!persistentConnection) {
 				return;
@@ -355,7 +411,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				nonInformationalResponse = false;
 				pendingResponses -= 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(), "Decreasing pending responses, now {}"),
+					HttpServerOperations.log.debug(format(ctx.channel(), "Decreasing pending responses count: {}"),
 							pendingResponses);
 				}
 			}
@@ -363,7 +419,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			if (pipelined != null && !pipelined.isEmpty()) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug(format(ctx.channel(), "Draining next pipelined " +
-									"request, pending response count: {}, queued: {}"),
+									"HTTP request, pending responses count: {}, queued: {}"),
 							pendingResponses, pipelined.size());
 				}
 				ctx.executor()
@@ -408,6 +464,18 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				HttpRequestHolder holder = (HttpRequestHolder) next;
 				nextRequest = holder.request;
 
+				finalizingResponse = false;
+
+				if (LAST_FLUSH_WHEN_NO_READ) {
+					ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+					if (ops instanceof HttpServerOperations) {
+						if (HttpServerOperations.log.isDebugEnabled()) {
+							HttpServerOperations.log.debug(format(ctx.channel(), "Last HTTP packet was sent, terminating the channel"));
+						}
+						((HttpServerOperations) ops).terminateInternal();
+					}
+				}
+
 				DecoderResult decoderResult = nextRequest.decoderResult();
 				if (decoderResult.isFailure()) {
 					sendDecodingFailures(decoderResult.cause(), nextRequest, holder.timestamp, null);
@@ -418,9 +486,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				HttpServerOperations ops;
 				ConnectionInfo connectionInfo = null;
 				try {
-					connectionInfo = ConnectionInfo.from(ctx.channel(),
+					connectionInfo = ConnectionInfo.from(
 							nextRequest,
 							secure,
+							ctx.channel().localAddress(),
 							remoteAddress,
 							forwardedHeaderHandler);
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
@@ -455,25 +524,6 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			}
 		}
 		overflow = false;
-	}
-
-	@Override
-	public void operationComplete(ChannelFuture future) {
-		if (!future.isSuccess()) {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(future.channel(),
-				        "Sending last HTTP packet was not successful, terminating the channel"),
-				        future.cause());
-			}
-		}
-		else {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(future.channel(),
-				        "Last HTTP packet was sent, terminating the channel"));
-			}
-		}
-
-		HttpServerOperations.cleanHandlerTerminate(future.channel());
 	}
 
 	@Override

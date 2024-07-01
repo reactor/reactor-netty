@@ -15,8 +15,11 @@
  */
 package reactor.netty.http;
 
+import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -31,13 +34,27 @@ class Http3SettingsSpecTest {
 	}
 
 	@Test
+	void idleTimeout() {
+		builder.idleTimeout(Duration.ofMillis(50));
+		Http3SettingsSpec spec = builder.build();
+		assertThat(spec.idleTimeout()).isEqualTo(Duration.ofMillis(50));
+		assertThat(spec.maxData()).isEqualTo(0);
+		assertThat(spec.maxStreamDataBidirectionalLocal()).isEqualTo(0);
+		assertThat(spec.maxStreamDataBidirectionalRemote()).isEqualTo(0);
+		assertThat(spec.maxStreamsBidirectional()).isEqualTo(0);
+		assertThat(spec.tokenHandler()).isNull();
+	}
+
+	@Test
 	void maxData() {
 		builder.maxData(123);
 		Http3SettingsSpec spec = builder.build();
+		assertThat(spec.idleTimeout()).isNull();
 		assertThat(spec.maxData()).isEqualTo(123);
 		assertThat(spec.maxStreamDataBidirectionalLocal()).isEqualTo(0);
 		assertThat(spec.maxStreamDataBidirectionalRemote()).isEqualTo(0);
 		assertThat(spec.maxStreamsBidirectional()).isEqualTo(0);
+		assertThat(spec.tokenHandler()).isNull();
 	}
 
 	@Test
@@ -51,10 +68,12 @@ class Http3SettingsSpecTest {
 	void maxStreamDataBidirectionalLocal() {
 		builder.maxStreamDataBidirectionalLocal(123);
 		Http3SettingsSpec spec = builder.build();
+		assertThat(spec.idleTimeout()).isNull();
 		assertThat(spec.maxData()).isEqualTo(0);
 		assertThat(spec.maxStreamDataBidirectionalLocal()).isEqualTo(123);
 		assertThat(spec.maxStreamDataBidirectionalRemote()).isEqualTo(0);
 		assertThat(spec.maxStreamsBidirectional()).isEqualTo(0);
+		assertThat(spec.tokenHandler()).isNull();
 	}
 
 	@Test
@@ -68,10 +87,12 @@ class Http3SettingsSpecTest {
 	void maxStreamDataBidirectionalRemote() {
 		builder.maxStreamDataBidirectionalRemote(123);
 		Http3SettingsSpec spec = builder.build();
+		assertThat(spec.idleTimeout()).isNull();
 		assertThat(spec.maxData()).isEqualTo(0);
 		assertThat(spec.maxStreamDataBidirectionalLocal()).isEqualTo(0);
 		assertThat(spec.maxStreamDataBidirectionalRemote()).isEqualTo(123);
 		assertThat(spec.maxStreamsBidirectional()).isEqualTo(0);
+		assertThat(spec.tokenHandler()).isNull();
 	}
 
 	@Test
@@ -85,10 +106,12 @@ class Http3SettingsSpecTest {
 	void maxStreamsBidirectional() {
 		builder.maxStreamsBidirectional(123);
 		Http3SettingsSpec spec = builder.build();
+		assertThat(spec.idleTimeout()).isNull();
 		assertThat(spec.maxData()).isEqualTo(0);
 		assertThat(spec.maxStreamDataBidirectionalLocal()).isEqualTo(0);
 		assertThat(spec.maxStreamDataBidirectionalRemote()).isEqualTo(0);
 		assertThat(spec.maxStreamsBidirectional()).isEqualTo(123);
+		assertThat(spec.tokenHandler()).isNull();
 	}
 
 	@Test
@@ -96,5 +119,17 @@ class Http3SettingsSpecTest {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.isThrownBy(() -> builder.maxStreamsBidirectional(-1))
 				.withMessageContaining("maxStreamsBidirectional must be positive or zero");
+	}
+
+	@Test
+	void tokenHandler() {
+		builder.tokenHandler(InsecureQuicTokenHandler.INSTANCE);
+		Http3SettingsSpec spec = builder.build();
+		assertThat(spec.idleTimeout()).isNull();
+		assertThat(spec.maxData()).isEqualTo(0);
+		assertThat(spec.maxStreamDataBidirectionalLocal()).isEqualTo(0);
+		assertThat(spec.maxStreamDataBidirectionalRemote()).isEqualTo(0);
+		assertThat(spec.maxStreamsBidirectional()).isEqualTo(0);
+		assertThat(spec.tokenHandler()).isEqualTo(InsecureQuicTokenHandler.INSTANCE);
 	}
 }

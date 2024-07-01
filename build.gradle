@@ -23,25 +23,25 @@ buildscript {
 		maven { url "https://repo.spring.io/plugins-release" }
 	}
 	dependencies {
-		classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.33.13' //applied in individual submodules
+		classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.33.20' //applied in individual submodules
 	}
 }
 
 plugins {
 	id "com.diffplug.spotless" version "6.13.0"
 	id 'com.google.osdetector' version '1.7.3'
-	id 'org.gradle.test-retry' version '1.5.8'
+	id 'org.gradle.test-retry' version '1.5.9'
 	id 'io.spring.nohttp' version '0.0.11'
 	id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
 	//we now need version of Artifactory gradle plugin deployed on Maven Central, see above
-	id 'me.champeau.gradle.japicmp' version '0.4.2' apply false
+	id 'me.champeau.gradle.japicmp' version '0.4.3' apply false
 	id 'de.undercouch.download' version '5.6.0' apply false
 	id 'io.spring.javadoc' version '0.0.1' apply false
 	id 'io.spring.javadoc-aggregate' version '0.0.1' apply false
 	id 'biz.aQute.bnd.builder' version '6.4.0' apply false
 	id 'org.graalvm.buildtools.native' version '0.9.25' apply false
 	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
-	id 'net.ltgt.errorprone' version '3.1.0' apply false
+	id 'net.ltgt.errorprone' version '4.0.1' apply false
 }
 
 description = 'Reactive Streams Netty driver'
@@ -85,11 +85,11 @@ ext {
 	}
 
 	//Metrics
-	micrometerVersion = '1.10.0' //optional baseline
-	micrometerTracingVersion = '1.0.0' //optional baseline
-	micrometerDocsVersion = '1.0.0' //optional baseline
+	micrometerVersion = '1.13.0' //optional baseline
+	micrometerTracingVersion = '1.3.0' //optional baseline
+	micrometerDocsVersion = '1.0.2' //optional baseline
 
-	contextPropagationDefaultVersion = '1.0.0' //optional baseline
+	contextPropagationDefaultVersion = '1.1.0' //optional baseline
 	if (!project.hasProperty("forceContextPropagationVersion")) {
 		contextPropagationVersion = contextPropagationDefaultVersion
 	}
@@ -98,8 +98,8 @@ ext {
 		println "Context Propagation version defined from command line: ${forceContextPropagationVersion}"
 	}
 
-	braveVersion = '6.0.2'
-	zipkinSenderVersion = '3.3.0'
+	braveVersion = '6.0.3'
+	zipkinSenderVersion = '3.4.0'
 
 	jsr305Version = '3.0.2'
 
@@ -108,7 +108,7 @@ ext {
 	logbackVersion = '1.2.13'
 
 	// Netty
-	nettyDefaultVersion = '4.1.109.Final'
+	nettyDefaultVersion = '4.1.111.Final'
 	if (!project.hasProperty("forceNettyVersion")) {
 		nettyVersion = nettyDefaultVersion
 	}
@@ -117,36 +117,29 @@ ext {
 		println "Netty version defined from command line: ${forceNettyVersion}"
 	}
 	nettyIoUringVersion = '0.0.25.Final'
-	nettyQuicVersion = '0.0.62.Final'
+	nettyQuicVersion = '0.0.65.Final'
 	nettyHttp3Version = '0.0.28.Final'
 
 	// Testing
 	brotli4jVersion = '1.16.0'
-	zstdJniVersion = '1.5.6-1'
-	jacksonDatabindVersion = '2.17.0'
+	zstdJniVersion = '1.5.6-3'
+	jacksonDatabindVersion = '2.17.1'
 	testAddonVersion = reactorCoreVersion
-	assertJVersion = '3.25.3'
+	assertJVersion = '3.26.0'
 	awaitilityVersion = '4.2.1'
-	hoverflyJavaVersion = '0.17.1'
-	tomcatVersion = '9.0.87'
+	hoverflyJavaVersion = '0.18.1'
+	tomcatVersion = '9.0.90'
 	boringSslVersion = '2.0.65.Final'
-	junitVersion = '5.10.2'
-	junitPlatformLauncherVersion = '1.10.2'
+	junitVersion = '5.10.3'
+	junitPlatformLauncherVersion = '1.10.3'
 	mockitoVersion = '4.11.0'
-	blockHoundVersion = '1.0.8.RELEASE'
+	blockHoundVersion = '1.0.9.RELEASE'
 	reflectionsVersion = '0.10.2'
 	errorproneCoreVersion = '2.10.0'
 	errorproneGuavaVersion = '30.0-jre'
 
 	// Antora
 	antoraPluginVersion = '1.0.0'
-	antoraVersion = '3.2.0-alpha.4'
-	antoraAtlasExtensionVersion = '1.0.0-alpha.1'
-	antoraPdfExtensionVersion = '1.0.0-alpha.7'
-	antoraCollectorExtensionVersion = '1.0.0-alpha.3'
-	asciiDocTabVersion = '1.0.0-beta.6'
-	springIoAntoraExtensionsVersion = '1.8.2'
-	springIoAsciidoctorExtensionsVersion = '1.0.0-alpha.9'
 
 	javadocLinks = ["https://docs.oracle.com/javase/8/docs/api/",
 					// Use Reactive Streams 1.0.3 version for javadoc generation
@@ -155,7 +148,8 @@ ext {
 					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
 					"https://projectreactor.io/docs/core/release/api/",
 					"https://netty.io/4.1/api/",
-					"https://projectreactor.io/docs/netty/release/api/",] as String[]
+					"https://projectreactor.io/docs/netty/release/api/",
+					"https://javadoc.io/doc/io.netty.incubator/netty-incubator-codec-classes-quic/latest/"] as String[]
 }
 
 nohttp {
@@ -281,9 +275,6 @@ subprojects {
 		if (project.hasProperty("forceTransport")) {
 			systemProperty("forceTransport", forceTransport)
 		}
-		systemProperty("nettyVersionMicro", VersionNumber.parse(nettyVersion.toString()).micro)
-		systemProperty("reactorCoreVersionMinor", VersionNumber.parse(reactorCoreVersion.toString()).minor)
-		systemProperty("contextPropagationVersionMicro", VersionNumber.parse(contextPropagationVersion.toString()).micro)
 		scanForTestClasses = false
 		include '**/*Tests.*'
 		include '**/*Test.*'

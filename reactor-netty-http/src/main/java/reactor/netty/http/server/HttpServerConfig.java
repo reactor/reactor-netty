@@ -23,6 +23,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpDecoderConfig;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -73,6 +76,7 @@ import reactor.netty.transport.ServerTransportConfig;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Incubating;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -89,6 +93,7 @@ import java.util.function.Supplier;
 
 import static reactor.netty.ReactorNetty.ACCESS_LOG_ENABLED;
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.http.server.Http3Codec.newHttp3ServerConnectionHandler;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 
 /**
@@ -166,6 +171,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * @return the HTTP/3 configuration
 	 * @since 1.2.0
 	 */
+	@Incubating
+	@Nullable
 	public Http3SettingsSpec http3SettingsSpec() {
 		return http3Settings;
 	}
@@ -371,6 +378,19 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	@Override
+	public ChannelInitializer<Channel> channelInitializer(ConnectionObserver connectionObserver,
+			@Nullable SocketAddress remoteAddress, boolean onServer) {
+		ChannelInitializer<Channel> channelInitializer = super.channelInitializer(connectionObserver, remoteAddress, onServer);
+		return (_protocols & h3) == h3 ? new Http3ChannelInitializer(this, channelInitializer) : channelInitializer;
+	}
+
+	@Override
+	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
+		return isDomainSocket ? ServerDomainSocketChannel.class :
+				(_protocols & h3) == h3 ? DatagramChannel.class : ServerSocketChannel.class;
+	}
+
+	@Override
 	protected LoggingHandler defaultLoggingHandler() {
 		return LOGGING_HANDLER;
 	}
@@ -567,6 +587,39 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			lengthPredicate = lengthPredicate.and(compressionPredicate);
 		}
 		return lengthPredicate;
+	}
+
+	static void configureHttp3Pipeline(
+			ChannelPipeline p,
+			boolean accessLogEnabled,
+			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+			ServerCookieDecoder cookieDecoder,
+			ServerCookieEncoder cookieEncoder,
+			HttpServerFormDecoderProvider formDecoderProvider,
+			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
+			HttpMessageLogFactory httpMessageLogFactory,
+			ConnectionObserver listener,
+			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
+			@Nullable Function<String, String> methodTagValue,
+			@Nullable ChannelMetricsRecorder metricsRecorder,
+			int minCompressionSize,
+			ChannelOperations.OnSetup opsFactory,
+			@Nullable Duration readTimeout,
+			@Nullable Duration requestTimeout,
+			@Nullable Function<String, String> uriTagValue,
+			boolean validate) {
+		p.remove(NettyPipeline.ReactiveBridge);
+
+		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(accessLogEnabled, accessLog, compressPredicate,
+				cookieDecoder, cookieEncoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory,
+				listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize, opsFactory, readTimeout,
+				requestTimeout, uriTagValue, validate));
+
+		if (metricsRecorder != null) {
+			// Connection metrics are not applicable
+			p.remove(NettyPipeline.ChannelMetricsHandler);
+		}
 	}
 
 	static void configureH2Pipeline(ChannelPipeline p,
@@ -1232,7 +1285,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final HttpServerFormDecoderProvider                           formDecoderProvider;
 		final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 		final Http2SettingsSpec                                       http2SettingsSpec;
-		final Http3SettingsSpec                                       http3SettingsSpec;
 		final HttpMessageLogFactory                                   httpMessageLogFactory;
 		final Duration                                                idleTimeout;
 		final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
@@ -1261,7 +1313,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.formDecoderProvider = config.formDecoderProvider;
 			this.forwardedHeaderHandler = config.forwardedHeaderHandler;
 			this.http2SettingsSpec = config.http2Settings;
-			this.http3SettingsSpec = config.http3Settings;
 			this.httpMessageLogFactory = config.httpMessageLogFactory;
 			this.idleTimeout = config.idleTimeout;
 			this.mapHandle = config.mapHandle;
@@ -1285,14 +1336,16 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 			if (sslProvider != null) {
 				ChannelPipeline pipeline = channel.pipeline();
-				if (redirectHttpToHttps && (protocols & h2) != h2) {
-					NonSslRedirectDetector nonSslRedirectDetector = new NonSslRedirectDetector(sslProvider,
-							remoteAddress,
-							SSL_DEBUG);
-					pipeline.addFirst(NettyPipeline.NonSslRedirectDetector, nonSslRedirectDetector);
-				}
-				else {
-					sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+				if ((protocols & h3) != h3) {
+					if (redirectHttpToHttps && (protocols & h2) != h2) {
+						NonSslRedirectDetector nonSslRedirectDetector = new NonSslRedirectDetector(sslProvider,
+								remoteAddress,
+								SSL_DEBUG);
+						pipeline.addFirst(NettyPipeline.NonSslRedirectDetector, nonSslRedirectDetector);
+					}
+					else {
+						sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
+					}
 				}
 
 				if ((protocols & h11orH2) == h11orH2) {
@@ -1339,6 +1392,28 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							http2SettingsSpec,
 							httpMessageLogFactory,
 							idleTimeout,
+							observer,
+							mapHandle,
+							methodTagValue,
+							metricsRecorder,
+							minCompressionSize,
+							opsFactory,
+							readTimeout,
+							requestTimeout,
+							uriTagValue,
+							decoder.validateHeaders());
+				}
+				else if ((protocols & h3) == h3) {
+					configureHttp3Pipeline(
+							channel.pipeline(),
+							accessLogEnabled,
+							accessLog,
+							compressPredicate(compressPredicate, minCompressionSize),
+							cookieDecoder,
+							cookieEncoder,
+							formDecoderProvider,
+							forwardedHeaderHandler,
+							httpMessageLogFactory,
 							observer,
 							mapHandle,
 							methodTagValue,

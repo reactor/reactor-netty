@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,7 +101,7 @@ class TcpResourcesTest {
 			TcpResources.disposeLoopsAndConnectionsLater();
 			assertThat(newTcpResources.isDisposed()).isFalse();
 
-			TcpResources.disposeLoopsAndConnectionsLater().block();
+			TcpResources.disposeLoopsAndConnectionsLater().block(Duration.ofSeconds(5));
 			assertThat(newTcpResources.isDisposed()).as("disposeLoopsAndConnectionsLater completion").isTrue();
 
 			assertThat(TcpResources.tcpResources.get()).isNull();
@@ -140,7 +140,7 @@ class TcpResourcesTest {
 		                               	try {
 			                                out.sendString(Flux.just("Hello World!"))
 			                                   .then()
-			                                   .block();
+			                                   .block(Duration.ofSeconds(5));
 		                                }
 		                                catch (RuntimeException e) {
 			                                latch.countDown();
@@ -170,7 +170,7 @@ class TcpResourcesTest {
 
 		TcpResources current = TcpResources.tcpResources.get();
 		TcpResources.disposeLoopsAndConnectionsLater()
-		            .block();
+		            .block(Duration.ofSeconds(5));
 		assertThat(current.isDisposed()).isTrue();
 	}
 }

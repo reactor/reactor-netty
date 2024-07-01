@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,6 @@ import java.util.function.BiPredicate;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.DecoderResult;
@@ -57,7 +55,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Violeta Georgieva
  */
-final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implements ChannelFutureListener {
+final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
 	final ServerCookieDecoder                                     cookieDecoder;
@@ -128,9 +126,10 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 			ConnectionInfo connectionInfo = null;
 			try {
 				pendingResponse = true;
-				connectionInfo = ConnectionInfo.from(ctx.channel(),
+				connectionInfo = ConnectionInfo.from(
 						request,
 						secured,
+						ctx.channel().localAddress(),
 						remoteAddress,
 						forwardedHeaderHandler);
 				ops = new HttpServerOperations(Connection.from(ctx.channel()),
@@ -176,6 +175,16 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof ByteBuf) {
+			if (!pendingResponse) {
+				if (HttpServerOperations.log.isDebugEnabled()) {
+					HttpServerOperations.log.debug(
+							format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"), msg);
+				}
+				((ByteBuf) msg).release();
+				promise.setSuccess();
+				return;
+			}
+
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
 		}
@@ -185,31 +194,11 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler implemen
 		}
 		else {
 			//"FutureReturnValueIgnored" this is deliberate
-			ChannelFuture f = ctx.write(msg, promise);
+			ctx.write(msg, promise);
 			if (msg instanceof LastHttpContent) {
 				pendingResponse = false;
-				f.addListener(this);
 				ctx.read();
 			}
 		}
-	}
-
-	@Override
-	public void operationComplete(ChannelFuture future) {
-		if (!future.isSuccess()) {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(future.channel(),
-						"Sending last HTTP packet was not successful, terminating the channel"),
-						future.cause());
-			}
-		}
-		else {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug(format(future.channel(),
-						"Last HTTP packet was sent, terminating the channel"));
-			}
-		}
-
-		HttpServerOperations.cleanHandlerTerminate(future.channel());
 	}
 }

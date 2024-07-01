@@ -22,7 +22,7 @@ copy contains this `Copyright Notice`, whether distributed in print or electroni
 == Contributing to the Documentation
 The reference guide is written in
 https://asciidoctor.org/docs/asciidoc-writers-guide/[Asciidoc] using https://docs.antora.org/antora/latest/[Antora], and you can find its
-sources at https://github.com/reactor/reactor-netty/tree/main/docs.
+sources at {reactor-netty-github-repo}/docs.
 
 If you have an improvement, we will be happy to get a pull request from you!
 
@@ -35,7 +35,7 @@ ifeval::["{backend}" == "html5"]
 TIP: To facilitate documentation edits, you can edit the current page from the `Edit this Page` link located in the upper right corner sidebar. The link opens
 an edit `UI` directly on `GitHub` for the main source file for the current page. These links are
 only present in the `HTML5` version of this reference guide. They look like the following link:
-link:https://github.com/reactor/reactor-netty/edit/main/docs/modules/ROOT/pages/about-doc.adoc[Edit this Page^, role="fa fa-edit"] to xref:about-doc.adoc[About the Documentation].
+link:https://github.com/reactor/reactor-netty/edit/main/docs/modules/ROOT/pages/about-doc.adoc[Edit this Page^, role="fa fa-edit"] to make changes to xref:about-doc.adoc[About the Documentation] page.
 endif::[]
 
 [[getting-help]]
@@ -49,5 +49,5 @@ https://stackoverflow.com/tags/reactor-netty[`reactor-netty`].
 https://github.com/reactor/reactor-netty/issues[reactor-netty].
 
 NOTE: All of `Reactor Netty` is open source,
-https://github.com/reactor/reactor-netty/tree/main/docs/asciidoc[including this
+{reactor-netty-github-repo}/docs[including this
 documentation].

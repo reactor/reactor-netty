@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import io.micrometer.common.KeyValues;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.transport.RequestReplyReceiverContext;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import reactor.netty.observability.ReactorNettyHandlerContext;
@@ -26,6 +27,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Function;
@@ -80,17 +82,42 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	}
 
 	@Override
+	protected MetricsArgProvider createMetricsArgProvider() {
+		return super.createMetricsArgProvider().put(Observation.class, responseTimeObservation);
+	}
+
+	@Override
 	protected HttpServerMetricsRecorder recorder() {
 		return recorder;
 	}
 
 	@Override
-	protected void recordWrite(HttpServerOperations ops, String path, String method, String status) {
+	protected void recordWrite(Channel channel) {
+		recordWrite(dataSent, dataSentTime, method, path, remoteSocketAddress, responseTimeObservation, status);
+
+		setChannelContext(channel, parentContextView);
+	}
+
+	@Override
+	protected void recordWrite(Channel channel, MetricsArgProvider metricsArgProvider) {
+		recordWrite(metricsArgProvider.dataSent, metricsArgProvider.dataSentTime, metricsArgProvider.method, metricsArgProvider.path,
+				metricsArgProvider.remoteSocketAddress, metricsArgProvider.get(Observation.class), metricsArgProvider.status);
+	}
+
+	void recordWrite(
+			long dataSent,
+			long dataSentTime,
+			String method,
+			String path,
+			SocketAddress remoteSocketAddress,
+			Observation responseTimeObservation,
+			String status) {
 		Duration dataSentTimeDuration = Duration.ofNanos(System.nanoTime() - dataSentTime);
 		recorder().recordDataSentTime(path, method, status, dataSentTimeDuration);
 
 		// Always take the remote address from the operations in order to consider proxy information
-		recorder().recordDataSent(ops.remoteAddress(), path, dataSent);
+		// Use remoteSocketAddress() in order to obtain UDS info
+		recorder().recordDataSent(remoteSocketAddress, path, dataSent);
 
 		// Cannot invoke the recorder anymore:
 		// 1. The recorder is one instance only, it is invoked for all requests that can happen
@@ -98,17 +125,11 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		//
 		// Move the implementation from the recorder here
 		responseTimeObservation.stop();
-
-		setChannelContext(ops.channel(), parentContextView);
-
-		responseTimeHandlerContext = null;
-		responseTimeObservation = null;
-		parentContextView = null;
 	}
 
 	@Override
-	protected void startRead(HttpServerOperations ops, String path, String method) {
-		super.startRead(ops, path, method);
+	protected void startRead(HttpServerOperations ops) {
+		super.startRead(ops);
 
 		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, method, path, ops);
 		responseTimeObservation = Observation.createNotStarted(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
@@ -118,8 +139,8 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 	// response
 	@Override
-	protected void startWrite(HttpServerOperations ops, String path, String method, String status) {
-		super.startWrite(ops, path, method, status);
+	protected void startWrite(HttpServerOperations ops) {
+		super.startWrite(ops);
 
 		if (responseTimeObservation == null) {
 			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, method, path, ops);
@@ -129,6 +150,19 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		}
 		responseTimeHandlerContext.setResponse(ops.nettyResponse);
 		responseTimeHandlerContext.status = status;
+	}
+
+	@Override
+	protected void reset(Channel channel) {
+		super.reset(channel);
+
+		if (isHttp11 && LAST_FLUSH_WHEN_NO_READ) {
+			setChannelContext(channel, parentContextView);
+		}
+
+		responseTimeHandlerContext = null;
+		responseTimeObservation = null;
+		parentContextView = null;
 	}
 
 	/*

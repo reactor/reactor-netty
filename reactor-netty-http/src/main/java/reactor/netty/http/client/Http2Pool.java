@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
@@ -106,7 +107,7 @@ import static reactor.netty.ReactorNetty.format;
  *
  * @author Violeta Georgieva
  */
-final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMetrics {
+class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMetrics {
 
 	static final Logger log = Loggers.getLogger(Http2Pool.class);
 
@@ -291,44 +292,50 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
+	Slot createSlot(Connection connection) {
+		return new Slot(this, connection);
+	}
+
 	Mono<Void> destroyPoolable(Http2PooledRef ref) {
 		assert ref.slot.connection.channel().eventLoop().inEventLoop();
 		Mono<Void> mono = Mono.empty();
 		try {
 			// By default, check the connection for removal on acquire and invalidate (only if there are no active streams)
 			if (ref.slot.decrementConcurrencyAndGet() == 0) {
-				// not HTTP/2 request
-				if (ref.slot.http2FrameCodecCtx() == null) {
-					ref.slot.invalidate();
-					removeSlot(ref.slot);
-				}
-				// If there is eviction in background, the background process will remove this connection
-				else if (poolConfig.evictInBackgroundInterval().isZero()) {
-					// not active
-					if (!ref.poolable().channel().isActive()) {
-						ref.slot.invalidate();
-						removeSlot(ref.slot);
-					}
-					// received GO_AWAY
-					if (ref.slot.goAwayReceived()) {
-						ref.slot.invalidate();
-						removeSlot(ref.slot);
-					}
-					// eviction predicate evaluates to true
-					else if (testEvictionPredicate(ref.slot)) {
-						//"FutureReturnValueIgnored" this is deliberate
-						ref.slot.connection.channel().close();
-						ref.slot.invalidate();
-						removeSlot(ref.slot);
-					}
-				}
+				destroyPoolableInternal(ref);
 			}
 		}
 		catch (Throwable destroyFunctionError) {
 			mono = Mono.error(destroyFunctionError);
 		}
 		return mono;
+	}
+
+	void destroyPoolableInternal(Http2PooledRef ref) {
+		// not HTTP/2 request
+		if (ref.slot.http2FrameCodecCtx() == null) {
+			ref.slot.invalidate();
+			removeSlot(ref.slot);
+		}
+		// If there is eviction in background, the background process will remove this connection
+		else if (poolConfig.evictInBackgroundInterval().isZero()) {
+			// not active
+			if (!ref.poolable().channel().isActive()) {
+				ref.slot.invalidate();
+				removeSlot(ref.slot);
+			}
+			// received GO_AWAY
+			if (ref.slot.goAwayReceived()) {
+				ref.slot.invalidate();
+				removeSlot(ref.slot);
+			}
+			// eviction predicate evaluates to true
+			else if (testEvictionPredicate(ref.slot)) {
+				closeChannel(ref.slot.connection.channel());
+				ref.slot.invalidate();
+				removeSlot(ref.slot);
+			}
+		}
 	}
 
 	void doAcquire(Borrower borrower) {
@@ -429,7 +436,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 									             if (sig.isOnNext()) {
 									                 Connection newInstance = sig.get();
 									                 assert newInstance != null;
-									                 Slot newSlot = new Slot(this, newInstance);
+									                 Slot newSlot = createSlot(newInstance);
 									                 if (log.isDebugEnabled()) {
 									                     log.debug(format(newInstance.channel(), "Channel activated"));
 									                 }
@@ -458,7 +465,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	void evictInBackground() {
 		@SuppressWarnings("unchecked")
 		ConcurrentLinkedQueue<Slot> resources = CONNECTIONS.get(this);
@@ -499,8 +505,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 							if (log.isDebugEnabled()) {
 								log.debug(format(slot.connection.channel(), "Eviction predicate was true, remove from pool"));
 							}
-							//"FutureReturnValueIgnored" this is deliberate
-							slot.connection.channel().close();
+							closeChannel(slot.connection.channel());
 							recordInteractionTimestamp();
 							slots.remove();
 							IDLE_SIZE.decrementAndGet(this);
@@ -519,7 +524,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	}
 
 	@Nullable
-	@SuppressWarnings("FutureReturnValueIgnored")
 	Slot findConnection(ConcurrentLinkedQueue<Slot> resources) {
 		int resourcesCount = idleSize;
 		while (resourcesCount > 0) {
@@ -582,8 +586,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 					if (log.isDebugEnabled()) {
 						log.debug(format(slot.connection.channel(), "Eviction predicate was true, remove from pool"));
 					}
-					//"FutureReturnValueIgnored" this is deliberate
-					slot.connection.channel().close();
+					closeChannel(slot.connection.channel());
 					slot.invalidate();
 				}
 				continue;
@@ -624,14 +627,24 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	 * @param borrower a new {@link Borrower} to add to the queue and later either serve or consider pending
 	 */
 	void pendingOffer(Borrower borrower) {
-		int maxPending = poolConfig.maxPending();
 		ConcurrentLinkedDeque<Borrower> pendingQueue = pending;
 		if (pendingQueue == TERMINATED) {
 			return;
 		}
+
 		int postOffer = addPending(pendingQueue, borrower, false);
 
+		long estimateStreamsCount = totalMaxConcurrentStreams - acquired;
+		int permits = poolConfig.allocationStrategy().estimatePermitCount();
+		if (permits + estimateStreamsCount < postOffer) {
+			borrower.pendingAcquireStart = clock.millis();
+			if (!borrower.acquireTimeout.isZero()) {
+				borrower.timeoutTask = poolConfig.pendingAcquireTimer().apply(borrower, borrower.acquireTimeout);
+			}
+		}
+
 		if (WIP.getAndIncrement(this) == 0) {
+			int maxPending = poolConfig.maxPending();
 			ConcurrentLinkedQueue<Slot> ir = connections;
 			if (maxPending >= 0 && postOffer > maxPending && ir.isEmpty() && poolConfig.allocationStrategy().estimatePermitCount() == 0) {
 				Borrower toCull = pollPending(pendingQueue, false);
@@ -676,6 +689,12 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			borrowers.offerLast(borrower);
 		}
 		return PENDING_SIZE.incrementAndGet(this);
+	}
+
+	@SuppressWarnings("FutureReturnValueIgnored")
+	void closeChannel(Channel channel) {
+		//"FutureReturnValueIgnored" this is deliberate
+		channel.close();
 	}
 
 	void offerSlot(@Nullable ConcurrentLinkedQueue<Slot> slots, Slot slot) {
@@ -757,13 +776,6 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		@Override
 		public void request(long n) {
 			if (Operators.validate(n)) {
-				long estimateStreamsCount = pool.totalMaxConcurrentStreams - pool.acquired;
-				int permits = pool.poolConfig.allocationStrategy().estimatePermitCount();
-				int pending = pool.pendingSize;
-				if (!acquireTimeout.isZero() && permits + estimateStreamsCount <= pending) {
-					pendingAcquireStart = pool.clock.millis();
-					timeoutTask = pool.poolConfig.pendingAcquireTimer().apply(this, acquireTimeout);
-				}
 				pool.doAcquire(this);
 			}
 		}
@@ -822,13 +834,15 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 
 		void stopPendingCountdown(boolean success) {
-			if (!timeoutTask.isDisposed()) {
+			if (pendingAcquireStart > 0) {
 				if (success) {
 					pool.poolConfig.metricsRecorder().recordPendingSuccessAndLatency(pool.clock.millis() - pendingAcquireStart);
 				}
 				else {
 					pool.poolConfig.metricsRecorder().recordPendingFailureAndLatency(pool.clock.millis() - pendingAcquireStart);
 				}
+
+				pendingAcquireStart = 0;
 			}
 			timeoutTask.dispose();
 		}
@@ -921,7 +935,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 		}
 	}
 
-	static final class Slot extends AtomicBoolean implements PooledRefMetadata {
+	static class Slot extends AtomicBoolean implements PooledRefMetadata {
 
 		volatile int concurrency;
 		static final AtomicIntegerFieldUpdater<Slot> CONCURRENCY =
@@ -951,13 +965,17 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 			else {
 				this.applicationProtocol = null;
 			}
+			initMaxConcurrentStreams();
+			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, this.maxConcurrentStreams);
+		}
+
+		void initMaxConcurrentStreams() {
 			ChannelHandlerContext frameCodec = http2FrameCodecCtx();
 			if (frameCodec != null && http2MultiplexHandlerCtx() != null) {
 				this.maxConcurrentStreams = ((Http2FrameCodec) frameCodec.handler()).connection().local().maxActiveStreams();
 				this.maxConcurrentStreams = pool.maxConcurrentStreams == -1 ? maxConcurrentStreams :
 						Math.min(pool.maxConcurrentStreams, maxConcurrentStreams);
 			}
-			TOTAL_MAX_CONCURRENT_STREAMS.addAndGet(this.pool, this.maxConcurrentStreams);
 		}
 
 		boolean canOpenStream() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1123,6 +1123,7 @@ class TcpServerTests {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testSniSupport() throws Exception {
 		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
 		TcpSslContextSpec defaultTcpSslContextSpec =

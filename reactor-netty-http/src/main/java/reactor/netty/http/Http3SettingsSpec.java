@@ -15,12 +15,20 @@
  */
 package reactor.netty.http;
 
+import io.netty.incubator.codec.quic.QuicTokenHandler;
+import reactor.util.annotation.Incubating;
+import reactor.util.annotation.Nullable;
+
+import java.time.Duration;
+import java.util.Objects;
+
 /**
  * A configuration builder to fine tune the HTTP/3 settings.
  *
  * @author Violeta Georgieva
  * @since 1.2.0
  */
+@Incubating
 public final class Http3SettingsSpec {
 
 	public interface Builder {
@@ -31,6 +39,17 @@ public final class Http3SettingsSpec {
 		 * @return a new {@link Http3SettingsSpec}
 		 */
 		Http3SettingsSpec build();
+
+		/**
+		 * Set the maximum idle timeout (resolution: ms)
+		 * See <a href="https://docs.rs/quiche/0.6.0/quiche/struct.Config.html#method.set_max_idle_timeout">
+		 *     set_max_idle_timeout</a>.
+		 * <p>By default {@code idleTimeout} is not specified.
+		 *
+		 * @param idleTimeout the maximum idle timeout (resolution: ms)
+		 * @return {@code this}
+		 */
+		Builder idleTimeout(Duration idleTimeout);
 
 		/**
 		 * Set the initial maximum data limit.
@@ -78,6 +97,16 @@ public final class Http3SettingsSpec {
 		 * @return {@code this}
 		 */
 		Builder maxStreamsBidirectional(long maxStreamsBidirectional);
+
+		/**
+		 * Set the {@link QuicTokenHandler} that is used to generate and validate tokens or
+		 * {@code null} if no tokens should be used at all.
+		 * Default to {@code null}.
+		 *
+		 * @param tokenHandler  the {@link QuicTokenHandler} to use.
+		 * @return {@code this}
+		 */
+		Builder tokenHandler(QuicTokenHandler tokenHandler);
 	}
 
 	/**
@@ -87,6 +116,16 @@ public final class Http3SettingsSpec {
 	 */
 	public static Http3SettingsSpec.Builder builder() {
 		return new Http3SettingsSpec.Build();
+	}
+
+	/**
+	 * Return the configured maximum idle timeout or null.
+	 *
+	 * @return the configured maximum idle timeout or null
+	 */
+	@Nullable
+	public Duration idleTimeout() {
+		return idleTimeout;
 	}
 
 	/**
@@ -125,6 +164,16 @@ public final class Http3SettingsSpec {
 		return maxStreamsBidirectional;
 	}
 
+	/**
+	 * Return the configured {@link QuicTokenHandler} or null.
+	 *
+	 * @return the configured {@link QuicTokenHandler} or null
+	 */
+	@Nullable
+	public QuicTokenHandler tokenHandler() {
+		return tokenHandler;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -134,32 +183,40 @@ public final class Http3SettingsSpec {
 			return false;
 		}
 		Http3SettingsSpec that = (Http3SettingsSpec) o;
-		return maxData == that.maxData &&
+		return Objects.equals(idleTimeout, that.idleTimeout) &&
+				maxData == that.maxData &&
 				maxStreamDataBidirectionalLocal == that.maxStreamDataBidirectionalLocal &&
 				maxStreamDataBidirectionalRemote == that.maxStreamDataBidirectionalRemote &&
-				maxStreamsBidirectional == that.maxStreamsBidirectional;
+				maxStreamsBidirectional == that.maxStreamsBidirectional &&
+				Objects.equals(tokenHandler, that.tokenHandler);
 	}
 
 	@Override
 	public int hashCode() {
 		int result = 1;
+		result = 31 * result + Objects.hashCode(idleTimeout);
 		result = 31 * result + Long.hashCode(maxData);
 		result = 31 * result + Long.hashCode(maxStreamDataBidirectionalLocal);
 		result = 31 * result + Long.hashCode(maxStreamDataBidirectionalRemote);
 		result = 31 * result + Long.hashCode(maxStreamsBidirectional);
+		result = 31 * result + Objects.hashCode(tokenHandler);
 		return result;
 	}
 
+	final Duration idleTimeout;
 	final long maxData;
 	final long maxStreamDataBidirectionalLocal;
 	final long maxStreamDataBidirectionalRemote;
 	final long maxStreamsBidirectional;
+	final QuicTokenHandler tokenHandler;
 
 	Http3SettingsSpec(Build build) {
+		this.idleTimeout = build.idleTimeout;
 		this.maxData = build.maxData;
 		this.maxStreamDataBidirectionalLocal = build.maxStreamDataBidirectionalLocal;
 		this.maxStreamDataBidirectionalRemote = build.maxStreamDataBidirectionalRemote;
 		this.maxStreamsBidirectional = build.maxStreamsBidirectional;
+		this.tokenHandler = build.tokenHandler;
 	}
 
 	static final class Build implements Builder {
@@ -168,14 +225,22 @@ public final class Http3SettingsSpec {
 		static final long DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_REMOTE = 0L;
 		static final long DEFAULT_MAX_STREAMS_BIDIRECTIONAL = 0L;
 
+		Duration idleTimeout;
 		long maxData = DEFAULT_MAX_DATA;
 		long maxStreamDataBidirectionalLocal = DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_LOCAL;
 		long maxStreamDataBidirectionalRemote = DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_REMOTE;
 		long maxStreamsBidirectional = DEFAULT_MAX_STREAMS_BIDIRECTIONAL;
+		QuicTokenHandler tokenHandler;
 
 		@Override
 		public Http3SettingsSpec build() {
 			return new Http3SettingsSpec(this);
+		}
+
+		@Override
+		public Builder idleTimeout(Duration idleTimeout) {
+			this.idleTimeout = idleTimeout;
+			return this;
 		}
 
 		@Override
@@ -211,6 +276,12 @@ public final class Http3SettingsSpec {
 				throw new IllegalArgumentException("maxStreamsBidirectional must be positive or zero");
 			}
 			this.maxStreamsBidirectional = maxStreamsBidirectional;
+			return this;
+		}
+
+		@Override
+		public Builder tokenHandler(QuicTokenHandler tokenHandler) {
+			this.tokenHandler = tokenHandler;
 			return this;
 		}
 	}

@@ -393,7 +393,7 @@ class HttpRedirectTest extends BaseHttpTest {
 		          .get()
 		          .uri("/")
 		          .responseContent()
-		          .blockLast();
+		          .blockLast(Duration.ofSeconds(5));
 
 		assertThat(followRedirects.get()).isEqualTo(4);
 	}
@@ -421,6 +421,7 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testIssue843() {
 		final int server2Port = SocketUtils.findAvailableTcpPort();
 
@@ -473,6 +474,7 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testHttpRequestIfRedirectHttpToHttpsEnabled() {
 		Http11SslContextSpec sslContext = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		disposableServer =
@@ -503,6 +505,7 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testHttpsRequestIfRedirectHttpToHttpsEnabled() {
 		String message = "The client should receive the message";
 		disposableServer =
@@ -530,6 +533,7 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testRelativeRedirectKeepsScheme() {
 		final String requestPath = "/request";
 		final String redirectPath = "/redirect";
@@ -563,6 +567,7 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testLastLocationSetToResourceUrlOnRedirect() {
 		final String redirectPath = "/redirect";
 		final String destinationPath = "/destination";
@@ -675,6 +680,7 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testHttpServerWithDomainSockets_HTTP2() {
 		Http11SslContextSpec serverCtx = Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http11SslContextSpec clientCtx =
@@ -709,6 +715,7 @@ class HttpRedirectTest extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testHttp2Redirect() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -783,6 +790,6 @@ class HttpRedirectTest extends BaseHttpTest {
 		        .as(StepVerifier::create)
 		        .expectNextMatches(tuple -> "OK".equals(tuple.getT1()) && tuple.getT2() == 200)
 		        .expectComplete()
-		        .verify(Duration.ofSeconds(5));
+		        .verify(Duration.ofSeconds(10));
 	}
 }

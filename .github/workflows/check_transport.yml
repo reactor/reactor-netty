@@ -8,7 +8,7 @@ jobs:
     name: preliminary sanity checks
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0 #needed by spotless
       - uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9
@@ -43,15 +43,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-11, windows-2019]
+        os: [ubuntu-20.04, macos-12, windows-2019]
         transport: [native, nio]
         exclude:
           # excludes native on Windows (there's none)
           - os: windows-2019
             transport: native
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-      - uses: gradle/actions/wrapper-validation@6cec5d49d4d6d4bb982fbed7047db31ea6d38f11
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+      - uses: gradle/actions/wrapper-validation@dbbdc275be76ac10734476cc723d82dfe7ec6eda
       - name: Set up JDK 1.8
         uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9
         with:

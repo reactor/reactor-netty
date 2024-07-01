@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,9 @@ import java.util.function.Function;
  */
 final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 
+	static final boolean LAST_FLUSH_WHEN_NO_READ = Boolean.parseBoolean(
+			System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false"));
+
 	AccessLogArgProviderH1 accessLogArgProvider;
 
 	AccessLogHandlerH1(@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
@@ -60,6 +63,9 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 			if (accessLogArgProvider == null) {
 				accessLogArgProvider = new AccessLogArgProviderH1(ctx.channel().remoteAddress());
 			}
+			else {
+				accessLogArgProvider.clear();
+			}
 
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops instanceof HttpServerRequest) {
@@ -75,14 +81,14 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 		}
 		if (msg instanceof LastHttpContent) {
 			accessLogArgProvider.increaseContentLength(((LastHttpContent) msg).content().readableBytes());
+			AccessLogArgProviderH1 copy = LAST_FLUSH_WHEN_NO_READ ? new AccessLogArgProviderH1(accessLogArgProvider) : null;
 			ctx.write(msg, promise.unvoid())
 			   .addListener(future -> {
 			       if (future.isSuccess()) {
-				       AccessLog log = accessLog.apply(accessLogArgProvider);
-				       if (log != null) {
-					       log.log();
-				       }
-				       accessLogArgProvider.clear();
+			           AccessLog log = copy != null ? accessLog.apply(copy) : accessLog.apply(accessLogArgProvider);
+			           if (log != null) {
+			               log.log();
+			           }
 			       }
 			   });
 			return;

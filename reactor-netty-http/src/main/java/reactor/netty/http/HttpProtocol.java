@@ -15,6 +15,8 @@
  */
 package reactor.netty.http;
 
+import reactor.util.annotation.Incubating;
+
 /**
  * An enum defining various HTTP negotiations between H2, H2C-upgrade,
  * H2C-prior-knowledge and HTTP/1.1.
@@ -54,5 +56,6 @@ public enum HttpProtocol {
 	 * HTTP/3.0 support.
 	 * @since 1.2.0
 	 */
+	@Incubating
 	HTTP3
 }

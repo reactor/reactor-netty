@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,6 +98,7 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testHttpSslH2CFails() {
 		Http2SslContextSpec serverOptions = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 
@@ -200,7 +201,7 @@ class Http2Tests extends BaseHttpTest {
 		ConnectionProvider provider = builder.build();
 		doTestMaxActiveStreams(HttpClient.create(provider), 1, 1, 1);
 		provider.disposeLater()
-		        .block();
+		        .block(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -213,7 +214,7 @@ class Http2Tests extends BaseHttpTest {
 		ConnectionProvider provider = ConnectionProvider.create("testMaxActiveStreams_2", 1);
 		doTestMaxActiveStreams(HttpClient.create(provider), 2, 2, 0);
 		provider.disposeLater()
-		        .block();
+		        .block(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -225,6 +226,7 @@ class Http2Tests extends BaseHttpTest {
 		doTestMaxActiveStreams(baseClient, maxActiveStreams, 256, 32, expectedOnNext, expectedOnError);
 	}
 
+	@SuppressWarnings("deprecation")
 	void doTestMaxActiveStreams(HttpClient baseClient, int maxActiveStreams, int concurrency, int prefetch, int expectedOnNext, int expectedOnError) throws Exception {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -287,6 +289,7 @@ class Http2Tests extends BaseHttpTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	void testHttp2ForMemoryLeaks() {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -375,6 +378,7 @@ class Http2Tests extends BaseHttpTest {
 		doTestMonoRequestBodySentAsFullRequest(ByteBufMono.fromString(Mono.just("test")), 1);
 	}
 
+	@SuppressWarnings("deprecation")
 	private void doTestMonoRequestBodySentAsFullRequest(Publisher<? extends ByteBuf> body, int expectedMsg) {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -440,6 +444,7 @@ class Http2Tests extends BaseHttpTest {
 		doTestIssue1394_SchemeHttp("null", HttpProtocol.HTTP11, HttpProtocol.H2);
 	}
 
+	@SuppressWarnings("deprecation")
 	private void doTestIssue1394_SchemeHttp(String expectedStreamId, HttpProtocol... protocols) {
 		disposableServer =
 				createServer()
@@ -556,6 +561,7 @@ class Http2Tests extends BaseHttpTest {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	private void testTooManyPermitsReturned(HttpClient client) {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -621,6 +627,7 @@ class Http2Tests extends BaseHttpTest {
 		doTestPR2659_SchemeHttps(s -> !"null".equals(s));
 	}
 
+	@SuppressWarnings("deprecation")
 	private static void doTestPR2659_SchemeHttps(Predicate<String> predicate) {
 		HttpClient.create()
 		          .protocol(HttpProtocol.HTTP11, HttpProtocol.H2, HttpProtocol.H2C)
@@ -650,6 +657,7 @@ class Http2Tests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
+	@SuppressWarnings("deprecation")
 	void testMaxStreamsH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -695,7 +703,7 @@ class Http2Tests extends BaseHttpTest {
 		    .as(StepVerifier::create)
 		    .assertNext(t -> assertThat(t.getT1()).isNotNull().hasSize(2).allMatch("doTestMaxStreams"::equals))
 		    .expectComplete()
-		    .verify(Duration.ofSeconds(5));
+		    .verify(Duration.ofSeconds(10));
 	}
 
 	@ParameterizedTest
@@ -707,6 +715,7 @@ class Http2Tests extends BaseHttpTest {
 
 	@ParameterizedTest
 	@MethodSource("h2CompatibleCombinations")
+	@SuppressWarnings("deprecation")
 	void testEmptyDataFrameH2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
@@ -731,6 +740,6 @@ class Http2Tests extends BaseHttpTest {
 		      .as(StepVerifier::create)
 		      .expectNextMatches(buf -> expectation.equals(buf.toString(Charset.defaultCharset())))
 		      .expectComplete()
-		      .verify(Duration.ofSeconds(5));
+		      .verify(Duration.ofSeconds(10));
 	}
 }

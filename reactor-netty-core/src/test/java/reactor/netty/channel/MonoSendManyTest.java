@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package reactor.netty.channel;
 
 import java.lang.ref.WeakReference;
+import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -156,7 +157,7 @@ class MonoSendManyTest {
 		            .consumeSubscriptionWith(s -> _w.add(new WeakReference<>(s)))
 		            .then(channel::runPendingTasks)
 		            .thenCancel()
-		            .verify();
+		            .verify(Duration.ofSeconds(5));
 
 		System.gc();
 		wait(_w.get(0));

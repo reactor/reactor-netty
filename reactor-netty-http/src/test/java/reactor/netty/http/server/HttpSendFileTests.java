@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -266,7 +266,7 @@ class HttpSendFileTests extends BaseHttpTest {
 				          .uri("/foo")
 				          .responseSingle((res, byteBufMono) -> byteBufMono.asString(StandardCharsets.UTF_8));
 
-		String body = response.block(Duration.ofSeconds(5));
+		String body = response.block(Duration.ofSeconds(30));
 
 		bodyAssertion.accept(body);
 	}
@@ -346,7 +346,7 @@ class HttpSendFileTests extends BaseHttpTest {
 				    .aggregate()
 				    .asByteArray()
 				    .onErrorReturn(IOException.class, expectedContent == null ? new byte[0] :  expectedContent)
-				    .block();
+				    .block(Duration.ofSeconds(5));
 
 		assertThat(response).isEqualTo(expectedContent == null ? Files.readAllBytes(tempFile) : expectedContent);
 	}

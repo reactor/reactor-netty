@@ -245,6 +245,10 @@ class HttpClientConnect extends HttpClient {
 							return;
 						}
 					}
+					else if (_config.checkProtocol(HttpClientConfig.h3)) {
+						sink.error(new IllegalArgumentException("Configured HTTP/3 protocol without TLS. Check URL scheme"));
+						return;
+					}
 				}
 
 				ConnectionObserver observer =
@@ -253,7 +257,8 @@ class HttpClientConnect extends HttpClient {
 						        .then(_config.connectionObserver())
 						        .then(new HttpIOHandlerObserver(sink, handler));
 
-				AddressResolverGroup<?> resolver = _config.resolverInternal();
+				AddressResolverGroup<?> resolver =
+						!_config.checkProtocol(HttpClientConfig.h3) ? _config.resolverInternal() : null;
 
 				_config.httpConnectionProvider()
 						.acquire(_config, observer, handler, resolver)
