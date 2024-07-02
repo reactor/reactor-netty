@@ -22,6 +22,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.nio.charset.Charset;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.zip.GZIPInputStream;
@@ -460,7 +463,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 
 	@ParameterizedCompressionTest
 	void compressionActivatedOnClientAddsHeader(HttpServer server, HttpClient client) {
-		AtomicReference<String> zip = new AtomicReference<>("fail");
+		AtomicReference<List<String>> acceptEncodingHeaderValues = new AtomicReference<>(Collections.singletonList("fail"));
 
 		disposableServer =
 				server.compress(true)
@@ -468,13 +471,15 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				      .bindNow(Duration.ofSeconds(10));
 		client.port(disposableServer.port())
 		      .compress(true)
-		      .headers(h -> zip.set(h.get("accept-encoding")))
+		      .headers(h -> acceptEncodingHeaderValues.set(h.getAll("accept-encoding")))
 		      .get()
 		      .uri("/test")
 		      .responseContent()
 		      .blockLast(Duration.ofSeconds(10));
 
-		assertThat(zip.get()).isEqualTo("gzip");
+		assertThat(acceptEncodingHeaderValues.get())
+				.hasSize(2)
+				.hasSameElementsAs(Arrays.asList("br", "gzip"));
 	}
 
 	@ParameterizedCompressionTest
