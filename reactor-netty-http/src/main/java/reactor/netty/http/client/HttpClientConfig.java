@@ -122,6 +122,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Override
 	public int channelHash() {
 		int result = super.channelHash();
+		result = 31 * result + Boolean.hashCode(acceptBrotli);
 		result = 31 * result + Boolean.hashCode(acceptGzip);
 		result = 31 * result + Objects.hashCode(decoder);
 		result = 31 * result + _protocols;
@@ -209,6 +210,15 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Nullable
 	public Http3SettingsSpec http3SettingsSpec() {
 		return http3Settings;
+	}
+
+	/**
+	 * Return whether Brotli compression is enabled.
+	 *
+	 * @return whether Brotli compression is enabled
+	 */
+	public boolean isAcceptBrotli() {
+		return acceptBrotli;
 	}
 
 	/**
@@ -331,6 +341,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	// Protected/Package private write API
 
+	boolean acceptBrotli;
 	boolean acceptGzip;
 	String baseUrl;
 	BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> body;
@@ -367,6 +378,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	HttpClientConfig(HttpConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
 		super(connectionProvider, options, remoteAddress);
+		this.acceptBrotli = false;
 		this.acceptGzip = false;
 		this.cookieDecoder = ClientCookieDecoder.STRICT;
 		this.cookieEncoder = ClientCookieEncoder.STRICT;
@@ -381,6 +393,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	HttpClientConfig(HttpClientConfig parent) {
 		super(parent);
+		this.acceptBrotli = parent.acceptBrotli;
 		this.acceptGzip = parent.acceptGzip;
 		this.baseUrl = parent.baseUrl;
 		this.body = parent.body;
