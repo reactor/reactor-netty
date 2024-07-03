@@ -125,6 +125,9 @@ ext {
 	errorproneCoreVersion = '2.10.0'
 	errorproneGuavaVersion = '30.0-jre'
 
+	// org.hidetake.ssh version
+	hidetakeSshVersion = '2.11.2'
+
 	javadocLinks = ["https://docs.oracle.com/javase/8/docs/api/",
 					// Use Reactive Streams 1.0.3 version for javadoc generation
 					// With Reactive Streams 1.0.4 version there is
@@ -166,9 +169,9 @@ spotless {
 	format 'gradle', {
 		target '**/*.gradle'
 		// find start of gradle files by looking for either `import`, `apply`
-		// or start of blocks like `javadoc{` or `configure(rootProject) {`...
+		// or start of blocks like `javadoc {` or `configure(rootProject) {`...
 		licenseHeaderFile('codequality/spotless/licenseSlashstarStyle.txt',
-				"^\\w+(\\(\\w+\\))?\\s?\\{\$|import|apply")
+				"^\\w+(\\(\\w+\\))?\\s?\\{?|import|apply")
 	}
 }
 
@@ -186,7 +189,7 @@ subprojects {
 
 	java {
 		toolchain {
-			languageVersion = JavaLanguageVersion.of(8)
+			languageVersion = JavaLanguageVersion.of(name == "docs" ? 11 : 8)
 		}
 	}
 

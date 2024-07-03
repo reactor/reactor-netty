@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,3 +20,7 @@ include 'reactor-netty-http-brave'
 include 'reactor-netty-incubator-quic'
 include 'reactor-netty-examples'
 include 'reactor-netty'
+
+if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_11)) {
+	include 'docs'
+}

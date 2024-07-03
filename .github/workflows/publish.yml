@@ -6,6 +6,10 @@ on:
       - 1.1.x
       - 1.0.x
 permissions: read-all
+env:
+    # reactor-netty/build will be uploaded to this artifact in the current workflow run
+    REACTOR_NETTY_BUILD_ARTIFACT: reactor-netty-build
+
 jobs:
   # General job notes: we DON'T want to cancel any previous runs, especially in the case of a "back to snapshots" build right after a release push
   # We specify the ubuntu version to minimize the chances we have to deal with a migration during a release
@@ -94,6 +98,15 @@ jobs:
           ORG_GRADLE_PROJECT_artifactory_publish_password: ${{secrets.ARTIFACTORY_PASSWORD}}
         run: |
           ./gradlew assemble artifactoryPublish -Partifactory_publish_contextUrl=https://repo.spring.io -Partifactory_publish_repoKey=libs-snapshot-local
+      - name: upload reactor-netty/build to current workflow run
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4
+        with:
+            name: ${{ env.REACTOR_NETTY_BUILD_ARTIFACT }}
+            retention-days: 3
+            if-no-files-found: error
+            path: |
+              reactor-netty/build/docs/javadoc
+              reactor-netty/build/asciidoc
 
   #sign the milestone artifacts and deploy them to Artifactory
   deployMilestone:
@@ -116,6 +129,15 @@ jobs:
           ORG_GRADLE_PROJECT_signingPassword: ${{secrets.SIGNING_PASSPHRASE}}
         run: |
           ./gradlew assemble sign artifactoryPublish -Partifactory_publish_contextUrl=https://repo.spring.io -Partifactory_publish_repoKey=libs-milestone-local
+      - name: upload reactor-netty/build to current workflow run
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4
+        with:
+            name: ${{ env.REACTOR_NETTY_BUILD_ARTIFACT }}
+            retention-days: 3
+            if-no-files-found: error
+            path: |
+                reactor-netty/build/docs/javadoc
+                reactor-netty/build/asciidoc
 
   #sign the release artifacts and deploy them to Artifactory
   deployRelease:
@@ -140,6 +162,15 @@ jobs:
           ORG_GRADLE_PROJECT_sonatypePassword: ${{secrets.SONATYPE_PASSWORD}}
         run: |
           ./gradlew assemble sign artifactoryPublish -Partifactory_publish_contextUrl=https://repo.spring.io  -Partifactory_publish_repoKey=libs-release-local publishMavenJavaPublicationToSonatypeRepository
+      - name: upload reactor-netty/build to current workflow run
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4
+        with:
+            name: ${{ env.REACTOR_NETTY_BUILD_ARTIFACT }}
+            retention-days: 3
+            if-no-files-found: error
+            path: |
+                reactor-netty/build/docs/javadoc
+                reactor-netty/build/asciidoc
 
   tagMilestone:
     name: Tag milestone
@@ -170,6 +201,49 @@ jobs:
           git config --local user.email '32325210+reactorbot@users.noreply.github.com'
           git tag -m "Release version ${{ needs.reactor-netty-core.outputs.fullVersion }}" v${{ needs.reactor-netty-core.outputs.fullVersion }} ${{ github.sha }}
           git push --tags
+
+  # deploy javadoc and reference doc into https://docs.spring.io/
+  deployDocs:
+    needs: [ deploySnapshot, deployRelease, deployMilestone ]
+    if: always() && (needs.deploySnapshot.result == 'success' || needs.deployRelease.result == 'success' || needs.deployMilestone.result == 'success')
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+      - name: Setup java 11
+        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+      - name: download reactor-netty build
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4
+        with:
+            name: ${{ env.REACTOR_NETTY_BUILD_ARTIFACT }}
+            path: reactor-netty/build
+      - name: deploy docs to docs.spring.io
+        env:
+          USER: ${{ secrets.DOCS_USERNAME }}
+          HOST: ${{ secrets.DOCS_HOST }}
+          KEY: ${{ secrets.DOCS_SSH_KEY }}
+          HOST_KEY: ${{ secrets.DOCS_SSH_HOST_KEY }}
+        run: |-
+          ./gradlew docs:deployDocs -PdeployDocsHost=$HOST -PdeployDocsSshUsername=$USER -PdeployDocsSshKey="$KEY" -PdeployDocsSshHostKey="$HOST_KEY"
+
+  cleanup:
+      needs: [ deployDocs ]
+      if: always() && needs.deployDocs.result == 'success'
+      runs-on: ubuntu-20.04
+      permissions:
+          actions: write
+      steps:
+          - name: delete reactor-netty build artifact
+            env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            run: |-
+                ARTIFACTS_URL="/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts"
+                ARTIFACT_ID=$(gh api -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' $ARTIFACTS_URL | jq -r '.artifacts[] | select(.name == "'$REACTOR_NETTY_BUILD_ARTIFACT'") | .id // ""')
+                if [ -n "$ARTIFACT_ID" ]; then
+                  gh api --method DELETE -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' /repos/${{github.repository}}/actions/artifacts/$ARTIFACT_ID}
+                fi
 
 # For Gradle configuration of signing, see https://docs.gradle.org/current/userguide/signing_plugin.html#sec:in-memory-keys
 # publishMavenJavaPublicationToSonatypeRepository only sends to a staging repository
