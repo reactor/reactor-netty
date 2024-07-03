@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Signal;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
@@ -45,6 +46,7 @@ import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 import reactor.netty.http.server.logging.AccessLog;
+import reactor.netty.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
@@ -58,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -384,6 +387,145 @@ class Http3Tests {
 		        .bind()
 		        .as(StepVerifier::create)
 		        .verifyErrorMessage(HTTP3_WITHOUT_TLS_SERVER);
+	}
+
+	@Test
+	void testHttp3ForMemoryLeaks() {
+		disposableServer =
+				createServer()
+				        .wiretap(false)
+				        .handle((req, res) ->
+				                res.sendString(Flux.range(0, 10)
+				                                   .map(i -> "test")
+				                                   .delayElements(Duration.ofMillis(4))))
+				        .bindNow();
+
+		HttpClient client = createClient(disposableServer.port()).wiretap(false);
+		for (int i = 0; i < 1000; ++i) {
+			try {
+				client.get()
+				      .uri("/")
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .timeout(Duration.ofMillis(ThreadLocalRandom.current().nextInt(1, 35)))
+				      .block(Duration.ofMillis(100));
+			}
+			catch (Throwable t) {
+				// ignore
+			}
+		}
+
+		System.gc();
+		for (int i = 0; i < 100000; ++i) {
+			@SuppressWarnings("UnusedVariable")
+			int[] arr = new int[100000];
+		}
+		System.gc();
+	}
+
+	@Test
+	void testMaxActiveStreamsCustomPool() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.create("testMaxActiveStreamsCustomPool", 1);
+		try {
+			doTestMaxActiveStreams(provider, 2, 2, 0);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testMaxActiveStreamsCustomPoolOneMaxActiveStream() throws Exception {
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testMaxActiveStreamsCustomPoolOneMaxActiveStream")
+				                  .maxConnections(1)
+				                  .pendingAcquireTimeout(Duration.ofMillis(10))
+				                  .build();
+		try {
+			doTestMaxActiveStreams(provider, 1, 1, 1);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	@Test
+	void testMaxActiveStreamsDefaultPool() throws Exception {
+		doTestMaxActiveStreams(2, 2, 0);
+	}
+
+	@Test
+	void testMaxActiveStreamsNoPool() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.newConnection();
+		try {
+			doTestMaxActiveStreams(provider, 2, 2, 0);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	void doTestMaxActiveStreams(int maxActiveStreams, int expectedOnNext, int expectedOnError) throws Exception {
+		doTestMaxActiveStreams(null, maxActiveStreams, expectedOnNext, expectedOnError);
+	}
+
+	void doTestMaxActiveStreams(@Nullable ConnectionProvider provider, int maxActiveStreams, int expectedOnNext, int expectedOnError) throws Exception {
+		disposableServer =
+				createServer()
+				        .route(routes ->
+				                routes.post("/echo", (req, res) -> res.send(req.receive()
+				                                                               .aggregate()
+				                                                               .retain()
+				                                                               .delayElement(Duration.ofMillis(100)))))
+				        .http3Settings(spec -> spec.idleTimeout(Duration.ofSeconds(5))
+				                                   .maxData(10000000)
+				                                   .maxStreamDataBidirectionalLocal(1000000)
+				                                   .maxStreamDataBidirectionalRemote(1000000)
+				                                   .maxStreamsBidirectional(maxActiveStreams)
+				                                   .tokenHandler(InsecureQuicTokenHandler.INSTANCE))
+				        .bindNow();
+
+		HttpClient client = createClient(provider, disposableServer.port());
+
+		CountDownLatch latch = new CountDownLatch(1);
+		List<? extends Signal<? extends String>> list =
+				Flux.range(0, 2)
+				    .flatMapDelayError(i ->
+				            client.post()
+				                  .uri("/echo")
+				                  .send(ByteBufFlux.fromString(Mono.just("doTestMaxActiveStreams")))
+				                  .responseContent()
+				                  .aggregate()
+				                  .asString()
+				                  .materialize(), 256, 32)
+				    .collectList()
+				    .doFinally(fin -> latch.countDown())
+				    .block(Duration.ofSeconds(5));
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch 5s").isTrue();
+
+		assertThat(list).isNotNull().hasSize(2);
+
+		int onNext = 0;
+		int onError = 0;
+		String msg = "Pool#acquire(Duration) has been pending for more than the configured timeout of 10ms";
+		for (int i = 0; i < 2; i++) {
+			Signal<? extends String> signal = list.get(i);
+			if (signal.isOnNext()) {
+				onNext++;
+			}
+			else if (signal.getThrowable() instanceof PoolAcquireTimeoutException &&
+					signal.getThrowable().getMessage().contains(msg)) {
+				onError++;
+			}
+		}
+
+		assertThat(onNext).isEqualTo(expectedOnNext);
+		assertThat(onError).isEqualTo(expectedOnError);
 	}
 
 	@Test
