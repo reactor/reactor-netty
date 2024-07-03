@@ -22,6 +22,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.nio.charset.Charset;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.zip.GZIPInputStream;
@@ -56,6 +61,9 @@ import reactor.netty5.http.server.HttpServerResponse;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
+import static io.netty5.handler.codec.http.HttpHeaderNames.ACCEPT_ENCODING;
+import static io.netty5.handler.codec.http.HttpHeaderValues.BR;
+import static io.netty5.handler.codec.http.HttpHeaderValues.GZIP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty5.NettyPipeline.HttpCodec;
 
@@ -461,7 +469,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 
 	@ParameterizedCompressionTest
 	void compressionActivatedOnClientAddsHeader(HttpServer server, HttpClient client) {
-		AtomicReference<String> zip = new AtomicReference<>("fail");
+		AtomicReference<List<CharSequence>> acceptEncodingHeaderValues = new AtomicReference<>(Collections.singletonList("fail"));
 
 		disposableServer =
 				server.compress(true)
@@ -469,13 +477,23 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 				      .bindNow(Duration.ofSeconds(10));
 		client.port(disposableServer.port())
 		      .compress(true)
-		      .headers(h -> zip.set(getHeader(h, "accept-encoding")))
+		      .headers(h -> {
+		          List<CharSequence> result = new ArrayList<>();
+		          for (Map.Entry<CharSequence, CharSequence> entry: h) {
+		              if (ACCEPT_ENCODING.equals(entry.getKey())) {
+		                  result.add(entry.getValue());
+		              }
+		          }
+		          acceptEncodingHeaderValues.set(result);
+		      })
 		      .get()
 		      .uri("/test")
 		      .responseContent()
 		      .blockLast(Duration.ofSeconds(10));
 
-		assertThat(zip.get()).isEqualTo("gzip");
+		assertThat(acceptEncodingHeaderValues.get())
+				.hasSize(2)
+				.hasSameElementsAs(Arrays.asList(GZIP, BR));
 	}
 
 	@ParameterizedCompressionTest

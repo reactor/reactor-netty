@@ -30,6 +30,7 @@ import java.util.function.Supplier;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.DecoderException;
+import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.HttpMessage;
@@ -445,23 +446,35 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 */
 	public final HttpClient compress(boolean compressionEnabled) {
 		if (compressionEnabled) {
+			// Enabling the compression means at least "acceptGzip" is enabled.
+			// So we can use "acceptGzip" as a flag for the compression.
 			if (!configuration().acceptGzip) {
 				HttpClient dup = duplicate();
+				HttpClientConfig config = dup.configuration();
 				HttpHeaders headers = configuration().headers.copy();
 				headers.add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
-				dup.configuration().headers = headers;
-				dup.configuration().acceptGzip = true;
+				config.acceptGzip = true;
+
+				if (Brotli.isAvailable()) {
+					headers.add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.BR);
+					config.acceptBrotli = true;
+				}
+
+				config.headers = headers;
+
 				return dup;
 			}
 		}
 		else if (configuration().acceptGzip) {
 			HttpClient dup = duplicate();
+			HttpClientConfig config = dup.configuration();
 			if (isCompressing(configuration().headers)) {
 				HttpHeaders headers = configuration().headers.copy();
 				headers.remove(HttpHeaderNames.ACCEPT_ENCODING);
-				dup.configuration().headers = headers;
+				config.headers = headers;
 			}
-			dup.configuration().acceptGzip = false;
+			config.acceptGzip = false;
+			config.acceptBrotli = false;
 			return dup;
 		}
 		return this;
@@ -1403,7 +1416,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	static boolean isCompressing(HttpHeaders h) {
-		return h.containsIgnoreCase(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
+		return h.containsIgnoreCase(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP) ||
+				h.containsIgnoreCase(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.BR);
 	}
 
 	static String reactorNettyVersion() {

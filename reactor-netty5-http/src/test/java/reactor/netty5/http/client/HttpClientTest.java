@@ -69,6 +69,7 @@ import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.DomainSocketAddress;
+import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.HttpClientCodec;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
@@ -130,8 +131,12 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
+import static io.netty5.handler.codec.http.HttpHeaderNames.ACCEPT_ENCODING;
+import static io.netty5.handler.codec.http.HttpHeaderValues.BR;
+import static io.netty5.handler.codec.http.HttpHeaderValues.GZIP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * This test class verifies {@link HttpClient}.
@@ -474,6 +479,38 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	void brotliEnabled() {
+		doTestBrotli(true);
+	}
+
+	@Test
+	void brotliDisabled() {
+		doTestBrotli(false);
+	}
+
+	private void doTestBrotli(boolean brotliEnabled) {
+		assumeThat(Brotli.isAvailable()).isTrue();
+
+		disposableServer =
+				createServer()
+				        .compress(true)
+				        .handle((req, res) -> res.sendString(Mono.just(getHeader(req.requestHeaders(), ACCEPT_ENCODING, "no brotli"))))
+				        .bindNow();
+
+		String expectedResponse = brotliEnabled ? "br" : "no brotli";
+		createHttpClientForContextWithPort()
+		        .compress(brotliEnabled)
+		        .headersWhen(h -> brotliEnabled ? Mono.just(h.set(ACCEPT_ENCODING, BR)) : Mono.just(h))
+		        .get()
+		        .uri("/")
+		        .responseSingle((r, buf) -> buf.asString().zipWith(Mono.just(r.status().code())))
+		        .as(StepVerifier::create)
+		        .expectNextMatches(tuple -> expectedResponse.equals(tuple.getT1()) && (tuple.getT2() == 200))
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
 	void gzipEnabled() {
 		doTestGzip(true);
 	}
@@ -484,18 +521,16 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	private void doTestGzip(boolean gzipEnabled) {
-		String expectedResponse = gzipEnabled ? "gzip" : "no gzip";
 		disposableServer =
 				createServer()
-				          .handle((req, res) -> res.sendString(Mono.just(req.requestHeaders()
-				                                                           .get(HttpHeaderNames.ACCEPT_ENCODING,
-				                                                                "no gzip").toString())))
+				          .handle((req, res) -> res.sendString(Mono.just(getHeader(req.requestHeaders(), ACCEPT_ENCODING, "no gzip"))))
 				          .bindNow();
-		HttpClient client = createHttpClientForContextWithPort();
 
-		if (gzipEnabled) {
-			client = client.compress(true);
-		}
+		String expectedResponse = gzipEnabled ? "gzip" : "no gzip";
+		HttpClient client =
+				createHttpClientForContextWithPort()
+				        .compress(gzipEnabled)
+				        .headersWhen(h -> gzipEnabled ? Mono.just(h.set(ACCEPT_ENCODING, GZIP)) : Mono.just(h));
 
 		StepVerifier.create(client.get()
 		                          .uri("/")
