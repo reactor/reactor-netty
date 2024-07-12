@@ -94,13 +94,6 @@ jobs:
           ORG_GRADLE_PROJECT_artifactory_publish_password: ${{secrets.ARTIFACTORY_PASSWORD}}
         run: |
           ./gradlew assemble artifactoryPublish -Partifactory_publish_contextUrl=https://repo.spring.io -Partifactory_publish_repoKey=libs-snapshot-local
-      - name: deploy docs
-        env:
-          DOCS_USER: ${{ secrets.DOCS_USERNAME }}
-          DOCS_HOST: ${{ secrets.DOCS_HOST }}
-          DOCS_KEY: ${{ secrets.DOCS_SSH_KEY }}
-          DOCS_HOST_KEY: ${{ secrets.DOCS_SSH_HOST_KEY }}
-        run: ./gradlew deployDocs -PdeployDocsHost=$DOCS_HOST -PdeployDocsSshUsername=$DOCS_USER -PdeployDocsSshKey="$DOCS_KEY" -PdeployDocsSshHostKey="$DOCS_HOST_KEY"
 
   #sign the milestone artifacts and deploy them to Artifactory
   deployMilestone:
@@ -123,13 +116,6 @@ jobs:
           ORG_GRADLE_PROJECT_signingPassword: ${{secrets.SIGNING_PASSPHRASE}}
         run: |
           ./gradlew assemble sign artifactoryPublish -Partifactory_publish_contextUrl=https://repo.spring.io -Partifactory_publish_repoKey=libs-milestone-local
-      - name: deploy docs
-        env:
-          DOCS_USER: ${{ secrets.DOCS_USERNAME }}
-          DOCS_HOST: ${{ secrets.DOCS_HOST }}
-          DOCS_KEY: ${{ secrets.DOCS_SSH_KEY }}
-          DOCS_HOST_KEY: ${{ secrets.DOCS_SSH_HOST_KEY }}
-        run: ./gradlew deployDocs -PdeployDocsHost=$DOCS_HOST -PdeployDocsSshUsername=$DOCS_USER -PdeployDocsSshKey="$DOCS_KEY" -PdeployDocsSshHostKey="$DOCS_HOST_KEY"
 
   #sign the release artifacts and deploy them to Artifactory
   deployRelease:
@@ -154,13 +140,6 @@ jobs:
           ORG_GRADLE_PROJECT_sonatypePassword: ${{secrets.SONATYPE_PASSWORD}}
         run: |
           ./gradlew assemble sign artifactoryPublish -Partifactory_publish_contextUrl=https://repo.spring.io  -Partifactory_publish_repoKey=libs-release-local publishMavenJavaPublicationToSonatypeRepository
-      - name: deploy docs
-        env:
-          DOCS_USER: ${{ secrets.DOCS_USERNAME }}
-          DOCS_HOST: ${{ secrets.DOCS_HOST }}
-          DOCS_KEY: ${{ secrets.DOCS_SSH_KEY }}
-          DOCS_HOST_KEY: ${{ secrets.DOCS_SSH_HOST_KEY }}
-        run: ./gradlew deployDocs -PdeployDocsHost=$DOCS_HOST -PdeployDocsSshUsername=$DOCS_USER -PdeployDocsSshKey="$DOCS_KEY" -PdeployDocsSshHostKey="$DOCS_HOST_KEY"
 
   tagMilestone:
     name: Tag milestone
