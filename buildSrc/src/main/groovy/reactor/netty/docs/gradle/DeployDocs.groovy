@@ -59,7 +59,7 @@ class DeployDocs implements Plugin<Project> {
 				includeEmptyDirs = false
 				eachFile { fileCopyDetails ->
 					if (fileCopyDetails.name == 'index.pdf') {
-						fileCopyDetails.name = "reactor-netty-reference-guide-${rootProject.version}.pdf"
+						fileCopyDetails.name = "reactor-netty-reference-guide-${project.rootProject.version}.pdf"
 					}
 				}
 			}
