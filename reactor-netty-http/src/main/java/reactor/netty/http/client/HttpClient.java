@@ -520,6 +520,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 *
 	 * <p>Note: Brotli and zstd compressions require additional dependencies.
 	 *
+	 * <p>Note: For zstd compression, {@literal Accept-Encoding: zstd} header needs to be added explicitly.
+	 *
 	 * @param compressionEnabled if true, compression (gzip, Brotli, and zstd) is enabled, otherwise disabled (default: false)
 	 * @return a new {@link HttpClient}
 	 */
