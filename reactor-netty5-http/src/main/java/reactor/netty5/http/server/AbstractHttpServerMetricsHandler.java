@@ -277,7 +277,9 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	@Override
 	public void channelExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		try {
-			recordException();
+			if (path != null) {
+				recordException();
+			}
 		}
 		catch (RuntimeException e) {
 			// Allow request-response exchange to continue, unaffected by metrics problem
