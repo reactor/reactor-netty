@@ -249,6 +249,9 @@ task japicmp(type: JapicmpTask) {
 
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 	methodExcludes = [
+			'reactor.netty.http.HttpOperations$PostHeadersNettyOutbound#accept(java.lang.Object)',
+			'reactor.netty.http.HttpOperations$PostHeadersNettyOutbound#accept(java.lang.Throwable)',
+			'reactor.netty.http.HttpOperations$PostHeadersNettyOutbound#run()'
 	]
 }
 
