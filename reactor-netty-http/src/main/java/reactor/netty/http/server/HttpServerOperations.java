@@ -43,8 +43,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DefaultHeaders;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -101,6 +104,7 @@ import reactor.util.context.Context;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.trailersFactory;
 import static io.netty.handler.codec.http.HttpUtil.isTransferEncodingChunked;
+import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 import static reactor.netty.http.server.HttpServerState.REQUEST_DECODING_FAILED;
@@ -765,17 +769,27 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest) {
+		Class<?> msgClass = msg.getClass();
+		if (msgClass == DefaultHttpRequest.class) {
+			handleDefaultHttpRequest(ctx);
+		}
+		else if (msgClass == DefaultFullHttpRequest.class) {
+			handleDefaultFullHttpRequest(ctx, (DefaultFullHttpRequest) msg);
+		}
+		else if (msg == EMPTY_LAST_CONTENT) {
+			handleLastHttpContent();
+		}
+		else if (msgClass == DefaultLastHttpContent.class) {
+			super.onInboundNext(ctx, msg);
+			handleLastHttpContent();
+		}
+		else if (msgClass == DefaultHttpContent.class) {
+			super.onInboundNext(ctx, msg);
+		}
+		else if (msg instanceof HttpRequest) {
 			boolean isFullHttpRequest = msg instanceof FullHttpRequest;
 			if (!(isHttp2() && isFullHttpRequest)) {
-				if (readTimeout != null) {
-					addHandlerFirst(NettyPipeline.ReadTimeoutHandler,
-							new ReadTimeoutHandler(readTimeout.toMillis(), TimeUnit.MILLISECONDS));
-				}
-				if (requestTimeout != null) {
-					requestTimeoutFuture =
-							ctx.executor().schedule(new RequestTimeoutTask(ctx), Math.max(requestTimeout.toMillis(), 1), TimeUnit.MILLISECONDS);
-				}
+				startReadTimeout(ctx);
 			}
 			try {
 				listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
@@ -799,27 +813,73 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					onInboundComplete();
 				}
 			}
-			return;
 		}
-		if (msg instanceof HttpContent) {
-			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
-				super.onInboundNext(ctx, msg);
-			}
-			if (msg instanceof LastHttpContent) {
-				if (readTimeout != null) {
-					removeHandler(NettyPipeline.ReadTimeoutHandler);
-				}
-				if (requestTimeoutFuture != null) {
-					requestTimeoutFuture.cancel(false);
-					requestTimeoutFuture = null;
-				}
-				//force auto read to enable more accurate close selection now inbound is done
-				channel().config().setAutoRead(true);
-				onInboundComplete();
-			}
+		else if (msg instanceof LastHttpContent) {
+			super.onInboundNext(ctx, msg);
+			handleLastHttpContent();
 		}
 		else {
 			super.onInboundNext(ctx, msg);
+		}
+	}
+
+	void handleDefaultHttpRequest(ChannelHandlerContext ctx) {
+		startReadTimeout(ctx);
+		try {
+			listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
+		}
+		catch (Exception e) {
+			onInboundError(e);
+		}
+	}
+
+	void handleDefaultFullHttpRequest(ChannelHandlerContext ctx, DefaultFullHttpRequest msg) {
+		try {
+			listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
+		}
+		catch (Exception e) {
+			onInboundError(e);
+			msg.release();
+			return;
+		}
+		if (msg.content().readableBytes() > 0) {
+			super.onInboundNext(ctx, msg);
+		}
+		else {
+			msg.release();
+		}
+		if (isHttp2()) {
+			//force auto read to enable more accurate close selection now inbound is done
+			channel().config().setAutoRead(true);
+			onInboundComplete();
+		}
+	}
+
+	void handleLastHttpContent() {
+		stopReadTimeout();
+		//force auto read to enable more accurate close selection now inbound is done
+		channel().config().setAutoRead(true);
+		onInboundComplete();
+	}
+
+	void startReadTimeout(ChannelHandlerContext ctx) {
+		if (readTimeout != null) {
+			addHandlerFirst(NettyPipeline.ReadTimeoutHandler,
+					new ReadTimeoutHandler(readTimeout.toMillis(), TimeUnit.MILLISECONDS));
+		}
+		if (requestTimeout != null) {
+			requestTimeoutFuture =
+					ctx.executor().schedule(new RequestTimeoutTask(ctx), Math.max(requestTimeout.toMillis(), 1), TimeUnit.MILLISECONDS);
+		}
+	}
+
+	void stopReadTimeout() {
+		if (readTimeout != null) {
+			removeHandler(NettyPipeline.ReadTimeoutHandler);
+		}
+		if (requestTimeoutFuture != null) {
+			requestTimeoutFuture.cancel(false);
+			requestTimeoutFuture = null;
 		}
 	}
 
@@ -916,7 +976,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			f = channel().writeAndFlush(trailerHeaders != null && !trailerHeaders.isEmpty() ?
 					new DefaultLastHttpContent(Unpooled.buffer(0), trailerHeaders) :
-					LastHttpContent.EMPTY_LAST_CONTENT);
+					EMPTY_LAST_CONTENT);
 		}
 		else {
 			discard();
