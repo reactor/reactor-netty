@@ -45,6 +45,7 @@ import io.netty5.handler.codec.http.DefaultHttpResponse;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.FullHttpRequest;
+import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
@@ -98,6 +99,7 @@ import reactor.util.context.Context;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpUtil.isTransferEncodingChunked;
+import static io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory.trailersFactory;
 import static reactor.netty5.ReactorNetty.format;
 import static reactor.netty5.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 import static reactor.netty5.http.server.HttpServerState.REQUEST_DECODING_FAILED;
@@ -131,7 +133,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	String path;
 	Future<Void> requestTimeoutFuture;
 	Consumer<? super HttpHeaders> trailerHeadersConsumer;
-	HttpMessage fullHttpResponse;
+	FullHttpResponse fullHttpResponse;
 
 	volatile Context currentContext;
 
@@ -524,7 +526,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					.flatMap(b -> {
 						if (!hasSentHeaders()) {
 							try {
-								fullHttpResponse = prepareHttpMessage(b);
+								fullHttpResponse = prepareFullHttpResponse(b);
 
 								afterMarkSentHeaders();
 							}
@@ -558,7 +560,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return new PostHeadersNettyOutbound(Mono.create(sink -> {
 				if (!hasSentHeaders()) {
 					try {
-						fullHttpResponse = prepareHttpMessage(b);
+						fullHttpResponse = prepareFullHttpResponse(b);
 
 						afterMarkSentHeaders();
 					}
@@ -673,7 +675,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				int contentLength = HttpUtil.getContentLength(msg, -1);
 				if (contentLength == 0 || isContentAlwaysEmpty()) {
 					last = true;
-					msg = newFullBodyMessage(channel().bufferAllocator().allocate(0));
+					msg = newFullHttpResponse(channel().bufferAllocator().allocate(0), contentLength);
 				}
 				else if (contentLength > 0) {
 					responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -941,6 +943,48 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		terminate();
 	}
 
+	final FullHttpResponse prepareFullHttpResponse(Buffer buffer) {
+		int contentLength = HttpUtil.getContentLength(outboundHttpMessage(), -1);
+		if (contentLength == 0 || isContentAlwaysEmpty()) {
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel(), "Dropped HTTP content, since response has " +
+						"1. [Content-Length: 0] or 2. there must be no content: {}"), buffer);
+			}
+			buffer.close();
+			return newFullHttpResponse(channel().bufferAllocator().allocate(0), contentLength);
+		}
+		else {
+			return newFullHttpResponse(buffer, contentLength);
+		}
+	}
+
+	final FullHttpResponse newFullHttpResponse(Buffer body, int contentLength) {
+		if (!HttpMethod.HEAD.equals(method())) {
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+			int code = status().code();
+			if (!(HttpResponseStatus.NOT_MODIFIED.code() == code ||
+					HttpResponseStatus.NO_CONTENT.code() == code)) {
+
+				if (HttpUtil.getContentLength(nettyResponse, -1) == -1) {
+					responseHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(body.readableBytes()));
+				}
+			}
+		}
+		// For HEAD requests:
+		// - if there is Transfer-Encoding and Content-Length, Transfer-Encoding will be removed
+		// - if there is only Transfer-Encoding, it will be kept and not replaced by
+		// Content-Length: body.readableBytes()
+		// For HEAD requests, the I/O handler may decide to provide only the headers and complete
+		// the response. In that case body will be EMPTY_BUFFER and if we set Content-Length: 0,
+		// this will not be correct
+		// https://github.com/reactor/reactor-netty/issues/1333
+		else if (HttpUtil.getContentLength(nettyResponse, -1) != -1) {
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+		}
+
+		return new DefaultFullHttpResponse(version(), status(), body, responseHeaders, trailersFactory().newHeaders());
+	}
+
 	static long requestsCounter(Channel channel) {
 		HttpServerOperations ops = Connection.from(channel).as(HttpServerOperations.class);
 
@@ -997,7 +1041,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else {
 			status = HttpResponseStatus.BAD_REQUEST;
 		}
-		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status,
+		FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status,
 				ctx.bufferAllocator().allocate(0));
 		response.headers()
 		        .set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO)
