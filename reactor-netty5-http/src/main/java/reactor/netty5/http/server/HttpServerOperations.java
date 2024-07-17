@@ -126,6 +126,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final ZonedDateTime timestamp;
 
 	BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
+	boolean isWebsocket;
 	Function<? super String, Map<String, String>> paramsResolver;
 	String path;
 	Future<Void> requestTimeoutFuture;
@@ -144,6 +145,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.formDecoderProvider = replaced.formDecoderProvider;
 		this.is100ContinueExpected = replaced.is100ContinueExpected;
 		this.isHttp2 = replaced.isHttp2;
+		this.isWebsocket = replaced.isWebsocket;
 		this.fullHttpResponse = replaced.fullHttpResponse;
 		this.mapHandle = replaced.mapHandle;
 		this.nettyRequest = replaced.nettyRequest;
@@ -352,7 +354,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public boolean isWebsocket() {
-		return get(channel()) instanceof WebsocketServerOperations;
+		return isWebsocket;
 	}
 
 	final boolean isHttp2() {
@@ -860,6 +862,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void onOutboundComplete() {
 		if (isWebsocket()) {
+			// There is no need to proceed for 'HTTP/1.1 101 Switching Protocols',
+			// a full response has been sent
 			return;
 		}
 
@@ -1102,6 +1106,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		Objects.requireNonNull(websocketServerSpec, "websocketServerSpec");
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (markSentHeaders()) {
+			isWebsocket = true;
 			WebsocketServerOperations ops = new WebsocketServerOperations(url, websocketServerSpec, this);
 
 			return FutureMono.from(ops.handshakerResult)
