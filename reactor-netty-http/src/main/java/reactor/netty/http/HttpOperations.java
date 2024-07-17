@@ -45,6 +45,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
@@ -469,7 +470,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	static final Pattern SCHEME_PATTERN = Pattern.compile("^(https?|wss?)://.*$");
 
-	protected static final class PostHeadersNettyOutbound extends AtomicBoolean implements NettyOutbound, Consumer<Throwable>, Runnable {
+	protected static final class PostHeadersNettyOutbound extends AtomicBoolean implements NettyOutbound {
 
 		final Mono<Void> source;
 		final HttpOperations<?, ?> parent;
@@ -478,27 +479,18 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		public PostHeadersNettyOutbound(Mono<Void> source, HttpOperations<?, ?> parent, @Nullable ByteBuf msg) {
 			this.msg = msg;
 			if (msg != null) {
-				this.source = source.doOnError(this)
-				                    .doOnCancel(this);
+				this.source = source.doFinally(signalType -> {
+					if (signalType == SignalType.CANCEL || signalType == SignalType.ON_ERROR) {
+						if (msg.refCnt() > 0 && compareAndSet(false, true)) {
+							msg.release();
+						}
+					}
+				});
 			}
 			else {
 				this.source = source;
 			}
 			this.parent = parent;
-		}
-
-		@Override
-		public void run() {
-			if (msg != null && msg.refCnt() > 0 && compareAndSet(false, true)) {
-				msg.release();
-			}
-		}
-
-		@Override
-		public void accept(Throwable throwable) {
-			if (msg != null && msg.refCnt() > 0 && compareAndSet(false, true)) {
-				msg.release();
-			}
 		}
 
 		@Override
