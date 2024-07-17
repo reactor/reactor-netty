@@ -99,6 +99,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.trailersFactory;
 import static io.netty.handler.codec.http.HttpUtil.isTransferEncodingChunked;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
@@ -135,7 +136,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	String path;
 	Future<?> requestTimeoutFuture;
 	Consumer<? super HttpHeaders> trailerHeadersConsumer;
-	HttpMessage fullHttpResponse;
+	FullHttpResponse fullHttpResponse;
 
 	volatile Context currentContext;
 
@@ -535,7 +536,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					.flatMap(b -> {
 						if (!hasSentHeaders()) {
 							try {
-								fullHttpResponse = prepareHttpMessage(b);
+								fullHttpResponse = prepareFullHttpResponse(b);
 
 								afterMarkSentHeaders();
 							}
@@ -570,7 +571,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return new PostHeadersNettyOutbound(Mono.create(sink -> {
 				if (!hasSentHeaders()) {
 					try {
-						fullHttpResponse = prepareHttpMessage(b);
+						fullHttpResponse = prepareFullHttpResponse(b);
 
 						afterMarkSentHeaders();
 					}
@@ -685,7 +686,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				int contentLength = HttpUtil.getContentLength(msg, -1);
 				if (contentLength == 0 || isContentAlwaysEmpty()) {
 					last = true;
-					msg = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
+					msg = newFullHttpResponse(Unpooled.EMPTY_BUFFER, contentLength);
 				}
 				else if (contentLength > 0) {
 					responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -950,6 +951,48 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		terminate();
 	}
 
+	final FullHttpResponse prepareFullHttpResponse(ByteBuf buffer) {
+		int contentLength = HttpUtil.getContentLength(outboundHttpMessage(), -1);
+		if (contentLength == 0 || isContentAlwaysEmpty()) {
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel(), "Dropped HTTP content, since response has " +
+						"1. [Content-Length: 0] or 2. there must be no content: {}"), buffer);
+			}
+			buffer.release();
+			return newFullHttpResponse(Unpooled.EMPTY_BUFFER, contentLength);
+		}
+		else {
+			return newFullHttpResponse(buffer, contentLength);
+		}
+	}
+
+	final FullHttpResponse newFullHttpResponse(ByteBuf body, int contentLength) {
+		if (!HttpMethod.HEAD.equals(method())) {
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+			int code = status().code();
+			if (!(HttpResponseStatus.NOT_MODIFIED.code() == code ||
+					HttpResponseStatus.NO_CONTENT.code() == code)) {
+
+				if (contentLength == -1) {
+					responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+				}
+			}
+		}
+		// For HEAD requests:
+		// - if there is Transfer-Encoding and Content-Length, Transfer-Encoding will be removed
+		// - if there is only Transfer-Encoding, it will be kept and not replaced by
+		// Content-Length: body.readableBytes()
+		// For HEAD requests, the I/O handler may decide to provide only the headers and complete
+		// the response. In that case body will be EMPTY_BUFFER and if we set Content-Length: 0,
+		// this will not be correct
+		// https://github.com/reactor/reactor-netty/issues/1333
+		else if (contentLength != -1) {
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+		}
+
+		return new DefaultFullHttpResponse(version(), status(), body, responseHeaders, trailersFactory().newHeaders());
+	}
+
 	static long requestsCounter(Channel channel) {
 		HttpServerOperations ops = Connection.from(channel).as(HttpServerOperations.class);
 
@@ -1006,7 +1049,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else {
 			status = HttpResponseStatus.BAD_REQUEST;
 		}
-		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
+		FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
 		response.headers()
 		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
 		        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
