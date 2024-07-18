@@ -180,24 +180,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			@Nullable Duration requestTimeout,
 			boolean secured,
 			ZonedDateTime timestamp) {
-		this(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, formDecoderProvider,
-				httpMessageLogFactory, isHttp2, mapHandle, readTimeout, requestTimeout, true, secured, timestamp);
-	}
-
-	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
-			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			ConnectionInfo connectionInfo,
-			ServerCookieDecoder decoder,
-			ServerCookieEncoder encoder,
-			HttpServerFormDecoderProvider formDecoderProvider,
-			HttpMessageLogFactory httpMessageLogFactory,
-			boolean isHttp2,
-			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-			@Nullable Duration readTimeout,
-			@Nullable Duration requestTimeout,
-			boolean resolvePath,
-			boolean secured,
-			ZonedDateTime timestamp) {
 		super(c, listener, httpMessageLogFactory);
 		this.compressionPredicate = compressionPredicate;
 		this.configuredCompressionPredicate = compressionPredicate;
@@ -212,12 +194,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-		if (resolvePath) {
-			this.path = resolvePath(nettyRequest.uri());
-		}
-		else {
-			this.path = null;
-		}
 		this.readTimeout = readTimeout;
 		this.requestTimeout = requestTimeout;
 		this.responseHeaders = nettyResponse.headers();
@@ -730,7 +706,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public String fullPath() {
-		if (path != null) {
+		if (nettyRequest != null) {
+			if (path == null) {
+				path = resolvePath(nettyRequest.uri());
+			}
 			return path;
 		}
 		throw new IllegalStateException("request not parsed");
@@ -1245,17 +1224,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ConnectionInfo connectionInfo) {
 			super(c, listener, nettyRequest, null, connectionInfo,
 					ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT, DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, isHttp2,
-					null, null, null, false, secure, timestamp);
+					null, null, null, secure, timestamp);
 			this.customResponse = nettyResponse;
-			String tempPath = "";
+		}
+
+		@Override
+		public String fullPath() {
 			try {
-				tempPath = resolvePath(nettyRequest.uri());
+				return resolvePath(nettyRequest.uri());
 			}
 			catch (RuntimeException e) {
-				tempPath = "/bad-request";
-			}
-			finally {
-				this.path = tempPath;
+				return "/bad-request";
 			}
 		}
 
