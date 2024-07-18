@@ -156,6 +156,7 @@ nohttp {
 	source.exclude "docs/modules/ROOT/assets/highlight/**"
 	source.exclude "**/build/**"
 	source.exclude "docs/.gradle/**"
+	source.exclude "docs/node_modules/**"
 }
 
 spotless {
