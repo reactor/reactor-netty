@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,12 +127,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final FluxReceive         inbound;
 	final ConnectionObserver  listener;
 	final Sinks.Empty<Void>   onTerminate;
-	final String              shortId;
 
 	volatile Subscription outboundSubscription;
 
 	boolean localActive;
 	String longId;
+	String shortId;
 
 	protected ChannelOperations(ChannelOperations<INBOUND, OUTBOUND> replaced) {
 		this.connection = replaced.connection;
@@ -155,7 +155,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.listener = requireNonNull(listener, "listener");
 		this.onTerminate = Sinks.unsafe().empty();
 		this.inbound = new FluxReceive(this);
-		shortId = initShortId();
 	}
 
 	@Nullable
@@ -594,6 +593,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public String asShortText() {
+		if (shortId == null) {
+			shortId = initShortId();
+		}
+
 		return shortId;
 	}
 
