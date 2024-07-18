@@ -1760,7 +1760,7 @@ class HttpServerTests extends BaseHttpTest {
 				                  String path = res.fullPath();
 				                  return res.sendString(Mono.just("testIssue1001 " + path));
 				              }
-				              catch(Exception e) {
+				              catch (Exception e) {
 				                  ((HttpServerOperations) req).nettyRequest.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
 				                  return res.status(400).header(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE).send();
 				              }
