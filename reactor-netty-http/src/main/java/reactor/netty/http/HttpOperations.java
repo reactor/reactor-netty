@@ -387,16 +387,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 		String tempUri = uri;
 
-		int index = tempUri.indexOf('?');
-		if (index > -1) {
-			tempUri = tempUri.substring(0, index);
-		}
-
-		index = tempUri.indexOf('#');
-		if (index > -1) {
-			tempUri = tempUri.substring(0, index);
-		}
-
 		if (tempUri.isEmpty()) {
 			return tempUri;
 		}
