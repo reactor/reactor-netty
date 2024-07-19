@@ -189,7 +189,7 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 		if (channelOps instanceof HttpClientOperations) {
 			HttpClientOperations ops = (HttpClientOperations) channelOps;
-			path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
+			path = uriTagValue == null ? resolvePath(ops) : uriTagValue.apply(resolvePath(ops));
 			contextView = ops.currentContextView();
 		}
 
@@ -271,6 +271,15 @@ abstract class AbstractHttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	protected void startWrite(HttpRequest msg, Channel channel, SocketAddress address) {
 		dataSentTime = System.nanoTime();
+	}
+
+	static String resolvePath(HttpClientOperations ops) {
+		try {
+			return ops.fullPath();
+		}
+		catch (Exception e) {
+			return "/bad-request";
+		}
 	}
 
 	private String resolveUri(ChannelHandlerContext ctx) {

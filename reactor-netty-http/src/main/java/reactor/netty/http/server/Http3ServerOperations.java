@@ -57,27 +57,6 @@ final class Http3ServerOperations extends HttpServerOperations {
 				httpMessageLogFactory, isHttp2, mapHandle, readTimeout, requestTimeout, secured, timestamp);
 	}
 
-	Http3ServerOperations(
-			Connection c,
-			ConnectionObserver listener,
-			HttpRequest nettyRequest,
-			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			ConnectionInfo connectionInfo,
-			ServerCookieDecoder decoder,
-			ServerCookieEncoder encoder,
-			HttpServerFormDecoderProvider formDecoderProvider,
-			HttpMessageLogFactory httpMessageLogFactory,
-			boolean isHttp2,
-			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
-			@Nullable Duration readTimeout,
-			@Nullable Duration requestTimeout,
-			boolean resolvePath,
-			boolean secured,
-			ZonedDateTime timestamp) {
-		super(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, formDecoderProvider,
-				httpMessageLogFactory, isHttp2, mapHandle, readTimeout, requestTimeout, resolvePath, secured, timestamp);
-	}
-
 	@Override
 	public SocketAddress connectionHostAddress() {
 		return ((QuicChannel) channel().parent()).localSocketAddress();

@@ -65,6 +65,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -1754,7 +1755,16 @@ class HttpServerTests extends BaseHttpTest {
 				                      ctx.write(msg, promise);
 				                  }
 				              }))
-				          .handle((req, res) -> res.sendString(Mono.just("testIssue1001")))
+				          .handle((req, res) -> {
+				              try {
+				                  String path = res.fullPath();
+				                  return res.sendString(Mono.just("testIssue1001 " + path));
+				              }
+				              catch (Exception e) {
+				                  ((HttpServerOperations) req).nettyRequest.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
+				                  return res.status(400).header(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE).send();
+				              }
+				          })
 				          .bindNow();
 
 		int port = disposableServer.port();
@@ -1791,8 +1801,12 @@ class HttpServerTests extends BaseHttpTest {
 
 		StepVerifier.create(
 		        createClient(disposableServer::address)
-		                  .get()
+		                  .request(HttpMethod.GET)
 		                  .uri("/<")
+		                  .send((req, out) -> {
+		                      req.fullPath();
+		                      return out;
+		                  })
 		                  .response())
 		            .expectError(IllegalArgumentException.class)
 		            .verify(Duration.ofSeconds(30));
