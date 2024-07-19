@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ public interface HttpInfos {
 	 * Returns the decoded path portion from the {@link #uri()}.
 	 *
 	 * @return the decoded path portion from the {@link #uri()}
+	 * @throws IllegalArgumentException if the {@link #uri()} violates RFC2396
 	 * @since 0.9.6
 	 */
 	String fullPath();
@@ -82,6 +83,7 @@ public interface HttpInfos {
 	 * Returns the decoded path portion from the {@link #uri()} without the leading and trailing '/' if present.
 	 *
 	 * @return the decoded path portion from the {@link #uri()} without the leading and trailing '/' if present
+	 * @throws IllegalArgumentException if the {@link #uri()} violates RFC2396
 	 */
 	default String path() {
 		String path = fullPath();

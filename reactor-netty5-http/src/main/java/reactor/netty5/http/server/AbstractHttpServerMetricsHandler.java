@@ -164,7 +164,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 				if (channelOps instanceof HttpServerOperations ops) {
 					if (!initialized) {
 						method = methodTagValue.apply(ops.method().name());
-						path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
+						path = uriTagValue == null ? resolvePath(ops) : uriTagValue.apply(resolvePath(ops));
 						// Always take the remote address from the operations in order to consider proxy information
 						// Use remoteSocketAddress() in order to obtain UDS info
 						remoteSocketAddress = ops.remoteSocketAddress();
@@ -234,7 +234,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 				if (channelOps instanceof HttpServerOperations) {
 					ops = (HttpServerOperations) channelOps;
 					method = methodTagValue.apply(ops.method().name());
-					path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
+					path = uriTagValue == null ? resolvePath(ops) : uriTagValue.apply(resolvePath(ops));
 					// Always take the remote address from the operations in order to consider proxy information
 					// Use remoteSocketAddress() in order to obtain UDS info
 					remoteSocketAddress = ops.remoteSocketAddress();
@@ -415,6 +415,15 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 		path = null;
 		remoteSocketAddress = null;
 		status = null;
+	}
+
+	static String resolvePath(HttpServerOperations ops) {
+		try {
+			return ops.fullPath();
+		}
+		catch (Exception e) {
+			return "/bad-request";
+		}
 	}
 
 	static final Set<String> STANDARD_METHODS;

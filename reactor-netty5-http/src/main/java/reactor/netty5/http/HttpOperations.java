@@ -267,11 +267,18 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	public String toString() {
+		String path;
+		try {
+			path = fullPath();
+		}
+		catch (Exception e) {
+			path = "/bad-request";
+		}
 		if (isWebsocket()) {
-			return "ws{uri=" + fullPath() + ", connection=" + connection() + "}";
+			return "ws{uri=" + path + ", connection=" + connection() + "}";
 		}
 
-		return method().name() + "{uri=" + fullPath() + ", connection=" + connection() + "}";
+		return method().name() + "{uri=" + path + ", connection=" + connection() + "}";
 	}
 
 	@Override

@@ -53,7 +53,6 @@ import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.channel.AbortedException;
-import reactor.netty5.http.HttpOperations;
 import reactor.netty5.http.HttpProtocol;
 import reactor.netty5.transport.AddressUtils;
 import reactor.netty5.transport.ProxyProvider;
@@ -465,7 +464,8 @@ class HttpClientConnect extends HttpClient {
 				                        .setProtocolVersion(HttpVersion.HTTP_1_1)
 				                        .headers();
 
-				ch.path = HttpOperations.resolvePath(ch.uri());
+				// Reset to pickup the actual uri()
+				ch.path = null;
 
 				if (!defaultHeaders.isEmpty()) {
 					headers.set(defaultHeaders);

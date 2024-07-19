@@ -502,7 +502,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public final String fullPath() {
-		return this.path;
+		if (path == null) {
+			path = resolvePath(uri());
+		}
+		return path;
 	}
 
 	@Override
