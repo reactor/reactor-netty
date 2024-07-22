@@ -411,13 +411,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		//       If decoding a response, just throw an error.
 		if (is100ContinueExpected) {
 			return FutureMono.deferFuture(() -> {
-						if (!hasSentHeaders()) {
-							return channel().writeAndFlush(CONTINUE);
-						}
-						return channel().newSucceededFuture();
-					})
-
-			                 .thenMany(super.receiveObject());
+				if (!hasSentHeaders()) {
+					return channel().writeAndFlush(
+							new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, EMPTY_BUFFER));
+				}
+				return channel().newSucceededFuture();
+			})
+					.thenMany(super.receiveObject());
 		}
 		else {
 			return super.receiveObject();
@@ -1008,11 +1008,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	static final AsciiString      EVENT_STREAM = new AsciiString("text/event-stream");
 
 	static final BiPredicate<HttpServerRequest, HttpServerResponse> COMPRESSION_DISABLED = (req, res) -> false;
-
-	static final FullHttpResponse CONTINUE     =
-			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-					HttpResponseStatus.CONTINUE,
-					EMPTY_BUFFER);
 
 	static final class FailedHttpServerRequest extends HttpServerOperations {
 
