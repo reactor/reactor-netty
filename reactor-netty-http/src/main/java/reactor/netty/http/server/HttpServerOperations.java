@@ -602,13 +602,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (!compress) {
 			removeHandler(NettyPipeline.CompressionHandler);
 		}
-		else if (channel().pipeline()
-		                  .get(NettyPipeline.CompressionHandler) == null) {
+		else if (channel().pipeline().get(NettyPipeline.CompressionHandler) == null) {
 			SimpleCompressionHandler handler = new SimpleCompressionHandler();
+			handler.request = nettyRequest;
 			try {
-				//Do not invoke handler.channelRead as it will trigger ctx.fireChannelRead
-				handler.decode(channel().pipeline().context(NettyPipeline.ReactiveBridge), nettyRequest);
-
 				addHandlerFirst(NettyPipeline.CompressionHandler, handler);
 			}
 			catch (Throwable e) {
