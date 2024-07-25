@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayList;
@@ -37,8 +39,17 @@ import java.util.List;
  */
 final class SimpleCompressionHandler extends HttpContentCompressor {
 
+	boolean decoded;
+	HttpRequest request;
+
 	SimpleCompressionHandler() {
 		super((CompressionOptions[]) null);
+	}
+
+	@Override
+	protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) throws Exception {
+		decoded = true;
+		super.decode(ctx, msg, out);
 	}
 
 	@Override
@@ -49,6 +60,13 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 			super.write(ctx, new DefaultHttpContent((ByteBuf) msg), promise);
 		}
 		else {
+			if (!decoded && msg instanceof HttpResponse) {
+				decode(ctx, request);
+			}
+			if (decoded && request != null && msg instanceof LastHttpContent) {
+				decoded = false;
+				request = null;
+			}
 			super.write(ctx, msg, promise);
 		}
 	}
@@ -63,7 +81,7 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 				// decode(...) will observe a freed content
 				request = new DefaultHttpRequest(msg.protocolVersion(), msg.method(), msg.uri(), msg.headers());
 			}
-			super.decode(ctx, request, out);
+			decode(ctx, request, out);
 		}
 		catch (DecoderException e) {
 			throw e;
