@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.FullHttpRequest;
 import io.netty5.handler.codec.http.HttpContentCompressor;
 import io.netty5.handler.codec.http.HttpRequest;
+import io.netty5.handler.codec.http.HttpResponse;
+import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.util.concurrent.Future;
 
 /**
@@ -31,6 +33,9 @@ import io.netty5.util.concurrent.Future;
  * @author Stephane Maldini
  */
 final class SimpleCompressionHandler extends HttpContentCompressor {
+
+	boolean decoded;
+	HttpRequest request;
 
 	SimpleCompressionHandler() {
 		super((CompressionOptions[]) null);
@@ -41,10 +46,23 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		if (msg instanceof Buffer buffer) {
 			return super.write(ctx, new DefaultHttpContent(buffer));
 		}
+		if (!decoded && msg instanceof HttpResponse) {
+			try {
+				decode(ctx, request, false);
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		if (decoded && request != null && msg instanceof LastHttpContent) {
+			decoded = false;
+			request = null;
+		}
 		return super.write(ctx, msg);
 	}
 
 	void decode(ChannelHandlerContext ctx, HttpRequest msg, boolean release) throws Exception {
+		decoded = true;
 		HttpRequest request = msg;
 		if (msg instanceof FullHttpRequest fullHttpRequest &&
 				(!fullHttpRequest.isAccessible() || fullHttpRequest.payload().readableBytes() == 0)) {
