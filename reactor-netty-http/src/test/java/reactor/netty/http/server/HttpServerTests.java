@@ -2133,7 +2133,8 @@ class HttpServerTests extends BaseHttpTest {
 				null,
 				null,
 				false,
-				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM));
+				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM),
+				true);
 		ops.status(status);
 		HttpMessage response = ops.newFullBodyMessage(Unpooled.EMPTY_BUFFER);
 		assertThat(((FullHttpResponse) response).status().reasonPhrase()).isEqualTo(status.reasonPhrase());
@@ -3136,7 +3137,8 @@ class HttpServerTests extends BaseHttpTest {
 				null,
 				null,
 				false,
-				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM));
+				ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM),
+				true);
 		assertThat(ops.isFormUrlencoded()).isEqualTo(expectation);
 		// "FutureReturnValueIgnored" is suppressed deliberately
 		channel.close();
