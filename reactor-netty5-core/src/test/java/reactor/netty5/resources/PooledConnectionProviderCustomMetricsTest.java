@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.resolver.DefaultAddressResolverGroup;
@@ -58,7 +58,7 @@ class PooledConnectionProviderCustomMetricsTest {
 	@BeforeEach
 	void setUp() {
 		remoteAddress = () -> InetSocketAddress.createUnresolved("localhost", 0);
-		group = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
+		group = new MultithreadEventLoopGroup(2, NioIoHandler.newFactory());
 	}
 
 	@AfterEach

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import io.netty5.buffer.CompositeBuffer;
 import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DomainSocketAddress;
 import org.junit.jupiter.api.Test;
@@ -119,7 +119,7 @@ class UdpClientTest {
 	@Test
 	void testIssue192() throws Exception {
 		LoopResources resources = LoopResources.create("testIssue192");
-		EventLoopGroup loop = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+		EventLoopGroup loop = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 		UdpServer server = UdpServer.create()
 		                            .runOn(resources);
 		UdpClient client = UdpClient.create()

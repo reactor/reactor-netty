@@ -25,6 +25,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.kqueue.KQueue;
 import io.netty5.channel.kqueue.KQueueDatagramChannel;
+import io.netty5.channel.kqueue.KQueueIoHandle;
 import io.netty5.channel.kqueue.KQueueIoHandler;
 import io.netty5.channel.kqueue.KQueueServerSocketChannel;
 import io.netty5.channel.kqueue.KQueueSocketChannel;
@@ -48,11 +49,11 @@ final class DefaultLoopKQueue implements DefaultLoop {
 	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop,
 			@Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(SocketChannel.class)) {
-			return eventLoop.isCompatible(KQueueSocketChannel.class) ?
+			return eventLoop.isCompatible(KQueueIoHandle.class) ?
 					(CHANNEL) new KQueueSocketChannel(eventLoop, protocolFamily) : null;
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
-			return eventLoop.isCompatible(KQueueDatagramChannel.class) ?
+			return eventLoop.isCompatible(KQueueIoHandle.class) ?
 					(CHANNEL) new KQueueDatagramChannel(eventLoop, protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
@@ -69,7 +70,7 @@ final class DefaultLoopKQueue implements DefaultLoop {
 	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
 			EventLoopGroup childEventLoopGroup, @Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(ServerSocketChannel.class)) {
-			return eventLoop.isCompatible(KQueueServerSocketChannel.class) ?
+			return eventLoop.isCompatible(KQueueIoHandle.class) ?
 					(SERVERCHANNEL) new KQueueServerSocketChannel(eventLoop, childEventLoopGroup, protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());

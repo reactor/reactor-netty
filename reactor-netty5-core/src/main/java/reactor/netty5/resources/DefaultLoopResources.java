@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.util.concurrent.FastThreadLocalThread;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.NonBlocking;
@@ -193,7 +193,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		EventLoopGroup eventLoopGroup = serverSelectLoops.get();
 		if (null == eventLoopGroup) {
 			EventLoopGroup newEventLoopGroup = new MultithreadEventLoopGroup(selectCount,
-					threadFactory(this, "select-nio"), NioHandler.newFactory());
+					threadFactory(this, "select-nio"), NioIoHandler.newFactory());
 			if (!serverSelectLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 			}
@@ -206,7 +206,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		EventLoopGroup eventLoopGroup = serverLoops.get();
 		if (null == eventLoopGroup) {
 			EventLoopGroup newEventLoopGroup = new MultithreadEventLoopGroup(workerCount,
-					threadFactory(this, "nio"), NioHandler.newFactory());
+					threadFactory(this, "nio"), NioIoHandler.newFactory());
 			if (!serverLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 			}

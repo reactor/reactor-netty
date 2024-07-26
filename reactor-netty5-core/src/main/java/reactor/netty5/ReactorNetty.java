@@ -34,7 +34,7 @@ import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.BufferHolder;
 import io.netty5.buffer.MemoryManager;
-import io.netty5.channel.nio.AbstractNioChannel;
+import io.netty5.channel.nio.NioIoHandle;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -424,7 +424,7 @@ public final class ReactorNetty {
 		ChannelPipeline p = c.channel().pipeline();
 		return p.get(SslHandler.class) != null  ||
 				p.get(NettyPipeline.CompressionHandler) != null ||
-				(!c.channel().executor().isCompatible(AbstractNioChannel.class) &&
+				(!c.channel().executor().isCompatible(NioIoHandle.class) &&
 						!"file".equals(file.toUri().getScheme()));
 	}
 

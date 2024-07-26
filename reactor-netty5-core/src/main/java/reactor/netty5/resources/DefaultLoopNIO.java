@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannel;
+import io.netty5.channel.nio.NioIoHandle;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
@@ -47,14 +48,14 @@ final class DefaultLoopNIO implements DefaultLoop {
 	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop,
 			@Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(SocketChannel.class)) {
-			return eventLoop.isCompatible(NioSocketChannel.class) ?
+			return eventLoop.isCompatible(NioIoHandle.class) ?
 					(CHANNEL) new NioSocketChannel(eventLoop, SelectorProvider.provider(), protocolFamily) : null;
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
 			if (protocolFamily == SocketProtocolFamily.UNIX) {
 				throw new IllegalArgumentException("Channel type: NioDatagramChannel does not support Unix Domain Sockets");
 			}
-			return eventLoop.isCompatible(NioDatagramChannel.class) ?
+			return eventLoop.isCompatible(NioIoHandle.class) ?
 					(CHANNEL) new NioDatagramChannel(eventLoop, SelectorProvider.provider(), protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
@@ -71,7 +72,7 @@ final class DefaultLoopNIO implements DefaultLoop {
 	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
 			EventLoopGroup childEventLoopGroup, @Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(ServerSocketChannel.class)) {
-			return eventLoop.isCompatible(NioServerSocketChannel.class) ?
+			return eventLoop.isCompatible(NioIoHandle.class) ?
 					(SERVERCHANNEL) new NioServerSocketChannel(eventLoop, childEventLoopGroup,
 							SelectorProvider.provider(), protocolFamily) : null;
 		}

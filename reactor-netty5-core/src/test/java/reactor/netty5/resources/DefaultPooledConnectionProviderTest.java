@@ -41,7 +41,7 @@ import java.util.function.Supplier;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.resolver.AddressResolver;
 import io.netty5.resolver.AddressResolverGroup;
@@ -145,7 +145,7 @@ class DefaultPooledConnectionProviderTest {
 		final ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
 		int echoServerPort = SocketUtils.findAvailableTcpPort();
 		TcpClientTests.EchoServer echoServer = new TcpClientTests.EchoServer(echoServerPort);
-		EventLoopGroup group = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
+		EventLoopGroup group = new MultithreadEventLoopGroup(2, NioIoHandler.newFactory());
 
 		java.util.concurrent.Future<?> f1 = null;
 		java.util.concurrent.Future<?> f2 = null;
@@ -389,7 +389,7 @@ class DefaultPooledConnectionProviderTest {
 	@Test
 	@SuppressWarnings("unchecked")
 	void testRetryConnect() throws Exception {
-		EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+		EventLoopGroup group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 		InetSocketAddress address = AddressUtils.createUnresolved("localhost", 12122);
 
 		AddressResolverGroup<SocketAddress> resolverGroup = Mockito.mock(AddressResolverGroup.class);
@@ -433,7 +433,7 @@ class DefaultPooledConnectionProviderTest {
 
 	@Test
 	void testDisposeInactivePoolsInBackground() throws Exception {
-		EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+		EventLoopGroup group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 		InetSocketAddress address = AddressUtils.createUnresolved("example.com", 80);
 		ConnectionProvider.Builder builder =
 				ConnectionProvider.builder("testDisposeInactivePoolsInBackground")
@@ -548,7 +548,7 @@ class DefaultPooledConnectionProviderTest {
 
 		DefaultPooledConnectionProvider provider =
 				(DefaultPooledConnectionProvider) ConnectionProvider.create("testIssue3316", 400);
-		EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+		EventLoopGroup group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 		try {
 			Flux.range(0, 400)
 			    .flatMap(i ->

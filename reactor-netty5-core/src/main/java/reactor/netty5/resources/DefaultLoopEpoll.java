@@ -25,6 +25,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.channel.epoll.Epoll;
 import io.netty5.channel.epoll.EpollDatagramChannel;
+import io.netty5.channel.epoll.EpollIoHandle;
 import io.netty5.channel.epoll.EpollIoHandler;
 import io.netty5.channel.epoll.EpollServerSocketChannel;
 import io.netty5.channel.epoll.EpollSocketChannel;
@@ -49,11 +50,11 @@ final class DefaultLoopEpoll implements DefaultLoop {
 	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop,
 			@Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(SocketChannel.class)) {
-			return eventLoop.isCompatible(EpollSocketChannel.class) ?
+			return eventLoop.isCompatible(EpollIoHandle.class) ?
 					(CHANNEL) new EpollSocketChannel(eventLoop, protocolFamily) : null;
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
-			return eventLoop.isCompatible(EpollDatagramChannel.class) ?
+			return eventLoop.isCompatible(EpollIoHandle.class) ?
 					(CHANNEL) new EpollDatagramChannel(eventLoop, protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
@@ -70,7 +71,7 @@ final class DefaultLoopEpoll implements DefaultLoop {
 	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
 			EventLoopGroup childEventLoopGroup, @Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(ServerSocketChannel.class)) {
-			return eventLoop.isCompatible(EpollServerSocketChannel.class) ?
+			return eventLoop.isCompatible(EpollIoHandle.class) ?
 					(SERVERCHANNEL) new EpollServerSocketChannel(eventLoop, childEventLoopGroup, protocolFamily) : null;
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());

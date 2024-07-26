@@ -25,6 +25,7 @@ import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.uring.IOUring;
 import io.netty5.channel.uring.IOUringDatagramChannel;
+import io.netty5.channel.uring.IOUringIoHandle;
 import io.netty5.channel.uring.IOUringIoHandler;
 import io.netty5.channel.uring.IOUringServerSocketChannel;
 import io.netty5.channel.uring.IOUringSocketChannel;
@@ -48,12 +49,12 @@ final class DefaultLoopIOUring implements DefaultLoop {
 	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass, EventLoop eventLoop,
 			@Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(SocketChannel.class)) {
-			return eventLoop.isCompatible(IOUringSocketChannel.class) ?
+			return eventLoop.isCompatible(IOUringIoHandle.class) ?
 					(CHANNEL) new IOUringSocketChannel(eventLoop) : // ignore protocolFamily
 					null;
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
-			return eventLoop.isCompatible(IOUringDatagramChannel.class) ?
+			return eventLoop.isCompatible(IOUringIoHandle.class) ?
 					(CHANNEL) new IOUringDatagramChannel(eventLoop) : null; // ignore protocolFamily
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
@@ -70,7 +71,7 @@ final class DefaultLoopIOUring implements DefaultLoop {
 	public <SERVERCHANNEL extends ServerChannel> SERVERCHANNEL getServerChannel(Class<SERVERCHANNEL> channelClass, EventLoop eventLoop,
 			EventLoopGroup childEventLoopGroup, @Nullable ProtocolFamily protocolFamily) {
 		if (channelClass.equals(ServerSocketChannel.class)) {
-			return eventLoop.isCompatible(IOUringServerSocketChannel.class) ?
+			return eventLoop.isCompatible(IOUringIoHandle.class) ?
 					(SERVERCHANNEL) new IOUringServerSocketChannel(eventLoop, childEventLoopGroup) : // ignore protocolFamily
 					null;
 		}

@@ -67,7 +67,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.group.ChannelGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
@@ -2948,7 +2948,7 @@ class HttpClientTest extends BaseHttpTest {
 				        .handle((req, res) -> res.sendString(Mono.just("testIssue1547")))
 				        .bindNow();
 
-		EventLoopGroup loop = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+		EventLoopGroup loop = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 		AtomicReference<List<AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
 		AtomicReference<List<AddressResolverGroup<?>>> resolversInternal = new AtomicReference<>(new ArrayList<>());
 		try {

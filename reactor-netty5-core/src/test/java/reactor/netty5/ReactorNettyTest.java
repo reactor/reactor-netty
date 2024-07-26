@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,10 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.IoHandle;
+import io.netty5.channel.IoHandler;
+import io.netty5.channel.IoRegistration;
 import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.channel.nio.NioIoHandle;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import reactor.util.annotation.Nullable;
@@ -123,7 +126,7 @@ class ReactorNettyTest {
 		}
 
 		TestChannel(Channel parent, @Nullable SocketAddress localAddress, @Nullable SocketAddress remoteAddress) {
-			super(parent, new TestEventLoop(), false);
+			super(parent, new TestEventLoop(), false, NioIoHandle.class);
 			this.localAddress = localAddress;
 			this.remoteAddress = remoteAddress;
 		}
@@ -178,6 +181,11 @@ class ReactorNettyTest {
 		}
 
 		@Override
+		protected IoHandle ioHandle() {
+			return null;
+		}
+
+		@Override
 		public boolean isOpen() {
 			return false;
 		}
@@ -196,18 +204,8 @@ class ReactorNettyTest {
 	static final class TestEventLoop implements EventLoop {
 
 		@Override
-		public Future<Void> registerForIo(IoHandle handle) {
-			return null;
-		}
+		public void execute(Runnable task) {
 
-		@Override
-		public Future<Void> deregisterForIo(IoHandle handle) {
-			return null;
-		}
-
-		@Override
-		public boolean isCompatible(Class<? extends IoHandle> handleType) {
-			return true;
 		}
 
 		@Override
@@ -216,7 +214,12 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		public boolean isShuttingDown() {
+		public boolean isCompatible(Class<? extends IoHandle> handleType) {
+			return true;
+		}
+
+		@Override
+		public boolean isIoType(Class<? extends IoHandler> aClass) {
 			return false;
 		}
 
@@ -226,37 +229,22 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
-			return null;
+		public boolean isShuttingDown() {
+			return false;
 		}
 
 		@Override
-		public Future<Void> terminationFuture() {
-			return null;
-		}
-
-		@Override
-		public Future<Void> submit(Runnable task) {
-			return null;
-		}
-
-		@Override
-		public <T> Future<T> submit(Runnable task, T result) {
-			return null;
-		}
-
-		@Override
-		public <T> Future<T> submit(Callable<T> task) {
-			return null;
-		}
-
-		@Override
-		public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
+		public Future<IoRegistration> register(IoHandle ioHandle) {
 			return null;
 		}
 
 		@Override
 		public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
+			return null;
+		}
+
+		@Override
+		public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
 			return null;
 		}
 
@@ -271,8 +259,28 @@ class ReactorNettyTest {
 		}
 
 		@Override
-		public void execute(Runnable task) {
+		public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+			return null;
+		}
 
+		@Override
+		public <T> Future<T> submit(Callable<T> task) {
+			return null;
+		}
+
+		@Override
+		public Future<Void> submit(Runnable task) {
+			return null;
+		}
+
+		@Override
+		public <T> Future<T> submit(Runnable task, T result) {
+			return null;
+		}
+
+		@Override
+		public Future<Void> terminationFuture() {
+			return null;
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.epoll.Epoll;
 import io.netty5.channel.kqueue.KQueue;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -125,7 +125,7 @@ class DefaultLoopResourcesTest {
 	private void testClientTransportWarmup(boolean preferNative) throws Exception {
 		final DefaultLoopResources loop1 =
 				(DefaultLoopResources) LoopResources.create("testClientTransportWarmup", 1, true);
-		final EventLoopGroup loop2 = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+		final EventLoopGroup loop2 = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 		try {
 			TcpClient tcpClient = TcpClient.create()
 			                               .resolver(spec -> spec.runOn(loop2))
