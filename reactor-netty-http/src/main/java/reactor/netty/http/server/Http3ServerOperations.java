@@ -54,7 +54,7 @@ final class Http3ServerOperations extends HttpServerOperations {
 			boolean secured,
 			ZonedDateTime timestamp) {
 		super(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, formDecoderProvider,
-				httpMessageLogFactory, isHttp2, mapHandle, readTimeout, requestTimeout, secured, timestamp);
+				httpMessageLogFactory, isHttp2, mapHandle, readTimeout, requestTimeout, secured, timestamp, true);
 	}
 
 	@Override

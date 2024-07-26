@@ -99,6 +99,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.trailersFactory;
 import static io.netty.handler.codec.http.HttpUtil.isTransferEncodingChunked;
 import static reactor.netty.ReactorNetty.format;
@@ -129,6 +130,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final HttpHeaders responseHeaders;
 	final String scheme;
 	final ZonedDateTime timestamp;
+	final boolean validateHeaders;
 
 	BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 	boolean isWebsocket;
@@ -165,6 +167,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.scheme = replaced.scheme;
 		this.timestamp = replaced.timestamp;
 		this.trailerHeadersConsumer = replaced.trailerHeadersConsumer;
+		this.validateHeaders = replaced.validateHeaders;
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
@@ -179,7 +182,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
 			boolean secured,
-			ZonedDateTime timestamp) {
+			ZonedDateTime timestamp,
+			boolean validateHeaders) {
 		super(c, listener, httpMessageLogFactory);
 		this.compressionPredicate = compressionPredicate;
 		this.configuredCompressionPredicate = compressionPredicate;
@@ -193,13 +197,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.isHttp2 = isHttp2;
 		this.mapHandle = mapHandle;
 		this.nettyRequest = nettyRequest;
-		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, headersFactory().withValidation(validateHeaders));
 		this.readTimeout = readTimeout;
 		this.requestTimeout = requestTimeout;
 		this.responseHeaders = nettyResponse.headers();
 		this.responseHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 		this.scheme = secured ? "https" : "http";
 		this.timestamp = timestamp;
+		this.validateHeaders = validateHeaders;
 	}
 
 	@Override
@@ -221,7 +226,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected HttpMessage newFullBodyMessage(ByteBuf body) {
 		HttpResponse res =
-				new DefaultFullHttpResponse(version(), status(), body);
+				new DefaultFullHttpResponse(version(), status(), body,
+						headersFactory().withValidation(validateHeaders), trailersFactory().withValidation(validateHeaders));
 
 		if (!HttpMethod.HEAD.equals(method())) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -415,7 +421,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return FutureMono.deferFuture(() -> {
 				if (!hasSentHeaders()) {
 					return channel().writeAndFlush(
-							new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, EMPTY_BUFFER));
+							new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, EMPTY_BUFFER,
+									headersFactory().withValidation(validateHeaders), trailersFactory().withValidation(validateHeaders)));
 				}
 				return channel().newSucceededFuture();
 			})
@@ -966,7 +973,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 		}
 
-		return new DefaultFullHttpResponse(version(), status(), body, responseHeaders, trailersFactory().newHeaders());
+		return new DefaultFullHttpResponse(version(), status(), body, responseHeaders, trailersFactory().withValidation(validateHeaders).newHeaders());
 	}
 
 	static long requestsCounter(Channel channel) {
@@ -988,8 +995,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpMessageLogFactory httpMessageLogFactory,
 			@Nullable ZonedDateTime timestamp,
 			@Nullable ConnectionInfo connectionInfo,
-			SocketAddress remoteAddress) {
-		sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory, false, timestamp, connectionInfo, remoteAddress);
+			SocketAddress remoteAddress,
+			boolean validateHeaders) {
+		sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory, false, timestamp, connectionInfo, remoteAddress, validateHeaders);
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
@@ -1003,7 +1011,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			boolean isHttp2,
 			@Nullable ZonedDateTime timestamp,
 			@Nullable ConnectionInfo connectionInfo,
-			SocketAddress remoteAddress) {
+			SocketAddress remoteAddress,
+			boolean validateHeaders) {
 
 		Throwable cause = t.getCause() != null ? t.getCause() : t;
 
@@ -1025,7 +1034,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else {
 			status = HttpResponseStatus.BAD_REQUEST;
 		}
-		FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
+		FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.buffer(0),
+				headersFactory().withValidation(validateHeaders), trailersFactory().withValidation(validateHeaders));
 		response.headers()
 		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
 		        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
@@ -1036,7 +1046,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (msg instanceof HttpRequest) {
 				ops = new FailedHttpServerRequest(conn, listener, (HttpRequest) msg, response, httpMessageLogFactory, isHttp2,
 						secure, timestamp == null ? ZonedDateTime.now(ReactorNetty.ZONE_ID_SYSTEM) : timestamp,
-						connectionInfo == null ? new ConnectionInfo(ctx.channel().localAddress(), remoteAddress, secure) : connectionInfo);
+						connectionInfo == null ? new ConnectionInfo(ctx.channel().localAddress(), remoteAddress, secure) : connectionInfo, validateHeaders);
 				ops.bind();
 			}
 			else {
@@ -1213,10 +1223,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				boolean isHttp2,
 				boolean secure,
 				ZonedDateTime timestamp,
-				ConnectionInfo connectionInfo) {
+				ConnectionInfo connectionInfo,
+				boolean validateHeaders) {
 			super(c, listener, nettyRequest, null, connectionInfo,
 					ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT, DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, isHttp2,
-					null, null, null, secure, timestamp);
+					null, null, null, secure, timestamp, validateHeaders);
 			this.customResponse = nettyResponse;
 		}
 

@@ -142,7 +142,7 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 			catch (RuntimeException e) {
 				pendingResponse = false;
 				request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-				HttpServerOperations.sendDecodingFailures(ctx, listener, true, e, msg, httpMessageLogFactory, true, timestamp, connectionInfo, remoteAddress);
+				HttpServerOperations.sendDecodingFailures(ctx, listener, true, e, msg, httpMessageLogFactory, true, timestamp, connectionInfo, remoteAddress, true);
 				return;
 			}
 			ops.bind();

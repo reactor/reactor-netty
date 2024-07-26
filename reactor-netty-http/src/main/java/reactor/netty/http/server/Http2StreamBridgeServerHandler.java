@@ -146,12 +146,13 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 						readTimeout,
 						requestTimeout,
 						secured,
-						timestamp);
+						timestamp,
+						true);
 			}
 			catch (RuntimeException e) {
 				pendingResponse = false;
 				request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory, true, timestamp, connectionInfo, remoteAddress);
+				HttpServerOperations.sendDecodingFailures(ctx, listener, secured, e, msg, httpMessageLogFactory, true, timestamp, connectionInfo, remoteAddress, true);
 				return;
 			}
 			ops.bind();
