@@ -81,6 +81,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 	final int                                                     maxKeepAliveRequests;
 	final Duration                                                readTimeout;
 	final Duration                                                requestTimeout;
+	final boolean                                                 validateHeaders;
 
 	ChannelHandlerContext ctx;
 
@@ -111,7 +112,8 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			@Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>> mapHandle,
 			int maxKeepAliveRequests,
 			@Nullable Duration readTimeout,
-			@Nullable Duration requestTimeout) {
+			@Nullable Duration requestTimeout,
+			boolean validateHeaders) {
 		this.listener = listener;
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
@@ -122,6 +124,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		this.maxKeepAliveRequests = maxKeepAliveRequests;
 		this.readTimeout = readTimeout;
 		this.requestTimeout = requestTimeout;
+		this.validateHeaders = validateHeaders;
 	}
 
 	@Override
@@ -177,7 +180,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 				IllegalStateException e = new IllegalStateException(
 						"Unexpected request [" + request.method() + " " + request.uri() + " HTTP/2.0]");
 				request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-				sendDecodingFailures(e, msg);
+				sendDecodingFailures(e, msg, validateHeaders);
 				return;
 			}
 
@@ -207,7 +210,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 
 				DecoderResult decoderResult = request.decoderResult();
 				if (decoderResult.isFailure()) {
-					sendDecodingFailures(decoderResult.cause(), msg);
+					sendDecodingFailures(decoderResult.cause(), msg, validateHeaders);
 					return;
 				}
 
@@ -232,11 +235,12 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							readTimeout,
 							requestTimeout,
 							secure,
-							timestamp);
+							timestamp,
+							validateHeaders);
 				}
 				catch (RuntimeException e) {
 					request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-					sendDecodingFailures(e, msg, timestamp, connectionInfo);
+					sendDecodingFailures(e, msg, timestamp, connectionInfo, validateHeaders);
 					return;
 				}
 				ops.bind();
@@ -251,7 +255,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			if (msg instanceof LastHttpContent<?> lastHttpContent) {
 				DecoderResult decoderResult = lastHttpContent.decoderResult();
 				if (decoderResult.isFailure()) {
-					sendDecodingFailures(decoderResult.cause(), msg);
+					sendDecodingFailures(decoderResult.cause(), msg, validateHeaders);
 					return;
 				}
 
@@ -283,7 +287,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		if (msg instanceof DecoderResultProvider decoderResultProvider) {
 			DecoderResult decoderResult = decoderResultProvider.decoderResult();
 			if (decoderResult.isFailure()) {
-				sendDecodingFailures(decoderResult.cause(), msg);
+				sendDecodingFailures(decoderResult.cause(), msg, validateHeaders);
 				return;
 			}
 		}
@@ -333,14 +337,14 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		}
 	}
 
-	void sendDecodingFailures(Throwable t, Object msg) {
-		sendDecodingFailures(t, msg, null, null);
+	void sendDecodingFailures(Throwable t, Object msg, boolean validateHeaders) {
+		sendDecodingFailures(t, msg, null, null, validateHeaders);
 	}
 
-	void sendDecodingFailures(Throwable t, Object msg, @Nullable ZonedDateTime timestamp, @Nullable ConnectionInfo connectionInfo) {
+	void sendDecodingFailures(Throwable t, Object msg, @Nullable ZonedDateTime timestamp, @Nullable ConnectionInfo connectionInfo, boolean validateHeaders) {
 		persistentConnection = false;
 		HttpServerOperations.sendDecodingFailures(ctx, listener, secure, t, msg, httpMessageLogFactory, timestamp, connectionInfo,
-				remoteAddress);
+				remoteAddress, validateHeaders);
 	}
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
@@ -477,7 +481,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 
 				DecoderResult decoderResult = nextRequest.decoderResult();
 				if (decoderResult.isFailure()) {
-					sendDecodingFailures(decoderResult.cause(), nextRequest, holder.timestamp, null);
+					sendDecodingFailures(decoderResult.cause(), nextRequest, holder.timestamp, null, validateHeaders);
 					discard();
 					return;
 				}
@@ -502,11 +506,12 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 							readTimeout,
 							requestTimeout,
 							secure,
-							holder.timestamp);
+							holder.timestamp,
+							validateHeaders);
 				}
 				catch (RuntimeException e) {
 					holder.request.setDecoderResult(DecoderResult.failure(e.getCause() != null ? e.getCause() : e));
-					sendDecodingFailures(e, holder.request, holder.timestamp, connectionInfo);
+					sendDecodingFailures(e, holder.request, holder.timestamp, connectionInfo, validateHeaders);
 					return;
 				}
 				ops.bind();
