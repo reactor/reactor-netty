@@ -150,6 +150,8 @@ ext {
 nohttp {
 	source.exclude "docs/asciidoc/highlight/**"
 	source.exclude "**/build/**"
+	source.exclude "docs/.gradle/**"
+	source.exclude "docs/node_modules/**"
 }
 
 spotless {
