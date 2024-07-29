@@ -40,7 +40,10 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
+import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
+import io.netty5.handler.codec.http.DefaultHttpContent;
+import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.DefaultHttpResponse;
 import io.netty5.handler.codec.http.DefaultLastHttpContent;
 import io.netty5.handler.codec.http.EmptyLastHttpContent;
@@ -745,17 +748,28 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest) {
+		Class<?> msgClass = msg.getClass();
+		if (msgClass == DefaultHttpRequest.class) {
+			handleDefaultHttpRequest(ctx);
+		}
+		else if (msgClass == DefaultFullHttpRequest.class) {
+			handleDefaultFullHttpRequest(ctx, (DefaultFullHttpRequest) msg);
+		}
+		else if (msgClass == EmptyLastHttpContent.class) {
+			((EmptyLastHttpContent) msg).close();
+			handleLastHttpContent();
+		}
+		else if (msgClass == DefaultLastHttpContent.class) {
+			super.onInboundNext(ctx, msg);
+			handleLastHttpContent();
+		}
+		else if (msgClass == DefaultHttpContent.class) {
+			super.onInboundNext(ctx, msg);
+		}
+		else if (msg instanceof HttpRequest) {
 			boolean isFullHttpRequest = msg instanceof FullHttpRequest;
 			if (!(isHttp2() && isFullHttpRequest)) {
-				if (readTimeout != null) {
-					addHandlerFirst(NettyPipeline.ReadTimeoutHandler,
-							new ReadTimeoutHandler(readTimeout.toMillis(), TimeUnit.MILLISECONDS));
-				}
-				if (requestTimeout != null) {
-					requestTimeoutFuture =
-							ctx.executor().schedule(new RequestTimeoutTask(ctx), Math.max(requestTimeout.toMillis(), 1), TimeUnit.MILLISECONDS);
-				}
+				startReadTimeout(ctx);
 			}
 			try {
 				listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
@@ -779,30 +793,73 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					onInboundComplete();
 				}
 			}
-			return;
 		}
-		if (msg instanceof HttpContent) {
-			if (!(msg instanceof EmptyLastHttpContent emptyLastHttpContent)) {
-				super.onInboundNext(ctx, msg);
-			}
-			else {
-				emptyLastHttpContent.close();
-			}
-			if (msg instanceof LastHttpContent) {
-				if (readTimeout != null) {
-					removeHandler(NettyPipeline.ReadTimeoutHandler);
-				}
-				if (requestTimeoutFuture != null) {
-					requestTimeoutFuture.cancel();
-					requestTimeoutFuture = null;
-				}
-				//force auto read to enable more accurate close selection now inbound is done
-				channel().setOption(ChannelOption.AUTO_READ, true);
-				onInboundComplete();
-			}
+		else if (msg instanceof LastHttpContent) {
+			super.onInboundNext(ctx, msg);
+			handleLastHttpContent();
 		}
 		else {
 			super.onInboundNext(ctx, msg);
+		}
+	}
+
+	void handleDefaultHttpRequest(ChannelHandlerContext ctx) {
+		startReadTimeout(ctx);
+		try {
+			listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
+		}
+		catch (Exception e) {
+			onInboundError(e);
+		}
+	}
+
+	void handleDefaultFullHttpRequest(ChannelHandlerContext ctx, DefaultFullHttpRequest msg) {
+		try {
+			listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
+		}
+		catch (Exception e) {
+			onInboundError(e);
+			msg.close();
+			return;
+		}
+		if (msg.payload().readableBytes() > 0) {
+			super.onInboundNext(ctx, msg);
+		}
+		else {
+			msg.close();
+		}
+		if (isHttp2()) {
+			//force auto read to enable more accurate close selection now inbound is done
+			channel().setOption(ChannelOption.AUTO_READ, true);
+			onInboundComplete();
+		}
+	}
+
+	void handleLastHttpContent() {
+		stopReadTimeout();
+		//force auto read to enable more accurate close selection now inbound is done
+		channel().setOption(ChannelOption.AUTO_READ, true);
+		onInboundComplete();
+	}
+
+	void startReadTimeout(ChannelHandlerContext ctx) {
+		if (readTimeout != null) {
+			addHandlerFirst(NettyPipeline.ReadTimeoutHandler,
+					new ReadTimeoutHandler(readTimeout.toMillis(), TimeUnit.MILLISECONDS));
+		}
+		if (requestTimeout != null) {
+			requestTimeoutFuture =
+					ctx.executor().schedule(new RequestTimeoutTask(ctx), Math.max(requestTimeout.toMillis(), 1), TimeUnit.MILLISECONDS);
+		}
+	}
+
+	void stopReadTimeout() {
+		if (readTimeout != null) {
+			removeHandler(NettyPipeline.ReadTimeoutHandler);
+		}
+		if (requestTimeoutFuture != null) {
+			requestTimeoutFuture.cancel();
+			requestTimeoutFuture = null;
 		}
 	}
 
