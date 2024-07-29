@@ -28,6 +28,11 @@ import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.DecoderResultProvider;
+import io.netty5.handler.codec.http.DefaultFullHttpResponse;
+import io.netty5.handler.codec.http.DefaultHttpContent;
+import io.netty5.handler.codec.http.DefaultHttpResponse;
+import io.netty5.handler.codec.http.DefaultLastHttpContent;
+import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpRequest;
@@ -359,8 +364,25 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+		Class<?> msgClass = msg.getClass();
 		// modify message on way out to add headers if needed
-		if (msg instanceof HttpResponse response) {
+		if (msgClass == DefaultHttpResponse.class) {
+			return handleDefaultHttpResponse((DefaultHttpResponse) msg);
+		}
+		else if (msgClass == DefaultFullHttpResponse.class) {
+			Future<Void> f = handleDefaultFullHttpResponse((DefaultFullHttpResponse) msg);
+			if (f != null) {
+				return f;
+			}
+			return handleLastHttpContent(msg);
+		}
+		else if (msgClass == EmptyLastHttpContent.class || msgClass == DefaultLastHttpContent.class) {
+			return handleLastHttpContent(msg);
+		}
+		else if (msgClass == DefaultHttpContent.class) {
+			return handleDefaultHttContent((DefaultHttpContent) msg);
+		}
+		else if (msg instanceof HttpResponse response) {
 			if (pendingResponses == 0) {
 				return responseAlreadySent(msg);
 			}
@@ -382,51 +404,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			}
 		}
 		if (msg instanceof LastHttpContent) {
-			finalizingResponse = true;
-
-			if (LAST_FLUSH_WHEN_NO_READ) {
-				needsFlush = !read;
-			}
-
-			if (!shouldKeepAlive()) {
-				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(), "Detected non persistent http " +
-									"connection, preparing to close. Pending responses count: {}"),
-							pendingResponses);
-				}
-				return ctx.write(msg).addListener(ctx, ChannelFutureListeners.CLOSE);
-			}
-
-			Future<Void> future = ctx.write(msg);
-
-			if (!persistentConnection) {
-				return future;
-			}
-
-			if (nonInformationalResponse) {
-				nonInformationalResponse = false;
-				pendingResponses -= 1;
-				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(), "Decreasing pending responses count: {}"),
-							pendingResponses);
-				}
-			}
-
-			if (pipelined != null && !pipelined.isEmpty()) {
-				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(), "Draining next pipelined " +
-									"HTTP request, pending responses count: {}, queued: {}"),
-							pendingResponses, pipelined.size());
-				}
-				ctx.executor()
-				   .execute(this);
-			}
-			else {
-				IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
-
-				ctx.read();
-			}
-			return future;
+			return handleLastHttpContent(msg);
 		}
 		if (persistentConnection && pendingResponses == 0) {
 			return responseAlreadySent(msg);
@@ -443,6 +421,103 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		}
 		Resource.dispose(msg);
 		return ctx.newSucceededFuture();
+	}
+
+	@Nullable
+	Future<Void> handleDefaultFullHttpResponse(DefaultFullHttpResponse response) {
+		nonInformationalResponse = !isInformational(response);
+		// Assume the response writer knows if they can persist or not and sets isKeepAlive on the response
+		boolean maxKeepAliveRequestsReached = maxKeepAliveRequests != -1 && HttpServerOperations.requestsCounter(ctx.channel()) == maxKeepAliveRequests;
+		if (maxKeepAliveRequestsReached || !isKeepAlive(response) || !isSelfDefinedMessageLength(response)) {
+			// No longer keep alive as the client can't tell when the message is done unless we close connection
+			pendingResponses = 0;
+			persistentConnection = false;
+		}
+		// Server might think it can keep connection alive, but we should fix response header if we know better
+		if (!shouldKeepAlive()) {
+			setKeepAlive(response, false);
+		}
+
+		if (response.status().equals(HttpResponseStatus.CONTINUE)) {
+			return ctx.write(response);
+		}
+		return null;
+	}
+
+	@SuppressWarnings("FutureReturnValueIgnored")
+	Future<Void> handleDefaultHttContent(DefaultHttpContent msg) {
+		if (persistentConnection && pendingResponses == 0) {
+			if (HttpServerOperations.log.isDebugEnabled()) {
+				HttpServerOperations.log.debug(
+						format(ctx.channel(), "Dropped HTTP content, since response has been sent already: {}"),
+								httpMessageLogFactory.debug(HttpMessageArgProviderFactory.create(msg)));
+			}
+			msg.close();
+			return ctx.newSucceededFuture();
+		}
+		return ctx.write(msg);
+	}
+
+	Future<Void> handleDefaultHttpResponse(DefaultHttpResponse response) {
+		nonInformationalResponse = !isInformational(response);
+		// Assume the response writer knows if they can persist or not and sets isKeepAlive on the response
+		boolean maxKeepAliveRequestsReached = maxKeepAliveRequests != -1 && HttpServerOperations.requestsCounter(ctx.channel()) == maxKeepAliveRequests;
+		if (maxKeepAliveRequestsReached || !isKeepAlive(response) || !isSelfDefinedMessageLength(response)) {
+			// No longer keep alive as the client can't tell when the message is done unless we close connection
+			pendingResponses = 0;
+			persistentConnection = false;
+		}
+		// Server might think it can keep connection alive, but we should fix response header if we know better
+		if (!shouldKeepAlive()) {
+			setKeepAlive(response, false);
+		}
+		return ctx.write(response);
+	}
+
+	Future<Void> handleLastHttpContent(Object msg) {
+		finalizingResponse = true;
+
+		if (LAST_FLUSH_WHEN_NO_READ) {
+			needsFlush = !read;
+		}
+
+		if (!shouldKeepAlive()) {
+			if (HttpServerOperations.log.isDebugEnabled()) {
+				HttpServerOperations.log.debug(format(ctx.channel(), "Detected non persistent http " +
+								"connection, preparing to close. Pending responses count: {}"),
+						pendingResponses);
+			}
+			return ctx.write(msg).addListener(ctx, ChannelFutureListeners.CLOSE);
+		}
+
+		Future<Void> future = ctx.write(msg);
+
+		if (!persistentConnection) {
+			return future;
+		}
+
+		if (nonInformationalResponse) {
+			nonInformationalResponse = false;
+			pendingResponses -= 1;
+			if (HttpServerOperations.log.isDebugEnabled()) {
+				HttpServerOperations.log.debug(format(ctx.channel(), "Decreasing pending responses count: {}"),
+						pendingResponses);
+			}
+		}
+
+		if (pipelined != null && !pipelined.isEmpty()) {
+			if (HttpServerOperations.log.isDebugEnabled()) {
+				HttpServerOperations.log.debug(format(ctx.channel(), "Draining next pipelined " +
+								"HTTP request, pending responses count: {}, queued: {}"),
+						pendingResponses, pipelined.size());
+			}
+			ctx.executor().execute(this);
+		}
+		else {
+			IdleTimeoutHandler.addIdleTimeoutHandler(ctx.pipeline(), idleTimeout);
+			ctx.read();
+		}
+		return future;
 	}
 
 	@Override
