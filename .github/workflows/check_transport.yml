@@ -51,7 +51,7 @@ jobs:
             transport: native
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
-      - uses: gradle/actions/wrapper-validation@d9c87d481d55275bb5441eef3fe0e46805f9ef70
+      - uses: gradle/actions/wrapper-validation@af1da67850ed9a4cedd57bfd976089dd991e2582
       - name: Set up JDK 1.8
         uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9
         with:
