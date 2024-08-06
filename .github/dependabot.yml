@@ -139,4 +139,5 @@ updates:
   # Dependencies updated by forward merging 1.0.x branch
   - dependency-name: actions/checkout
   - dependency-name: gradle/actions
+  - dependency-name: actions/setup-java
   rebase-strategy: disabled
