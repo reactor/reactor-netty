@@ -257,7 +257,10 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			}
 		}
 		else if (persistentConnection && pendingResponses == 0) {
-			if (msg instanceof LastHttpContent<?> lastHttpContent) {
+			if (msg.getClass() == EmptyLastHttpContent.class) {
+				ctx.fireChannelRead(msg);
+			}
+			else if (msg instanceof LastHttpContent<?> lastHttpContent) {
 				DecoderResult decoderResult = lastHttpContent.decoderResult();
 				if (decoderResult.isFailure()) {
 					sendDecodingFailures(decoderResult.cause(), msg, validateHeaders);
