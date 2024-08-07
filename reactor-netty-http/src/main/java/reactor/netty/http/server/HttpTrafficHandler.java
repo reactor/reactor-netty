@@ -272,7 +272,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			}
 		}
 		else if (persistentConnection && pendingResponses == 0) {
-			if (msg instanceof LastHttpContent) {
+			if (msg == EMPTY_LAST_CONTENT) {
+				ctx.fireChannelRead(msg);
+			}
+			else if (msg instanceof LastHttpContent) {
 				DecoderResult decoderResult = ((LastHttpContent) msg).decoderResult();
 				if (decoderResult.isFailure()) {
 					sendDecodingFailures(decoderResult.cause(), msg, validateHeaders);
