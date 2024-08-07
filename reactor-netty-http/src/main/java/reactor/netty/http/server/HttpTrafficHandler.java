@@ -225,9 +225,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 					}
 				}
 
-				DecoderResult decoderResult = request.decoderResult();
-				if (decoderResult.isFailure()) {
-					sendDecodingFailures(decoderResult.cause(), msg, validateHeaders);
+				if (handleDecodingFailures(request.decoderResult(), msg, validateHeaders)) {
 					return;
 				}
 
@@ -275,13 +273,16 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			if (msg == EMPTY_LAST_CONTENT) {
 				ctx.fireChannelRead(msg);
 			}
-			else if (msg instanceof LastHttpContent) {
-				DecoderResult decoderResult = ((LastHttpContent) msg).decoderResult();
-				if (decoderResult.isFailure()) {
-					sendDecodingFailures(decoderResult.cause(), msg, validateHeaders);
+			else if (msg.getClass() == DefaultLastHttpContent.class) {
+				if (handleDecodingFailures(((DefaultLastHttpContent) msg).decoderResult(), msg, validateHeaders)) {
 					return;
 				}
-
+				ctx.fireChannelRead(msg);
+			}
+			else if (msg instanceof LastHttpContent) {
+				if (handleDecodingFailures(((LastHttpContent) msg).decoderResult(), msg, validateHeaders)) {
+					return;
+				}
 				ctx.fireChannelRead(msg);
 			}
 			else {
@@ -307,12 +308,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			return;
 		}
 
-		if (msg instanceof DecoderResultProvider) {
-			DecoderResult decoderResult = ((DecoderResultProvider) msg).decoderResult();
-			if (decoderResult.isFailure()) {
-				sendDecodingFailures(decoderResult.cause(), msg, validateHeaders);
-				return;
-			}
+		if (msg instanceof DecoderResultProvider &&
+				handleDecodingFailures(((DecoderResultProvider) msg).decoderResult(), msg, validateHeaders)) {
+			return;
 		}
 
 		ctx.fireChannelRead(msg);
@@ -348,6 +346,14 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		else {
 			ctx.flush();
 		}
+	}
+
+	boolean handleDecodingFailures(DecoderResult decoderResult, Object msg, boolean validateHeaders) {
+		if (decoderResult.isFailure()) {
+			sendDecodingFailures(decoderResult.cause(), msg, validateHeaders);
+			return true;
+		}
+		return false;
 	}
 
 	void sendDecodingFailures(Throwable t, Object msg, boolean validateHeaders) {
