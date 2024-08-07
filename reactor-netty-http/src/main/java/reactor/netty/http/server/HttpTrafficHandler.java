@@ -222,9 +222,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 					}
 				}
 
-				DecoderResult decoderResult = request.decoderResult();
-				if (decoderResult.isFailure()) {
-					sendDecodingFailures(decoderResult.cause(), msg);
+				if (handleDecodingFailures(request.decoderResult(), msg)) {
 					return;
 				}
 
@@ -270,13 +268,16 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			if (msg == EMPTY_LAST_CONTENT) {
 				ctx.fireChannelRead(msg);
 			}
-			else if (msg instanceof LastHttpContent) {
-				DecoderResult decoderResult = ((LastHttpContent) msg).decoderResult();
-				if (decoderResult.isFailure()) {
-					sendDecodingFailures(decoderResult.cause(), msg);
+			else if (msg.getClass() == DefaultLastHttpContent.class) {
+				if (handleDecodingFailures(((DefaultLastHttpContent) msg).decoderResult(), msg)) {
 					return;
 				}
-
+				ctx.fireChannelRead(msg);
+			}
+			else if (msg instanceof LastHttpContent) {
+				if (handleDecodingFailures(((LastHttpContent) msg).decoderResult(), msg)) {
+					return;
+				}
 				ctx.fireChannelRead(msg);
 			}
 			else {
@@ -302,12 +303,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			return;
 		}
 
-		if (msg instanceof DecoderResultProvider) {
-			DecoderResult decoderResult = ((DecoderResultProvider) msg).decoderResult();
-			if (decoderResult.isFailure()) {
-				sendDecodingFailures(decoderResult.cause(), msg);
-				return;
-			}
+		if (msg instanceof DecoderResultProvider &&
+				handleDecodingFailures(((DecoderResultProvider) msg).decoderResult(), msg)) {
+			return;
 		}
 
 		ctx.fireChannelRead(msg);
@@ -343,6 +341,14 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		else {
 			ctx.flush();
 		}
+	}
+
+	boolean handleDecodingFailures(DecoderResult decoderResult, Object msg) {
+		if (decoderResult.isFailure()) {
+			sendDecodingFailures(decoderResult.cause(), msg);
+			return true;
+		}
+		return false;
 	}
 
 	void sendDecodingFailures(Throwable t, Object msg) {
