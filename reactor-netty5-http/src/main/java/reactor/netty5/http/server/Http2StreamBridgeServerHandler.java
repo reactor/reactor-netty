@@ -174,7 +174,7 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter {
 
 			return ctx.write(new DefaultHttpContent(buffer));
 		}
-		else if (msg instanceof HttpResponse && CONTINUE.equals(((HttpResponse) msg).status())) {
+		else if (msg instanceof HttpResponse && CONTINUE.code() == ((HttpResponse) msg).status().code()) {
 			return ctx.write(msg);
 		}
 		else {

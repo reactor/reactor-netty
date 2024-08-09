@@ -408,7 +408,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 				setKeepAlive(response, false);
 			}
 
-			if (response.status().equals(HttpResponseStatus.CONTINUE)) {
+			if (response.status().code() == HttpResponseStatus.CONTINUE.code()) {
 				return ctx.write(msg);
 			}
 		}
@@ -447,7 +447,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			setKeepAlive(response, false);
 		}
 
-		if (response.status().equals(HttpResponseStatus.CONTINUE)) {
+		if (response.status().code() == HttpResponseStatus.CONTINUE.code()) {
 			return ctx.write(response);
 		}
 		return null;

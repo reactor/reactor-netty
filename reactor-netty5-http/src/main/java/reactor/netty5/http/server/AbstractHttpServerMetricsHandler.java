@@ -156,7 +156,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
 		try {
 			if (msg instanceof HttpResponse httpResponse) {
-				if (httpResponse.status().equals(HttpResponseStatus.CONTINUE)) {
+				if (httpResponse.status().code() == HttpResponseStatus.CONTINUE.code()) {
 					return ctx.write(msg);
 				}
 

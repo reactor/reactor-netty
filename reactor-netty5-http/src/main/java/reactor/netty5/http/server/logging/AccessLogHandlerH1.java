@@ -52,7 +52,7 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 		if (msg instanceof HttpResponse response) {
 			final HttpResponseStatus status = response.status();
 
-			if (status.equals(HttpResponseStatus.CONTINUE)) {
+			if (status.code() == HttpResponseStatus.CONTINUE.code()) {
 				return ctx.write(msg);
 			}
 
