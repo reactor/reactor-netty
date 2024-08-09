@@ -189,7 +189,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
 		}
-		else if (msg instanceof HttpResponse && HttpResponseStatus.CONTINUE.equals(((HttpResponse) msg).status())) {
+		else if (msg instanceof HttpResponse && HttpResponseStatus.CONTINUE.code() == ((HttpResponse) msg).status().code()) {
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.write(msg, promise);
 		}

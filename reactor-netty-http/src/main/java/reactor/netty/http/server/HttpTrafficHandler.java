@@ -415,7 +415,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 				setKeepAlive(response, false);
 			}
 
-			if (response.status().equals(HttpResponseStatus.CONTINUE)) {
+			if (response.status().code() == HttpResponseStatus.CONTINUE.code()) {
 				//"FutureReturnValueIgnored" this is deliberate
 				ctx.write(msg, promise);
 				return;
@@ -455,7 +455,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			setKeepAlive(response, false);
 		}
 
-		if (response.status().equals(HttpResponseStatus.CONTINUE)) {
+		if (response.status().code() == HttpResponseStatus.CONTINUE.code()) {
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.write(response, promise);
 			return true;
