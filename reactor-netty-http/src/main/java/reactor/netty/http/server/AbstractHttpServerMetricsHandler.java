@@ -157,7 +157,7 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		try {
 			if (msg instanceof HttpResponse) {
-				if (((HttpResponse) msg).status().equals(HttpResponseStatus.CONTINUE)) {
+				if (((HttpResponse) msg).status().code() == HttpResponseStatus.CONTINUE.code()) {
 					//"FutureReturnValueIgnored" this is deliberate
 					ctx.write(msg, promise);
 					return;
