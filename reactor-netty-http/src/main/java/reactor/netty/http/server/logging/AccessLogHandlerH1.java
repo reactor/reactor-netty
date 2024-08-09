@@ -54,7 +54,7 @@ final class AccessLogHandlerH1 extends BaseAccessLogHandler {
 			final HttpResponse response = (HttpResponse) msg;
 			final HttpResponseStatus status = response.status();
 
-			if (status.equals(HttpResponseStatus.CONTINUE)) {
+			if (status.code() == HttpResponseStatus.CONTINUE.code()) {
 				//"FutureReturnValueIgnored" this is deliberate
 				ctx.write(msg, promise);
 				return;
