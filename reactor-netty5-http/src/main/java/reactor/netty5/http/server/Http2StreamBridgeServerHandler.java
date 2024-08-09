@@ -26,7 +26,11 @@ import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.DecoderResult;
+import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.DefaultHttpContent;
+import io.netty5.handler.codec.http.DefaultHttpResponse;
+import io.netty5.handler.codec.http.DefaultLastHttpContent;
+import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.HttpObject;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
@@ -162,7 +166,24 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter {
 
 	@Override
 	public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof Buffer buffer) {
+		Class<?> msgClass = msg.getClass();
+		if (msgClass == DefaultHttpResponse.class) {
+			return ctx.write(msg);
+		}
+		else if (msgClass == DefaultFullHttpResponse.class) {
+			Future<Void> f = ctx.write(msg);
+			if (CONTINUE.code() == ((DefaultFullHttpResponse) msg).status().code()) {
+				return f;
+			}
+			finalizeResponse(ctx);
+			return f;
+		}
+		else if (msgClass == EmptyLastHttpContent.class || msgClass == DefaultLastHttpContent.class) {
+			Future<Void> f = ctx.write(msg);
+			finalizeResponse(ctx);
+			return f;
+		}
+		else if (msg instanceof Buffer buffer) {
 			if (!pendingResponse) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug(
@@ -180,10 +201,14 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter {
 		else {
 			Future<Void> f = ctx.write(msg);
 			if (msg instanceof LastHttpContent) {
-				pendingResponse = false;
-				ctx.read();
+				finalizeResponse(ctx);
 			}
 			return f;
 		}
+	}
+
+	void finalizeResponse(ChannelHandlerContext ctx) {
+		pendingResponse = false;
+		ctx.read();
 	}
 }
