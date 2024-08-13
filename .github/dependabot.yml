@@ -7,14 +7,14 @@ updates:
   open-pull-requests-limit: 10
   assignees:
   - violetagg
-  target-branch: "1.0.x"
+  target-branch: "1.1.x"
   labels:
   - type/dependency-upgrade
   ignore:
   # Don't update Micrometer
   - dependency-name: io.micrometer:micrometer-core
     versions:
-    - "> 1.5.0"
+    - "> 1.10.0"
   # Don't update Context Propagation
   - dependency-name: io.micrometer:context-propagation
     versions:
@@ -65,7 +65,7 @@ updates:
   open-pull-requests-limit: 10
   assignees:
       - violetagg
-  target-branch: "1.0.x"
+  target-branch: "1.1.x"
   labels:
       - type/dependency-upgrade
   rebase-strategy: disabled
