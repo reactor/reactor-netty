@@ -86,17 +86,17 @@ updates:
   # Don't update Micrometer
   - dependency-name: io.micrometer:micrometer-core
     versions:
-    - "> 1.13.0"
+    - "> 1.14.0"
   # Don't update Micrometer Tracing
   - dependency-name: io.micrometer:micrometer-tracing
     versions:
-    - "> 1.3.0"
+    - "> 1.4.0"
   - dependency-name: io.micrometer:micrometer-tracing-integration-test
     versions:
-    - "> 1.3.0"
+    - "> 1.4.0"
   - dependency-name: io.micrometer:micrometer-tracing-bridge-brave
     versions:
-    - "> 1.3.0"
+    - "> 1.4.0"
   # Don't update Context Propagation
   - dependency-name: io.micrometer:context-propagation
     versions:
