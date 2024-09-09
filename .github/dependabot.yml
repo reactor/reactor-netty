@@ -123,7 +123,7 @@ updates:
   - dependency-name: org.graalvm.buildtools.native
     versions:
     - "> 0.9.25"
-  # Dependencies updated by forward merging 1.0.x branch
+  # Dependencies updated by forward merging 1.1.x branch
   - dependency-name: org.apache.tomcat.embed:tomcat-embed-core
   - dependency-name: org.jfrog.buildinfo:build-info-extractor-gradle
   - dependency-name: org.assertj:assertj-core
@@ -136,6 +136,7 @@ updates:
   - dependency-name: org.junit.platform:junit-platform-launcher
   - dependency-name: org.junit.jupiter:*
   - dependency-name: org.awaitility:awaitility
+  - dependency-name: com.aayushatharva.brotli4j:brotli4j
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
@@ -159,7 +160,7 @@ updates:
   labels:
       - type/dependency-upgrade
   ignore:
-  # Dependencies updated by forward merging 1.0.x branch
+  # Dependencies updated by forward merging 1.1.x branch
   - dependency-name: actions/checkout
   - dependency-name: gradle/actions
   - dependency-name: actions/setup-java
