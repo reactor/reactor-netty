@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           fetch-depth: 0 #needed by spotless
-      - uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018
+      - uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88
         with:
           distribution: 'temurin'
           java-version: 8
@@ -53,7 +53,7 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       - uses: gradle/actions/wrapper-validation@16bf8bc8fe830fa669c3c9f914d3eb147c629707
       - name: Set up JDK 1.8
-        uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018
+        uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88
         with:
           distribution: 'temurin'
           java-version: '8'
