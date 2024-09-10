@@ -204,6 +204,11 @@ public final class ReactorNetty {
 	public static final String REACTOR_NETTY_SEND_MAX_PREFETCH_SIZE = "reactor.netty.send.maxPrefetchSize";
 
 	/**
+	 * Default pending task log threshold, fallback to -1 (no logging).
+	 */
+	public static final String PENDING_TASK_LOG_THRESHOLD = "reactor.netty.pendingTaskLogThreshold";
+
+	/**
 	 * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
 	 * If the specified message doesn't implement {@link ReferenceCounted} or it is already released,
 	 * this method does nothing.

@@ -35,6 +35,13 @@ import reactor.netty.ReactorNetty;
 public interface LoopResources extends Disposable {
 
 	/**
+	 * Default pending task log threshold, fallback to -1 (no logging).
+	 */
+	int DEFAULT_PENDING_TASK_LOG_THRESHOLD = Integer.parseInt(System.getProperty(
+			ReactorNetty.PENDING_TASK_LOG_THRESHOLD,
+			"" + -1));
+
+	/**
 	 * Default worker thread count, fallback to available processor
 	 * (but with a minimum value of 4).
 	 */
@@ -43,11 +50,12 @@ public interface LoopResources extends Disposable {
 			"" + Math.max(Runtime.getRuntime().availableProcessors(), 4)));
 
 	/**
-	 * Default selector thread count, fallback to -1 (no selector thread).
+	 * Default selector thread count, fallback to -1 (no selector thread),
+	 * but fallback to 1 if pending task logging is enabled.
 	 */
 	int DEFAULT_IO_SELECT_COUNT = Integer.parseInt(System.getProperty(
 			ReactorNetty.IO_SELECT_COUNT,
-			"" + -1));
+			DEFAULT_PENDING_TASK_LOG_THRESHOLD > -1 ? "" + 1 : "" + -1));
 
 	/**
 	 * Default value whether the native transport (epoll, kqueue) will be preferred,

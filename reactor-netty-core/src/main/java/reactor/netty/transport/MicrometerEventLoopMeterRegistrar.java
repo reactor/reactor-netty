@@ -19,10 +19,13 @@ import io.micrometer.core.instrument.Gauge;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import reactor.netty.internal.util.MapUtils;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static reactor.netty.resources.LoopResources.DEFAULT_PENDING_TASK_LOG_THRESHOLD;
 import static reactor.netty.transport.EventLoopMeters.PENDING_TASKS;
 import static reactor.netty.transport.EventLoopMeters.EventLoopMetersTags.NAME;
 
@@ -39,6 +42,8 @@ import static reactor.netty.Metrics.REGISTRY;
  */
 final class MicrometerEventLoopMeterRegistrar {
 
+	private static final Logger log = Loggers.getLogger(MicrometerEventLoopMeterRegistrar.class);
+
 	static final MicrometerEventLoopMeterRegistrar INSTANCE = new MicrometerEventLoopMeterRegistrar();
 
 	private final ConcurrentMap<String, EventLoop> cache = new ConcurrentHashMap<>();
@@ -50,11 +55,25 @@ final class MicrometerEventLoopMeterRegistrar {
 			SingleThreadEventExecutor singleThreadEventExecutor = (SingleThreadEventExecutor) eventLoop;
 			String executorName = singleThreadEventExecutor.threadProperties().name();
 			MapUtils.computeIfAbsent(cache, executorName, key -> {
-				Gauge.builder(PENDING_TASKS.getName(), singleThreadEventExecutor::pendingTasks)
+				Gauge.builder(PENDING_TASKS.getName(), () -> pendingTasks(singleThreadEventExecutor))
 				     .tag(NAME.asString(), executorName)
 				     .register(REGISTRY);
 				return eventLoop;
 			});
 		}
+	}
+
+	private Number pendingTasks(SingleThreadEventExecutor singleThreadEventExecutor) {
+		int pendingTasks = singleThreadEventExecutor.pendingTasks();
+		if (DEFAULT_PENDING_TASK_LOG_THRESHOLD >= 0 && pendingTasks > DEFAULT_PENDING_TASK_LOG_THRESHOLD) {
+			StackTraceElement[] stackTraceElements = singleThreadEventExecutor.threadProperties().stackTrace();
+			StringBuilder trace = new StringBuilder();
+			for (StackTraceElement traceElement : stackTraceElements) {
+				trace.append("\tat ").append(traceElement).append("\n");
+			}
+			log.warn("Thread {}: The number of pending tasks has reached the threshold. Stack trace: \n{}",
+					singleThreadEventExecutor.threadProperties().name(), trace.toString());
+		}
+		return pendingTasks;
 	}
 }
