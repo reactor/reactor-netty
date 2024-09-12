@@ -205,7 +205,7 @@ include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..39]
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java[lines=44..52]
+include::{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java[lines=42..50]
 ----
 ====
 
