@@ -192,7 +192,7 @@ include::{sourcedir}/reactor/netty5/http/HttpDecoderSpec.java[lines=28..32]
 {http-source-link}/reactor/netty5/http/client/HttpResponseDecoderSpec.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty5/http/client/HttpResponseDecoderSpec.java[lines=44..52]
+include::{sourcedir}/reactor/netty5/http/client/HttpResponseDecoderSpec.java[lines=42..50]
 ----
 
 When you need to change these default settings, you can configure the `HTTP` client as follows:

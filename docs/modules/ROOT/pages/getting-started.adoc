@@ -208,4 +208,4 @@ repositories {
 
 The entries below are mirroring https://github.com/reactor/.github/blob/main/SUPPORT.adoc
 
-include::partial$SUPPORT.adoc[leveloffset=2,lines=11..47]
+include::partial$SUPPORT.adoc[leveloffset=2,lines=11..206]
