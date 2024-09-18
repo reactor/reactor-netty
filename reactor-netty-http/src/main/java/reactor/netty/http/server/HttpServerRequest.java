@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -158,4 +158,11 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * @since 1.0.28
 	 */
 	ZonedDateTime timestamp();
+
+	/**
+	 * Returns the X-Forwarded-Prefix if it was part of the request headers.
+	 * @return the X-Forwarded-Prefix
+	 * @since 1.1.23
+	 */
+	String forwardedPrefix();
 }
