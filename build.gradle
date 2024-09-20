@@ -100,7 +100,7 @@ ext {
 
 	// Used only in examples
 	braveVersion = '6.0.3'
-	zipkinSenderVersion = '3.4.1'
+	zipkinSenderVersion = '3.4.2'
 
 	jsr305Version = '3.0.2'
 
