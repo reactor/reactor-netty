@@ -15,6 +15,10 @@
  */
 package reactor.netty.http.server;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.StringTokenizer;
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -44,6 +48,8 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 	static final Pattern FORWARDED_HOST_PATTERN   = Pattern.compile("host=\"?([^;,\"]+)\"?");
 	static final Pattern FORWARDED_PROTO_PATTERN  = Pattern.compile("proto=\"?([^;,\"]+)\"?");
 	static final Pattern FORWARDED_FOR_PATTERN    = Pattern.compile("for=\"?([^;,\"]+)\"?");
+
+	private static final String[] EMPTY_STRING_ARRAY = {};
 
 	/**
 	 * Specifies whether the Http Server applies a strict {@code Forwarded} header validation.
@@ -118,9 +124,34 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		}
 
 		String prefixHeader = request.headers().get(X_FORWARDED_PREFIX_HEADER);
-		if (prefixHeader != null && !prefixHeader.isEmpty()) {
-			connectionInfo = connectionInfo.withForwardedPrefix(prefixHeader);
+		if (prefixHeader != null) {
+			connectionInfo = connectionInfo.withForwardedPrefix(parseForwardedPrefix(prefixHeader));
 		}
 		return connectionInfo;
+	}
+
+	private static String parseForwardedPrefix(String prefixHeader) {
+		StringBuilder prefix = new StringBuilder(prefixHeader.length());
+		String[] rawPrefixes = tokenizeToStringArray(prefixHeader);
+		for (String rawPrefix : rawPrefixes) {
+			int endIndex = rawPrefix.length();
+			while (endIndex > 1 && rawPrefix.charAt(endIndex - 1) == '/') {
+				endIndex--;
+			}
+			prefix.append((endIndex != rawPrefix.length() ? rawPrefix.substring(0, endIndex) : rawPrefix));
+		}
+		return prefix.toString();
+	}
+
+	private static String[] tokenizeToStringArray(String str) {
+		StringTokenizer st = new StringTokenizer(str, ",");
+		ArrayList<String> tokens = new ArrayList<>();
+		while (st.hasMoreTokens()) {
+			String token = st.nextToken().trim();
+			if (!token.isEmpty()) {
+				tokens.add(token);
+			}
+		}
+		return !tokens.isEmpty() ? tokens.toArray(EMPTY_STRING_ARRAY) : EMPTY_STRING_ARRAY;
 	}
 }

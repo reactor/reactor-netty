@@ -57,6 +57,7 @@ public final class ConnectionInfo {
 
 	final boolean isInetAddress;
 
+	@Nullable
 	final String forwardedPrefix;
 
 	static ConnectionInfo from(Channel channel, HttpRequest request, boolean secured, SocketAddress remoteAddress,
@@ -96,11 +97,11 @@ public final class ConnectionInfo {
 
 	ConnectionInfo(SocketAddress hostAddress, String hostName, int hostPort,
 			SocketAddress remoteAddress, String scheme, boolean isInetAddress) {
-		this(hostAddress, hostName, hostPort, remoteAddress, scheme, isInetAddress, "");
+		this(hostAddress, hostName, hostPort, remoteAddress, scheme, isInetAddress, null);
 	}
 
 	ConnectionInfo(SocketAddress hostAddress, String hostName, int hostPort,
-			SocketAddress remoteAddress, String scheme, boolean isInetAddress, String forwardedPrefix) {
+			SocketAddress remoteAddress, String scheme, boolean isInetAddress, @Nullable String forwardedPrefix) {
 		this.hostAddress = hostAddress;
 		this.hostName = hostName;
 		this.hostPort = hostPort;
@@ -216,6 +217,7 @@ public final class ConnectionInfo {
 	 * @return the X-Forwarded-Prefix
 	 * @since 1.1.23
 	 */
+	@Nullable
 	public String getForwardedPrefix() {
 		return forwardedPrefix;
 	}

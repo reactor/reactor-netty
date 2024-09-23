@@ -164,5 +164,6 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * @return the X-Forwarded-Prefix
 	 * @since 1.1.23
 	 */
+	@Nullable
 	String forwardedPrefix();
 }
