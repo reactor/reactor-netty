@@ -16,8 +16,6 @@
 package reactor.netty.http.server;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.StringTokenizer;
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
