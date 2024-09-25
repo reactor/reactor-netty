@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       - name: setup java
-        uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88
+        uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73
         with:
           distribution: 'temurin'
           java-version: 17
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       - name: setup java
-        uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88
+        uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73
         with:
           distribution: 'temurin'
           java-version: '8'
@@ -59,7 +59,7 @@ jobs:
 #    steps:
 #      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 #      - name: setup java
-#        uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88
+#        uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73
 #        with:
 #          distribution: 'temurin'
 #          java-version: '8'
@@ -81,7 +81,7 @@ jobs:
       - name: Install asciidoctor-pdf / rouge
         run: gem install asciidoctor-pdf rouge
       - name: Setup java 17 for antora
-        uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88
+        uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -108,7 +108,7 @@ jobs:
     environment: snapshots
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
-      - uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88
+      - uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73
         with:
           distribution: 'temurin'
           java-version: 17
@@ -134,7 +134,7 @@ jobs:
     environment: releases
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
-      - uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88
+      - uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73
         with:
           distribution: 'temurin'
           java-version: 17
@@ -162,7 +162,7 @@ jobs:
     environment: releases
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
-      - uses: actions/setup-java@2dfa2011c5b2a0f1489bf9e433881c92c1631f88
+      - uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73
         with:
           distribution: 'temurin'
           java-version: 17
