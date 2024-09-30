@@ -735,6 +735,8 @@ public final class ReactorNetty {
 
 		// This construction is used only with ChannelOperations#sendObject
 		// The implementation relies on Netty's promise that Channel#writeAndFlush will release the buffer on success/error
+		// The onCleanup callback is invoked only in case when we are sure that the processing doesn't delegate to Netty
+		// because of some failure before the exchange can be continued in the thenPublisher
 		OutboundThen(NettyOutbound source, Publisher<Void> thenPublisher, Runnable onCleanup) {
 			this.source = source;
 			Objects.requireNonNull(onCleanup, "onCleanup");
