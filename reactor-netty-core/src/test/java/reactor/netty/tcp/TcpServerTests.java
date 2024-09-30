@@ -53,6 +53,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.SslContext;
@@ -67,6 +68,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -84,6 +87,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.LoopResources;
+import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -1232,6 +1236,57 @@ class TcpServerTests {
 			}
 			List<String> serverMessages = serverMsg.get();
 			assertThat(serverMessages.size()).isEqualTo(0);
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testIssue3406(boolean singleInvocation) {
+		DisposableServer server = null;
+		Connection client = null;
+
+		try {
+			server =
+					TcpServer.create()
+					         .wiretap(true)
+					         .handle((in, out) -> out.sendString(Mono.just("testIssue3406"))
+					                                 .then(in.receive().then()))
+					         .bindNow();
+
+			Sinks.One<Void> result = Sinks.one();
+			client =
+					TcpClient.create()
+					         .remoteAddress(server::address)
+					         .wiretap(true)
+					         .doOnConnected(conn ->
+					                 conn.addHandlerFirst(
+					                     new MessageToMessageEncoder<Object>() {
+					                         @Override
+					                         protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) {
+					                             // This is no-op in order to force Netty to release the 'msg'
+					                             // and to throw Exception
+					                         }
+					                     }))
+					         .handle((in, out) ->
+					                 in.receive()
+					                   .retain()
+					                   .doOnError(result::tryEmitError)
+					                   .doOnComplete(result::tryEmitEmpty)
+					                   .flatMap(b -> singleInvocation ? out.sendObject(b) : out.sendObject(b.retain()).sendObject(b)))
+					         .connectNow();
+
+			result.asMono()
+			      .as(StepVerifier::create)
+			      .expectComplete()
+			      .verify(Duration.ofSeconds(5));
+		}
+		finally {
+			if (client != null) {
+				client.disposeNow();
+			}
+			if (server != null) {
+				server.disposeNow();
+			}
 		}
 	}
 }
