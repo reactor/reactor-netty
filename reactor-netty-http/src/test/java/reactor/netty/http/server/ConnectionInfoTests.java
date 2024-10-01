@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Mono;
@@ -218,6 +219,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
 	}
@@ -234,6 +236,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
 	}
@@ -250,6 +253,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
 	}
@@ -265,6 +269,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(9090);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(9090);
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
 	}
@@ -282,6 +287,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
 	}
@@ -299,6 +305,78 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
+				},
+				useCustomForwardedHandler);
+	}
+
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedPrefix(boolean useCustomForwardedHandler) {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-Prefix", "/test-prefix");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isEqualTo("/test-prefix");
+				},
+				useCustomForwardedHandler);
+	}
+
+	@Test
+	void xForwardedPrefixWithoutForwardSlash() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-Prefix", "forward-slash-missing");
+				},
+				serverRequest -> {
+
+				},
+				null,
+				httpClient -> httpClient,
+				httpServer -> httpServer.port(8080),
+				false,
+				true);
+	}
+
+	@ParameterizedTest
+	@CsvSource(value = {
+			"/first,/second    | /first/second",
+			"/first,/second/   | /first/second",
+			"/first/,/second/  | /first/second",
+			"/first/,/second// | /first/second"
+	}, delimiter = '|')
+	void xForwardedPrefixDelimited(String input, String output) {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-Prefix", input);
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isEqualTo(output);
+				},
+				false);
+	}
+
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedPrefixEmpty(boolean useCustomForwardedHandler) {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-Prefix", "");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isEqualTo("");
+				},
+				useCustomForwardedHandler);
+	}
+
+	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ValueSource(booleans = {true, false})
+	void xForwardedPrefixMissing(boolean useCustomForwardedHandler) {
+		testClientRequest(
+				clientRequestHeaders -> {},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
 	}
@@ -314,6 +392,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					clientRequestHeaders.add("X-Forwarded-Port", "8081");
 					clientRequestHeaders.add("X-Forwarded-Proto", "http");
 					clientRequestHeaders.add("X-Forwarded-Proto", "https");
+					clientRequestHeaders.add("X-Forwarded-Prefix", "/test-prefix");
 				},
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
@@ -321,6 +400,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isEqualTo("/test-prefix");
 				},
 				useCustomForwardedHandler);
 	}
@@ -339,6 +419,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(port);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(port);
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				getForwardedHandler(useCustomForwardedHandler),
 				httpClient -> httpClient,
@@ -359,6 +440,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("192.168.0.1");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				getForwardedHandler(useCustomForwardedHandler),
 				httpClient -> httpClient,
@@ -382,6 +464,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
 	}
@@ -403,6 +486,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
 	}
@@ -424,6 +508,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
 	}
@@ -449,6 +534,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(8443);
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				getForwardedHandler(useCustomForwardedHandler),
 				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
@@ -471,6 +557,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 					Assertions.assertThat(serverRequest.hostName()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostPort()).isEqualTo(getDefaultHostPort(protocol));
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo(protocol);
+					Assertions.assertThat(serverRequest.forwardedPrefix()).isNull();
 				},
 				useCustomForwardedHandler);
 	}

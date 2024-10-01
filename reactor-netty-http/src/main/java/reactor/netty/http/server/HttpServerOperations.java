@@ -513,6 +513,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public String forwardedPrefix() {
+		return connectionInfo.getForwardedPrefix();
+	}
+
+	@Override
 	@SuppressWarnings("unchecked")
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
 		if (!channel().isActive()) {

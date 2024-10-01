@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ public final class CustomXForwardedHeadersHandler {
 	static final String X_FORWARDED_HOST_HEADER = "X-Forwarded-Host";
 	static final String X_FORWARDED_PORT_HEADER = "X-Forwarded-Port";
 	static final String X_FORWARDED_PROTO_HEADER = "X-Forwarded-Proto";
+	static final String X_FORWARDED_PREFIX_HEADER = "X-Forwarded-Prefix";
 
 	private CustomXForwardedHeadersHandler() {
 	}
@@ -74,6 +75,12 @@ public final class CustomXForwardedHeadersHandler {
 				throw new IllegalArgumentException("Failed to parse a port from " + portHeader);
 			}
 		}
+
+		String prefixHeader = request.headers().get(X_FORWARDED_PREFIX_HEADER);
+		if (prefixHeader != null) {
+			connectionInfo = connectionInfo.withForwardedPrefix(prefixHeader);
+		}
+
 		return connectionInfo;
 	}
 }
