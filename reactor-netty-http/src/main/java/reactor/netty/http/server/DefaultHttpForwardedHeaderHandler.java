@@ -139,7 +139,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 			prefix.append((endIndex != rawPrefix.length() ? rawPrefix.substring(0, endIndex) : rawPrefix));
 		}
 		String parsedPrefix = prefix.toString();
-		if (!parsedPrefix.isEmpty() && DEFAULT_FORWARDED_HEADER_VALIDATION && !parsedPrefix.startsWith("/")) {
+		if (!parsedPrefix.isEmpty() && DEFAULT_FORWARDED_HEADER_VALIDATION && parsedPrefix.charAt(0) != '/') {
 			throw new IllegalArgumentException("X-Forwarded-Prefix did not start with a slash (\"/\"): " + prefixHeader);
 		}
 		return parsedPrefix;
