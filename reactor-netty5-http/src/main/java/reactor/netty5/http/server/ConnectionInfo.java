@@ -57,6 +57,9 @@ public final class ConnectionInfo {
 
 	final boolean isInetAddress;
 
+	@Nullable
+	final String forwardedPrefix;
+
 	static ConnectionInfo from(Channel channel, HttpRequest request, boolean secured, SocketAddress remoteAddress,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
 		String hostName = DEFAULT_HOST_NAME;
@@ -94,12 +97,18 @@ public final class ConnectionInfo {
 
 	ConnectionInfo(SocketAddress hostAddress, String hostName, int hostPort,
 			SocketAddress remoteAddress, String scheme, boolean isInetAddress) {
+		this(hostAddress, hostName, hostPort, remoteAddress, scheme, isInetAddress, null);
+	}
+
+	ConnectionInfo(SocketAddress hostAddress, String hostName, int hostPort,
+			SocketAddress remoteAddress, String scheme, boolean isInetAddress, @Nullable String forwardedPrefix) {
 		this.hostAddress = hostAddress;
 		this.hostName = hostName;
 		this.hostPort = hostPort;
 		this.isInetAddress = isInetAddress;
 		this.remoteAddress = remoteAddress;
 		this.scheme = scheme;
+		this.forwardedPrefix = forwardedPrefix;
 	}
 
 	/**
@@ -174,6 +183,18 @@ public final class ConnectionInfo {
 	}
 
 	/**
+	 * Return a new {@link ConnectionInfo} with the forwardedPrefix set.
+	 * @param forwardedPrefix the prefix provided via X-Forwarded-Prefix header
+	 * @return a new {@link ConnectionInfo}
+	 * @since 1.1.23
+	 */
+	public ConnectionInfo withForwardedPrefix(String forwardedPrefix) {
+		requireNonNull(forwardedPrefix, "forwardedPrefix");
+		return new ConnectionInfo(this.hostAddress, this.hostName, this.hostPort, this.remoteAddress, this.scheme,
+				this.isInetAddress, forwardedPrefix);
+	}
+
+	/**
 	 * Returns the connection host name.
 	 * @return the connection host name
 	 * @since 1.0.32
@@ -189,6 +210,16 @@ public final class ConnectionInfo {
 	 */
 	public int getHostPort() {
 		return hostPort != -1 ? hostPort : getDefaultHostPort(scheme);
+	}
+
+	/**
+	 * Returns the X-Forwarded-Prefix if it was part of the request headers.
+	 * @return the X-Forwarded-Prefix
+	 * @since 1.1.23
+	 */
+	@Nullable
+	public String getForwardedPrefix() {
+		return forwardedPrefix;
 	}
 
 	/**
