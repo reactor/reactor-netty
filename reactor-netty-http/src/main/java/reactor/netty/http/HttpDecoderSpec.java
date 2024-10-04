@@ -233,6 +233,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	 *
 	 * @param allowPartialChunks set to {@code false} to only allow sending whole chunks down the pipeline.
 	 * @return this option builder for further configuration
+	 * @since 1.1.23
 	 */
 	public T allowPartialChunks(boolean allowPartialChunks) {
 		this.allowPartialChunks = allowPartialChunks;
