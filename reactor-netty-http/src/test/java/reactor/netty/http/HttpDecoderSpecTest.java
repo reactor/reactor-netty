@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ public class HttpDecoderSpecTest {
 		checkDefaultValidateHeaders(conf);
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
+		checkDefaultAllowPartialChunks(conf);
 	}
 
 	@Test
@@ -71,6 +72,7 @@ public class HttpDecoderSpecTest {
 		checkDefaultValidateHeaders(conf);
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
+		checkDefaultAllowPartialChunks(conf);
 	}
 
 	@Test
@@ -100,6 +102,7 @@ public class HttpDecoderSpecTest {
 		checkDefaultValidateHeaders(conf);
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
+		checkDefaultAllowPartialChunks(conf);
 	}
 
 	@Test
@@ -129,6 +132,7 @@ public class HttpDecoderSpecTest {
 		checkDefaultMaxChunkSize(conf);
 		checkDefaultInitialBufferSize(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
+		checkDefaultAllowPartialChunks(conf);
 	}
 
 	@Test
@@ -144,6 +148,7 @@ public class HttpDecoderSpecTest {
 		checkDefaultMaxChunkSize(conf);
 		checkDefaultValidateHeaders(conf);
 		checkDefaultAllowDuplicateContentLengths(conf);
+		checkDefaultAllowPartialChunks(conf);
 	}
 
 	@Test
@@ -172,6 +177,23 @@ public class HttpDecoderSpecTest {
 		checkDefaultMaxChunkSize(conf);
 		checkDefaultValidateHeaders(conf);
 		checkDefaultInitialBufferSize(conf);
+		checkDefaultAllowPartialChunks(conf);
+	}
+
+	@Test
+	void allowPartialChunks() {
+		checkDefaultAllowPartialChunks(conf);
+
+		conf.allowPartialChunks(false);
+
+		assertThat(conf.allowPartialChunks()).as("allow partial chunks").isFalse();
+
+		checkDefaultMaxInitialLineLength(conf);
+		checkDefaultMaxHeaderSize(conf);
+		checkDefaultMaxChunkSize(conf);
+		checkDefaultValidateHeaders(conf);
+		checkDefaultInitialBufferSize(conf);
+		checkDefaultAllowDuplicateContentLengths(conf);
 	}
 
 	public static void checkDefaultMaxInitialLineLength(HttpDecoderSpec<?> conf) {
@@ -209,6 +231,12 @@ public class HttpDecoderSpecTest {
 		assertThat(conf.allowDuplicateContentLengths()).as("default allow duplicate Content-Length headers")
 				.isEqualTo(HttpDecoderSpec.DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS)
 				.isFalse();
+	}
+
+	public static void checkDefaultAllowPartialChunks(HttpDecoderSpec<?> conf) {
+		assertThat(conf.allowPartialChunks()).as("default allow partial chunks")
+				.isEqualTo(HttpDecoderSpec.DEFAULT_ALLOW_PARTIAL_CHUNKS)
+				.isTrue();
 	}
 
 	private static final class HttpDecoderSpecImpl extends HttpDecoderSpec<HttpDecoderSpecImpl> {

@@ -1701,6 +1701,7 @@ class HttpClientTest extends BaseHttpTest {
 		AtomicBoolean validate = new AtomicBoolean();
 		AtomicInteger chunkSize = new AtomicInteger();
 		AtomicBoolean allowDuplicateContentLengths = new AtomicBoolean();
+		AtomicBoolean allowPartialChunks = new AtomicBoolean(true);
 		disposableServer =
 				createServer()
 				          .handle((req, resp) -> req.receive()
@@ -1715,7 +1716,8 @@ class HttpClientTest extends BaseHttpTest {
 		                                       .initialBufferSize(10)
 		                                       .failOnMissingResponse(true)
 		                                       .parseHttpAfterConnectRequest(true)
-		                                       .allowDuplicateContentLengths(true))
+		                                       .allowDuplicateContentLengths(true)
+		                                       .allowPartialChunks(false))
 		        .doOnConnected(c -> {
 		                    channelRef.set(c.channel());
 		                    HttpClientCodec codec = c.channel()
@@ -1725,6 +1727,7 @@ class HttpClientTest extends BaseHttpTest {
 		                    chunkSize.set((Integer) getValueReflection(decoder, "maxChunkSize", 2));
 		                    validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
 		                    allowDuplicateContentLengths.set((Boolean) getValueReflection(decoder, "allowDuplicateContentLengths", 2));
+		                    allowPartialChunks.set((Boolean) getValueReflection(decoder, "allowPartialChunks", 2));
 		                })
 		        .post()
 		        .uri("/")
@@ -1738,6 +1741,7 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(chunkSize).as("line length").hasValue(789);
 		assertThat(validate).as("validate headers").isFalse();
 		assertThat(allowDuplicateContentLengths).as("allow duplicate Content-Length").isTrue();
+		assertThat(allowPartialChunks).as("allow partial chunks").isFalse();
 	}
 
 	private Object getValueReflection(Object obj, String fieldName, int superLevel) {

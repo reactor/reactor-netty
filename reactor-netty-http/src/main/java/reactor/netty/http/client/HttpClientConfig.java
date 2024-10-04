@@ -653,7 +653,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		             .setMaxChunkSize(decoder.maxChunkSize())
 		             .setValidateHeaders(decoder.validateHeaders())
 		             .setInitialBufferSize(decoder.initialBufferSize())
-		             .setAllowDuplicateContentLengths(decoder.allowDuplicateContentLengths());
+		             .setAllowDuplicateContentLengths(decoder.allowDuplicateContentLengths())
+		             .setAllowPartialChunks(decoder.allowPartialChunks());
 		HttpClientCodec httpClientCodec =
 				new HttpClientCodec(decoderConfig, decoder.failOnMissingResponse, decoder.parseHttpAfterConnectRequest);
 
@@ -715,7 +716,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		             .setMaxChunkSize(decoder.maxChunkSize())
 		             .setValidateHeaders(decoder.validateHeaders())
 		             .setInitialBufferSize(decoder.initialBufferSize())
-		             .setAllowDuplicateContentLengths(decoder.allowDuplicateContentLengths());
+		             .setAllowDuplicateContentLengths(decoder.allowDuplicateContentLengths())
+		             .setAllowPartialChunks(decoder.allowPartialChunks());
 		p.addBefore(NettyPipeline.ReactiveBridge,
 				NettyPipeline.HttpCodec,
 				new HttpClientCodec(decoderConfig, decoder.failOnMissingResponse, decoder.parseHttpAfterConnectRequest));
