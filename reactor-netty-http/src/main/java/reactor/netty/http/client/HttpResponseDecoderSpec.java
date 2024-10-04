@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package reactor.netty.http.client;
 
 import reactor.netty.http.HttpDecoderSpec;
-import reactor.netty.http.server.HttpRequestDecoderSpec;
 
 /**
  * A configuration builder to fine tune the {@link io.netty.handler.codec.http.HttpClientCodec}
@@ -33,6 +32,7 @@ import reactor.netty.http.server.HttpRequestDecoderSpec;
  *     <tr><td>{@link #DEFAULT_MAX_INITIAL_LINE_LENGTH}</td><td>4096</td></tr>
  *     <tr><td>{@link #DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST}</td><td>false</td></tr>
  *     <tr><td>{@link #DEFAULT_VALIDATE_HEADERS}</td><td>true</td></tr>
+ *     <tr><td>{@link #DEFAULT_ALLOW_PARTIAL_CHUNKS}</td><td>true</td></tr>
  * </table>
  *
  * @author Violeta Georgieva
@@ -110,7 +110,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 	}
 
 	/**
-	 * Build a {@link HttpRequestDecoderSpec}.
+	 * Build a {@link HttpResponseDecoderSpec}.
 	 */
 	HttpResponseDecoderSpec build() {
 		HttpResponseDecoderSpec decoder = new HttpResponseDecoderSpec();
@@ -123,6 +123,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 		decoder.failOnMissingResponse = failOnMissingResponse;
 		decoder.parseHttpAfterConnectRequest = parseHttpAfterConnectRequest;
 		decoder.h2cMaxContentLength = h2cMaxContentLength;
+		decoder.allowPartialChunks = allowPartialChunks;
 		return decoder;
 	}
 }
