@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import reactor.netty5.http.HttpDecoderSpec;
  *     <tr><td>{@link #DEFAULT_MAX_HEADER_SIZE}</td><td>8192</td></tr>
  *     <tr><td>{@link #DEFAULT_MAX_INITIAL_LINE_LENGTH}</td><td>4096</td></tr>
  *     <tr><td>{@link #DEFAULT_VALIDATE_HEADERS}</td><td>true</td></tr>
+ *     <tr><td>{@link #DEFAULT_ALLOW_PARTIAL_CHUNKS}</td><td>true</td></tr>
  * </table>
  *
  * @author Simon Baslé
@@ -64,6 +65,7 @@ public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDec
 		decoder.validateHeaders = validateHeaders;
 		decoder.allowDuplicateContentLengths = allowDuplicateContentLengths;
 		decoder.h2cMaxContentLength = h2cMaxContentLength;
+		decoder.allowPartialChunks = allowPartialChunks;
 		return decoder;
 	}
 }

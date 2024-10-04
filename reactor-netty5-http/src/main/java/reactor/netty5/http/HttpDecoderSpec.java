@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	public static final boolean DEFAULT_VALIDATE_HEADERS                = true;
 	public static final int DEFAULT_INITIAL_BUFFER_SIZE                 = 128;
 	public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
+	public static final boolean DEFAULT_ALLOW_PARTIAL_CHUNKS = true;
 
 	protected int maxInitialLineLength             = DEFAULT_MAX_INITIAL_LINE_LENGTH;
 	protected int maxHeaderSize                    = DEFAULT_MAX_HEADER_SIZE;
@@ -37,6 +38,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	protected int initialBufferSize                = DEFAULT_INITIAL_BUFFER_SIZE;
 	protected boolean allowDuplicateContentLengths = DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS;
 	protected int h2cMaxContentLength;
+	protected boolean allowPartialChunks = DEFAULT_ALLOW_PARTIAL_CHUNKS;
 
 	/**
 	 * Configure the maximum length that can be decoded for the HTTP request's initial
@@ -189,6 +191,30 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		return h2cMaxContentLength;
 	}
 
+	/**
+	 * Configure whether chunks can be split into multiple messages, if their chunk size exceeds the size of the
+	 * input buffer. Defaults to {@link #DEFAULT_ALLOW_PARTIAL_CHUNKS}.
+	 *
+	 * @param allowPartialChunks set to {@code false} to only allow sending whole chunks down the pipeline.
+	 * @return this option builder for further configuration
+	 * @since 1.1.23
+	 */
+	public T allowPartialChunks(boolean allowPartialChunks) {
+		this.allowPartialChunks = allowPartialChunks;
+		return get();
+	}
+
+	/**
+	 * Return the configuration whether chunks can be split into multiple messages, if their chunk size
+	 * exceeds the size of the input buffer.
+	 *
+	 * @return the configuration whether to allow duplicate {@code Content-Length} headers
+	 * @since 1.1.23
+	 */
+	public boolean allowPartialChunks() {
+		return allowPartialChunks;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -202,7 +228,8 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 				validateHeaders == that.validateHeaders &&
 				initialBufferSize == that.initialBufferSize &&
 				allowDuplicateContentLengths == that.allowDuplicateContentLengths &&
-				h2cMaxContentLength == that.h2cMaxContentLength;
+				h2cMaxContentLength == that.h2cMaxContentLength &&
+				allowPartialChunks == that.allowPartialChunks;
 	}
 
 	@Override
@@ -214,6 +241,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		result = 31 * result + initialBufferSize;
 		result = 31 * result + Boolean.hashCode(allowDuplicateContentLengths);
 		result = 31 * result + h2cMaxContentLength;
+		result = 31 * result + Boolean.hashCode(allowPartialChunks);
 		return result;
 	}
 }

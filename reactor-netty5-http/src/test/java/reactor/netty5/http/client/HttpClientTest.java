@@ -1731,6 +1731,7 @@ class HttpClientTest extends BaseHttpTest {
 		AtomicReference<Channel> channelRef = new AtomicReference<>();
 		AtomicBoolean validate = new AtomicBoolean();
 		AtomicBoolean allowDuplicateContentLengths = new AtomicBoolean();
+		AtomicBoolean allowPartialChunks = new AtomicBoolean(true);
 		disposableServer =
 				createServer()
 				          .handle((req, resp) -> req.receive()
@@ -1744,7 +1745,8 @@ class HttpClientTest extends BaseHttpTest {
 		                                       .initialBufferSize(10)
 		                                       .failOnMissingResponse(true)
 		                                       .parseHttpAfterConnectRequest(true)
-		                                       .allowDuplicateContentLengths(true))
+		                                       .allowDuplicateContentLengths(true)
+		                                       .allowPartialChunks(false))
 		        .doOnConnected(c -> {
 		                    channelRef.set(c.channel());
 		                    HttpClientCodec codec = c.channel()
@@ -1753,6 +1755,7 @@ class HttpClientTest extends BaseHttpTest {
 		                    HttpObjectDecoder decoder = (HttpObjectDecoder) getValueReflection(codec, "inboundHandler", 1);
 		                    validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
 		                    allowDuplicateContentLengths.set((Boolean) getValueReflection(decoder, "allowDuplicateContentLengths", 2));
+		                    allowPartialChunks.set((Boolean) getValueReflection(decoder, "allowPartialChunks", 2));
 		                })
 		        .post()
 		        .uri("/")
@@ -1765,6 +1768,7 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(channelRef.get()).isNotNull();
 		assertThat(validate).as("validate headers").isFalse();
 		assertThat(allowDuplicateContentLengths).as("allow duplicate Content-Length").isTrue();
+		assertThat(allowPartialChunks).as("allow partial chunks").isFalse();
 	}
 
 	private Object getValueReflection(Object obj, String fieldName, int superLevel) {
