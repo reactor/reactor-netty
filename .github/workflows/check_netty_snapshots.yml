@@ -11,14 +11,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-12, windows-2019]
+        os: [ubuntu-20.04, macos-13, windows-2019]
         transport: [native, nio]
         exclude:
           # excludes native on Windows (there's none)
           - os: windows-2019
             transport: native
           # macOS - https://github.com/netty/netty/issues/9689
-          - os: macos-12
+          - os: macos-13
             transport: native
 
     steps:
