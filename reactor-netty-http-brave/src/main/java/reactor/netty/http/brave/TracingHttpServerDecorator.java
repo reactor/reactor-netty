@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -266,6 +266,12 @@ final class TracingHttpServerDecorator {
 		public Mono<Void> apply(Mono<Void> voidMono, Connection connection) {
 			HttpServerRequest braveRequest = connection.channel().attr(REQUEST_ATTR_KEY).get();
 			Span span = connection.channel().attr(SPAN_ATTR_KEY).get();
+			connection.onTerminate()
+			          .subscribe(
+			              null,
+			              t -> cleanup(connection.channel()),
+			              () -> cleanup(connection.channel()));
+			EventLoop eventLoop = connection.channel().eventLoop();
 			return voidMono.doFinally(sig -> {
 			                   if (braveRequest.unwrap() instanceof reactor.netty.http.server.HttpServerResponse) {
 			                       reactor.netty.http.server.HttpServerResponse response =
@@ -273,20 +279,12 @@ final class TracingHttpServerDecorator {
 			                       Span localSpan = sig == SignalType.CANCEL ? span.annotate("cancel") : span;
 			                       HttpServerResponse braveResponse =
 			                               new DelegatingHttpResponse(response, braveRequest, throwable);
-			                       response.withConnection(conn -> {
-			                               conn.onTerminate()
-			                                   .subscribe(
-			                                           null,
-			                                           t -> cleanup(connection.channel()),
-			                                           () -> cleanup(connection.channel()));
-			                               EventLoop eventLoop = conn.channel().eventLoop();
-			                               if (eventLoop.inEventLoop()) {
-			                                   handler.handleSend(braveResponse, localSpan);
-			                               }
-			                               else {
-			                                   eventLoop.execute(() -> handler.handleSend(braveResponse, localSpan));
-			                               }
-			                       });
+			                       if (eventLoop.inEventLoop()) {
+			                           handler.handleSend(braveResponse, localSpan);
+			                       }
+			                       else {
+			                           eventLoop.execute(() -> handler.handleSend(braveResponse, localSpan));
+			                       }
 			                   }
 			               })
 			               .doOnError(this::throwable)
