@@ -315,14 +315,14 @@ By default, the `HTTP` server is configured with the following settings:
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/http/HttpDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..39]
+include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..40]
 ----
 ====
 ====
 [source,java,indent=0]
 .{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=41..46]
+include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=42..47]
 ----
 ====
 
