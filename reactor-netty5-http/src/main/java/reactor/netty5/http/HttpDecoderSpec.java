@@ -30,7 +30,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	public static final boolean DEFAULT_VALIDATE_HEADERS                = true;
 	public static final int DEFAULT_INITIAL_BUFFER_SIZE                 = 128;
 	public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
-	public static final boolean DEFAULT_ALLOW_PARTIAL_CHUNKS = true;
+	public static final boolean DEFAULT_ALLOW_PARTIAL_CHUNKS            = true;
 
 	protected int maxInitialLineLength             = DEFAULT_MAX_INITIAL_LINE_LENGTH;
 	protected int maxHeaderSize                    = DEFAULT_MAX_HEADER_SIZE;
