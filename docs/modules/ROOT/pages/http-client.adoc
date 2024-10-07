@@ -186,7 +186,7 @@ By default, the `HTTP` client is configured with the following settings:
 {http-source-link}/reactor/netty/http/HttpDecoderSpec.java
 [%unbreakable]
 ----
-include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..39]
+include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..40]
 ----
 
 {http-source-link}/reactor/netty/http/client/HttpResponseDecoderSpec.java
