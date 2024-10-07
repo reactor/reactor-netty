@@ -28,6 +28,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelMetadata;
@@ -703,6 +704,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			this.config = new DefaultChannelConfig(this);
 			this.localAddress = copy.localAddress();
 			this.remoteAddress = copy.remoteAddress();
+		}
+
+		@Override
+		public ChannelFuture closeFuture() {
+			return newSucceededFuture();
 		}
 
 		@Override
