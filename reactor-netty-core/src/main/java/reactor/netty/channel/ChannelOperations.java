@@ -214,7 +214,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (!inbound.isDisposed()) {
 			discard();
 		}
-		connection.dispose();
+		if (!connection.isDisposed()) {
+			connection.dispose();
+		}
 	}
 
 	@Override
