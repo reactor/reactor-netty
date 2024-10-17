@@ -244,7 +244,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	 * Return the configuration whether chunks can be split into multiple messages, if their chunk size
 	 * exceeds the size of the input buffer.
 	 *
-	 * @return the configuration whether to allow duplicate {@code Content-Length} headers
+	 * @return whether to only allow sending whole chunks down the pipeline.
 	 * @since 1.1.23
 	 */
 	public boolean allowPartialChunks() {
