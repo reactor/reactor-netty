@@ -76,9 +76,9 @@ public final class CustomXForwardedHeadersHandler {
 			}
 		}
 
-		String prefixHeader = request.headers().get(X_FORWARDED_PREFIX_HEADER);
+		CharSequence prefixHeader = request.headers().get(X_FORWARDED_PREFIX_HEADER);
 		if (prefixHeader != null) {
-			connectionInfo = connectionInfo.withForwardedPrefix(prefixHeader);
+			connectionInfo = connectionInfo.withForwardedPrefix(prefixHeader.toString());
 		}
 
 		return connectionInfo;
