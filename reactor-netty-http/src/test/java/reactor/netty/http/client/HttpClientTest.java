@@ -3424,7 +3424,7 @@ class HttpClientTest extends BaseHttpTest {
 		client.get()
 		      .uri("/")
 		      .response() // Reactor Netty will close the connection
-		      .flatMap(res ->
+		      .flatMap(res -> // Keep response object alive and at the same time check that the real connection can be GCed
 		          client.websocket()
 		                .uri("/ws")
 		                .handle((in, out) ->

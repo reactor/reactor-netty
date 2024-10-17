@@ -271,6 +271,8 @@ final class TracingHttpServerDecorator {
 			              null,
 			              t -> cleanup(connection.channel()),
 			              () -> cleanup(connection.channel()));
+			// At the point of doFinally the connection might be disposed and there might be no event loop
+			// associated with the disposed connection
 			EventLoop eventLoop = connection.channel().eventLoop();
 			return voidMono.doFinally(sig -> {
 			                   if (braveRequest.unwrap() instanceof reactor.netty.http.server.HttpServerResponse) {

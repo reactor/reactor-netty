@@ -700,12 +700,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		final ChannelMetadata metadata;
 		final SocketAddress remoteAddress;
 
-		DisposedChannel(Channel copy) {
+		DisposedChannel(Channel actual) {
 			super(null);
-			this.metadata = copy.metadata();
+			this.metadata = actual.metadata();
 			this.config = new DefaultChannelConfig(this);
-			this.localAddress = copy.localAddress();
-			this.remoteAddress = copy.remoteAddress();
+			this.localAddress = actual.localAddress();
+			this.remoteAddress = actual.remoteAddress();
 		}
 
 		@Override
@@ -791,8 +791,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 		final Channel channel;
 
-		DisposedConnection(Channel copy) {
-			this.channel = new DisposedChannel(copy);
+		DisposedConnection(Channel actual) {
+			this.channel = new DisposedChannel(actual);
 		}
 
 		@Override
