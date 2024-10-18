@@ -25,6 +25,9 @@ import java.util.function.Predicate;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.channel.AbstractChannel;
+import io.netty5.channel.ChannelShutdownDirection;
+import io.netty5.channel.IoHandle;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -123,9 +126,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		                 .as(ChannelOperations.class);
 	}
 
-	final Connection          connection;
+	Connection                connection;
 	final FluxReceive         inbound;
-	final ConnectionObserver  listener;
+	ConnectionObserver        listener;
 	final Sinks.Empty<Void>   onTerminate;
 
 	volatile Subscription outboundSubscription;
@@ -205,7 +208,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (!inbound.isDisposed()) {
 			discard();
 		}
-		connection.dispose();
+		if (!connection.isDisposed()) {
+			connection.dispose();
+		}
 	}
 
 	@Override
@@ -500,6 +505,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			// and it is guarded by rebind(connection), so tryEmitEmpty() should happen just once
 			onTerminate.tryEmitEmpty();
 			listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
+			connection = new DisposedConnection(channel());
+			listener = ConnectionObserver.emptyListener();
 		}
 	}
 
@@ -677,4 +684,104 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			Subscription.class,
 			"outboundSubscription");
 
+	static final class DisposedChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
+
+		final SocketAddress localAddress;
+		final SocketAddress remoteAddress;
+
+		DisposedChannel(Channel actual) {
+			super(null, null, false, null);
+			this.localAddress = actual.localAddress();
+			this.remoteAddress = actual.remoteAddress();
+		}
+
+		@Override
+		protected void doBind(SocketAddress socketAddress) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		protected void doClose() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		protected boolean doConnect(SocketAddress socketAddress, SocketAddress socketAddress1, Buffer buffer) {
+			return false;
+		}
+
+		@Override
+		protected void doDisconnect() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		protected boolean doFinishConnect(SocketAddress socketAddress) throws Exception {
+			return false;
+		}
+
+		@Override
+		protected void doRead(boolean b) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		protected boolean doReadNow(AbstractChannel<Channel, SocketAddress, SocketAddress>.ReadSink readSink) throws Exception {
+			return false;
+		}
+
+		@Override
+		protected void doShutdown(ChannelShutdownDirection channelShutdownDirection) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		protected void doWriteNow(AbstractChannel<Channel, SocketAddress, SocketAddress>.WriteSink writeSink) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		protected IoHandle ioHandle() {
+			return null;
+		}
+
+		@Override
+		public boolean isActive() {
+			return false;
+		}
+
+		@Override
+		public boolean isOpen() {
+			return false;
+		}
+
+		@Override
+		public boolean isShutdown(ChannelShutdownDirection channelShutdownDirection) {
+			return false;
+		}
+
+		@Override
+		protected SocketAddress localAddress0() {
+			return localAddress;
+		}
+
+		@Override
+		protected SocketAddress remoteAddress0() {
+			return remoteAddress;
+		}
+	}
+
+	static final class DisposedConnection implements Connection {
+
+		final Channel channel;
+
+		DisposedConnection(Channel actual) {
+			this.channel = new DisposedChannel(actual);
+		}
+
+		@Override
+		public Channel channel() {
+			return channel;
+		}
+	}
 }

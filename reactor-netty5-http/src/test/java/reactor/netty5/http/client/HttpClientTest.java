@@ -16,6 +16,7 @@
 package reactor.netty5.http.client;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -106,6 +107,7 @@ import reactor.netty5.BufferFlux;
 import reactor.netty5.BufferMono;
 import reactor.netty5.CancelReceiverHandlerTest;
 import reactor.netty5.Connection;
+import reactor.netty5.ConnectionObserver;
 import reactor.netty5.FutureMono;
 import reactor.netty5.LogTracker;
 import reactor.netty5.NettyPipeline;
@@ -3364,6 +3366,48 @@ class HttpClientTest extends BaseHttpTest {
 			        .expectComplete()
 			        .verify(Duration.ofSeconds(5));
 		}
+	}
+
+	@Test
+	void testIssue3416() {
+		disposableServer =
+				createServer()
+				        .route(r -> r.get("/", (req, res) -> res.sendString(Mono.just("testIssue3416")))
+				                     .ws("/ws", (in, out) -> out.neverComplete()))
+				        .bindNow();
+
+		AtomicReference<WeakReference<Connection>> connWeakRef = new AtomicReference<>();
+		HttpClient client =
+				createClient(disposableServer.port())
+				        .observe((conn, state) -> {
+				            if (state == ConnectionObserver.State.CONNECTED) {
+				                connWeakRef.compareAndSet(null, new WeakReference<>(conn));
+				            }
+				        });
+
+		client.get()
+		      .uri("/")
+		      .response() // Reactor Netty will close the connection
+		      .flatMap(res -> // Keep response object alive and at the same time check that the real connection can be GCed
+		          client.websocket()
+		                .uri("/ws")
+		                .handle((in, out) ->
+		                    Flux.range(0, 10)
+		                        .delayElements(Duration.ofMillis(100))
+		                        .skipUntil(l -> {
+		                            boolean result = connWeakRef.get().get() == null;
+		                            if (!result) {
+		                                System.gc();
+		                            }
+		                            return result;
+		                        })
+		                        .switchIfEmpty(Mono.error(new RuntimeException("failed"))
+		                        .flatMap(l -> Mono.empty())))
+		                .then()
+		                .contextWrite(Context.of(res.getClass(), res)))
+		      .as(StepVerifier::create)
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
 	}
 
 	static final class TestMeterRegistrar implements ConnectionProvider.MeterRegistrar {

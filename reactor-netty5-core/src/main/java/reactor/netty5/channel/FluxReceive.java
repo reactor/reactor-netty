@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	static final int QUEUE_LOW_LIMIT = 32;
 
-	final Channel           channel;
 	final ChannelOperations<?, ?> parent;
 	final EventLoop         eventLoop;
 
@@ -77,9 +76,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		//reset channel to manual read if re-used
 
 		this.parent = parent;
-		this.channel = parent.channel();
-		this.eventLoop = channel.executor();
-		channel.setOption(ChannelOption.AUTO_READ, false);
+		this.eventLoop = parent.channel().executor();
+		parent.channel().setOption(ChannelOption.AUTO_READ, false);
 		CANCEL.lazySet(this, (state) -> {
 			if (eventLoop.inEventLoop()) {
 				if (state == 1) {
@@ -153,7 +151,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		if (!subscribedOnce) {
 			subscribedOnce = true;
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "{}: subscribing inbound receiver"), this);
+				log.debug(format(parent.channel(), "{}: subscribing inbound receiver"), this);
 			}
 			if ((inboundDone && getPending() == 0) || isCancelled()) {
 				if (inboundError != null) {
@@ -180,7 +178,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "{}: Rejecting additional inbound receiver."), this);
+					log.debug(format(parent.channel(), "{}: Rejecting additional inbound receiver."), this);
 				}
 
 				String msg = "Rejecting additional inbound receiver. State=" + toString(false);
@@ -216,7 +214,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			Object o;
 			while ((o = q.poll()) != null) {
 				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "{}: dropping frame {}"), this, parent.asDebugLogMessage(o));
+					log.debug(format(parent.channel(), "{}: dropping frame {}"), this, parent.asDebugLogMessage(o));
 				}
 				Resource.dispose(o);
 			}
@@ -280,7 +278,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 				try {
 					if (logLeakDetection.isDebugEnabled() && v instanceof Resource<?> resource) {
-						resource.touch(format(channel, "Receiver " + a.getClass().getName() +
+						resource.touch(format(parent.channel(), "Receiver " + a.getClass().getName() +
 								" will handle the message from this point"));
 					}
 					a.onNext(v);
@@ -314,7 +312,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				receiverFastpath = true;
 				if (needRead) {
 					needRead = false;
-					channel.setOption(ChannelOption.AUTO_READ, true);
+					parent.channel().setOption(ChannelOption.AUTO_READ, true);
 				}
 				//CHECKSTYLE:OFF
 				missed = (wip -= missed);
@@ -327,12 +325,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			if ((receiverDemand -= e) > 0L || (e > 0L && q.size() < QUEUE_LOW_LIMIT)) {
 				if (needRead) {
 					needRead = false;
-					channel.setOption(ChannelOption.AUTO_READ, true);
+					parent.channel().setOption(ChannelOption.AUTO_READ, true);
 				}
 			}
 			else if (!needRead) {
 				needRead = true;
-				channel.setOption(ChannelOption.AUTO_READ, false);
+				parent.channel().setOption(ChannelOption.AUTO_READ, false);
 			}
 
 			//CHECKSTYLE:OFF
@@ -347,7 +345,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	final void onInboundNext(Object msg) {
 		if (inboundDone || isCancelled()) {
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "{}: dropping frame {}"), this, parent.asDebugLogMessage(msg));
+				log.debug(format(parent.channel(), "{}: dropping frame {}"), this, parent.asDebugLogMessage(msg));
 			}
 			Resource.dispose(msg);
 			return;
@@ -356,7 +354,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		if (receiverFastpath && receiver != null) {
 			try {
 				if (logLeakDetection.isDebugEnabled() && msg instanceof Resource<?> resource) {
-					resource.touch(format(channel, "Receiver " + receiver.getClass().getName() +
+					resource.touch(format(parent.channel(), "Receiver " + receiver.getClass().getName() +
 							" will handle the message from this point"));
 				}
 				receiver.onNext(msg);
@@ -375,7 +373,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				receiverQueue = q;
 			}
 			if (logLeakDetection.isDebugEnabled() && msg instanceof Resource<?> resource) {
-				resource.touch(format(channel, "Buffered 'Resource' in the inbound buffer queue"));
+				resource.touch(format(parent.channel(), "Buffered 'Resource' in the inbound buffer queue"));
 			}
 			q.offer(msg);
 			drainReceiver();
@@ -401,20 +399,20 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		if (isCancelled() || inboundDone) {
 			if (log.isDebugEnabled()) {
 				if (AbortedException.isConnectionReset(err)) {
-					log.debug(format(channel, "Connection reset has been observed post termination"), err);
+					log.debug(format(parent.channel(), "Connection reset has been observed post termination"), err);
 				}
 				else {
-					log.warn(format(channel, "An exception has been observed post termination"), err);
+					log.warn(format(parent.channel(), "An exception has been observed post termination"), err);
 				}
 			}
 			else if (log.isWarnEnabled() && !AbortedException.isConnectionReset(err)) {
-				log.warn(format(channel, "An exception has been observed post termination, use DEBUG level to see the full stack: {}"), err.toString());
+				log.warn(format(parent.channel(), "An exception has been observed post termination, use DEBUG level to see the full stack: {}"), err.toString());
 			}
 			return;
 		}
 		CoreSubscriber<?> receiver = this.receiver;
 		this.inboundDone = true;
-		if (channel.isActive()) {
+		if (parent.channel().isActive()) {
 			parent.markPersistent(false);
 		}
 
