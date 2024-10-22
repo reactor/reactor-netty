@@ -24,10 +24,22 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '8'
+      - name: Download GraalVM 17
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            download_url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.9/graalvm-community-jdk-17.0.9_linux-x64_bin.tar.gz"
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            download_url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.9/graalvm-community-jdk-17.0.9_macos-x64_bin.tar.gz"
+          else
+            download_url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-17.0.9/graalvm-community-jdk-17.0.9_windows-x64_bin.zip"
+          fi
+          curl -L $download_url --output $RUNNER_TEMP/java_package.tar.gz
+        shell: bash
       - name: Set up GraalVM 17
         uses: actions/setup-java@b36c23c0d998641eff861008f374ee103c25ac73
         with:
-            distribution: 'graalvm'
+            distribution: 'jdkfile'
+            jdkFile: ${{ runner.temp }}/java_package.tar.gz
             java-version: '17'
       - name: Build with Gradle
         run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }}
