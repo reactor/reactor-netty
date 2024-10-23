@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.SslHandler;
 import reactor.netty.ReactorNetty;
 import reactor.netty.observability.ReactorNettyHandlerContext;
@@ -238,6 +239,8 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		final MicrometerChannelMetricsRecorder recorder;
 		final SocketAddress remoteAddress;
 		final String type;
+
+		boolean listenerAdded;
 		Observation observation;
 
 		// remote address and status are not known beforehand
@@ -257,31 +260,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		@Override
 		@SuppressWarnings("try")
 		public void channelActive(ChannelHandlerContext ctx) {
-			SocketAddress rAddr = remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress();
-			if (rAddr instanceof InetSocketAddress) {
-				InetSocketAddress address = (InetSocketAddress) rAddr;
-				this.netPeerName = address.getHostString();
-				this.netPeerPort = address.getPort() + "";
-			}
-			else {
-				this.netPeerName = rAddr.toString();
-				this.netPeerPort = "";
-			}
-			observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
-			parentContextView = updateChannelContext(ctx.channel(), observation);
-			observation.start();
-			ctx.pipeline()
-			   .get(SslHandler.class)
-			   .handshakeFuture()
-			   .addListener(f -> {
-			           ctx.pipeline().remove(this);
-			           status = f.isSuccess() ? SUCCESS : ERROR;
-			           observation.stop();
-
-			           ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
-			           parentContextView = null;
-			   });
-
+			addListener(ctx);
 			ctx.fireChannelActive();
 		}
 
@@ -361,12 +340,46 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 
 		@Override
 		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+			if (evt instanceof SniCompletionEvent) {
+				addListener(ctx);
+			}
 			ctx.fireUserEventTriggered(evt);
 		}
 
 		@Override
 		public Timer getTimer() {
 			return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
+		}
+
+		private void addListener(ChannelHandlerContext ctx) {
+			if (!listenerAdded) {
+				SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
+				if (sslHandler != null) {
+					listenerAdded = true;
+					SocketAddress rAddr = remoteAddress != null ? remoteAddress : ctx.channel().remoteAddress();
+					if (rAddr instanceof InetSocketAddress) {
+						InetSocketAddress address = (InetSocketAddress) rAddr;
+						this.netPeerName = address.getHostString();
+						this.netPeerPort = address.getPort() + "";
+					}
+					else {
+						this.netPeerName = rAddr.toString();
+						this.netPeerPort = "";
+					}
+					observation = Observation.createNotStarted(recorder.name() + TLS_HANDSHAKE_TIME, this, OBSERVATION_REGISTRY);
+					parentContextView = updateChannelContext(ctx.channel(), observation);
+					observation.start();
+					sslHandler.handshakeFuture()
+					          .addListener(f -> {
+					               ctx.pipeline().remove(this);
+					               status = f.isSuccess() ? SUCCESS : ERROR;
+					               observation.stop();
+
+					               ReactorNetty.setChannelContext(ctx.channel(), parentContextView);
+					               parentContextView = null;
+					          });
+				}
+			}
 		}
 	}
 }
