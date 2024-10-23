@@ -559,7 +559,6 @@ class HttpClientConnect extends HttpClient {
 
 				if (!Objects.equals(method, HttpMethod.GET) &&
 							!Objects.equals(method, HttpMethod.HEAD) &&
-							!Objects.equals(method, HttpMethod.DELETE) &&
 							!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
 					ch.chunkedTransfer(true);
 				}
