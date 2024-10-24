@@ -2208,14 +2208,14 @@ class HttpServerTests extends BaseHttpTest {
 				      .doOnChannelInit((obs, channel, remoteAddress) ->
 				          channel.pipeline()
 				                 .addAfter(NettyPipeline.SslHandler, "test", new ChannelInboundHandlerAdapter() {
-				                         @Override
-				                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				                     @Override
+				                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 				                         if (evt instanceof SniCompletionEvent) {
 				                             hostname.set(((SniCompletionEvent) evt).hostname());
 				                         }
 				                         ctx.fireUserEventTriggered(evt);
 				                     }
-				                     }))
+				                 }))
 				      .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
 				      .bindNow();
 
@@ -2270,14 +2270,14 @@ class HttpServerTests extends BaseHttpTest {
 				      .doOnChannelInit((obs, channel, remoteAddress) ->
 				          channel.pipeline()
 				                 .addAfter(NettyPipeline.SslHandler, "test", new ChannelInboundHandlerAdapter() {
-				                         @Override
-				                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				                     @Override
+				                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 				                         if (evt instanceof SniCompletionEvent) {
 				                             hostname.set(((SniCompletionEvent) evt).hostname());
 				                         }
-				                             ctx.fireUserEventTriggered(evt);
-				                         }
-				                         }))
+				                         ctx.fireUserEventTriggered(evt);
+				                     }
+				                 }))
 				      .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
 				      .bindNow();
 
