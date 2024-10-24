@@ -99,6 +99,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -3488,5 +3489,28 @@ class HttpClientTest extends BaseHttpTest {
 		      .as(StepVerifier::create)
 		      .expectComplete()
 		      .verify(Duration.ofSeconds(5));
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testDeleteMethod(boolean chunked) {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.send(req.receive().retain()))
+				        .bindNow();
+
+		Publisher<ByteBuf> body = chunked ?
+				ByteBufFlux.fromString(Flux.just("d", "e", "l", "e", "t", "e")) :
+				ByteBufMono.fromString(Mono.just("delete"));
+
+		createClient(disposableServer.port())
+		        .delete()
+		        .uri("/")
+		        .send(body)
+		        .responseSingle((res, bytes) -> bytes.asString())
+		        .as(StepVerifier::create)
+		        .expectNext("delete")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
 	}
 }
