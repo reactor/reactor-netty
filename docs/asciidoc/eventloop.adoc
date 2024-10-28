@@ -12,7 +12,7 @@ The following listing shows the default configuration for the Event Loop Group:
 [source,java,indent=0]
 .{eventloopsourcedir}/reactor/netty/ReactorNetty.java
 ----
-include::{eventloopsourcedir}/reactor/netty/ReactorNetty.java[lines=86..120]
+include::{eventloopsourcedir}/reactor/netty/ReactorNetty.java[lines=87..121]
 ----
 ====
 

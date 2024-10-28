@@ -21,7 +21,7 @@ and is intentional because only the user/framework knows if the actual protocol 
 [source,java,indent=0]
 ../../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
 ----
-include::./../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java[lines=123..133]
+include::./../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java[lines=124..134]
 ----
 ====
 
