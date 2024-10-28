@@ -2022,12 +2022,18 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	void testSniSupport() throws Exception {
+	void testSniSupportHttp11() throws Exception {
 		doTestSniSupport(Function.identity(), Function.identity());
 	}
 
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testSniSupportHttp2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		doTestSniSupport(server -> server.protocol(serverProtocols), client -> client.protocol(clientProtocols));
+	}
+
 	@Test
-	void testIssue3022() throws Exception {
+	void testIssue3022Http11() throws Exception {
 		TestHttpClientMetricsRecorder clientMetricsRecorder = new TestHttpClientMetricsRecorder();
 		TestHttpServerMetricsRecorder serverMetricsRecorder = new TestHttpServerMetricsRecorder();
 		doTestSniSupport(server -> server.metrics(true, () -> serverMetricsRecorder, Function.identity()),
@@ -2036,39 +2042,67 @@ class HttpServerTests extends BaseHttpTest {
 		assertThat(serverMetricsRecorder.tlsHandshakeTime).isNotNull().isGreaterThan(Duration.ZERO);
 	}
 
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testIssue3022Http2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		TestHttpClientMetricsRecorder clientMetricsRecorder = new TestHttpClientMetricsRecorder();
+		TestHttpServerMetricsRecorder serverMetricsRecorder = new TestHttpServerMetricsRecorder();
+		doTestSniSupport(server -> server.protocol(serverProtocols).metrics(true, () -> serverMetricsRecorder, Function.identity()),
+				client -> client.protocol(clientProtocols).metrics(true, () -> clientMetricsRecorder, Function.identity()));
+		assertThat(clientMetricsRecorder.tlsHandshakeTime).isNotNull().isGreaterThan(Duration.ZERO);
+		assertThat(serverMetricsRecorder.tlsHandshakeTime).isNotNull().isGreaterThan(Duration.ZERO);
+	}
+
+	@Test
+	void testIssue3473Http11() throws Exception {
+		doTestSniSupport(server -> server.metrics(true, Function.identity()),
+				client -> client.metrics(true, Function.identity()));
+	}
+
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testIssue3473Http2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		doTestSniSupport(server -> server.protocol(serverProtocols).metrics(true, Function.identity()),
+				client -> client.protocol(clientProtocols).metrics(true, Function.identity()));
+	}
+
 	@SuppressWarnings("deprecation")
 	private void doTestSniSupport(Function<HttpServer, HttpServer> serverCustomizer,
 			Function<HttpClient, HttpClient> clientCustomizer) throws Exception {
 		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
-		Http11SslContextSpec defaultSslContextBuilder =
-				Http11SslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey());
-
 		SelfSignedCertificate testCert = new SelfSignedCertificate("test.com");
-		Http11SslContextSpec testSslContextBuilder =
-				Http11SslContextSpec.forServer(testCert.certificate(), testCert.privateKey());
-
-		Http11SslContextSpec clientSslContextBuilder =
-				Http11SslContextSpec.forClient()
-				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
 		AtomicReference<String> hostname = new AtomicReference<>();
+		HttpServer server = serverCustomizer.apply(createServer());
+
+		boolean isH2 = (server.configuration()._protocols & HttpServerConfig.h2) == HttpServerConfig.h2;
+		SslProvider.ProtocolSslContextSpec defaultSslContextBuilder = isH2 ?
+				Http2SslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey()) :
+				Http11SslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey());
+		SslProvider.ProtocolSslContextSpec testSslContextBuilder = isH2 ?
+				Http2SslContextSpec.forServer(testCert.certificate(), testCert.privateKey()) :
+				Http11SslContextSpec.forServer(testCert.certificate(), testCert.privateKey());
+
 		disposableServer =
-				serverCustomizer.apply(createServer())
-				          .secure(spec -> spec.sslContext(defaultSslContextBuilder)
-				                              .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(testSslContextBuilder)))
-				          .doOnChannelInit((obs, channel, remoteAddress) ->
-				              channel.pipeline()
-				                     .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
-				                         @Override
-				                         public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-					                         if (evt instanceof SniCompletionEvent sniCompletionEvent) {
-				                                 hostname.set(sniCompletionEvent.hostname());
-				                             }
-				                             ctx.fireChannelInboundEvent(evt);
+				server.secure(spec -> spec.sslContext(defaultSslContextBuilder)
+				                          .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(testSslContextBuilder)))
+				      .doOnChannelInit((obs, channel, remoteAddress) ->
+				          channel.pipeline()
+				                 .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
+				                     @Override
+				                     public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+				                         if (evt instanceof SniCompletionEvent) {
+				                             hostname.set(((SniCompletionEvent) evt).hostname());
 				                         }
-				                     }))
-				          .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
-				          .bindNow();
+				                         ctx.fireChannelInboundEvent(evt);
+				                     }
+				                 }))
+				      .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
+				      .bindNow();
+
+		SslProvider.ProtocolSslContextSpec clientSslContextBuilder = isH2 ?
+				Http2SslContextSpec.forClient().configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE)) :
+				Http11SslContextSpec.forClient().configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
 		clientCustomizer.apply(createClient(disposableServer::address))
 		          .secure(spec -> spec.sslContext(clientSslContextBuilder)
@@ -2084,41 +2118,56 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	void testSniSupportAsyncMappings() throws Exception {
-		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
-		Http11SslContextSpec defaultSslContextBuilder =
-				Http11SslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey());
+	void testSniSupportAsyncMappingsHttp11() throws Exception {
+		doTestSniSupportAsyncMappings(Function.identity(), Function.identity());
+	}
 
+	@ParameterizedTest
+	@MethodSource("h2CompatibleCombinations")
+	void testSniSupportAsyncMappingsHttp2(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols) throws Exception {
+		doTestSniSupportAsyncMappings(server -> server.protocol(serverProtocols), client -> client.protocol(clientProtocols));
+	}
+
+	@SuppressWarnings("deprecation")
+	private void doTestSniSupportAsyncMappings(Function<HttpServer, HttpServer> serverCustomizer,
+			Function<HttpClient, HttpClient> clientCustomizer) throws Exception {
+		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
 		SelfSignedCertificate testCert = new SelfSignedCertificate("test.com");
-		Http11SslContextSpec testSslContextBuilder =
+
+		AtomicReference<String> hostname = new AtomicReference<>();
+		HttpServer server = serverCustomizer.apply(createServer());
+
+		boolean isH2 = (server.configuration()._protocols & HttpServerConfig.h2) == HttpServerConfig.h2;
+		SslProvider.ProtocolSslContextSpec defaultSslContextBuilder = isH2 ?
+				Http2SslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey()) :
+				Http11SslContextSpec.forServer(defaultCert.certificate(), defaultCert.privateKey());
+		SslProvider.ProtocolSslContextSpec testSslContextBuilder = isH2 ?
+				Http2SslContextSpec.forServer(testCert.certificate(), testCert.privateKey()) :
 				Http11SslContextSpec.forServer(testCert.certificate(), testCert.privateKey());
 		SslProvider testSslProvider = SslProvider.builder().sslContext(testSslContextBuilder).build();
 
-		Http11SslContextSpec clientSslContextBuilder =
-				Http11SslContextSpec.forClient()
-				                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-
-		AtomicReference<String> hostname = new AtomicReference<>();
 		disposableServer =
-				createServer()
-				          .secure(spec -> spec.sslContext(defaultSslContextBuilder)
+				server.secure(spec -> spec.sslContext(defaultSslContextBuilder)
 				                              .setSniAsyncMappings((input, promise) -> promise.setSuccess(testSslProvider).asFuture()))
-				          .doOnChannelInit((obs, channel, remoteAddress) ->
-				              channel.pipeline()
-				                     .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
-				                         @Override
-				                         public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
-					                         if (evt instanceof SniCompletionEvent sniCompletionEvent) {
-				                                 hostname.set(sniCompletionEvent.hostname());
-				                             }
-				                                 ctx.fireChannelInboundEvent(evt);
-				                             }
-				                         }))
-				          .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
-				          .bindNow();
+				      .doOnChannelInit((obs, channel, remoteAddress) ->
+				          channel.pipeline()
+				                 .addAfter(NettyPipeline.SslHandler, "test", new ChannelHandlerAdapter() {
+				                     @Override
+				                     public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
+				                         if (evt instanceof SniCompletionEvent) {
+				                             hostname.set(((SniCompletionEvent) evt).hostname());
+				                         }
+				                         ctx.fireChannelInboundEvent(evt);
+				                     }
+				                 }))
+				      .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
+				      .bindNow();
 
-		createClient(disposableServer::address)
+		SslProvider.ProtocolSslContextSpec clientSslContextBuilder = isH2 ?
+				Http2SslContextSpec.forClient().configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE)) :
+				Http11SslContextSpec.forClient().configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		clientCustomizer.apply(createClient(disposableServer::address))
 		          .secure(spec -> spec.sslContext(clientSslContextBuilder)
 		                              .serverNames(new SNIHostName("test.com")))
 		          .get()
