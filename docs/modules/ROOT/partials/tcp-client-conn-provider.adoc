@@ -22,7 +22,7 @@ and is intentional because only the user/framework knows if the actual protocol 
 {core-source-link}/reactor/netty/ReactorNetty.java
 [%unbreakable]
 ----
-include::{core}/src/main/java/reactor/netty/ReactorNetty.java[lines=123..133]
+include::{core}/src/main/java/reactor/netty/ReactorNetty.java[lines=124..134]
 ----
 
 When you need to change the default settings, you can configure the `ConnectionProvider` as follows:

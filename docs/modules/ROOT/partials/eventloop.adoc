@@ -11,7 +11,7 @@ The following listing shows the default configuration for the Event Loop Group:
 {core-source-link}/reactor/netty/ReactorNetty.java
 [%unbreakable]
 ----
-include::{eventloopsourcedir}/reactor/netty/ReactorNetty.java[lines=86..120]
+include::{eventloopsourcedir}/reactor/netty/ReactorNetty.java[lines=87..121]
 ----
 
 If you need changes to these settings, you can apply the following configuration:

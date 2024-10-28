@@ -16,7 +16,7 @@ and further attempts are declined with an error.
 {reactor-netty-github-repo}/reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
 [%unbreakable]
 ----
-include::{core}/src/main/java/reactor/netty/ReactorNetty.java[lines=123..171]
+include::{core}/src/main/java/reactor/netty/ReactorNetty.java[lines=124..172]
 ----
 
 When you need to change the default settings, you can configure the `ConnectionProvider` as follows:
