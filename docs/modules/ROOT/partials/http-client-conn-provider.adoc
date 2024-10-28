@@ -16,7 +16,7 @@ and further attempts are declined with an error.
 {core-source-link}/reactor/netty5/ReactorNetty.java
 [%unbreakable]
 ----
-include::{core}/src/main/java/reactor/netty5/ReactorNetty.java[lines=122..170]
+include::{core}/src/main/java/reactor/netty5/ReactorNetty.java[lines=123..171]
 ----
 
 When you need to change the default settings, you can configure the `ConnectionProvider` as follows:
