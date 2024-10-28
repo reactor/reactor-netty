@@ -501,7 +501,7 @@ hello
 
 {http-source-link}/reactor/netty/http/HttpProtocol.java
 ----
-include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=24..58]
+include::{sourcedir}/reactor/netty/http/HttpProtocol.java[lines=26..61]
 ----
 
 [[HTTP3]]
