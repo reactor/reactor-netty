@@ -179,7 +179,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.cookieList = new ArrayList<>();
 		if (c.channel() instanceof Http2StreamChannel) {
 			this.version = H2;
-		} else if (c.channel() instanceof SocketChannel) {
+		}
+		else if (c.channel() instanceof SocketChannel) {
 			HttpVersion version = this.nettyRequest.protocolVersion();
 			if (version.equals(HttpVersion.HTTP_1_0)) {
 				this.version = HttpVersion.HTTP_1_0;
@@ -190,7 +191,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			else {
 				throw new IllegalStateException(version.protocolName() + " not supported");
 			}
-		} else {
+		}
+		else {
 			this.version = H3;
 		}
 		this.trailerHeaders = Sinks.unsafe().one();
