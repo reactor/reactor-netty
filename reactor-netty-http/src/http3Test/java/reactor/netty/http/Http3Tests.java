@@ -21,8 +21,11 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
@@ -52,6 +55,7 @@ import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
+import javax.net.ssl.SNIHostName;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.cert.CertificateException;
@@ -649,6 +653,51 @@ class Http3Tests {
 		        .expectNextMatches(t -> t.getT1().equals(t.getT2()) && "HTTP/3.0".equals(t.getT1()))
 		        .expectComplete()
 		        .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
+	void testSniSupport() throws Exception {
+		SelfSignedCertificate defaultCert = new SelfSignedCertificate("default");
+		SelfSignedCertificate testCert = new SelfSignedCertificate("test.com");
+
+		AtomicReference<String> hostname = new AtomicReference<>();
+
+		Http3SslContextSpec defaultSslContextBuilder = Http3SslContextSpec.forServer(defaultCert.key(), null, defaultCert.cert());
+		Http3SslContextSpec testSslContextBuilder = Http3SslContextSpec.forServer(testCert.key(), null, testCert.cert());
+
+		disposableServer =
+				createServer().port(8080)
+				              .secure(spec -> spec.sslContext(defaultSslContextBuilder)
+				                                  .addSniMapping("*.test.com", domainSpec -> domainSpec.sslContext(testSslContextBuilder)))
+				              .doOnChannelInit((obs, channel, remoteAddress) ->
+				                  channel.pipeline()
+				                         .addLast(new ChannelInboundHandlerAdapter() {
+				                               @Override
+				                               public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+				                                 if (evt instanceof SniCompletionEvent) {
+				                                     hostname.set(((SniCompletionEvent) evt).hostname());
+				                                 }
+				                                 ctx.fireUserEventTriggered(evt);
+				                             }
+				                           }))
+				              .handle((req, res) -> res.sendString(Mono.just("testSniSupport")))
+				              .bindNow();
+
+		Http3SslContextSpec clientSslContextBuilder =
+				Http3SslContextSpec.forClient()
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+
+		createClient(disposableServer.port())
+		         .secure(spec -> spec.sslContext(clientSslContextBuilder)
+		                             .serverNames(new SNIHostName("test.com")))
+		         .get()
+		         .uri("/")
+		         .responseContent()
+		         .aggregate()
+		         .block(Duration.ofSeconds(30));
+
+		assertThat(hostname.get()).isNotNull();
+		assertThat(hostname.get()).isEqualTo("test.com");
 	}
 
 	@Test

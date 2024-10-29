@@ -16,7 +16,9 @@
 package reactor.netty.http;
 
 import io.netty.handler.ssl.SslContext;
+import io.netty.incubator.codec.quic.QuicSslContext;
 import io.netty.incubator.codec.quic.QuicSslContextBuilder;
+import io.netty.util.DomainWildcardMappingBuilder;
 import reactor.netty.tcp.SslProvider;
 import reactor.util.annotation.Incubating;
 import reactor.util.annotation.Nullable;
@@ -27,10 +29,12 @@ import javax.net.ssl.SSLException;
 import java.io.File;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
 import static io.netty.incubator.codec.http3.Http3.supportedApplicationProtocols;
+import static io.netty.incubator.codec.quic.QuicSslContextBuilder.buildForServerWithSni;
 
 /**
  * SslContext builder that provides default configuration specific to HTTP/3 as follows:
@@ -44,7 +48,7 @@ import static io.netty.incubator.codec.http3.Http3.supportedApplicationProtocols
  * @see io.netty.incubator.codec.http3.Http3#supportedApplicationProtocols()
  */
 @Incubating
-public final class Http3SslContextSpec implements SslProvider.GenericSslContextSpec<QuicSslContextBuilder> {
+public final class Http3SslContextSpec implements SslProvider.GenericSslContextSpecWithSniSupport<QuicSslContextBuilder> {
 
 	/**
 	 * Creates a builder for new client-side {@link SslContext}.
@@ -101,6 +105,14 @@ public final class Http3SslContextSpec implements SslProvider.GenericSslContextS
 	@Override
 	public SslContext sslContext() throws SSLException {
 		return sslContextBuilder.build();
+	}
+
+	@Override
+	public SslContext sslContext(Map<String, SslProvider> sniMappings) throws SSLException {
+		DomainWildcardMappingBuilder<QuicSslContext> mappingsSslProviderBuilder =
+				new DomainWildcardMappingBuilder<>((QuicSslContext) sslContext());
+		sniMappings.forEach((s, sslProvider) -> mappingsSslProviderBuilder.add(s, (QuicSslContext) sslProvider.getSslContext()));
+		return buildForServerWithSni(mappingsSslProviderBuilder.build());
 	}
 
 	final QuicSslContextBuilder sslContextBuilder;

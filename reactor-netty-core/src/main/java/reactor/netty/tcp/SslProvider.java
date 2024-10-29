@@ -47,6 +47,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Incubating;
 import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
@@ -285,6 +286,28 @@ public final class SslProvider {
 		SslContext sslContext() throws SSLException;
 	}
 
+	@Incubating
+	public interface GenericSslContextSpecWithSniSupport<B> extends GenericSslContextSpec<B> {
+
+		/**
+		 * Configures the underlying {@link SslContext}.
+		 *
+		 * @param sslCtxBuilder a callback for configuring the underlying {@link SslContext}
+		 * @return {@code this}
+		 */
+		@Override
+		GenericSslContextSpecWithSniSupport<B> configure(Consumer<B> sslCtxBuilder);
+
+		/**
+		 * Create a new {@link SslContext} instance with the configured settings.
+		 *
+		 * @param sniMappings {@code SNI} configuration per domain
+		 * @return a new {@link SslContext} instance
+		 * @throws SSLException thrown when {@link SslContext} instance cannot be created
+		 */
+		SslContext sslContext(Map<String, SslProvider> sniMappings) throws SSLException;
+	}
+
 	/**
 	 * SslContext builder that provides, specific for the protocol, default configuration.
 	 * The default configuration is applied prior any other custom configuration.
@@ -305,13 +328,20 @@ public final class SslProvider {
 	final int                          builderHashCode;
 	final SniProvider                  sniProvider;
 	final Map<String, SslProvider>     confPerDomainName;
+	final List<SNIServerName>          serverNames;
 	final AsyncMapping<String, SslProvider> sniMappings;
 
 	SslProvider(SslProvider.Build builder) {
+		this.confPerDomainName = builder.confPerDomainName;
 		if (builder.sslContext == null) {
 			if (builder.genericSslContextSpec != null) {
 				try {
-					this.sslContext = builder.genericSslContextSpec.sslContext();
+					if (!confPerDomainName.isEmpty() && builder.genericSslContextSpec instanceof GenericSslContextSpecWithSniSupport) {
+						this.sslContext = ((GenericSslContextSpecWithSniSupport<?>) builder.genericSslContextSpec).sslContext(confPerDomainName);
+					}
+					else {
+						this.sslContext = builder.genericSslContextSpec.sslContext();
+					}
 				}
 				catch (SSLException e) {
 					throw Exceptions.propagate(e);
@@ -324,12 +354,13 @@ public final class SslProvider {
 		else {
 			this.sslContext = builder.sslContext;
 		}
-		if (builder.serverNames != null) {
+		this.serverNames = builder.serverNames;
+		if (serverNames != null) {
 			Consumer<SslHandler> configurator =
 					h -> {
 						SSLEngine engine = h.engine();
 						SSLParameters sslParameters = engine.getSSLParameters();
-						sslParameters.setServerNames(builder.serverNames);
+						sslParameters.setServerNames(serverNames);
 						engine.setSSLParameters(sslParameters);
 					};
 			this.handlerConfigurator = builder.handlerConfigurator == null ? configurator :
@@ -342,7 +373,6 @@ public final class SslProvider {
 		this.closeNotifyFlushTimeoutMillis = builder.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = builder.closeNotifyReadTimeoutMillis;
 		this.builderHashCode = builder.hashCode();
-		this.confPerDomainName = builder.confPerDomainName;
 		this.sniMappings = builder.sniMappings;
 		if (!confPerDomainName.isEmpty()) {
 			this.sniProvider = new SniProvider(confPerDomainName, this);
@@ -371,6 +401,7 @@ public final class SslProvider {
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
 		this.builderHashCode = from.builderHashCode;
 		this.confPerDomainName = from.confPerDomainName;
+		this.serverNames = from.serverNames;
 		this.sniMappings = from.sniMappings;
 		this.sniProvider = from.sniProvider;
 	}
@@ -382,6 +413,12 @@ public final class SslProvider {
 	 */
 	public SslContext getSslContext() {
 		return this.sslContext;
+	}
+
+	@Incubating
+	@Nullable
+	public List<SNIServerName> getServerNames() {
+		return serverNames;
 	}
 
 	public void configure(SslHandler sslHandler) {
