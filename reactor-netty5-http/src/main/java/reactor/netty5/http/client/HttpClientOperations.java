@@ -110,6 +110,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final HttpRequest            nettyRequest;
 	final HttpHeaders            requestHeaders;
 	final List<HttpCookiePair>   cookieList;
+	final boolean                isHttp2;
 	final Sinks.One<HttpHeaders> trailerHeaders;
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
@@ -152,6 +153,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.responseTimeout = replaced.responseTimeout;
 		this.is100Continue = replaced.is100Continue;
 		this.trailerHeaders = replaced.trailerHeaders;
+		this.isHttp2 = replaced.isHttp2;
 		// No need to copy the unprocessedOutboundError field from the replaced instance. The reason for this is that the
 		// "unprocessedOutboundError" field contains an error that occurs when the connection of the HttpClientOperations
 		// is already closed. In essence, this error represents the final state for the HttpClientOperations, and there's
@@ -166,6 +168,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.nettyRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
 		this.cookieList = new ArrayList<>();
+		this.isHttp2 = c.channel() instanceof Http2StreamChannel;
 		this.trailerHeaders = Sinks.unsafe().one();
 	}
 
@@ -515,14 +518,19 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public final HttpVersion version() {
-		HttpVersion version = this.nettyRequest.protocolVersion();
-		if (version.equals(HttpVersion.HTTP_1_0)) {
-			return HttpVersion.HTTP_1_0;
+		if (isHttp2) {
+			return H2;
 		}
-		else if (version.equals(HttpVersion.HTTP_1_1)) {
-			return HttpVersion.HTTP_1_1;
+		else {
+			HttpVersion version = this.nettyRequest.protocolVersion();
+			if (version.equals(HttpVersion.HTTP_1_0)) {
+				return HttpVersion.HTTP_1_0;
+			}
+			else if (version.equals(HttpVersion.HTTP_1_1)) {
+				return HttpVersion.HTTP_1_1;
+			}
+			throw new IllegalStateException(version.protocolName() + " not supported");
 		}
-		throw new IllegalStateException(version.protocolName() + " not supported");
 	}
 
 	/**
@@ -1033,6 +1041,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 	}
 
+	static final HttpVersion            H2 = HttpVersion.valueOf("HTTP/2.0");
 	static final int                    MAX_REDIRECTS      = 50;
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[]) new Supplier[0];
