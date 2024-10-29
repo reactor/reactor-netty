@@ -636,6 +636,22 @@ class Http3Tests {
 	}
 
 	@Test
+	void testProtocolVersion() {
+		disposableServer =
+				createServer().handle((req, res) -> res.sendString(Mono.just(req.protocol())))
+				              .bindNow();
+
+		createClient(disposableServer.port())
+		        .get()
+		        .uri("/")
+		        .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just(res.version().text())))
+		        .as(StepVerifier::create)
+		        .expectNextMatches(t -> t.getT1().equals(t.getT2()) && "HTTP/3.0".equals(t.getT1()))
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(5));
+	}
+
+	@Test
 	void testTrailerHeadersChunkedResponse() {
 		disposableServer =
 				createServer()

@@ -109,6 +109,7 @@ import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.http.server.HttpServerFormDecoderProvider.DEFAULT_FORM_DECODER_SPEC;
 import static reactor.netty.http.server.HttpServerState.REQUEST_DECODING_FAILED;
+import static reactor.netty.http.server.HttpTrafficHandler.H2;
 
 /**
  * Conversion between Netty types and Reactor types ({@link HttpOperations}.
@@ -504,7 +505,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public String protocol() {
-		return nettyRequest.protocolVersion().text();
+		if (isHttp2) {
+			return H2.text();
+		}
+		else {
+			return nettyRequest.protocolVersion().text();
+		}
 	}
 
 	@Override
@@ -734,7 +740,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public HttpVersion version() {
 		if (nettyRequest != null) {
-			return nettyRequest.protocolVersion();
+			if (isHttp2) {
+				return H2;
+			}
+			else {
+				return nettyRequest.protocolVersion();
+			}
 		}
 		throw new IllegalStateException("request not parsed");
 	}

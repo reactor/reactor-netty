@@ -988,6 +988,27 @@ class HttpProtocolsTests extends BaseHttpTest {
 		}
 	}
 
+	@ParameterizedCompatibleCombinationsTest
+	void testProtocolVersion(HttpServer server, HttpClient client) {
+		HttpProtocol[] serverProtocols = server.configuration().protocols();
+		HttpProtocol[] clientProtocols = client.configuration().protocols();
+		String configuredProtocol = (serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
+				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11) ? "HTTP/1.1" : "HTTP/2.0";
+
+		disposableServer =
+				server.handle((req, res) -> res.sendString(Mono.just(req.protocol())))
+				      .bindNow();
+
+		client.port(disposableServer.port())
+		      .get()
+		      .uri("/")
+		      .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just(res.version().text())))
+		      .as(StepVerifier::create)
+		      .expectNextMatches(t -> t.getT1().equals(t.getT2()) && t.getT1().equals(configuredProtocol))
+		      .expectComplete()
+		      .verify(Duration.ofSeconds(5));
+	}
+
 	static final class IdleTimeoutTestChannelInboundHandler extends ChannelInboundHandlerAdapter {
 
 		final CountDownLatch latch = new CountDownLatch(1);

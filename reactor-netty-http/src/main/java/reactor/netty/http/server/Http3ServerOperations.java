@@ -16,6 +16,7 @@
 package reactor.netty.http.server;
 
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.incubator.codec.quic.QuicChannel;
@@ -66,4 +67,19 @@ final class Http3ServerOperations extends HttpServerOperations {
 	public SocketAddress connectionRemoteAddress() {
 		return ((QuicChannel) channel().parent()).remoteSocketAddress();
 	}
+
+	@Override
+	public String protocol() {
+		return H3.text();
+	}
+
+	@Override
+	public HttpVersion version() {
+		if (nettyRequest != null) {
+			return H3;
+		}
+		throw new IllegalStateException("request not parsed");
+	}
+
+	static final HttpVersion H3 = HttpVersion.valueOf("HTTP/3.0");
 }
