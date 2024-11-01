@@ -20,6 +20,8 @@ apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
 apply plugin: 'biz.aQute.bnd.builder'
 
+apply from: "${rootDir}/gradle/toolchains.gradle"
+
 ext {
 	bndOptions = [
 			"Export-Package" : "reactor.netty.http*;version=$osgiVersion;-noimport:=true",
@@ -175,6 +177,13 @@ dependencies {
 	testRuntimeOnly "io.netty:netty-codec-haproxy:$nettyVersion"
 	// Needed for HTTP/2 testing
 	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
+
+	if (project.hasProperty("testToolchain")) {
+		if (testToolchain == "17") {
+			// Necessary for generating SelfSignedCertificate on Java version >= 15
+			testRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
+		}
+	}
 
 	// noMicrometerTest sourceSet (must not include Micrometer)
 	noMicrometerTestImplementation "org.assertj:assertj-core:$assertJVersion"

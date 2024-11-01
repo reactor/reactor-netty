@@ -305,13 +305,14 @@ You may also need to configure the Reactor Netty `ObservationHandlers` using the
 
 [[unix-domain-sockets]]
 == Unix Domain Sockets
-The `TCP` server supports Unix Domain Sockets (UDS) when native transport is in use.
+The `TCP` server supports Unix Domain Sockets (UDS) when native transport is in use for all java versions
+and when NIO transport is in use for java 17 and above.
 
 The following example shows how to use UDS support:
 
 {examples-link}/uds/Application.java
 [%unbreakable]
 ----
-include::{examples-dir}/uds/Application.java[lines=18..33]
+include::{examples-dir}/uds/Application.java[lines=18..38]
 ----
 <1> Specifies `DomainSocketAddress` that will be used

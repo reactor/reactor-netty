@@ -28,7 +28,6 @@ import java.util.function.Function;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
-import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
@@ -59,6 +58,7 @@ import reactor.util.context.Context;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.getChannelContext;
 import static reactor.netty.ReactorNetty.setChannelContext;
+import static reactor.netty.transport.DomainSocketAddressUtils.isDomainSocketAddress;
 
 /**
  * A default implementation for pooled {@link ConnectionProvider}.
@@ -550,7 +550,7 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				else {
 					Objects.requireNonNull(config.bindAddress(), "bindAddress");
 					SocketAddress local = Objects.requireNonNull(config.bindAddress().get(), "Bind Address supplier returned null");
-					TransportConnector.bind(config, initializer, local, remoteAddress instanceof DomainSocketAddress)
+					TransportConnector.bind(config, initializer, local, isDomainSocketAddress(remoteAddress))
 							.subscribe(initializer);
 				}
 			});

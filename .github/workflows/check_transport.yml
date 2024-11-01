@@ -52,10 +52,18 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: gradle/actions/wrapper-validation@d156388eb19639ec20ade50009f3d199ce1e2808
+      - name: Set up JDK 17
+        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
+        with:
+            distribution: 'temurin'
+            java-version: '17'
       - name: Set up JDK 1.8
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
         with:
           distribution: 'temurin'
           java-version: '8'
-      - name: Build with Gradle
-        run: ./gradlew clean check --no-daemon -x spotlessCheck -PforceTransport=${{ matrix.transport }}
+      - name: Build and test with Java 8
+        run: ./gradlew clean check -x :reactor-netty-core:java17Test --no-daemon -x spotlessCheck -PforceTransport=${{ matrix.transport }}
+      - name: Build and test with Java 17
+        if: ${{ ! startsWith(matrix.os, 'windows') }}
+        run: ./gradlew reactor-netty-http:test --tests reactor.netty.http.server.HttpServerTests.testHttpServerWithDomainSockets_HTTP11 -PtestToolchain=17 --no-daemon -x spotlessCheck -PforceTransport=nio
