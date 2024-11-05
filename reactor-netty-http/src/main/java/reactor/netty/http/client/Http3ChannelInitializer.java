@@ -22,12 +22,20 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.incubator.codec.quic.QuicClientCodecBuilder;
 import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.incubator.codec.quic.QuicSslEngine;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Http3SettingsSpec;
+import reactor.netty.tcp.SslProvider;
+import reactor.util.annotation.Nullable;
 
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIServerName;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.incubator.codec.http3.Http3.newQuicClientCodecBuilder;
@@ -39,25 +47,52 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 	final ConnectionObserver          obs;
 	final ChannelOperations.OnSetup   opsFactory;
 	final ChannelInitializer<Channel> quicChannelInitializer;
-	final QuicSslContext              quicSslContext;
+	final SocketAddress               remoteAddress;
+	final SslProvider                 sslProvider;
 
-	Http3ChannelInitializer(HttpClientConfig config, ChannelInitializer<Channel> quicChannelInitializer, ConnectionObserver obs) {
+	Http3ChannelInitializer(HttpClientConfig config, ChannelInitializer<Channel> quicChannelInitializer, ConnectionObserver obs,
+			@Nullable SocketAddress remoteAddress) {
 		this.http3Settings = config.http3SettingsSpec();
 		this.loggingHandler = config.loggingHandler();
 		this.obs = obs;
 		this.opsFactory = config.channelOperationsProvider();
 		this.quicChannelInitializer = quicChannelInitializer;
-		if (config.sslProvider.getSslContext() instanceof QuicSslContext) {
-			this.quicSslContext = (QuicSslContext) config.sslProvider.getSslContext();
-		}
-		else {
-			throw new IllegalArgumentException("The configured SslContext is not QuicSslContext");
-		}
+		this.remoteAddress = remoteAddress;
+		this.sslProvider = config.sslProvider;
 	}
 
 	@Override
 	protected void initChannel(Channel channel) {
-		QuicClientCodecBuilder quicClientCodecBuilder = newQuicClientCodecBuilder().sslContext(quicSslContext);
+		QuicClientCodecBuilder quicClientCodecBuilder = newQuicClientCodecBuilder();
+
+		quicClientCodecBuilder.sslEngineProvider(ch -> {
+			QuicSslContext quicSslContext;
+			if (sslProvider.getSslContext() instanceof QuicSslContext) {
+				quicSslContext = (QuicSslContext) sslProvider.getSslContext();
+			}
+			else {
+				throw new IllegalArgumentException("The configured SslContext is not QuicSslContext");
+			}
+
+			QuicSslEngine engine;
+			if (remoteAddress instanceof InetSocketAddress) {
+				InetSocketAddress sniInfo = (InetSocketAddress) remoteAddress;
+				if (sslProvider.getServerNames() != null && !sslProvider.getServerNames().isEmpty()) {
+					SNIServerName serverName = sslProvider.getServerNames().get(0);
+					String serverNameStr = serverName instanceof SNIHostName ? ((SNIHostName) serverName).getAsciiName() :
+							new String(serverName.getEncoded(), StandardCharsets.US_ASCII);
+					engine = quicSslContext.newEngine(ch.alloc(), serverNameStr, sniInfo.getPort());
+				}
+				else {
+					engine = quicSslContext.newEngine(ch.alloc(), sniInfo.getHostString(), sniInfo.getPort());
+				}
+			}
+			else {
+				engine = quicSslContext.newEngine(ch.alloc());
+			}
+
+			return engine;
+		});
 
 		if (http3Settings != null) {
 			quicClientCodecBuilder.initialMaxData(http3Settings.maxData())
