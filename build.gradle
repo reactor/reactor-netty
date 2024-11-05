@@ -42,6 +42,7 @@ plugins {
 	id 'org.graalvm.buildtools.native' version '0.9.25' apply false
 	id 'io.spring.antora.generate-antora-yml' version '0.0.1' apply false
 	id 'net.ltgt.errorprone' version '4.1.0' apply false
+	id 'me.champeau.mrjar' version '0.1.1' apply false
 }
 
 description = 'Reactive Streams Netty driver'
@@ -137,6 +138,7 @@ ext {
 	reflectionsVersion = '0.10.2'
 	errorproneCoreVersion = '2.10.0'
 	errorproneGuavaVersion = '30.0-jre'
+	bouncycastleVersion = '1.70'
 
 	// Antora
 	antoraPluginVersion = '1.0.0'
@@ -187,7 +189,7 @@ spotless {
 		// find start of gradle files by looking for either `import`, `apply`
 		// or start of blocks like `javadoc {` or `configure(rootProject) {`...
 		licenseHeaderFile('codequality/spotless/licenseSlashstarStyle.txt',
-				"^\\w+(\\(\\w+\\))?\\s?\\{?|import|apply")
+				"^\\w+(\\(\\w+\\))?\\s?\\{?|import|apply|/\\*\\*")
 	}
 }
 

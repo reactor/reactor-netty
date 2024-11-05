@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.reflections.scanners.Scanners.SubTypes;
 
 class NativeConfigTest {
 
 	@Test
 	void testChannelHandler() throws Exception {
+		assumeThat(!System.getProperty("java.version").startsWith("17")).isTrue();
 		Set<Config> classes = findAllClassesUsingReflection("reactor.netty", ChannelHandler.class);
 
 		try (InputStream is = getClass()

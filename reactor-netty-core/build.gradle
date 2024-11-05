@@ -22,6 +22,11 @@ apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
 apply plugin: 'biz.aQute.bnd.builder'
+apply plugin: 'me.champeau.mrjar'
+
+multiRelease {
+	targetVersions 8, 17
+}
 
 ext {
 	bndOptions = [
@@ -48,6 +53,7 @@ sourceSets {
 }
 
 configurations {
+	java17Implementation.extendsFrom(implementation)
 	shaded
 	contextPropagationTestImplementation.extendsFrom(implementation)
 	contextPropagationTestRuntimeOnly.extendsFrom(runtimeOnly)
@@ -143,6 +149,11 @@ dependencies {
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 
+	if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
+		// Necessary for generating SelfSignedCertificate on Java version >= 15
+		testRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
+	}
+
 	// JSR-305 annotations
 	testFixturesCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 	testFixturesApi("ch.qos.logback:logback-classic:$logbackVersion")
@@ -175,6 +186,18 @@ jar {
 		attributes("Automatic-Module-Name": "reactor.netty.core")
 	}
 	bnd(bndOptions)
+
+	bundle {
+		// workaround for multi-version JARs
+		// see https://github.com/bndtools/bnd/issues/2227
+		bnd '''\
+				-fixupmessages: '^Classes found in the wrong directory: .*'
+			'''.stripIndent()
+	}
+}
+
+java17Test {
+	jvmArgs = ["-XX:+AllowRedefinitionToAddDeleteMethods"]
 }
 
 components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }
@@ -272,11 +295,23 @@ shadowJar {
 	}
 	bnd(bndOptions)
 
+	bundle {
+		// workaround for multi-version JARs
+		// see https://github.com/bndtools/bnd/issues/2227
+		bnd '''\
+				-fixupmessages: '^Classes found in the wrong directory: .*'
+			'''.stripIndent()
+	}
+
 	enableRelocation true
 	relocationPrefix "reactor.netty.internal.shaded"
 	archiveClassifier.set('')
 
 	dependsOn(project.tasks.jar)
+
+	into('META-INF/versions/17') {
+		from sourceSets.java17.output
+	}
 
 	manifest {
 		inheritFrom project.tasks.jar.manifest

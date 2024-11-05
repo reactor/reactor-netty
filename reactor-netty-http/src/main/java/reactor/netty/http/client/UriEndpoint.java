@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,10 @@ import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.NetUtil;
+
+import static reactor.netty.transport.DomainSocketAddressUtils.isDomainSocketAddress;
+import static reactor.netty.transport.DomainSocketAddressUtils.path;
 
 final class UriEndpoint {
 	final String scheme;
@@ -61,8 +63,8 @@ final class UriEndpoint {
 	String toExternalForm() {
 		StringBuilder sb = new StringBuilder();
 		SocketAddress address = remoteAddress.get();
-		if (address instanceof DomainSocketAddress) {
-			sb.append(((DomainSocketAddress) address).path());
+		if (isDomainSocketAddress(address)) {
+			sb.append(path(address));
 		}
 		else {
 			sb.append(scheme);

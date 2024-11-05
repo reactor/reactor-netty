@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.resolver.AddressResolverGroup;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -45,6 +44,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.transport.DomainSocketAddressUtils.isDomainSocketAddress;
 
 /**
  * {@link ConnectionProvider} that always establishes a new connection.
@@ -96,7 +96,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 				ConnectionObserver connectionObserver = new NewConnectionObserver(sink, observer);
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, null, true);
 				DisposableConnect disposableConnect = new DisposableConnect(sink, config.bindAddress());
-				TransportConnector.bind(config, channelInitializer, local, local instanceof DomainSocketAddress)
+				TransportConnector.bind(config, channelInitializer, local, isDomainSocketAddress(local))
 				                  .subscribe(disposableConnect);
 			}
 		});

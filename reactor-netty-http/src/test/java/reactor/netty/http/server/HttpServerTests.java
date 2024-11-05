@@ -18,6 +18,8 @@ package reactor.netty.http.server;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URISyntaxException;
@@ -1963,9 +1965,10 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client, String expectedScheme) {
-		assumeThat(LoopResources.hasNativeSupport()).isTrue();
+		boolean isJava17 = System.getProperty("java.version").startsWith("17");
+		assumeThat(LoopResources.hasNativeSupport() || isJava17).isTrue();
 		disposableServer =
-				server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				server.bindAddress(() -> createDomainSocketAddress(isJava17))
 				      .wiretap(true)
 				      .handle((req, res) -> {
 				          req.withConnection(conn -> {
@@ -1992,6 +1995,22 @@ class HttpServerTests extends BaseHttpTest {
 				      .block(Duration.ofSeconds(30));
 
 		assertThat(response).isEqualTo("123");
+	}
+
+	private static SocketAddress createDomainSocketAddress(boolean isJava17) {
+		if (isJava17) {
+			try {
+				Class<?> clazz = Class.forName("java.net.UnixDomainSocketAddress");
+				Method method = clazz.getMethod("of", String.class);
+				return (SocketAddress) method.invoke(null, "/tmp/test.sock");
+			}
+			catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+				throw new RuntimeException(e);
+			}
+		}
+		else {
+			return new DomainSocketAddress("/tmp/test.sock");
+		}
 	}
 
 	@Test

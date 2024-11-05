@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,17 @@ import io.netty.channel.unix.DomainSocketAddress;
 import reactor.netty.Connection;
 import reactor.netty.tcp.TcpClient;
 
+//import java.net.UnixDomainSocketAddress;
+
 public class Application {
 
 	public static void main(String[] args) {
 		Connection connection =
 				TcpClient.create()
+				         // The configuration below is available only when Epoll/KQueue transport is used
 				         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock")) //<1>
+				         // The configuration below is available only when NIO transport is used with Java 17+
+				         //.remoteAddress(() -> UnixDomainSocketAddress.of("/tmp/test.sock"))
 				         .connectNow();
 
 		connection.onDispose()

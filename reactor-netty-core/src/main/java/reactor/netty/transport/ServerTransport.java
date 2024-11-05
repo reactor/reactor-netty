@@ -39,7 +39,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Subscription;
@@ -63,6 +62,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.transport.DomainSocketAddressUtils.isDomainSocketAddress;
 
 /**
  * A generic server {@link Transport} that will {@link #bind()} to a local address and provide a {@link DisposableServer}.
@@ -101,7 +101,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 			boolean isDomainSocket = false;
 			DisposableBind disposableServer;
-			if (local instanceof DomainSocketAddress) {
+			if (isDomainSocketAddress(local)) {
 				isDomainSocket = true;
 				disposableServer = new UdsDisposableBind(sink, config, local);
 			}
@@ -658,13 +658,8 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		}
 
 		@Override
-		public DomainSocketAddress address() {
-			return (DomainSocketAddress) channel().localAddress();
-		}
-
-		@Override
 		public String path() {
-			return address().path();
+			return DomainSocketAddressUtils.path(channel().localAddress());
 		}
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
@@ -54,6 +53,7 @@ import java.util.function.Supplier;
 
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.setChannelContext;
+import static reactor.netty.transport.DomainSocketAddressUtils.isDomainSocketAddress;
 
 /**
  * {@link TransportConnector} is a helper class that creates, initializes and registers the channel.
@@ -160,7 +160,7 @@ public final class TransportConnector {
 		Objects.requireNonNull(eventLoop, "eventLoop");
 		Objects.requireNonNull(contextView, "contextView");
 
-		boolean isDomainAddress = remoteAddress instanceof DomainSocketAddress;
+		boolean isDomainAddress = isDomainSocketAddress(remoteAddress);
 		return doInitAndRegister(config, channelInitializer, isDomainAddress, eventLoop)
 				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup, contextView)
 						.onErrorResume(RetryConnectException.class,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,9 @@ class JarFileShadingTest extends AbstractJarFileTest {
 		try (Stream<Path> stream = Files.list(root.resolve("reactor"))) {
 			assertThatFileList(stream).containsOnly("netty");
 		}
+		try (Stream<Path> stream = Files.list(root.resolve("META-INF"))) {
+			assertThatFileList(stream).containsOnly("native-image", "services", "versions", "MANIFEST.MF");
+		}
 	}
 
 	@Test
@@ -88,7 +91,8 @@ class JarFileShadingTest extends AbstractJarFileTest {
 					.contains(
 							"Implementation-Title: reactor-netty-core",
 							"Implementation-Version: " + version,
-							"Automatic-Module-Name: reactor.netty.core"
+							"Automatic-Module-Name: reactor.netty.core",
+							"Multi-Release: true"
 					);
 			assertThat(lines)
 					.as("OSGI content")
