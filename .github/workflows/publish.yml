@@ -92,7 +92,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Set up Ruby for asciidoctor-pdf
-        uses: ruby/setup-ruby@217c988b8c2bf2bacb2d5c78a7e7b18f8c34daed # v1
+        uses: ruby/setup-ruby@46ca53beb334a2329bcd0e46a694816a6ae6d173 # v1
         with:
           ruby-version: 3.3.0
       - name: Install asciidoctor-pdf / rouge
