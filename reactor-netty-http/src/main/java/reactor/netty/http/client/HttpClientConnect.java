@@ -256,8 +256,7 @@ class HttpClientConnect extends HttpClient {
 						        .then(_config.connectionObserver())
 						        .then(new HttpIOHandlerObserver(sink, handler));
 
-				AddressResolverGroup<?> resolver =
-						!_config.checkProtocol(HttpClientConfig.h3) ? _config.resolverInternal() : null;
+				AddressResolverGroup<?> resolver = _config.resolverInternal();
 
 				_config.httpConnectionProvider()
 						.acquire(_config, observer, handler, resolver)

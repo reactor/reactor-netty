@@ -345,11 +345,10 @@ The following listing presents a simple `HTTP3` example:
 
 {examples-link}/http3/Application.java
 ----
-include::{examples-dir}/http3/Application.java[lines=18..49]
+include::{examples-dir}/http3/Application.java[lines=18..46]
 ----
 <1> Configures the client to support only `HTTP/3`
-<2> Configures `SSL`
-<3> Configures `HTTP/3` settings
+<2> Configures `HTTP/3` settings
 
 include::partial$proxy.adoc[]
 

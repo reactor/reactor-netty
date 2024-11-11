@@ -21,7 +21,6 @@ import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.util.function.Tuple2;
 
-import java.net.InetSocketAddress;
 import java.time.Duration;
 
 public class Application {
@@ -29,16 +28,14 @@ public class Application {
 	public static void main(String[] args) throws Exception {
 		HttpClient client =
 				HttpClient.create()
-				          .remoteAddress(() -> new InetSocketAddress("www.google.com", 443))
 				          .protocol(HttpProtocol.HTTP3)                                  //<1>
-				          .secure()                                                      //<2>
-				          .http3Settings(spec -> spec.idleTimeout(Duration.ofSeconds(5)) //<3>
+				          .http3Settings(spec -> spec.idleTimeout(Duration.ofSeconds(5)) //<2>
 				                                     .maxData(10000000)
 				                                     .maxStreamDataBidirectionalLocal(1000000));
 
 		Tuple2<String, HttpHeaders> response =
 				client.get()
-				      .uri("/")
+				      .uri("https://www.google.com/")
 				      .responseSingle((res, bytes) -> bytes.asString()
 				                                           .zipWith(Mono.just(res.responseHeaders())))
 				      .block();

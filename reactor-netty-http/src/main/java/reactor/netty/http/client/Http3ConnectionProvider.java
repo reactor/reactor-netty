@@ -16,6 +16,7 @@
 package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LoggingHandler;
@@ -25,6 +26,7 @@ import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicChannelBootstrap;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannelBootstrap;
+import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
@@ -495,8 +497,9 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 							poolConfig -> new Http3Pool(poolConfig, poolFactory.allocationStrategy()));
 		}
 
+		@SuppressWarnings({"unchecked", "FutureReturnValueIgnored"})
 		Publisher<Connection> connectChannel() {
-			return parent.acquire(config, new DelegatingConnectionObserver(), () -> remoteAddress, resolver)
+			return parent.acquire(config, new DelegatingConnectionObserver(), () -> remoteAddress, null)
 					.flatMap(conn ->
 						Mono.create(sink -> {
 							Channel channel = conn.channel();
@@ -506,22 +509,47 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 							Http3ChannelInitializer.HttpTrafficHandler initializer =
 									channel.pipeline().remove(Http3ChannelInitializer.HttpTrafficHandler.class);
 
-							QuicChannelBootstrap bootstrap =
-									QuicChannel.newBootstrap(channel)
-									           .handler(initializer.quicChannelInitializer)
-									           .remoteAddress(remoteAddress);
-							attributes(bootstrap, config.attributes());
-							channelOptions(bootstrap, config.options());
-							bootstrap.option(ChannelOption.AUTO_READ, true);
-							bootstrap.connect()
-							         .addListener(f -> {
-							             if (!f.isSuccess()) {
-							                 sink.error(f.cause());
-							             }
-							             else {
-							                 sink.success(Connection.from((Channel) f.get()));
-							             }
-							         });
+							AddressResolver<SocketAddress> addrResolver;
+							try {
+								addrResolver = (AddressResolver<SocketAddress>) resolver.getResolver(channel.eventLoop());
+							}
+							catch (Throwable t) {
+								// "FutureReturnValueIgnored" this is deliberate
+								channel.close();
+								sink.error(t);
+								return;
+							}
+
+							if (!addrResolver.isSupported(remoteAddress) || addrResolver.isResolved(remoteAddress)) {
+								connect(channel, config, initializer.quicChannelInitializer, remoteAddress, sink);
+							}
+							else {
+								Future<SocketAddress> resolveFuture = addrResolver.resolve(remoteAddress);
+								if (resolveFuture.isDone()) {
+									Throwable cause = resolveFuture.cause();
+									if (cause != null) {
+										// "FutureReturnValueIgnored" this is deliberate
+										channel.close();
+										sink.error(cause);
+									}
+									else {
+										connect(channel, config, initializer.quicChannelInitializer, resolveFuture.getNow(), sink);
+									}
+								}
+								else {
+									resolveFuture.addListener(future -> {
+										Throwable cause = future.cause();
+										if (cause != null) {
+											// "FutureReturnValueIgnored" this is deliberate
+											channel.close();
+											sink.error(cause);
+										}
+										else {
+											connect(channel, config, initializer.quicChannelInitializer, (SocketAddress) future.getNow(), sink);
+										}
+									});
+								}
+							}
 						}));
 		}
 
@@ -537,6 +565,26 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 			for (Map.Entry<ChannelOption<?>, ?> e : options.entrySet()) {
 				bootstrap.option((ChannelOption<Object>) e.getKey(), e.getValue());
 			}
+		}
+
+		static void connect(Channel channel, TransportConfig config, ChannelHandler handler, SocketAddress remoteAddress,
+				MonoSink<Connection> sink) {
+			QuicChannelBootstrap bootstrap =
+					QuicChannel.newBootstrap(channel)
+					           .handler(handler)
+					           .remoteAddress(remoteAddress);
+			attributes(bootstrap, config.attributes());
+			channelOptions(bootstrap, config.options());
+			bootstrap.option(ChannelOption.AUTO_READ, true);
+			bootstrap.connect()
+			         .addListener(f -> {
+			             if (!f.isSuccess()) {
+			                 sink.error(f.cause());
+			             }
+			             else {
+			                 sink.success(Connection.from((Channel) f.get()));
+			             }
+			         });
 		}
 
 		static final BiPredicate<Connection, PooledRefMetadata> DEFAULT_EVICTION_PREDICATE =
