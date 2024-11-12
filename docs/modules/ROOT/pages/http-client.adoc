@@ -443,7 +443,7 @@ include::{examples-dir}/tracing/Application.java[lines=18..90]
 
 The result in `Zipkin` looks like:
 
-image::http-client-tracing.png[]
+image::http-client-tracing.png[role="invert-dark"]
 
 [[access-current-observation]]
 === Access Current Observation

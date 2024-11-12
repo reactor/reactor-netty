@@ -587,7 +587,7 @@ include::{examples-dir}/tracing/Application.java[lines=18..91]
 
 The result in `Zipkin` looks like:
 
-image::http-server-tracing.png[]
+image::http-server-tracing.png[role="invert-dark"]
 
 [[access-current-observation]]
 === Access Current Observation

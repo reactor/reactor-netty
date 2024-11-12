@@ -309,7 +309,7 @@ include::{examples-dir}/tracing/Application.java[lines=18..81]
 
 The result in `Zipkin` looks like:
 
-image::tcp-client-tracing.png[]
+image::tcp-client-tracing.png[role="invert-dark"]
 
 [[access-current-observation]]
 === Access Current Observation
