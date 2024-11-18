@@ -1894,6 +1894,67 @@ class HttpServerTests extends BaseHttpTest {
 	}
 
 	@Test
+	public void testGracefulShutdownIssue3509() throws Exception {
+		CountDownLatch latch1 = new CountDownLatch(2);
+		CountDownLatch latch2 = new CountDownLatch(1);
+		CountDownLatch latch3 = new CountDownLatch(1);
+		LoopResources loop = LoopResources.create("testGracefulShutdownIssue3509");
+		this.disposableServer =
+				createServer().runOn(loop)
+				              .doOnConnection(c -> {
+				                  c.onDispose().subscribe(null, null, latch2::countDown);
+				                  latch1.countDown();
+				              })
+				              // Register a channel group, when invoking disposeNow()
+				              // the implementation will wait for the active requests to finish
+				              .channelGroup(new DefaultChannelGroup(new DefaultEventExecutor()))
+				              .route(r ->
+				                  r.get("/delay500", (req, res) -> res.sendString(Mono.just("delay500").delayElement(Duration.ofMillis(500))))
+				                   .get("/cpuIntensive", (req, res) -> {
+				                       // Simulate some long-running CPU-intensive work
+				                       boolean stop = false;
+				                       while (!stop) {
+				                       }
+				                       return res.sendString(Mono.just("cpuIntensive"));
+				                   }))
+				              .bindNow(Duration.ofSeconds(30));
+
+		HttpClient client = createClient(this.disposableServer::address);
+
+		AtomicReference<String> result = new AtomicReference<>();
+		Flux.just("/delay500", "/cpuIntensive")
+		    .flatMap(s -> client.get().uri(s).responseContent().aggregate().asString())
+		    .subscribe(s -> {
+		        result.set(s);
+		        latch3.countDown();
+		    });
+
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+
+		// Stop accepting incoming requests, wait at most 1s for the active requests to finish
+		try {
+			// Reduce the timeout for testing purposes, by default it is 3s
+			this.disposableServer.disposeNow(Duration.ofSeconds(1));
+			fail("Expectation is that the socket cannot be closed");
+		}
+		catch (IllegalStateException e) {
+			// The socket couldn't be stopped, continue with shutdown
+			this.disposableServer = null;
+		}
+
+		// Reduce the quiet period and the timeout for testing purposes
+		// by default the quiet period is 2s and the timeout is 15s
+		loop.disposeLater(Duration.ofMillis(100), Duration.ofSeconds(1))
+		    .as(StepVerifier::create)
+		    .expectError(IllegalStateException.class)
+		    .verify(Duration.ofSeconds(5));
+
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(latch3.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(result.get()).isNotNull().isEqualTo("delay500");
+	}
+
+	@Test
 	void testHttpServerWithDomainSocketsNIOTransport() {
 		assertThatExceptionOfType(ChannelBindException.class)
 				.isThrownBy(() -> {
