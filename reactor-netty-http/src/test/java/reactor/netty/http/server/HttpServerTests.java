@@ -1914,6 +1914,7 @@ class HttpServerTests extends BaseHttpTest {
 				                       // Simulate some long-running CPU-intensive work
 				                       boolean stop = false;
 				                       while (!stop) {
+				                       // this is deliberate
 				                       }
 				                       return res.sendString(Mono.just("cpuIntensive"));
 				                   }))
