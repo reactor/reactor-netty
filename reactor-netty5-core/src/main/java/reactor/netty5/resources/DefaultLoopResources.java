@@ -129,7 +129,8 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 				}
 			}
 
-			return Mono.when(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono);
+			return Mono.when(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono)
+			           .timeout(timeout, Mono.error(new IllegalStateException("LoopResources couldn't be disposed within " + timeout.toMillis() + "ms")));
 		});
 	}
 
