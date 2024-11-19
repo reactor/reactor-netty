@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -130,7 +130,8 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 				}
 			}
 
-			return Mono.when(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono);
+			return Mono.when(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono)
+			           .timeout(timeout, Mono.error(new IllegalStateException("LoopResources couldn't be disposed within " + timeout.toMillis() + "ms")));
 		});
 	}
 
