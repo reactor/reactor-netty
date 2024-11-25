@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -31,10 +32,12 @@ import io.specto.hoverfly.junit5.api.HoverflyCore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.transport.ProxyProvider;
 import reactor.test.StepVerifier;
 import reactor.util.annotation.Nullable;
@@ -42,6 +45,8 @@ import reactor.util.function.Tuple2;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -404,5 +409,87 @@ class HttpClientProxyTest extends BaseHttpTest {
 			registry.clear();
 			registry.close();
 		}
+	}
+
+	@Test
+	void testIssue3501(Hoverfly hoverfly) {
+		ConnectionProvider provider = ConnectionProvider.create("testIssue3501", 1);
+
+		AtomicInteger invocations = new AtomicInteger();
+		HttpClient client1 = testIssue3501ConfigureProxy(createClient(provider, port), hoverfly,
+				h -> {
+					h.set("Test-Issue-3501", "test1");
+					invocations.getAndIncrement();
+				});
+		List<Tuple2<String, Channel>> response1 =
+				Flux.range(0, 2)
+				    .concatMap(i -> testIssue3501SendRequest(client1, port))
+				    .collectList()
+				    .block(Duration.ofSeconds(10));
+
+		assertThat(response1).isNotNull().hasSize(2);
+		assertThat(response1.get(0).getT1()).isEqualTo("test");
+		assertThat(response1.get(1).getT1()).isEqualTo("test");
+
+		assertThat(response1.get(0).getT2()).isSameAs(response1.get(1).getT2());
+
+		assertThat(invocations).hasValue(2);
+
+		invocations.set(0);
+		HttpClient client2 = testIssue3501ConfigureProxy(client1, hoverfly,
+				h -> {
+					h.set("Test-Issue-3501", "test1");
+					invocations.getAndIncrement();
+				});
+		List<Tuple2<String, Channel>> response2 =
+				testIssue3501SendRequest(client2, port)
+				        .collectList()
+				        .block(Duration.ofSeconds(10));
+
+		assertThat(response2).isNotNull().hasSize(1);
+		assertThat(response2.get(0).getT1()).isEqualTo("test");
+
+		assertThat(response2.get(0).getT2()).isSameAs(response1.get(0).getT2());
+
+		assertThat(invocations).hasValue(1);
+
+		invocations.set(0);
+		HttpClient client3 = testIssue3501ConfigureProxy(client1, hoverfly,
+				h -> {
+					h.set("Test-Issue-3501", "test2");
+					invocations.getAndIncrement();
+				});
+		List<Tuple2<String, Channel>> response3 =
+				testIssue3501SendRequest(client3, port)
+				        .collectList()
+				        .block(Duration.ofSeconds(10));
+
+		assertThat(response3).isNotNull().hasSize(1);
+		assertThat(response3.get(0).getT1()).isEqualTo("test");
+
+		assertThat(response3.get(0).getT2()).isNotSameAs(response1.get(0).getT2());
+
+		assertThat(invocations).hasValue(1);
+
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(5));
+	}
+
+	private static HttpClient testIssue3501ConfigureProxy(HttpClient baseClient, Hoverfly hoverfly, Consumer<HttpHeaders> headers) {
+		return baseClient.proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP)
+		                                    .host("localhost")
+		                                    .port(hoverfly.getHoverflyConfig().getProxyPort())
+		                                    .httpHeaders(headers));
+	}
+
+	private static Flux<Tuple2<String, Channel>> testIssue3501SendRequest(HttpClient client, int port) {
+		return client.get()
+		             .uri("http://127.0.0.1:" + port + "/")
+		             .responseConnection((res, conn) ->
+		                 conn.inbound()
+		                     .receive()
+		                     .aggregate()
+		                     .asString()
+		                     .zipWith(Mono.just(conn.channel())));
 	}
 }
