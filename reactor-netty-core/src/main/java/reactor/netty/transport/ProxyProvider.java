@@ -112,7 +112,7 @@ public final class ProxyProvider {
 	 *
 	 * @return The address to connect to.
 	 */
-	public final SocketAddress getSocketAddress() {
+	public final SocketAddress getProxyAddress() {
 		return this.address;
 	}
 

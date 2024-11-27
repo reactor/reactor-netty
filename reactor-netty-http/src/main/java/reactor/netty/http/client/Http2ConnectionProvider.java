@@ -120,7 +120,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 		boolean acceptGzip = false;
 		ChannelMetricsRecorder metricsRecorder = config.metricsRecorder() != null ? config.metricsRecorder().get() : null;
 		SocketAddress proxyAddress = ((ClientTransportConfig<?>) config).proxyProvider() != null ?
-				((ClientTransportConfig<?>) config).proxyProvider().getSocketAddress() : null;
+				((ClientTransportConfig<?>) config).proxyProvider().getProxyAddress() : null;
 		Function<String, String> uriTagValue = null;
 		if (config instanceof HttpClientConfig) {
 			acceptGzip = ((HttpClientConfig) config).acceptGzip;
