@@ -19,6 +19,8 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty5.handler.codec.http.HttpHeaderNames;
+import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.AfterEach;
@@ -30,10 +32,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty5.BaseHttpTest;
+import reactor.netty5.channel.ChannelMetricsRecorder;
 import reactor.netty5.http.Http2SslContextSpec;
 import reactor.netty5.http.HttpProtocol;
 import reactor.netty5.http.client.HttpClient;
 import reactor.netty5.http.server.HttpServer;
+import reactor.test.StepVerifier;
 
 import java.security.cert.CertificateException;
 import java.time.Duration;
@@ -46,6 +50,7 @@ import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.mock;
 import static reactor.netty5.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty5.Metrics.ACTIVE_STREAMS;
 import static reactor.netty5.Metrics.ERROR;
@@ -56,6 +61,7 @@ import static reactor.netty5.Metrics.PENDING_CONNECTIONS;
 import static reactor.netty5.Metrics.MAX_PENDING_CONNECTIONS;
 import static reactor.netty5.Metrics.NAME;
 import static reactor.netty5.Metrics.PENDING_STREAMS;
+import static reactor.netty5.Metrics.REGISTRY;
 import static reactor.netty5.Metrics.STATUS;
 import static reactor.netty5.Metrics.TOTAL_CONNECTIONS;
 import static reactor.netty5.http.client.HttpClientState.STREAM_CONFIGURED;
@@ -368,6 +374,52 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 
 			assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch await").isTrue();
 			assertTimer(registry, PENDING_CONNECTIONS_TIME.getName(), NAME, "testIssue3060", STATUS, ERROR).hasCountEqualTo(1);
+		}
+		finally {
+			provider.disposeLater()
+			        .block(Duration.ofSeconds(5));
+		}
+	}
+
+	/* https://github.com/reactor/reactor-netty/issues/3519 */
+	@Test
+	public void testConnectionProviderDisableAllBuiltInMetrics() throws Exception {
+		disposableServer =
+				createServer()
+				        .handle((req, res) -> res.sendString(Mono.just("testConnectionProviderDisableAllBuiltInMetrics")))
+				        .bindNow();
+
+		ConnectionProvider provider =
+				ConnectionProvider.builder("testConnectionProviderDisableAllBuiltInMetrics")
+				                  .metrics(true, () -> mock(ConnectionProvider.MeterRegistrar.class))
+				                  .build();
+
+		try {
+			CountDownLatch latch = new CountDownLatch(1);
+			createClient(provider, disposableServer.port())
+			        .metrics(true, () -> mock(ChannelMetricsRecorder.class))
+			        .headers(h -> h.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE))
+			        .doOnRequest((req, conn) -> conn.channel().closeFuture().addListener(f -> latch.countDown()))
+			        .get()
+			        .uri("/")
+			        .responseContent()
+			        .aggregate()
+			        .asString()
+			        .as(StepVerifier::create)
+			        .expectNext("testConnectionProviderDisableAllBuiltInMetrics")
+			        .expectComplete()
+			        .verify(Duration.ofSeconds(5));
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).as("latch await").isTrue();
+
+			AtomicInteger count = new AtomicInteger();
+			REGISTRY.forEachMeter(meter -> {
+				if (meter.getId().getName().startsWith("reactor.netty.connection")) {
+					count.incrementAndGet();
+				}
+			});
+
+			assertThat(count).hasValue(0);
 		}
 		finally {
 			provider.disposeLater()
