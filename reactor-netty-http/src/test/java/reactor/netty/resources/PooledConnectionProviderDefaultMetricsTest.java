@@ -239,26 +239,26 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
-						.configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
 		disposableServer =
 				HttpServer.create()
-						.port(0)
-						.protocol(HttpProtocol.H2)
-						.secure(spec -> spec.sslContext(serverCtx))
-						.handle((req, res) ->
-								res.sendString(Flux.range(0, 10)
-										.map(i -> "test")
-										.delayElements(Duration.ofMillis(4))))
-						.bindNow();
+				          .port(0)
+				          .protocol(HttpProtocol.H2)
+				          .secure(spec -> spec.sslContext(serverCtx))
+				          .handle((req, res) ->
+				              res.sendString(Flux.range(0, 10)
+				                                 .map(i -> "test")
+				                                 .delayElements(Duration.ofMillis(4))))
+				          .bindNow();
 
-		ConnectionProvider.Builder builder = ConnectionProvider
-				.builder("testConnectionPoolPendingAcquireSize")
-				.pendingAcquireMaxCount(1000)
-				.maxConnections(500)
-				.metrics(true);
-		ConnectionProvider provider = disposeTimeoutMillis == 0 ? builder.build() :
-				builder.disposeTimeout(Duration.ofMillis(disposeTimeoutMillis)).build();
+		ConnectionProvider.Builder builder =
+				ConnectionProvider.builder("testConnectionPoolPendingAcquireSize")
+				                  .pendingAcquireMaxCount(1000)
+				                  .maxConnections(500)
+				                  .metrics(true);
+		ConnectionProvider provider = disposeTimeoutMillis == 0 ?
+				builder.build() : builder.disposeTimeout(Duration.ofMillis(disposeTimeoutMillis)).build();
 
 		CountDownLatch meterRemoved = new CountDownLatch(1);
 		String name = CONNECTION_PROVIDER_PREFIX + PENDING_STREAMS;
@@ -272,37 +272,37 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 			AtomicInteger counter = new AtomicInteger();
 			HttpClient client =
 					HttpClient.create(provider)
-							.port(disposableServer.port())
-							.protocol(HttpProtocol.H2)
-							.secure(spec -> spec.sslContext(clientCtx))
-							.observe((conn, state) -> {
-								if (state == STREAM_CONFIGURED) {
-									counter.incrementAndGet();
-									conn.onTerminate()
-									    .subscribe(null,
-									        t -> conn.channel().eventLoop().execute(() -> {
-									                if (counter.decrementAndGet() == 0) {
-									                    latch.countDown();
-									                }
-									        }),
-									        () -> conn.channel().eventLoop().execute(() -> {
-									                if (counter.decrementAndGet() == 0) {
-									                    latch.countDown();
-									                }
-									        }));
-								}
-							});
+					          .port(disposableServer.port())
+					          .protocol(HttpProtocol.H2)
+					          .secure(spec -> spec.sslContext(clientCtx))
+					          .observe((conn, state) -> {
+					              if (state == STREAM_CONFIGURED) {
+					                  counter.incrementAndGet();
+					                  conn.onTerminate()
+					                      .subscribe(null,
+					                          t -> conn.channel().eventLoop().execute(() -> {
+					                              if (counter.decrementAndGet() == 0) {
+					                                  latch.countDown();
+					                              }
+					                          }),
+					                          () -> conn.channel().eventLoop().execute(() -> {
+					                              if (counter.decrementAndGet() == 0) {
+					                                  latch.countDown();
+					                              }
+					                          }));
+					              }
+					          });
 
 
 			Flux.range(0, 1000)
-					.flatMap(i ->
-							client.get()
-									.uri("/")
-									.responseContent()
-									.aggregate()
-									.asString()
-									.timeout(Duration.ofMillis(ThreadLocalRandom.current().nextInt(1, 35)), Mono.just("timeout")))
-					.blockLast(Duration.ofSeconds(30));
+			    .flatMap(i ->
+			        client.get()
+			              .uri("/")
+			              .responseContent()
+			              .aggregate()
+			              .asString()
+			              .timeout(Duration.ofMillis(ThreadLocalRandom.current().nextInt(1, 35)), Mono.just("timeout")))
+			    .blockLast(Duration.ofSeconds(30));
 
 			assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
@@ -315,7 +315,7 @@ class PooledConnectionProviderDefaultMetricsTest extends BaseHttpTest {
 		}
 		finally {
 			provider.disposeLater()
-					.block(Duration.ofSeconds(30));
+			        .block(Duration.ofSeconds(30));
 		}
 
 		assertThat(meterRemoved.await(30, TimeUnit.SECONDS)).isTrue();
