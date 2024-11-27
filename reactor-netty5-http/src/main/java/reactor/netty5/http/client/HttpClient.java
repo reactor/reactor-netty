@@ -1407,10 +1407,10 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	@Override
-	protected ProxyProvider proxyProviderFrom(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
+	protected Supplier<ProxyProvider> proxyProviderFrom(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
 		HttpClientProxyProvider.Build builder = new HttpClientProxyProvider.Build();
 		proxyOptions.accept(builder);
-		return builder.build();
+		return () -> builder.build();
 	}
 
 	@Override

@@ -54,26 +54,26 @@ public class ProxyProvider {
 	}
 
 	final String username;
-	final Function<? super String, ? extends String> password;
-	final Supplier<? extends SocketAddress> address;
+	final String password;
+	final SocketAddress address;
 	final Predicate<SocketAddress> nonProxyHostPredicate;
 	final Proxy type;
 	final long connectTimeoutMillis;
 
 	protected ProxyProvider(AbstractBuild<?> builder) {
 		this.username = builder.username;
-		this.password = builder.password;
+		this.password = builder.password != null ? builder.password : getPasswordValue(builder.passwordFunction);
 		this.nonProxyHostPredicate = builder.nonProxyHostPredicate;
 		if (Objects.isNull(builder.address)) {
 			if (builder.host != null) {
-				this.address = () -> AddressUtils.createResolved(builder.host, builder.port);
+				this.address = AddressUtils.createResolved(builder.host, builder.port);
 			}
 			else {
 				throw new IllegalArgumentException("Neither address nor host is specified");
 			}
 		}
 		else {
-			this.address = builder.address;
+			this.address = builder.address.get();
 		}
 		this.type = builder.type;
 		this.connectTimeoutMillis = builder.connectTimeoutMillis;
@@ -97,7 +97,7 @@ public class ProxyProvider {
 	 */
 	@Deprecated
 	public final Supplier<? extends InetSocketAddress> getAddress() {
-		return () -> (InetSocketAddress) address.get();
+		return () -> (InetSocketAddress) this.address;
 	}
 
 	/**
@@ -106,6 +106,15 @@ public class ProxyProvider {
 	 * @return The supplier for the address to connect to.
 	 */
 	public final Supplier<? extends SocketAddress> getSocketAddress() {
+		return () -> this.address;
+	}
+
+	/**
+	 * The address to connect to.
+	 *
+	 * @return The address to connect to.
+	 */
+	public final SocketAddress getProxyAddress() {
 		return this.address;
 	}
 
@@ -127,23 +136,18 @@ public class ProxyProvider {
 	 * @return a new eventual {@link ProxyHandler}
 	 */
 	public ProxyHandler newProxyHandler() {
-		SocketAddress proxyAddr = this.address.get();
-
 		final boolean b = Objects.nonNull(username) && Objects.nonNull(password);
-
-		String username = this.username;
-		String password = b ? this.password.apply(username) : null;
 
 		final ProxyHandler proxyHandler;
 		switch (this.type) {
 			case SOCKS4:
-				proxyHandler = Objects.nonNull(username) ? new Socks4ProxyHandler(proxyAddr, username) :
-						new Socks4ProxyHandler(proxyAddr);
+				proxyHandler = Objects.nonNull(username) ? new Socks4ProxyHandler(address, username) :
+						new Socks4ProxyHandler(address);
 				break;
 			case SOCKS5:
 				proxyHandler = b ?
-						new Socks5ProxyHandler(proxyAddr, username, password) :
-						new Socks5ProxyHandler(proxyAddr);
+						new Socks5ProxyHandler(address, username, password) :
+						new Socks5ProxyHandler(address);
 				break;
 			default:
 				throw new IllegalArgumentException("Proxy type unsupported : " + this.type);
@@ -185,7 +189,7 @@ public class ProxyProvider {
 	@Override
 	public String toString() {
 		return "ProxyProvider {" +
-				"address=" + address.get() +
+				"address=" + address +
 				", nonProxyHosts=" + nonProxyHostPredicate +
 				", type=" + type +
 				'}';
@@ -200,10 +204,10 @@ public class ProxyProvider {
 			return false;
 		}
 		return Objects.equals(username, that.username) &&
-				Objects.equals(getPasswordValue(), that.getPasswordValue()) &&
-				Objects.equals(getSocketAddress().get(), that.getSocketAddress().get()) &&
+				Objects.equals(password, that.password) &&
+				Objects.equals(address, that.address) &&
 				getNonProxyHostsValue() == that.getNonProxyHostsValue() &&
-				getType() == that.getType() &&
+				type == that.type &&
 				connectTimeoutMillis == that.connectTimeoutMillis;
 	}
 
@@ -211,10 +215,10 @@ public class ProxyProvider {
 	public int hashCode() {
 		int result = 1;
 		result = 31 * result + Objects.hashCode(username);
-		result = 31 * result + Objects.hashCode(getPasswordValue());
-		result = 31 * result + Objects.hashCode(getSocketAddress().get());
+		result = 31 * result + Objects.hashCode(password);
+		result = 31 * result + Objects.hashCode(address);
 		result = 31 * result + Boolean.hashCode(getNonProxyHostsValue());
-		result = 31 * result + Objects.hashCode(getType());
+		result = 31 * result + Objects.hashCode(type);
 		result = 31 * result + Long.hashCode(connectTimeoutMillis);
 		return result;
 	}
@@ -224,11 +228,8 @@ public class ProxyProvider {
 	}
 
 	@Nullable
-	protected String getPasswordValue() {
-		if (username == null || password == null) {
-			return null;
-		}
-		return password.apply(username);
+	protected String getPassword() {
+		return password;
 	}
 
 	@Nullable
@@ -238,6 +239,14 @@ public class ProxyProvider {
 
 	private boolean getNonProxyHostsValue() {
 		return nonProxyHostPredicate.test(getSocketAddress().get());
+	}
+
+	@Nullable
+	private String getPasswordValue(@Nullable Function<? super String, ? extends String> passwordFunction) {
+		if (username == null || passwordFunction == null) {
+			return null;
+		}
+		return passwordFunction.apply(username);
 	}
 
 	static final LoggingHandler LOGGING_HANDLER =
@@ -280,10 +289,10 @@ public class ProxyProvider {
 				.port(port);
 
 		if (properties.containsKey(SOCKS_USERNAME)) {
-			proxy = proxy.username(properties.getProperty(SOCKS_USERNAME));
+			proxy.username(properties.getProperty(SOCKS_USERNAME));
 		}
 		if (properties.containsKey(SOCKS_PASSWORD)) {
-			proxy = proxy.password(u -> properties.getProperty(SOCKS_PASSWORD));
+			proxy.password(properties.getProperty(SOCKS_PASSWORD));
 		}
 
 		return proxy.build();
@@ -311,7 +320,8 @@ public class ProxyProvider {
 		static final Predicate<SocketAddress> ALWAYS_PROXY = a -> false;
 
 		String username;
-		Function<? super String, ? extends String> password;
+		String password;
+		Function<? super String, ? extends String> passwordFunction;
 		String host;
 		int port;
 		Supplier<? extends SocketAddress> address;
@@ -326,8 +336,15 @@ public class ProxyProvider {
 		}
 
 		@Override
-		public final T password(Function<? super String, ? extends String> password) {
+		public final T password(Function<? super String, ? extends String> passwordFunction) {
+			this.password = null;
+			this.passwordFunction = passwordFunction;
+			return get();
+		}
+
+		protected T password(String password) {
 			this.password = password;
+			this.passwordFunction = null;
 			return get();
 		}
 

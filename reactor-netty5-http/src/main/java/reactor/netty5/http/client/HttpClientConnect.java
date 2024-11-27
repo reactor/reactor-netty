@@ -147,11 +147,13 @@ class HttpClientConnect extends HttpClient {
 			HttpClientHandler handler = new HttpClientHandler(config);
 
 			Mono.<Connection>create(sink -> {
+				boolean configCopied = false;
 				HttpClientConfig _config = config;
 
 				//append secure handler if needed
 				if (handler.toURI.isSecure()) {
 					if (_config.sslProvider == null) {
+						configCopied = true;
 						_config = new HttpClientConfig(config);
 						_config.sslProvider = HttpClientSecure.defaultSslProvider(_config);
 					}
@@ -171,6 +173,7 @@ class HttpClientConnect extends HttpClient {
 				}
 				else {
 					if (_config.sslProvider != null) {
+						configCopied = true;
 						_config = new HttpClientConfig(config);
 						_config.sslProvider = null;
 					}
@@ -186,6 +189,16 @@ class HttpClientConnect extends HttpClient {
 							return;
 						}
 					}
+				}
+
+				if (_config.proxyProvider() == null && _config.proxyProviderSupplier() != null) {
+					if (!configCopied) {
+						configCopied = true;
+						_config = new HttpClientConfig(config);
+					}
+					ProxyProvider proxyProvider = _config.proxyProviderSupplier().get();
+					_config.proxyProvider(proxyProvider);
+					handler.proxyProvider = proxyProvider;
 				}
 
 				ConnectionObserver observer =
@@ -392,8 +405,9 @@ class HttpClientConnect extends HttpClient {
 		final Consumer<HttpClientRequest>
 		                              redirectRequestConsumer;
 		final HttpResponseDecoderSpec decoder;
-		final ProxyProvider           proxyProvider;
 		final Duration                responseTimeout;
+
+		ProxyProvider                 proxyProvider;
 
 		volatile UriEndpoint        toURI;
 		volatile String             resourceUrl;

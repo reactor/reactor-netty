@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,7 +105,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	 * @return true if that {@link ClientTransportConfig} is configured with a proxy
 	 */
 	public final boolean hasProxy() {
-		return proxyProvider != null;
+		return proxyProvider != null || proxyProviderSupplier != null;
 	}
 
 	/**
@@ -126,6 +126,16 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	@Nullable
 	public final ProxyProvider proxyProvider() {
 		return proxyProvider;
+	}
+
+	/**
+	 * Return the {@link ProxyProvider} supplier if any or null.
+	 *
+	 * @return the {@link ProxyProvider} supplier if any or null
+	 */
+	@Nullable
+	public final Supplier<ProxyProvider> proxyProviderSupplier() {
+		return proxyProviderSupplier;
 	}
 
 	/**
@@ -156,11 +166,12 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	Consumer<? super CONF>                   doOnConnect;
 	Consumer<? super Connection>             doOnConnected;
 	Consumer<? super Connection>             doOnDisconnected;
-	Consumer<? super Connection>                doOnResolve;
+	Consumer<? super Connection>             doOnResolve;
 	BiConsumer<? super Connection, ? super SocketAddress> doAfterResolve;
 	BiConsumer<? super Connection, ? super Throwable> doOnResolveError;
 	NameResolverProvider                     nameResolverProvider;
 	ProxyProvider                            proxyProvider;
+	Supplier<ProxyProvider>                  proxyProviderSupplier;
 	Supplier<? extends SocketAddress>        remoteAddress;
 	AddressResolverGroup<?>                  resolver;
 
@@ -182,6 +193,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.doOnResolveError = parent.doOnResolveError;
 		this.nameResolverProvider = parent.nameResolverProvider;
 		this.proxyProvider = parent.proxyProvider;
+		this.proxyProviderSupplier = parent.proxyProviderSupplier;
 		this.remoteAddress = parent.remoteAddress;
 		this.resolver = parent.resolver;
 	}

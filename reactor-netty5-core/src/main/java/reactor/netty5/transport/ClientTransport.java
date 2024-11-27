@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,16 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @return a {@link Mono} of {@link Connection}
 	 */
 	protected Mono<? extends Connection> connect() {
-		CONF config = configuration();
+		CONF originalConfiguration = configuration();
+		CONF config;
+		if (originalConfiguration.proxyProvider() == null && originalConfiguration.proxyProviderSupplier() != null) {
+			T dup = duplicate();
+			config = dup.configuration();
+			config.proxyProvider(config.proxyProviderSupplier().get());
+		}
+		else {
+			config = originalConfiguration;
+		}
 
 		ConnectionObserver observer = config.defaultConnectionObserver().then(config.observer);
 
@@ -213,6 +222,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		if (configuration().hasProxy()) {
 			T dup = duplicate();
 			dup.configuration().proxyProvider = null;
+			dup.configuration().proxyProviderSupplier = null;
 			if (dup.configuration().resolver == NoopAddressResolverGroup.INSTANCE) {
 				dup.configuration().resolver = null;
 			}
@@ -241,13 +251,25 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 */
 	public T proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
 		Objects.requireNonNull(proxyOptions, "proxyOptions");
-		return proxyWithProxyProvider(proxyProviderFrom(proxyOptions));
+		return proxyWithProxyProviderSupplier(proxyProviderFrom(proxyOptions));
 	}
 
 	final T proxyWithProxyProvider(ProxyProvider proxy) {
 		T dup = duplicate();
 		CONF conf = dup.configuration();
 		conf.proxyProvider = proxy;
+		conf.proxyProviderSupplier = null;
+		if (conf.resolver == null) {
+			conf.resolver = NoopAddressResolverGroup.INSTANCE;
+		}
+		return dup;
+	}
+
+	final T proxyWithProxyProviderSupplier(Supplier<ProxyProvider> proxy) {
+		T dup = duplicate();
+		CONF conf = dup.configuration();
+		conf.proxyProvider = null;
+		conf.proxyProviderSupplier = proxy;
 		if (conf.resolver == null) {
 			conf.resolver = NoopAddressResolverGroup.INSTANCE;
 		}
@@ -288,10 +310,10 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		return proxy == null ? noProxy() : proxyWithProxyProvider(proxy);
 	}
 
-	protected ProxyProvider proxyProviderFrom(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
+	protected Supplier<ProxyProvider> proxyProviderFrom(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
 		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder();
 		proxyOptions.accept(builder);
-		return builder.build();
+		return () -> builder.build();
 	}
 
 	@Nullable

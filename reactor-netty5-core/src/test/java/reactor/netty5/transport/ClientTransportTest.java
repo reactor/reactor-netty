@@ -186,11 +186,13 @@ class ClientTransportTest {
 	void proxyOverriddenWithNullIfSystemPropertiesHaveNoProxySet() {
 		TestClientTransport transport = createTestTransportForProxy();
 		transport.proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP).host("proxy").port(8080));
-		assertThat(transport.configuration().proxyProvider).isNotNull();
+		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().proxyProviderSupplier).isNotNull();
 		assertThat(transport.configuration().resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 
 		transport.proxyWithSystemProperties(new Properties());
 		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().proxyProviderSupplier).isNull();
 		assertThat(transport.configuration().resolver()).isNull();
 	}
 
@@ -198,10 +200,12 @@ class ClientTransportTest {
 	void noProxyIfSystemPropertiesHaveNoProxySet() {
 		TestClientTransport transport = createTestTransportForProxy();
 		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().proxyProviderSupplier).isNull();
 		assertThat(transport.configuration().resolver()).isNull();
 
 		transport.proxyWithSystemProperties(new Properties());
 		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().proxyProviderSupplier).isNull();
 		assertThat(transport.configuration().resolver()).isNull();
 	}
 

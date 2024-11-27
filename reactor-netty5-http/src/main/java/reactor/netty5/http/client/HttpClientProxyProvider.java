@@ -56,11 +56,11 @@ public final class HttpClientProxyProvider extends ProxyProvider {
 	static final String HTTP_NON_PROXY_HOSTS = "http.nonProxyHosts";
 	static final String DEFAULT_NON_PROXY_HOSTS = "localhost|127.*|[::1]";
 
-	final Supplier<? extends HttpHeaders> httpHeaders;
+	final HttpHeaders httpHeaders;
 
 	HttpClientProxyProvider(Build builder) {
 		super(builder);
-		this.httpHeaders = builder.httpHeaders;
+		this.httpHeaders = builder.httpHeaders.get();
 	}
 
 	@Override
@@ -69,10 +69,10 @@ public final class HttpClientProxyProvider extends ProxyProvider {
 			return super.newProxyHandler();
 		}
 		String username = getUsername();
-		String password = getPasswordValue();
+		String password = getPassword();
 		ProxyHandler proxyHandler = username != null && password != null ?
-				new HttpProxyHandler(getSocketAddress().get(), username, password, this.httpHeaders.get()) :
-				new HttpProxyHandler(getSocketAddress().get(), this.httpHeaders.get());
+				new HttpProxyHandler(getProxyAddress(), username, password, this.httpHeaders) :
+				new HttpProxyHandler(getProxyAddress(), this.httpHeaders);
 		proxyHandler.setConnectTimeoutMillis(getConnectTimeoutMillis());
 		return proxyHandler;
 	}
@@ -88,12 +88,12 @@ public final class HttpClientProxyProvider extends ProxyProvider {
 		if (!super.equals(o)) {
 			return false;
 		}
-		return Objects.equals(httpHeaders.get(), that.httpHeaders.get());
+		return Objects.equals(httpHeaders, that.httpHeaders);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(super.hashCode(), httpHeaders.get());
+		return Objects.hash(super.hashCode(), httpHeaders);
 	}
 
 	@Nullable
@@ -144,10 +144,10 @@ public final class HttpClientProxyProvider extends ProxyProvider {
 				.nonProxyHostsPredicate(transformedNonProxyHosts);
 
 		if (properties.containsKey(userProperty)) {
-			proxy = proxy.username(properties.getProperty(userProperty));
+			proxy.username(properties.getProperty(userProperty));
 
 			if (properties.containsKey(passwordProperty)) {
-				proxy = proxy.password(u -> properties.getProperty(passwordProperty));
+				proxy.password(properties.getProperty(passwordProperty));
 			}
 			else {
 				throw new NullPointerException("Proxy username is set via '" + userProperty + "', but '" + passwordProperty + "' is not set.");
@@ -183,6 +183,11 @@ public final class HttpClientProxyProvider extends ProxyProvider {
 				};
 			}
 			return get();
+		}
+
+		@Override
+		protected Build password(String password) {
+			return super.password(password);
 		}
 	}
 }
