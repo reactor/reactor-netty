@@ -134,7 +134,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				boolean metricsEnabled = poolFactory.metricsEnabled || config.metricsRecorder() != null;
 				String id = metricsEnabled ? poolKey.hashCode() + "" : null;
 
-				InstrumentedPool<T> newPool = metricsEnabled && Metrics.isMicrometerAvailable() ?
+				InstrumentedPool<T> newPool = metricsEnabled && poolFactory.registrar == null && Metrics.isMicrometerAvailable() ?
 						createPool(id, config, poolFactory, remoteAddress, resolverGroup) :
 						createPool(config, poolFactory, remoteAddress, resolverGroup);
 
