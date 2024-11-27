@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ final class NonSslRedirectDetector extends ByteToMessageDecoder {
 			return;
 		}
 		ChannelPipeline pipeline = ctx.pipeline();
-		if (SslHandler.isEncrypted(in)) {
+		if (SslHandler.isEncrypted(in, false)) {
 			sslProvider.addSslHandler(ctx.channel(), remoteAddress, sslDebug);
 		}
 		else {
