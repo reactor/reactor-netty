@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -213,11 +213,13 @@ class ClientTransportTest {
 	void proxyOverriddenWithNullIfSystemPropertiesHaveNoProxySet() {
 		TestClientTransport transport = createTestTransportForProxy();
 		transport.proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP).host("proxy").port(8080));
-		assertThat(transport.configuration().proxyProvider).isNotNull();
+		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().proxyProviderSupplier).isNotNull();
 		assertThat(transport.configuration().resolver()).isSameAs(NoopAddressResolverGroup.INSTANCE);
 
 		transport.proxyWithSystemProperties(new Properties());
 		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().proxyProviderSupplier).isNull();
 		assertThat(transport.configuration().resolver()).isNull();
 	}
 
@@ -225,10 +227,12 @@ class ClientTransportTest {
 	void noProxyIfSystemPropertiesHaveNoProxySet() {
 		TestClientTransport transport = createTestTransportForProxy();
 		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().proxyProviderSupplier).isNull();
 		assertThat(transport.configuration().resolver()).isNull();
 
 		transport.proxyWithSystemProperties(new Properties());
 		assertThat(transport.configuration().proxyProvider).isNull();
+		assertThat(transport.configuration().proxyProviderSupplier).isNull();
 		assertThat(transport.configuration().resolver()).isNull();
 	}
 
