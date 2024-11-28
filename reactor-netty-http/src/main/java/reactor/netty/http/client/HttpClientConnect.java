@@ -618,7 +618,13 @@ class HttpClientConnect extends HttpClient {
 				}
 
 				ch.redirectRequestConsumer(consumer);
-				return handler != null ? handler.apply(ch, ch) : ch.send();
+				if (handler != null) {
+					Publisher<Void> publisher = handler.apply(ch, ch);
+					return ch.equals(publisher) ? ch.send() : publisher;
+				}
+				else {
+					return ch.send();
+				}
 			}
 			catch (Throwable t) {
 				return Mono.error(t);

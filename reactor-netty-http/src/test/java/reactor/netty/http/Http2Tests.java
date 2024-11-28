@@ -15,7 +15,6 @@
  */
 package reactor.netty.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -31,7 +30,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
-import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -60,6 +58,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
@@ -371,17 +370,54 @@ class Http2Tests extends BaseHttpTest {
 	@Test
 	void testMonoRequestBodySentAsFullRequest_Flux() {
 		// sends the message and then last http content
-		doTestMonoRequestBodySentAsFullRequest(ByteBufFlux.fromString(Mono.just("test")), 2);
+		doTestMonoRequestBodySentAsFullRequest(sender -> sender.send(ByteBufFlux.fromString(Mono.just("test"))), 2);
 	}
 
 	@Test
 	void testMonoRequestBodySentAsFullRequest_Mono() {
 		// sends "full" request
-		doTestMonoRequestBodySentAsFullRequest(ByteBufMono.fromString(Mono.just("test")), 1);
+		doTestMonoRequestBodySentAsFullRequest(sender -> sender.send(ByteBufMono.fromString(Mono.just("test"))), 1);
+	}
+
+	@Test
+	void testMonoRequestBodySentAsFullRequest_MonoEmpty() {
+		// sends "full" request
+		doTestMonoRequestBodySentAsFullRequest(sender -> sender.send(Mono.empty()), 0);
+	}
+
+	@Test
+	void testIssue3524Flux() {
+		// sends the message and then last http content
+		doTestMonoRequestBodySentAsFullRequest(sender -> sender.send((req, out) -> out.sendString(Flux.just("te", "st"))), 3);
+	}
+
+	@Test
+	void testIssue3524Mono() {
+		// sends "full" request
+		doTestMonoRequestBodySentAsFullRequest(sender -> sender.send((req, out) -> out.sendString(Mono.just("test"))), 1);
+	}
+
+	@Test
+	void testIssue3524MonoEmpty() {
+		// sends "full" request
+		doTestMonoRequestBodySentAsFullRequest(sender -> sender.send((req, out) -> Mono.empty()), 0);
+	}
+
+	@Test
+	void testIssue3524NoBody() {
+		// sends "full" request
+		doTestMonoRequestBodySentAsFullRequest(sender -> sender.send((req, out) -> out), 0);
+	}
+
+	@Test
+	void testIssue3524Object() {
+		// sends "full" request
+		doTestMonoRequestBodySentAsFullRequest(
+				sender -> sender.send((req, out) -> out.sendObject(Unpooled.wrappedBuffer("test".getBytes(Charset.defaultCharset())))), 1);
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	private void doTestMonoRequestBodySentAsFullRequest(Publisher<? extends ByteBuf> body, int expectedMsg) {
+	private void doTestMonoRequestBodySentAsFullRequest(Function<HttpClient.RequestSender, HttpClient.ResponseReceiver<?>> sendFunction, int expectedMsg) {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
@@ -396,32 +432,32 @@ class Http2Tests extends BaseHttpTest {
 				          .bindNow(Duration.ofSeconds(30));
 
 		AtomicInteger counter = new AtomicInteger();
-		createClient(disposableServer.port())
-		          .protocol(HttpProtocol.H2)
-		          .secure(spec -> spec.sslContext(clientCtx))
-		          .doOnRequest((req, conn) -> {
-		              ChannelPipeline pipeline = conn.channel().parent().pipeline();
-		              ChannelHandlerContext ctx = pipeline.context(Http2FrameCodec.class);
-		              if (ctx != null) {
-		                  pipeline.addAfter(ctx.name(), "testMonoRequestBodySentAsFullRequest",
-		                      new ChannelOutboundHandlerAdapter() {
+		sendFunction.apply(
+				createClient(disposableServer.port())
+				          .protocol(HttpProtocol.H2)
+				          .secure(spec -> spec.sslContext(clientCtx))
+				          .doOnRequest((req, conn) -> {
+				              ChannelPipeline pipeline = conn.channel().parent().pipeline();
+				              ChannelHandlerContext ctx = pipeline.context(Http2FrameCodec.class);
+				              if (ctx != null) {
+				                  pipeline.addAfter(ctx.name(), "testMonoRequestBodySentAsFullRequest",
+				                      new ChannelOutboundHandlerAdapter() {
 		                          @Override
 		                          public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-		                              if (msg instanceof Http2DataFrame) {
-		                                  counter.getAndIncrement();
-		                              }
-		                              //"FutureReturnValueIgnored" this is deliberate
-		                              ctx.write(msg, promise);
-		                          }
+				                              if (msg instanceof Http2DataFrame) {
+				                                  counter.getAndIncrement();
+				                              }
+				                              //"FutureReturnValueIgnored" this is deliberate
+				                              ctx.write(msg, promise);
+				                          }
 		                      });
-		              }
-		          })
-		          .post()
-		          .uri("/")
-		          .send(body)
-		          .responseContent()
-		          .aggregate()
-		          .block(Duration.ofSeconds(30));
+				              }
+				          })
+				          .post()
+				          .uri("/"))
+				.responseContent()
+				.aggregate()
+				.block(Duration.ofSeconds(30));
 
 		assertThat(counter.get()).isEqualTo(expectedMsg);
 	}
