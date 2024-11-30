@@ -50,9 +50,9 @@ public class H2ClientHeartbeatHandler extends SimpleChannelInboundHandler<Http2P
                             log.debug("begin send PINT frame to {} with content {}", ctx.channel().remoteAddress(), defaultHttp2PingFrame.content());
                         }
                         ctx.writeAndFlush(defaultHttp2PingFrame);
-                        ctx.executor().schedule(new HeartbeatCheckTask(ctx, pintContent), pingTimeout.toSeconds(), TimeUnit.SECONDS);
+                        ctx.executor().schedule(new HeartbeatCheckTask(ctx, pintContent), pingTimeout.getSeconds(), TimeUnit.SECONDS);
                     }
-                }, 5, pingTime.toSeconds(), TimeUnit.SECONDS);
+                }, 5, pingTime.getSeconds(), TimeUnit.SECONDS);
 
         ctx.fireChannelActive();
     }
