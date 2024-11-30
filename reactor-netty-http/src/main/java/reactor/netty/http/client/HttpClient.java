@@ -1315,6 +1315,92 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		return this;
 	}
 
+	/**
+	 * Enable or Disable heartbeat support for the client.
+	 *
+	 * @param enableH2Heartbeat enableH2Heartbeat true if heartbeat should be enabled (default: false)
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient enableH2Heartbeat(boolean enableH2Heartbeat) {
+		HttpClient dup = duplicate();
+		dup.configuration().h2Heartbeat = enableH2Heartbeat;
+		return dup;
+	}
+
+	public final HttpClient enableH2Heartbeat(Supplier<Boolean> enableH2Heartbeat) {
+		HttpClient dup = duplicate();
+		dup.configuration().h2Heartbeat = enableH2Heartbeat.get();
+		return dup;
+	}
+
+	/**
+	 * The interval between PING frames.
+	 *
+	 * @param heartbeatTime the interval between two PING frames
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient h2HeartbeatTime(Duration heartbeatTime) {
+		Objects.requireNonNull(heartbeatTime, "heartbeatTime");
+		HttpClient dup = duplicate();
+		dup.configuration().h2HeartbeatTime = heartbeatTime;
+		return dup;
+	}
+
+	public final HttpClient h2HeartbeatTime(Supplier<Duration> heartbeatTime) {
+		Objects.requireNonNull(heartbeatTime, "heartbeatTime");
+		HttpClient dup = duplicate();
+		dup.configuration().h2HeartbeatTime = heartbeatTime.get();
+		return dup;
+	}
+
+	/**
+	 * The timeout for a PING frame to be acknowledged. If client does not receive an acknowledgment within this time,
+	 * it will considered PING request failed.
+	 *
+	 * @param heartbeatTimeout the timeout of a PING frame
+	 * @return @return a new {@link HttpClient}
+	 */
+	public final HttpClient h2HeartbeatTimeout(Duration heartbeatTimeout) {
+		Objects.requireNonNull(heartbeatTimeout, "heartbeatTimeout");
+		HttpClient dup = duplicate();
+		dup.configuration().h2HeartbeatTimeout = heartbeatTimeout;
+		return dup;
+	}
+
+	public final HttpClient h2HeartbeatTimeout(Supplier<Duration> heartbeatTimeout) {
+		Objects.requireNonNull(heartbeatTimeout, "heartbeatTimeout");
+		HttpClient dup = duplicate();
+		dup.configuration().h2HeartbeatTimeout = heartbeatTimeout.get();
+		return dup;
+	}
+
+	/**
+	 * The max times for PING frame not acknowledged,when more than this value clint will close the connection.
+	 *
+	 * @param maxFailedTimes the max time for PING failed before close connection
+	 * @return @return a new {@link HttpClient}
+	 */
+	public final HttpClient maxH2HeartbeatFailedTimes(int maxFailedTimes) {
+		if (maxFailedTimes <= 0) {
+			throw new IllegalArgumentException("max failed times must be big than zero");
+		}
+
+		HttpClient dup = duplicate();
+		dup.configuration().maxH2HeartbeatFailedTimes = maxFailedTimes;
+		return dup;
+	}
+
+	public final HttpClient maxH2HeartbeatFailedTimes(Supplier<Integer> maxFailedTimes) {
+		Objects.requireNonNull(maxFailedTimes, "maxFailedTimes");
+		if (maxFailedTimes.get() <= 0) {
+			throw new IllegalArgumentException("max failed times must be big than zero");
+		}
+
+		HttpClient dup = duplicate();
+		dup.configuration().maxH2HeartbeatFailedTimes = maxFailedTimes.get();
+		return dup;
+	}
+
 	@Override
 	public final HttpClient observe(ConnectionObserver observer) {
 		return super.observe(observer);
