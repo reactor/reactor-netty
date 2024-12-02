@@ -1463,7 +1463,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Override
 			public void run() {
 				if (!requestAvailable) {
-					ctx.fireChannelInboundEvent(RequestTimeoutException.INSTANCE);
+					ctx.fireChannelInboundEvent(RequestTimeoutException.requestTimedOut());
 					ctx.close();
 				}
 			}

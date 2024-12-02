@@ -1335,7 +1335,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		@Override
 		public void run() {
 			if (ctx.channel().isActive() && !(isInboundCancelled() || isInboundDisposed())) {
-				onInboundError(RequestTimeoutException.INSTANCE);
+				onInboundError(RequestTimeoutException.requestTimedOut());
 				ctx.close();
 			}
 		}
