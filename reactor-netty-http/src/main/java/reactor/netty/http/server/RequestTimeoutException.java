@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,20 @@ package reactor.netty.http.server;
 import io.netty.channel.ChannelException;
 
 final class RequestTimeoutException extends ChannelException {
-
-	static final RequestTimeoutException INSTANCE = new RequestTimeoutException();
+	static final String REQUEST_TIMED_OUT = "Request timed out";
 
 	private static final long serialVersionUID = 422626851161276356L;
 
-	RequestTimeoutException() {
-		super(null, null, true);
+	RequestTimeoutException(String message) {
+		super(message);
 	}
 
 	@Override
 	public synchronized Throwable fillInStackTrace() {
 		return this;
+	}
+
+	static RequestTimeoutException requestTimedOut() {
+		return new RequestTimeoutException(REQUEST_TIMED_OUT);
 	}
 }

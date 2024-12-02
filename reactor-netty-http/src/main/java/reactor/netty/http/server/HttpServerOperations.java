@@ -1341,7 +1341,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void run() {
 			if (ctx.channel().isActive() && !(isInboundCancelled() || isInboundDisposed())) {
-				onInboundError(RequestTimeoutException.INSTANCE);
+				onInboundError(RequestTimeoutException.requestTimedOut());
 				//"FutureReturnValueIgnored" this is deliberate
 				ctx.close();
 			}

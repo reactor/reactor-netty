@@ -1618,7 +1618,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@SuppressWarnings("FutureReturnValueIgnored")
 			public void run() {
 				if (!requestAvailable) {
-					ctx.fireExceptionCaught(RequestTimeoutException.INSTANCE);
+					ctx.fireExceptionCaught(RequestTimeoutException.requestTimedOut());
 					//"FutureReturnValueIgnored" this is deliberate
 					ctx.close();
 				}
