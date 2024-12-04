@@ -16,10 +16,15 @@
 package reactor.netty5.http;
 
 import io.netty5.buffer.Buffer;
+import io.netty5.channel.ChannelHandlerAdapter;
+import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.http2.Http2Connection;
+import io.netty5.handler.codec.http2.Http2DataFrame;
 import io.netty5.handler.codec.http2.Http2FrameCodec;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -385,19 +390,34 @@ class Http2Tests extends BaseHttpTest {
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
-		AtomicInteger counter = new AtomicInteger();
 		disposableServer =
 				createServer()
 				          .protocol(HttpProtocol.H2)
 				          .secure(spec -> spec.sslContext(serverCtx))
-				          .handle((req, res) -> req.receiveContent()
-				                                   .doOnNext(httpContent -> counter.getAndIncrement())
+				          .handle((req, res) -> req.receive()
 				                                   .then(res.send()))
 				          .bindNow(Duration.ofSeconds(30));
 
+		AtomicInteger counter = new AtomicInteger();
 		createClient(disposableServer.port())
 		          .protocol(HttpProtocol.H2)
 		          .secure(spec -> spec.sslContext(clientCtx))
+		          .doOnRequest((req, conn) -> {
+		              ChannelPipeline pipeline = conn.channel().parent().pipeline();
+		              ChannelHandlerContext ctx = pipeline.context(Http2FrameCodec.class);
+		              if (ctx != null) {
+		                  pipeline.addAfter(ctx.name(), "testMonoRequestBodySentAsFullRequest",
+		                      new ChannelHandlerAdapter() {
+		                          @Override
+		                          public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+		                              if (msg instanceof Http2DataFrame) {
+		                                  counter.getAndIncrement();
+		                              }
+		                              return ctx.write(msg);
+		                          }
+		                      });
+		              }
+		          })
 		          .post()
 		          .uri("/")
 		          .send(body)
