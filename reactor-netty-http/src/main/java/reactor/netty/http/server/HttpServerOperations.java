@@ -796,7 +796,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			handleLastHttpContent();
 		}
 		else if (msgClass == DefaultLastHttpContent.class) {
-			super.onInboundNext(ctx, msg);
+			DefaultLastHttpContent lastHttpContent = (DefaultLastHttpContent) msg;
+			if (lastHttpContent.content().readableBytes() > 0) {
+				super.onInboundNext(ctx, msg);
+			}
+			else {
+				lastHttpContent.release();
+			}
 			handleLastHttpContent();
 		}
 		else if (msgClass == DefaultHttpContent.class) {
@@ -831,7 +837,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 		}
 		else if (msg instanceof LastHttpContent) {
-			super.onInboundNext(ctx, msg);
+			LastHttpContent lastHttpContent = (LastHttpContent) msg;
+			if (lastHttpContent.content().readableBytes() > 0) {
+				super.onInboundNext(ctx, msg);
+			}
+			else {
+				lastHttpContent.release();
+			}
 			handleLastHttpContent();
 		}
 		else {
