@@ -17,7 +17,12 @@ package reactor.netty.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2DataFrame;
 import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -378,26 +383,42 @@ class Http2Tests extends BaseHttpTest {
 		doTestMonoRequestBodySentAsFullRequest(ByteBufMono.fromString(Mono.just("test")), 1);
 	}
 
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({"deprecation", "FutureReturnValueIgnored"})
 	private void doTestMonoRequestBodySentAsFullRequest(Publisher<? extends ByteBuf> body, int expectedMsg) {
 		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
 		Http2SslContextSpec clientCtx =
 				Http2SslContextSpec.forClient()
 				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
-		AtomicInteger counter = new AtomicInteger();
 		disposableServer =
 				createServer()
 				          .protocol(HttpProtocol.H2)
 				          .secure(spec -> spec.sslContext(serverCtx))
-				          .handle((req, res) -> req.receiveContent()
-				                                   .doOnNext(httpContent -> counter.getAndIncrement())
+				          .handle((req, res) -> req.receive()
 				                                   .then(res.send()))
 				          .bindNow(Duration.ofSeconds(30));
 
+		AtomicInteger counter = new AtomicInteger();
 		createClient(disposableServer.port())
 		          .protocol(HttpProtocol.H2)
 		          .secure(spec -> spec.sslContext(clientCtx))
+		          .doOnRequest((req, conn) -> {
+		              ChannelPipeline pipeline = conn.channel().parent().pipeline();
+		              ChannelHandlerContext ctx = pipeline.context(Http2FrameCodec.class);
+		              if (ctx != null) {
+		                  pipeline.addAfter(ctx.name(), "testMonoRequestBodySentAsFullRequest",
+		                      new ChannelOutboundHandlerAdapter() {
+		                          @Override
+		                          public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+		                              if (msg instanceof Http2DataFrame) {
+		                                  counter.getAndIncrement();
+		                              }
+		                              //"FutureReturnValueIgnored" this is deliberate
+		                              ctx.write(msg, promise);
+		                          }
+		                      });
+		              }
+		          })
 		          .post()
 		          .uri("/")
 		          .send(body)
