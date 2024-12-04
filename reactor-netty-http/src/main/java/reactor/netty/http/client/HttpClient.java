@@ -183,7 +183,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 *
 		 * @param sender a bifunction given the outgoing request and the sending
 		 * {@link NettyOutbound}, returns a publisher that will terminate the request
-		 * body on complete
+		 * body on complete. Return {@link Mono#empty()} in case of a request without body.
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
