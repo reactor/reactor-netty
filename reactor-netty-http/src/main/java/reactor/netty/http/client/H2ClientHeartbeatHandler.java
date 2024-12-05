@@ -31,6 +31,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * This is handler periodically sending a PING frame to the HTTP2 server. When the PING frame not acknowledged after
+ * max times,this handler will close the connection.User can config the interval between PING frames,the timeout in for
+ * a PING frame to be acknowledged and the maximum PING frame not acknowledged before close connection.
+ * @author chentong
+ * @since 1.2.1
+ */
 public class H2ClientHeartbeatHandler extends SimpleChannelInboundHandler<Http2PingFrame> {
     private static final Logger log = Loggers.getLogger(Http3Codec.class);
 
