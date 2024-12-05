@@ -374,6 +374,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	String uriStr;
 	Function<String, String> uriTagValue;
 	WebsocketClientSpec websocketClientSpec;
+	boolean h2Heartbeat;
+	Duration h2HeartbeatTime;
+	Duration h2HeartbeatTimeout;
+	int maxH2HeartbeatFailedTimes;
 
 	HttpClientConfig(HttpConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
@@ -426,6 +430,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.uriStr = parent.uriStr;
 		this.uriTagValue = parent.uriTagValue;
 		this.websocketClientSpec = parent.websocketClientSpec;
+		this.h2Heartbeat = parent.h2Heartbeat;
+		this.h2HeartbeatTime = parent.h2HeartbeatTime;
+		this.h2HeartbeatTimeout = parent.h2HeartbeatTimeout;
+		this.maxH2HeartbeatFailedTimes = parent.maxH2HeartbeatFailedTimes;
 	}
 
 	@Override
@@ -1053,6 +1061,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final SocketAddress                              proxyAddress;
 		final SslProvider                                sslProvider;
 		final Function<String, String>                   uriTagValue;
+		final boolean                                    heartbeat;
+		final Duration                                   heartbeatTime;
+		final Duration                                   heartbeatTimeout;
+		final int                                        maxH2HeartbeatFailedTimes;
 
 		HttpClientChannelInitializer(HttpClientConfig config) {
 			this.acceptGzip = config.acceptGzip;
@@ -1064,6 +1076,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			this.proxyAddress = config.proxyProvider() != null ? config.proxyProvider().getProxyAddress() : null;
 			this.sslProvider = config.sslProvider;
 			this.uriTagValue = config.uriTagValue;
+			this.heartbeat = config.h2Heartbeat;
+			this.heartbeatTime = config.h2HeartbeatTime;
+			this.heartbeatTimeout = config.h2HeartbeatTimeout;
+			this.maxH2HeartbeatFailedTimes = config.maxH2HeartbeatFailedTimes;
 		}
 
 		@Override
@@ -1098,6 +1114,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				else if ((protocols & h2c) == h2c) {
 					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
 				}
+			}
+			if (heartbeat && (protocols & h2) == h2) {
+				channel.pipeline().addLast(new H2ClientHeartbeatHandler(heartbeatTime, heartbeatTimeout, maxH2HeartbeatFailedTimes));
 			}
 		}
 	}
