@@ -67,7 +67,6 @@ import java.util.function.Function;
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.ReactorNetty.getChannelContext;
 import static reactor.netty.ReactorNetty.setChannelContext;
-import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 
 /**
  * An HTTP/3 implementation for pooled {@link ConnectionProvider}.
