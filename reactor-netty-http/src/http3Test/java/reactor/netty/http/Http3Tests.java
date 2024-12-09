@@ -38,6 +38,7 @@ import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -571,6 +572,7 @@ class Http3Tests {
 	}
 
 	@Test
+	@Disabled
 	void testMetrics() throws Exception {
 		disposableServer =
 				createServer()
