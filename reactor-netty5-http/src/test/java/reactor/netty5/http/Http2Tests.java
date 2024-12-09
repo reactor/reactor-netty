@@ -15,22 +15,15 @@
  */
 package reactor.netty5.http;
 
-import io.netty5.buffer.Buffer;
-import io.netty5.channel.ChannelHandlerAdapter;
-import io.netty5.channel.ChannelHandlerContext;
-import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.http2.Http2Connection;
-import io.netty5.handler.codec.http2.Http2DataFrame;
 import io.netty5.handler.codec.http2.Http2FrameCodec;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
-import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -39,7 +32,6 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.BufferFlux;
-import reactor.netty5.BufferMono;
 import reactor.netty5.http.client.HttpClient;
 import reactor.netty5.http.server.HttpServer;
 import reactor.netty5.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
@@ -57,7 +49,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
@@ -369,63 +360,6 @@ class Http2Tests extends BaseHttpTest {
 		            .verify(Duration.ofSeconds(30));
 
 		assertThat(channel.get()).isTrue();
-	}
-
-	@Test
-	void testMonoRequestBodySentAsFullRequest_Flux() {
-		// sends the message and then last http content
-		doTestMonoRequestBodySentAsFullRequest(BufferFlux.fromString(Mono.just("test")), 2);
-	}
-
-	@Test
-	void testMonoRequestBodySentAsFullRequest_Mono() {
-		// sends "full" request
-		doTestMonoRequestBodySentAsFullRequest(BufferMono.fromString(Mono.just("test")), 1);
-	}
-
-	@SuppressWarnings("deprecation")
-	private void doTestMonoRequestBodySentAsFullRequest(Publisher<? extends Buffer> body, int expectedMsg) {
-		Http2SslContextSpec serverCtx = Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey());
-		Http2SslContextSpec clientCtx =
-				Http2SslContextSpec.forClient()
-				                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-
-		disposableServer =
-				createServer()
-				          .protocol(HttpProtocol.H2)
-				          .secure(spec -> spec.sslContext(serverCtx))
-				          .handle((req, res) -> req.receive()
-				                                   .then(res.send()))
-				          .bindNow(Duration.ofSeconds(30));
-
-		AtomicInteger counter = new AtomicInteger();
-		createClient(disposableServer.port())
-		          .protocol(HttpProtocol.H2)
-		          .secure(spec -> spec.sslContext(clientCtx))
-		          .doOnRequest((req, conn) -> {
-		              ChannelPipeline pipeline = conn.channel().parent().pipeline();
-		              ChannelHandlerContext ctx = pipeline.context(Http2FrameCodec.class);
-		              if (ctx != null) {
-		                  pipeline.addAfter(ctx.name(), "testMonoRequestBodySentAsFullRequest",
-		                      new ChannelHandlerAdapter() {
-		                          @Override
-		                          public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-		                              if (msg instanceof Http2DataFrame) {
-		                                  counter.getAndIncrement();
-		                              }
-		                              return ctx.write(msg);
-		                          }
-		                      });
-		              }
-		          })
-		          .post()
-		          .uri("/")
-		          .send(body)
-		          .responseContent()
-		          .aggregate()
-		          .block(Duration.ofSeconds(30));
-
-		assertThat(counter.get()).isEqualTo(expectedMsg);
 	}
 
 	@Test

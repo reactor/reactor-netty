@@ -39,6 +39,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Signal;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.Connection;
+import reactor.netty5.ConnectionObserver;
 import reactor.netty5.DisposableServer;
 import reactor.netty5.LogTracker;
 import reactor.netty5.http.HttpProtocol;
@@ -537,9 +538,9 @@ class HttpServerOutboundCompleteTest extends BaseHttpTest {
 						ch.pipeline().addBefore(HttpTrafficHandler, "eventsRecorderHandler", new EventsRecorderHandler(recorder));
 					}
 				})
-				.doOnConnection(conn -> {
-					conn.onTerminate().subscribe(null, null, recorder::recordOnTerminateIsReceived);
-					if (protocol == HttpProtocol.H2C) {
+				.doOnConnection(conn -> conn.onTerminate().subscribe(null, null, recorder::recordOnTerminateIsReceived))
+				.childObserve((conn, state) -> {
+					if (state == ConnectionObserver.State.CONNECTED && protocol == HttpProtocol.H2C) {
 						conn.channel().pipeline().addBefore(HttpTrafficHandler, "eventsRecorderHandler", new EventsRecorderHandler(recorder));
 					}
 				})
