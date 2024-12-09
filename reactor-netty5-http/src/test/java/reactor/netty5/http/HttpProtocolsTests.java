@@ -1020,6 +1020,7 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 	@ParameterizedCompatibleCombinationsTest
 	void testMonoRequestBodySentAsFullRequest_Flux(HttpServer server, HttpClient client) {
+		// sends the message and then last http content
 		testRequestBody(server, client, sender -> sender.send(BufferFlux.fromString(Mono.just("test"))), 2);
 	}
 
