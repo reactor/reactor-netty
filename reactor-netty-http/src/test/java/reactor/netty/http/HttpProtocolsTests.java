@@ -20,11 +20,15 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -78,6 +82,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -85,6 +90,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -1007,6 +1013,114 @@ class HttpProtocolsTests extends BaseHttpTest {
 		      .expectNextMatches(t -> t.getT1().equals(t.getT2()) && t.getT1().equals(configuredProtocol))
 		      .expectComplete()
 		      .verify(Duration.ofSeconds(5));
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testMonoRequestBodySentAsFullRequest_Flux(HttpServer server, HttpClient client) {
+		testRequestBody(server, client, sender -> sender.send(ByteBufFlux.fromString(Mono.just("test"))), 2);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testMonoRequestBodySentAsFullRequest_Mono(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client, sender -> sender.send(ByteBufMono.fromString(Mono.just("test"))), 1);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testMonoRequestBodySentAsFullRequest_MonoEmpty(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client, sender -> sender.send(Mono.empty()), 1);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testIssue3524Flux(HttpServer server, HttpClient client) {
+		// sends the message and then last http content
+		testRequestBody(server, client, sender -> sender.send((req, out) -> out.sendString(Flux.just("te", "st"))), 3);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testIssue3524Mono(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client, sender -> sender.send((req, out) -> out.sendString(Mono.just("test"))), 1);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testIssue3524MonoEmpty(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client, sender -> sender.send((req, out) -> Mono.empty()), 1);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testIssue3524NoBody(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client, sender -> sender.send((req, out) -> out), 1);
+	}
+
+	@ParameterizedCompatibleCombinationsTest
+	void testIssue3524Object(HttpServer server, HttpClient client) {
+		// sends "full" request
+		testRequestBody(server, client,
+				sender -> sender.send((req, out) -> out.sendObject(Unpooled.wrappedBuffer("test".getBytes(Charset.defaultCharset())))), 1);
+	}
+
+	@SuppressWarnings("FutureReturnValueIgnored")
+	private void testRequestBody(HttpServer server, HttpClient client,
+			Function<HttpClient.RequestSender, HttpClient.ResponseReceiver<?>> sendFunction, int expectedMsg) {
+		disposableServer =
+				server.handle((req, res) -> req.receive()
+				                               .then(res.send()))
+				      .bindNow(Duration.ofSeconds(30));
+
+		AtomicInteger counter = new AtomicInteger();
+		sendFunction.apply(
+		                client.port(disposableServer.port())
+		                      .doOnRequest((req, conn) -> {
+		                          ChannelPipeline pipeline = conn.channel() instanceof Http2StreamChannel ?
+		                                  conn.channel().parent().pipeline() : conn.channel().pipeline();
+		                          ChannelHandlerContext ctx = pipeline.context(NettyPipeline.HttpCodec);
+		                          if (ctx == null) {
+		                              ctx = pipeline.context(HttpClientCodec.class);
+		                          }
+		                          if (ctx != null) {
+		                              pipeline.addAfter(ctx.name(), "testRequestBody",
+		                                  new ChannelOutboundHandlerAdapter() {
+		                                      boolean done;
+
+		                                      @Override
+		                                      public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+		                                          if (!done) {
+		                                              if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
+		                                                      done = true;
+		                                                      counter.getAndIncrement();
+		                                              }
+		                                              else if (msg instanceof Http2DataFrame) {
+		                                                  if (((Http2DataFrame) msg).isEndStream()) {
+		                                                      done = true;
+		                                                  }
+		                                                  counter.getAndIncrement();
+		                                              }
+		                                              else if (msg instanceof LastHttpContent) {
+		                                                  done = true;
+		                                                  counter.getAndIncrement();
+		                                              }
+		                                              else if (msg instanceof ByteBuf) {
+		                                                  counter.getAndIncrement();
+		                                              }
+		                                          }
+		                                          //"FutureReturnValueIgnored" this is deliberate
+		                                          ctx.write(msg, promise);
+		                                      }
+		                                  });
+		                          }
+		                      })
+		                      .post()
+		                      .uri("/"))
+		            .responseContent()
+		            .aggregate()
+		            .asString()
+		            .block(Duration.ofSeconds(30));
+
+		assertThat(counter.get()).isEqualTo(expectedMsg);
 	}
 
 	static final class IdleTimeoutTestChannelInboundHandler extends ChannelInboundHandlerAdapter {
