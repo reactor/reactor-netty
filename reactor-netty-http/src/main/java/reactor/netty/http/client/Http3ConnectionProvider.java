@@ -404,7 +404,6 @@ final class Http3ConnectionProvider extends PooledConnectionProvider<Connection>
 
 					ChannelOperations<?, ?> ops = ChannelOperations.get(ch);
 					if (ops != null) {
-						obs.onStateChange(ops, STREAM_CONFIGURED);
 						sink.success(ops);
 					}
 				}
