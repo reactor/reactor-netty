@@ -814,6 +814,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				}
 				else {
 					request.release();
+					// HTTP/1.1 TLS Upgrade (RFC-2817) on empty requests (GET/HEAD/OPTIONS)
+					if (!isHttp2() && request.headers().contains(HttpHeaderNames.UPGRADE)) {
+						onInboundComplete();
+					}
 				}
 				if (isHttp2()) {
 					//force auto read to enable more accurate close selection now inbound is done
