@@ -379,7 +379,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	protected final String initShortId() {
 		Connection connection = connection();
 		if (connection instanceof AtomicLong) {
-			return channel().id().asShortText() + '-' + ((AtomicLong) connection).incrementAndGet();
+			return connection.channel().id().asShortText() + '-' + ((AtomicLong) connection).incrementAndGet();
 		}
 		return super.initShortId();
 	}
