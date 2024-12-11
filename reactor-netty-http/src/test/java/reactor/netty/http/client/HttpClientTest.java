@@ -1699,6 +1699,40 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
+	void testIssue3538GetWithPayload() throws Exception {
+		disposableServer =
+				createServer()
+				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				          .route(r -> r.get("/", (req, res) -> {
+				              final EchoAction action = new EchoAction();
+
+				              req
+				                  .receiveContent().switchIfEmpty(Mono.just(LastHttpContent.EMPTY_LAST_CONTENT))
+				                  .subscribe(action);
+
+				              return res.sendObject(action);
+				          }
+				      ))
+				      .bindNow();
+		assertThat(disposableServer).isNotNull();
+
+		// The H2C max content length is 0 by default (no content is expected),
+		// so the request is rejected with HTTP/413 Content Too Large
+		StepVerifier.create(createHttpClientForContextWithPort()
+		        .protocol(HttpProtocol.HTTP11)
+		        .headers(h ->
+		            h.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+		             .add(HttpHeaderNames.UPGRADE, "TLS/1.2"))
+		        .request(HttpMethod.GET)
+		        .send((req, res) -> res.sendString(Mono.just("testIssue3538")))
+		        .uri("/")
+                .response((r, buf) -> Mono.just(r.status().code())))
+		    .expectNextMatches(status -> status == 413)
+  		    .expectComplete()
+  		    .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
 	void testIssue694() {
 		disposableServer =
 				createServer()
@@ -3561,6 +3595,9 @@ class HttpClientTest extends BaseHttpTest {
         @Override
         public void accept(HttpContent message) {
             if (message instanceof LastHttpContent) {
+                if (message.content().readableBytes() > 0) {
+                    emitter.next(message.retain());
+                }
                 emitter.complete();
             }
             else {
