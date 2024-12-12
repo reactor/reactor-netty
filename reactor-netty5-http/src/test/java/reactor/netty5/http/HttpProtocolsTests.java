@@ -119,28 +119,28 @@ class HttpProtocolsTests extends BaseHttpTest {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
-	@ParameterizedTest(name = "{displayName}({0}, {1})")
+	@ParameterizedTest
 	@MethodSource("dataAllCombinations")
 	@interface ParameterizedAllCombinationsTest {
 	}
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
-	@ParameterizedTest(name = "{displayName}({0}, {1})")
+	@ParameterizedTest
 	@MethodSource("dataCompatibleCombinations")
 	@interface ParameterizedCompatibleCombinationsTest {
 	}
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
-	@ParameterizedTest(name = "{displayName}({0}, {1})")
+	@ParameterizedTest
 	@MethodSource("dataCompatibleCombinations_NoPool")
 	@interface ParameterizedCompatibleCombinationsNoPoolTest {
 	}
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
-	@ParameterizedTest(name = "{displayName}({0}, {1})")
+	@ParameterizedTest
 	@MethodSource("dataCompatibleCombinations_CustomPool")
 	@interface ParameterizedCompatibleCombinationsCustomPoolTest {
 	}

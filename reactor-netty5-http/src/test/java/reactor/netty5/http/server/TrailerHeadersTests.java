@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class TrailerHeadersTests {
 	static final String HEADER_VALUE = "test";
 	static final String SPACE = " ";
 
-	@ParameterizedTest(name = "{displayName}({0})")
+	@ParameterizedTest
 	@MethodSource("disallowedTrailerHeaderNames")
 	void testDisallowedTrailerHeaderNames(String declaredHeaderName) {
 		assertThatExceptionOfType(IllegalArgumentException.class)
@@ -50,7 +50,7 @@ class TrailerHeadersTests {
 				.withMessage(String.format(ERROR_MESSAGE, declaredHeaderName));
 	}
 
-	@ParameterizedTest(name = "{displayName}({index})")
+	@ParameterizedTest
 	@ValueSource(strings = {
 			HEADER_NAME_1,
 			COMMA + HEADER_NAME_1,
@@ -86,7 +86,7 @@ class TrailerHeadersTests {
 				.withMessage(String.format(ERROR_MESSAGE, HEADER_NAME_2));
 	}
 
-	@ParameterizedTest(name = "{displayName}({index})")
+	@ParameterizedTest
 	@ValueSource(strings = {COMMA, EMPTY, SPACE})
 	void testNothingIsIncludedInTrailerHeader(String declaredHeaderNames) {
 		assertThatExceptionOfType(IllegalArgumentException.class)

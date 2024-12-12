@@ -78,7 +78,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
-	@ParameterizedTest(name = "{displayName}({0}, {1})")
+	@ParameterizedTest
 	@MethodSource("data")
 	@interface ParameterizedCompressionTest {
 	}

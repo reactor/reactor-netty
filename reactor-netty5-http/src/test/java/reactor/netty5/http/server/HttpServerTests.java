@@ -3018,7 +3018,7 @@ class HttpServerTests extends BaseHttpTest {
 		            .verify(Duration.ofSeconds(5));
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(ints = {-1, 1, 2})
 	void testMaxKeepAliveRequests(int maxKeepAliveRequests) {
 		HttpServer server = createServer().handle((req, res) -> res.sendString(Mono.just("testMaxKeepAliveRequests")));
@@ -3068,7 +3068,7 @@ class HttpServerTests extends BaseHttpTest {
 		provider.disposeLater().block(Duration.ofSeconds(5));
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(ints = {-2, 0})
 	void testMaxKeepAliveRequestsBadValues(int maxKeepAliveRequests) {
 		assertThatExceptionOfType(IllegalArgumentException.class)
