@@ -605,8 +605,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public String asShortText() {
+		String shortId = this.shortId;
 		if (shortId == null) {
-			shortId = initShortId();
+			this.shortId = shortId = initShortId();
 		}
 
 		return shortId;
