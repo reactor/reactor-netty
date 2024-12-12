@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -3181,7 +3182,12 @@ class HttpServerTests extends BaseHttpTest {
 	@ParameterizedTest
 	@ValueSource(ints = {-1, 1, 2})
 	void testMaxKeepAliveRequests(int maxKeepAliveRequests) {
-		HttpServer server = createServer().handle((req, res) -> res.sendString(Mono.just("testMaxKeepAliveRequests")));
+		AtomicLong requestId = new AtomicLong();
+		HttpServer server = createServer().handle((req, res) -> {
+			String id = req.requestId();
+			requestId.set(Integer.parseInt(id.substring(id.lastIndexOf('-') + 1)));
+			return res.sendString(Mono.just("testMaxKeepAliveRequests"));
+		});
 		assertThat(server.configuration().maxKeepAliveRequests()).isEqualTo(-1);
 
 		server = server.maxKeepAliveRequests(maxKeepAliveRequests);
@@ -3206,17 +3212,17 @@ class HttpServerTests extends BaseHttpTest {
 		                "testMaxKeepAliveRequests".equals(l.get(1).getT1());
 
 		        if (maxKeepAliveRequests == -1) {
-		            return result &&
+		            return result && requestId.get() == 2 &&
 		                    "persistent".equals(l.get(0).getT2()) &&
 		                    "persistent".equals(l.get(1).getT2());
 		        }
 		        else if (maxKeepAliveRequests == 1) {
-		            return result &&
+		            return result && requestId.get() == 1 &&
 		                    "close".equals(l.get(0).getT2()) &&
 		                    "close".equals(l.get(1).getT2());
 		        }
 		        else if (maxKeepAliveRequests == 2) {
-		            return result &&
+		            return result && requestId.get() == 2 &&
 		                    "persistent".equals(l.get(0).getT2()) &&
 		                    "close".equals(l.get(1).getT2());
 		        }
