@@ -72,6 +72,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpContentDecompressor;
@@ -1730,6 +1731,39 @@ class HttpClientTest extends BaseHttpTest {
 		    .expectNextMatches(status -> status == 413)
   		    .expectComplete()
   		    .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void testIssue3538GetWithPayloadAndH2cMaxContentLength() throws Exception {
+		disposableServer =
+				createServer()
+				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(100))
+				          .route(r -> r.get("/", (req, res) -> {
+				              final EchoAction action = new EchoAction();
+
+				              req
+				                  .receiveContent().switchIfEmpty(Mono.just(LastHttpContent.EMPTY_LAST_CONTENT))
+				                  .subscribe(action);
+
+				              return res.sendObject(action);
+				          }
+				      ))
+				      .bindNow();
+		assertThat(disposableServer).isNotNull();
+
+		final ByteBuf content = createHttpClientForContextWithPort()
+		        .protocol(HttpProtocol.HTTP11)
+		        .headers(h ->
+		            h.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+		             .add(HttpHeaderNames.UPGRADE, "TLS/1.2"))
+		        .request(HttpMethod.GET)
+		        .send((req, res) -> res.sendString(Mono.just("testIssue3538")))
+		        .uri("/")
+		        .responseContent()
+		        .blockLast(Duration.ofSeconds(30));
+
+		assertThat(content).isNotNull();
 	}
 
 	@Test
@@ -3594,14 +3628,12 @@ class HttpClientTest extends BaseHttpTest {
 
         @Override
         public void accept(HttpContent message) {
-            if (message instanceof LastHttpContent) {
-                if (message.content().readableBytes() > 0) {
-                    emitter.next(message.retain());
-                }
-                emitter.complete();
+            if (message.content().readableBytes() > 0) {
+                emitter.next(new DefaultHttpContent(message.content().retain()));
             }
-            else {
-                emitter.next(message.retain());
+
+            if (message instanceof LastHttpContent) {
+                emitter.complete();
             }
         }
 

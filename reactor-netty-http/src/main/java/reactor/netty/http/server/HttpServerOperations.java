@@ -826,6 +826,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					channel().config().setAutoRead(true);
 					onInboundComplete();
 				}
+				else if (!isHttp2() && request.headers().contains(HttpHeaderNames.UPGRADE)) {
+					// HTTP/1.1 TLS Upgrade (RFC-2817) requests (GET/HEAD/OPTIONS) with empty / non-empty payload
+					// No need to call onInboundComplete(), it will be triggered by onInboundNext(...)
+					// since this is the last HTTP content
+					stopReadTimeout();
+				}
 			}
 		}
 		else if (msg instanceof LastHttpContent) {
