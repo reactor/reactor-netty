@@ -194,7 +194,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				});
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(strings = {"http", "https", "wss"})
 	void forwardedProtoOnly(String protocol) {
 		testClientRequest(
@@ -210,7 +210,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				});
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedFor(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -224,7 +224,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedHost(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -241,7 +241,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedHostEmptyHostHeader(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -258,7 +258,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedHostPortIncluded(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -274,7 +274,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedHostAndPort(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -292,7 +292,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedHostPortIncludedAndXForwardedPort(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -310,7 +310,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedPrefix(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -357,7 +357,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				false);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedPrefixEmpty(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -370,7 +370,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedPrefixMissing(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -381,7 +381,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedMultipleHeaders(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -405,7 +405,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedHostAndEmptyPort(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -427,7 +427,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				false);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedHostAndNonNumericPort(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -449,7 +449,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				true);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedForHostAndPort(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -469,7 +469,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedForHostAndPortAndProto(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -491,7 +491,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedForMultipleHostAndPortAndProto(boolean useCustomForwardedHandler) {
 		testClientRequest(
@@ -513,7 +513,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				useCustomForwardedHandler);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void xForwardedForAndPortOnly(boolean useCustomForwardedHandler) throws SSLException {
 		SslContext clientSslContext = SslContextBuilder.forClient()
@@ -542,7 +542,7 @@ class ConnectionInfoTests extends BaseHttpTest {
 				true);
 	}
 
-	@ParameterizedTest(name = "{displayName}({arguments})")
+	@ParameterizedTest
 	@MethodSource("forwardedProtoOnlyParams")
 	void xForwardedProtoOnly(String protocol, boolean useCustomForwardedHandler) {
 		testClientRequest(
