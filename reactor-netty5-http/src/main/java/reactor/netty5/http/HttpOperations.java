@@ -93,6 +93,9 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	protected HttpOperations(Connection connection, ConnectionObserver listener, HttpMessageLogFactory httpMessageLogFactory) {
 		super(connection, listener);
 		this.httpMessageLogFactory = httpMessageLogFactory;
+		if (connection instanceof AtomicLong) {
+			((AtomicLong) connection).incrementAndGet();
+		}
 	}
 
 	/**
@@ -398,7 +401,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	protected final String initShortId() {
 		Connection connection = connection();
 		if (connection instanceof AtomicLong) {
-			return connection.channel().id().asShortText() + '-' + ((AtomicLong) connection).incrementAndGet();
+			return connection.channel().id().asShortText() + '-' + ((AtomicLong) connection).get();
 		}
 		return super.initShortId();
 	}
