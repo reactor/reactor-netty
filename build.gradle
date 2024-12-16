@@ -123,7 +123,7 @@ ext {
 	nettyContribHandlerProxyVersion = '5.0.0.Alpha3-SNAPSHOT'
 
 	// Testing
-	brotli4jVersion = '1.17.0'
+	brotli4jVersion = '1.18.0'
 	zstdJniVersion = '1.5.6-8'
 	jacksonDatabindVersion = '2.18.2'
 	testAddonVersion = reactorCoreVersion
