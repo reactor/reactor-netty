@@ -820,7 +820,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					channel().config().setAutoRead(true);
 					onInboundComplete();
 				}
-				else if (!isHttp2() && request.headers().contains(HttpHeaderNames.UPGRADE)) {
+				else if (request.headers().contains(HttpHeaderNames.UPGRADE)) {
 					// HTTP/1.1 TLS Upgrade (RFC-2817) requests (GET/HEAD/OPTIONS) with empty / non-empty payload
 					stopReadTimeout();
 					//force auto read to enable more accurate close selection now inbound is done
