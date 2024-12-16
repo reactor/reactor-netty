@@ -3641,6 +3641,5 @@ class HttpClientTest extends BaseHttpTest {
         public void subscribe(Subscriber<? super HttpContent> s) {
             sender.subscribe(s);
         }
-
     }
 }

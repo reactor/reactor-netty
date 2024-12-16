@@ -814,12 +814,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				}
 				else {
 					request.release();
-					// HTTP/1.1 TLS Upgrade (RFC-2817) on empty requests (GET/HEAD/OPTIONS)
-					if (!isHttp2() && request.headers().contains(HttpHeaderNames.UPGRADE)) {
-						//force auto read to enable more accurate close selection now inbound is done
-						channel().config().setAutoRead(true);
-						onInboundComplete();
-					}
 				}
 				if (isHttp2()) {
 					//force auto read to enable more accurate close selection now inbound is done
@@ -828,9 +822,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				}
 				else if (!isHttp2() && request.headers().contains(HttpHeaderNames.UPGRADE)) {
 					// HTTP/1.1 TLS Upgrade (RFC-2817) requests (GET/HEAD/OPTIONS) with empty / non-empty payload
-					// No need to call onInboundComplete(), it will be triggered by onInboundNext(...)
-					// since this is the last HTTP content
 					stopReadTimeout();
+					//force auto read to enable more accurate close selection now inbound is done
+					channel().config().setAutoRead(true);
+					onInboundComplete();
 				}
 			}
 		}
