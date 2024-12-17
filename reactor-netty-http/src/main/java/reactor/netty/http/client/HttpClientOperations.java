@@ -445,7 +445,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (source instanceof Mono) {
 			return super.send(source);
 		}
-		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
+		if (Objects.equals(method(), HttpMethod.GET) ||
+				Objects.equals(method(), HttpMethod.HEAD) ||
+				Objects.equals(method(), HttpMethod.DELETE)) {
 
 			ByteBufAllocator alloc = channel().alloc();
 			return new PostHeadersNettyOutbound(Flux.from(source)
@@ -480,7 +482,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				                }
 				                for (ByteBuf bb : list) {
 				                	if (log.isDebugEnabled()) {
-						                log.debug(format(channel(), "Ignoring accumulated bytebuf on http GET {}"), bb);
+						                log.debug(format(channel(), "Ignoring accumulated bytebuf on http {} {}"), method(), bb);
 					                }
 				                	bb.release();
 				                }
