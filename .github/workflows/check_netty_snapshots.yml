@@ -34,6 +34,6 @@ jobs:
             distribution: 'graalvm'
             java-version: '17.0.12'
       - name: Build with Gradle
-        run: ./gradlew clean check -x :reactor-netty-core:java17Test --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.116.Final-SNAPSHOT'
+        run: ./gradlew clean check -x :reactor-netty-core:java17Test --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.117.Final-SNAPSHOT'
       - name: GraalVM smoke tests
-        run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.116.Final-SNAPSHOT'
+        run: ./gradlew :reactor-netty-graalvm-smoke-tests:nativeTest --no-daemon -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.117.Final-SNAPSHOT'
