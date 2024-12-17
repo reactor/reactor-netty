@@ -1670,21 +1670,20 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue3538() throws Exception {
+	void testIssue3538() {
 		disposableServer =
 				createServer()
-				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
-				          .route(r -> r.get("/", (req, res) -> {
-				              final EchoAction action = new EchoAction();
+				        .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				        .route(r -> r.get("/", (req, res) -> {
+				            final EchoAction action = new EchoAction();
 
-				              req
-				                  .receiveContent().switchIfEmpty(Mono.just(new EmptyLastHttpContent(res.alloc())))
-				                  .subscribe(action);
+				            req.receiveContent()
+				               .switchIfEmpty(Mono.just(new EmptyLastHttpContent(res.alloc())))
+				               .subscribe(action);
 
-				              return res.sendObject(action);
-				          }
-				      ))
-				      .bindNow();
+				            return res.sendObject(action);
+				        }))
+				        .bindNow();
 		assertThat(disposableServer).isNotNull();
 
 		final Buffer content = createHttpClientForContextWithPort()
@@ -1701,26 +1700,25 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@Test
-	void testIssue3538GetWithPayload() throws Exception {
+	void testIssue3538GetWithPayload() {
 		disposableServer =
 				createServer()
-				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
-				          .route(r -> r.get("/", (req, res) -> {
-				              final EchoAction action = new EchoAction();
+				        .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				        .route(r -> r.get("/", (req, res) -> {
+				            final EchoAction action = new EchoAction();
 
-				              req
-				                  .receiveContent().switchIfEmpty(Mono.just(new EmptyLastHttpContent(res.alloc())))
-				                  .subscribe(action);
+				            req.receiveContent()
+				               .switchIfEmpty(Mono.just(new EmptyLastHttpContent(res.alloc())))
+				               .subscribe(action);
 
-				              return res.sendObject(action);
-				          }
-				      ))
-				      .bindNow();
+				            return res.sendObject(action);
+				        }))
+				        .bindNow();
 		assertThat(disposableServer).isNotNull();
 
 		// The H2C max content length is 0 by default (no content is expected),
 		// so the request is rejected with HTTP/413 Content Too Large
-		StepVerifier.create(createHttpClientForContextWithPort()
+		createHttpClientForContextWithPort()
 		        .protocol(HttpProtocol.HTTP11)
 		        .headers(h ->
 		            h.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
@@ -1728,29 +1726,29 @@ class HttpClientTest extends BaseHttpTest {
 		        .request(HttpMethod.GET)
 		        .send((req, res) -> res.sendString(Mono.just("testIssue3538")))
 		        .uri("/")
-                .response((r, buf) -> Mono.just(r.status().code())))
-		    .expectNextMatches(status -> status == 413)
-  		    .expectComplete()
-  		    .verify(Duration.ofSeconds(30));
+		        .response((r, buf) -> Mono.just(r.status().code()))
+		        .as(StepVerifier::create)
+		        .expectNextMatches(status -> status == 413)
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
-	void testIssue3538GetWithPayloadAndH2cMaxContentLength() throws Exception {
+	void testIssue3538GetWithPayloadAndH2cMaxContentLength() {
 		disposableServer =
 				createServer()
-				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
-				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(100))
-				          .route(r -> r.get("/", (req, res) -> {
-				              final EchoAction action = new EchoAction();
+				        .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				        .httpRequestDecoder(spec -> spec.h2cMaxContentLength(100))
+				        .route(r -> r.get("/", (req, res) -> {
+				            final EchoAction action = new EchoAction();
 
-				              req
-				                  .receiveContent().switchIfEmpty(Mono.just(new EmptyLastHttpContent(res.alloc())))
-				                  .subscribe(action);
+				            req.receiveContent()
+				               .switchIfEmpty(Mono.just(new EmptyLastHttpContent(res.alloc())))
+				               .subscribe(action);
 
-				              return res.sendObject(action);
-				          }
-				      ))
-				      .bindNow();
+				            return res.sendObject(action);
+				        }))
+				        .bindNow();
 		assertThat(disposableServer).isNotNull();
 
 		final Buffer content = createHttpClientForContextWithPort()
@@ -3553,28 +3551,28 @@ class HttpClientTest extends BaseHttpTest {
 		}
 	}
 
-    private static class EchoAction implements Publisher<HttpContent>, Consumer<HttpContent> {
-        private final Publisher<HttpContent> sender;
-        private volatile FluxSink<HttpContent> emitter;
+	private static final class EchoAction implements Publisher<HttpContent>, Consumer<HttpContent> {
+		private final Publisher<HttpContent> sender;
+		private volatile FluxSink<HttpContent> emitter;
 
-        EchoAction() {
-            this.sender = Flux.create(emitter ->  this.emitter = emitter);
-        }
+		EchoAction() {
+			this.sender = Flux.create(emitter ->  this.emitter = emitter);
+		}
 
-        @Override
-        public void accept(HttpContent message) {
-            if (message.payload().readableBytes() > 0) {
-                emitter.next(new DefaultHttpContent(message.payload().copy()));
-            }
+		@Override
+		public void accept(HttpContent message) {
+			if (message.payload().readableBytes() > 0) {
+				emitter.next(new DefaultHttpContent(message.payload().copy()));
+			}
 
-            if (message instanceof LastHttpContent) {
-                emitter.complete();
-            }
-        }
+			if (message instanceof LastHttpContent) {
+				emitter.complete();
+			}
+		}
 
-        @Override
-        public void subscribe(Subscriber<? super HttpContent> s) {
-            sender.subscribe(s);
-        }
-    }
+		@Override
+		public void subscribe(Subscriber<? super HttpContent> s) {
+			sender.subscribe(s);
+		}
+	}
 }
