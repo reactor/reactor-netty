@@ -72,10 +72,14 @@ import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
+import io.netty5.handler.codec.http.DefaultHttpContent;
+import io.netty5.handler.codec.http.EmptyLastHttpContent;
 import io.netty5.handler.codec.http.HttpClientCodec;
+import io.netty5.handler.codec.http.HttpContent;
 import io.netty5.handler.codec.http.HttpContentDecompressor;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
+import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.headers.DefaultHttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
@@ -100,7 +104,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.netty5.BaseHttpTest;
@@ -1660,6 +1667,104 @@ class HttpClientTest extends BaseHttpTest {
 		        .blockLast(Duration.ofSeconds(30));
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+	}
+
+	@Test
+	void testIssue3538() throws Exception {
+		disposableServer =
+				createServer()
+				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				          .route(r -> r.get("/", (req, res) -> {
+				              final EchoAction action = new EchoAction();
+
+				              req
+				                  .receiveContent().switchIfEmpty(Mono.just(new EmptyLastHttpContent(res.alloc())))
+				                  .subscribe(action);
+
+				              return res.sendObject(action);
+				          }
+				      ))
+				      .bindNow();
+		assertThat(disposableServer).isNotNull();
+
+		final Buffer content = createHttpClientForContextWithPort()
+		        .protocol(HttpProtocol.HTTP11)
+		        .headers(h ->
+		            h.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+		             .add(HttpHeaderNames.UPGRADE, "TLS/1.2"))
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .blockLast(Duration.ofSeconds(30));
+
+		assertThat(content).isNull();
+	}
+
+	@Test
+	void testIssue3538GetWithPayload() throws Exception {
+		disposableServer =
+				createServer()
+				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				          .route(r -> r.get("/", (req, res) -> {
+				              final EchoAction action = new EchoAction();
+
+				              req
+				                  .receiveContent().switchIfEmpty(Mono.just(new EmptyLastHttpContent(res.alloc())))
+				                  .subscribe(action);
+
+				              return res.sendObject(action);
+				          }
+				      ))
+				      .bindNow();
+		assertThat(disposableServer).isNotNull();
+
+		// The H2C max content length is 0 by default (no content is expected),
+		// so the request is rejected with HTTP/413 Content Too Large
+		StepVerifier.create(createHttpClientForContextWithPort()
+		        .protocol(HttpProtocol.HTTP11)
+		        .headers(h ->
+		            h.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+		             .add(HttpHeaderNames.UPGRADE, "TLS/1.2"))
+		        .request(HttpMethod.GET)
+		        .send((req, res) -> res.sendString(Mono.just("testIssue3538")))
+		        .uri("/")
+                .response((r, buf) -> Mono.just(r.status().code())))
+		    .expectNextMatches(status -> status == 413)
+  		    .expectComplete()
+  		    .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void testIssue3538GetWithPayloadAndH2cMaxContentLength() throws Exception {
+		disposableServer =
+				createServer()
+				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(100))
+				          .route(r -> r.get("/", (req, res) -> {
+				              final EchoAction action = new EchoAction();
+
+				              req
+				                  .receiveContent().switchIfEmpty(Mono.just(new EmptyLastHttpContent(res.alloc())))
+				                  .subscribe(action);
+
+				              return res.sendObject(action);
+				          }
+				      ))
+				      .bindNow();
+		assertThat(disposableServer).isNotNull();
+
+		final Buffer content = createHttpClientForContextWithPort()
+		        .protocol(HttpProtocol.HTTP11)
+		        .headers(h ->
+		            h.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+		             .add(HttpHeaderNames.UPGRADE, "TLS/1.2"))
+		        .request(HttpMethod.GET)
+		        .send((req, res) -> res.sendString(Mono.just("testIssue3538")))
+		        .uri("/")
+		        .responseContent()
+		        .blockLast(Duration.ofSeconds(30));
+
+		assertThat(content).isNotNull();
 	}
 
 	@Test
@@ -3447,4 +3552,29 @@ class HttpClientTest extends BaseHttpTest {
 		public void deRegisterMetrics(String poolName, String id, SocketAddress remoteAddress) {
 		}
 	}
+
+    private static class EchoAction implements Publisher<HttpContent>, Consumer<HttpContent> {
+        private final Publisher<HttpContent> sender;
+        private volatile FluxSink<HttpContent> emitter;
+
+        EchoAction() {
+            this.sender = Flux.create(emitter ->  this.emitter = emitter);
+        }
+
+        @Override
+        public void accept(HttpContent message) {
+            if (message.payload().readableBytes() > 0) {
+                emitter.next(new DefaultHttpContent(message.payload().copy()));
+            }
+
+            if (message instanceof LastHttpContent) {
+                emitter.complete();
+            }
+        }
+
+        @Override
+        public void subscribe(Subscriber<? super HttpContent> s) {
+            sender.subscribe(s);
+        }
+    }
 }
