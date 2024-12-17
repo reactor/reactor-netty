@@ -3515,16 +3515,18 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(booleans = {true, false})
-	void testDeleteMethod(boolean chunked) {
+	@ValueSource(strings = {"mono", "flux", "empty"})
+	void testDeleteMethod(String requestBodyType) {
 		disposableServer =
 				createServer()
-				        .handle((req, res) -> res.send(req.receive().transferOwnership()))
+				        .handle((req, res) -> res.sendString(
+				            Flux.concat(req.receive().aggregate().asString().defaultIfEmpty("empty"),
+				                        Mono.just(" " + req.requestHeaders().get(HttpHeaderNames.CONTENT_LENGTH)))))
 				        .bindNow();
 
-		Publisher<Buffer> body = chunked ?
+		Publisher<Buffer> body = "flux".equals(requestBodyType) ?
 				BufferFlux.fromString(Flux.just("d", "e", "l", "e", "t", "e")) :
-				BufferMono.fromString(Mono.just("delete"));
+				"mono".equals(requestBodyType) ? BufferMono.fromString(Mono.just("delete")) : Mono.empty();
 
 		createClient(disposableServer.port())
 		        .delete()
@@ -3532,7 +3534,7 @@ class HttpClientTest extends BaseHttpTest {
 		        .send(body)
 		        .responseSingle((res, bytes) -> bytes.asString())
 		        .as(StepVerifier::create)
-		        .expectNext("delete")
+		        .expectNext("empty".equals(requestBodyType) ? "empty 0" : "delete 6")
 		        .expectComplete()
 		        .verify(Duration.ofSeconds(5));
 	}
