@@ -15,6 +15,9 @@
  */
 package reactor.netty.http.server;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -33,9 +36,6 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * {@link HttpContentCompressor} to enable on-demand compression.
  *
@@ -46,22 +46,22 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 	boolean decoded;
 	HttpRequest request;
 
-	private SimpleCompressionHandler(CompressionOptions ... options) {
+	private SimpleCompressionHandler(CompressionOptions... options) {
 		super(options);
 	}
 
 	static SimpleCompressionHandler create(int compressionLevel) {
 		ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
 
-		List<CompressionOptions>  options = new ArrayList<>();
+		List<CompressionOptions> options = new ArrayList<>();
 		options.add(StandardCompressionOptions.gzip(compressionLevel, 15, 8));
 		options.add(StandardCompressionOptions.deflate(compressionLevel, 15, 8));
 		options.add(StandardCompressionOptions.snappy());
 
-		if(Zstd.isAvailable()) {
+		if (Zstd.isAvailable()) {
 			options.add(StandardCompressionOptions.zstd(compressionLevel, 15, 8));
 		}
-		if(Brotli.isAvailable()) {
+		if (Brotli.isAvailable()) {
 			options.add(StandardCompressionOptions.brotli());
 		}
 
