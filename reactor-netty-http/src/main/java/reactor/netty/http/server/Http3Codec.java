@@ -63,6 +63,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	final Function<String, String>                                methodTagValue;
 	final ChannelMetricsRecorder                                  metricsRecorder;
 	final int                                                     minCompressionSize;
+	final int                                                       compressionLevel;
 	final ChannelOperations.OnSetup                               opsFactory;
 	final Duration                                                readTimeout;
 	final Duration                                                requestTimeout;
@@ -83,6 +84,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
+			int compressionLevel,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -101,6 +103,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		this.methodTagValue = methodTagValue;
 		this.metricsRecorder = metricsRecorder;
 		this.minCompressionSize = minCompressionSize;
+		this.compressionLevel = compressionLevel;
 		this.opsFactory = opsFactory;
 		this.readTimeout = readTimeout;
 		this.requestTimeout = requestTimeout;
@@ -118,13 +121,13 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
 		p.addLast(NettyPipeline.H3ToHttp11Codec, new Http3FrameToHttpObjectCodec(true, validate))
 		 .addLast(NettyPipeline.HttpTrafficHandler,
-		         new Http3StreamBridgeServerHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
+		         new Http3StreamBridgeServerHandler(compressPredicate, compressionLevel, cookieDecoder, cookieEncoder, formDecoderProvider,
 		                 forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, readTimeout, requestTimeout));
 
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
 		if (alwaysCompress) {
-			p.addLast(NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
+			p.addLast(NettyPipeline.CompressionHandler, SimpleCompressionHandler.create(compressionLevel));
 		}
 
 		ChannelOperations.addReactiveBridge(channel, opsFactory, listener);
@@ -166,6 +169,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
+			int compressionLevel,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -173,7 +177,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			boolean validate) {
 		return new Http3ServerConnectionHandler(
 				new Http3Codec(accessLogEnabled, accessLog, compressPredicate, decoder, encoder, formDecoderProvider, forwardedHeaderHandler,
-						httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize,
+						httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize, compressionLevel,
 						opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
 	}
 }

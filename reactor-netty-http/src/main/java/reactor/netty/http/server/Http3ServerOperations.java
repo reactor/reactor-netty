@@ -43,6 +43,7 @@ final class Http3ServerOperations extends HttpServerOperations {
 			ConnectionObserver listener,
 			HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
+			int compressionLevel,
 			ConnectionInfo connectionInfo,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
@@ -54,7 +55,7 @@ final class Http3ServerOperations extends HttpServerOperations {
 			@Nullable Duration requestTimeout,
 			boolean secured,
 			ZonedDateTime timestamp) {
-		super(c, listener, nettyRequest, compressionPredicate, connectionInfo, decoder, encoder, formDecoderProvider,
+		super(c, listener, nettyRequest, compressionPredicate, compressionLevel, connectionInfo, decoder, encoder, formDecoderProvider,
 				httpMessageLogFactory, isHttp2, mapHandle, readTimeout, requestTimeout, secured, timestamp, true);
 	}
 
