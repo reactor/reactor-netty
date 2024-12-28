@@ -35,6 +35,7 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.internal.ObjectUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -301,15 +302,35 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Specifies whether GZip response compression is enabled if the client request
 	 * presents accept encoding.
+	 *  default compression level is 6.
 	 *
 	 * @param compressionEnabled if true GZip response compression
 	 * is enabled if the client request presents accept encoding, otherwise disabled.
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer compress(boolean compressionEnabled) {
+		return compress(compressionEnabled, 6);
+	}
+
+	/**
+	 * Enable GZip response compression if the client request presents accept encoding
+	 * headers AND the response reaches a minimum threshold.
+	 * And then, specify the compression level of the set compression rate and speed.
+	 *
+	 * @param compressionEnabled if true GZip response compression
+	 *  is enabled if the client request presents accept encoding, otherwise disabled.
+	 * @param compressionLevel must be between 0 and 9.
+	 * value in bytes
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer compress(boolean compressionEnabled,  int compressionLevel) {
+		ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+
 		HttpServer dup = duplicate();
 		if (compressionEnabled) {
 			dup.configuration().minCompressionSize = 0;
+			dup.configuration().compressionLevel = compressionLevel;
 		}
 		else {
 			dup.configuration().minCompressionSize = -1;

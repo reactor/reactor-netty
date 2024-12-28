@@ -54,6 +54,7 @@ import static reactor.netty.ReactorNetty.format;
 
 final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
+	final int compressionLevel;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
@@ -74,6 +75,7 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 
 	Http3StreamBridgeServerHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
+			int compressionLevel,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
@@ -84,6 +86,7 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout) {
 		this.compress = compress;
+		this.compressionLevel = compressionLevel;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
 		this.formDecoderProvider = formDecoderProvider;
@@ -131,6 +134,7 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 						listener,
 						request,
 						compress,
+						compressionLevel,
 						connectionInfo,
 						cookieDecoder,
 						cookieEncoder,
