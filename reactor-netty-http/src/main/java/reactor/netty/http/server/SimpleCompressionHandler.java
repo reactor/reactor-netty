@@ -59,7 +59,7 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		options.add(StandardCompressionOptions.snappy());
 
 		if (Zstd.isAvailable()) {
-			options.add(StandardCompressionOptions.zstd(compressionLevel, 15, 8));
+			options.add(StandardCompressionOptions.zstd());
 		}
 		if (Brotli.isAvailable()) {
 			options.add(StandardCompressionOptions.brotli());
