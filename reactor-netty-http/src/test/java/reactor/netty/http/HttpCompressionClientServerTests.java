@@ -750,7 +750,7 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		);
 
 		ByteBuf byteBuf = Unpooled.directBuffer(32);
-		byteBuf.writeBytes("reply".getBytes());
+		byteBuf.writeBytes("reply".getBytes(Charset.defaultCharset()));
 
 		embeddedChannel.writeOutbound(byteBuf);
 		ByteBuf encodedByteBuf = embeddedChannel.readOutbound();
