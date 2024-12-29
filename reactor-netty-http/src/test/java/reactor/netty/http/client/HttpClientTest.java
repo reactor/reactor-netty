@@ -100,6 +100,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -119,6 +122,7 @@ import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
+import reactor.netty.http.client.HttpClient.ResponseReceiver;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionPoolMetrics;
 import reactor.netty.resources.ConnectionProvider;
@@ -142,6 +146,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.mockito.Mockito.times;
 
 /**
  * This test class verifies {@link HttpClient}.
@@ -606,6 +611,97 @@ class HttpClientTest extends BaseHttpTest {
 				          .block(Duration.ofMillis(200));
 
 		assertThat(responseString).isEqualTo("hello /foo");
+	}
+
+	@Test
+	void expectedConnectionPoolsEnabled() throws SSLException {
+		ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+		Logger spyLogger = Mockito.spy(log);
+		Loggers.useCustomLoggers(s -> spyLogger);
+
+		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+				.build();
+
+
+		disposableServer =
+				createServer()
+						.secure(ssl -> ssl.sslContext(sslServer))
+						.handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+						.bindNow();
+
+		ConnectionProvider connectionProvider = ConnectionProvider.builder("expected-connection-pool").expectedConnectionPools(1).build();
+
+		StepVerifier.create(
+				Flux.range(1, 2)
+						.flatMap(i -> createClient(connectionProvider, disposableServer::address)
+								.secure(ssl -> ssl.sslContext(createClientSslContext()))
+								.get()
+								.uri("/foo")
+								.responseContent()
+								.aggregate()
+								.asString()))
+				.thenConsumeWhile(s -> true)
+				.verifyComplete();
+
+		Loggers.resetLoggerFactory();
+
+
+		Mockito.verify(spyLogger).warn(argumentCaptor.capture(), Mockito.eq(2), Mockito.eq(1));
+		assertThat(argumentCaptor.getValue()).isEqualTo("Connection pool creation limit exceeded: {} pools created, maximum expected is {}");
+
+		connectionProvider.dispose();
+		disposableServer.dispose();
+
+	}
+
+	@Test
+	void expectedConnectionPoolsNotEnabled() throws SSLException {
+		Logger spyLogger = Mockito.spy(log);
+		Loggers.useCustomLoggers(s -> spyLogger);
+
+		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+				.build();
+
+
+		disposableServer =
+				createServer()
+						.secure(ssl -> ssl.sslContext(sslServer))
+						.handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+						.bindNow();
+
+		ConnectionProvider connectionProvider = ConnectionProvider.builder("expected-connection-pool").build();
+
+		StepVerifier.create(
+						Flux.range(1, 2)
+								.flatMap(i -> createClient(connectionProvider, disposableServer::address)
+										.secure(ssl -> ssl.sslContext(createClientSslContext()))
+										.get()
+										.uri("/foo")
+										.responseContent()
+										.aggregate()
+										.asString()))
+				.thenConsumeWhile(s -> true)
+				.verifyComplete();
+
+		Loggers.resetLoggerFactory();
+
+
+		Mockito.verify(spyLogger, times(0)).warn(Mockito.eq("Connection pool creation limit exceeded: {} pools created, maximum expected is {}"), Mockito.eq(2), Mockito.eq(1));
+
+		connectionProvider.dispose();
+		disposableServer.dispose();
+
+	}
+
+	private SslContext createClientSslContext() {
+		try {
+			return SslContextBuilder.forClient()
+					.trustManager(InsecureTrustManagerFactory.INSTANCE)
+					.build();
+		}
+		catch (SSLException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Test

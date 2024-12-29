@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -394,6 +394,9 @@ public interface ConnectionProvider extends Disposable {
 	final class Builder extends ConnectionPoolSpec<Builder> {
 
 		static final Duration DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED = Duration.ZERO;
+		static final int EXPECTED_CONNECTION_POOLS_DISABLED = -1;
+
+		int expectedConnectionPools = EXPECTED_CONNECTION_POOLS_DISABLED;
 
 		String name;
 		Duration inactivePoolDisposeInterval = DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED;
@@ -417,6 +420,7 @@ public interface ConnectionProvider extends Disposable {
 			this.inactivePoolDisposeInterval = copy.inactivePoolDisposeInterval;
 			this.poolInactivity = copy.poolInactivity;
 			this.disposeTimeout = copy.disposeTimeout;
+			this.expectedConnectionPools = copy.expectedConnectionPools;
 			copy.confPerRemoteHost.forEach((address, spec) -> this.confPerRemoteHost.put(address, new ConnectionPoolSpec<>(spec)));
 		}
 
@@ -488,6 +492,18 @@ public interface ConnectionProvider extends Disposable {
 			return this;
 		}
 
+		/**
+		 * Specifies the expected number of connection pools that the provider can create.
+		 * If the number of connection pools created exceeds this value, a warning message is logged.
+		 * The value must be positive; otherwise, the connection pools check is ignored.
+		 *
+		 * @param expectedConnectionPools the number of connection pools expected to be created.
+		 * @return the current {@link Builder} instance with the updated configuration.
+		 */
+		public Builder expectedConnectionPools(int expectedConnectionPools) {
+			this.expectedConnectionPools = expectedConnectionPools;
+			return this;
+		}
 		/**
 		 * Builds new ConnectionProvider.
 		 *
