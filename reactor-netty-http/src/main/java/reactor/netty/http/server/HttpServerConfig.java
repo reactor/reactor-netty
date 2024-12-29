@@ -229,15 +229,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	/**
-	 * Returns the specified compression level.
-	 *
-	 * @return compression level
-	 */
-	public int compressionLevel() {
-		return compressionLevel;
-	}
-
-	/**
 	 * Return the HTTP protocol to support. Default is {@link HttpProtocol#HTTP11}.
 	 *
 	 * @return the HTTP protocol to support
@@ -335,7 +326,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	int                                                     maxKeepAliveRequests;
 	Function<String, String>                                methodTagValue;
 	int                                                     minCompressionSize;
-	int                                                     compressionLevel;
+	HttpCompressionSettingsSpec compressionSettings;
 	HttpProtocol[]                                          protocols;
 	int                                                     _protocols;
 	ProxyProtocolSupportType                                proxyProtocolSupportType;
@@ -354,7 +345,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.httpMessageLogFactory = ReactorNettyHttpMessageLogFactory.INSTANCE;
 		this.maxKeepAliveRequests = -1;
 		this.minCompressionSize = -1;
-		this.compressionLevel = 6;
+		this.compressionSettings = HttpCompressionSettingsSpec.provideDefault();
 		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
 		this._protocols = h11;
 		this.proxyProtocolSupportType = ProxyProtocolSupportType.OFF;
@@ -379,7 +370,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.maxKeepAliveRequests = parent.maxKeepAliveRequests;
 		this.methodTagValue = parent.methodTagValue;
 		this.minCompressionSize = parent.minCompressionSize;
-		this.compressionLevel = parent.compressionLevel;
+		this.compressionSettings = parent.compressionSettings;
 		this.protocols = parent.protocols;
 		this._protocols = parent._protocols;
 		this.proxyProtocolSupportType = parent.proxyProtocolSupportType;
@@ -504,7 +495,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			int compressionLevel,
+			HttpCompressionSettingsSpec compressionSettings,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -515,14 +506,14 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 		pipeline.addLast(NettyPipeline.H2ToHttp11Codec, HTTP2_STREAM_FRAME_TO_HTTP_OBJECT)
 		        .addLast(NettyPipeline.HttpTrafficHandler,
-		                 new Http2StreamBridgeServerHandler(compressPredicate, compressionLevel, decoder, encoder, formDecoderProvider,
+		                 new Http2StreamBridgeServerHandler(compressPredicate, compressionSettings, decoder, encoder, formDecoderProvider,
 		                         forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle,
 		                         readTimeout, requestTimeout));
 
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
 		if (alwaysCompress) {
-			pipeline.addLast(NettyPipeline.CompressionHandler, SimpleCompressionHandler.create(compressionLevel));
+			pipeline.addLast(NettyPipeline.CompressionHandler, SimpleCompressionHandler.create(compressionSettings));
 		}
 
 		ChannelOperations.addReactiveBridge(ch, opsFactory, listener);
@@ -618,7 +609,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			int compressionLevel,
+			HttpCompressionSettingsSpec compressionSettings,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -628,7 +619,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		p.addLast(NettyPipeline.HttpCodec, newHttp3ServerConnectionHandler(accessLogEnabled, accessLog, compressPredicate,
 				cookieDecoder, cookieEncoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory,
-				listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize, compressionLevel, opsFactory, readTimeout,
+				listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize, compressionSettings, opsFactory, readTimeout,
 				requestTimeout, uriTagValue, validate));
 
 		if (metricsRecorder != null) {
@@ -654,7 +645,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			int compressionLevel,
+			HttpCompressionSettingsSpec compressionSettings,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -691,7 +682,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		 .addLast(NettyPipeline.H2MultiplexHandler,
 		          new Http2MultiplexHandler(new H2Codec(accessLogEnabled, accessLog, compressPredicate, cookieDecoder,
 		                  cookieEncoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener,
-		                  mapHandle, methodTagValue, metricsRecorder, minCompressionSize, compressionLevel, opsFactory, readTimeout, requestTimeout, uriTagValue)));
+		                  mapHandle, methodTagValue, metricsRecorder, minCompressionSize, compressionSettings, opsFactory, readTimeout, requestTimeout, uriTagValue)));
 
 		IdleTimeoutHandler.addIdleTimeoutHandler(p, idleTimeout);
 
@@ -725,7 +716,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			int compressionLevel,
+			HttpCompressionSettingsSpec compressionSettings,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -744,7 +735,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		Http11OrH2CleartextCodec upgrader = new Http11OrH2CleartextCodec(accessLogEnabled, accessLog, compressPredicate,
 				cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null, enableGracefulShutdown, formDecoderProvider,
 				forwardedHeaderHandler, http2SettingsSpec, httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder,
-				minCompressionSize, compressionLevel, opsFactory, readTimeout, requestTimeout, uriTagValue, decoder.validateHeaders());
+				minCompressionSize, compressionSettings, opsFactory, readTimeout, requestTimeout, uriTagValue, decoder.validateHeaders());
 
 		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader, http2SettingsSpec != null ? http2SettingsSpec.maxStreams() : null);
 
@@ -759,7 +750,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		            NettyPipeline.H2CUpgradeHandler, h2cUpgradeHandler)
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
-		            new HttpTrafficHandler(compressPredicate, compressionLevel, cookieDecoder, cookieEncoder, formDecoderProvider,
+		            new HttpTrafficHandler(compressPredicate, compressionSettings, cookieDecoder, cookieEncoder, formDecoderProvider,
 		                    forwardedHeaderHandler, httpMessageLogFactory, idleTimeout, listener, mapHandle, maxKeepAliveRequests,
 		                    readTimeout, requestTimeout, decoder.validateHeaders()));
 
@@ -770,7 +761,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
 		if (alwaysCompress) {
-			p.addBefore(NettyPipeline.HttpTrafficHandler, NettyPipeline.CompressionHandler, SimpleCompressionHandler.create(compressionLevel));
+			p.addBefore(NettyPipeline.HttpTrafficHandler, NettyPipeline.CompressionHandler, SimpleCompressionHandler.create(compressionSettings));
 		}
 
 		if (metricsRecorder != null) {
@@ -814,7 +805,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			int compressionLevel,
+			HttpCompressionSettingsSpec compressionSettings,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
 			@Nullable Function<String, String> uriTagValue) {
@@ -831,7 +822,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		            new HttpServerCodec(decoderConfig))
 		 .addBefore(NettyPipeline.ReactiveBridge,
 		            NettyPipeline.HttpTrafficHandler,
-		            new HttpTrafficHandler(compressPredicate, compressionLevel, cookieDecoder, cookieEncoder, formDecoderProvider,
+		            new HttpTrafficHandler(compressPredicate, compressionSettings, cookieDecoder, cookieEncoder, formDecoderProvider,
 		                    forwardedHeaderHandler, httpMessageLogFactory, idleTimeout, listener, mapHandle, maxKeepAliveRequests,
 		                    readTimeout, requestTimeout, decoder.validateHeaders()));
 
@@ -842,7 +833,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
 		if (alwaysCompress) {
-			p.addBefore(NettyPipeline.HttpTrafficHandler, NettyPipeline.CompressionHandler, SimpleCompressionHandler.create(compressionLevel));
+			p.addBefore(NettyPipeline.HttpTrafficHandler, NettyPipeline.CompressionHandler, SimpleCompressionHandler.create(compressionSettings));
 		}
 
 		if (metricsRecorder != null) {
@@ -1025,7 +1016,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Function<String, String>                                methodTagValue;
 		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
-		final int                                                     compressionLevel;
+		final HttpCompressionSettingsSpec compressionSettings;
 		final ChannelOperations.OnSetup                               opsFactory;
 		final Duration                                                readTimeout;
 		final Duration                                                requestTimeout;
@@ -1045,7 +1036,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable Function<String, String> methodTagValue,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				int minCompressionSize,
-				int compressionLevel,
+				HttpCompressionSettingsSpec compressionSettings,
 				ChannelOperations.OnSetup opsFactory,
 				@Nullable Duration readTimeout,
 				@Nullable Duration requestTimeout,
@@ -1063,7 +1054,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.methodTagValue = methodTagValue;
 			this.metricsRecorder = metricsRecorder;
 			this.minCompressionSize = minCompressionSize;
-			this.compressionLevel = compressionLevel;
+			this.compressionSettings = compressionSettings;
 			this.opsFactory = opsFactory;
 			this.readTimeout = readTimeout;
 			this.requestTimeout = requestTimeout;
@@ -1075,7 +1066,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ch.pipeline().remove(this);
 			addStreamHandlers(ch, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
 					formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder,
-					minCompressionSize, compressionLevel, opsFactory, readTimeout, requestTimeout, uriTagValue);
+					minCompressionSize, compressionSettings, opsFactory, readTimeout, requestTimeout, uriTagValue);
 		}
 	}
 
@@ -1098,7 +1089,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Function<String, String>                                methodTagValue;
 		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
-		final int                                                     compressionLevel;
+		final HttpCompressionSettingsSpec compressionSettings;
 		final ChannelOperations.OnSetup                               opsFactory;
 		final Duration                                                readTimeout;
 		final Duration                                                requestTimeout;
@@ -1121,7 +1112,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable Function<String, String> methodTagValue,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				int minCompressionSize,
-				int compressionLevel,
+				HttpCompressionSettingsSpec compressionSettings,
 				ChannelOperations.OnSetup opsFactory,
 				@Nullable Duration readTimeout,
 				@Nullable Duration requestTimeout,
@@ -1162,7 +1153,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.methodTagValue = methodTagValue;
 			this.metricsRecorder = metricsRecorder;
 			this.minCompressionSize = minCompressionSize;
-			this.compressionLevel = compressionLevel;
+			this.compressionSettings = compressionSettings;
 			this.opsFactory = opsFactory;
 			this.readTimeout = readTimeout;
 			this.requestTimeout = requestTimeout;
@@ -1177,7 +1168,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ch.pipeline().remove(this);
 			addStreamHandlers(ch, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
 					formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, methodTagValue,
-					metricsRecorder, minCompressionSize, compressionLevel, opsFactory, readTimeout, requestTimeout, uriTagValue);
+					metricsRecorder, minCompressionSize, compressionSettings, opsFactory, readTimeout, requestTimeout, uriTagValue);
 		}
 
 		@Override
@@ -1236,7 +1227,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Function<String, String>                                methodTagValue;
 		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
-		final int                                                     compressionLevel;
+		final HttpCompressionSettingsSpec compressionSettings;
 		final ChannelOperations.OnSetup                               opsFactory;
 		final Duration                                                readTimeout;
 		final Duration                                                requestTimeout;
@@ -1267,7 +1258,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.methodTagValue = initializer.methodTagValue;
 			this.metricsRecorder = initializer.metricsRecorder;
 			this.minCompressionSize = initializer.minCompressionSize;
-			this.compressionLevel = initializer.compressionLevel;
+			this.compressionSettings = initializer.compressionSettings;
 			this.opsFactory = initializer.opsFactory;
 			this.readTimeout = initializer.readTimeout;
 			this.requestTimeout = initializer.requestTimeout;
@@ -1286,7 +1277,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
 				configureH2Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder,
 						enableGracefulShutdown, formDecoderProvider, forwardedHeaderHandler, http2SettingsSpec, httpMessageLogFactory, idleTimeout,
-						listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize, compressionLevel, opsFactory, readTimeout, requestTimeout,
+						listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize, compressionSettings, opsFactory, readTimeout, requestTimeout,
 						uriTagValue, decoder.validateHeaders());
 				return;
 			}
@@ -1294,7 +1285,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			if (!supportOnlyHttp2 && ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
 				configureHttp11Pipeline(p, accessLogEnabled, accessLog, compressPredicate, cookieDecoder, cookieEncoder, true,
 						decoder, formDecoderProvider, forwardedHeaderHandler, httpMessageLogFactory, idleTimeout, listener,
-						mapHandle, maxKeepAliveRequests, methodTagValue, metricsRecorder, minCompressionSize, compressionLevel, readTimeout, requestTimeout, uriTagValue);
+						mapHandle, maxKeepAliveRequests, methodTagValue, metricsRecorder, minCompressionSize, compressionSettings, readTimeout, requestTimeout, uriTagValue);
 
 				// When the server is configured with HTTP/1.1 and H2 and HTTP/1.1 is negotiated,
 				// when channelActive event happens, this HttpTrafficHandler is still not in the pipeline,
@@ -1327,7 +1318,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final Function<String, String>                                methodTagValue;
 		final ChannelMetricsRecorder                                  metricsRecorder;
 		final int                                                     minCompressionSize;
-		final int                                                     compressionLevel;
+		final HttpCompressionSettingsSpec compressionSettings;
 		final ChannelOperations.OnSetup                               opsFactory;
 		final int                                                     protocols;
 		final ProxyProtocolSupportType                                proxyProtocolSupportType;
@@ -1355,7 +1346,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.methodTagValue = config.methodTagValue;
 			this.metricsRecorder = config.metricsRecorderInternal();
 			this.minCompressionSize = config.minCompressionSize;
-			this.compressionLevel = config.compressionLevel;
+			this.compressionSettings = config.compressionSettings;
 			this.opsFactory = config.channelOperationsProvider();
 			this.protocols = config._protocols;
 			this.proxyProtocolSupportType = config.proxyProtocolSupportType;
@@ -1410,7 +1401,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							methodTagValue,
 							metricsRecorder,
 							minCompressionSize,
-							compressionLevel,
+							compressionSettings,
 							readTimeout,
 							requestTimeout,
 							uriTagValue);
@@ -1442,7 +1433,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 								methodTagValue,
 								metricsRecorder,
 								minCompressionSize,
-								compressionLevel,
+								compressionSettings,
 								opsFactory,
 								readTimeout,
 								requestTimeout,
@@ -1466,7 +1457,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							methodTagValue,
 							metricsRecorder,
 							minCompressionSize,
-							compressionLevel,
+							compressionSettings,
 							opsFactory,
 							readTimeout,
 							requestTimeout,
@@ -1496,7 +1487,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							methodTagValue,
 							metricsRecorder,
 							minCompressionSize,
-							compressionLevel,
+							compressionSettings,
 							opsFactory,
 							readTimeout,
 							requestTimeout,
@@ -1522,7 +1513,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							methodTagValue,
 							metricsRecorder,
 							minCompressionSize,
-							compressionLevel,
+							compressionSettings,
 							readTimeout,
 							requestTimeout,
 							uriTagValue);
@@ -1546,7 +1537,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							methodTagValue,
 							metricsRecorder,
 							minCompressionSize,
-							compressionLevel,
+							compressionSettings,
 							opsFactory,
 							readTimeout,
 							requestTimeout,

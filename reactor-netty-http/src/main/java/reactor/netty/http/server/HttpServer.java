@@ -35,7 +35,6 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.internal.ObjectUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -309,28 +308,9 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer compress(boolean compressionEnabled) {
-		return compress(compressionEnabled, 6);
-	}
-
-	/**
-	 * Enable GZip response compression if the client request presents accept encoding
-	 * headers AND the response reaches a minimum threshold.
-	 * And then, specify the compression level of the set compression rate and speed.
-	 *
-	 * @param compressionEnabled if true GZip response compression
-	 *  is enabled if the client request presents accept encoding, otherwise disabled.
-	 * @param compressionLevel must be between 0 and 9.
-	 * value in bytes
-	 *
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer compress(boolean compressionEnabled,  int compressionLevel) {
-		ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
-
 		HttpServer dup = duplicate();
 		if (compressionEnabled) {
 			dup.configuration().minCompressionSize = 0;
-			dup.configuration().compressionLevel = compressionLevel;
 		}
 		else {
 			dup.configuration().minCompressionSize = -1;
@@ -354,6 +334,35 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 		HttpServer dup = duplicate();
 		dup.configuration().minCompressionSize = minResponseSize;
+		return dup;
+	}
+
+	/**
+	 * Specifies GZIP, DEFLATE, ZSTD Compression Level.
+	 *
+	 * @param compressionSettings configures {@link HttpCompressionSettingsSpec} after enable compress.
+	 * <pre>
+	 * {@code
+	 *     HttpServer.create()
+	 *                      .compress(true)
+	 * 					.compressOptions(
+	 * 					    builder -> builder.gzip(6)
+	 * 					                        .deflate(6)
+	 * 					                        .zstd(3)
+	 * 					 )
+	 * 					.bindNow();
+	 * }
+	 * </pre>
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer compressSettings(Consumer<HttpCompressionSettingsSpec.Builder> compressionSettings) {
+		Objects.requireNonNull(compressionSettings, "compressionSettings");
+
+		HttpCompressionSettingsSpec.Builder builder = HttpCompressionSettingsSpec.builder();
+		compressionSettings.accept(builder);
+
+		HttpServer dup = duplicate();
+		dup.configuration().compressionSettings = builder.build();
 		return dup;
 	}
 

@@ -22,10 +22,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.DecoderException;
-import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.CompressionOptions;
-import io.netty.handler.codec.compression.StandardCompressionOptions;
-import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -34,7 +31,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
 
 /**
  * {@link HttpContentCompressor} to enable on-demand compression.
@@ -50,23 +46,9 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		super(options);
 	}
 
-	static SimpleCompressionHandler create(int compressionLevel) {
-		ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
-
-		List<CompressionOptions> options = new ArrayList<>();
-		options.add(StandardCompressionOptions.gzip(compressionLevel, 15, 8));
-		options.add(StandardCompressionOptions.deflate(compressionLevel, 15, 8));
-		options.add(StandardCompressionOptions.snappy());
-
-		if (Zstd.isAvailable()) {
-			options.add(StandardCompressionOptions.zstd());
-		}
-		if (Brotli.isAvailable()) {
-			options.add(StandardCompressionOptions.brotli());
-		}
-
+	static SimpleCompressionHandler create(HttpCompressionSettingsSpec compressionSettings) {
 		return new SimpleCompressionHandler(
-				options.toArray(new CompressionOptions[0])
+				compressionSettings.adaptToOptions()
 		);
 	}
 
