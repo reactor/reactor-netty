@@ -124,7 +124,7 @@ ext {
 	brotli4jVersion = '1.18.0'
 	jacksonDatabindVersion = '2.18.2'
 	testAddonVersion = reactorCoreVersion
-	assertJVersion = '3.26.3'
+	assertJVersion = '3.27.0'
 	awaitilityVersion = '4.2.2'
 	hoverflyJavaVersion = '0.19.1'
 	tomcatVersion = '9.0.98'
