@@ -365,12 +365,14 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 	protected static void logPoolState(Channel channel, InstrumentedPool<? extends Connection> pool, String msg, @Nullable Throwable t) {
 		InstrumentedPool.PoolMetrics metrics = pool.metrics();
-		log.debug(format(channel, "{}, now: {} active connections, {} inactive connections and {} pending acquire requests."),
+		log.debug(
+				format(channel, "{}, now: {} active connections, {} inactive connections and {} pending acquire requests."),
 				msg,
 				metrics.acquiredSize(),
 				metrics.idleSize(),
 				metrics.pendingAcquireSize(),
-				t == null ? "" : t);
+				t
+		);
 	}
 
 	final void scheduleInactivePoolsDisposal() {
