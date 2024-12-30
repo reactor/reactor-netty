@@ -137,6 +137,7 @@ updates:
   - dependency-name: org.junit.jupiter:*
   - dependency-name: org.awaitility:awaitility
   - dependency-name: com.aayushatharva.brotli4j:brotli4j
+  - dependency-name: io.netty.incubator:netty-incubator-transport-native-io_uring
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
