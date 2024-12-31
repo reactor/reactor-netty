@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import io.netty5.util.Resource;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -46,12 +48,17 @@ public final class CancelReceiverHandlerTest extends ChannelHandlerAdapter {
 	final Runnable cancelAction;
 
 	/**
+	 * List with incoming message body parts which are expected to be all released.
+	 */
+	private final List<Resource<?>> resources;
+
+	/**
 	 * Flag set to true when the cancel action has already been invoked.
 	 */
 	private final AtomicBoolean cancelled = new AtomicBoolean();
 
 	/**
-	 * Latch initialized with the number of incoming message body parts which are exected to be all released.
+	 * Latch initialized with the number of incoming message body parts which are expected to be all released.
 	 */
 	private final CountDownLatch expectedReleaseCount;
 
@@ -73,28 +80,39 @@ public final class CancelReceiverHandlerTest extends ChannelHandlerAdapter {
 	 *                             message buffers are all released.
 	 */
 	public CancelReceiverHandlerTest(Runnable cancelAction, int expectedReleaseCount) {
+		this.resources = new ArrayList<>(expectedReleaseCount);
 		this.cancelAction = cancelAction;
 		this.expectedReleaseCount = new CountDownLatch(expectedReleaseCount);
 	}
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
-		// If the incoming message is a kind of a buffer, calls the cancel action.
+		// If the incoming message is Resource, calls the cancel action.
 		if (msg instanceof Resource<?> buf) {
-			if (buf != null && cancelled.compareAndSet(false, true)) {
+			if (cancelled.compareAndSet(false, true)) {
 				log.debug("Executing cancel action");
 				cancelAction.run();
 			}
+			resources.add(buf);
 		}
 
+		ctx.fireChannelRead(msg);
+	}
+
+	@Override
+	public void channelReadComplete(ChannelHandlerContext ctx) {
 		try {
-			ctx.fireChannelRead(msg);
+			ctx.fireChannelReadComplete();
 		}
 		finally {
-			if (msg instanceof Resource<?> buf && !buf.isAccessible()) {
-				expectedReleaseCount.countDown();
-				if (expectedReleaseCount.getCount() == 0) {
-					log.debug("All received messages have been released.");
+			for (int i = 0; i < resources.size(); i++) {
+				Resource<?> buf = resources.get(i);
+				if (!buf.isAccessible()) {
+					resources.remove(i);
+					expectedReleaseCount.countDown();
+					if (expectedReleaseCount.getCount() == 0) {
+						log.debug("All received messages have been released.");
+					}
 				}
 			}
 		}
