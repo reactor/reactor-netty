@@ -15,15 +15,14 @@
  */
 package reactor.netty.examples.http.cors;
 
-import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http.cors.CorsConfigBuilder;
 import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import java.net.SocketAddress;
 import java.security.cert.CertificateException;
-import reactor.netty.ConnectionObserver;
+
+import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.Http11SslContextSpec;
@@ -52,7 +51,7 @@ public class HttpCorsServer {
 				          .port(PORT)
 				          .wiretap(WIRETAP)
 				          .compress(COMPRESS)
-				          .doOnChannelInit(HttpCorsServer::addCorsHandler)
+				          .doOnConnection(HttpCorsServer::addCorsHandler)
 				          .route(routes -> routes.route(r -> true, HttpCorsServer::okResponse));
 
 		if (SECURE) {
@@ -80,8 +79,13 @@ public class HttpCorsServer {
 		return response;
 	}
 
-	private static void addCorsHandler(ConnectionObserver observer, Channel channel, SocketAddress remoteAddress) {
+	private static void addCorsHandler(Connection connection) {
 		CorsConfig corsConfig = CorsConfigBuilder.forOrigin("example.com").allowNullOrigin().allowCredentials().allowedRequestHeaders("custom-request-header").build();
-		channel.pipeline().addAfter(NettyPipeline.HttpCodec, "Cors", new CorsHandler(corsConfig));
+		if (!HTTP2) {
+			connection.channel().pipeline().addAfter(NettyPipeline.HttpCodec, "Cors", new CorsHandler(corsConfig));
+		}
+		else {
+			connection.channel().pipeline().addAfter(NettyPipeline.H2ToHttp11Codec, "Cors", new CorsHandler(corsConfig));
+		}
 	}
 }
