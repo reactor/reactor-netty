@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,6 +66,23 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		 * @return {@code this}
 		 */
 		Builder minConnections(int minConnections);
+
+		/**
+		 * Enables or disables work stealing mode for managing HTTP2 Connection Pools.
+		 * <p>
+		 * By default, a single Connection Pool is used by multiple Netty event loop threads.
+		 * When work stealing is enabled, each Netty event loop will maintain its own
+		 * HTTP2 Connection Pool, and HTTP2 streams allocation will be distributed over all available
+		 * pools using a work stealing strategy. This approach maximizes throughput and
+		 * resource utilization in a multithreaded environment.
+		 *
+		 * @param progressive true if the HTTP2 Connection pools should be enabled gradually (when the nth pool becomes
+		 *                    is starting to get some pendingg acquisitions request, then enable one more
+		 *                    pool until all available pools are enabled).
+		 *
+		 * @return {@code this}
+		 */
+		Builder enableWorkStealing(boolean progressive);
 	}
 
 	/**
@@ -75,6 +92,18 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 	 */
 	public static Http2AllocationStrategy.Builder builder() {
 		return new Http2AllocationStrategy.Build();
+	}
+
+	/**
+	 * Creates a builder for {@link Http2AllocationStrategy} and initialize it
+	 * with an existing strategy. This method can be used to create a mutated version
+	 * of an existing strategy.
+	 *
+	 * @return a new {@link Http2AllocationStrategy.Builder} initialized with an existing http2
+	 * allocation strategy.
+	 */
+	public static Http2AllocationStrategy.Builder builder(Http2AllocationStrategy existing) {
+		return new Http2AllocationStrategy.Build(existing);
 	}
 
 	@Override
@@ -141,9 +170,14 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		}
 	}
 
+	public boolean enableWorkStealing() {
+		return enableWorkStealing;
+	}
+
 	final long maxConcurrentStreams;
 	final int maxConnections;
 	final int minConnections;
+	final boolean enableWorkStealing;
 
 	volatile int permits;
 	static final AtomicIntegerFieldUpdater<Http2AllocationStrategy> PERMITS = AtomicIntegerFieldUpdater.newUpdater(Http2AllocationStrategy.class, "permits");
@@ -152,6 +186,7 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		this.maxConcurrentStreams = build.maxConcurrentStreams;
 		this.maxConnections = build.maxConnections;
 		this.minConnections = build.minConnections;
+		this.enableWorkStealing = build.enableWorkStealing;
 		PERMITS.lazySet(this, this.maxConnections);
 	}
 
@@ -159,6 +194,7 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		this.maxConcurrentStreams = copy.maxConcurrentStreams;
 		this.maxConnections = copy.maxConnections;
 		this.minConnections = copy.minConnections;
+		this.enableWorkStealing = copy.enableWorkStealing;
 		PERMITS.lazySet(this, this.maxConnections);
 	}
 
@@ -170,6 +206,17 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 		long maxConcurrentStreams = DEFAULT_MAX_CONCURRENT_STREAMS;
 		int maxConnections = DEFAULT_MAX_CONNECTIONS;
 		int minConnections = DEFAULT_MIN_CONNECTIONS;
+		boolean enableWorkStealing = Boolean.getBoolean("reactor.netty.pool.h2.enableworkstealing");
+
+		Build() {
+		}
+
+		Build(Http2AllocationStrategy existing) {
+			this.maxConcurrentStreams = existing.maxConcurrentStreams;
+			this.minConnections = existing.minConnections;
+			this.maxConnections = existing.maxConnections;
+			this.enableWorkStealing = existing.enableWorkStealing;
+		}
 
 		@Override
 		public Http2AllocationStrategy build() {
@@ -204,6 +251,12 @@ public final class Http2AllocationStrategy implements ConnectionProvider.Allocat
 				throw new IllegalArgumentException("minConnections must be positive or zero");
 			}
 			this.minConnections = minConnections;
+			return this;
+		}
+
+		@Override
+		public Builder enableWorkStealing(boolean progressive) {
+			this.enableWorkStealing = true;
 			return this;
 		}
 	}
