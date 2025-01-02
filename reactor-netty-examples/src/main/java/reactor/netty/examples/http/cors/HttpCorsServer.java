@@ -37,7 +37,7 @@ import reactor.netty.http.server.HttpServerResponse;
  * An HTTP server that handles CORS (Cross-Origin Resource Sharing) requests.
  *
  * @author Jack Cheng
- **/
+ */
 public class HttpCorsServer {
 
 	static final boolean SECURE = System.getProperty("secure") != null;
@@ -47,19 +47,15 @@ public class HttpCorsServer {
 	static final boolean HTTP2 = System.getProperty("http2") != null;
 
 	public static void main(String... args) throws CertificateException {
-
-
 		HttpServer server =
 				HttpServer.create()
-						.port(PORT)
-						.wiretap(WIRETAP)
-						.compress(COMPRESS)
-						.doOnChannelInit(HttpCorsServer::addCorsHandler)
-						.route(routes -> routes.route(r -> true,
-								HttpCorsServer::okResponse));
+				          .port(PORT)
+				          .wiretap(WIRETAP)
+				          .compress(COMPRESS)
+				          .doOnChannelInit(HttpCorsServer::addCorsHandler)
+				          .route(routes -> routes.route(r -> true, HttpCorsServer::okResponse));
 
 		if (SECURE) {
-
 			SelfSignedCertificate ssc = new SelfSignedCertificate("localhost");
 			if (HTTP2) {
 				server = server.secure(spec -> spec.sslContext(Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
@@ -74,8 +70,8 @@ public class HttpCorsServer {
 		}
 
 		server.bindNow()
-				.onDispose()
-				.block();
+		      .onDispose()
+		      .block();
 	}
 
 	private static NettyOutbound okResponse(HttpServerRequest request, HttpServerResponse response) {
@@ -83,7 +79,6 @@ public class HttpCorsServer {
 		response.header("custom-response-header", "Some value");
 		return response;
 	}
-
 
 	private static void addCorsHandler(ConnectionObserver observer, Channel channel, SocketAddress remoteAddress) {
 		CorsConfig corsConfig = CorsConfigBuilder.forOrigin("example.com").allowNullOrigin().allowCredentials().allowedRequestHeaders("custom-request-header").build();
