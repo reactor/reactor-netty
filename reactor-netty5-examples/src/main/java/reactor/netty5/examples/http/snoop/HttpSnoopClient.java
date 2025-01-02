@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import reactor.netty5.http.client.HttpClient;
  *
  * @author Kun.Long
  * @see HttpSnoopServer
- **/
+ */
 public class HttpSnoopClient {
 
 	static final boolean SECURE = System.getProperty("secure") != null;
