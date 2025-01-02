@@ -21,6 +21,8 @@ import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.core.publisher.Mono;
 import reactor.netty5.BufferMono;
 import reactor.netty5.http.Http11SslContextSpec;
+import reactor.netty5.http.Http2SslContextSpec;
+import reactor.netty5.http.HttpProtocol;
 import reactor.netty5.http.client.HttpClient;
 
 /**
@@ -35,6 +37,7 @@ public class HttpSnoopClient {
 	static final int PORT = Integer.parseInt(System.getProperty("port", SECURE ? "8443" : "8080"));
 	static final boolean WIRETAP = System.getProperty("wiretap") != null;
 	static final boolean COMPRESS = System.getProperty("compress") != null;
+	static final boolean HTTP2 = System.getProperty("http2") != null;
 
 	public static void main(String[] args) throws Exception {
 		HttpClient client = HttpClient.create()
@@ -43,10 +46,22 @@ public class HttpSnoopClient {
 		                              .compress(COMPRESS);
 
 		if (SECURE) {
-			Http11SslContextSpec http11SslContextSpec =
-					Http11SslContextSpec.forClient()
-					                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-			client = client.secure(spec -> spec.sslContext(http11SslContextSpec));
+			if (HTTP2) {
+				Http2SslContextSpec http2SslContextSpec =
+						Http2SslContextSpec.forClient()
+						                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+				client = client.secure(spec -> spec.sslContext(http2SslContextSpec));
+			}
+			else {
+				Http11SslContextSpec http11SslContextSpec =
+						Http11SslContextSpec.forClient()
+						                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+				client = client.secure(spec -> spec.sslContext(http11SslContextSpec));
+			}
+		}
+
+		if (HTTP2) {
+			client = client.protocol(HttpProtocol.H2);
 		}
 
 		// we fire two requests to the server asynchronously
