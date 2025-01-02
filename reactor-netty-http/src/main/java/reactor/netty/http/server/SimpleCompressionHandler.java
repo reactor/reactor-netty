@@ -15,6 +15,9 @@
  */
 package reactor.netty.http.server;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -29,9 +32,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * {@link HttpContentCompressor} to enable on-demand compression.
  *
@@ -42,8 +42,14 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 	boolean decoded;
 	HttpRequest request;
 
-	SimpleCompressionHandler() {
-		super((CompressionOptions[]) null);
+	private SimpleCompressionHandler(CompressionOptions... options) {
+		super(options);
+	}
+
+	static SimpleCompressionHandler create(HttpCompressionSettingsSpec compressionSettings) {
+		return new SimpleCompressionHandler(
+				compressionSettings.adaptToOptions()
+		);
 	}
 
 	@Override

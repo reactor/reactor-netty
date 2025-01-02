@@ -301,6 +301,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Specifies whether GZip response compression is enabled if the client request
 	 * presents accept encoding.
+	 *  default compression level is 6.
 	 *
 	 * @param compressionEnabled if true GZip response compression
 	 * is enabled if the client request presents accept encoding, otherwise disabled.
@@ -333,6 +334,35 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 		HttpServer dup = duplicate();
 		dup.configuration().minCompressionSize = minResponseSize;
+		return dup;
+	}
+
+	/**
+	 * Specifies GZIP, DEFLATE, ZSTD Compression Level.
+	 *
+	 * @param compressionSettings configures {@link HttpCompressionSettingsSpec} after enable compress.
+	 * <pre>
+	 * {@code
+	 *     HttpServer.create()
+	 *                      .compress(true)
+	 * 					.compressOptions(
+	 * 					    builder -> builder.gzip(6)
+	 * 					                        .deflate(6)
+	 * 					                        .zstd(3)
+	 * 					 )
+	 * 					.bindNow();
+	 * }
+	 * </pre>
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer compressSettings(Consumer<HttpCompressionSettingsSpec.Builder> compressionSettings) {
+		Objects.requireNonNull(compressionSettings, "compressionSettings");
+
+		HttpCompressionSettingsSpec.Builder builder = HttpCompressionSettingsSpec.builder();
+		compressionSettings.accept(builder);
+
+		HttpServer dup = duplicate();
+		dup.configuration().compressionSettings = builder.build();
 		return dup;
 	}
 
