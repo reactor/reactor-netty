@@ -21,12 +21,14 @@ import io.netty.handler.codec.http.cors.CorsConfigBuilder;
 import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import java.security.cert.CertificateException;
+import java.time.Duration;
 
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
+import reactor.netty.http.Http3SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
@@ -44,6 +46,7 @@ public class HttpCorsServer {
 	static final boolean WIRETAP = System.getProperty("wiretap") != null;
 	static final boolean COMPRESS = System.getProperty("compress") != null;
 	static final boolean HTTP2 = System.getProperty("http2") != null;
+	static final boolean HTTP3 = System.getProperty("http3") != null;
 
 	public static void main(String... args) throws CertificateException {
 		HttpServer server =
@@ -59,6 +62,9 @@ public class HttpCorsServer {
 			if (HTTP2) {
 				server = server.secure(spec -> spec.sslContext(Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
 			}
+			else if (HTTP3) {
+				server = server.secure(spec -> spec.sslContext(Http3SslContextSpec.forServer(ssc.key(), null, ssc.cert())));
+			}
 			else {
 				server = server.secure(spec -> spec.sslContext(Http11SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
 			}
@@ -66,6 +72,16 @@ public class HttpCorsServer {
 
 		if (HTTP2) {
 			server = server.protocol(HttpProtocol.H2);
+		}
+
+		if (HTTP3) {
+			server =
+					server.protocol(HttpProtocol.HTTP3)
+					      .http3Settings(spec -> spec.idleTimeout(Duration.ofSeconds(5))
+					                                 .maxData(10000000)
+					                                 .maxStreamDataBidirectionalLocal(1000000)
+					                                 .maxStreamDataBidirectionalRemote(1000000)
+					                                 .maxStreamsBidirectional(100));
 		}
 
 		server.bindNow()
@@ -81,11 +97,14 @@ public class HttpCorsServer {
 
 	private static void addCorsHandler(Connection connection) {
 		CorsConfig corsConfig = CorsConfigBuilder.forOrigin("example.com").allowNullOrigin().allowCredentials().allowedRequestHeaders("custom-request-header").build();
-		if (!HTTP2) {
-			connection.channel().pipeline().addAfter(NettyPipeline.HttpCodec, "Cors", new CorsHandler(corsConfig));
+		if (HTTP2) {
+			connection.channel().pipeline().addAfter(NettyPipeline.H2ToHttp11Codec, "Cors", new CorsHandler(corsConfig));
+		}
+		else if (HTTP3) {
+			connection.channel().pipeline().addAfter(NettyPipeline.H3ToHttp11Codec, "Cors", new CorsHandler(corsConfig));
 		}
 		else {
-			connection.channel().pipeline().addAfter(NettyPipeline.H2ToHttp11Codec, "Cors", new CorsHandler(corsConfig));
+			connection.channel().pipeline().addAfter(NettyPipeline.HttpCodec, "Cors", new CorsHandler(corsConfig));
 		}
 	}
 }
