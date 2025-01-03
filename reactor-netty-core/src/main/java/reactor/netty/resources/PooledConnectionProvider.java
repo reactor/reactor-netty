@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -375,13 +376,29 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	}
 
 	protected static void logPoolState(Channel channel, InstrumentedPool<? extends Connection> pool, String msg, @Nullable Throwable t) {
+		String logMsg = msg + ", " + stringifyPoolMetrics(pool);
+		if (t == null) {
+			log.debug(format(channel, logMsg));
+			return;
+		}
+
+		log.debug(
+			format(channel, logMsg),
+			t
+		);
+	}
+
+	private static String stringifyPoolMetrics(InstrumentedPool<? extends Connection> pool) {
 		InstrumentedPool.PoolMetrics metrics = pool.metrics();
-		log.debug(format(channel, "{}, now: {} active connections, {} inactive connections and {} pending acquire requests."),
-				msg,
-				metrics.acquiredSize(),
-				metrics.idleSize(),
-				metrics.pendingAcquireSize(),
-				t == null ? "" : t);
+		return new StringJoiner(" ")
+				.add("now:")
+				.add(String.valueOf(metrics.acquiredSize()))
+				.add("active connections,")
+				.add(String.valueOf(metrics.idleSize()))
+				.add("inactive connections")
+				.add(String.valueOf(metrics.pendingAcquireSize()))
+				.add("pending acquire requests.")
+				.toString();
 	}
 
 	final void scheduleInactivePoolsDisposal() {

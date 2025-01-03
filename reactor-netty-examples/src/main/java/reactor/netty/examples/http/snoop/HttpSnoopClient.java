@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2023-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,20 +21,27 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufMono;
 import reactor.netty.http.Http11SslContextSpec;
+import reactor.netty.http.Http2SslContextSpec;
+import reactor.netty.http.Http3SslContextSpec;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
+
+import java.time.Duration;
 
 /**
  * An HTTP client demo that sends two requests to the http snoop server and then waits for the completion of the two requests.
  *
  * @author Kun.Long
  * @see HttpSnoopServer
- **/
+ */
 public class HttpSnoopClient {
 
 	static final boolean SECURE = System.getProperty("secure") != null;
 	static final int PORT = Integer.parseInt(System.getProperty("port", SECURE ? "8443" : "8080"));
 	static final boolean WIRETAP = System.getProperty("wiretap") != null;
 	static final boolean COMPRESS = System.getProperty("compress") != null;
+	static final boolean HTTP2 = System.getProperty("http2") != null;
+	static final boolean HTTP3 = System.getProperty("http3") != null;
 
 	public static void main(String[] args) throws Exception {
 		HttpClient client = HttpClient.create()
@@ -43,10 +50,36 @@ public class HttpSnoopClient {
 		                              .compress(COMPRESS);
 
 		if (SECURE) {
-			Http11SslContextSpec http11SslContextSpec =
-					Http11SslContextSpec.forClient()
-					                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
-			client = client.secure(spec -> spec.sslContext(http11SslContextSpec));
+			if (HTTP2) {
+				Http2SslContextSpec http2SslContextSpec =
+						Http2SslContextSpec.forClient()
+						                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+				client = client.secure(spec -> spec.sslContext(http2SslContextSpec));
+			}
+			else if (HTTP3) {
+				Http3SslContextSpec http3SslContextSpec =
+						Http3SslContextSpec.forClient()
+						                   .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+				client = client.secure(spec -> spec.sslContext(http3SslContextSpec));
+			}
+			else {
+				Http11SslContextSpec http11SslContextSpec =
+						Http11SslContextSpec.forClient()
+						                    .configure(builder -> builder.trustManager(InsecureTrustManagerFactory.INSTANCE));
+				client = client.secure(spec -> spec.sslContext(http11SslContextSpec));
+			}
+		}
+
+		if (HTTP2) {
+			client = client.protocol(HttpProtocol.H2);
+		}
+
+		if (HTTP3) {
+			client =
+					client.protocol(HttpProtocol.HTTP3)
+					      .http3Settings(spec -> spec.idleTimeout(Duration.ofSeconds(5))
+					                                 .maxData(10000000)
+					                                 .maxStreamDataBidirectionalLocal(1000000));
 		}
 
 		// we fire two requests to the server asynchronously

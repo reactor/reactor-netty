@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,27 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.http.helloworld;
+package reactor.netty.examples.http.cors;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.cors.CorsConfig;
+import io.netty.handler.codec.http.cors.CorsConfigBuilder;
+import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import reactor.core.publisher.Mono;
+import java.security.cert.CertificateException;
+import java.time.Duration;
+
+import reactor.netty.Connection;
+import reactor.netty.NettyOutbound;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.Http11SslContextSpec;
 import reactor.netty.http.Http2SslContextSpec;
 import reactor.netty.http.Http3SslContextSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
-
-import java.time.Duration;
-
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpHeaderValues.TEXT_PLAIN;
+import reactor.netty.http.server.HttpServerRequest;
+import reactor.netty.http.server.HttpServerResponse;
 
 /**
- * An HTTP server that expects GET request and sends back "Hello World!".
+ * An HTTP server that handles CORS (Cross-Origin Resource Sharing) requests.
  *
- * @author Violeta Georgieva
+ * @author Jack Cheng
  */
-public final class HelloWorldServer {
+public class HttpCorsServer {
 
 	static final boolean SECURE = System.getProperty("secure") != null;
 	static final int PORT = Integer.parseInt(System.getProperty("port", SECURE ? "8443" : "8080"));
@@ -42,18 +48,17 @@ public final class HelloWorldServer {
 	static final boolean HTTP2 = System.getProperty("http2") != null;
 	static final boolean HTTP3 = System.getProperty("http3") != null;
 
-	public static void main(String[] args) throws Exception {
+	public static void main(String... args) throws CertificateException {
 		HttpServer server =
 				HttpServer.create()
 				          .port(PORT)
 				          .wiretap(WIRETAP)
 				          .compress(COMPRESS)
-				          .route(r -> r.get("/hello",
-				                  (req, res) -> res.header(CONTENT_TYPE, TEXT_PLAIN)
-				                                   .sendString(Mono.just("Hello World!"))));
+				          .doOnConnection(HttpCorsServer::addCorsHandler)
+				          .route(routes -> routes.route(r -> true, HttpCorsServer::okResponse));
 
 		if (SECURE) {
-			SelfSignedCertificate ssc = new SelfSignedCertificate();
+			SelfSignedCertificate ssc = new SelfSignedCertificate("localhost");
 			if (HTTP2) {
 				server = server.secure(spec -> spec.sslContext(Http2SslContextSpec.forServer(ssc.certificate(), ssc.privateKey())));
 			}
@@ -82,5 +87,24 @@ public final class HelloWorldServer {
 		server.bindNow()
 		      .onDispose()
 		      .block();
+	}
+
+	private static NettyOutbound okResponse(HttpServerRequest request, HttpServerResponse response) {
+		response.status(HttpResponseStatus.OK);
+		response.header("custom-response-header", "Some value");
+		return response;
+	}
+
+	private static void addCorsHandler(Connection connection) {
+		CorsConfig corsConfig = CorsConfigBuilder.forOrigin("example.com").allowNullOrigin().allowCredentials().allowedRequestHeaders("custom-request-header").build();
+		if (HTTP2) {
+			connection.channel().pipeline().addAfter(NettyPipeline.H2ToHttp11Codec, "Cors", new CorsHandler(corsConfig));
+		}
+		else if (HTTP3) {
+			connection.channel().pipeline().addAfter(NettyPipeline.H3ToHttp11Codec, "Cors", new CorsHandler(corsConfig));
+		}
+		else {
+			connection.channel().pipeline().addAfter(NettyPipeline.HttpCodec, "Cors", new CorsHandler(corsConfig));
+		}
 	}
 }

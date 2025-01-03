@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,12 +26,12 @@ dependencies {
 	api "io.zipkin.reporter2:zipkin-sender-urlconnection:$zipkinSenderVersion"
 
 	api "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
+	api "io.netty.incubator:netty-incubator-codec-http3:$nettyHttp3Version"
 
 	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
 	// Needed for proxy testing
 	runtimeOnly "io.netty:netty-handler-proxy:$nettyVersion"
-	runtimeOnly "io.netty.incubator:netty-incubator-codec-http3:$nettyHttp3Version"
 }
 
 description = "Examples for the Reactor Netty library"

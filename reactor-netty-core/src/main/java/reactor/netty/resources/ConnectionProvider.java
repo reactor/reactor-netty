@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -232,7 +232,7 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link ConnectionProvider} implementations may decide to provide more specific implementation.
 	 *
 	 * @return a Mono representing the completion of the ConnectionProvider disposal.
-	 **/
+	 */
 	default Mono<Void> disposeLater() {
 		//noop default
 		return Mono.empty();
