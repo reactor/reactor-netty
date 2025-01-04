@@ -618,83 +618,65 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(responseString).isEqualTo("hello /foo");
 	}
 
-	@Test
-	void expectedConnectionPoolsEnabled() throws SSLException {
-		ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
-		Logger spyLogger = Mockito.spy(log);
-		Loggers.useCustomLoggers(s -> spyLogger);
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void maxConnectionPools(boolean withMaxConnectionPools) throws SSLException {
 
-		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-				.build();
+		try {
+			ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+			Logger spyLogger = Mockito.spy(log);
+			Loggers.useCustomLoggers(s -> spyLogger);
 
+			SslContext sslServer = SslContextBuilder
+					.forServer(ssc.certificate(), ssc.privateKey())
+					.build();
 
-		disposableServer =
-				createServer()
-						.secure(ssl -> ssl.sslContext(sslServer))
-						.handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
-						.bindNow();
+			disposableServer = createServer()
+					.secure(ssl -> ssl.sslContext(sslServer))
+					.handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+					.bindNow();
 
-		ConnectionProvider connectionProvider = ConnectionProvider.builder("expected-connection-pool").expectedConnectionPools(1).build();
+			ConnectionProvider connectionProvider = withMaxConnectionPools ? ConnectionProvider
+					.builder("max-connection-pools")
+					.maxConnectionPools(1)
+					.build() : ConnectionProvider
+					.builder("max-connection-pools")
+					.build();
 
-		StepVerifier.create(
-				Flux.range(1, 2)
-						.flatMap(i -> createClient(connectionProvider, disposableServer::address)
-								.secure(ssl -> ssl.sslContext(createClientSslContext()))
-								.get()
-								.uri("/foo")
-								.responseContent()
-								.aggregate()
-								.asString()))
-				.thenConsumeWhile(s -> true)
-				.verifyComplete();
+			StepVerifier
+					.create(Flux
+							.range(1, 2)
+							.flatMap(i -> createClient(connectionProvider, disposableServer::address)
+									.secure(ssl -> ssl.sslContext(createClientSslContext()))
+									.get()
+									.uri("/foo")
+									.responseContent()
+									.aggregate()
+									.asString()))
+					.thenConsumeWhile(s -> true)
+					.verifyComplete();
 
-		Loggers.resetLoggerFactory();
+			if (withMaxConnectionPools) {
+				Mockito
+						.verify(spyLogger)
+						.warn(argumentCaptor.capture(), Mockito.eq(2), Mockito.eq(1));
+				assertThat(argumentCaptor.getValue()).isEqualTo(
+						"Connection pool creation limit exceeded: {} pools created, maximum expected is {}");
+			}
+			else {
+				Mockito
+						.verify(spyLogger, times(0))
+						.warn(Mockito.eq(
+										"Connection pool creation limit exceeded: {} pools created, maximum expected is {}"),
+								Mockito.eq(2),
+								Mockito.eq(1));
 
-
-		Mockito.verify(spyLogger).warn(argumentCaptor.capture(), Mockito.eq(2), Mockito.eq(1));
-		assertThat(argumentCaptor.getValue()).isEqualTo("Connection pool creation limit exceeded: {} pools created, maximum expected is {}");
-
-		connectionProvider.dispose();
-		disposableServer.dispose();
-
-	}
-
-	@Test
-	void expectedConnectionPoolsNotEnabled() throws SSLException {
-		Logger spyLogger = Mockito.spy(log);
-		Loggers.useCustomLoggers(s -> spyLogger);
-
-		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-				.build();
-
-
-		disposableServer =
-				createServer()
-						.secure(ssl -> ssl.sslContext(sslServer))
-						.handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
-						.bindNow();
-
-		ConnectionProvider connectionProvider = ConnectionProvider.builder("max-connection-pools").build();
-
-		StepVerifier.create(
-						Flux.range(1, 2)
-								.flatMap(i -> createClient(connectionProvider, disposableServer::address)
-										.secure(ssl -> ssl.sslContext(createClientSslContext()))
-										.get()
-										.uri("/foo")
-										.responseContent()
-										.aggregate()
-										.asString()))
-				.thenConsumeWhile(s -> true)
-				.verifyComplete();
-
-		Loggers.resetLoggerFactory();
-
-
-		Mockito.verify(spyLogger, times(0)).warn(Mockito.eq("Connection pool creation limit exceeded: {} pools created, maximum expected is {}"), Mockito.eq(2), Mockito.eq(1));
-
-		connectionProvider.dispose();
-		disposableServer.dispose();
+			}
+		}
+		finally {
+			disposableServer.dispose();
+			Loggers.resetLoggerFactory();
+		}
 
 	}
 

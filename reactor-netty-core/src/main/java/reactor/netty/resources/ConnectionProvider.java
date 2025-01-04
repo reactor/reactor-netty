@@ -394,9 +394,9 @@ public interface ConnectionProvider extends Disposable {
 	final class Builder extends ConnectionPoolSpec<Builder> {
 
 		static final Duration DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED = Duration.ZERO;
-		static final int EXPECTED_CONNECTION_POOLS_DISABLED = -1;
+		static final int MAX_CONNECTION_POOLS = -1;
 
-		int expectedConnectionPools = EXPECTED_CONNECTION_POOLS_DISABLED;
+		int maxConnectionPools = MAX_CONNECTION_POOLS;
 
 		String name;
 		Duration inactivePoolDisposeInterval = DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED;
@@ -420,7 +420,7 @@ public interface ConnectionProvider extends Disposable {
 			this.inactivePoolDisposeInterval = copy.inactivePoolDisposeInterval;
 			this.poolInactivity = copy.poolInactivity;
 			this.disposeTimeout = copy.disposeTimeout;
-			this.expectedConnectionPools = copy.expectedConnectionPools;
+			this.maxConnectionPools = copy.maxConnectionPools;
 			copy.confPerRemoteHost.forEach((address, spec) -> this.confPerRemoteHost.put(address, new ConnectionPoolSpec<>(spec)));
 		}
 
@@ -493,15 +493,15 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
-		 * Specifies the expected number of connection pools that the provider can create.
+		 * Specifies the maximum number of connection pools that the provider can create.
 		 * If the number of connection pools created exceeds this value, a warning message is logged.
-		 * The value must be positive; otherwise, the connection pools check is ignored.
+		 * The value must be positive or zero; otherwise, the connection pools check is ignored.
 		 *
-		 * @param expectedConnectionPools the number of connection pools expected to be created.
+		 * @param maxConnectionPools the number of connection pools expected to be created.
 		 * @return the current {@link Builder} instance with the updated configuration.
 		 */
-		public Builder expectedConnectionPools(int expectedConnectionPools) {
-			this.expectedConnectionPools = expectedConnectionPools;
+		public Builder maxConnectionPools(int maxConnectionPools) {
+			this.maxConnectionPools = maxConnectionPools;
 			return this;
 		}
 		/**
