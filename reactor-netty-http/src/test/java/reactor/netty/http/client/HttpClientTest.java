@@ -674,7 +674,7 @@ class HttpClientTest extends BaseHttpTest {
 						.handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
 						.bindNow();
 
-		ConnectionProvider connectionProvider = ConnectionProvider.builder("expected-connection-pool").build();
+		ConnectionProvider connectionProvider = ConnectionProvider.builder("max-connection-pools").build();
 
 		StepVerifier.create(
 						Flux.range(1, 2)
