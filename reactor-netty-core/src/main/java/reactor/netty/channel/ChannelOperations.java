@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -704,7 +704,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		DisposedChannel(Channel actual) {
 			super(null);
 			this.metadata = actual.metadata();
-			this.config = new DefaultChannelConfig(this);
+			this.config = new DisposedChannelConfig(this);
 			this.localAddress = actual.localAddress();
 			this.remoteAddress = actual.remoteAddress();
 		}
@@ -785,6 +785,19 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
 				promise.setFailure(new UnsupportedOperationException());
 			}
+		}
+	}
+
+	static final class DisposedChannelConfig extends DefaultChannelConfig {
+
+		DisposedChannelConfig(Channel channel) {
+			super(channel);
+		}
+
+		@Override
+		public ChannelConfig setAutoRead(boolean autoRead) {
+			// no-op
+			return this;
 		}
 	}
 
