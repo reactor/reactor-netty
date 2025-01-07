@@ -45,6 +45,8 @@ import reactor.netty.http.Http3SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.logging.HttpMessageLogFactory;
 import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
+import reactor.netty.http.server.compression.HttpCompressionOption;
+import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.netty.http.server.logging.AccessLog;
 import reactor.netty.http.server.logging.AccessLogArgProvider;
 import reactor.netty.http.server.logging.AccessLogFactory;
@@ -340,29 +342,24 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Specifies GZIP, DEFLATE, ZSTD Compression Level.
 	 *
-	 * @param compressionSettings configures {@link HttpCompressionSettingsSpec} after enable compress.
-	 * <pre>
-	 * {@code
-	 *     HttpServer.create()
-	 *                      .compress(true)
-	 * 					.compressOptions(
-	 * 					    builder -> builder.gzip(6)
-	 * 					                        .deflate(6)
-	 * 					                        .zstd(3)
-	 * 					 )
-	 * 					.bindNow();
-	 * }
-	 * </pre>
+	 * @param compressionOptions configures {@link HttpCompressionOption} after enable compress.
+	 *  <pre>
+	 *  {@code
+	 *      HttpServer.create()
+	 *                       .compress(true)
+	 *  					.compressOptions(
+	 *                         StandardHttpCompressionOptions.gzip(6, 15, 8)
+	 *  					 )
+	 *  					.bindNow();
+	 *  }
+	 *  </pre>
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer compressSettings(Consumer<HttpCompressionSettingsSpec.Builder> compressionSettings) {
-		Objects.requireNonNull(compressionSettings, "compressionSettings");
-
-		HttpCompressionSettingsSpec.Builder builder = HttpCompressionSettingsSpec.builder();
-		compressionSettings.accept(builder);
+	public final HttpServer compressOptions(HttpCompressionOption... compressionOptions) {
+		Objects.requireNonNull(compressionOptions, "compressionOptions");
 
 		HttpServer dup = duplicate();
-		dup.configuration().compressionSettings = builder.build();
+		dup.configuration().compressionOptions = new HttpCompressionOptionsSpec(compressionOptions);
 		return dup;
 	}
 

@@ -94,6 +94,7 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
+import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
@@ -138,7 +139,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final boolean validateHeaders;
 
 	BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
-	HttpCompressionSettingsSpec compressionSettings;
+	HttpCompressionOptionsSpec compressionOptions;
 	boolean isWebsocket;
 	Function<? super String, Map<String, String>> paramsResolver;
 	String path;
@@ -152,7 +153,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		super(replaced);
 		this.compressionPredicate = replaced.compressionPredicate;
 		this.configuredCompressionPredicate = replaced.configuredCompressionPredicate;
-		this.compressionSettings = replaced.compressionSettings;
+		this.compressionOptions = replaced.compressionOptions;
 		this.connectionInfo = replaced.connectionInfo;
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.cookieEncoder = replaced.cookieEncoder;
@@ -179,7 +180,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			HttpCompressionSettingsSpec compressionSettings,
+			HttpCompressionOptionsSpec compressionOptions,
 			ConnectionInfo connectionInfo,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
@@ -195,7 +196,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		super(c, listener, httpMessageLogFactory);
 		this.compressionPredicate = compressionPredicate;
 		this.configuredCompressionPredicate = compressionPredicate;
-		this.compressionSettings = compressionSettings;
+		this.compressionOptions = compressionOptions;
 		this.connectionInfo = connectionInfo;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
@@ -761,7 +762,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			removeHandler(NettyPipeline.CompressionHandler);
 		}
 		else if (channel().pipeline().get(NettyPipeline.CompressionHandler) == null) {
-			SimpleCompressionHandler handler = SimpleCompressionHandler.create(compressionSettings);
+			SimpleCompressionHandler handler = SimpleCompressionHandler.create(compressionOptions);
 			handler.request = nettyRequest;
 			try {
 				addHandlerFirst(NettyPipeline.CompressionHandler, handler);
@@ -1324,7 +1325,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ZonedDateTime timestamp,
 				ConnectionInfo connectionInfo,
 				boolean validateHeaders) {
-			super(c, listener, nettyRequest, null, HttpCompressionSettingsSpec.provideDefault(), connectionInfo,
+			super(c, listener, nettyRequest, null, HttpCompressionOptionsSpec.provideDefault(), connectionInfo,
 					ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT, DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, isHttp2,
 					null, null, null, secure, timestamp, validateHeaders);
 			this.customResponse = nettyResponse;

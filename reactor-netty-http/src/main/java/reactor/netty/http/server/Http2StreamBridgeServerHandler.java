@@ -47,6 +47,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
+import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.util.annotation.Nullable;
 
 import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
@@ -62,7 +63,7 @@ import static reactor.netty.ReactorNetty.format;
 final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
-	final HttpCompressionSettingsSpec compressionSettings;
+	final HttpCompressionOptionsSpec compressionOptions;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
@@ -85,7 +86,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 
 	Http2StreamBridgeServerHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
-			HttpCompressionSettingsSpec compressionSettings,
+			HttpCompressionOptionsSpec compressionOptions,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
@@ -96,7 +97,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout) {
 		this.compress = compress;
-		this.compressionSettings = compressionSettings;
+		this.compressionOptions = compressionOptions;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
 		this.formDecoderProvider = formDecoderProvider;
@@ -143,7 +144,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 						listener,
 						request,
 						compress,
-						compressionSettings,
+						compressionOptions,
 						connectionInfo,
 						cookieDecoder,
 						cookieEncoder,

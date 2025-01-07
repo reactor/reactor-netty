@@ -53,6 +53,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
+import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 
@@ -77,7 +78,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false"));
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
-	final HttpCompressionSettingsSpec compressionSettings;
+	final HttpCompressionOptionsSpec compressionOptions;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
@@ -113,7 +114,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	HttpTrafficHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
-			HttpCompressionSettingsSpec compressionSettings,
+			HttpCompressionOptionsSpec compressionOptions,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
@@ -130,7 +131,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
-		this.compressionSettings = compressionSettings;
+		this.compressionOptions = compressionOptions;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
 		this.httpMessageLogFactory = httpMessageLogFactory;
@@ -246,7 +247,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 							listener,
 							request,
 							compress,
-							compressionSettings,
+							compressionOptions,
 							connectionInfo,
 							cookieDecoder,
 							cookieEncoder,
@@ -599,7 +600,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 							listener,
 							nextRequest,
 							compress,
-							compressionSettings,
+							compressionOptions,
 							connectionInfo,
 							cookieDecoder,
 							cookieEncoder,

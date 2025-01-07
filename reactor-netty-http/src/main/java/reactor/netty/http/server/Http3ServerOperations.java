@@ -24,6 +24,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.http.logging.HttpMessageLogFactory;
+import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -43,7 +44,7 @@ final class Http3ServerOperations extends HttpServerOperations {
 			ConnectionObserver listener,
 			HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			HttpCompressionSettingsSpec compressionSettings,
+			HttpCompressionOptionsSpec compressionOptions,
 			ConnectionInfo connectionInfo,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
@@ -55,7 +56,7 @@ final class Http3ServerOperations extends HttpServerOperations {
 			@Nullable Duration requestTimeout,
 			boolean secured,
 			ZonedDateTime timestamp) {
-		super(c, listener, nettyRequest, compressionPredicate, compressionSettings, connectionInfo, decoder, encoder, formDecoderProvider,
+		super(c, listener, nettyRequest, compressionPredicate, compressionOptions, connectionInfo, decoder, encoder, formDecoderProvider,
 				httpMessageLogFactory, isHttp2, mapHandle, readTimeout, requestTimeout, secured, timestamp, true);
 	}
 

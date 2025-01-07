@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
+import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 
 /**
  * {@link HttpContentCompressor} to enable on-demand compression.
@@ -46,9 +47,9 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		super(options);
 	}
 
-	static SimpleCompressionHandler create(HttpCompressionSettingsSpec compressionSettings) {
+	static SimpleCompressionHandler create(HttpCompressionOptionsSpec compressionOptions) {
 		return new SimpleCompressionHandler(
-				compressionSettings.adaptToOptions()
+				compressionOptions.adapt()
 		);
 	}
 
