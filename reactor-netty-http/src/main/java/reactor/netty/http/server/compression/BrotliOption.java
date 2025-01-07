@@ -19,7 +19,7 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 
 /**
- * Brotli compression option configuration
+ * Brotli compression option configuration.
  *
  * @author raccoonback
  */

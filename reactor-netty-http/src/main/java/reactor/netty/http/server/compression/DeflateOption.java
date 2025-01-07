@@ -19,7 +19,7 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 
 /**
- * Deflate compression option configuration
+ * Deflate compression option configuration.
  *
  * @author raccoonback
  */

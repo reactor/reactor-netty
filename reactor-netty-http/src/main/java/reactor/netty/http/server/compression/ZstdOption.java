@@ -19,7 +19,7 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 
 /**
- * ZSTD compression option configuration
+ * ZSTD compression option configuration.
  *
  * @author raccoonback
  */

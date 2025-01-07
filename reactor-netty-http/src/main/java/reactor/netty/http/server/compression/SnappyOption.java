@@ -19,7 +19,7 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 
 /**
- * Snappy compression option configuration
+ * Snappy compression option configuration.
  *
  * @author raccoonback
  */

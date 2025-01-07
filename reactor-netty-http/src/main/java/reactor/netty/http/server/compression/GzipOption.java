@@ -19,7 +19,7 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 
 /**
- * GZIP compression option configuration
+ * GZIP compression option configuration.
  *
  * @author raccoonback
  */

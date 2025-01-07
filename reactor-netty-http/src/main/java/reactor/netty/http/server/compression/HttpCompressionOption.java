@@ -16,7 +16,7 @@
 package reactor.netty.http.server.compression;
 
 /**
- * HTTP compression option configuration
+ * HTTP compression option configuration.
  *
  * @author raccoonback
  */

@@ -20,7 +20,7 @@ import io.netty.handler.codec.compression.Zstd;
 import io.netty.util.internal.ObjectUtil;
 
 /**
- * Standard Compression Options for {@link GzipOption}, {@link DeflateOption} and {@link ZstdOption}
+ * Standard Compression Options for {@link GzipOption}, {@link DeflateOption} and {@link ZstdOption}.
  *
  * @author raccoonback
  */
