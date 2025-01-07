@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -330,6 +330,11 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 	}
 
 	void doAcquire(Borrower borrower) {
+		if (borrower.get()) {
+			// Borrower is cancelled, do nothing
+			return;
+		}
+
 		if (isDisposed()) {
 			borrower.fail(new PoolShutdownException());
 			return;
