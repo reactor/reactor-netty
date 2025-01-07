@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscription;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -46,6 +47,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -139,6 +141,28 @@ class Http2PoolTest {
 			channel.finishAndReleaseAll();
 			Connection.from(channel).dispose();
 		}
+	}
+
+	@Test
+	void doAcquireNotCalledIfBorrowerInScopeCancelledEarly() {
+		AtomicInteger allocator = new AtomicInteger();
+		PoolBuilder<Connection, PoolConfig<Connection>> poolBuilder =
+				PoolBuilder.from(Mono.fromSupplier(() -> {
+				               allocator.incrementAndGet();
+				               Channel channel = new EmbeddedChannel(
+				                   new TestChannelId(),
+				                   Http2FrameCodecBuilder.forClient().build());
+				               return Connection.from(channel);
+				           }));
+
+		Http2Pool http2Pool = poolBuilder.build(config -> new Http2Pool(config, null));
+
+		assertThat(allocator).as("before invoking acquire").hasValue(0);
+
+		// Borrower is in state cancelled before the actual acquisition
+		http2Pool.acquire().doOnSubscribe(Subscription::cancel).subscribe();
+
+		assertThat(allocator).as("after invoking acquire").hasValue(0);
 	}
 
 	@Test
