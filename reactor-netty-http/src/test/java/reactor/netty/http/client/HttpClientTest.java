@@ -622,6 +622,8 @@ class HttpClientTest extends BaseHttpTest {
 	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
 	void testMaxConnectionPools(boolean withMaxConnectionPools) throws SSLException {
+		Logger spyLogger = Mockito.spy(log);
+		Loggers.useCustomLoggers(s -> spyLogger);
 
 		ConnectionProvider connectionProvider = withMaxConnectionPools ? ConnectionProvider
 				.builder("max-connection-pools")
@@ -632,8 +634,6 @@ class HttpClientTest extends BaseHttpTest {
 
 		try {
 			ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
-			Logger spyLogger = Mockito.spy(log);
-			Loggers.useCustomLoggers(s -> spyLogger);
 
 			SslContext sslServer = SslContextBuilder
 					.forServer(ssc.certificate(), ssc.privateKey())
