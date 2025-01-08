@@ -394,6 +394,9 @@ public interface ConnectionProvider extends Disposable {
 	final class Builder extends ConnectionPoolSpec<Builder> {
 
 		static final Duration DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED = Duration.ZERO;
+		static final int MAX_CONNECTION_POOLS = -1;
+
+		int maxConnectionPools = MAX_CONNECTION_POOLS;
 
 		String name;
 		Duration inactivePoolDisposeInterval = DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED;
@@ -417,6 +420,7 @@ public interface ConnectionProvider extends Disposable {
 			this.inactivePoolDisposeInterval = copy.inactivePoolDisposeInterval;
 			this.poolInactivity = copy.poolInactivity;
 			this.disposeTimeout = copy.disposeTimeout;
+			this.maxConnectionPools = copy.maxConnectionPools;
 			copy.confPerRemoteHost.forEach((address, spec) -> this.confPerRemoteHost.put(address, new ConnectionPoolSpec<>(spec)));
 		}
 
@@ -488,6 +492,21 @@ public interface ConnectionProvider extends Disposable {
 			return this;
 		}
 
+		/**
+		 * Specifies the maximum number of connection pools that the provider can create.
+		 * If the number of connection pools created exceeds this value, a warning message is logged.
+		 * The value must be strictly positive or -1; otherwise, the connection pools check is ignored.
+		 * Setting the configuration to -1 disables the setting.
+		 * @param maxConnectionPools the maximum number of connection pools that can be created.
+		 * @return the current {@link Builder} instance with the updated configuration.
+		 */
+		public Builder maxConnectionPools(int maxConnectionPools) {
+			if (maxConnectionPools != MAX_CONNECTION_POOLS && maxConnectionPools <= 0) {
+				throw new IllegalArgumentException("Maximum connection pools setting must be strictly positive.");
+			}
+			this.maxConnectionPools = maxConnectionPools;
+			return this;
+		}
 		/**
 		 * Builds new ConnectionProvider.
 		 *
