@@ -677,8 +677,8 @@ class HttpClientTest extends BaseHttpTest {
 			}
 		}
 		finally {
-			connectionProvider.dispose();
 			Loggers.resetLoggerFactory();
+			connectionProvider.dispose();
 		}
 
 	}
