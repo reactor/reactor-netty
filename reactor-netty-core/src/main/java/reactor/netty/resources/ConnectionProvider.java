@@ -507,6 +507,7 @@ public interface ConnectionProvider extends Disposable {
 			this.maxConnectionPools = maxConnectionPools;
 			return this;
 		}
+
 		/**
 		 * Builds new ConnectionProvider.
 		 *
