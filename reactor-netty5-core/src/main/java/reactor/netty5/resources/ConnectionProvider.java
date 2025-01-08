@@ -499,6 +499,7 @@ public interface ConnectionProvider extends Disposable {
 		 *
 		 * @param maxConnectionPools the maximum number of connection pools that can be created
 		 * @return the current {@link Builder} instance with the updated configuration
+		 * @since 1.2.2
 		 */
 		public Builder maxConnectionPools(int maxConnectionPools) {
 			if (maxConnectionPools != MAX_CONNECTION_POOLS && maxConnectionPools <= 0) {
