@@ -375,7 +375,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 				Slot slot = belowMinConnections ? null : findConnection(resources);
 				if (slot != null) {
 					Borrower borrower = pollPending(borrowers, true);
-					if (borrower == null) {
+					if (borrower == null || borrower.get()) {
 						offerSlot(resources, slot);
 						continue;
 					}
@@ -420,7 +420,7 @@ final class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.
 								poolConfig.allocationStrategy().returnPermits(permits - 1);
 							}
 							Borrower borrower = pollPending(borrowers, true);
-							if (borrower == null) {
+							if (borrower == null || borrower.get()) {
 								continue;
 							}
 							if (isDisposed()) {
