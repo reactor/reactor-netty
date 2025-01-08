@@ -36,7 +36,7 @@ updates:
   # Versions > 6.13 require JDK11+
   - dependency-name: com.diffplug.spotless
     versions:
-    - "[6.14.a, 7.0]"
+    - "[6.14.a, 7]"
   # Versions > 3 require JDK11+
   - dependency-name: org.asciidoctor.jvm.convert
     versions:
@@ -138,6 +138,7 @@ updates:
   - dependency-name: org.awaitility:awaitility
   - dependency-name: com.aayushatharva.brotli4j:brotli4j
   - dependency-name: io.netty.incubator:netty-incubator-transport-native-io_uring
+  - dependency-name: com.diffplug.spotless
   rebase-strategy: disabled
 - package-ecosystem: github-actions
   directory: "/"
