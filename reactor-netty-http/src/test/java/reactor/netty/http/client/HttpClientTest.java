@@ -150,6 +150,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.BR;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.mockito.Mockito.times;
 
@@ -620,7 +621,14 @@ class HttpClientTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
-	void maxConnectionPools(boolean withMaxConnectionPools) throws SSLException {
+	void testMaxConnectionPools(boolean withMaxConnectionPools) throws SSLException {
+
+		ConnectionProvider connectionProvider = withMaxConnectionPools ? ConnectionProvider
+				.builder("max-connection-pools")
+				.maxConnectionPools(1)
+				.build() : ConnectionProvider
+				.builder("max-connection-pools")
+				.build();
 
 		try {
 			ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
@@ -636,12 +644,7 @@ class HttpClientTest extends BaseHttpTest {
 					.handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
 					.bindNow();
 
-			ConnectionProvider connectionProvider = withMaxConnectionPools ? ConnectionProvider
-					.builder("max-connection-pools")
-					.maxConnectionPools(1)
-					.build() : ConnectionProvider
-					.builder("max-connection-pools")
-					.build();
+
 
 			StepVerifier
 					.create(Flux
@@ -674,9 +677,19 @@ class HttpClientTest extends BaseHttpTest {
 			}
 		}
 		finally {
-			disposableServer.dispose();
+			connectionProvider.dispose();
 			Loggers.resetLoggerFactory();
 		}
+
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {0, -2})
+	void testInvalidMaxConnectionPoolsSetting(int maxConnectionPools) {
+
+		assertThatIllegalArgumentException().isThrownBy(() -> ConnectionProvider
+				.builder("max-connection-pools")
+				.maxConnectionPools(maxConnectionPools));
 
 	}
 

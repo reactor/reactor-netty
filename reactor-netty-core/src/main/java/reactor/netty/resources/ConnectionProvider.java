@@ -495,12 +495,15 @@ public interface ConnectionProvider extends Disposable {
 		/**
 		 * Specifies the maximum number of connection pools that the provider can create.
 		 * If the number of connection pools created exceeds this value, a warning message is logged.
-		 * The value must be positive or zero; otherwise, the connection pools check is ignored.
-		 *
-		 * @param maxConnectionPools the number of connection pools expected to be created.
+		 * The value must be strictly positive or -1; otherwise, the connection pools check is ignored.
+		 * Setting the configuration to -1 disables the setting.
+		 * @param maxConnectionPools the maximum number of connection pools that can be created.
 		 * @return the current {@link Builder} instance with the updated configuration.
 		 */
 		public Builder maxConnectionPools(int maxConnectionPools) {
+			if (maxConnectionPools != MAX_CONNECTION_POOLS && maxConnectionPools <= 0) {
+				throw new IllegalArgumentException("Maximum connection pools setting must be strictly positive.");
+			}
 			this.maxConnectionPools = maxConnectionPools;
 			return this;
 		}
