@@ -625,79 +625,62 @@ class HttpClientTest extends BaseHttpTest {
 		Logger spyLogger = Mockito.spy(log);
 		Loggers.useCustomLoggers(s -> spyLogger);
 
-		ConnectionProvider connectionProvider = withMaxConnectionPools ? ConnectionProvider
-				.builder("max-connection-pools")
-				.maxConnectionPools(1)
-				.build() : ConnectionProvider
-				.builder("max-connection-pools")
-				.build();
+		ConnectionProvider connectionProvider = withMaxConnectionPools ?
+				ConnectionProvider.builder("max-connection-pools").maxConnectionPools(1).build() :
+				ConnectionProvider.builder("max-connection-pools").build();
 
 		try {
 			ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
 
-			SslContext sslServer = SslContextBuilder
-					.forServer(ssc.certificate(), ssc.privateKey())
-					.build();
+			SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 
-			disposableServer = createServer()
-					.secure(ssl -> ssl.sslContext(sslServer))
-					.handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
-					.bindNow();
+			disposableServer =
+					createServer().secure(ssl -> ssl.sslContext(sslServer))
+					              .handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+					              .bindNow();
 
-
-
-			StepVerifier
-					.create(Flux
-							.range(1, 2)
-							.flatMap(i -> createClient(connectionProvider, disposableServer::address)
-									.secure(ssl -> ssl.sslContext(createClientSslContext()))
-									.get()
-									.uri("/foo")
-									.responseContent()
-									.aggregate()
-									.asString()))
-					.thenConsumeWhile(s -> true)
-					.verifyComplete();
+			Flux.range(1, 2)
+			    .flatMap(i ->
+			            createClient(connectionProvider, disposableServer::address)
+			                    .secure(ssl -> ssl.sslContext(createClientSslContext()))
+			                    .get()
+			                    .uri("/foo")
+			                    .responseContent()
+			                    .aggregate()
+			                    .asString())
+			    .as(StepVerifier::create)
+			    .thenConsumeWhile(s -> true)
+			    .expectComplete()
+			    .verify(Duration.ofSeconds(5));
 
 			if (withMaxConnectionPools) {
-				Mockito
-						.verify(spyLogger)
-						.warn(argumentCaptor.capture(), Mockito.eq(2), Mockito.eq(1));
-				assertThat(argumentCaptor.getValue()).isEqualTo(
-						"Connection pool creation limit exceeded: {} pools created, maximum expected is {}");
+				Mockito.verify(spyLogger)
+				       .warn(argumentCaptor.capture(), Mockito.eq(2), Mockito.eq(1));
+				assertThat(argumentCaptor.getValue())
+						.isEqualTo("Connection pool creation limit exceeded: {} pools created, maximum expected is {}");
 			}
 			else {
-				Mockito
-						.verify(spyLogger, times(0))
-						.warn(Mockito.eq(
-										"Connection pool creation limit exceeded: {} pools created, maximum expected is {}"),
-								Mockito.eq(2),
-								Mockito.eq(1));
-
+				Mockito.verify(spyLogger, times(0))
+				       .warn(Mockito.eq("Connection pool creation limit exceeded: {} pools created, maximum expected is {}"),
+				               Mockito.eq(2), Mockito.eq(1));
 			}
 		}
 		finally {
 			Loggers.resetLoggerFactory();
 			connectionProvider.dispose();
 		}
-
 	}
 
 	@ParameterizedTest
 	@ValueSource(ints = {0, -2})
 	void testInvalidMaxConnectionPoolsSetting(int maxConnectionPools) {
-
-		assertThatIllegalArgumentException().isThrownBy(() -> ConnectionProvider
-				.builder("max-connection-pools")
-				.maxConnectionPools(maxConnectionPools));
-
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> ConnectionProvider.builder("max-connection-pools").maxConnectionPools(maxConnectionPools));
 	}
 
-	private SslContext createClientSslContext() {
+	private static SslContext createClientSslContext() {
 		try {
-			return SslContextBuilder.forClient()
-					.trustManager(InsecureTrustManagerFactory.INSTANCE)
-					.build();
+			return SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 		}
 		catch (SSLException e) {
 			throw new RuntimeException(e);

@@ -396,12 +396,11 @@ public interface ConnectionProvider extends Disposable {
 		static final Duration DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED = Duration.ZERO;
 		static final int MAX_CONNECTION_POOLS = -1;
 
-		int maxConnectionPools = MAX_CONNECTION_POOLS;
-
 		String name;
 		Duration inactivePoolDisposeInterval = DISPOSE_INACTIVE_POOLS_IN_BACKGROUND_DISABLED;
 		Duration poolInactivity;
 		Duration disposeTimeout;
+		int maxConnectionPools = MAX_CONNECTION_POOLS;
 		final Map<SocketAddress, ConnectionPoolSpec<?>> confPerRemoteHost = new HashMap<>();
 
 		/**
@@ -497,8 +496,9 @@ public interface ConnectionProvider extends Disposable {
 		 * If the number of connection pools created exceeds this value, a warning message is logged.
 		 * The value must be strictly positive or -1; otherwise, the connection pools check is ignored.
 		 * Setting the configuration to -1 disables the setting.
-		 * @param maxConnectionPools the maximum number of connection pools that can be created.
-		 * @return the current {@link Builder} instance with the updated configuration.
+		 *
+		 * @param maxConnectionPools the maximum number of connection pools that can be created
+		 * @return the current {@link Builder} instance with the updated configuration
 		 */
 		public Builder maxConnectionPools(int maxConnectionPools) {
 			if (maxConnectionPools != MAX_CONNECTION_POOLS && maxConnectionPools <= 0) {

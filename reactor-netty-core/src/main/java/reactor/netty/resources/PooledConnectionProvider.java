@@ -136,8 +136,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 					log.debug("Creating a new [{}] client pool [{}] for [{}]", name, poolFactory, remoteAddress);
 				}
 
-				if (maxConnectionPools > Builder.MAX_CONNECTION_POOLS && connectionPoolCount.incrementAndGet() > maxConnectionPools) {
-					if (log.isWarnEnabled()) {
+				if (log.isWarnEnabled()) {
+					if (maxConnectionPools > Builder.MAX_CONNECTION_POOLS && connectionPoolCount.incrementAndGet() > maxConnectionPools) {
 						log.warn("Connection pool creation limit exceeded: {} pools created, maximum expected is {}", connectionPoolCount.get(),
 								maxConnectionPools);
 					}
