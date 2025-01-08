@@ -59,6 +59,7 @@ import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -91,6 +92,8 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 	final Duration inactivePoolDisposeInterval;
 	final Duration poolInactivity;
 	final Duration disposeTimeout;
+	final int maxConnectionPools;
+	final AtomicInteger connectionPoolCount = new AtomicInteger(0);
 	final Map<SocketAddress, Integer> maxConnections = new HashMap<>();
 	Mono<Void> onDispose;
 
@@ -105,6 +108,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 		this.inactivePoolDisposeInterval = builder.inactivePoolDisposeInterval;
 		this.poolInactivity = builder.poolInactivity;
 		this.disposeTimeout = builder.disposeTimeout;
+		this.maxConnectionPools = builder.maxConnectionPools;
 		this.defaultPoolFactory = new PoolFactory<>(builder, builder.disposeTimeout, clock);
 		for (Map.Entry<SocketAddress, ConnectionPoolSpec<?>> entry : builder.confPerRemoteHost.entrySet()) {
 			poolFactoryPerRemoteHost.put(entry.getKey(), new PoolFactory<>(entry.getValue(), builder.disposeTimeout));
@@ -131,6 +135,13 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			InstrumentedPool<T> pool = MapUtils.computeIfAbsent(channelPools, holder, poolKey -> {
 				if (log.isDebugEnabled()) {
 					log.debug("Creating a new [{}] client pool [{}] for [{}]", name, poolFactory, remoteAddress);
+				}
+
+				if (log.isWarnEnabled()) {
+					if (maxConnectionPools > Builder.MAX_CONNECTION_POOLS && connectionPoolCount.incrementAndGet() > maxConnectionPools) {
+						log.warn("Connection pool creation limit exceeded: {} pools created, maximum expected is {}", connectionPoolCount.get(),
+								maxConnectionPools);
+					}
 				}
 
 				boolean metricsEnabled = poolFactory.metricsEnabled || config.metricsRecorder() != null;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,6 +103,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
@@ -146,7 +148,9 @@ import static io.netty5.handler.codec.http.HttpHeaderValues.BR;
 import static io.netty5.handler.codec.http.HttpHeaderValues.GZIP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.mockito.Mockito.times;
 
 /**
  * This test class verifies {@link HttpClient}.
@@ -612,6 +616,74 @@ class HttpClientTest extends BaseHttpTest {
 				          .block(Duration.ofMillis(200));
 
 		assertThat(responseString).isEqualTo("hello /foo");
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testMaxConnectionPools(boolean withMaxConnectionPools) throws SSLException {
+		Logger spyLogger = Mockito.spy(log);
+		Loggers.useCustomLoggers(s -> spyLogger);
+
+		ConnectionProvider connectionProvider = withMaxConnectionPools ?
+				ConnectionProvider.builder("max-connection-pools").maxConnectionPools(1).build() :
+				ConnectionProvider.builder("max-connection-pools").build();
+
+		try {
+			ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+
+			SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+
+			disposableServer =
+					createServer().secure(ssl -> ssl.sslContext(sslServer))
+					              .handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+					              .bindNow();
+
+			Flux.range(1, 2)
+			    .flatMap(i ->
+			            createClient(connectionProvider, disposableServer::address)
+			                    .secure(ssl -> ssl.sslContext(createClientSslContext()))
+			                    .get()
+			                    .uri("/foo")
+			                    .responseContent()
+			                    .aggregate()
+			                    .asString())
+			    .as(StepVerifier::create)
+			    .thenConsumeWhile(s -> true)
+			    .expectComplete()
+			    .verify(Duration.ofSeconds(5));
+
+			if (withMaxConnectionPools) {
+				Mockito.verify(spyLogger)
+				       .warn(argumentCaptor.capture(), Mockito.eq(2), Mockito.eq(1));
+				assertThat(argumentCaptor.getValue())
+						.isEqualTo("Connection pool creation limit exceeded: {} pools created, maximum expected is {}");
+			}
+			else {
+				Mockito.verify(spyLogger, times(0))
+				       .warn(Mockito.eq("Connection pool creation limit exceeded: {} pools created, maximum expected is {}"),
+				               Mockito.eq(2), Mockito.eq(1));
+			}
+		}
+		finally {
+			Loggers.resetLoggerFactory();
+			connectionProvider.dispose();
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {0, -2})
+	void testInvalidMaxConnectionPoolsSetting(int maxConnectionPools) {
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> ConnectionProvider.builder("max-connection-pools").maxConnectionPools(maxConnectionPools));
+	}
+
+	private static SslContext createClientSslContext() {
+		try {
+			return SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+		}
+		catch (SSLException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Test
