@@ -44,7 +44,7 @@ final class Http3ServerOperations extends HttpServerOperations {
 			ConnectionObserver listener,
 			HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			HttpCompressionOptionsSpec compressionOptions,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ConnectionInfo connectionInfo,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,

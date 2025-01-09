@@ -74,10 +74,6 @@ public final class HttpCompressionOptionsSpec {
 		}
 	}
 
-	public static HttpCompressionOptionsSpec provideDefault() {
-		return new HttpCompressionOptionsSpec();
-	}
-
 	public CompressionOptions[] adapt() {
 		List<CompressionOptions> options = new ArrayList<>(
 				Arrays.asList(

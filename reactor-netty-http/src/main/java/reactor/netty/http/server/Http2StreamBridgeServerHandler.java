@@ -86,7 +86,7 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 
 	Http2StreamBridgeServerHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
-			HttpCompressionOptionsSpec compressionOptions,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,

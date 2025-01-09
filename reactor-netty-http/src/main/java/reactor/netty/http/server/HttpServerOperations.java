@@ -180,7 +180,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			HttpCompressionOptionsSpec compressionOptions,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ConnectionInfo connectionInfo,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
@@ -1325,7 +1325,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ZonedDateTime timestamp,
 				ConnectionInfo connectionInfo,
 				boolean validateHeaders) {
-			super(c, listener, nettyRequest, null, HttpCompressionOptionsSpec.provideDefault(), connectionInfo,
+			super(c, listener, nettyRequest, null, null, connectionInfo,
 					ServerCookieDecoder.STRICT, ServerCookieEncoder.STRICT, DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, isHttp2,
 					null, null, null, secure, timestamp, validateHeaders);
 			this.customResponse = nettyResponse;

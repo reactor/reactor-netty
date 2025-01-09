@@ -145,7 +145,6 @@ import reactor.netty.http.client.HttpClientMetricsRecorder;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.PrematureCloseException;
 import reactor.netty.http.logging.ReactorNettyHttpMessageLogFactory;
-import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
@@ -2215,7 +2214,7 @@ class HttpServerTests extends BaseHttpTest {
 				ConnectionObserver.emptyListener(),
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
 				null,
-				HttpCompressionOptionsSpec.provideDefault(),
+				null,
 				new ConnectionInfo(localSocketAddress, DEFAULT_HOST_NAME, DEFAULT_HTTP_PORT, remoteSocketAddress, "http", true),
 				ServerCookieDecoder.STRICT,
 				ServerCookieEncoder.STRICT,
@@ -3274,7 +3273,7 @@ class HttpServerTests extends BaseHttpTest {
 				ConnectionObserver.emptyListener(),
 				request,
 				null,
-				HttpCompressionOptionsSpec.provideDefault(),
+				null,
 				new ConnectionInfo(localSocketAddress, DEFAULT_HOST_NAME, DEFAULT_HTTP_PORT, remoteSocketAddress, "http", true),
 				ServerCookieDecoder.STRICT,
 				ServerCookieEncoder.STRICT,

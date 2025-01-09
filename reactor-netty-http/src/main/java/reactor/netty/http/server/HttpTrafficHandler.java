@@ -114,7 +114,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	HttpTrafficHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
-			HttpCompressionOptionsSpec compressionOptions,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,

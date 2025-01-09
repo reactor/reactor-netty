@@ -346,7 +346,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.httpMessageLogFactory = ReactorNettyHttpMessageLogFactory.INSTANCE;
 		this.maxKeepAliveRequests = -1;
 		this.minCompressionSize = -1;
-		this.compressionOptions = HttpCompressionOptionsSpec.provideDefault();
+		this.compressionOptions = null;
 		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
 		this._protocols = h11;
 		this.proxyProtocolSupportType = ProxyProtocolSupportType.OFF;
@@ -496,7 +496,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			HttpCompressionOptionsSpec compressionOptions,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -610,7 +610,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			HttpCompressionOptionsSpec compressionOptions,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -646,7 +646,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			HttpCompressionOptionsSpec compressionOptions,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -717,7 +717,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			HttpCompressionOptionsSpec compressionOptions,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -806,7 +806,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			HttpCompressionOptionsSpec compressionOptions,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
 			@Nullable Function<String, String> uriTagValue) {
@@ -1037,7 +1037,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable Function<String, String> methodTagValue,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				int minCompressionSize,
-				HttpCompressionOptionsSpec compressionOptions,
+				@Nullable HttpCompressionOptionsSpec compressionOptions,
 				ChannelOperations.OnSetup opsFactory,
 				@Nullable Duration readTimeout,
 				@Nullable Duration requestTimeout,
@@ -1113,7 +1113,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				@Nullable Function<String, String> methodTagValue,
 				@Nullable ChannelMetricsRecorder metricsRecorder,
 				int minCompressionSize,
-				HttpCompressionOptionsSpec compressionOptions,
+				@Nullable HttpCompressionOptionsSpec compressionOptions,
 				ChannelOperations.OnSetup opsFactory,
 				@Nullable Duration readTimeout,
 				@Nullable Duration requestTimeout,
