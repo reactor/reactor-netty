@@ -25,13 +25,7 @@ import io.netty.handler.codec.compression.StandardCompressionOptions;
  */
 final class BrotliOption implements HttpCompressionOption {
 
-	private final CompressionOptions option;
-
-	BrotliOption() {
-		this.option = StandardCompressionOptions.brotli();
-	}
-
 	CompressionOptions adapt() {
-		return option;
+		return StandardCompressionOptions.brotli();
 	}
 }

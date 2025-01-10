@@ -25,13 +25,7 @@ import io.netty.handler.codec.compression.StandardCompressionOptions;
  */
 final class SnappyOption implements HttpCompressionOption {
 
-	private final CompressionOptions option;
-
-	SnappyOption() {
-		this.option = StandardCompressionOptions.snappy();
-	}
-
 	CompressionOptions adapt() {
-		return option;
+		return StandardCompressionOptions.snappy();
 	}
 }

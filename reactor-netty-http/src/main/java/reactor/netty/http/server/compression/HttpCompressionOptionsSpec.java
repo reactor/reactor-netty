@@ -37,16 +37,16 @@ public final class HttpCompressionOptionsSpec {
 	private ZstdOption zstd;
 
 	private HttpCompressionOptionsSpec() {
-		gzip = StandardHttpCompressionOptions.gzip();
-		deflate = StandardHttpCompressionOptions.deflate();
-		snappy = StandardHttpCompressionOptions.snappy();
+		gzip = GzipOption.provideDefault();
+		deflate = DeflateOption.provideDefault();
+		snappy = new SnappyOption();
 
 		if (Brotli.isAvailable()) {
-			brotli = StandardHttpCompressionOptions.brotli();
+			brotli = new BrotliOption();
 		}
 
 		if (Zstd.isAvailable()) {
-			zstd = StandardHttpCompressionOptions.zstd();
+			zstd = ZstdOption.provideDefault();
 		}
 	}
 

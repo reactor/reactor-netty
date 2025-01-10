@@ -17,29 +17,112 @@ package reactor.netty.http.server.compression;
 
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
+import io.netty.handler.codec.compression.Zstd;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * ZSTD compression option configuration.
  *
  * @author raccoonback
  */
-final class ZstdOption implements HttpCompressionOption {
+public final class ZstdOption implements HttpCompressionOption {
 
-	private final CompressionOptions option;
+	private final int compressionLevel;
+	private final int blockSize;
+	private final int maxEncodeSize;
 
-	ZstdOption() {
-		this.option = StandardCompressionOptions.zstd();
+	private ZstdOption(Build build) {
+		this.compressionLevel = build.compressionLevel;
+		this.blockSize = build.blockSize;
+		this.maxEncodeSize = build.maxEncodeSize;
 	}
 
-	ZstdOption(int compressionLevel, int windowBits, int memoryLevel) {
-		this.option = StandardCompressionOptions.zstd(
-				compressionLevel,
-				windowBits,
-				memoryLevel
-		);
+	static ZstdOption provideDefault() {
+		return builder().build();
 	}
 
 	CompressionOptions adapt() {
-		return option;
+		return StandardCompressionOptions.zstd(
+				compressionLevel,
+				blockSize,
+				maxEncodeSize
+		);
+	}
+
+	/**
+	 * Creates a builder for {@link ZstdOption}.
+	 *
+	 * @return a new {@link ZstdOption.Builder}
+	 */
+	public static Builder builder() {
+		if (!Zstd.isAvailable()) {
+			throw new IllegalStateException("zstd is not available", Zstd.cause());
+		}
+
+		return new ZstdOption.Build();
+	}
+
+	public interface Builder {
+
+		/**
+		 * Build a new {@link ZstdOption}.
+		 *
+		 * @return a new {@link ZstdOption}
+		 */
+		ZstdOption build();
+
+		/**
+		 * Sets the zstd compression level.
+		 *
+		 * @return a new {@link ZstdOption.Builder}
+		 */
+		Builder compressionLevel(int compressionLevel);
+
+		/**
+		 * Sets the zstd block size.
+		 *
+		 * @return a new {@link ZstdOption.Builder}
+		 */
+		Builder blockSize(int blockSize);
+
+		/**
+		 * Sets the zstd memory level.
+		 *
+		 * @return a new {@link ZstdOption.Builder}
+		 */
+		Builder maxEncodeSize(int maxEncodeSize);
+	}
+
+	private static final class Build implements Builder {
+
+		private int compressionLevel = 3;
+		private int blockSize = 1 << 16;  // 64KB
+		private int maxEncodeSize = 1 << (compressionLevel + 7 + 0x0F);   //  32MB
+
+		@Override
+		public ZstdOption build() {
+			return new ZstdOption(this);
+		}
+
+		@Override
+		public Builder compressionLevel(int compressionLevel) {
+			ObjectUtil.checkInRange(compressionLevel, -(1 << 17), 22, "compressionLevel");
+			this.compressionLevel = compressionLevel;
+			return this;
+		}
+
+		@Override
+		public Builder blockSize(int blockSize) {
+			ObjectUtil.checkPositive(blockSize, "blockSize");
+			this.blockSize = blockSize;
+			return this;
+		}
+
+		@Override
+		public Builder maxEncodeSize(int maxEncodeSize) {
+			ObjectUtil.checkPositive(maxEncodeSize, "maxEncodeSize");
+			this.maxEncodeSize = maxEncodeSize;
+			return this;
+		}
 	}
 }

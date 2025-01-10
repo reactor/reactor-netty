@@ -17,29 +17,107 @@ package reactor.netty.http.server.compression;
 
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Deflate compression option configuration.
  *
  * @author raccoonback
  */
-final class DeflateOption implements HttpCompressionOption {
+public final class DeflateOption implements HttpCompressionOption {
 
-	private final CompressionOptions option;
+	private final int compressionLevel;
+	private final int windowBits;
+	private final int memoryLevel;
 
-	DeflateOption() {
-		this.option = StandardCompressionOptions.gzip();
+	private DeflateOption(Build build) {
+		this.compressionLevel = build.compressionLevel;
+		this.windowBits = build.windowBits;
+		this.memoryLevel = build.memoryLevel;
 	}
 
-	DeflateOption(int compressionLevel, int windowBits, int memoryLevel) {
-		this.option = StandardCompressionOptions.gzip(
+	static DeflateOption provideDefault() {
+		return builder().build();
+	}
+
+	CompressionOptions adapt() {
+		return StandardCompressionOptions.deflate(
 				compressionLevel,
 				windowBits,
 				memoryLevel
 		);
 	}
 
-	CompressionOptions adapt() {
-		return option;
+	/**
+	 * Creates a builder for {@link DeflateOption}.
+	 *
+	 * @return a new {@link DeflateOption.Builder}
+	 */
+	public static Builder builder() {
+		return new DeflateOption.Build();
+	}
+
+	public interface Builder {
+
+		/**
+		 * Build a new {@link DeflateOption}.
+		 *
+		 * @return a new {@link DeflateOption}
+		 */
+		DeflateOption build();
+
+		/**
+		 * Sets the deflate compression level.
+		 *
+		 * @return a new {@link DeflateOption.Builder}
+		 */
+		Builder compressionLevel(int compressionLevel);
+
+		/**
+		 * Sets the deflate window bits.
+		 *
+		 * @return a new {@link DeflateOption.Builder}
+		 */
+		Builder windowBits(int windowBits);
+
+		/**
+		 * Sets the deflate memory level.
+		 *
+		 * @return a new {@link DeflateOption.Builder}
+		 */
+		Builder memoryLevel(int memoryLevel);
+	}
+
+	private static final class Build implements Builder {
+
+		private int compressionLevel = 6;
+		private int windowBits = 12;
+		private int memoryLevel = 8;
+
+		@Override
+		public DeflateOption build() {
+			return new DeflateOption(this);
+		}
+
+		@Override
+		public Builder compressionLevel(int compressionLevel) {
+			ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+			this.compressionLevel = compressionLevel;
+			return this;
+		}
+
+		@Override
+		public Builder windowBits(int windowBits) {
+			ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
+			this.windowBits = windowBits;
+			return this;
+		}
+
+		@Override
+		public Builder memoryLevel(int memoryLevel) {
+			ObjectUtil.checkInRange(memoryLevel, 1, 9, "memoryLevel");
+			this.memoryLevel = memoryLevel;
+			return this;
+		}
 	}
 }

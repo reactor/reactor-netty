@@ -340,15 +340,24 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	}
 
 	/**
-	 * Specifies GZIP, DEFLATE, ZSTD Compression Level.
+	 * Specifies GZip, Deflate, ZSTD compression option
+	 * with {@link reactor.netty.http.server.compression.GzipOption}, {@link reactor.netty.http.server.compression.DeflateOption}, , {@link reactor.netty.http.server.compression.ZstdOption}.
 	 *
 	 * @param compressionOptions configures {@link HttpCompressionOption} after enable compress.
+	 *
 	 *  <pre>
 	 *  {@code
 	 *      HttpServer.create()
-	 *                       .compress(true)
+	 *                      .compress(true)
 	 *  					.compressOptions(
-	 *                         StandardHttpCompressionOptions.gzip(6, 15, 8)
+	 *  				            	GzipOption.builder()
+	 *                                      .compressionLevel(6)
+	 *                                      .windowBits(15)
+	 *                                      .memoryLevel(8)
+	 *                                      .build(),
+	 *                                  ZstdOption.builder()
+	 *                                      .compressionLevel(3)
+	 *                                      .build()
 	 *  					 )
 	 *  					.bindNow();
 	 *  }

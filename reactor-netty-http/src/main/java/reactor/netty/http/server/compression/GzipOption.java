@@ -17,29 +17,107 @@ package reactor.netty.http.server.compression;
 
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * GZIP compression option configuration.
  *
  * @author raccoonback
  */
-final class GzipOption implements HttpCompressionOption {
+public final class GzipOption implements HttpCompressionOption {
 
-	private final CompressionOptions option;
+	private final int compressionLevel;
+	private final int windowBits;
+	private final int memoryLevel;
 
-	GzipOption() {
-		this.option = StandardCompressionOptions.gzip();
+	private GzipOption(Build build) {
+		this.compressionLevel = build.compressionLevel;
+		this.windowBits = build.windowBits;
+		this.memoryLevel = build.memoryLevel;
 	}
 
-	GzipOption(int compressionLevel, int windowBits, int memoryLevel) {
-		this.option = StandardCompressionOptions.gzip(
+	static GzipOption provideDefault() {
+		return builder().build();
+	}
+
+	CompressionOptions adapt() {
+		return StandardCompressionOptions.gzip(
 				compressionLevel,
 				windowBits,
 				memoryLevel
 		);
 	}
 
-	CompressionOptions adapt() {
-		return option;
+	/**
+	 * Creates a builder for {@link GzipOption}.
+	 *
+	 * @return a new {@link GzipOption.Builder}
+	 */
+	public static Builder builder() {
+		return new Build();
+	}
+
+	public interface Builder {
+
+		/**
+		 * Build a new {@link GzipOption}.
+		 *
+		 * @return a new {@link GzipOption}
+		 */
+		GzipOption build();
+
+		/**
+		 * Sets the gzip compression level.
+		 *
+		 * @return a new {@link GzipOption.Builder}
+		 */
+		Builder compressionLevel(int compressionLevel);
+
+		/**
+		 * Sets the gzip window bits.
+		 *
+		 * @return a new {@link GzipOption.Builder}
+		 */
+		Builder windowBits(int windowBits);
+
+		/**
+		 * Sets the gzip memory level.
+		 *
+		 * @return a new {@link GzipOption.Builder}
+		 */
+		Builder memoryLevel(int memoryLevel);
+	}
+
+	private static final class Build implements Builder {
+
+		private int compressionLevel = 6;
+		private int windowBits = 12;
+		private int memoryLevel = 8;
+
+		@Override
+		public GzipOption build() {
+			return new GzipOption(this);
+		}
+
+		@Override
+		public Builder compressionLevel(int compressionLevel) {
+			ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+			this.compressionLevel = compressionLevel;
+			return this;
+		}
+
+		@Override
+		public Builder windowBits(int windowBits) {
+			ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
+			this.windowBits = windowBits;
+			return this;
+		}
+
+		@Override
+		public Builder memoryLevel(int memoryLevel) {
+			ObjectUtil.checkInRange(memoryLevel, 1, 9, "memoryLevel");
+			this.memoryLevel = memoryLevel;
+			return this;
+		}
 	}
 }

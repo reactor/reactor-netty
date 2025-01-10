@@ -59,7 +59,8 @@ import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerResponse;
-import reactor.netty.http.server.compression.StandardHttpCompressionOptions;
+import reactor.netty.http.server.compression.GzipOption;
+import reactor.netty.http.server.compression.ZstdOption;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
@@ -727,7 +728,13 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	void serverCompressionWithCompressionLevelSettings(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(true)
-						.compressOptions(StandardHttpCompressionOptions.gzip(4, 15, 8))
+						.compressOptions(
+								GzipOption.builder()
+										.compressionLevel(4)
+										.windowBits(15)
+										.memoryLevel(8)
+										.build()
+						)
 						.handle((in, out) -> out.sendString(Mono.just("reply")))
 						.bindNow(Duration.ofSeconds(10));
 
@@ -766,7 +773,13 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	void serverCompressionEnabledWithGzipCompressionLevelSettings(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.compress(true)
-						.compressOptions(StandardHttpCompressionOptions.gzip(4, 15, 8))
+						.compressOptions(
+								GzipOption.builder()
+										.compressionLevel(4)
+										.windowBits(15)
+										.memoryLevel(8)
+										.build()
+						)
 						.handle((in, out) -> out.sendString(Mono.just("reply")))
 						.bindNow(Duration.ofSeconds(10));
 
@@ -801,7 +814,13 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		assertThat(Zstd.isAvailable()).isTrue();
 		disposableServer =
 				server.compress(true)
-						.compressOptions(StandardHttpCompressionOptions.zstd(12, 65536, 65536))
+						.compressOptions(
+								ZstdOption.builder()
+										.compressionLevel(12)
+										.blockSize(65536)
+										.maxEncodeSize(65536)
+										.build()
+						)
 						.handle((in, out) -> out.sendString(Mono.just("reply")))
 						.bindNow(Duration.ofSeconds(10));
 
