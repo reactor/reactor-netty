@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tags;
 import reactor.netty.internal.shaded.reactor.pool.InstrumentedPool;
+import reactor.netty.internal.shaded.reactor.pool.PoolScheduler;
 
 import java.net.SocketAddress;
+import java.util.List;
 
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.ACTIVE_CONNECTIONS;
@@ -31,6 +33,7 @@ import static reactor.netty.http.client.Http2ConnectionProviderMeters.Http2Conne
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.IDLE_CONNECTIONS;
 import static reactor.netty.http.client.Http2ConnectionProviderMeters.PENDING_STREAMS;
 import static reactor.netty.Metrics.formatSocketAddress;
+import static reactor.netty.http.client.Http2ConnectionProviderMeters.STEAL_STREAMS;
 
 final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 
@@ -48,9 +51,20 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(ACTIVE_STREAMS.getName(), metrics, poolMetrics -> ((Http2Pool) poolMetrics).activeStreams())
-		     .tags(tags)
-		     .register(REGISTRY);
+		if (metrics instanceof Http2Pool) {
+			Gauge.builder(ACTIVE_STREAMS.getName(), metrics, poolMetrics -> ((Http2Pool) poolMetrics).activeStreams())
+					.tags(tags)
+					.register(REGISTRY);
+		}
+		else if (metrics instanceof PoolScheduler<?>) {
+			Gauge.builder(ACTIVE_STREAMS.getName(), metrics, poolMetrics -> getActiveStreams(((PoolScheduler<?>) metrics).getPools()))
+					.tags(tags)
+					.register(REGISTRY);
+
+			Gauge.builder(STEAL_STREAMS.getName(), metrics, poolMetrics -> ((PoolScheduler<?>) metrics).stealCount())
+					.tags(tags)
+					.register(REGISTRY);
+		}
 
 		Gauge.builder(IDLE_CONNECTIONS.getName(), metrics, InstrumentedPool.PoolMetrics::idleSize)
 		     .tags(tags)
@@ -69,5 +83,11 @@ final class MicrometerHttp2ConnectionProviderMeterRegistrar {
 		REGISTRY.remove(new Meter.Id(ACTIVE_STREAMS.getName(), tags, null, null, Meter.Type.GAUGE));
 		REGISTRY.remove(new Meter.Id(IDLE_CONNECTIONS.getName(), tags, null, null, Meter.Type.GAUGE));
 		REGISTRY.remove(new Meter.Id(PENDING_STREAMS.getName(), tags, null, null, Meter.Type.GAUGE));
+	}
+
+	int getActiveStreams(List<? extends InstrumentedPool<?>> pools) {
+		return pools.stream()
+				.mapToInt(pool -> ((Http2Pool) pool).activeStreams())
+				.sum();
 	}
 }
