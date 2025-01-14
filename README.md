@@ -22,10 +22,10 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
     }
 
     dependencies {
-      //compile "io.projectreactor.netty:reactor-netty-core:1.2.2-SNAPSHOT"
-      compile "io.projectreactor.netty:reactor-netty-core:1.2.1"
-      //compile "io.projectreactor.netty:reactor-netty-http:1.2.2-SNAPSHOT"
-      compile "io.projectreactor.netty:reactor-netty-http:1.2.1"
+      //compile "io.projectreactor.netty:reactor-netty-core:1.2.3-SNAPSHOT"
+      compile "io.projectreactor.netty:reactor-netty-core:1.2.2"
+      //compile "io.projectreactor.netty:reactor-netty-http:1.2.3-SNAPSHOT"
+      compile "io.projectreactor.netty:reactor-netty-http:1.2.2"
     }
 ```
 
