@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
+import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 
@@ -77,6 +78,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false"));
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
+	final HttpCompressionOptionsSpec compressionOptions;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
@@ -112,6 +114,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 
 	HttpTrafficHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
@@ -128,6 +131,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
+		this.compressionOptions = compressionOptions;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
 		this.httpMessageLogFactory = httpMessageLogFactory;
@@ -243,6 +247,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 							listener,
 							request,
 							compress,
+							compressionOptions,
 							connectionInfo,
 							cookieDecoder,
 							cookieEncoder,
@@ -595,6 +600,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 							listener,
 							nextRequest,
 							compress,
+							compressionOptions,
 							connectionInfo,
 							cookieDecoder,
 							cookieEncoder,

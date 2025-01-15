@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.logging.HttpMessageLogFactory;
+import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.netty.http.server.logging.AccessLog;
 import reactor.netty.http.server.logging.AccessLogArgProvider;
 import reactor.netty.http.server.logging.AccessLogHandlerFactory;
@@ -63,6 +64,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	final Function<String, String>                                methodTagValue;
 	final ChannelMetricsRecorder                                  metricsRecorder;
 	final int                                                     minCompressionSize;
+	final HttpCompressionOptionsSpec compressionOptions;
 	final ChannelOperations.OnSetup                               opsFactory;
 	final Duration                                                readTimeout;
 	final Duration                                                requestTimeout;
@@ -83,6 +85,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -101,6 +104,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		this.methodTagValue = methodTagValue;
 		this.metricsRecorder = metricsRecorder;
 		this.minCompressionSize = minCompressionSize;
+		this.compressionOptions = compressionOptions;
 		this.opsFactory = opsFactory;
 		this.readTimeout = readTimeout;
 		this.requestTimeout = requestTimeout;
@@ -118,13 +122,13 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
 		p.addLast(NettyPipeline.H3ToHttp11Codec, new Http3FrameToHttpObjectCodec(true, validate))
 		 .addLast(NettyPipeline.HttpTrafficHandler,
-		         new Http3StreamBridgeServerHandler(compressPredicate, cookieDecoder, cookieEncoder, formDecoderProvider,
+		         new Http3StreamBridgeServerHandler(compressPredicate, compressionOptions, cookieDecoder, cookieEncoder, formDecoderProvider,
 		                 forwardedHeaderHandler, httpMessageLogFactory, listener, mapHandle, readTimeout, requestTimeout));
 
 		boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
 		if (alwaysCompress) {
-			p.addLast(NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
+			p.addLast(NettyPipeline.CompressionHandler, SimpleCompressionHandler.create(compressionOptions));
 		}
 
 		ChannelOperations.addReactiveBridge(channel, opsFactory, listener);
@@ -166,6 +170,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -173,7 +178,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			boolean validate) {
 		return new Http3ServerConnectionHandler(
 				new Http3Codec(accessLogEnabled, accessLog, compressPredicate, decoder, encoder, formDecoderProvider, forwardedHeaderHandler,
-						httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize,
+						httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize, compressionOptions,
 						opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
 	}
 }

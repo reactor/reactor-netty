@@ -162,6 +162,28 @@ You can configure the `HTTP` server to send a compressed response, depending on 
 * `compress(int)`: The compression is performed once the response size exceeds the given value (in bytes).
 * `compress(BiPredicate<HttpServerRequest, HttpServerResponse>)`: The compression is performed if
 the predicate returns `true`.
+* `compressOptions(HttpCompressionOption... compressionOptions)`: Specifies the compression options for GZip, Deflate, and ZSTD.
++
+[NOTE]
+====
+GZip Compression Options
+
+* compression level : only the range 0 to 9 is allowed. (default: 6)
+* window bits : only the range 0 to 9 is allowed. (default: 15)
+* memory level : only the range 1 to 9 is allowed. (default: 8)
+
+Deflate Compression Options
+
+* compression level : only the range 0 to 9 is allowed. (default: 6)
+* window bits : only the range 0 to 9 is allowed. (default: 15)
+* memory level : only the range 1 to 9 is allowed. (default: 8)
+
+ZSTD Compression Options
+
+* compression level : only the range -131072 to 9 is allowed. (default: 3)
+* block size : only the positive number is allowed. (default: 65536, that is 64KB)
+* max encode size : only the positive number is allowed. (default: 33554432, that is 32MB)
+====
 
 The following example uses the `compress` method (set to `true`) to enable compression:
 

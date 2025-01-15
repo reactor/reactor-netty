@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
+import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -56,6 +59,8 @@ import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerResponse;
+import reactor.netty.http.server.compression.GzipOption;
+import reactor.netty.http.server.compression.ZstdOption;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
@@ -717,5 +722,126 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		                    "reply".equals(t.getT1())))
 		    .expectComplete()
 		    .verify(Duration.ofSeconds(10));
+	}
+
+	@ParameterizedCompressionTest
+	void serverCompressionWithCompressionLevelSettings(HttpServer server, HttpClient client) {
+		disposableServer =
+				server.compress(true)
+						.compressOptions(
+								GzipOption.builder()
+										.compressionLevel(4)
+										.windowBits(15)
+										.memoryLevel(8)
+										.build()
+						)
+						.handle((in, out) -> out.sendString(Mono.just("reply")))
+						.bindNow(Duration.ofSeconds(10));
+
+		Tuple2<byte[], HttpHeaders> resp =
+				client.port(disposableServer.port())
+						.headers(h -> h.add("accept-encoding", "gzip"))
+						.get()
+						.uri("/test")
+						.responseSingle((res, buf) -> buf.asByteArray()
+								.zipWith(Mono.just(res.responseHeaders())))
+						.block(Duration.ofSeconds(10));
+
+		EmbeddedChannel embeddedChannel = new EmbeddedChannel(
+				ZlibCodecFactory.newZlibEncoder(
+						ZlibWrapper.GZIP,
+						4,
+						15,
+						8
+				)
+		);
+
+		ByteBuf byteBuf = Unpooled.directBuffer(32);
+		byteBuf.writeBytes("reply".getBytes(Charset.defaultCharset()));
+
+		embeddedChannel.writeOutbound(byteBuf);
+		ByteBuf encodedByteBuf = embeddedChannel.readOutbound();
+
+		byte[] result = new byte[encodedByteBuf.readableBytes()];
+		encodedByteBuf.getBytes(encodedByteBuf.readerIndex(), result);
+
+		assertThat(resp).isNotNull();
+		assertThat(resp.getT1()).startsWith(result);    // Ignore the original data size and crc checksum comparison
+	}
+
+	@ParameterizedCompressionTest
+	void serverCompressionEnabledWithGzipCompressionLevelSettings(HttpServer server, HttpClient client) throws Exception {
+		disposableServer =
+				server.compress(true)
+						.compressOptions(
+								GzipOption.builder()
+										.compressionLevel(4)
+										.windowBits(15)
+										.memoryLevel(8)
+										.build()
+						)
+						.handle((in, out) -> out.sendString(Mono.just("reply")))
+						.bindNow(Duration.ofSeconds(10));
+
+		Tuple2<byte[], HttpHeaders> resp =
+				client.port(disposableServer.port())
+						.headers(h -> h.add("accept-encoding", "gzip"))
+						.get()
+						.uri("/test")
+						.responseSingle((res, buf) -> buf.asByteArray()
+								.zipWith(Mono.just(res.responseHeaders())))
+						.block(Duration.ofSeconds(10));
+
+		assertThat(resp).isNotNull();
+		assertThat(resp.getT2().get("content-encoding")).isEqualTo("gzip");
+
+		assertThat(new String(resp.getT1(), Charset.defaultCharset())).isNotEqualTo("reply");
+
+		GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(resp.getT1()));
+		byte[] deflatedBuf = new byte[1024];
+		int readable = gis.read(deflatedBuf);
+		gis.close();
+
+		assertThat(readable).isGreaterThan(0);
+
+		String deflated = new String(deflatedBuf, 0, readable, Charset.defaultCharset());
+
+		assertThat(deflated).isEqualTo("reply");
+	}
+
+	@ParameterizedCompressionTest
+	void serverCompressionEnabledWithZstdCompressionLevel(HttpServer server, HttpClient client) {
+		assertThat(Zstd.isAvailable()).isTrue();
+		disposableServer =
+				server.compress(true)
+						.compressOptions(
+								ZstdOption.builder()
+										.compressionLevel(12)
+										.blockSize(65536)
+										.maxEncodeSize(65536)
+										.build()
+						)
+						.handle((in, out) -> out.sendString(Mono.just("reply")))
+						.bindNow(Duration.ofSeconds(10));
+
+		Tuple2<byte[], HttpHeaders> resp =
+				client.port(disposableServer.port())
+						.compress(false)
+						.headers(h -> h.add("Accept-Encoding", "zstd"))
+						.get()
+						.uri("/test")
+						.responseSingle((res, buf) -> buf.asByteArray()
+								.zipWith(Mono.just(res.responseHeaders())))
+						.block(Duration.ofSeconds(10));
+
+		assertThat(resp).isNotNull();
+		assertThat(resp.getT2().get("content-encoding")).isEqualTo("zstd");
+
+		final byte[] compressedData = resp.getT1();
+		assertThat(new String(compressedData, Charset.defaultCharset())).isNotEqualTo("reply");
+
+		final byte[] decompressedData = com.github.luben.zstd.Zstd.decompress(compressedData, 1_000);
+		assertThat(decompressedData).isNotEmpty();
+		assertThat(new String(decompressedData, Charset.defaultCharset())).isEqualTo("reply");
 	}
 }
