@@ -710,6 +710,17 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 
 		@Override
+		public ChannelFuture close() {
+			return newSucceededFuture();
+		}
+
+		@Override
+		public ChannelFuture close(ChannelPromise promise) {
+			promise.setSuccess();
+			return promise;
+		}
+
+		@Override
 		public ChannelFuture closeFuture() {
 			return newSucceededFuture();
 		}
