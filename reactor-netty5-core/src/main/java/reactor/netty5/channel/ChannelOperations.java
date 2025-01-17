@@ -32,6 +32,7 @@ import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
+import io.netty5.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -697,6 +698,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 
 		@Override
+		public Future<Void> close() {
+			return newSucceededFuture();
+		}
+
+		@Override
 		protected void doBind(SocketAddress socketAddress) {
 			throw new UnsupportedOperationException();
 		}
@@ -717,7 +723,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 
 		@Override
-		protected boolean doFinishConnect(SocketAddress socketAddress) throws Exception {
+		protected boolean doFinishConnect(SocketAddress socketAddress) {
 			return false;
 		}
 
@@ -727,7 +733,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 
 		@Override
-		protected boolean doReadNow(AbstractChannel<Channel, SocketAddress, SocketAddress>.ReadSink readSink) throws Exception {
+		protected boolean doReadNow(AbstractChannel<Channel, SocketAddress, SocketAddress>.ReadSink readSink) {
 			return false;
 		}
 
