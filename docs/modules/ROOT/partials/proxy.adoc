@@ -19,3 +19,16 @@ The following example uses `ProxyProvider`:
 include::{examples-dir}/proxy/Application.java[lines=18..42]
 ----
 <1> Configures the connection establishment timeout to 20 seconds.
+
+
+// tag::proxy-when-method[]
+The `proxyWhen(BiConsumer<HttpClientConfig, ? super ProxyProvider.TypeSpec> proxyBuilder)` method allows for dynamic proxy configuration.
+
+- `proxyWhen(...)` takes an `HttpClientConfig` and enables setting a proxy for each individual HTTP request, providing flexibility to choose different proxies depending on the request.
+- Once the proxy is set using `proxyWhen(...)`, any previous proxy settings via `proxy(...)` or `noProxy()` will be ignored.
+// end::proxy-when-method[]
+{examples-link}/proxy/deferred/Application.java
+[%unbreakable]
+----
+include::{examples-dir}/proxy/deferred/Application.java[lines=18..53]
+----

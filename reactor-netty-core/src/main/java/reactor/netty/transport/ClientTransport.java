@@ -252,7 +252,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		Objects.requireNonNull(proxyOptions, "proxyOptions");
 		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder();
 		proxyOptions.accept(builder);
-		return proxyWithProxyProviderSupplier(() -> builder.build());
+		return proxyWithProxyProviderSupplier(builder::build);
 	}
 
 	final T proxyWithProxyProvider(ProxyProvider proxy) {
