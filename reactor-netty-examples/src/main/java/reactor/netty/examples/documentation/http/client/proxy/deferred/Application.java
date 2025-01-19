@@ -32,12 +32,12 @@ public class Application {
 										.connectTimeoutMillis(20_000);
 							}
 						})
-						.proxy(     // ignored
+						.proxy(
 								spec -> spec.type(ProxyProvider.Proxy.HTTP)
 										.host("ignored-proxy-domain")
 										.port(9000)
 										.connectTimeoutMillis(20_000)
-						)
+						)   // ignored
 						.noProxy(); // ignored
 
 		String response =

@@ -55,9 +55,6 @@ import static io.specto.hoverfly.junit.core.SimulationSource.dsl;
 import static io.specto.hoverfly.junit.dsl.HoverflyDsl.service;
 import static io.specto.hoverfly.junit.dsl.ResponseCreators.success;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.CONNECT_TIME;
@@ -179,9 +176,9 @@ class HttpClientProxyTest extends BaseHttpTest {
 								)
 				)
 				.expectNextMatches(t -> {
-					assertEquals("test", t.getT1());
-					assertEquals("FOUND", t.getT2().get("Logging-Handler"));
-					assertTrue(t.getT2().contains("Hoverfly"));
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isTrue();
 					return true;
 				})
 				.expectComplete()
@@ -194,7 +191,7 @@ class HttpClientProxyTest extends BaseHttpTest {
 				HttpClient.create()
 						.proxyWhen(
 								(config, spec) -> {
-									if(config.uri().startsWith("http://127.0.0.1")) {
+									if (config.uri().startsWith("http://127.0.0.1")) {
 										spec.type(ProxyProvider.Proxy.HTTP)
 												.host("localhost")
 												.port(hoverfly.getHoverflyConfig().getProxyPort());
@@ -220,9 +217,9 @@ class HttpClientProxyTest extends BaseHttpTest {
 								)
 				)
 				.expectNextMatches(t -> {
-					assertEquals("test", t.getT1());
-					assertEquals("FOUND", t.getT2().get("Logging-Handler"));
-					assertTrue(t.getT2().contains("Hoverfly"));
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isTrue();
 					return true;
 				})
 				.expectComplete()
@@ -241,9 +238,9 @@ class HttpClientProxyTest extends BaseHttpTest {
 								)
 				)
 				.expectNextMatches(t -> {
-					assertEquals("test", t.getT1());
-					assertEquals("NOT FOUND", t.getT2().get("Logging-Handler"));
-					assertFalse(t.getT2().contains("Hoverfly"));
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("NOT FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isFalse();
 					return true;
 				})
 				.expectComplete()
@@ -282,9 +279,9 @@ class HttpClientProxyTest extends BaseHttpTest {
 								)
 				)
 				.expectNextMatches(t -> {
-					assertEquals("test", t.getT1());
-					assertEquals("FOUND", t.getT2().get("Logging-Handler"));
-					assertTrue(t.getT2().contains("Hoverfly"));
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isTrue();
 					return true;
 				})
 				.expectComplete()
@@ -321,9 +318,9 @@ class HttpClientProxyTest extends BaseHttpTest {
 								)
 				)
 				.expectNextMatches(t -> {
-					assertEquals("test", t.getT1());
-					assertEquals("FOUND", t.getT2().get("Logging-Handler"));
-					assertTrue(t.getT2().contains("Hoverfly"));
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isTrue();
 					return true;
 				})
 				.expectComplete()
@@ -358,10 +355,10 @@ class HttpClientProxyTest extends BaseHttpTest {
 								)
 				)
 				.expectNextMatches(t -> {
-					assertEquals("test", t.getT1());
-					assertEquals("FOUND", t.getT2().get("Logging-Handler"));
-					assertEquals("NOT FOUND", t.getT2().get("Proxy-Logging-Handler"));
-					assertFalse(t.getT2().contains("Hoverfly"));
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("FOUND");
+					assertThat(t.getT2().get("Proxy-Logging-Handler")).isEqualTo("NOT FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isFalse();
 					return true;
 				})
 				.expectComplete()
