@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -623,16 +623,19 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
 		HttpClient dup = duplicate();
-		dup.configuration().deferredConf(config ->
-				cookieBuilder.apply(new DefaultCookie(name, ""))
-				             .map(c -> {
-				                 if (!c.value().isEmpty()) {
-				                     HttpHeaders headers = configuration().headers.copy();
-				                     headers.add(HttpHeaderNames.COOKIE, config.cookieEncoder.encode(c));
-				                     config.headers = headers;
-				                 }
-				                 return config;
-				             }));
+		dup.configuration().deferredConf(config -> {
+			Mono<? extends Cookie> mono = cookieBuilder.apply(new DefaultCookie(name, ""));
+			return mono == Mono.<Cookie>empty() ?
+					Mono.just(config) :
+					mono.map(c -> {
+						if (!c.value().isEmpty()) {
+							HttpHeaders headers = configuration().headers.copy();
+							headers.add(HttpHeaderNames.COOKIE, config.cookieEncoder.encode(c));
+							config.headers = headers;
+						}
+						return config;
+					});
+		});
 		return dup;
 	}
 
@@ -1056,12 +1059,15 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	public final HttpClient headersWhen(Function<? super HttpHeaders, Mono<? extends HttpHeaders>> headerBuilder) {
 		Objects.requireNonNull(headerBuilder, "headerBuilder");
 		HttpClient dup = duplicate();
-		dup.configuration().deferredConf(config ->
-				headerBuilder.apply(config.headers.copy())
-				             .map(h -> {
-				                 config.headers = h;
-				                 return config;
-				             }));
+		dup.configuration().deferredConf(config -> {
+			Mono<? extends HttpHeaders> mono = headerBuilder.apply(config.headers.copy());
+			return mono == Mono.<HttpHeaders>empty() ?
+					Mono.just(config) :
+					mono.map(h -> {
+						config.headers = h;
+						return config;
+					});
+		});
 		return dup;
 	}
 
