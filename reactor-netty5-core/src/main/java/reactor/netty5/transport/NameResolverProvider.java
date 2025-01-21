@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -572,7 +572,7 @@ public final class NameResolverProvider {
 				.ndots(ndots)
 				.queryTimeoutMillis(queryTimeout.toMillis())
 				.eventLoop(group.next())
-				.channelFactory(el -> loop.onChannel(DatagramChannel.class, el, null))
+				.datagramChannelFactory(el -> loop.onChannel(DatagramChannel.class, el, null))
 				.socketChannelFactory(el -> loop.onChannel(SocketChannel.class, el, null), retryTcpOnTimeout);
 		if (bindAddressSupplier != null) {
 			// There is no check for bindAddressSupplier.get() == null
