@@ -22,7 +22,7 @@ include::{examples-dir}/proxy/Application.java[lines=18..42]
 
 
 // tag::proxy-when-method[]
-The `proxyWhen(BiConsumer<HttpClientConfig, ? super ProxyProvider.TypeSpec> proxyBuilder)` method allows for dynamic proxy configuration.
+The `proxyWhen(...)` method allows for dynamic proxy configuration.
 
 - `proxyWhen(...)` takes an `HttpClientConfig` and enables setting a proxy for each individual HTTP request, providing flexibility to choose different proxies depending on the request.
 - Once the proxy is set using `proxyWhen(...)`, any previous proxy settings via `proxy(...)` or `noProxy()` will be ignored.

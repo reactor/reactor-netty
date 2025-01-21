@@ -389,7 +389,7 @@ public final class ProxyProvider {
 		return Integer.parseInt(port);
 	}
 
-	static final class Build implements TypeSpec, AddressSpec, Builder, Validator {
+	static final class Build implements TypeSpec, AddressSpec, Builder {
 
 		@SuppressWarnings("UnnecessaryLambda")
 		static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
@@ -512,11 +512,6 @@ public final class ProxyProvider {
 		@Override
 		public ProxyProvider build() {
 			return new ProxyProvider(this);
-		}
-
-		@Override
-		public final boolean isConfiguredCorrectly() {
-			return type != null && host != null;
 		}
 	}
 
@@ -737,15 +732,5 @@ public final class ProxyProvider {
 		 * @return builds new ProxyProvider
 		 */
 		ProxyProvider build();
-	}
-
-	public interface Validator {
-
-		/**
-		 * Checks whether the proxy configuration is correctly set.
-		 *
-		 * @return true if the required settings are completed, false if any settings are missing
-		 */
-		boolean isConfiguredCorrectly();
 	}
 }

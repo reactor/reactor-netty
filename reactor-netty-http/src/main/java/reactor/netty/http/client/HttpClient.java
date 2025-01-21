@@ -1644,21 +1644,24 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param proxyBuilder a consumer for proxy configuration
 	 * @return a new {@link HttpClient} reference
 	 */
-	public final HttpClient proxyWhen(BiConsumer<HttpClientConfig, ? super ProxyProvider.TypeSpec> proxyBuilder) {
+	public final HttpClient proxyWhen(
+			BiFunction<HttpClientConfig, ? super ProxyProvider.TypeSpec, Mono<? extends ProxyProvider.Builder>> proxyBuilder) {
 		Objects.requireNonNull(proxyBuilder, "proxyBuilder");
 		HttpClient dup = duplicate();
 		dup.configuration()
 				.deferredConf(
 						config -> {
-							ProxyProvider.TypeSpec spec = ProxyProvider.builder();
-							proxyBuilder.accept(config, spec);
-
-							if (((ProxyProvider.Validator) spec).isConfiguredCorrectly()) {
-								ProxyProvider proxyProvider = ((ProxyProvider.Builder) spec).build();
-								config.proxyProvider(proxyProvider);
+							Mono<? extends ProxyProvider.Builder> mono = proxyBuilder.apply(config, ProxyProvider.builder());
+							if (mono == null || mono == Mono.<ProxyProvider.Builder>empty()) {
+								return Mono.just(config);
 							}
 
-							return Mono.just(config);
+							return mono.map(
+									builder -> {
+										config.proxyProvider(builder.build());
+										return config;
+									}
+							);
 						}
 				);
 		return dup;

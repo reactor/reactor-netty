@@ -15,6 +15,7 @@
  */
 package reactor.netty.examples.documentation.http.client.proxy.deferred;
 
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.transport.ProxyProvider;
 
@@ -25,12 +26,16 @@ public class Application {
 				HttpClient.create()
 						.proxyWhen((httpClientConfig, spec) -> {    // only applied
 							if (httpClientConfig.uri().startsWith("https://example.com")) {
-								spec.type(ProxyProvider.Proxy.HTTP)
-										.host("proxy")
-										.port(8080)
-										.nonProxyHosts("localhost")
-										.connectTimeoutMillis(20_000);
+								return Mono.justOrEmpty(
+										spec.type(ProxyProvider.Proxy.HTTP)
+												.host("proxy")
+												.port(8080)
+												.nonProxyHosts("localhost")
+												.connectTimeoutMillis(20_000)
+								);
 							}
+
+							return Mono.empty();
 						})
 						.proxy(
 								spec -> spec.type(ProxyProvider.Proxy.HTTP)
