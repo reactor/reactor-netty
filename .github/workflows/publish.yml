@@ -4,7 +4,6 @@ on:
     branches: # For branches, better to list them explicitly than regexp include
       - main
       - 1.1.x
-      - 1.0.x
 permissions: read-all
 jobs:
   # General job notes: we DON'T want to cancel any previous runs, especially in the case of a "back to snapshots" build right after a release push
