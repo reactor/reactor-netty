@@ -81,6 +81,7 @@ import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http.headers.DefaultHttpCookiePair;
+import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpObjectDecoder;
@@ -872,24 +873,67 @@ class HttpClientTest extends BaseHttpTest {
 		        .blockLast(Duration.ofSeconds(5));
 	}
 
-	@Test
-	void testDeferredHeader() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testDeferredCookie(boolean provideEmptyPublisher) {
 		disposableServer =
 				createServer()
 				          .host("localhost")
-				          .route(r -> r.get("/201", (req, res) -> res.addHeader("Content-Length", "0")
-				                                                     .status(HttpResponseStatus.CREATED)
-				                                                     .sendHeaders()))
+				          .route(r -> r.get("/", (req, res) -> {
+				              Set<HttpCookiePair> cookies = req.cookies().get("testDeferredCookie");
+				              return cookies != null ?
+				                      res.sendString(Mono.just(cookies.iterator().next().value().toString())) :
+				                      res.sendString(Mono.just("empty"));
+				          }))
+				          .bindNow();
+
+		Mono<? extends HttpCookiePair> cookie = provideEmptyPublisher ?
+				Mono.empty() :
+				Mono.just(new DefaultHttpCookiePair("testDeferredCookie", "testDeferredCookie"))
+				    .delayElement(Duration.ofMillis(100));
+		createHttpClientForContextWithAddress()
+		          .cookiesWhen(cookie)
+		          .get()
+		          .uri("/")
+		          .responseSingle((res, bytes) -> bytes.asString())
+		          .as(StepVerifier::create)
+		          .expectNextMatches(s -> provideEmptyPublisher ? "empty".equals(s) : "testDeferredCookie".equals(s))
+		          .expectComplete()
+		          .verify(Duration.ofSeconds(30));
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	void testDeferredHeader(boolean provideEmptyPublisher) {
+		disposableServer =
+				createServer()
+				          .host("localhost")
+				          .route(r -> r.get("/201", (req, res) -> {
+				              CharSequence header = req.requestHeaders().get("test");
+				              if (header != null) {
+				                  res.addHeader("test", header);
+				              }
+				              return res.addHeader("Content-Length", "0")
+				                        .status(HttpResponseStatus.CREATED)
+				                        .sendHeaders();
+				          }))
 				          .bindNow();
 
 		createHttpClientForContextWithAddress()
-		        .headersWhen(h -> Mono.just(h.set("test", "test")).delayElement(Duration.ofSeconds(2)))
+		        .headersWhen(h -> provideEmptyPublisher ?
+		                Mono.empty() :
+		                Mono.just(h.set("test", "test")).delayElement(Duration.ofMillis(100)))
 		        .observe((c, s) -> log.debug(s + "" + c))
 		        .get()
 		        .uri("/201")
-		        .responseContent()
+		        .responseSingle((res, bytes) -> Mono.just(res.responseHeaders().get("test", "empty")))
 		        .repeat(4)
-		        .blockLast(Duration.ofSeconds(30));
+		        .collectList()
+		        .as(StepVerifier::create)
+		        .assertNext(l -> assertThat(l).hasSize(5).allMatch(s -> provideEmptyPublisher ?
+		                "empty".equals(s) : "test".equals(s)))
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
