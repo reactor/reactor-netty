@@ -24,34 +24,31 @@ public class Application {
 	public static void main(String[] args) {
 		HttpClient client =
 				HttpClient.create()
-						.proxyWhen((httpClientConfig, spec) -> {    // only applied
-							if (httpClientConfig.uri().startsWith("https://example.com")) {
-								return Mono.justOrEmpty(
-										spec.type(ProxyProvider.Proxy.HTTP)
-												.host("proxy")
-												.port(8080)
-												.nonProxyHosts("localhost")
-												.connectTimeoutMillis(20_000)
-								);
-							}
+				          .proxyWhen((httpClientConfig, spec) -> {    // only applied
+				              if (httpClientConfig.uri().startsWith("https://example.com")) {
+				                  return Mono.justOrEmpty(
+				                          spec.type(ProxyProvider.Proxy.HTTP)
+				                              .host("proxy")
+				                              .port(8080)
+				                              .nonProxyHosts("localhost")
+				                              .connectTimeoutMillis(20_000));
+				              }
 
-							return Mono.empty();
-						})
-						.proxy(
-								spec -> spec.type(ProxyProvider.Proxy.HTTP)
-										.host("ignored-proxy-domain")
-										.port(9000)
-										.connectTimeoutMillis(20_000)
-						)   // ignored
-						.noProxy(); // ignored
+				              return Mono.empty();
+				          })
+				          .proxy(spec -> spec.type(ProxyProvider.Proxy.HTTP)
+				                             .host("ignored-proxy-domain")
+				                             .port(9000)
+				                             .connectTimeoutMillis(20_000))   // ignored
+				          .noProxy(); // ignored
 
 		String response =
 				client.get()
-						.uri("https://example.com/")
-						.responseContent()
-						.aggregate()
-						.asString()
-						.block();
+				      .uri("https://example.com/")
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .block();
 
 		System.out.println("Response " + response);
 	}
