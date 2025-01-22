@@ -66,6 +66,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.ClientTransport;
+import reactor.netty.transport.ProxyProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Incubating;
@@ -1638,6 +1639,38 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 				// the default security will be used thus always try to load the OpenSsl natives
 				// see HttpClientConnect.MonoHttpConnect#subscribe
 				Mono.fromRunnable(OpenSsl::version));
+	}
+
+	/**
+	 * Supports proxy configuration with a deferred approach.
+	 *
+	 * <p>When proxyWhen(...) is set, calls to proxy(...) and noProxy() methods are ignored.</p>
+	 * <p>This method allows dynamic determination of proxy settings, applying or skipping the proxy based on the configured conditions.</p>
+	 *
+	 * @param proxyBuilder a consumer for proxy configuration
+	 * @return a new {@link HttpClient} reference
+	 */
+	public final HttpClient proxyWhen(
+			BiFunction<HttpClientConfig, ? super ProxyProvider.TypeSpec, Mono<? extends ProxyProvider.Builder>> proxyBuilder) {
+		Objects.requireNonNull(proxyBuilder, "proxyBuilder");
+		HttpClient dup = duplicate();
+		dup.configuration()
+				.deferredConf(
+						config -> {
+							Mono<? extends ProxyProvider.Builder> mono = proxyBuilder.apply(config, ProxyProvider.builder());
+							if (mono == null || mono == Mono.<ProxyProvider.Builder>empty()) {
+								return Mono.just(config);
+							}
+
+							return mono.map(
+									builder -> {
+										config.proxyProvider(builder.build());
+										return config;
+									}
+							);
+						}
+				);
+		return dup;
 	}
 
 	/**

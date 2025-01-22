@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import java.net.SocketAddress;
+import java.nio.channels.UnresolvedAddressException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -145,6 +146,267 @@ class HttpClientProxyTest extends BaseHttpTest {
 				                "test".equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void proxyWithDeferredConfiguration(Hoverfly hoverfly) {
+		HttpClient client =
+				HttpClient.create()
+						.proxyWhen(
+								(config, spec) -> Mono.delay(Duration.ofMillis(10))
+										.map(
+												noOp -> spec.type(ProxyProvider.Proxy.HTTP)
+														.host("localhost")
+														.port(hoverfly.getHoverflyConfig().getProxyPort())
+										)
+						)
+						.doOnResponse((res, conn) -> {
+							ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ProxyLoggingHandler);
+							res.responseHeaders()
+									.add("Logging-Handler", handler != null ? "FOUND" : "NOT FOUND");
+						});
+
+		StepVerifier.create(
+						client.wiretap(true)
+								.get()
+								.uri("http://127.0.0.1:" + port + "/")
+								.responseSingle(
+										(response, body) ->
+												Mono.zip(
+														body.asString(),
+														Mono.just(response.responseHeaders())
+												)
+								)
+				)
+				.expectNextMatches(t -> {
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isTrue();
+					return true;
+				})
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void errorOccursWhenDeferredProxyConfigurationIsInvalid() {
+		HttpClient client =
+				HttpClient.create()
+						.proxyWhen(
+								(config, spec) ->
+										Mono.just(
+												spec.type(ProxyProvider.Proxy.HTTP)
+														.host("invalid-domain")
+										)
+						)
+						.doOnResponse((res, conn) -> {
+							ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ProxyLoggingHandler);
+							res.responseHeaders()
+									.add("Logging-Handler", handler != null ? "FOUND" : "NOT FOUND");
+						});
+
+		StepVerifier.create(
+						client.wiretap(true)
+								.get()
+								.uri("http://127.0.0.1:" + port + "/")
+								.responseSingle(
+										(response, body) ->
+												Mono.zip(
+														body.asString(),
+														Mono.just(response.responseHeaders())
+												)
+								)
+				)
+				.expectError(UnresolvedAddressException.class)
+				.verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void proxyWithDeferredConfigurationByConditions(Hoverfly hoverfly) {
+		HttpClient client =
+				HttpClient.create()
+						.proxyWhen(
+								(config, spec) -> {
+									if (config.uri().startsWith("http://127.0.0.1")) {
+										ProxyProvider.Builder builder = spec.type(ProxyProvider.Proxy.HTTP)
+												.host("localhost")
+												.port(hoverfly.getHoverflyConfig().getProxyPort());
+
+										return Mono.just(builder);
+									}
+
+									return Mono.empty();
+								}
+						)
+						.doOnResponse((res, conn) -> {
+							ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ProxyLoggingHandler);
+							res.responseHeaders()
+									.add("Logging-Handler", handler != null ? "FOUND" : "NOT FOUND");
+						});
+
+		StepVerifier.create(
+						client.wiretap(true)
+								.get()
+								.uri("http://127.0.0.1:" + port + "/")
+								.responseSingle(
+										(response, body) ->
+												Mono.zip(
+														body.asString(),
+														Mono.just(response.responseHeaders())
+												)
+								)
+				)
+				.expectNextMatches(t -> {
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isTrue();
+					return true;
+				})
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(
+						client.wiretap(true)
+								.get()
+								.uri("http://localhost:" + port + "/")
+								.responseSingle(
+										(response, body) ->
+												Mono.zip(
+														body.asString(),
+														Mono.just(response.responseHeaders())
+												)
+								)
+				)
+				.expectNextMatches(t -> {
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("NOT FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isFalse();
+					return true;
+				})
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void proxyIgnoredInStaticConfiguration(Hoverfly hoverfly) {
+		HttpClient client =
+				HttpClient.create()
+						.proxyWhen(
+								(config, spec) ->
+										Mono.just(
+												spec.type(ProxyProvider.Proxy.HTTP)
+														.host("localhost")
+														.port(hoverfly.getHoverflyConfig().getProxyPort())
+										)
+						)
+						.proxy((spec) -> spec.type(ProxyProvider.Proxy.HTTP)
+								.host("localhost")
+								.port(9999))
+						.doOnResponse((res, conn) -> {
+							ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ProxyLoggingHandler);
+							res.responseHeaders()
+									.add("Logging-Handler", handler != null ? "FOUND" : "NOT FOUND");
+						});
+
+		StepVerifier.create(
+						client.wiretap(true)
+								.get()
+								.uri("http://127.0.0.1:" + port + "/")
+								.responseSingle(
+										(response, body) ->
+												Mono.zip(
+														body.asString(),
+														Mono.just(response.responseHeaders())
+												)
+								)
+				)
+				.expectNextMatches(t -> {
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isTrue();
+					return true;
+				})
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void proxyIgnoredInStaticNoProxyConfiguration(Hoverfly hoverfly) {
+		HttpClient client =
+				HttpClient.create()
+						.proxyWhen(
+								(config, spec) ->
+										Mono.just(
+												spec.type(ProxyProvider.Proxy.HTTP)
+														.host("localhost")
+														.port(hoverfly.getHoverflyConfig().getProxyPort())
+										)
+						)
+						.noProxy()
+						.doOnResponse((res, conn) -> {
+							ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ProxyLoggingHandler);
+							res.responseHeaders()
+									.add("Logging-Handler", handler != null ? "FOUND" : "NOT FOUND");
+						});
+
+		StepVerifier.create(
+						client.wiretap(true)
+								.get()
+								.uri("http://127.0.0.1:" + port + "/")
+								.responseSingle(
+										(response, body) ->
+												Mono.zip(
+														body.asString(),
+														Mono.just(response.responseHeaders())
+												)
+								)
+				)
+				.expectNextMatches(t -> {
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isTrue();
+					return true;
+				})
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	void proxyNotEnabledDeferredWithoutNecessaryConfiguration() {
+		HttpClient client =
+				HttpClient.create()
+						.proxyWhen((config, spec) -> Mono.empty())
+						.doOnResponse((res, conn) -> {
+							ChannelHandler proxyLoggingHandler = conn.channel().pipeline().get(NettyPipeline.ProxyLoggingHandler);
+							res.responseHeaders()
+									.add("Proxy-Logging-Handler", proxyLoggingHandler != null ? "FOUND" : "NOT FOUND");
+
+							ChannelHandler loggingHandler = conn.channel().pipeline().get(NettyPipeline.LoggingHandler);
+							res.responseHeaders()
+									.add("Logging-Handler", loggingHandler != null ? "FOUND" : "NOT FOUND");
+						});
+
+		StepVerifier.create(
+						client.wiretap(true)
+								.get()
+								.uri("http://localhost:" + port + "/")
+								.responseSingle(
+										(response, body) ->
+												Mono.zip(
+														body.asString(),
+														Mono.just(response.responseHeaders())
+												)
+								)
+				)
+				.expectNextMatches(t -> {
+					assertThat(t.getT1()).isEqualTo("test");
+					assertThat(t.getT2().get("Logging-Handler")).isEqualTo("FOUND");
+					assertThat(t.getT2().get("Proxy-Logging-Handler")).isEqualTo("NOT FOUND");
+					assertThat(t.getT2().contains("Hoverfly")).isFalse();
+					return true;
+				})
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 	}
 
 	@Test
