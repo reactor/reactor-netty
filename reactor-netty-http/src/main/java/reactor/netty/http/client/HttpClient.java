@@ -649,7 +649,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		HttpClient dup = duplicate();
 		dup.configuration().deferredConf(config -> {
 			Mono<? extends Cookie> mono = cookieBuilder.apply(new DefaultCookie(name, ""));
-			return mono == Mono.<Cookie>empty() ?
+			return mono == null || mono == Mono.<Cookie>empty() ?
 					Mono.just(config) :
 					mono.map(c -> {
 						if (!c.value().isEmpty()) {
@@ -1085,7 +1085,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		HttpClient dup = duplicate();
 		dup.configuration().deferredConf(config -> {
 			Mono<? extends HttpHeaders> mono = headerBuilder.apply(config.headers.copy());
-			return mono == Mono.<HttpHeaders>empty() ?
+			return mono == null || mono == Mono.<HttpHeaders>empty() ?
 					Mono.just(config) :
 					mono.map(h -> {
 						config.headers = h;
