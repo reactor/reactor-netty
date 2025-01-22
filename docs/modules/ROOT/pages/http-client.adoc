@@ -350,7 +350,7 @@ include::{examples-dir}/http3/Application.java[lines=18..46]
 <1> Configures the client to support only `HTTP/3`
 <2> Configures `HTTP/3` settings
 
-include::partial$proxy.adoc[]
+include::partial$http-client-proxy.adoc[]
 
 [[metrics]]
 == Metrics

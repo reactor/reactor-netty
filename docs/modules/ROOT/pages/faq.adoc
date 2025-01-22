@@ -3,7 +3,7 @@
 
 [[faq.proxy-connect-method]]
 == Connection to the proxy cannot be established
-include::partial$proxy.adoc[tag=proxy-connect-method]
+include::partial$http-client-proxy.adoc[tag=proxy-connect-method]
 
 [[faq.logging-prefix]]
 == What is the meaning of the information that is prepended to every log record?
