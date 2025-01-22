@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.examples.documentation.http.client.proxy.deferred;
+package reactor.netty5.examples.documentation.http.client.proxy.deferred;
 
 import reactor.core.publisher.Mono;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.transport.ProxyProvider;
+import reactor.netty5.http.client.HttpClient;
+import reactor.netty5.transport.ProxyProvider;
 
 public class Application {
 

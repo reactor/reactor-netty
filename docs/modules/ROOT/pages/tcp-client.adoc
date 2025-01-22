@@ -227,7 +227,7 @@ When you need to change this default setting, you can configure the `TCP` client
 include::{examples-dir}/sni/Application.java[lines=18..41]
 ----
 
-include::partial$proxy.adoc[]
+include::partial$tcp-client-proxy.adoc[]
 
 [[metrics]]
 == Metrics

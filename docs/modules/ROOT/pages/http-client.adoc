@@ -333,7 +333,7 @@ include::{examples-dir}/http2/H2CApplication.java[lines=18..41]
 include::{sourcedir}/reactor/netty5/http/HttpProtocol.java[lines=24..52]
 ----
 
-include::partial$proxy.adoc[]
+include::partial$http-client-proxy.adoc[]
 
 [[metrics]]
 == Metrics
