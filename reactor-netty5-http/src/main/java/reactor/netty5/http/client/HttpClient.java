@@ -1383,6 +1383,34 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
+	 * Supports proxy configuration with a deferred approach.
+	 *
+	 * <p>When proxyWhen(...) is set, calls to proxy(...) and noProxy() methods are ignored.</p>
+	 * <p>This method allows dynamic determination of proxy settings, applying or skipping the proxy based on the configured conditions.</p>
+	 *
+	 * @param proxyBuilder a deferred builder for proxy configuration
+	 * @return a new {@link HttpClient} reference
+	 * @since 1.2.3
+	 */
+	public final HttpClient proxyWhen(
+			BiFunction<HttpClientConfig, ? super ProxyProvider.TypeSpec, Mono<? extends ProxyProvider.Builder<?>>> proxyBuilder) {
+		Objects.requireNonNull(proxyBuilder, "proxyBuilder");
+		HttpClient dup = duplicate();
+		dup.configuration().deferredConf(config -> {
+			Mono<? extends ProxyProvider.Builder<?>> mono = proxyBuilder.apply(config, new HttpClientProxyProvider.Build());
+			if (mono == null || mono == Mono.<ProxyProvider.Builder<?>>empty()) {
+				return Mono.just(config);
+			}
+
+			return mono.map(builder -> {
+				config.proxyProvider(builder.build());
+				return config;
+			});
+		});
+		return dup;
+	}
+
+	/**
 	 * HTTP Websocket to connect the {@link HttpClient}.
 	 *
 	 * @return a {@link WebsocketSender} ready to consume for response
