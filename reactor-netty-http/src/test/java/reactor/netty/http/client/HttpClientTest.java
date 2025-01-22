@@ -875,11 +875,13 @@ class HttpClientTest extends BaseHttpTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = {true, false})
+	@SuppressWarnings("CollectionUndefinedEquality")
 	void testDeferredCookie(boolean provideEmptyPublisher) {
 		disposableServer =
 				createServer()
 				          .host("localhost")
 				          .route(r -> r.get("/", (req, res) -> {
+				              // Suppressed "CollectionUndefinedEquality", the CharSequence is String
 				              Set<Cookie> cookies = req.cookies().get("testDeferredCookie");
 				              return cookies != null ?
 				                      res.sendString(Mono.just(cookies.iterator().next().value())) :
