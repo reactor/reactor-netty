@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -645,7 +645,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						"zero-length header"));
 			}
 			//"FutureReturnValueIgnored" this is deliberate
-			channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER));
+			channel().writeAndFlush(newFullBodyMessage());
 		}
 		else if (markSentBody()) {
 			//"FutureReturnValueIgnored" this is deliberate
@@ -869,6 +869,15 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		return request;
 	}
 
+	HttpMessage newFullBodyMessage() {
+		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri(), Unpooled.EMPTY_BUFFER);
+
+		requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+
+		request.headers().set(requestHeaders);
+		return request;
+	}
+
 	@Override
 	protected Throwable wrapInboundError(Throwable err) {
 		if (err instanceof ClosedChannelException) {
@@ -886,7 +895,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			return Mono.error(AbortedException.beforeSend());
 		}
 		return FutureMono.deferFuture(() -> markSentHeaderAndBody() ?
-				channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)) :
+				channel().writeAndFlush(newFullBodyMessage()) :
 				channel().newSucceededFuture());
 	}
 
