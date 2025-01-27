@@ -3605,7 +3605,7 @@ class HttpClientTest extends BaseHttpTest {
 		disposableServer =
 				createServer()
 				        .handle((req, res) -> res.sendString(
-				            Flux.concat(req.receive().retain().aggregate().asString().defaultIfEmpty("empty"),
+				            Flux.concat(req.receive().aggregate().asString().defaultIfEmpty("empty"),
 				                        Mono.just(" " + req.requestHeaders().get(HttpHeaderNames.CONTENT_LENGTH)))))
 				        .bindNow();
 
