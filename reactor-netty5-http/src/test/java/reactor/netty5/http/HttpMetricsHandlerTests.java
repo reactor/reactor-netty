@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -409,13 +409,13 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		List<HttpProtocol> protocols = Arrays.asList(clientProtocols);
 		int[] numWrites = new int[]{5, 7};
 		int[] numReads = new int[]{1, 2};
-		int[] bytesWrite = new int[]{106, 122};
+		int[] bytesWrite = new int[]{103, 118};
 		int[] bytesRead = new int[]{37, 48};
 		int connIndex = 1;
 		if ((serverProtocols.length == 1 && serverProtocols[0] == HttpProtocol.HTTP11) ||
 				(clientProtocols.length == 1 && clientProtocols[0] == HttpProtocol.HTTP11)) {
 			numWrites = new int[]{1, 2};
-			bytesWrite = new int[]{123, 246};
+			bytesWrite = new int[]{104, 208};
 			bytesRead = new int[]{64, 128};
 			connIndex = 2;
 		}
@@ -423,7 +423,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 				Arrays.equals(clientProtocols, new HttpProtocol[]{HttpProtocol.H2C, HttpProtocol.HTTP11})) {
 			numWrites = new int[]{4, 6};
 			numReads = new int[]{2, 3};
-			bytesWrite = new int[]{287, 345};
+			bytesWrite = new int[]{268, 323};
 			bytesRead = new int[]{108, 119};
 		}
 		else if (protocols.contains(HttpProtocol.H2) || protocols.contains(HttpProtocol.H2C)) {
@@ -1365,7 +1365,7 @@ class HttpMetricsHandlerTests extends BaseHttpTest {
 		assertCounter(registry, CLIENT_ERRORS, summaryTags1).isNull();
 		assertDistributionSummary(registry, CLIENT_DATA_SENT, summaryTags2)
 				.hasCountGreaterThanOrEqualTo(1)
-				.hasTotalAmountGreaterThanOrEqualTo(118);
+				.hasTotalAmountGreaterThanOrEqualTo(99);
 		assertCounter(registry, CLIENT_ERRORS, summaryTags2).isNull();
 	}
 

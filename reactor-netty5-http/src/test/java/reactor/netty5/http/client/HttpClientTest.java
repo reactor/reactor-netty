@@ -3639,7 +3639,8 @@ class HttpClientTest extends BaseHttpTest {
 				createServer()
 				        .handle((req, res) -> res.sendString(
 				            Flux.concat(req.receive().aggregate().asString().defaultIfEmpty("empty"),
-				                        Mono.just(" " + req.requestHeaders().get(HttpHeaderNames.CONTENT_LENGTH)))))
+				                        Mono.just(" " + req.requestHeaders().get(HttpHeaderNames.CONTENT_LENGTH) +
+				                        " " + req.requestHeaders().get(HttpHeaderNames.TRANSFER_ENCODING)))))
 				        .bindNow();
 
 		Publisher<Buffer> body = "flux".equals(requestBodyType) ?
@@ -3652,7 +3653,7 @@ class HttpClientTest extends BaseHttpTest {
 		        .send(body)
 		        .responseSingle((res, bytes) -> bytes.asString())
 		        .as(StepVerifier::create)
-		        .expectNext("empty".equals(requestBodyType) ? "empty 0" : "delete 6")
+		        .expectNext("empty".equals(requestBodyType) ? "empty null null" : "delete 6 null")
 		        .expectComplete()
 		        .verify(Duration.ofSeconds(5));
 	}
