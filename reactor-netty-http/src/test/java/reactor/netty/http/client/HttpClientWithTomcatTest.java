@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -233,7 +233,7 @@ class HttpClientWithTomcatTest {
 		assertThat(r).isNotNull();
 
 		assertThat(r.getT1()).isEqualTo(HttpResponseStatus.NOT_FOUND);
-		assertThat(headers.get().get("Content-Length")).isEqualTo("0");
+		assertThat(headers.get().get("Content-Length")).isNull();
 		assertThat(headers.get().get("Transfer-Encoding")).isNull();
 	}
 

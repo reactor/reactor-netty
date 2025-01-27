@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -1048,13 +1049,13 @@ class HttpProtocolsTests extends BaseHttpTest {
 	@ParameterizedCompatibleCombinationsTest
 	void testIssue3524MonoEmpty(HttpServer server, HttpClient client) {
 		// sends "full" request
-		testRequestBody(server, client, sender -> sender.send((req, out) -> Mono.empty()), 1);
+		testRequestBody(server, client, sender -> sender.send((req, out) -> Mono.empty()), 1, true);
 	}
 
 	@ParameterizedCompatibleCombinationsTest
 	void testIssue3524NoBody(HttpServer server, HttpClient client) {
 		// sends "full" request
-		testRequestBody(server, client, sender -> sender.send((req, out) -> out), 1);
+		testRequestBody(server, client, sender -> sender.send((req, out) -> out), 1, true);
 	}
 
 	@ParameterizedCompatibleCombinationsTest
@@ -1064,17 +1065,24 @@ class HttpProtocolsTests extends BaseHttpTest {
 				sender -> sender.send((req, out) -> out.sendObject(Unpooled.wrappedBuffer("test".getBytes(Charset.defaultCharset())))), 1);
 	}
 
-	@SuppressWarnings("FutureReturnValueIgnored")
 	private void testRequestBody(HttpServer server, HttpClient client,
 			Function<HttpClient.RequestSender, HttpClient.ResponseReceiver<?>> sendFunction, int expectedMsg) {
+		testRequestBody(server, client, sendFunction, expectedMsg, false);
+	}
+
+	@SuppressWarnings("FutureReturnValueIgnored")
+	private void testRequestBody(HttpServer server, HttpClient client,
+			Function<HttpClient.RequestSender, HttpClient.ResponseReceiver<?>> sendFunction, int expectedMsg, boolean contentHeadersDoNotExist) {
 		disposableServer =
 				server.handle((req, res) -> req.receive()
 				                               .then(res.send()))
 				      .bindNow(Duration.ofSeconds(30));
 
 		AtomicInteger counter = new AtomicInteger();
+		AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
 		sendFunction.apply(
 		                client.port(disposableServer.port())
+		                      .doAfterRequest((req, conn) -> requestHeaders.set(req.requestHeaders()))
 		                      .doOnRequest((req, conn) -> {
 		                          ChannelPipeline pipeline = conn.channel() instanceof Http2StreamChannel ?
 		                                  conn.channel().parent().pipeline() : conn.channel().pipeline();
@@ -1122,6 +1130,10 @@ class HttpProtocolsTests extends BaseHttpTest {
 		            .block(Duration.ofSeconds(30));
 
 		assertThat(counter.get()).isEqualTo(expectedMsg);
+		if (contentHeadersDoNotExist) {
+			assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+			assertThat(requestHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING)).isNull();
+		}
 	}
 
 	static final class IdleTimeoutTestChannelInboundHandler extends ChannelInboundHandlerAdapter {
