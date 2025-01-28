@@ -27,6 +27,7 @@ import io.netty.resolver.dns.DnsAddressResolverGroup;
 import io.netty.resolver.dns.DnsCache;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.resolver.dns.DnsNameResolverChannelStrategy;
 import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.LoggingDnsQueryLifeCycleObserverFactory;
 import io.netty.resolver.dns.RoundRobinDnsAddressResolverGroup;
@@ -114,6 +115,17 @@ public final class NameResolverProvider {
 		 * @return {@code this}
 		 */
 		NameResolverSpec completeOncePreferredResolved(boolean enable);
+
+		/**
+		 * Sets the strategy that is used to determine how a {@link DatagramChannel} is used by the resolver for sending
+		 * queries over UDP protocol.
+		 * Default to {@link DnsNameResolverChannelStrategy#ChannelPerResolver}
+		 *
+		 * @param datagramChannelStrategy the {@link DnsNameResolverChannelStrategy} to use when doing queries over UDP protocol
+		 * @return {@code this}
+		 * @since 1.2.3
+		 */
+		NameResolverSpec datagramChannelStrategy(DnsNameResolverChannelStrategy datagramChannelStrategy);
 
 		/**
 		 * Disables the automatic inclusion of an optional record that tries to hint the remote DNS server about
@@ -330,6 +342,17 @@ public final class NameResolverProvider {
 	}
 
 	/**
+	 * Returns the configured custom {@link DnsNameResolverChannelStrategy} or null.
+	 *
+	 * @return the configured custom {@link DnsNameResolverChannelStrategy} or null
+	 * @since 1.2.3
+	 */
+	@Nullable
+	public DnsNameResolverChannelStrategy datagramChannelStrategy() {
+		return datagramChannelStrategy;
+	}
+
+	/**
 	 * Returns the configured custom provider of {@link DnsAddressResolverGroup} or null.
 	 *
 	 * @return the configured custom provider of {@link DnsAddressResolverGroup} or null
@@ -500,6 +523,7 @@ public final class NameResolverProvider {
 				cacheMinTimeToLive.equals(that.cacheMinTimeToLive) &&
 				cacheNegativeTimeToLive.equals(that.cacheNegativeTimeToLive) &&
 				completeOncePreferredResolved == that.completeOncePreferredResolved &&
+				datagramChannelStrategy == that.datagramChannelStrategy &&
 				disableOptionalRecord == that.disableOptionalRecord &&
 				disableRecursionDesired == that.disableRecursionDesired &&
 				Objects.equals(dnsAddressResolverGroupProvider, that.dnsAddressResolverGroupProvider) &&
@@ -526,6 +550,7 @@ public final class NameResolverProvider {
 		result = 31 * result + Objects.hashCode(cacheMinTimeToLive);
 		result = 31 * result + Objects.hashCode(cacheNegativeTimeToLive);
 		result = 31 * result + Boolean.hashCode(completeOncePreferredResolved);
+		result = 31 * result + Objects.hashCode(datagramChannelStrategy);
 		result = 31 * result + Boolean.hashCode(disableOptionalRecord);
 		result = 31 * result + Boolean.hashCode(disableRecursionDesired);
 		result = 31 * result + Objects.hashCode(dnsAddressResolverGroupProvider);
@@ -573,6 +598,7 @@ public final class NameResolverProvider {
 				.ndots(ndots)
 				.queryTimeoutMillis(queryTimeout.toMillis())
 				.eventLoop(group.next())
+				.datagramChannelStrategy(datagramChannelStrategy)
 				.datagramChannelFactory(() -> loop.onChannel(DatagramChannel.class, group))
 				.socketChannelFactory(() -> loop.onChannel(SocketChannel.class, group), retryTcpOnTimeout);
 		if (bindAddressSupplier != null) {
@@ -606,6 +632,7 @@ public final class NameResolverProvider {
 	final Duration cacheMinTimeToLive;
 	final Duration cacheNegativeTimeToLive;
 	final boolean completeOncePreferredResolved;
+	final DnsNameResolverChannelStrategy datagramChannelStrategy;
 	final boolean disableOptionalRecord;
 	final boolean disableRecursionDesired;
 	final Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider;
@@ -629,6 +656,7 @@ public final class NameResolverProvider {
 		this.cacheMinTimeToLive = build.cacheMinTimeToLive;
 		this.cacheNegativeTimeToLive = build.cacheNegativeTimeToLive;
 		this.completeOncePreferredResolved = build.completeOncePreferredResolved;
+		this.datagramChannelStrategy = build.datagramChannelStrategy;
 		this.disableOptionalRecord = build.disableOptionalRecord;
 		this.disableRecursionDesired = build.disableRecursionDesired;
 		this.dnsAddressResolverGroupProvider = build.dnsAddressResolverGroupProvider;
@@ -652,6 +680,7 @@ public final class NameResolverProvider {
 		static final Duration DEFAULT_CACHE_MIN_TIME_TO_LIVE = Duration.ofSeconds(0);
 		static final Duration DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE = Duration.ofSeconds(0);
 		static final boolean DEFAULT_COMPLETE_ONCE_PREFERRED_RESOLVED = true;
+		static final DnsNameResolverChannelStrategy DEFAULT_DATAGRAM_CHANNEL_STRATEGY = DnsNameResolverChannelStrategy.ChannelPerResolver;
 		static final int DEFAULT_MAX_PAYLOAD_SIZE = 4096;
 		static final int DEFAULT_MAX_QUERIES_PER_RESOLVE = 16;
 		static final int DEFAULT_NDOTS = -1;
@@ -662,6 +691,7 @@ public final class NameResolverProvider {
 		Duration cacheMinTimeToLive = DEFAULT_CACHE_MIN_TIME_TO_LIVE;
 		Duration cacheNegativeTimeToLive = DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE;
 		boolean completeOncePreferredResolved = DEFAULT_COMPLETE_ONCE_PREFERRED_RESOLVED;
+		DnsNameResolverChannelStrategy datagramChannelStrategy = DEFAULT_DATAGRAM_CHANNEL_STRATEGY;
 		boolean disableOptionalRecord;
 		boolean disableRecursionDesired;
 		Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider;
@@ -708,6 +738,12 @@ public final class NameResolverProvider {
 		@Override
 		public NameResolverSpec completeOncePreferredResolved(boolean enable) {
 			this.completeOncePreferredResolved = enable;
+			return this;
+		}
+
+		@Override
+		public NameResolverSpec datagramChannelStrategy(DnsNameResolverChannelStrategy datagramChannelStrategy) {
+			this.datagramChannelStrategy = Objects.requireNonNull(datagramChannelStrategy);
 			return this;
 		}
 
