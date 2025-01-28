@@ -52,6 +52,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
 	final boolean                                                 accessLogEnabled;
 	final Function<AccessLogArgProvider, AccessLog>               accessLog;
+	final HttpCompressionOptionsSpec                              compressionOptions;
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
@@ -64,7 +65,6 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	final Function<String, String>                                methodTagValue;
 	final ChannelMetricsRecorder                                  metricsRecorder;
 	final int                                                     minCompressionSize;
-	final HttpCompressionOptionsSpec compressionOptions;
 	final ChannelOperations.OnSetup                               opsFactory;
 	final Duration                                                readTimeout;
 	final Duration                                                requestTimeout;
@@ -74,6 +74,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	Http3Codec(
 			boolean accessLogEnabled,
 			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
@@ -85,7 +86,6 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
@@ -93,6 +93,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			boolean validate) {
 		this.accessLogEnabled = accessLogEnabled;
 		this.accessLog = accessLog;
+		this.compressionOptions = compressionOptions;
 		this.compressPredicate = compressPredicate;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
@@ -104,7 +105,6 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 		this.methodTagValue = methodTagValue;
 		this.metricsRecorder = metricsRecorder;
 		this.minCompressionSize = minCompressionSize;
-		this.compressionOptions = compressionOptions;
 		this.opsFactory = opsFactory;
 		this.readTimeout = readTimeout;
 		this.requestTimeout = requestTimeout;
@@ -159,6 +159,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	static ChannelHandler newHttp3ServerConnectionHandler(
 			boolean accessLogEnabled,
 			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
@@ -170,15 +171,14 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable Function<String, String> methodTagValue,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			int minCompressionSize,
-			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ChannelOperations.OnSetup opsFactory,
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout,
 			@Nullable Function<String, String> uriTagValue,
 			boolean validate) {
 		return new Http3ServerConnectionHandler(
-				new Http3Codec(accessLogEnabled, accessLog, compressPredicate, decoder, encoder, formDecoderProvider, forwardedHeaderHandler,
-						httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize, compressionOptions,
+				new Http3Codec(accessLogEnabled, accessLog, compressionOptions, compressPredicate, decoder, encoder, formDecoderProvider, forwardedHeaderHandler,
+						httpMessageLogFactory, listener, mapHandle, methodTagValue, metricsRecorder, minCompressionSize,
 						opsFactory, readTimeout, requestTimeout, uriTagValue, validate));
 	}
 }

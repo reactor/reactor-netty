@@ -78,7 +78,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 			System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false"));
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
-	final HttpCompressionOptionsSpec compressionOptions;
+	final HttpCompressionOptionsSpec                              compressionOptions;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
@@ -246,8 +246,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
 							listener,
 							request,
-							compress,
 							compressionOptions,
+							compress,
 							connectionInfo,
 							cookieDecoder,
 							cookieEncoder,
@@ -599,8 +599,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
 							listener,
 							nextRequest,
-							compress,
 							compressionOptions,
+							compress,
 							connectionInfo,
 							cookieDecoder,
 							cookieEncoder,

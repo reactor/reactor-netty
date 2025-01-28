@@ -23,17 +23,18 @@ import io.netty.util.internal.ObjectUtil;
  * Deflate compression option configuration.
  *
  * @author raccoonback
+ * @since 1.2.3
  */
 public final class DeflateOption implements HttpCompressionOption {
 
 	private final int compressionLevel;
-	private final int windowBits;
 	private final int memoryLevel;
+	private final int windowBits;
 
 	private DeflateOption(Build build) {
 		this.compressionLevel = build.compressionLevel;
-		this.windowBits = build.windowBits;
 		this.memoryLevel = build.memoryLevel;
+		this.windowBits = build.windowBits;
 	}
 
 	static DeflateOption provideDefault() {
@@ -41,11 +42,7 @@ public final class DeflateOption implements HttpCompressionOption {
 	}
 
 	CompressionOptions adapt() {
-		return StandardCompressionOptions.deflate(
-				compressionLevel,
-				windowBits,
-				memoryLevel
-		);
+		return StandardCompressionOptions.deflate(compressionLevel, windowBits, memoryLevel);
 	}
 
 	/**
@@ -74,25 +71,25 @@ public final class DeflateOption implements HttpCompressionOption {
 		Builder compressionLevel(int compressionLevel);
 
 		/**
-		 * Sets the deflate window bits.
-		 *
-		 * @return a new {@link DeflateOption.Builder}
-		 */
-		Builder windowBits(int windowBits);
-
-		/**
 		 * Sets the deflate memory level.
 		 *
 		 * @return a new {@link DeflateOption.Builder}
 		 */
 		Builder memoryLevel(int memoryLevel);
+
+		/**
+		 * Sets the deflate window bits.
+		 *
+		 * @return a new {@link DeflateOption.Builder}
+		 */
+		Builder windowBits(int windowBits);
 	}
 
 	private static final class Build implements Builder {
 
 		private int compressionLevel = 6;
-		private int windowBits = 12;
 		private int memoryLevel = 8;
+		private int windowBits = 12;
 
 		@Override
 		public DeflateOption build() {
@@ -107,16 +104,16 @@ public final class DeflateOption implements HttpCompressionOption {
 		}
 
 		@Override
-		public Builder windowBits(int windowBits) {
-			ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
-			this.windowBits = windowBits;
+		public Builder memoryLevel(int memoryLevel) {
+			ObjectUtil.checkInRange(memoryLevel, 1, 9, "memoryLevel");
+			this.memoryLevel = memoryLevel;
 			return this;
 		}
 
 		@Override
-		public Builder memoryLevel(int memoryLevel) {
-			ObjectUtil.checkInRange(memoryLevel, 1, 9, "memoryLevel");
-			this.memoryLevel = memoryLevel;
+		public Builder windowBits(int windowBits) {
+			ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
+			this.windowBits = windowBits;
 			return this;
 		}
 	}

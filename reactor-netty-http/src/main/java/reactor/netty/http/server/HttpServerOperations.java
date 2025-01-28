@@ -120,6 +120,7 @@ import static reactor.netty.http.server.HttpTrafficHandler.H2;
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
 		implements HttpServerRequest, HttpServerResponse, GenericFutureListener<io.netty.util.concurrent.Future<? super Void>> {
 
+	final HttpCompressionOptionsSpec compressionOptions;
 	final BiPredicate<HttpServerRequest, HttpServerResponse> configuredCompressionPredicate;
 	final ConnectionInfo connectionInfo;
 	final ServerCookieDecoder cookieDecoder;
@@ -139,7 +140,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final boolean validateHeaders;
 
 	BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
-	HttpCompressionOptionsSpec compressionOptions;
 	boolean isWebsocket;
 	Function<? super String, Map<String, String>> paramsResolver;
 	String path;
@@ -151,9 +151,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	HttpServerOperations(HttpServerOperations replaced) {
 		super(replaced);
+		this.compressionOptions = replaced.compressionOptions;
 		this.compressionPredicate = replaced.compressionPredicate;
 		this.configuredCompressionPredicate = replaced.configuredCompressionPredicate;
-		this.compressionOptions = replaced.compressionOptions;
 		this.connectionInfo = replaced.connectionInfo;
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.cookieEncoder = replaced.cookieEncoder;
@@ -179,8 +179,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
-			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			ConnectionInfo connectionInfo,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
@@ -194,9 +194,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ZonedDateTime timestamp,
 			boolean validateHeaders) {
 		super(c, listener, httpMessageLogFactory);
+		this.compressionOptions = compressionOptions;
 		this.compressionPredicate = compressionPredicate;
 		this.configuredCompressionPredicate = compressionPredicate;
-		this.compressionOptions = compressionOptions;
 		this.connectionInfo = connectionInfo;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;

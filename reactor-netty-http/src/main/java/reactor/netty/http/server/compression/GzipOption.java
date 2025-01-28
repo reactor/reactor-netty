@@ -23,17 +23,18 @@ import io.netty.util.internal.ObjectUtil;
  * GZIP compression option configuration.
  *
  * @author raccoonback
+ * @since 1.2.3
  */
 public final class GzipOption implements HttpCompressionOption {
 
 	private final int compressionLevel;
-	private final int windowBits;
 	private final int memoryLevel;
+	private final int windowBits;
 
 	private GzipOption(Build build) {
 		this.compressionLevel = build.compressionLevel;
-		this.windowBits = build.windowBits;
 		this.memoryLevel = build.memoryLevel;
+		this.windowBits = build.windowBits;
 	}
 
 	static GzipOption provideDefault() {
@@ -41,11 +42,7 @@ public final class GzipOption implements HttpCompressionOption {
 	}
 
 	CompressionOptions adapt() {
-		return StandardCompressionOptions.gzip(
-				compressionLevel,
-				windowBits,
-				memoryLevel
-		);
+		return StandardCompressionOptions.gzip(compressionLevel, windowBits, memoryLevel);
 	}
 
 	/**
@@ -74,25 +71,25 @@ public final class GzipOption implements HttpCompressionOption {
 		Builder compressionLevel(int compressionLevel);
 
 		/**
-		 * Sets the gzip window bits.
-		 *
-		 * @return a new {@link GzipOption.Builder}
-		 */
-		Builder windowBits(int windowBits);
-
-		/**
 		 * Sets the gzip memory level.
 		 *
 		 * @return a new {@link GzipOption.Builder}
 		 */
 		Builder memoryLevel(int memoryLevel);
+
+		/**
+		 * Sets the gzip window bits.
+		 *
+		 * @return a new {@link GzipOption.Builder}
+		 */
+		Builder windowBits(int windowBits);
 	}
 
 	private static final class Build implements Builder {
 
 		private int compressionLevel = 6;
-		private int windowBits = 12;
 		private int memoryLevel = 8;
+		private int windowBits = 12;
 
 		@Override
 		public GzipOption build() {
@@ -107,16 +104,16 @@ public final class GzipOption implements HttpCompressionOption {
 		}
 
 		@Override
-		public Builder windowBits(int windowBits) {
-			ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
-			this.windowBits = windowBits;
+		public Builder memoryLevel(int memoryLevel) {
+			ObjectUtil.checkInRange(memoryLevel, 1, 9, "memoryLevel");
+			this.memoryLevel = memoryLevel;
 			return this;
 		}
 
 		@Override
-		public Builder memoryLevel(int memoryLevel) {
-			ObjectUtil.checkInRange(memoryLevel, 1, 9, "memoryLevel");
-			this.memoryLevel = memoryLevel;
+		public Builder windowBits(int windowBits) {
+			ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
+			this.windowBits = windowBits;
 			return this;
 		}
 	}

@@ -27,13 +27,14 @@ import java.util.List;
  * HTTP Compression configuration for the SimpleCompressionHandler.
  *
  * @author raccoonback
+ * @since 1.2.3
  */
 public final class HttpCompressionOptionsSpec {
 
-	private GzipOption gzip;
-	private DeflateOption deflate;
-	private SnappyOption snappy;
 	private BrotliOption brotli;
+	private DeflateOption deflate;
+	private GzipOption gzip;
+	private SnappyOption snappy;
 	private ZstdOption zstd;
 
 	private HttpCompressionOptionsSpec() {
@@ -52,8 +53,7 @@ public final class HttpCompressionOptionsSpec {
 
 	public HttpCompressionOptionsSpec(HttpCompressionOption... compressionOptions) {
 		this();
-		Arrays.stream(compressionOptions)
-				.forEach(this::initializeOption);
+		Arrays.stream(compressionOptions).forEach(this::initializeOption);
 	}
 
 	private void initializeOption(HttpCompressionOption option) {
@@ -75,13 +75,7 @@ public final class HttpCompressionOptionsSpec {
 	}
 
 	public CompressionOptions[] adapt() {
-		List<CompressionOptions> options = new ArrayList<>(
-				Arrays.asList(
-						gzip.adapt(),
-						deflate.adapt(),
-						snappy.adapt()
-				)
-		);
+		List<CompressionOptions> options = new ArrayList<>(Arrays.asList(gzip.adapt(), deflate.adapt(), snappy.adapt()));
 
 		if (brotli != null) {
 			options.add(brotli.adapt());

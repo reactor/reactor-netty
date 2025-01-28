@@ -63,7 +63,7 @@ import static reactor.netty.ReactorNetty.format;
 final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
-	final HttpCompressionOptionsSpec compressionOptions;
+	final HttpCompressionOptionsSpec                              compressionOptions;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
@@ -143,8 +143,8 @@ final class Http2StreamBridgeServerHandler extends ChannelDuplexHandler {
 				ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						request,
-						compress,
 						compressionOptions,
+						compress,
 						connectionInfo,
 						cookieDecoder,
 						cookieEncoder,

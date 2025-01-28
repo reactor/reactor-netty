@@ -53,13 +53,9 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 	}
 
 	static SimpleCompressionHandler create(@Nullable HttpCompressionOptionsSpec compressionOptions) {
-		if (compressionOptions == null) {
-			return new SimpleCompressionHandler();
-		}
-
-		return new SimpleCompressionHandler(
-				compressionOptions.adapt()
-		);
+		return compressionOptions == null ?
+				new SimpleCompressionHandler() :
+				new SimpleCompressionHandler(compressionOptions.adapt());
 	}
 
 	@Override

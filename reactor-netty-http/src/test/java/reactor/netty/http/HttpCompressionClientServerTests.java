@@ -728,69 +728,62 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 	void serverCompressionWithCompressionLevelSettings(HttpServer server, HttpClient client) {
 		disposableServer =
 				server.compress(true)
-						.compressOptions(
-								GzipOption.builder()
-										.compressionLevel(4)
-										.windowBits(15)
-										.memoryLevel(8)
-										.build()
-						)
-						.handle((in, out) -> out.sendString(Mono.just("reply")))
-						.bindNow(Duration.ofSeconds(10));
+				      .compressOptions(
+				              GzipOption.builder()
+				                        .compressionLevel(4)
+				                        .windowBits(15)
+				                        .memoryLevel(8)
+				                        .build())
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
+				      .bindNow(Duration.ofSeconds(10));
 
-		Tuple2<byte[], HttpHeaders> resp =
+		byte[] resp =
 				client.port(disposableServer.port())
-						.headers(h -> h.add("accept-encoding", "gzip"))
-						.get()
-						.uri("/test")
-						.responseSingle((res, buf) -> buf.asByteArray()
-								.zipWith(Mono.just(res.responseHeaders())))
-						.block(Duration.ofSeconds(10));
+				      .headers(h -> h.add("accept-encoding", "gzip"))
+				      .get()
+				      .uri("/test")
+				      .responseSingle((res, buf) -> buf.asByteArray())
+				      .block(Duration.ofSeconds(10));
 
-		EmbeddedChannel embeddedChannel = new EmbeddedChannel(
-				ZlibCodecFactory.newZlibEncoder(
-						ZlibWrapper.GZIP,
-						4,
-						15,
-						8
-				)
-		);
+		EmbeddedChannel embeddedChannel = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP, 4, 15, 8));
+		try {
+			ByteBuf byteBuf = Unpooled.directBuffer(32);
+			byteBuf.writeBytes("reply".getBytes(Charset.defaultCharset()));
 
-		ByteBuf byteBuf = Unpooled.directBuffer(32);
-		byteBuf.writeBytes("reply".getBytes(Charset.defaultCharset()));
+			embeddedChannel.writeOutbound(byteBuf);
+			ByteBuf encodedByteBuf = embeddedChannel.readOutbound();
 
-		embeddedChannel.writeOutbound(byteBuf);
-		ByteBuf encodedByteBuf = embeddedChannel.readOutbound();
+			byte[] result = new byte[encodedByteBuf.readableBytes()];
+			encodedByteBuf.getBytes(encodedByteBuf.readerIndex(), result);
 
-		byte[] result = new byte[encodedByteBuf.readableBytes()];
-		encodedByteBuf.getBytes(encodedByteBuf.readerIndex(), result);
-
-		assertThat(resp).isNotNull();
-		assertThat(resp.getT1()).startsWith(result);    // Ignore the original data size and crc checksum comparison
+			assertThat(resp).isNotNull();
+			assertThat(resp).startsWith(result); // Ignore the original data size and crc checksum comparison
+		}
+		finally {
+			embeddedChannel.finishAndReleaseAll();
+		}
 	}
 
 	@ParameterizedCompressionTest
 	void serverCompressionEnabledWithGzipCompressionLevelSettings(HttpServer server, HttpClient client) throws Exception {
 		disposableServer =
 				server.compress(true)
-						.compressOptions(
-								GzipOption.builder()
-										.compressionLevel(4)
-										.windowBits(15)
-										.memoryLevel(8)
-										.build()
-						)
-						.handle((in, out) -> out.sendString(Mono.just("reply")))
-						.bindNow(Duration.ofSeconds(10));
+				      .compressOptions(
+				              GzipOption.builder()
+				                        .compressionLevel(4)
+				                        .windowBits(15)
+				                        .memoryLevel(8)
+				                        .build())
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
+				      .bindNow(Duration.ofSeconds(10));
 
 		Tuple2<byte[], HttpHeaders> resp =
 				client.port(disposableServer.port())
-						.headers(h -> h.add("accept-encoding", "gzip"))
-						.get()
-						.uri("/test")
-						.responseSingle((res, buf) -> buf.asByteArray()
-								.zipWith(Mono.just(res.responseHeaders())))
-						.block(Duration.ofSeconds(10));
+				      .headers(h -> h.add("accept-encoding", "gzip"))
+				      .get()
+				      .uri("/test")
+				      .responseSingle((res, buf) -> buf.asByteArray().zipWith(Mono.just(res.responseHeaders())))
+				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isEqualTo("gzip");
@@ -814,25 +807,23 @@ class HttpCompressionClientServerTests extends BaseHttpTest {
 		assertThat(Zstd.isAvailable()).isTrue();
 		disposableServer =
 				server.compress(true)
-						.compressOptions(
-								ZstdOption.builder()
-										.compressionLevel(12)
-										.blockSize(65536)
-										.maxEncodeSize(65536)
-										.build()
-						)
-						.handle((in, out) -> out.sendString(Mono.just("reply")))
-						.bindNow(Duration.ofSeconds(10));
+				      .compressOptions(
+				              ZstdOption.builder()
+				                        .compressionLevel(12)
+				                        .blockSize(65536)
+				                        .maxEncodeSize(65536)
+				                        .build())
+				      .handle((in, out) -> out.sendString(Mono.just("reply")))
+				      .bindNow(Duration.ofSeconds(10));
 
 		Tuple2<byte[], HttpHeaders> resp =
 				client.port(disposableServer.port())
-						.compress(false)
-						.headers(h -> h.add("Accept-Encoding", "zstd"))
-						.get()
-						.uri("/test")
-						.responseSingle((res, buf) -> buf.asByteArray()
-								.zipWith(Mono.just(res.responseHeaders())))
-						.block(Duration.ofSeconds(10));
+				      .compress(false)
+				      .headers(h -> h.add("Accept-Encoding", "zstd"))
+				      .get()
+				      .uri("/test")
+				      .responseSingle((res, buf) -> buf.asByteArray().zipWith(Mono.just(res.responseHeaders())))
+				      .block(Duration.ofSeconds(10));
 
 		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isEqualTo("zstd");

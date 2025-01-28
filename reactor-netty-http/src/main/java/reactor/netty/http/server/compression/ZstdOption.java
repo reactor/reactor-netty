@@ -24,16 +24,17 @@ import io.netty.util.internal.ObjectUtil;
  * ZSTD compression option configuration.
  *
  * @author raccoonback
+ * @since 1.2.3
  */
 public final class ZstdOption implements HttpCompressionOption {
 
-	private final int compressionLevel;
 	private final int blockSize;
+	private final int compressionLevel;
 	private final int maxEncodeSize;
 
 	private ZstdOption(Build build) {
-		this.compressionLevel = build.compressionLevel;
 		this.blockSize = build.blockSize;
+		this.compressionLevel = build.compressionLevel;
 		this.maxEncodeSize = build.maxEncodeSize;
 	}
 
@@ -42,11 +43,7 @@ public final class ZstdOption implements HttpCompressionOption {
 	}
 
 	CompressionOptions adapt() {
-		return StandardCompressionOptions.zstd(
-				compressionLevel,
-				blockSize,
-				maxEncodeSize
-		);
+		return StandardCompressionOptions.zstd(compressionLevel, blockSize, maxEncodeSize);
 	}
 
 	/**
@@ -72,18 +69,18 @@ public final class ZstdOption implements HttpCompressionOption {
 		ZstdOption build();
 
 		/**
-		 * Sets the zstd compression level.
-		 *
-		 * @return a new {@link ZstdOption.Builder}
-		 */
-		Builder compressionLevel(int compressionLevel);
-
-		/**
 		 * Sets the zstd block size.
 		 *
 		 * @return a new {@link ZstdOption.Builder}
 		 */
 		Builder blockSize(int blockSize);
+
+		/**
+		 * Sets the zstd compression level.
+		 *
+		 * @return a new {@link ZstdOption.Builder}
+		 */
+		Builder compressionLevel(int compressionLevel);
 
 		/**
 		 * Sets the zstd memory level.
@@ -95,9 +92,9 @@ public final class ZstdOption implements HttpCompressionOption {
 
 	private static final class Build implements Builder {
 
+		private int blockSize = 1 << 16; // 64KB
 		private int compressionLevel = 3;
-		private int blockSize = 1 << 16;  // 64KB
-		private int maxEncodeSize = 1 << (compressionLevel + 7 + 0x0F);   //  32MB
+		private int maxEncodeSize = 1 << (compressionLevel + 7 + 0x0F); // 32MB
 
 		@Override
 		public ZstdOption build() {
@@ -105,16 +102,16 @@ public final class ZstdOption implements HttpCompressionOption {
 		}
 
 		@Override
-		public Builder compressionLevel(int compressionLevel) {
-			ObjectUtil.checkInRange(compressionLevel, -(1 << 17), 22, "compressionLevel");
-			this.compressionLevel = compressionLevel;
+		public Builder blockSize(int blockSize) {
+			ObjectUtil.checkPositive(blockSize, "blockSize");
+			this.blockSize = blockSize;
 			return this;
 		}
 
 		@Override
-		public Builder blockSize(int blockSize) {
-			ObjectUtil.checkPositive(blockSize, "blockSize");
-			this.blockSize = blockSize;
+		public Builder compressionLevel(int compressionLevel) {
+			ObjectUtil.checkInRange(compressionLevel, -(1 << 17), 22, "compressionLevel");
+			this.compressionLevel = compressionLevel;
 			return this;
 		}
 
