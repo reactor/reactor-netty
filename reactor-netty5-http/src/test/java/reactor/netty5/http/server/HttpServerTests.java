@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2058,6 +2058,7 @@ class HttpServerTests extends BaseHttpTest {
 				ConnectionObserver.emptyListener(),
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
 				null,
+				null,
 				new ConnectionInfo(localSocketAddress, DEFAULT_HOST_NAME, DEFAULT_HTTP_PORT, remoteSocketAddress, "http", true),
 				DEFAULT_FORM_DECODER_SPEC,
 				ReactorNettyHttpMessageLogFactory.INSTANCE,
@@ -3110,6 +3111,7 @@ class HttpServerTests extends BaseHttpTest {
 				Connection.from(channel),
 				ConnectionObserver.emptyListener(),
 				request,
+				null,
 				null,
 				new ConnectionInfo(localSocketAddress, DEFAULT_HOST_NAME, DEFAULT_HTTP_PORT, remoteSocketAddress, "http", true),
 				DEFAULT_FORM_DECODER_SPEC,

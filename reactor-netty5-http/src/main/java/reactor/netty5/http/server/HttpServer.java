@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@ import reactor.netty5.http.Http2SettingsSpec;
 import reactor.netty5.http.HttpProtocol;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.netty5.http.logging.ReactorNettyHttpMessageLogFactory;
+import reactor.netty5.http.server.compression.HttpCompressionOption;
+import reactor.netty5.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.netty5.http.server.logging.AccessLog;
 import reactor.netty5.http.server.logging.AccessLogArgProvider;
 import reactor.netty5.http.server.logging.AccessLogFactory;
@@ -188,6 +190,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	/**
 	 * Specifies whether GZip response compression is enabled if the client request
 	 * presents accept encoding.
+	 * Default compression level is 6.
 	 *
 	 * @param compressionEnabled if true GZip response compression
 	 * is enabled if the client request presents accept encoding, otherwise disabled.
@@ -220,6 +223,41 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 		HttpServer dup = duplicate();
 		dup.configuration().minCompressionSize = minResponseSize;
+		return dup;
+	}
+
+	/**
+	 * Specifies GZip, Deflate, ZSTD compression option
+	 * with {@link reactor.netty5.http.server.compression.GzipOption}, {@link reactor.netty5.http.server.compression.DeflateOption},
+	 * {@link reactor.netty5.http.server.compression.ZstdOption}.
+	 *
+	 * @param compressionOptions configures {@link HttpCompressionOption} after enable compress
+	 *
+	 * <pre>
+	 * {@code
+	 * HttpServer.create()
+	 *           .compress(true)
+	 *           .compressOptions(
+	 *                   GzipOption.builder()
+	 *                             .compressionLevel(6)
+	 *                             .windowBits(15)
+	 *                             .memoryLevel(8)
+	 *                             .build(),
+	 *                   ZstdOption.builder()
+	 *                             .compressionLevel(3)
+	 *                             .build()
+	 *           )
+	 *           .bindNow();
+	 * }
+	 * </pre>
+	 * @return a new {@link HttpServer}
+	 * @since 1.2.3
+	 */
+	public final HttpServer compressOptions(HttpCompressionOption... compressionOptions) {
+		Objects.requireNonNull(compressionOptions, "compressionOptions");
+
+		HttpServer dup = duplicate();
+		dup.configuration().compressionOptions = new HttpCompressionOptionsSpec(compressionOptions);
 		return dup;
 	}
 

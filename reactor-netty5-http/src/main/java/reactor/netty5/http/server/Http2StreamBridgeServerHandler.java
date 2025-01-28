@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ import reactor.netty5.ConnectionObserver;
 import reactor.netty5.ReactorNetty;
 import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
+import reactor.netty5.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.util.annotation.Nullable;
 
 import static io.netty5.handler.codec.http.HttpResponseStatus.CONTINUE;
@@ -60,6 +61,7 @@ import static reactor.netty5.ReactorNetty.format;
 final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter {
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
+	final HttpCompressionOptionsSpec                              compressionOptions;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final HttpMessageLogFactory                                   httpMessageLogFactory;
@@ -80,6 +82,7 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter {
 
 	Http2StreamBridgeServerHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
@@ -88,6 +91,7 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter {
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout) {
 		this.compress = compress;
+		this.compressionOptions = compressionOptions;
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.httpMessageLogFactory = httpMessageLogFactory;
@@ -129,6 +133,7 @@ final class Http2StreamBridgeServerHandler extends ChannelHandlerAdapter {
 				ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						request,
+						compressionOptions,
 						compress,
 						connectionInfo,
 						formDecoderProvider,

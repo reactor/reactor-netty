@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,6 +93,7 @@ import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.http.HttpOperations;
 import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
+import reactor.netty5.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.netty5.http.websocket.WebsocketInbound;
 import reactor.netty5.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
@@ -117,6 +118,7 @@ import static reactor.netty5.http.server.HttpTrafficHandler.H2;
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
 		implements HttpServerRequest, HttpServerResponse, FutureContextListener<Channel, Void> {
 
+	final HttpCompressionOptionsSpec compressionOptions;
 	final BiPredicate<HttpServerRequest, HttpServerResponse> configuredCompressionPredicate;
 	final ConnectionInfo connectionInfo;
 	final ServerCookies cookieHolder;
@@ -145,6 +147,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	HttpServerOperations(HttpServerOperations replaced) {
 		super(replaced);
+		this.compressionOptions = replaced.compressionOptions;
 		this.compressionPredicate = replaced.compressionPredicate;
 		this.configuredCompressionPredicate = replaced.configuredCompressionPredicate;
 		this.connectionInfo = replaced.connectionInfo;
@@ -170,6 +173,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	HttpServerOperations(Connection c, ConnectionObserver listener, HttpRequest nettyRequest,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			ConnectionInfo connectionInfo,
 			HttpServerFormDecoderProvider formDecoderProvider,
@@ -182,6 +186,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ZonedDateTime timestamp,
 			boolean validateHeaders) {
 		super(c, listener, httpMessageLogFactory);
+		this.compressionOptions = compressionOptions;
 		this.compressionPredicate = compressionPredicate;
 		this.configuredCompressionPredicate = compressionPredicate;
 		this.connectionInfo = connectionInfo;
@@ -750,7 +755,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			removeHandler(NettyPipeline.CompressionHandler);
 		}
 		else if (channel().pipeline().get(NettyPipeline.CompressionHandler) == null) {
-			SimpleCompressionHandler handler = new SimpleCompressionHandler();
+			SimpleCompressionHandler handler = SimpleCompressionHandler.create(compressionOptions);
 			handler.request = nettyRequest;
 			try {
 				addHandlerFirst(NettyPipeline.CompressionHandler, handler);
@@ -1316,7 +1321,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ZonedDateTime timestamp,
 				ConnectionInfo connectionInfo,
 				boolean validateHeaders) {
-			super(c, listener, nettyRequest, null, connectionInfo,
+			super(c, listener, nettyRequest, null, null, connectionInfo,
 					DEFAULT_FORM_DECODER_SPEC, httpMessageLogFactory, isHttp2, null, null, null, secure, timestamp, validateHeaders);
 			this.customResponse = nettyResponse;
 		}

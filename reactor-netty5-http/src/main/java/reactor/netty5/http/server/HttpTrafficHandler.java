@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ import reactor.netty5.ReactorNetty;
 import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
+import reactor.netty5.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 
@@ -76,6 +77,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 			System.getProperty("reactor.netty5.http.server.lastFlushWhenNoRead", "false"));
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
+	final HttpCompressionOptionsSpec compressionOptions;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
 	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
 	final HttpMessageLogFactory                                   httpMessageLogFactory;
@@ -109,6 +111,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 
 	HttpTrafficHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			HttpServerFormDecoderProvider formDecoderProvider,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler,
 			HttpMessageLogFactory httpMessageLogFactory,
@@ -123,6 +126,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 		this.formDecoderProvider = formDecoderProvider;
 		this.forwardedHeaderHandler = forwardedHeaderHandler;
 		this.compress = compress;
+		this.compressionOptions = compressionOptions;
 		this.httpMessageLogFactory = httpMessageLogFactory;
 		this.idleTimeout = idleTimeout;
 		this.mapHandle = mapHandle;
@@ -229,6 +233,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
 							listener,
 							request,
+							compressionOptions,
 							compress,
 							connectionInfo,
 							formDecoderProvider,
@@ -581,6 +586,7 @@ final class HttpTrafficHandler extends ChannelHandlerAdapter implements Runnable
 					ops = new HttpServerOperations(Connection.from(ctx.channel()),
 							listener,
 							nextRequest,
+							compressionOptions,
 							compress,
 							connectionInfo,
 							formDecoderProvider,

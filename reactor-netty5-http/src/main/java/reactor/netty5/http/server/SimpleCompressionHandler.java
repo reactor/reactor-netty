@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.util.concurrent.Future;
+import reactor.netty5.http.server.compression.HttpCompressionOptionsSpec;
+import reactor.util.annotation.Nullable;
 
 /**
  * {@link HttpContentCompressor} to enable on-demand compression.
@@ -37,8 +39,18 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 	boolean decoded;
 	HttpRequest request;
 
-	SimpleCompressionHandler() {
+	private SimpleCompressionHandler() {
 		super((CompressionOptions[]) null);
+	}
+
+	private SimpleCompressionHandler(CompressionOptions... options) {
+		super(options);
+	}
+
+	static SimpleCompressionHandler create(@Nullable HttpCompressionOptionsSpec compressionOptions) {
+		return compressionOptions == null ?
+				new SimpleCompressionHandler() :
+				new SimpleCompressionHandler(compressionOptions.adapt());
 	}
 
 	@Override
