@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import io.netty.resolver.dns.DnsAddressResolverGroup;
 import io.netty.resolver.dns.DnsCache;
 import io.netty.resolver.dns.DnsCacheEntry;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.resolver.dns.DnsNameResolverChannelStrategy;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.RoundRobinDnsAddressResolverGroup;
 import io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider;
@@ -48,6 +49,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_MAX_TIME_TO_LIVE;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_MIN_TIME_TO_LIVE;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_CACHE_NEGATIVE_TIME_TO_LIVE;
+import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_DATAGRAM_CHANNEL_STRATEGY;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_MAX_PAYLOAD_SIZE;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_MAX_QUERIES_PER_RESOLVE;
 import static reactor.netty.transport.NameResolverProvider.Build.DEFAULT_NDOTS;
@@ -143,6 +145,20 @@ class NameResolverProviderTest {
 
 		builder.completeOncePreferredResolved(false);
 		assertThat(builder.build().isCompleteOncePreferredResolved()).isFalse();
+	}
+
+	@Test
+	void datagramChannelStrategy() {
+		assertThat(builder.build().datagramChannelStrategy()).isEqualTo(DEFAULT_DATAGRAM_CHANNEL_STRATEGY);
+
+		builder.datagramChannelStrategy(DnsNameResolverChannelStrategy.ChannelPerResolution);
+		assertThat(builder.build().datagramChannelStrategy()).isEqualTo(DnsNameResolverChannelStrategy.ChannelPerResolution);
+	}
+
+	@Test
+	void datagramChannelStrategyBadValues() {
+		assertThatExceptionOfType(NullPointerException.class)
+				.isThrownBy(() -> builder.cacheNegativeTimeToLive(null));
 	}
 
 	@Test
