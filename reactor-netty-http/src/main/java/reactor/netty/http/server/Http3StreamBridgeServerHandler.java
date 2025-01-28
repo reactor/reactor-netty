@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
 import reactor.netty.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty.http.logging.HttpMessageLogFactory;
+import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -54,6 +55,7 @@ import static reactor.netty.ReactorNetty.format;
 
 final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
+	final HttpCompressionOptionsSpec compressionOptions;
 	final ServerCookieDecoder                                     cookieDecoder;
 	final ServerCookieEncoder                                     cookieEncoder;
 	final HttpServerFormDecoderProvider                           formDecoderProvider;
@@ -74,6 +76,7 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 
 	Http3StreamBridgeServerHandler(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
+			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			ServerCookieDecoder decoder,
 			ServerCookieEncoder encoder,
 			HttpServerFormDecoderProvider formDecoderProvider,
@@ -84,6 +87,7 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 			@Nullable Duration readTimeout,
 			@Nullable Duration requestTimeout) {
 		this.compress = compress;
+		this.compressionOptions = compressionOptions;
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;
 		this.formDecoderProvider = formDecoderProvider;
@@ -131,6 +135,7 @@ final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
 						listener,
 						request,
 						compress,
+						compressionOptions,
 						connectionInfo,
 						cookieDecoder,
 						cookieEncoder,
