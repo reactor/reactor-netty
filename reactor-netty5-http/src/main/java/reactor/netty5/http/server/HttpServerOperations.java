@@ -823,7 +823,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					// HTTP/1.1 TLS Upgrade (RFC-2817) requests (GET/HEAD/OPTIONS) with empty / non-empty payload
 					stopReadTimeout();
 					//force auto read to enable more accurate close selection now inbound is done
-					channel().config().setAutoRead(true);
+					channel().setOption(ChannelOption.AUTO_READ, true);
 					onInboundComplete();
 				}
 			}
