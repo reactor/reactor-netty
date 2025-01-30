@@ -428,6 +428,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 							}
 							Borrower borrower = pollPending(borrowers, true);
 							if (borrower == null || borrower.get()) {
+								poolConfig.allocationStrategy().returnPermits(1);
 								continue;
 							}
 							if (isDisposed()) {
