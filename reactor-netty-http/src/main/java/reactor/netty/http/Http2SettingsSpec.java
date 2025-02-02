@@ -19,6 +19,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Settings;
 import reactor.util.annotation.Nullable;
 
+import java.time.Duration;
 import java.util.Objects;
 
 /**
@@ -93,6 +94,21 @@ public final class Http2SettingsSpec {
 		 * @return {@code this}
 		 */
 		//Builder pushEnabled(boolean pushEnabled);
+
+		/**
+		 * Sets the interval for checking ping frames.
+		 * If a ping ACK frame is not received within the configured interval, the connection will be closed.
+		 *
+		 * <p>Be cautious when setting a very short interval, as it may cause the connection to be closed,
+		 * even if the keep-alive setting is enabled.</p>
+		 *
+		 * <p>If no interval is specified, no ping frame checking will be performed by default.</p>
+		 *
+		 * @param pingInterval the duration between sending ping frames. If not specified, ping frame checking is disabled.
+		 * @return {@code this}
+		 * @since 1.2.3
+		 */
+		Builder pingInterval(Duration pingInterval);
 	}
 
 	/**
@@ -176,6 +192,16 @@ public final class Http2SettingsSpec {
 		return pushEnabled;
 	}
 
+	/**
+	 * Returns the configured {@code pingInterval} value or null.
+	 *
+	 * @return the configured {@code pingInterval} value or null
+	 */
+	@Nullable
+	public Duration pingInterval() {
+		return pingInterval;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -191,7 +217,8 @@ public final class Http2SettingsSpec {
 				Objects.equals(maxFrameSize, that.maxFrameSize) &&
 				maxHeaderListSize.equals(that.maxHeaderListSize) &&
 				Objects.equals(maxStreams, that.maxStreams) &&
-				Objects.equals(pushEnabled, that.pushEnabled);
+				Objects.equals(pushEnabled, that.pushEnabled) &&
+				Objects.equals(pingInterval, that.pingInterval);
 	}
 
 	@Override
@@ -204,6 +231,7 @@ public final class Http2SettingsSpec {
 		result = 31 * result + (maxHeaderListSize == null ? 0 : Long.hashCode(maxHeaderListSize));
 		result = 31 * result + (maxStreams == null ? 0 : Long.hashCode(maxStreams));
 		result = 31 * result + (pushEnabled == null ? 0 : Boolean.hashCode(pushEnabled));
+		result = 31 * result + (pingInterval == null ? 0 : Objects.hashCode(pingInterval));
 		return result;
 	}
 
@@ -214,6 +242,7 @@ public final class Http2SettingsSpec {
 	final Long maxHeaderListSize;
 	final Long maxStreams;
 	final Boolean pushEnabled;
+	final Duration pingInterval;
 
 	Http2SettingsSpec(Build build) {
 		Http2Settings settings = build.http2Settings;
@@ -230,10 +259,12 @@ public final class Http2SettingsSpec {
 		maxHeaderListSize = settings.maxHeaderListSize();
 		maxStreams = build.maxStreams;
 		pushEnabled = settings.pushEnabled();
+		pingInterval = build.pingInterval;
 	}
 
 	static final class Build implements Builder {
 		Long maxStreams;
+		Duration pingInterval;
 		final Http2Settings http2Settings = Http2Settings.defaultSettings();
 
 		@Override
@@ -277,6 +308,12 @@ public final class Http2SettingsSpec {
 				throw new IllegalArgumentException("maxStreams must be positive");
 			}
 			this.maxStreams = Long.valueOf(maxStreams);
+			return this;
+		}
+
+		@Override
+		public Builder pingInterval(Duration pingInterval) {
+			this.pingInterval = pingInterval;
 			return this;
 		}
 
