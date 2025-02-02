@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,16 @@ import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.util.function.Tuple2;
 
+import java.time.Duration;
+
 public class H2Application {
 
 	public static void main(String[] args) {
 		HttpClient client =
 				HttpClient.create()
 				          .protocol(HttpProtocol.H2) //<1>
-				          .secure();                 //<2>
+				          .secure()                 //<2>
+						  .http2Settings(builder -> builder.pingInterval(Duration.ofMillis(100))); // <3>
 
 		Tuple2<String, HttpHeaders> response =
 				client.get()
