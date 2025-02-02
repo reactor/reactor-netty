@@ -16,12 +16,12 @@
 package reactor.netty.http.client;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.DefaultHttp2PingFrame;
-import io.netty.handler.codec.http2.Http2ChannelDuplexHandler;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -51,7 +51,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * @author raccoonback
  * @since 1.2.3
  */
-public class Http2ConnectionLivenessHandler extends Http2ChannelDuplexHandler {
+public class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 
 	private static final Logger log = Loggers.getLogger(Http2ConnectionLivenessHandler.class);
 
