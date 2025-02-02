@@ -28,7 +28,6 @@ import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.Objects;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -51,7 +50,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * @author raccoonback
  * @since 1.2.3
  */
-public class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
+final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 
 	private static final Logger log = Loggers.getLogger(Http2ConnectionLivenessHandler.class);
 
@@ -65,7 +64,6 @@ public class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 	private boolean isPingAckPending;
 
 	public Http2ConnectionLivenessHandler(Http2ConnectionEncoder encoder, @Nullable Duration pingInterval) {
-		Objects.requireNonNull(encoder, "encoder");
 		this.encoder = encoder;
 
 		if (pingInterval != null) {
