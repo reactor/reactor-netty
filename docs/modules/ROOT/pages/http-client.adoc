@@ -318,6 +318,7 @@ include::{examples-dir}/http2/H2Application.java[lines=18..42]
 ----
 <1> Configures the client to support only `HTTP/2`
 <2> Configures `SSL`
+<3> You can configure the interval for checking `Ping` frames
 
 The following listing presents a simple `H2C` example:
 
