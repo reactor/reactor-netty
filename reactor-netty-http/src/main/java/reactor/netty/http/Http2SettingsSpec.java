@@ -108,7 +108,9 @@ public final class Http2SettingsSpec {
 		 * @return {@code this}
 		 * @since 1.2.3
 		 */
-		Builder pingInterval(Duration pingInterval);
+		default Builder pingInterval(Duration pingInterval) {
+			return this;
+		}
 	}
 
 	/**
