@@ -146,7 +146,6 @@ final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 		public void run() {
 			Channel channel = ctx.channel();
 			if (channel == null || !channel.isOpen()) {
-
 				return;
 			}
 

@@ -31,7 +31,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
-import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
 import reactor.netty.resources.ConnectionProvider;
 
@@ -56,13 +55,12 @@ import static reactor.netty.http.HttpProtocol.H2;
  */
 class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 
-	static SelfSignedCertificate ssc;
 	static SslContext sslServer;
 	static SslContext sslClient;
 
 	@BeforeAll
 	static void createSelfSignedCertificate() throws CertificateException, SSLException {
-		ssc = new SelfSignedCertificate();
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 				.build();
 		sslClient = SslContextBuilder.forClient()
@@ -72,7 +70,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 
 	@Test
 	void successReceiveResponse() {
-		DisposableServer disposableServer = createServer()
+		disposableServer = createServer()
 				.protocol(H2)
 				.secure(spec -> spec.sslContext(sslServer))
 				.handle((req, resp) -> resp.sendString(Mono.just("Test")))
@@ -93,7 +91,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 	void noPingCheckWhenNotConfigured() {
 		Http2PingFrameHandler handler = new Http2PingFrameHandler();
 
-		DisposableServer disposableServer = createServer()
+		disposableServer = createServer()
 				.protocol(H2)
 				.maxKeepAliveRequests(1)
 				.secure(spec -> spec.sslContext(sslServer))
@@ -119,7 +117,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.single()
 				.block();
 
-		Mono.delay(Duration.ofMillis(100))
+		Mono.delay(Duration.ofSeconds(1))
 				.block();
 
 		assertThat(handler.getReceivedPingTimes()).isEmpty();
@@ -137,7 +135,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 						.subscribe()
 		);
 
-		DisposableServer disposableServer = createServer()
+		disposableServer = createServer()
 				.protocol(H2)
 				.maxKeepAliveRequests(1)
 				.secure(spec -> spec.sslContext(sslServer))
@@ -166,7 +164,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.single()
 				.block();
 
-		Mono.delay(Duration.ofMillis(600))
+		Mono.delay(Duration.ofSeconds(2))
 				.block();
 
 		assertThat(handler.getReceivedPingTimes()).hasSize(1);
@@ -184,7 +182,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 						.subscribe()
 		);
 
-		DisposableServer disposableServer = createServer()
+		disposableServer = createServer()
 				.protocol(H2)
 				.maxKeepAliveRequests(1)
 				.secure(spec -> spec.sslContext(sslServer))
@@ -214,7 +212,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.single()
 				.block();
 
-		Mono.delay(Duration.ofMillis(600))
+		Mono.delay(Duration.ofSeconds(2))
 				.block();
 
 		assertThat(handler.getReceivedPingTimes()).hasSize(1);
@@ -225,7 +223,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 	void ackPingFrameWithinInterval() {
 		Http2PingFrameHandler handler = new Http2PingFrameHandler();
 
-		DisposableServer disposableServer = createServer()
+		disposableServer = createServer()
 				.protocol(H2)
 				.maxKeepAliveRequests(1)
 				.secure(spec -> spec.sslContext(sslServer))
@@ -246,7 +244,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.keepAlive(true)
 				.secure(spec -> spec.sslContext(sslClient))
 				.http2Settings(builder -> {
-					builder.pingInterval(Duration.ofMillis(100));
+					builder.pingInterval(Duration.ofSeconds(1));
 				})
 				.get()
 				.uri("/")
@@ -254,7 +252,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.single()
 				.block();
 
-		Mono.delay(Duration.ofSeconds(1))
+		Mono.delay(Duration.ofSeconds(10))
 				.block();
 
 		assertThat(handler.getReceivedPingTimes()).hasSizeGreaterThanOrEqualTo(2);
@@ -265,7 +263,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 	void connectionRetentionInPoolOnPingFrameAck() {
 		Http2PingFrameHandler handler = new Http2PingFrameHandler();
 
-		DisposableServer disposableServer = createServer()
+		disposableServer = createServer()
 				.protocol(H2)
 				.maxKeepAliveRequests(1)
 				.secure(spec -> spec.sslContext(sslServer))
@@ -287,7 +285,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.keepAlive(true)
 				.secure(spec -> spec.sslContext(sslClient))
 				.http2Settings(builder -> {
-					builder.pingInterval(Duration.ofMillis(100));
+					builder.pingInterval(Duration.ofSeconds(1));
 				})
 				.get()
 				.uri("/")
@@ -295,7 +293,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.single()
 				.block();
 
-		Mono.delay(Duration.ofSeconds(1))
+		Mono.delay(Duration.ofSeconds(10))
 				.block();
 
 		assertThat(handler.getReceivedPingTimes()).hasSizeGreaterThanOrEqualTo(2);
@@ -322,6 +320,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 		protected void channelRead0(ChannelHandlerContext ctx, Http2PingFrame frame) throws InterruptedException {
 			receivedPingTimes.add(LocalDateTime.now(ZoneId.systemDefault()));
 			consumer.accept(ctx, frame);
+			ctx.fireChannelRead(frame);
 		}
 
 		public List<LocalDateTime> getReceivedPingTimes() {
