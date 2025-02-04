@@ -342,12 +342,11 @@ public final class NameResolverProvider {
 	}
 
 	/**
-	 * Returns the configured custom {@link DnsNameResolverChannelStrategy} or null.
+	 * Returns the configured custom {@link DnsNameResolverChannelStrategy}.
 	 *
-	 * @return the configured custom {@link DnsNameResolverChannelStrategy} or null
+	 * @return the configured custom {@link DnsNameResolverChannelStrategy}
 	 * @since 1.2.3
 	 */
-	@Nullable
 	public DnsNameResolverChannelStrategy datagramChannelStrategy() {
 		return datagramChannelStrategy;
 	}
