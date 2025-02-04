@@ -126,7 +126,7 @@ ext {
 	testAddonVersion = reactorCoreVersion
 	assertJVersion = '3.27.3'
 	awaitilityVersion = '4.2.2'
-	hoverflyJavaVersion = '0.19.1'
+	hoverflyJavaVersion = '0.20.0'
 	tomcatVersion = '9.0.98'
 	boringSslVersion = '2.0.69.Final'
 	junitVersion = '5.11.4'
