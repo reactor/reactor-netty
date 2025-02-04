@@ -71,6 +71,10 @@ updates:
   - dependency-name: io.zipkin.reporter2:zipkin-sender-urlconnection
     versions:
     - "[3.a, 4]"
+  # Versions > 0.19.1 require JDK11+
+  - dependency-name: io.specto:hoverfly-java-junit5
+    versions:
+    - "[0.20.a, 1]"
   rebase-strategy: disabled
 - package-ecosystem: gradle
   directory: "/"
