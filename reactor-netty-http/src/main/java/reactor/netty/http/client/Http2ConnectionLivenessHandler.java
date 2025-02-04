@@ -21,8 +21,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http2.DefaultHttp2PingFrame;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
+import io.netty.handler.codec.http2.Http2PingFrame;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -91,8 +91,8 @@ final class Http2ConnectionLivenessHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-		if (msg instanceof DefaultHttp2PingFrame) {
-			DefaultHttp2PingFrame frame = (DefaultHttp2PingFrame) msg;
+		if (msg instanceof Http2PingFrame) {
+			Http2PingFrame frame = (Http2PingFrame) msg;
 			if (frame.ack() && frame.content() == lastSentPingData) {
 				lastReceivedPingTime = System.nanoTime();
 			}
