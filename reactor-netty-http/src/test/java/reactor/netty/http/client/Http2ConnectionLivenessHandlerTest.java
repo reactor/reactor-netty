@@ -33,6 +33,8 @@ import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyPipeline;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import javax.net.ssl.SSLException;
 import java.security.cert.CertificateException;
@@ -54,6 +56,8 @@ import static reactor.netty.http.HttpProtocol.H2;
  * @since 1.2.3
  */
 class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
+
+	private static final Logger log = Loggers.getLogger(Http2ConnectionLivenessHandlerTest.class);
 
 	static SslContext sslServer;
 	static SslContext sslClient;
@@ -199,6 +203,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.create("closeConnectionInPoolIfPingFrameDelayed", 1);
+
 		Channel channel = createClient(pool, disposableServer::address)
 				.protocol(H2)
 				.keepAlive(true)
@@ -217,6 +222,8 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 
 		assertThat(handler.getReceivedPingTimes()).hasSize(1);
 		assertThat(channel.parent().isOpen()).isFalse();
+
+		pool.dispose();
 	}
 
 	@Test
@@ -255,8 +262,8 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 		Mono.delay(Duration.ofSeconds(10))
 				.block();
 
-		assertThat(handler.getReceivedPingTimes()).hasSizeGreaterThanOrEqualTo(2);
 		assertThat(channel.parent().isOpen()).isTrue();
+		assertThat(handler.getReceivedPingTimes()).hasSizeGreaterThanOrEqualTo(2);
 	}
 
 	@Test
@@ -279,7 +286,11 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.handle((req, resp) -> resp.sendString(Mono.just("Test")))
 				.bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.create("connectionRetentionInPoolOnPingFrameAck", 1);
+		ConnectionProvider pool = ConnectionProvider.builder("connectionRetentionInPoolOnPingFrameAck")
+				.maxConnections(10)
+				.maxIdleTime(Duration.ofSeconds(10))
+				.maxLifeTime(Duration.ofSeconds(10))
+				.build();
 		Channel channel = createClient(pool, disposableServer::address)
 				.protocol(H2)
 				.keepAlive(true)
@@ -296,8 +307,10 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 		Mono.delay(Duration.ofSeconds(10))
 				.block();
 
-		assertThat(handler.getReceivedPingTimes()).hasSizeGreaterThanOrEqualTo(2);
 		assertThat(channel.parent().isOpen()).isTrue();
+		assertThat(handler.getReceivedPingTimes()).hasSizeGreaterThanOrEqualTo(2);
+
+		pool.dispose();
 	}
 
 	private static final class Http2PingFrameHandler extends SimpleChannelInboundHandler<Http2PingFrame> {
@@ -309,7 +322,9 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 		private Http2PingFrameHandler() {
 			this.consumer = (ctx, frame) ->
 					ctx.writeAndFlush(new DefaultHttp2PingFrame(frame.content(), true))
-							.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+							.addListener((listener) -> {
+								log.info("Wrote ping ack. data: {}, result: {}", frame.content(), listener.isSuccess());
+							});
 		}
 
 		private Http2PingFrameHandler(BiConsumer<ChannelHandlerContext, Http2PingFrame> consumer) {
