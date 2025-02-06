@@ -30,7 +30,11 @@ public class H2Application {
 				HttpClient.create()
 				          .protocol(HttpProtocol.H2) //<1>
 				          .secure()                 //<2>
-						  .http2Settings(builder -> builder.pingInterval(Duration.ofMillis(100))); // <3>
+						  .http2Settings(
+								  builder -> builder.pingAckTimeout(Duration.ofMillis(600))  // <3>
+										  .pingScheduleInterval(Duration.ofMillis(300))  // <4>
+										  .pingAckDropThreshold(2)  // <5>
+						  );
 
 		Tuple2<String, HttpHeaders> response =
 				client.get()

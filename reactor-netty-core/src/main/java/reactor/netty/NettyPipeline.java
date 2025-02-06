@@ -111,7 +111,7 @@ public interface NettyPipeline {
 	String OnChannelReadIdle     = LEFT + "onChannelReadIdle";
 	String OnChannelWriteIdle    = LEFT + "onChannelWriteIdle";
 	String ProxyHandler          = LEFT + "proxyHandler";
-	String H2LivenessHandler          = LEFT + "h2LivenessHandler";
+	String H2LivenessHandler     = LEFT + "h2LivenessHandler";
 	/**
 	 * Use to register a special handler which ensures that any {@link io.netty.channel.VoidChannelPromise}
 	 * will be converted to "unvoided" promises.
