@@ -105,19 +105,75 @@ public final class Http2SettingsSpec {
 		//Builder pushEnabled(boolean pushEnabled);
 
 		/**
-		 * Sets the interval for checking ping frames.
-		 * If a ping ACK frame is not received within the configured interval, the connection will be closed.
+		 * Sets the interval for sending HTTP/2 PING frames and receiving ACK responses.
 		 *
-		 * <p>Be cautious when setting a very short interval, as it may cause the connection to be closed,
-		 * even if the keep-alive setting is enabled.</p>
+		 * <p>
+		 * This method configures the time interval at which PING frames are sent to the peer.
+		 * The interval should be chosen carefully to balance between detecting connection issues
+		 * and minimizing unnecessary network traffic.
+		 * </p>
 		 *
-		 * <p>If no interval is specified, no ping frame checking will be performed by default.</p>
+		 * <p>
+		 * If the interval is set too short, it may cause excessive network overhead.
+		 * If set too long, connection failures may not be detected in a timely manner.
+		 * </p>
 		 *
-		 * @param pingInterval the duration between sending ping frames. If not specified, ping frame checking is disabled.
-		 * @return {@code this}
-		 * @since 1.2.3
+		 * @param pingAckTimeout the interval in between consecutive PING frames
+		 *                       and ACK responses. Must be a positive value.
 		 */
-		default Builder pingInterval(Duration pingInterval) {
+		default Builder pingAckTimeout(Duration pingAckTimeout) {
+			return this;
+		}
+
+		/**
+		 * Sets the execution interval for the scheduler that sends HTTP/2 PING frames
+		 * and periodically checks for ACK responses.
+		 *
+		 * <p>
+		 * This method configures the time interval at which the scheduler runs
+		 * to send PING frames and verify if ACK responses are received within
+		 * the expected timeframe.
+		 * Proper tuning of this interval helps in detecting connection issues
+		 * while avoiding unnecessary network overhead.
+		 * </p>
+		 *
+		 * <p>
+		 * If the interval is too short, it may increase network and CPU usage.
+		 * Conversely, setting it too long may delay the detection of connection failures.
+		 * </p>
+		 *
+		 * @param pingScheduleInterval the interval in at which the scheduler executes.
+		 *                       Must be a positive value.
+		 */
+		default Builder pingScheduleInterval(Duration pingScheduleInterval) {
+			return this;
+		}
+
+		/**
+		 * Sets the threshold for retrying HTTP/2 PING frame transmissions.
+		 *
+		 * <p>
+		 * This method defines the maximum number of attempts to send a PING frame
+		 * before considering the connection as unresponsive.
+		 * If the threshold is exceeded without receiving an ACK response,
+		 * the connection may be closed or marked as unhealthy.
+		 * </p>
+		 *
+		 * <p>
+		 * A lower threshold can detect connection failures more quickly but may lead
+		 * to premature disconnections. Conversely, a higher threshold allows more retries
+		 * but may delay failure detection.
+		 * </p>
+		 *
+		 * <p>
+		 * If this value is not specified, it defaults to 0, meaning only one attempt to send a PING frame is made without retries.
+		 * </p>
+		 *
+		 * @param pingAckDropThreshold the maximum number of PING transmission attempts.
+		 *                 Must be a positive integer.
+		 *                 The default value is 0, meaning no retries will occur and only one PING frame will be sent.
+		 */
+		default Builder pingAckDropThreshold(Integer pingAckDropThreshold) {
 			return this;
 		}
 	}
@@ -215,13 +271,33 @@ public final class Http2SettingsSpec {
 	}
 
 	/**
-	 * Returns the configured {@code pingInterval} value or null.
+	 * Returns the configured {@code pingAckTimeout} value or null.
 	 *
-	 * @return the configured {@code pingInterval} value or null
+	 * @return the configured {@code pingAckTimeout} value or null
 	 */
 	@Nullable
-	public Duration pingInterval() {
-		return pingInterval;
+	public Duration pingAckTimeout() {
+		return pingAckTimeout;
+	}
+
+	/**
+	 * Returns the configured {@code pingScheduleInterval} value or null.
+	 *
+	 * @return the configured {@code pingScheduleInterval} value or null
+	 */
+	@Nullable
+	public Duration pingScheduleInterval() {
+		return pingScheduleInterval;
+	}
+
+	/**
+	 * Returns the configured {@code pingAckDropThreshold} value or null.
+	 *
+	 * @return the configured {@code pingAckDropThreshold} value or null
+	 */
+	@Nullable
+	public Integer pingAckDropThreshold() {
+		return pingAckDropThreshold;
 	}
 
 	@Override
@@ -241,7 +317,9 @@ public final class Http2SettingsSpec {
 				maxHeaderListSize.equals(that.maxHeaderListSize) &&
 				Objects.equals(maxStreams, that.maxStreams) &&
 				Objects.equals(pushEnabled, that.pushEnabled) &&
-				Objects.equals(pingInterval, that.pingInterval);
+				Objects.equals(pingAckTimeout, that.pingAckTimeout) &&
+				Objects.equals(pingScheduleInterval, that.pingScheduleInterval) &&
+				Objects.equals(pingAckDropThreshold, that.pingAckDropThreshold);
 	}
 
 	@Override
@@ -255,7 +333,9 @@ public final class Http2SettingsSpec {
 		result = 31 * result + (maxHeaderListSize == null ? 0 : Long.hashCode(maxHeaderListSize));
 		result = 31 * result + (maxStreams == null ? 0 : Long.hashCode(maxStreams));
 		result = 31 * result + (pushEnabled == null ? 0 : Boolean.hashCode(pushEnabled));
-		result = 31 * result + (pingInterval == null ? 0 : Objects.hashCode(pingInterval));
+		result = 31 * result + (pingAckTimeout == null ? 0 : Objects.hashCode(pingAckTimeout));
+		result = 31 * result + (pingScheduleInterval == null ? 0 : Objects.hashCode(pingScheduleInterval));
+		result = 31 * result + (pingAckDropThreshold == null ? 0 : Integer.hashCode(pingAckDropThreshold));
 		return result;
 	}
 
@@ -267,7 +347,9 @@ public final class Http2SettingsSpec {
 	final Long maxHeaderListSize;
 	final Long maxStreams;
 	final Boolean pushEnabled;
-	final Duration pingInterval;
+	final Duration pingAckTimeout;
+	final Duration pingScheduleInterval;
+	final Integer pingAckDropThreshold;
 
 	Http2SettingsSpec(Build build) {
 		Http2Settings settings = build.http2Settings;
@@ -285,13 +367,17 @@ public final class Http2SettingsSpec {
 		maxHeaderListSize = settings.maxHeaderListSize();
 		maxStreams = build.maxStreams;
 		pushEnabled = settings.pushEnabled();
-		pingInterval = build.pingInterval;
+		pingAckTimeout = build.pingAckTimeout;
+		pingScheduleInterval = build.pingScheduleInterval;
+		pingAckDropThreshold = build.pingAckDropThreshold;
 	}
 
 	static final class Build implements Builder {
 		Boolean connectProtocolEnabled;
 		Long maxStreams;
-		Duration pingInterval;
+		Duration pingAckTimeout;
+		Duration pingScheduleInterval;
+		Integer pingAckDropThreshold;
 		final Http2Settings http2Settings = Http2Settings.defaultSettings();
 
 		@Override
@@ -345,8 +431,20 @@ public final class Http2SettingsSpec {
 		}
 
 		@Override
-		public Builder pingInterval(Duration pingInterval) {
-			this.pingInterval = pingInterval;
+		public Builder pingAckTimeout(Duration pingAckTimeout) {
+			this.pingAckTimeout = pingAckTimeout;
+			return this;
+		}
+
+		@Override
+		public Builder pingScheduleInterval(Duration pingScheduleInterval) {
+			this.pingScheduleInterval = pingScheduleInterval;
+			return this;
+		}
+
+		@Override
+		public Builder pingAckDropThreshold(Integer pingAckDropThreshold) {
+			this.pingAckDropThreshold = pingAckDropThreshold;
 			return this;
 		}
 

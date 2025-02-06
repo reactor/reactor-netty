@@ -318,7 +318,10 @@ include::{examples-dir}/http2/H2Application.java[lines=18..42]
 ----
 <1> Configures the client to support only `HTTP/2`
 <2> Configures `SSL`
-<3> You can configure the interval for checking `Ping` frames
+<3> Sets the interval for sending `HTTP/2` `PING` frames and receiving `ACK` responses
+<4> Sets the execution interval for the scheduler that sends `HTTP/2` `PING frames and periodically checks for `ACK` responses
+<5> Sets the threshold for retrying `HTTP/2` `PING` frame transmissions.
+
 
 The following listing presents a simple `H2C` example:
 

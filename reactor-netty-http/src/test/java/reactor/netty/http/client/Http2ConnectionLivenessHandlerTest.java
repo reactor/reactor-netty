@@ -29,12 +29,12 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import reactor.core.publisher.Mono;
 import reactor.netty.BaseHttpTest;
 import reactor.netty.NettyPipeline;
 import reactor.netty.resources.ConnectionProvider;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 
 import javax.net.ssl.SSLException;
 import java.security.cert.CertificateException;
@@ -43,7 +43,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,8 +55,6 @@ import static reactor.netty.http.HttpProtocol.H2;
  * @since 1.2.3
  */
 class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
-
-	private static final Logger log = Loggers.getLogger(Http2ConnectionLivenessHandlerTest.class);
 
 	static SslContext sslServer;
 	static SslContext sslClient;
@@ -92,7 +89,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 	}
 
 	@Test
-	void noPingCheckWhenNotConfigured() {
+	void maintainConnectionWithoutPingCheckWhenNotConfigured() {
 		Http2PingFrameHandler handler = new Http2PingFrameHandler();
 
 		disposableServer = createServer()
@@ -121,17 +118,18 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.single()
 				.block();
 
-		Mono.delay(Duration.ofSeconds(1))
+		Mono.delay(Duration.ofSeconds(5))
 				.block();
 
-		assertThat(handler.getReceivedPingTimes()).isEmpty();
 		assertThat(channel.parent().isOpen()).isTrue();
+		assertThat(handler.getReceivedPingTimes()).isEmpty();
 	}
 
-	@Test
-	void closeConnectionIfPingFrameDelayed() {
+	@ParameterizedTest
+	@CsvSource({"100,300,3", "300,100,3"})
+	void closeConnectionIfPingFrameDelayed(Integer pingAckTimeout, Integer pingScheduleInterval, Integer pingAckDropThreshold) {
 		Http2PingFrameHandler handler = new Http2PingFrameHandler(
-				(ctx, frame) -> Mono.delay(Duration.ofMillis(150))
+				(ctx, frame, receivedPingTimes) -> Mono.delay(Duration.ofMillis(600))
 						.doOnNext(
 								unUsed -> ctx.writeAndFlush(new DefaultHttp2PingFrame(frame.content(), true))
 										.addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
@@ -160,7 +158,9 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.keepAlive(true)
 				.secure(spec -> spec.sslContext(sslClient))
 				.http2Settings(builder -> {
-					builder.pingInterval(Duration.ofMillis(100));
+					builder.pingAckTimeout(Duration.ofMillis(pingAckTimeout))
+							.pingScheduleInterval(Duration.ofMillis(pingScheduleInterval))
+							.pingAckDropThreshold(pingAckDropThreshold);
 				})
 				.get()
 				.uri("/")
@@ -168,17 +168,18 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.single()
 				.block();
 
-		Mono.delay(Duration.ofSeconds(2))
+		Mono.delay(Duration.ofSeconds(3))
 				.block();
 
-		assertThat(handler.getReceivedPingTimes()).hasSize(1);
 		assertThat(channel.parent().isOpen()).isFalse();
+		assertThat(handler.getReceivedPingTimes()).hasSizeGreaterThan(pingAckDropThreshold);
 	}
 
-	@Test
-	void closeConnectionInPoolIfPingFrameDelayed() {
+	@ParameterizedTest
+	@CsvSource({"100,300,3", "300,100,3"})
+	void closeConnectionInPoolIfPingFrameDelayed(Integer pingAckTimeout, Integer pingScheduleInterval, Integer pingAckDropThreshold) {
 		Http2PingFrameHandler handler = new Http2PingFrameHandler(
-				(ctx, frame) -> Mono.delay(Duration.ofMillis(150))
+				(ctx, frame, receivedPingTimes) -> Mono.delay(Duration.ofMillis(600))
 						.doOnNext(
 								unUsed -> ctx.writeAndFlush(new DefaultHttp2PingFrame(frame.content(), true))
 										.addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
@@ -209,7 +210,9 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.keepAlive(true)
 				.secure(spec -> spec.sslContext(sslClient))
 				.http2Settings(builder -> {
-					builder.pingInterval(Duration.ofMillis(100));
+					builder.pingAckTimeout(Duration.ofMillis(pingAckTimeout))
+							.pingScheduleInterval(Duration.ofMillis(pingScheduleInterval))
+							.pingAckDropThreshold(pingAckDropThreshold);
 				})
 				.get()
 				.uri("/")
@@ -217,17 +220,18 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.single()
 				.block();
 
-		Mono.delay(Duration.ofSeconds(2))
+		Mono.delay(Duration.ofSeconds(3))
 				.block();
 
-		assertThat(handler.getReceivedPingTimes()).hasSize(1);
 		assertThat(channel.parent().isOpen()).isFalse();
+		assertThat(handler.getReceivedPingTimes()).hasSizeGreaterThan(pingAckDropThreshold);
 
 		pool.dispose();
 	}
 
-	@Test
-	void ackPingFrameWithinInterval() {
+	@ParameterizedTest
+	@CsvSource({"300,600,0", "600,300,0"})
+	void ackPingFrameWithinInterval(Integer pingAckTimeout, Integer pingScheduleInterval, Integer pingAckDropThreshold) {
 		Http2PingFrameHandler handler = new Http2PingFrameHandler();
 
 		disposableServer = createServer()
@@ -251,7 +255,9 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.keepAlive(true)
 				.secure(spec -> spec.sslContext(sslClient))
 				.http2Settings(builder -> {
-					builder.pingInterval(Duration.ofSeconds(1));
+					builder.pingAckTimeout(Duration.ofMillis(pingAckTimeout))
+							.pingScheduleInterval(Duration.ofMillis(pingScheduleInterval))
+							.pingAckDropThreshold(pingAckDropThreshold);
 				})
 				.get()
 				.uri("/")
@@ -259,15 +265,16 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.single()
 				.block();
 
-		Mono.delay(Duration.ofSeconds(10))
+		Mono.delay(Duration.ofSeconds(5))
 				.block();
 
 		assertThat(channel.parent().isOpen()).isTrue();
 		assertThat(handler.getReceivedPingTimes()).hasSizeGreaterThanOrEqualTo(2);
 	}
 
-	@Test
-	void connectionRetentionInPoolOnPingFrameAck() {
+	@ParameterizedTest
+	@CsvSource({"300,600,0", "600,300,0"})
+	void connectionRetentionInPoolOnPingFrameAck(Integer pingAckTimeout, Integer pingScheduleInterval, Integer pingAckDropThreshold) {
 		Http2PingFrameHandler handler = new Http2PingFrameHandler();
 
 		disposableServer = createServer()
@@ -286,17 +293,16 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.handle((req, resp) -> resp.sendString(Mono.just("Test")))
 				.bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.builder("connectionRetentionInPoolOnPingFrameAck")
-				.maxConnections(10)
-				.maxIdleTime(Duration.ofSeconds(10))
-				.maxLifeTime(Duration.ofSeconds(10))
-				.build();
+		ConnectionProvider pool = ConnectionProvider.create("connectionRetentionInPoolOnPingFrameAck", 1);
+
 		Channel channel = createClient(pool, disposableServer::address)
 				.protocol(H2)
 				.keepAlive(true)
 				.secure(spec -> spec.sslContext(sslClient))
 				.http2Settings(builder -> {
-					builder.pingInterval(Duration.ofSeconds(1));
+					builder.pingAckTimeout(Duration.ofMillis(pingAckTimeout))
+							.pingScheduleInterval(Duration.ofMillis(pingScheduleInterval))
+							.pingAckDropThreshold(pingAckDropThreshold);
 				})
 				.get()
 				.uri("/")
@@ -304,7 +310,7 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 				.single()
 				.block();
 
-		Mono.delay(Duration.ofSeconds(10))
+		Mono.delay(Duration.ofSeconds(5))
 				.block();
 
 		assertThat(channel.parent().isOpen()).isTrue();
@@ -313,29 +319,83 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 		pool.dispose();
 	}
 
+	@ParameterizedTest
+	@CsvSource({"300,600,3", "600,300,3"})
+	void ackPingFrameWithinThreshold(Integer pingAckTimeout, Integer pingScheduleInterval, Integer pingAckDropThreshold) {
+		Http2PingFrameHandler handler = new Http2PingFrameHandler(
+				(ctx, frame, receivedPingTimes) -> {
+					int delayTime = 0;
+					if (receivedPingTimes.size() % 3 != 0) {
+						delayTime = 600;
+					}
+
+					Mono.delay(Duration.ofMillis(delayTime))
+							.doOnNext(
+									unUsed -> ctx.writeAndFlush(new DefaultHttp2PingFrame(frame.content(), true))
+											.addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
+							)
+							.subscribe();
+				}
+		);
+
+		disposableServer = createServer()
+				.protocol(H2)
+				.maxKeepAliveRequests(1)
+				.secure(spec -> spec.sslContext(sslServer))
+				.doOnChannelInit((connectionObserver, channel, remoteAddress) -> {
+					Http2FrameCodec http2FrameCodec = Http2FrameCodecBuilder.forServer()
+							.autoAckPingFrame(false)
+							.autoAckSettingsFrame(true)
+							.build();
+
+					channel.pipeline().replace(NettyPipeline.HttpCodec, NettyPipeline.HttpCodec, http2FrameCodec);
+					channel.pipeline().addLast(handler);
+				})
+				.handle((req, resp) -> resp.sendString(Mono.just("Test")))
+				.bindNow();
+
+		Channel channel = createClient(disposableServer::address)
+				.protocol(H2)
+				.keepAlive(true)
+				.secure(spec -> spec.sslContext(sslClient))
+				.http2Settings(builder -> {
+					builder.pingAckTimeout(Duration.ofMillis(pingAckTimeout))
+							.pingScheduleInterval(Duration.ofMillis(pingScheduleInterval))
+							.pingAckDropThreshold(pingAckDropThreshold);
+				})
+				.get()
+				.uri("/")
+				.responseConnection((conn, receiver) -> Mono.just(receiver.channel()))
+				.single()
+				.block();
+
+		Mono.delay(Duration.ofSeconds(5))
+				.block();
+
+		assertThat(channel.parent().isOpen()).isTrue();
+		assertThat(handler.getReceivedPingTimes()).hasSizeGreaterThanOrEqualTo(2);
+	}
+
 	private static final class Http2PingFrameHandler extends SimpleChannelInboundHandler<Http2PingFrame> {
 
 		private final List<LocalDateTime> receivedPingTimes = new ArrayList<>();
 
-		private final BiConsumer<ChannelHandlerContext, Http2PingFrame> consumer;
+		private final TriConsumer<ChannelHandlerContext, Http2PingFrame, List<LocalDateTime>> consumer;
 
 		private Http2PingFrameHandler() {
-			this.consumer = (ctx, frame) ->
+			this.consumer = (ctx, frame, receivedPings) ->
 					ctx.writeAndFlush(new DefaultHttp2PingFrame(frame.content(), true))
-							.addListener((listener) -> {
-								log.info("Wrote ping ack. data: {}, result: {}", frame.content(), listener.isSuccess());
-							});
+							.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 		}
 
-		private Http2PingFrameHandler(BiConsumer<ChannelHandlerContext, Http2PingFrame> consumer) {
+		private Http2PingFrameHandler(TriConsumer<ChannelHandlerContext, Http2PingFrame, List<LocalDateTime>> consumer) {
 			this.consumer = consumer;
 		}
 
 		@Override
 		protected void channelRead0(ChannelHandlerContext ctx, Http2PingFrame frame) throws InterruptedException {
 			receivedPingTimes.add(LocalDateTime.now(ZoneId.systemDefault()));
-			consumer.accept(ctx, frame);
-			ctx.fireChannelRead(frame);
+			consumer.accept(ctx, frame, receivedPingTimes);
 		}
 
 		public List<LocalDateTime> getReceivedPingTimes() {
@@ -343,5 +403,10 @@ class Http2ConnectionLivenessHandlerTest extends BaseHttpTest {
 					.sorted()
 					.collect(Collectors.toList());
 		}
+	}
+
+	@FunctionalInterface
+	public interface TriConsumer<T, U, V> {
+		void accept(T t, U u, V v);
 	}
 }
