@@ -4,6 +4,7 @@ on:
     branches: # For branches, better to list them explicitly than regexp include
       - main
       - 1.1.x
+      - 1.2.x
 permissions: read-all
 
 env:
