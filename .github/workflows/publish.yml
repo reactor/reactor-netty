@@ -5,6 +5,7 @@ on:
       - main
       - 1.1.x
 #      - netty5
+      - 1.2.x
 permissions: read-all
 
 env:
