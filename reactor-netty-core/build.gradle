@@ -266,7 +266,6 @@ task japicmp(type: JapicmpTask) {
 	compatibilityChangeExcludes = [ "METHOD_NEW_DEFAULT" ]
 
 	methodExcludes = [
-			'reactor.netty.transport.NameResolverProvider$NameResolverSpec#datagramChannelStrategy(io.netty.resolver.dns.DnsNameResolverChannelStrategy)'
 	]
 
 	classExcludes = [
