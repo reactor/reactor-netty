@@ -83,7 +83,7 @@ updates:
   open-pull-requests-limit: 10
   assignees:
   - violetagg
-  target-branch: "main"
+  target-branch: "1.2.x"
   labels:
   - type/dependency-upgrade
   ignore:
@@ -162,7 +162,7 @@ updates:
   open-pull-requests-limit: 10
   assignees:
       - violetagg
-  target-branch: "main"
+  target-branch: "1.2.x"
   labels:
       - type/dependency-upgrade
   ignore:
