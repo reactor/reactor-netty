@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import io.netty5.util.concurrent.Future;
 import reactor.netty5.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty5.internal.util.MapUtils;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
+import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
@@ -105,6 +106,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		}
 
 		@Override
+		@Nullable
 		public Timer getTimer() {
 			return recorder.getResolveAddressTimer(getName(), netPeerName + ':' + netPeerPort, status);
 		}

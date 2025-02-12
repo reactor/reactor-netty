@@ -518,6 +518,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	@Nullable
 	public String forwardedPrefix() {
 		return connectionInfo.getForwardedPrefix();
 	}

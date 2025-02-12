@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -233,16 +233,19 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	@Override
+	@Nullable
 	public Map<SocketAddress, Integer> maxConnectionsPerHost() {
 		return defaultProvider.maxConnectionsPerHost();
 	}
 
 	@Override
+	@Nullable
 	public Builder mutate() {
 		return defaultProvider.mutate();
 	}
 
 	@Override
+	@Nullable
 	public String name() {
 		return defaultProvider.name();
 	}
