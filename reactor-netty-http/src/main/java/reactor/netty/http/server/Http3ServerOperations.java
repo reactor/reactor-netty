@@ -61,11 +61,13 @@ final class Http3ServerOperations extends HttpServerOperations {
 	}
 
 	@Override
+	@Nullable
 	public SocketAddress connectionHostAddress() {
 		return ((QuicChannel) channel().parent()).localSocketAddress();
 	}
 
 	@Override
+	@Nullable
 	public SocketAddress connectionRemoteAddress() {
 		return ((QuicChannel) channel().parent()).remoteSocketAddress();
 	}
