@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -139,6 +140,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final ZonedDateTime timestamp;
 	final boolean validateHeaders;
 
+	Map<String, List<String>> queryParamsMap;
 	BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 	boolean isWebsocket;
 	Function<? super String, Map<String, String>> paramsResolver;
@@ -481,6 +483,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return nettyRequest.headers();
 		}
 		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public Map<String, List<String>> queryParams() {
+		if (queryParamsMap == null) {
+			queryParamsMap = Collections.unmodifiableMap(parseQueryParams(this.nettyRequest.uri()));
+		}
+		return queryParamsMap;
 	}
 
 	@Override

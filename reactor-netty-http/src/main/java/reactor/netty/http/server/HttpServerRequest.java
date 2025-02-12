@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import java.net.InetSocketAddress;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -142,6 +143,14 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * @return inbound {@link HttpHeaders}
 	 */
 	HttpHeaders requestHeaders();
+
+	/**
+	 * return parsed and decoded query parameter name value pairs
+	 *
+	 * @return query parameters {@link Map}
+	 * @since 1.1.6
+	 */
+	Map<String, List<String>> queryParams();
 
 	/**
 	 * Returns the inbound protocol and version.
