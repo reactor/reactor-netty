@@ -133,6 +133,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 *
 	 * @return the HTTP/2 configuration
 	 */
+	@Nullable
 	public Http2SettingsSpec http2SettingsSpec() {
 		return http2Settings;
 	}
