@@ -6,7 +6,7 @@ permissions: read-all
 jobs:
 #  preliminary:
 #    name: preliminary sanity checks
-#    runs-on: ubuntu-20.04
+#    runs-on: ubuntu-22.04
 #    steps:
 #      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 #        with:
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-13, windows-2019]
+        os: [ubuntu-22.04, macos-13, windows-2019]
         transport: [native, nio]
         exclude:
           # excludes native on Windows (there's none)
