@@ -16,7 +16,7 @@ jobs:
   reactor-netty-core:
     # Notes on reactor-netty-core: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
     name: reactor-netty-core
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       versionType: ${{ steps.version.outputs.versionType }}
       fullVersion: ${{ steps.version.outputs.fullVersion }}
@@ -44,7 +44,7 @@ jobs:
   reactor-netty-http:
     # Notes on reactor-netty-http: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
     name: reactor-netty-http
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: setup java
@@ -58,7 +58,7 @@ jobs:
   reactor-netty-http-brave:
     # Notes on reactor-netty-http-brave: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
     name: reactor-netty-http-brave
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: setup java
@@ -72,7 +72,7 @@ jobs:
   reactor-netty-incubator-quic:
     # Notes on reactor-netty-incubator-quic: this job has no access to secrets, only github token. As a result, all non-core actions are centralized here
     name: reactor-netty-incubator-quic
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: setup java
@@ -88,7 +88,7 @@ jobs:
   # Each deploy job can then download it, in order to let the docs-zip be built properly
   # (see reactor-netty/build.gradle which includes docs/build/site and optionally docs/assembly/.../pdf into the target docs.zip)
   build-branch-doc:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Set up Ruby for asciidoctor-pdf
@@ -118,7 +118,7 @@ jobs:
   #deploy the snapshot artifacts to Artifactory
   deploySnapshot:
     name: deploySnapshot
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'SNAPSHOT'
     environment: snapshots
@@ -149,7 +149,7 @@ jobs:
   #sign the milestone artifacts and deploy them to Artifactory
   deployMilestone:
     name: deployMilestone
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'MILESTONE'
     environment: releases
@@ -182,7 +182,7 @@ jobs:
   #sign the release artifacts and deploy them to Artifactory
   deployRelease:
     name: deployRelease
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [ reactor-netty-core, reactor-netty-http, reactor-netty-http-brave, reactor-netty-incubator-quic, build-branch-doc ]
     if: needs.reactor-netty-core.outputs.versionType == 'RELEASE'
     environment: releases
@@ -217,7 +217,7 @@ jobs:
   tagMilestone:
     name: Tag milestone
     needs: [ reactor-netty-core, deployMilestone ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
@@ -232,7 +232,7 @@ jobs:
   tagRelease:
     name: Tag release
     needs: [ reactor-netty-core, deployRelease ]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
@@ -247,7 +247,7 @@ jobs:
   cleanup:
     needs: [ deploySnapshot, tagRelease, tagMilestone ]
     if: always() && (needs.deploySnapshot.result == 'success' || needs.tagRelease.result == 'success' || needs.tagMilestone.result == 'success')
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     permissions:
         actions: write
     steps:
