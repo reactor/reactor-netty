@@ -54,10 +54,16 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	protected Mono<? extends Connection> connect() {
 		CONF originalConfiguration = configuration();
 		CONF config;
-		if (originalConfiguration.proxyProvider() == null && originalConfiguration.proxyProviderSupplier() != null) {
-			T dup = duplicate();
-			config = dup.configuration();
-			config.proxyProvider(config.proxyProviderSupplier().get());
+		if (originalConfiguration.proxyProvider() == null) {
+			Supplier<ProxyProvider> proxyProviderSupplier = originalConfiguration.proxyProviderSupplier();
+			if (proxyProviderSupplier != null) {
+				T dup = duplicate();
+				config = dup.configuration();
+				config.proxyProvider(proxyProviderSupplier.get());
+			}
+			else {
+				config = originalConfiguration;
+			}
 		}
 		else {
 			config = originalConfiguration;
