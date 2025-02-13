@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCounted;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CorePublisher;
@@ -61,7 +62,6 @@ import reactor.pool.PoolBuilder;
 import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
@@ -302,8 +302,7 @@ public final class ReactorNetty {
 	 * @return {@link ContextView} from the channel attributes when exists otherwise returns {@code null}
 	 * @since 1.0.26
 	 */
-	@Nullable
-	public static ContextView getChannelContext(Channel channel) {
+	public static @Nullable ContextView getChannelContext(Channel channel) {
 		return channel.attr(CONTEXT_VIEW).get();
 	}
 

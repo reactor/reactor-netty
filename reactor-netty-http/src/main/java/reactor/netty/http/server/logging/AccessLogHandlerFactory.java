@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 package reactor.netty.http.server.logging;
 
 import io.netty.channel.ChannelHandler;
+import org.jspecify.annotations.Nullable;
 import reactor.util.annotation.Incubating;
-import reactor.util.annotation.Nullable;
 
 import java.util.function.Function;
 

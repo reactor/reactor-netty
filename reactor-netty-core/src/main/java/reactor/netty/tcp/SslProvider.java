@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AsyncMapping;
+import org.jspecify.annotations.Nullable;
 import reactor.core.Exceptions;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
@@ -48,7 +49,6 @@ import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Incubating;
-import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -416,8 +416,7 @@ public final class SslProvider {
 	}
 
 	@Incubating
-	@Nullable
-	public List<SNIServerName> getServerNames() {
+	public @Nullable List<SNIServerName> getServerNames() {
 		return serverNames;
 	}
 

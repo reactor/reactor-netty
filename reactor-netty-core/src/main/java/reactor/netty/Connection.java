@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ package reactor.netty;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOutboundHandler;
+import org.jspecify.annotations.Nullable;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
-import reactor.util.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
@@ -57,8 +57,7 @@ public interface Connection extends DisposableChannel {
 	 *
 	 * @return a matching {@link Connection} reference or null
 	 */
-	@Nullable
-	default  <T extends Connection> T as(Class<T> clazz) {
+	default  <T extends Connection> @Nullable T as(Class<T> clazz) {
 		requireNonNull(clazz, "clazz");
 		if (clazz.isAssignableFrom(this.getClass())) {
 			@SuppressWarnings("unchecked")

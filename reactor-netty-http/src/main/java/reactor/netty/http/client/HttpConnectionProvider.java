@@ -16,13 +16,13 @@
 package reactor.netty.http.client;
 
 import io.netty.resolver.AddressResolverGroup;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.transport.TransportConfig;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.util.Map;
@@ -76,8 +76,7 @@ final class HttpConnectionProvider implements ConnectionProvider {
 	}
 
 	@Override
-	@Nullable
-	public Map<SocketAddress, Integer> maxConnectionsPerHost() {
+	public @Nullable Map<SocketAddress, Integer> maxConnectionsPerHost() {
 		return http1ConnectionProvider().maxConnectionsPerHost();
 	}
 

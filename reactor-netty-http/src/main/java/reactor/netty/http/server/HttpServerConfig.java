@@ -53,6 +53,7 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.AsciiString;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
@@ -79,7 +80,6 @@ import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Incubating;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
@@ -112,8 +112,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 *
 	 * @return the configured compression predicate or null
 	 */
-	@Nullable
-	public BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate() {
+	public @Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate() {
 		return compressPredicate;
 	}
 
@@ -163,8 +162,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 *
 	 * @return the HTTP/2 configuration
 	 */
-	@Nullable
-	public Http2SettingsSpec http2SettingsSpec() {
+	public @Nullable Http2SettingsSpec http2SettingsSpec() {
 		return http2Settings;
 	}
 
@@ -175,8 +173,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * @since 1.2.0
 	 */
 	@Incubating
-	@Nullable
-	public Http3SettingsSpec http3SettingsSpec() {
+	public @Nullable Http3SettingsSpec http3SettingsSpec() {
 		return http3Settings;
 	}
 
@@ -185,8 +182,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 *
 	 * @return the configured idle timeout for the connection when it is waiting for an HTTP request or null
 	 */
-	@Nullable
-	public Duration idleTimeout() {
+	public @Nullable Duration idleTimeout() {
 		return idleTimeout;
 	}
 
@@ -255,8 +251,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * @return the configured read timeout for the request or null
 	 * @since 1.1.9
 	 */
-	@Nullable
-	public Duration readTimeout() {
+	public @Nullable Duration readTimeout() {
 		return readTimeout;
 	}
 
@@ -279,8 +274,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * @return the configured request timeout for the request or null
 	 * @since 1.1.9
 	 */
-	@Nullable
-	public Duration requestTimeout() {
+	public @Nullable Duration requestTimeout() {
 		return requestTimeout;
 	}
 
@@ -291,8 +285,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * @return the current {@link SslProvider} if that {@link HttpServer} secured via SSL
 	 * transport or null
 	 */
-	@Nullable
-	public SslProvider sslProvider() {
+	public @Nullable SslProvider sslProvider() {
 		return sslProvider;
 	}
 
@@ -303,8 +296,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 * @return the configured function that receives the actual uri and returns the uri tag value
 	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag
 	 */
-	@Nullable
-	public Function<String, String> uriTagValue() {
+	public @Nullable Function<String, String> uriTagValue() {
 		return uriTagValue;
 	}
 
@@ -563,8 +555,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 	}
 
-	@Nullable
-	static BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(
+	static @Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			int minResponseSize) {
 
@@ -1173,8 +1164,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		@Override
-		@Nullable
-		public HttpServerUpgradeHandler.UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+		public HttpServerUpgradeHandler.@Nullable UpgradeCodec newUpgradeCodec(CharSequence protocol) {
 			if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
 				return new Http2ServerUpgradeCodec(http2FrameCodec, new H2CleartextCodec(this, false, false, maxStreams));
 			}

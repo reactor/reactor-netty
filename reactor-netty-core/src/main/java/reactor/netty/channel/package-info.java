@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
  * {@link reactor.netty.channel.ChannelOperationsHandler} will tail the
  * channel pipeline and convert {@link org.reactivestreams.Publisher} to outgoing write.
  */
-@NonNullApi
+@NullMarked
 package reactor.netty.channel;
 
-import reactor.util.annotation.NonNullApi;
+import org.jspecify.annotations.NullMarked;

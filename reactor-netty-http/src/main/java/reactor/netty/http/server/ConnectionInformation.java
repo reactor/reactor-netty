@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package reactor.netty.http.server;
 
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.net.SocketAddress;
 
@@ -32,16 +32,14 @@ public interface ConnectionInformation {
 	 *
 	 * @return the address merged from all proxies of the host which received the request
 	 */
-	@Nullable
-	SocketAddress hostAddress();
+	@Nullable SocketAddress hostAddress();
 
 	/**
 	 * Returns the address of the host which received the request, possibly {@code null} in case of Unix Domain Sockets.
 	 *
 	 * @return the address of the host which received the request
 	 */
-	@Nullable
-	SocketAddress connectionHostAddress();
+	@Nullable SocketAddress connectionHostAddress();
 
 	/**
 	 * Returns the address of the client that initiated the request, possibly {@code null} in case of Unix Domain Sockets.
@@ -49,16 +47,14 @@ public interface ConnectionInformation {
 	 *
 	 * @return the address merged from all proxies of the client that initiated the request
 	 */
-	@Nullable
-	SocketAddress remoteAddress();
+	@Nullable SocketAddress remoteAddress();
 
 	/**
 	 * Returns the address of the client that initiated the request, possibly {@code null} in case of Unix Domain Sockets.
 	 *
 	 * @return the address of the client that initiated the request
 	 */
-	@Nullable
-	SocketAddress connectionRemoteAddress();
+	@Nullable SocketAddress connectionRemoteAddress();
 
 	/**
 	 * Returns the current protocol scheme.

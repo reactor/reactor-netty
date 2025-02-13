@@ -28,8 +28,8 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.http.server.compression.HttpCompressionOptionsSpec;
-import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;

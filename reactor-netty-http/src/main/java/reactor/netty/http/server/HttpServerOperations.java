@@ -78,6 +78,7 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GenericFutureListener;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -99,7 +100,6 @@ import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
@@ -384,8 +384,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	@Nullable
-	public String param(CharSequence key) {
+	public @Nullable String param(CharSequence key) {
 		Objects.requireNonNull(key, "key");
 		Map<String, String> params = null;
 		if (paramsResolver != null) {
@@ -395,8 +394,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	@Nullable
-	public Map<String, String> params() {
+	public @Nullable Map<String, String> params() {
 		return null != paramsResolver ? paramsResolver.apply(uri()) : null;
 	}
 
@@ -444,8 +442,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	@Nullable
-	public InetSocketAddress hostAddress() {
+	public @Nullable InetSocketAddress hostAddress() {
 		return this.connectionInfo.getHostAddress();
 	}
 
@@ -454,14 +451,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	@Nullable
-	public SocketAddress connectionHostAddress() {
+	public @Nullable SocketAddress connectionHostAddress() {
 		return channel().localAddress();
 	}
 
 	@Override
-	@Nullable
-	public InetSocketAddress remoteAddress() {
+	public @Nullable InetSocketAddress remoteAddress() {
 		return this.connectionInfo.getRemoteAddress();
 	}
 
@@ -470,8 +465,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	@Nullable
-	public SocketAddress connectionRemoteAddress() {
+	public @Nullable SocketAddress connectionRemoteAddress() {
 		return channel().remoteAddress();
 	}
 
@@ -524,8 +518,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	@Nullable
-	public String forwardedPrefix() {
+	public @Nullable String forwardedPrefix() {
 		return connectionInfo.getForwardedPrefix();
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,10 +26,10 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.multipart.Attribute;
 import io.netty.handler.codec.http.multipart.FileUpload;
 import io.netty.handler.codec.http.multipart.HttpData;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.netty.Connection;
 import reactor.netty.NettyInbound;
-import reactor.util.annotation.Nullable;
 
 /**
  * An Http Reactive Channel with several accessors related to HTTP flow: headers, params,
@@ -49,16 +49,14 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * @param key parameter name e.g. {@code "param"} in URI {@code /test/{param}}
 	 * @return the parameter captured value
 	 */
-	@Nullable
-	String param(CharSequence key);
+	@Nullable String param(CharSequence key);
 
 	/**
 	 * Returns all URI parameters captured via {@code {}} e.g. {@code /test/{param1}/{param2}} as key/value map.
 	 *
 	 * @return the parameters captured key/value map
 	 */
-	@Nullable
-	Map<String, String> params();
+	@Nullable Map<String, String> params();
 
 	/**
 	 * Specifies a params resolver.
@@ -128,13 +126,11 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 */
 	Flux<HttpData> receiveForm(Consumer<HttpServerFormDecoderProvider.Builder> formDecoderBuilder);
 
-	@Nullable
 	@Override
-	InetSocketAddress hostAddress();
+	@Nullable InetSocketAddress hostAddress();
 
-	@Nullable
 	@Override
-	InetSocketAddress remoteAddress();
+	@Nullable InetSocketAddress remoteAddress();
 
 	/**
 	 * Returns inbound {@link HttpHeaders}.
@@ -164,6 +160,5 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 * @return the X-Forwarded-Prefix
 	 * @since 1.1.23
 	 */
-	@Nullable
-	String forwardedPrefix();
+	@Nullable String forwardedPrefix();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.ScheduledFuture;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Reuse local event loop if already working inside one.
@@ -218,8 +218,7 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 		}
 	}
 
-	@Nullable
-	EventLoop nextInternal() {
+	@Nullable EventLoop nextInternal() {
 		return localLoop.isSet() ? localLoop.get() : null;
 	}
 }

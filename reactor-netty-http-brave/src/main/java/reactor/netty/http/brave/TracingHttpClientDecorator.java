@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,11 @@ import brave.propagation.CurrentTraceContext;
 import brave.propagation.TraceContext;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.client.HttpClient;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
@@ -107,8 +107,7 @@ final class TracingHttpClientDecorator {
 		}
 
 		@Override
-		@Nullable
-		public String header(String name) {
+		public @Nullable String header(String name) {
 			requireNonNull(name, "name");
 			return delegate.requestHeaders().get(name);
 		}
@@ -141,8 +140,7 @@ final class TracingHttpClientDecorator {
 		}
 
 		@Override
-		@Nullable
-		public String url() {
+		public @Nullable String url() {
 			return delegate.resourceUrl();
 		}
 	}
@@ -180,8 +178,7 @@ final class TracingHttpClientDecorator {
 		}
 
 		@Override
-		@Nullable
-		public Throwable error() {
+		public @Nullable Throwable error() {
 			return error;
 		}
 	}

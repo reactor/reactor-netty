@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package reactor.netty.observability;
 
 import io.micrometer.core.instrument.Timer;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Abstraction over all Reactor Netty contexts.
@@ -30,7 +30,6 @@ public interface ReactorNettyHandlerContext {
 	 * Obtain the timer associated to this reactor netty context.
 	 * @return the current reactor netty handler context timer
 	 */
-	@Nullable
-	Timer getTimer();
+	@Nullable Timer getTimer();
 
 }

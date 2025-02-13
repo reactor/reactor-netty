@@ -21,6 +21,7 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscription;
 import reactor.core.Disposable;
@@ -34,7 +35,6 @@ import reactor.netty.internal.shaded.reactor.pool.PoolConfig;
 import reactor.netty.internal.shaded.reactor.pool.PoolMetricsRecorder;
 import reactor.netty.internal.shaded.reactor.pool.PooledRef;
 import reactor.test.StepVerifier;
-import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;

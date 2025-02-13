@@ -60,8 +60,7 @@ configurations {
 }
 
 dependencies {
-	// JSR-305 annotations
-	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
+	api "org.jspecify:jspecify:$jspecifyVersion"
 
 	api "io.netty:netty-handler:$nettyVersion"
 	api "io.netty:netty-handler-proxy:$nettyVersion"
@@ -129,9 +128,6 @@ dependencies {
 
 	// Testing
 
-	// JSR-305 annotations
-	testCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
-
 	testImplementation "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 	testImplementation "io.projectreactor:reactor-test:$testAddonVersion"
 	testImplementation "io.projectreactor.addons:reactor-extra:$reactorAddonsVersion"
@@ -154,8 +150,6 @@ dependencies {
 		testRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:$bouncycastleVersion"
 	}
 
-	// JSR-305 annotations
-	testFixturesCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 	testFixturesApi("ch.qos.logback:logback-classic:$logbackVersion")
 	testFixturesApi("io.micrometer:micrometer-core:$micrometerVersion")
 	testFixturesApi("org.assertj:assertj-core:$assertJVersion")

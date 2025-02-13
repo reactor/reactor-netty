@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.incubator.codec.http3.Http3DataFrame;
 import io.netty.incubator.codec.http3.Http3HeadersFrame;
 import io.netty.incubator.codec.quic.QuicChannel;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.server.HttpServerInfos;
-import reactor.util.annotation.Nullable;
 
 import java.util.function.Function;
 
