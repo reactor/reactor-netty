@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@ package reactor.netty.http.server.logging;
 
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.ReactorNetty;
 import reactor.netty.http.server.ConnectionInformation;
 import reactor.netty.internal.util.MapUtils;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
@@ -75,52 +75,44 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	}
 
 	@Override
-	@Nullable
 	@Deprecated
-	public String zonedDateTime() {
+	public @Nullable String zonedDateTime() {
 		return zonedDateTime;
 	}
 
 	@Override
-	@Nullable
-	public ZonedDateTime accessDateTime() {
+	public @Nullable ZonedDateTime accessDateTime() {
 		return accessDateTime;
 	}
 
 	@Override
-	@Nullable
 	@SuppressWarnings("deprecation")
-	public SocketAddress remoteAddress() {
+	public @Nullable SocketAddress remoteAddress() {
 		return remoteAddress;
 	}
 
 	@Override
-	@Nullable
-	public ConnectionInformation connectionInformation() {
+	public @Nullable ConnectionInformation connectionInformation() {
 		return connectionInfo;
 	}
 
 	@Override
-	@Nullable
-	public CharSequence method() {
+	public @Nullable CharSequence method() {
 		return method;
 	}
 
 	@Override
-	@Nullable
-	public CharSequence uri() {
+	public @Nullable CharSequence uri() {
 		return uri;
 	}
 
 	@Override
-	@Nullable
-	public String protocol() {
+	public @Nullable String protocol() {
 		return protocol;
 	}
 
 	@Override
-	@Nullable
-	public String user() {
+	public @Nullable String user() {
 		return user;
 	}
 
@@ -135,8 +127,7 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	}
 
 	@Override
-	@Nullable
-	public Map<CharSequence, Set<Cookie>> cookies() {
+	public @Nullable Map<CharSequence, Set<Cookie>> cookies() {
 		return cookies;
 	}
 

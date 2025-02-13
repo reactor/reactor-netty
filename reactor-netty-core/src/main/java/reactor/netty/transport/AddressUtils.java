@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import java.net.UnknownHostException;
 import java.util.function.Supplier;
 
 import io.netty.util.NetUtil;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 import static reactor.netty.transport.DomainSocketAddressUtils.isDomainSocketAddress;
@@ -233,8 +233,7 @@ public final class AddressUtils {
 		return createUnresolved(host, port);
 	}
 
-	@Nullable
-	static InetAddress attemptParsingIpString(String hostname) {
+	static @Nullable InetAddress attemptParsingIpString(String hostname) {
 		byte[] ipAddressBytes = NetUtil.createByteArrayFromIpAddressString(hostname);
 
 		if (ipAddressBytes != null) {
@@ -254,8 +253,7 @@ public final class AddressUtils {
 		return null;
 	}
 
-	@Nullable
-	static InetSocketAddress createForIpString(String hostname, int port) {
+	static @Nullable InetSocketAddress createForIpString(String hostname, int port) {
 		InetAddress inetAddressForIpString = attemptParsingIpString(hostname);
 		if (inetAddressForIpString != null) {
 			return new InetSocketAddress(inetAddressForIpString, port);

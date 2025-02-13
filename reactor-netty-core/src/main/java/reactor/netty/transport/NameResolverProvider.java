@@ -32,8 +32,8 @@ import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.LoggingDnsQueryLifeCycleObserverFactory;
 import io.netty.resolver.dns.RoundRobinDnsAddressResolverGroup;
 import io.netty.util.concurrent.Future;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.resources.LoopResources;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -309,8 +309,7 @@ public final class NameResolverProvider {
 	 * @return the configured supplier of local address to bind to or null
 	 * @since 1.0.14
 	 */
-	@Nullable
-	public Supplier<? extends SocketAddress> bindAddressSupplier() {
+	public @Nullable Supplier<? extends SocketAddress> bindAddressSupplier() {
 		return bindAddressSupplier;
 	}
 
@@ -357,8 +356,7 @@ public final class NameResolverProvider {
 	 * @return the configured custom provider of {@link DnsAddressResolverGroup} or null
 	 * @since 1.1.6
 	 */
-	@Nullable
-	public Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider() {
+	public @Nullable Function<DnsNameResolverBuilder, DnsAddressResolverGroup> dnsAddressResolverGroupProvider() {
 		return dnsAddressResolverGroupProvider;
 	}
 
@@ -368,8 +366,7 @@ public final class NameResolverProvider {
 	 * @return the configured custom {@link HostsFileEntriesResolver} to be used for hosts file entries or null
 	 * @since 1.0.12
 	 */
-	@Nullable
-	public HostsFileEntriesResolver hostsFileEntriesResolver() {
+	public @Nullable HostsFileEntriesResolver hostsFileEntriesResolver() {
 		return hostsFileEntriesResolver;
 	}
 
@@ -435,8 +432,7 @@ public final class NameResolverProvider {
 	 *
 	 * @return the configured {@link LoopResources} or null
 	 */
-	@Nullable
-	public LoopResources loopResources() {
+	public @Nullable LoopResources loopResources() {
 		return loopResources;
 	}
 
@@ -482,8 +478,7 @@ public final class NameResolverProvider {
 	 * @return the configured DNS resolver cache or null
 	 * @since 1.0.27
 	 */
-	@Nullable
-	public DnsCache resolveCache() {
+	public @Nullable DnsCache resolveCache() {
 		return resolveCache;
 	}
 
@@ -492,8 +487,7 @@ public final class NameResolverProvider {
 	 *
 	 * @return the configured list of the protocol families of the address resolved or null
 	 */
-	@Nullable
-	public ResolvedAddressTypes resolvedAddressTypes() {
+	public @Nullable ResolvedAddressTypes resolvedAddressTypes() {
 		return resolvedAddressTypes;
 	}
 
@@ -502,8 +496,7 @@ public final class NameResolverProvider {
 	 *
 	 * @return the configured list of search domains of the resolver or null
 	 */
-	@Nullable
-	public Iterable<String> searchDomains() {
+	public @Nullable Iterable<String> searchDomains() {
 		return searchDomains;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.ObservationRegistry;
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.observability.ReactorNettyTimerObservationHandler;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
@@ -295,16 +295,14 @@ public class Metrics {
 
 	public static final String NA = "na";
 
-	@Nullable
-	public static Observation currentObservation(ContextView contextView) {
+	public static @Nullable Observation currentObservation(ContextView contextView) {
 		if (contextView.hasKey(OBSERVATION_KEY)) {
 			return contextView.get(OBSERVATION_KEY);
 		}
 		return OBSERVATION_REGISTRY.getCurrentObservation();
 	}
 
-	@Nullable
-	public static String formatSocketAddress(@Nullable SocketAddress socketAddress) {
+	public static @Nullable String formatSocketAddress(@Nullable SocketAddress socketAddress) {
 		if (socketAddress != null) {
 			if (socketAddress instanceof InetSocketAddress) {
 				InetSocketAddress address = (InetSocketAddress) socketAddress;
@@ -345,8 +343,7 @@ public class Metrics {
 	 * @return the previous {@link Observation} when exists otherwise {@code null}
 	 * @since 1.1.1
 	 */
-	@Nullable
-	public static ContextView updateChannelContext(Channel channel, Observation observation) {
+	public static @Nullable ContextView updateChannelContext(Channel channel, Observation observation) {
 		ContextView parentContextView = channel.attr(CONTEXT_VIEW).get();
 		if (parentContextView != null) {
 			Observation parentObservation = parentContextView.getOrDefault(OBSERVATION_KEY, null);

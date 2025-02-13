@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -27,7 +28,6 @@ import reactor.core.publisher.Operators;
 import reactor.netty.channel.AbortedException;
 import reactor.test.StepVerifier;
 import reactor.test.util.RaceTestUtils;
-import reactor.util.annotation.Nullable;
 
 import java.lang.reflect.Field;
 import java.nio.channels.ClosedChannelException;
@@ -160,9 +160,8 @@ class FutureMonoTest {
 		}
 	}
 
-	@Nullable
 	@SuppressWarnings("unchecked")
-	static GenericFutureListener<? extends Future<?>>[] resolveListeners(Promise<Void> promise) {
+	static GenericFutureListener<? extends Future<?>> @Nullable [] resolveListeners(Promise<Void> promise) {
 		try {
 			final Field listeners = DefaultPromise.class.getDeclaredField("listeners");
 			final Class<?> aClass = Class.forName("io.netty.util.concurrent.DefaultFutureListeners");

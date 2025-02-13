@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package reactor.netty.http.server.logging;
 
 import io.netty.incubator.codec.http3.Http3HeadersFrame;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.net.SocketAddress;
 import java.util.Objects;
@@ -44,21 +44,18 @@ final class AccessLogArgProviderH3 extends AbstractAccessLogArgProvider<AccessLo
 	}
 
 	@Override
-	@Nullable
-	public CharSequence status() {
+	public @Nullable CharSequence status() {
 		return responseHeaders == null ? null : responseHeaders.headers().status();
 	}
 
 	@Override
-	@Nullable
-	public CharSequence requestHeader(CharSequence name) {
+	public @Nullable CharSequence requestHeader(CharSequence name) {
 		Objects.requireNonNull(name, "name");
 		return requestHeaders == null ? null : requestHeaders.headers().get(name);
 	}
 
 	@Override
-	@Nullable
-	public CharSequence responseHeader(CharSequence name) {
+	public @Nullable CharSequence responseHeader(CharSequence name) {
 		Objects.requireNonNull(name, "name");
 		return responseHeaders == null ? null : responseHeaders.headers().get(name);
 	}

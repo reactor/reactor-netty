@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@ package reactor.netty.http.brave;
 
 import brave.propagation.CurrentTraceContext;
 import io.netty.channel.Channel;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 

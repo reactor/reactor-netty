@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,11 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.util.AttributeKey;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
-import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -87,8 +87,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super CONF> doOnBind() {
+	public final @Nullable Consumer<? super CONF> doOnBind() {
 		return doOnBind;
 	}
 
@@ -97,8 +96,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super DisposableServer> doOnBound() {
+	public final @Nullable Consumer<? super DisposableServer> doOnBound() {
 		return doOnBound;
 	}
 
@@ -107,8 +105,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super Connection> doOnConnection() {
+	public final @Nullable Consumer<? super Connection> doOnConnection() {
 		return doOnConnection;
 	}
 
@@ -117,8 +114,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super DisposableServer> doOnUnbound() {
+	public final @Nullable Consumer<? super DisposableServer> doOnUnbound() {
 		return doOnUnbound;
 	}
 

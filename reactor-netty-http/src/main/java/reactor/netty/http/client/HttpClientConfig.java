@@ -68,6 +68,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.ReferenceCountUtil;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.ChannelPipelineConfigurer;
@@ -93,7 +94,6 @@ import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Incubating;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
@@ -114,8 +114,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 *
 	 * @return the configured base URL to use for this request/response or null
 	 */
-	@Nullable
-	public String baseUrl() {
+	public @Nullable String baseUrl() {
 		return baseUrl;
 	}
 
@@ -177,8 +176,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 *
 	 * @return the configured follow redirect predicate or null
 	 */
-	@Nullable
-	public BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate() {
+	public @Nullable BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate() {
 		return followRedirectPredicate;
 	}
 
@@ -196,8 +194,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 *
 	 * @return the HTTP/2 configuration
 	 */
-	@Nullable
-	public Http2SettingsSpec http2SettingsSpec() {
+	public @Nullable Http2SettingsSpec http2SettingsSpec() {
 		return http2Settings;
 	}
 
@@ -208,8 +205,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 * @since 1.2.0
 	 */
 	@Incubating
-	@Nullable
-	public Http3SettingsSpec http3SettingsSpec() {
+	public @Nullable Http3SettingsSpec http3SettingsSpec() {
 		return http3Settings;
 	}
 
@@ -272,8 +268,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 *
 	 * @return the configured redirect request {@link BiConsumer} or null
 	 */
-	@Nullable
-	public BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer() {
+	public @Nullable BiConsumer<HttpHeaders, HttpClientRequest> redirectRequestBiConsumer() {
 		return redirectRequestBiConsumer;
 	}
 
@@ -282,8 +277,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 *
 	 * @return the configured redirect request consumer or null
 	 */
-	@Nullable
-	public Consumer<HttpClientRequest> redirectRequestConsumer() {
+	public @Nullable Consumer<HttpClientRequest> redirectRequestConsumer() {
 		return redirectRequestConsumer;
 	}
 
@@ -292,8 +286,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 *
 	 * @return the configured response timeout or null
 	 */
-	@Nullable
-	public Duration responseTimeout() {
+	public @Nullable Duration responseTimeout() {
 		return responseTimeout;
 	}
 
@@ -304,8 +297,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 * @return the current {@link SslProvider} if that {@link HttpClient} secured via SSL
 	 * transport or null
 	 */
-	@Nullable
-	public SslProvider sslProvider() {
+	public @Nullable SslProvider sslProvider() {
 		return sslProvider;
 	}
 
@@ -325,8 +317,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 * @return the configured function that receives the actual uri and returns the uri tag value
 	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag
 	 */
-	@Nullable
-	public Function<String, String> uriTagValue() {
+	public @Nullable Function<String, String> uriTagValue() {
 		return uriTagValue;
 	}
 
@@ -335,8 +326,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 *
 	 * @return the configured websocket client configuration
 	 */
-	@Nullable
-	public WebsocketClientSpec websocketClientSpec() {
+	public @Nullable WebsocketClientSpec websocketClientSpec() {
 		return websocketClientSpec;
 	}
 
@@ -929,7 +919,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		final Function<String, String> uriTagValue;
 
 		H2Codec(
-				@Nullable Http2ConnectionProvider.DisposableAcquire owner,
+				Http2ConnectionProvider.@Nullable DisposableAcquire owner,
 				@Nullable ConnectionObserver observer,
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,
@@ -942,7 +932,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 
 		H2Codec(
-				@Nullable Http2ConnectionProvider.DisposableAcquire owner,
+				Http2ConnectionProvider.@Nullable DisposableAcquire owner,
 				@Nullable ConnectionObserver observer,
 				ChannelOperations.OnSetup opsFactory,
 				boolean acceptGzip,

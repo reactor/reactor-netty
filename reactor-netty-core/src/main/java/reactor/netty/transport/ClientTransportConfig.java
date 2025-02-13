@@ -32,6 +32,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -39,7 +40,6 @@ import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.internal.util.MapUtils;
-import reactor.util.annotation.Nullable;
 
 /**
  * Encapsulate all necessary configuration for client transport. The public API is read-only.
@@ -73,8 +73,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super CONF> doOnConnect() {
+	public final @Nullable Consumer<? super CONF> doOnConnect() {
 		return doOnConnect;
 	}
 
@@ -83,8 +82,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super Connection> doOnConnected() {
+	public final @Nullable Consumer<? super Connection> doOnConnected() {
 		return doOnConnected;
 	}
 
@@ -93,8 +91,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super Connection> doOnDisconnected() {
+	public final @Nullable Consumer<? super Connection> doOnDisconnected() {
 		return doOnDisconnected;
 	}
 
@@ -112,8 +109,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the configured {@link NameResolverProvider} or null
 	 */
-	@Nullable
-	public NameResolverProvider getNameResolverProvider() {
+	public @Nullable NameResolverProvider getNameResolverProvider() {
 		return nameResolverProvider;
 	}
 
@@ -122,8 +118,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the {@link ProxyProvider} if any or null
 	 */
-	@Nullable
-	public final ProxyProvider proxyProvider() {
+	public final @Nullable ProxyProvider proxyProvider() {
 		return proxyProvider;
 	}
 
@@ -132,8 +127,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the {@link ProxyProvider} supplier if any or null
 	 */
-	@Nullable
-	public final Supplier<ProxyProvider> proxyProviderSupplier() {
+	public final @Nullable Supplier<ProxyProvider> proxyProviderSupplier() {
 		return proxyProviderSupplier;
 	}
 
@@ -152,8 +146,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the configured {@link AddressResolverGroup} or null
 	 */
-	@Nullable
-	public final AddressResolverGroup<?> resolver() {
+	public final @Nullable AddressResolverGroup<?> resolver() {
 		return resolver;
 	}
 

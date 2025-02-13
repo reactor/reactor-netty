@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.NettyOutbound;
-import reactor.util.annotation.Nullable;
 
 /**
  * A websocket framed outbound.
@@ -43,8 +43,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	 *
 	 * @return the subprotocol, or null
 	 */
-	@Nullable
-	String selectedSubprotocol();
+	@Nullable String selectedSubprotocol();
 
 	@Override
 	NettyOutbound send(Publisher<? extends ByteBuf> dataStream);

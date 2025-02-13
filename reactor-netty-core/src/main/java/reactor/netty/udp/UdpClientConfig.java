@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
@@ -33,7 +34,6 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.ClientTransportConfig;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
@@ -58,8 +58,7 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 	 *
 	 * @return the configured {@link InternetProtocolFamily} to run with or null
 	 */
-	@Nullable
-	public final InternetProtocolFamily family() {
+	public final @Nullable InternetProtocolFamily family() {
 		return family;
 	}
 

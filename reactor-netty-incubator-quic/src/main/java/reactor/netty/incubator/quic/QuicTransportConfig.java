@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import io.netty.incubator.codec.quic.QuicCongestionControlAlgorithm;
 import io.netty.incubator.codec.quic.QuicSslEngine;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.AttributeKey;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.ChannelPipelineConfigurer;
@@ -40,7 +41,6 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.TransportConfig;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -166,8 +166,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super CONF> doOnBind() {
+	public final @Nullable Consumer<? super CONF> doOnBind() {
 		return doOnBind;
 	}
 
@@ -176,8 +175,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super Connection> doOnBound() {
+	public final @Nullable Consumer<? super Connection> doOnBound() {
 		return doOnBound;
 	}
 
@@ -186,8 +184,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super Connection> doOnUnbound() {
+	public final @Nullable Consumer<? super Connection> doOnUnbound() {
 		return doOnUnbound;
 	}
 
@@ -196,8 +193,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 	 *
 	 * @return the configured idle timeout or null
 	 */
-	@Nullable
-	public final Duration idleTimeout() {
+	public final @Nullable Duration idleTimeout() {
 		return idleTimeout;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Timer;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 import reactor.netty.internal.util.MapUtils;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -100,8 +100,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		}
 	}
 
-	@Nullable
-	final Timer getResponseTimeTimer(String name, String uri, String method, String status) {
+	final @Nullable Timer getResponseTimeTimer(String name, String uri, String method, String status) {
 		MeterKey meterKey = new MeterKey(uri, null, null, method, status);
 		return MapUtils.computeIfAbsent(responseTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
@@ -206,8 +205,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		throw new UnsupportedOperationException();
 	}
 
-	@Nullable
-	LongAdder getActiveStreamsAdder(SocketAddress localAddress) {
+	@Nullable LongAdder getActiveStreamsAdder(SocketAddress localAddress) {
 		String address = formatSocketAddress(localAddress);
 		return MapUtils.computeIfAbsent(activeStreamsCache, address,
 				key -> {
@@ -221,8 +219,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 				});
 	}
 
-	@Nullable
-	LongAdder getServerConnectionAdder(SocketAddress localAddress) {
+	@Nullable LongAdder getServerConnectionAdder(SocketAddress localAddress) {
 		String address = formatSocketAddress(localAddress);
 		return MapUtils.computeIfAbsent(activeConnectionsCache, address,
 				key -> {

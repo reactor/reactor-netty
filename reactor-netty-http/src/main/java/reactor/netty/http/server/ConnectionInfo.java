@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import java.util.function.BiFunction;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
@@ -56,8 +56,7 @@ public final class ConnectionInfo {
 
 	final boolean isInetAddress;
 
-	@Nullable
-	final String forwardedPrefix;
+	final @Nullable String forwardedPrefix;
 
 	static ConnectionInfo from(HttpRequest request, boolean secured, SocketAddress localAddress, SocketAddress remoteAddress,
 			@Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler) {
@@ -114,8 +113,7 @@ public final class ConnectionInfo {
 	 * Return the host address of the connection.
 	 * @return the host address
 	 */
-	@Nullable
-	public InetSocketAddress getHostAddress() {
+	public @Nullable InetSocketAddress getHostAddress() {
 		return isInetAddress ? (InetSocketAddress) hostAddress : null;
 	}
 
@@ -123,8 +121,7 @@ public final class ConnectionInfo {
 	 * Return the remote address of the connection.
 	 * @return the remote address
 	 */
-	@Nullable
-	public InetSocketAddress getRemoteAddress() {
+	public @Nullable InetSocketAddress getRemoteAddress() {
 		return isInetAddress ? (InetSocketAddress) remoteAddress : null;
 	}
 
@@ -216,8 +213,7 @@ public final class ConnectionInfo {
 	 * @return the X-Forwarded-Prefix
 	 * @since 1.1.23
 	 */
-	@Nullable
-	public String getForwardedPrefix() {
+	public @Nullable String getForwardedPrefix() {
 		return forwardedPrefix;
 	}
 

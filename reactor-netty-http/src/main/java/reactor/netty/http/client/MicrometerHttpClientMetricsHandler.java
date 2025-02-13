@@ -22,8 +22,8 @@ import io.micrometer.observation.transport.RequestReplySenderContext;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.observability.ReactorNettyHandlerContext;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
@@ -188,8 +188,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		}
 
 		@Override
-		@Nullable
-		public Timer getTimer() {
+		public @Nullable Timer getTimer() {
 			return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, path, method, status);
 		}
 

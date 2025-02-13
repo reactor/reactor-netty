@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,12 +26,12 @@ import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicClientCodecBuilder;
 import io.netty.incubator.codec.quic.QuicCongestionControlAlgorithm;
 import io.netty.incubator.codec.quic.QuicSslEngine;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
@@ -83,8 +83,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public Consumer<? super QuicClientConfig> doOnConnect() {
+	public @Nullable Consumer<? super QuicClientConfig> doOnConnect() {
 		return doOnConnect;
 	}
 
@@ -93,8 +92,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public Consumer<? super QuicConnection> doOnConnected() {
+	public @Nullable Consumer<? super QuicConnection> doOnConnected() {
 		return doOnConnected;
 	}
 
@@ -103,8 +101,7 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public Consumer<? super QuicConnection> doOnDisconnected() {
+	public @Nullable Consumer<? super QuicConnection> doOnDisconnected() {
 		return doOnDisconnected;
 	}
 

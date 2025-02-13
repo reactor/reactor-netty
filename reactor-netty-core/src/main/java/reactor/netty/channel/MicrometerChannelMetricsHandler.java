@@ -25,9 +25,9 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.SslHandler;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.ReactorNetty;
 import reactor.netty.observability.ReactorNettyHandlerContext;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
@@ -111,8 +111,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
-		@Nullable
-		public Timer getTimer() {
+		public @Nullable Timer getTimer() {
 			return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
 		}
 
@@ -348,8 +347,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
-		@Nullable
-		public Timer getTimer() {
+		public @Nullable Timer getTimer() {
 			return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.NettyPipeline;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;

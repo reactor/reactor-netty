@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -35,7 +36,6 @@ import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.TransportConfig;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
@@ -61,8 +61,7 @@ public final class UdpServerConfig extends TransportConfig {
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super UdpServerConfig> doOnBind() {
+	public final @Nullable Consumer<? super UdpServerConfig> doOnBind() {
 		return doOnBind;
 	}
 
@@ -71,8 +70,7 @@ public final class UdpServerConfig extends TransportConfig {
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super Connection> doOnBound() {
+	public final @Nullable Consumer<? super Connection> doOnBound() {
 		return doOnBound;
 	}
 
@@ -81,8 +79,7 @@ public final class UdpServerConfig extends TransportConfig {
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super Connection> doOnUnbound() {
+	public final @Nullable Consumer<? super Connection> doOnUnbound() {
 		return doOnUnbound;
 	}
 
@@ -91,8 +88,7 @@ public final class UdpServerConfig extends TransportConfig {
 	 *
 	 * @return the configured {@link InternetProtocolFamily} to run with or null
 	 */
-	@Nullable
-	public final InternetProtocolFamily family() {
+	public final @Nullable InternetProtocolFamily family() {
 		return family;
 	}
 

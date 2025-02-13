@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 package reactor.netty.http.server.logging;
 
 import io.netty.handler.codec.http.cookie.Cookie;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.http.server.ConnectionInformation;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
@@ -39,9 +39,8 @@ public interface AccessLogArgProvider {
 	 * @return the date-time string with a time-zone
 	 * @deprecated as of 1.0.6. Prefer using {@link #accessDateTime()} This method will be removed in version 1.2.0.
 	 */
-	@Nullable
 	@Deprecated
-	String zonedDateTime();
+	@Nullable String zonedDateTime();
 
 	/**
 	 * Returns the date-time of the moment when the request was received.
@@ -49,8 +48,7 @@ public interface AccessLogArgProvider {
 	 * @return zoned date-time
 	 * @since 1.0.6
 	 */
-	@Nullable
-	ZonedDateTime accessDateTime();
+	@Nullable ZonedDateTime accessDateTime();
 
 	/**
 	 * Returns the address of the remote peer or {@code null} in case of Unix Domain Sockets.
@@ -58,9 +56,8 @@ public interface AccessLogArgProvider {
 	 * @return the peer's address
 	 * @deprecated as of 1.0.26. Use {@link ConnectionInformation#connectionRemoteAddress()}
 	 */
-	@Nullable
 	@Deprecated
-	SocketAddress remoteAddress();
+	@Nullable SocketAddress remoteAddress();
 
 	/**
 	 * Returns the information about the current connection.
@@ -71,48 +68,42 @@ public interface AccessLogArgProvider {
 	 * @since 1.0.26
 	 * @see reactor.netty.http.server.HttpServer#forwarded(BiFunction)
 	 */
-	@Nullable
-	ConnectionInformation connectionInformation();
+	@Nullable ConnectionInformation connectionInformation();
 
 	/**
 	 * Returns the name of this method, (e.g. "GET").
 	 *
 	 * @return the name of this method
 	 */
-	@Nullable
-	CharSequence method();
+	@Nullable CharSequence method();
 
 	/**
 	 * Returns the requested URI, (e.g. "/hello").
 	 *
 	 * @return the requested URI
 	 */
-	@Nullable
-	CharSequence uri();
+	@Nullable CharSequence uri();
 
 	/**
 	 * Returns the protocol version, (e.g. "HTTP/1.1" or "HTTP/2.0").
 	 *
 	 * @return the protocol version
 	 */
-	@Nullable
-	String protocol();
+	@Nullable String protocol();
 
 	/**
 	 * Returns the user identifier.
 	 *
 	 * @return the user identifier
 	 */
-	@Nullable
-	String user();
+	@Nullable String user();
 
 	/**
 	 * Returns the response status, (e.g. 200).
 	 *
 	 * @return the response status
 	 */
-	@Nullable
-	CharSequence status();
+	@Nullable CharSequence status();
 
 	/**
 	 * Returns the response content length.
@@ -135,8 +126,7 @@ public interface AccessLogArgProvider {
 	 * @param name the request header name
 	 * @return the value of the request header
 	 */
-	@Nullable
-	CharSequence requestHeader(CharSequence name);
+	@Nullable CharSequence requestHeader(CharSequence name);
 
 	/**
 	 * Returns the value of a response header with the specified name
@@ -146,8 +136,7 @@ public interface AccessLogArgProvider {
 	 * @return the value of the response header
 	 * @since 1.0.4
 	 */
-	@Nullable
-	CharSequence responseHeader(CharSequence name);
+	@Nullable CharSequence responseHeader(CharSequence name);
 
 	/**
 	 * Returns resolved HTTP cookies.
@@ -158,6 +147,5 @@ public interface AccessLogArgProvider {
 	 * @return Resolved HTTP cookies
 	 * @since 1.0.6
 	 */
-	@Nullable
-	Map<CharSequence, Set<Cookie>> cookies();
+	@Nullable Map<CharSequence, Set<Cookie>> cookies();
 }

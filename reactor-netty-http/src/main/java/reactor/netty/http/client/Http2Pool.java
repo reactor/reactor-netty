@@ -34,6 +34,7 @@ import io.netty.handler.codec.http2.Http2FrameCodec;
 import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslHandler;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -55,7 +56,6 @@ import reactor.netty.internal.shaded.reactor.pool.PooledRefMetadata;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
@@ -162,7 +162,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 
 	Disposable evictionTask;
 
-	Http2Pool(PoolConfig<Connection> poolConfig, @Nullable ConnectionProvider.AllocationStrategy<?> allocationStrategy) {
+	Http2Pool(PoolConfig<Connection> poolConfig, ConnectionProvider.@Nullable AllocationStrategy<?> allocationStrategy) {
 		this.clock = poolConfig.clock();
 		this.connections = new ConcurrentLinkedQueue<>();
 		this.lastInteractionTimestamp = clock.millis();
@@ -529,8 +529,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		scheduleEviction();
 	}
 
-	@Nullable
-	Slot findConnection(ConcurrentLinkedQueue<Slot> resources) {
+	@Nullable Slot findConnection(ConcurrentLinkedQueue<Slot> resources) {
 		int resourcesCount = idleSize;
 		while (resourcesCount > 0) {
 			// There are connections in the queue
@@ -672,8 +671,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		this.lastInteractionTimestamp = clock.millis();
 	}
 
-	@Nullable
-	Borrower pollPending(ConcurrentLinkedDeque<Borrower> borrowers, boolean pollFirst) {
+	@Nullable Borrower pollPending(ConcurrentLinkedDeque<Borrower> borrowers, boolean pollFirst) {
 		Borrower borrower = pollFirst ? borrowers.pollFirst() : borrowers.pollLast();
 		if (borrower != null) {
 			PENDING_SIZE.decrementAndGet(this);
@@ -709,8 +707,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 	}
 
-	@Nullable
-	Slot pollSlot(@Nullable ConcurrentLinkedQueue<Slot> slots) {
+	@Nullable Slot pollSlot(@Nullable ConcurrentLinkedQueue<Slot> slots) {
 		if (slots == null) {
 			return null;
 		}
@@ -797,9 +794,8 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 		}
 
 		@Override
-		@Nullable
 		@SuppressWarnings("rawtypes")
-		public Object scanUnsafe(Attr key) {
+		public @Nullable Object scanUnsafe(Attr key) {
 			if (key == Attr.CANCELLED) {
 				return get();
 			}
@@ -1025,8 +1021,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			return frameCodec != null && ((Http2FrameCodec) frameCodec.handler()).connection().goAwayReceived();
 		}
 
-		@Nullable
-		ChannelHandlerContext http2FrameCodecCtx() {
+		@Nullable ChannelHandlerContext http2FrameCodecCtx() {
 			ChannelHandlerContext ctx = http2FrameCodecCtx;
 			// ChannelHandlerContext.isRemoved is only meant to be called from within the EventLoop
 			if (ctx != null && connection.channel().eventLoop().inEventLoop() && !ctx.isRemoved()) {
@@ -1037,8 +1032,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			return ctx;
 		}
 
-		@Nullable
-		ChannelHandlerContext http2MultiplexHandlerCtx() {
+		@Nullable ChannelHandlerContext http2MultiplexHandlerCtx() {
 			ChannelHandlerContext ctx = http2MultiplexHandlerCtx;
 			// ChannelHandlerContext.isRemoved is only meant to be called from within the EventLoop
 			if (ctx != null && connection.channel().eventLoop().inEventLoop() && !ctx.isRemoved()) {
@@ -1049,8 +1043,7 @@ class Http2Pool implements InstrumentedPool<Connection>, InstrumentedPool.PoolMe
 			return ctx;
 		}
 
-		@Nullable
-		ChannelHandlerContext h2cUpgradeHandlerCtx() {
+		@Nullable ChannelHandlerContext h2cUpgradeHandlerCtx() {
 			ChannelHandlerContext ctx = h2cUpgradeHandlerCtx;
 			// ChannelHandlerContext.isRemoved is only meant to be called from within the EventLoop
 			if (ctx != null && connection.channel().eventLoop().inEventLoop() && !ctx.isRemoved()) {

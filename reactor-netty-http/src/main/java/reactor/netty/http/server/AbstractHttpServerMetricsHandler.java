@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,10 +27,10 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2StreamChannel;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
@@ -502,9 +502,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelDuplexHandler {
 			return this;
 		}
 
-		@Nullable
 		@SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
-		<T> T get(Object key) {
+		<T> @Nullable T get(Object key) {
 			return (T) this.map.get(key);
 		}
 	}

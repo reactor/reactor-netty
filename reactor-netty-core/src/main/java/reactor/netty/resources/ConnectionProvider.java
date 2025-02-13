@@ -16,6 +16,7 @@
 package reactor.netty.resources;
 
 import io.netty.resolver.AddressResolverGroup;
+import org.jspecify.annotations.Nullable;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -24,7 +25,6 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
 import reactor.netty.internal.util.Metrics;
 import reactor.netty.transport.TransportConfig;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -252,8 +252,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return the maximum number of connections per host before starting pending
 	 */
-	@Nullable
-	default Map<SocketAddress, Integer> maxConnectionsPerHost() {
+	default @Nullable Map<SocketAddress, Integer> maxConnectionsPerHost() {
 		return null;
 	}
 
@@ -263,8 +262,7 @@ public interface ConnectionProvider extends Disposable {
 	 * @return a builder to mutate properties of this {@link ConnectionProvider}
 	 * @since 1.0.14
 	 */
-	@Nullable
-	default Builder mutate() {
+	default @Nullable Builder mutate() {
 		return null;
 	}
 
@@ -274,8 +272,7 @@ public interface ConnectionProvider extends Disposable {
 	 * @return {@link ConnectionProvider} name used for metrics
 	 * @since 1.0.14
 	 */
-	@Nullable
-	default String name() {
+	default @Nullable String name() {
 		return null;
 	}
 

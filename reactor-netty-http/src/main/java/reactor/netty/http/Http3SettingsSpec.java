@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 package reactor.netty.http;
 
 import io.netty.incubator.codec.quic.QuicTokenHandler;
+import org.jspecify.annotations.Nullable;
 import reactor.util.annotation.Incubating;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -123,8 +123,7 @@ public final class Http3SettingsSpec {
 	 *
 	 * @return the configured maximum idle timeout or null
 	 */
-	@Nullable
-	public Duration idleTimeout() {
+	public @Nullable Duration idleTimeout() {
 		return idleTimeout;
 	}
 
@@ -169,8 +168,7 @@ public final class Http3SettingsSpec {
 	 *
 	 * @return the configured {@link QuicTokenHandler} or null
 	 */
-	@Nullable
-	public QuicTokenHandler tokenHandler() {
+	public @Nullable QuicTokenHandler tokenHandler() {
 		return tokenHandler;
 	}
 

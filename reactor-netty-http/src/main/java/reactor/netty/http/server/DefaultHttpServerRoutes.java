@@ -30,10 +30,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import io.netty.handler.codec.http.HttpMethod;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
-import reactor.util.annotation.Nullable;
 
 /**
  * Server routes are unique and only the first matching in order of declaration will be invoked.
@@ -189,14 +189,12 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		}
 
 		@Override
-		@Nullable
-		public String getPath() {
+		public @Nullable String getPath() {
 			return path;
 		}
 
 		@Override
-		@Nullable
-		public HttpMethod getMethod() {
+		public @Nullable HttpMethod getMethod() {
 			return method;
 		}
 	}

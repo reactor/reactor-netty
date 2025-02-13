@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,12 +26,12 @@ import brave.propagation.TraceContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoop;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.http.server.HttpServer;
-import reactor.util.annotation.Nullable;
 
 import java.net.InetSocketAddress;
 import java.util.function.BiFunction;
@@ -75,8 +75,7 @@ final class TracingHttpServerDecorator {
 			this.path = initPath();
 		}
 
-		@Nullable
-		String initPath() {
+		@Nullable String initPath() {
 			try {
 				return delegate.fullPath();
 			}
@@ -86,8 +85,7 @@ final class TracingHttpServerDecorator {
 		}
 
 		@Override
-		@Nullable
-		public String header(String name) {
+		public @Nullable String header(String name) {
 			requireNonNull(name, "name");
 			return delegate.requestHeaders().get(name);
 		}
@@ -110,14 +108,12 @@ final class TracingHttpServerDecorator {
 		}
 
 		@Override
-		@Nullable
-		public String path() {
+		public @Nullable String path() {
 			return path;
 		}
 
 		@Override
-		@Nullable
-		public String route() {
+		public @Nullable String route() {
 			return path == null ? null : uriMapping.apply(path);
 		}
 
@@ -127,8 +123,7 @@ final class TracingHttpServerDecorator {
 		}
 
 		@Override
-		@Nullable
-		public String url() {
+		public @Nullable String url() {
 			InetSocketAddress hostAddress = delegate.hostAddress();
 			if (hostAddress == null) {
 				// This can happen only in case of UDS
@@ -168,14 +163,12 @@ final class TracingHttpServerDecorator {
 		}
 
 		@Override
-		@Nullable
-		public HttpServerRequest request() {
+		public @Nullable HttpServerRequest request() {
 			return request;
 		}
 
 		@Override
-		@Nullable
-		public Throwable error() {
+		public @Nullable Throwable error() {
 			return error;
 		}
 
