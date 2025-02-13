@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import ch.qos.logback.core.Appender;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.handler.codec.http.headers.DefaultHttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.NettyPipeline;
-import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import java.time.Duration;
@@ -208,8 +208,7 @@ class AccessLogTest extends BaseHttpTest {
 		assertThat(response.getT2()).isEqualTo(enable ? FOUND : NOT_FOUND);
 	}
 
-	@Nullable
-	private Tuple2<String, String> getHttpClientResponse(String uri) {
+	private @Nullable Tuple2<String, String> getHttpClientResponse(String uri) {
 		return createClient(disposableServer.port())
 				.cookie(new DefaultHttpCookiePair(COOKIE_KEY, COOKIE_VALUE))
 				.get()

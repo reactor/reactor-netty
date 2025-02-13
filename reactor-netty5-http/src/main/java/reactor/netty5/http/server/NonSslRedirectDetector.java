@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import io.netty5.handler.codec.ByteToMessageDecoder;
 import io.netty5.handler.ssl.SslHandler;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.tcp.SslProvider;
+import org.jspecify.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.net.SocketAddress;
 
 /**

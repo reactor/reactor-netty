@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import io.netty5.handler.ssl.OpenSsl;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.util.AttributeKey;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
@@ -42,7 +43,6 @@ import reactor.netty5.transport.ClientTransport;
 import reactor.netty5.transport.ProxyProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;
 import static reactor.netty5.ReactorNetty.format;

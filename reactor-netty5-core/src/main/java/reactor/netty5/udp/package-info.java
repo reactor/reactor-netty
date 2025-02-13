@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 /**
  * Components for writing UDP-based clients and servers using Reactor abstractions.
  */
-@NonNullApi
+@NullMarked
 package reactor.netty5.udp;
 
-import reactor.util.annotation.NonNullApi;
+import org.jspecify.annotations.NullMarked;

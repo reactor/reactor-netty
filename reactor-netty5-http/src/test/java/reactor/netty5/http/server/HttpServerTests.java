@@ -104,6 +104,7 @@ import io.netty5.util.Resource;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import io.netty5.util.concurrent.EventExecutor;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -149,7 +150,6 @@ import reactor.netty5.transport.AddressUtils;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 

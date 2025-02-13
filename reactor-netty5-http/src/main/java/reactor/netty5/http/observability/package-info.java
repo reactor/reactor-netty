@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
  * This package contains tracing observation handlers for {@link reactor.netty5.http.client.HttpClient}
  * and {@link reactor.netty5.http.server.HttpServer}.
  */
-@NonNullApi
+@NullMarked
 package reactor.netty5.http.observability;
 
-import reactor.util.annotation.NonNullApi;
+import org.jspecify.annotations.NullMarked;

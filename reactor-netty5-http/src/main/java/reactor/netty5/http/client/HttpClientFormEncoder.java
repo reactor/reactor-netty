@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,9 @@ import io.netty.contrib.handler.codec.http.multipart.FileUpload;
 import io.netty.contrib.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.contrib.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty5.handler.stream.ChunkedInput;
+import org.jspecify.annotations.Nullable;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Sinks;
-import reactor.util.annotation.Nullable;
 
 /**
  * Modified {@link io.netty.contrib.handler.codec.http.multipart.HttpPostRequestEncoder} for

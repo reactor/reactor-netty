@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import reactor.netty5.channel.ChannelMeters;
 import reactor.netty5.channel.MeterKey;
 import reactor.netty5.http.MicrometerHttpMetricsRecorder;
 import reactor.netty5.internal.util.MapUtils;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -133,8 +133,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		}
 	}
 
-	@Nullable
-	Timer getResponseTimeTimer(String name, @Nullable String remoteAddress, @Nullable String proxyAddress, String uri, String method, String status) {
+	@Nullable Timer getResponseTimeTimer(String name, @Nullable String remoteAddress, @Nullable String proxyAddress, String uri, String method, String status) {
 		MeterKey meterKey = new MeterKey(uri, remoteAddress, proxyAddress, method, status);
 		return MapUtils.computeIfAbsent(responseTimeCache, meterKey,
 				key -> filter(Timer.builder(name)

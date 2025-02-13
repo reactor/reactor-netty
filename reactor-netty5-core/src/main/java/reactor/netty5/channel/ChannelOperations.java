@@ -33,6 +33,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -52,7 +53,6 @@ import reactor.netty5.NettyPipeline;
 import reactor.netty5.ReactorNetty;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static java.util.Objects.requireNonNull;
@@ -121,8 +121,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 *
 	 * @return the current {@link Channel} bound {@link ChannelOperations} or null if none
 	 */
-	@Nullable
-	public static ChannelOperations<?, ?> get(Channel ch) {
+	public static @Nullable ChannelOperations<?, ?> get(Channel ch) {
 		return Connection.from(ch)
 		                 .as(ChannelOperations.class);
 	}
@@ -161,9 +160,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.inbound = new FluxReceive(this);
 	}
 
-	@Nullable
 	@Override
-	public <T extends Connection> T as(Class<T> clazz) {
+	public <T extends Connection> @Nullable T as(Class<T> clazz) {
 		if (clazz == ChannelOperations.class) {
 			@SuppressWarnings("unchecked")
 			T thiz = (T) this;
@@ -671,8 +669,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		 *
 		 * @return the new {@link ChannelOperations}
 		 */
-		@Nullable
-		ChannelOperations<?, ?> create(Connection c, ConnectionObserver listener, @Nullable Object msg);
+		@Nullable ChannelOperations<?, ?> create(Connection c, ConnectionObserver listener, @Nullable Object msg);
 
 	}
 

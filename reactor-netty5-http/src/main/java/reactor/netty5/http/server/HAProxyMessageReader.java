@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty.contrib.handler.codec.haproxy.HAProxyMessage;
 import io.netty5.util.AttributeKey;
 import reactor.netty5.transport.AddressUtils;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Consumes {@link io.netty.contrib.handler.codec.haproxy.HAProxyMessage}
@@ -54,8 +54,7 @@ final class HAProxyMessageReader extends ChannelHandlerAdapter {
 		return isProxyProtocolAvailable;
 	}
 
-	@Nullable
-	static SocketAddress resolveRemoteAddressFromProxyProtocol(Channel channel) {
+	static @Nullable SocketAddress resolveRemoteAddressFromProxyProtocol(Channel channel) {
 		if (HAProxyMessageReader.isProxyProtocolAvailable()) {
 			return channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).getAndSet(null);
 		}

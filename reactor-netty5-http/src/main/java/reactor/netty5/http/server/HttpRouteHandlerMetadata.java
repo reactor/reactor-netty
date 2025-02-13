@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package reactor.netty5.http.server;
 
 import io.netty5.handler.codec.http.HttpMethod;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Comparator;
 
@@ -34,8 +34,7 @@ public interface HttpRouteHandlerMetadata {
 	 *
 	 * @return the http path
 	 */
-	@Nullable
-	String getPath();
+	@Nullable String getPath();
 
 	/**
 	 * Get the http method this handler can handle.
@@ -43,6 +42,5 @@ public interface HttpRouteHandlerMetadata {
 	 * @return the http method {@link HttpMethod}
 	 * @since 1.0.11
 	 */
-	@Nullable
-	HttpMethod getMethod();
+	@Nullable HttpMethod getMethod();
 }

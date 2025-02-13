@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package reactor.netty5.http;
 
 import io.netty5.handler.codec.http2.Http2CodecUtil;
 import io.netty5.handler.codec.http2.Http2Settings;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -109,8 +109,7 @@ public final class Http2SettingsSpec {
 	 *
 	 * @return the configured {@code SETTINGS_HEADER_TABLE_SIZE} value or null
 	 */
-	@Nullable
-	public Long headerTableSize() {
+	public @Nullable Long headerTableSize() {
 		return headerTableSize;
 	}
 
@@ -119,8 +118,7 @@ public final class Http2SettingsSpec {
 	 *
 	 * @return the configured {@code SETTINGS_INITIAL_WINDOW_SIZE} value or null
 	 */
-	@Nullable
-	public Integer initialWindowSize() {
+	public @Nullable Integer initialWindowSize() {
 		return initialWindowSize;
 	}
 
@@ -129,8 +127,7 @@ public final class Http2SettingsSpec {
 	 *
 	 * @return the configured {@code SETTINGS_MAX_CONCURRENT_STREAMS} value or null
 	 */
-	@Nullable
-	public Long maxConcurrentStreams() {
+	public @Nullable Long maxConcurrentStreams() {
 		return maxConcurrentStreams;
 	}
 
@@ -139,8 +136,7 @@ public final class Http2SettingsSpec {
 	 *
 	 * @return the configured {@code SETTINGS_MAX_FRAME_SIZE} value or null
 	 */
-	@Nullable
-	public Integer maxFrameSize() {
+	public @Nullable Integer maxFrameSize() {
 		return maxFrameSize;
 	}
 
@@ -161,8 +157,7 @@ public final class Http2SettingsSpec {
 	 * @return the configured {@code maxStreams} value or null
 	 * @since 1.0.33
 	 */
-	@Nullable
-	public Long maxStreams() {
+	public @Nullable Long maxStreams() {
 		return maxStreams;
 	}
 
@@ -171,8 +166,7 @@ public final class Http2SettingsSpec {
 	 *
 	 * @return the configured {@code SETTINGS_ENABLE_PUSH} value or null
 	 */
-	@Nullable
-	public Boolean pushEnabled() {
+	public @Nullable Boolean pushEnabled() {
 		return pushEnabled;
 	}
 

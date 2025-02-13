@@ -33,6 +33,7 @@ import io.netty5.handler.ssl.JdkSslContext;
 import io.netty5.handler.ssl.OpenSsl;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
@@ -52,7 +53,6 @@ import reactor.netty5.tcp.SslProvider;
 import reactor.netty5.transport.ServerTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static reactor.netty5.ReactorNetty.format;

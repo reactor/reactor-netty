@@ -43,6 +43,7 @@ import io.netty5.handler.ssl.SslClosedEngineException;
 import io.netty5.resolver.AddressResolverGroup;
 import io.netty5.util.AsciiString;
 import io.netty5.util.NetUtil;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -58,7 +59,6 @@ import reactor.netty5.transport.AddressUtils;
 import reactor.netty5.transport.ProxyProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.retry.Retry;
 
@@ -603,7 +603,7 @@ class HttpClientConnect extends HttpClient {
 		}
 
 		@SuppressWarnings({"unchecked", "rawtypes"})
-		static Supplier<String>[] addToRedirectedFromArray(@Nullable Supplier<String>[] redirectedFrom, UriEndpoint from) {
+		static Supplier<String>[] addToRedirectedFromArray(Supplier<String> @Nullable [] redirectedFrom, UriEndpoint from) {
 			Supplier<String> fromUrlSupplier = from::toExternalForm;
 			if (redirectedFrom == null) {
 				return new Supplier[]{fromUrlSupplier};

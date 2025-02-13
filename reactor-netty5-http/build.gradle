@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,8 +61,7 @@ configurations {
 dependencies {
 	api project(path: ':reactor-netty5-core', configuration: 'shadow')
 
-	// JSR-305 annotations
-	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
+	api "org.jspecify:jspecify:$jspecifyVersion"
 
 	api "io.netty.contrib:netty-handler-proxy:$nettyContribHandlerProxyVersion"
 	api "io.netty:netty5-codec-http:$nettyVersion"
@@ -128,9 +127,6 @@ dependencies {
 	}
 
 	// Testing
-
-	// JSR-305 annotations
-	testCompileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
 	testImplementation "org.mockito:mockito-core:$mockitoVersion"
 	testImplementation "io.specto:hoverfly-java-junit5:$hoverflyJavaVersion"

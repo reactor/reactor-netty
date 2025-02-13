@@ -25,7 +25,7 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.concurrent.Future;
 import reactor.netty5.ReactorNetty;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
@@ -109,8 +109,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
-		@Nullable
-		public Timer getTimer() {
+		public @Nullable Timer getTimer() {
 			return recorder.getConnectTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
 		}
 
@@ -237,8 +236,7 @@ public final class MicrometerChannelMetricsHandler extends AbstractChannelMetric
 		}
 
 		@Override
-		@Nullable
-		public Timer getTimer() {
+		public @Nullable Timer getTimer() {
 			return recorder.getTlsHandshakeTimer(getName(), netPeerName + ':' + netPeerPort, proxyAddress == null ? NA : proxyAddress, status);
 		}
 

@@ -46,9 +46,9 @@ import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.internal.util.MapUtils;
 import reactor.netty5.internal.util.Metrics;
 import reactor.netty5.resources.LoopResources;
+import org.jspecify.annotations.Nullable;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;
 import static reactor.netty5.ReactorNetty.format;
@@ -79,8 +79,7 @@ public abstract class TransportConfig {
 	 *
 	 * @return the {@link SocketAddress} supplier
 	 */
-	@Nullable
-	public final Supplier<? extends SocketAddress> bindAddress() {
+	public final @Nullable Supplier<? extends SocketAddress> bindAddress() {
 		return this.bindAddress;
 	}
 
@@ -104,8 +103,7 @@ public abstract class TransportConfig {
 	 *
 	 * @return the configured {@link ChannelGroup} or null
 	 */
-	@Nullable
-	public final ChannelGroup channelGroup() {
+	public final @Nullable ChannelGroup channelGroup() {
 		return channelGroup;
 	}
 
@@ -174,8 +172,7 @@ public abstract class TransportConfig {
 	 *
 	 * @return the configured {@link LoggingHandler} or null
 	 */
-	@Nullable
-	public final LoggingHandler loggingHandler() {
+	public final @Nullable LoggingHandler loggingHandler() {
 		return loggingHandler;
 	}
 
@@ -193,8 +190,7 @@ public abstract class TransportConfig {
 	 *
 	 * @return the configured metrics recorder {@link ChannelMetricsRecorder} or null
 	 */
-	@Nullable
-	public final Supplier<? extends ChannelMetricsRecorder> metricsRecorder() {
+	public final @Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder() {
 		return this.metricsRecorder != null ? () -> this.metricsRecorder : null;
 	}
 
@@ -343,8 +339,7 @@ public abstract class TransportConfig {
 		this.metricsRecorder = metricsRecorderSupplier != null ? metricsRecorderSupplier.get() : null;
 	}
 
-	@Nullable
-	protected ChannelMetricsRecorder metricsRecorderInternal() {
+	protected @Nullable ChannelMetricsRecorder metricsRecorderInternal() {
 		return metricsRecorder;
 	}
 

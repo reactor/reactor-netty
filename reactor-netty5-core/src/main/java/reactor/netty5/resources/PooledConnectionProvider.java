@@ -19,6 +19,8 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.resolver.AddressResolverGroup;
+
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
@@ -43,7 +45,6 @@ import reactor.pool.decorators.InstrumentedPoolDecorators;
 import reactor.pool.introspection.SamplingAllocationStrategy;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import java.net.InetAddress;
@@ -519,7 +520,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 		public InstrumentedPool<T> newPool(
 				Publisher<T> allocator,
-				@Nullable reactor.pool.AllocationStrategy allocationStrategy, // this is not used but kept for backwards compatibility
+				reactor.pool.@Nullable AllocationStrategy allocationStrategy, // this is not used but kept for backwards compatibility
 				Function<T, Publisher<Void>> destroyHandler,
 				BiPredicate<T, PooledRefMetadata> evictionPredicate) {
 			if (disposeTimeout != null) {
@@ -543,7 +544,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 
 		public InstrumentedPool<T> newPool(
 				Publisher<T> allocator,
-				@Nullable reactor.pool.AllocationStrategy allocationStrategy, // this is not used but kept for backwards compatibility
+				reactor.pool.@Nullable AllocationStrategy allocationStrategy, // this is not used but kept for backwards compatibility
 				Function<T, Publisher<Void>> destroyHandler,
 				BiPredicate<T, PooledRefMetadata> defaultEvictionPredicate,
 				Function<PoolConfig<T>, InstrumentedPool<T>> poolFactory) {
@@ -634,8 +635,7 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 			return poolBuilder;
 		}
 
-		@Nullable
-		public AllocationStrategy<?> allocationStrategy() {
+		public @Nullable AllocationStrategy<?> allocationStrategy() {
 			return allocationStrategy;
 		}
 

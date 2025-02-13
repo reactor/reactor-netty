@@ -28,6 +28,7 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.resolver.AddressResolverGroup;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
 import reactor.netty5.ConnectionObserver;
@@ -37,7 +38,6 @@ import reactor.netty5.transport.NameResolverProvider;
 import reactor.netty5.transport.TransportConfig;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
@@ -233,20 +233,17 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	@Override
-	@Nullable
-	public Map<SocketAddress, Integer> maxConnectionsPerHost() {
+	public @Nullable Map<SocketAddress, Integer> maxConnectionsPerHost() {
 		return defaultProvider.maxConnectionsPerHost();
 	}
 
 	@Override
-	@Nullable
-	public Builder mutate() {
+	public @Nullable Builder mutate() {
 		return defaultProvider.mutate();
 	}
 
 	@Override
-	@Nullable
-	public String name() {
+	public @Nullable String name() {
 		return defaultProvider.name();
 	}
 

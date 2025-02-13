@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 
-import javax.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.HOST;
 import static io.netty5.handler.codec.http.HttpHeaderNames.LOCATION;
@@ -65,8 +65,7 @@ final class NonSslRedirectHandler extends ChannelHandlerAdapter {
 		}
 	}
 
-	@Nullable
-	private String getRequestedUrlInHttps(HttpRequest request) {
+	private @Nullable String getRequestedUrlInHttps(HttpRequest request) {
 		String uri = request.uri();
 		boolean isAbsoluteUri = uri.startsWith(HTTP_PROTOCOL);
 		if (isAbsoluteUri) {

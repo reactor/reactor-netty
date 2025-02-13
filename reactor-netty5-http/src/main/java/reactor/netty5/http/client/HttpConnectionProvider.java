@@ -22,7 +22,7 @@ import reactor.netty5.ConnectionObserver;
 import reactor.netty5.http.HttpResources;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.transport.TransportConfig;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.net.SocketAddress;
 import java.util.Map;
@@ -67,8 +67,7 @@ final class HttpConnectionProvider implements ConnectionProvider {
 	}
 
 	@Override
-	@Nullable
-	public Map<SocketAddress, Integer> maxConnectionsPerHost() {
+	public @Nullable Map<SocketAddress, Integer> maxConnectionsPerHost() {
 		return http1ConnectionProvider().maxConnectionsPerHost();
 	}
 

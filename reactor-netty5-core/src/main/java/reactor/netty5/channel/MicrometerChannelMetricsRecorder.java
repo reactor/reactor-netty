@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.noop.NoopMeter;
 import reactor.netty5.internal.util.MapUtils;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -182,9 +182,8 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	 * @deprecated as of 1.1.19. Prefer the {@link #getTlsHandshakeTimer(String, String, String, String)}.
 	 * This method will be removed in version 1.3.0.
 	 */
-	@Nullable
 	@Deprecated
-	public final Timer getTlsHandshakeTimer(String name, @Nullable String address, String status) {
+	public final @Nullable Timer getTlsHandshakeTimer(String name, @Nullable String address, String status) {
 		MeterKey meterKey = new MeterKey(null, address, null, null, status);
 		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
@@ -209,8 +208,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	 * @param status the status of the TLS handshake operation
 	 * @return TLS handshake timer
 	 */
-	@Nullable
-	public final Timer getTlsHandshakeTimer(String name, @Nullable String remoteAddress, @Nullable String proxyAddress, String status) {
+	public final @Nullable Timer getTlsHandshakeTimer(String name, @Nullable String remoteAddress, @Nullable String proxyAddress, String status) {
 		MeterKey meterKey = new MeterKey(null, remoteAddress, proxyAddress, null, status);
 		return MapUtils.computeIfAbsent(tlsHandshakeTimeCache, meterKey, key -> {
 			Timer.Builder builder = Timer.builder(name).tags(REMOTE_ADDRESS, remoteAddress, STATUS, status);
@@ -237,8 +235,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		}
 	}
 
-	@Nullable
-	final Timer getConnectTimer(String name, @Nullable String remoteAddress, @Nullable String proxyAddress, String status) {
+	final @Nullable Timer getConnectTimer(String name, @Nullable String remoteAddress, @Nullable String proxyAddress, String status) {
 		MeterKey meterKey = new MeterKey(null, remoteAddress, proxyAddress, null, status);
 		return MapUtils.computeIfAbsent(connectTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
@@ -255,8 +252,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		}
 	}
 
-	@Nullable
-	public final Timer getResolveAddressTimer(String name, @Nullable String address, String status) {
+	public final @Nullable Timer getResolveAddressTimer(String name, @Nullable String address, String status) {
 		MeterKey meterKey = new MeterKey(null, address, null, null, status);
 		return MapUtils.computeIfAbsent(addressResolverTimeCache, meterKey,
 				key -> filter(Timer.builder(name)
@@ -280,8 +276,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		}
 	}
 
-	@Nullable
-	protected static <M extends Meter> M filter(M meter) {
+	protected static <M extends Meter> @Nullable M filter(M meter) {
 		if (meter instanceof NoopMeter) {
 			return null;
 		}
@@ -298,8 +293,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		return protocol;
 	}
 
-	@Nullable
-	LongAdder getTotalConnectionsAdder(SocketAddress serverAddress) {
+	@Nullable LongAdder getTotalConnectionsAdder(SocketAddress serverAddress) {
 		String address = formatSocketAddress(serverAddress);
 		return MapUtils.computeIfAbsent(totalConnectionsCache, address,
 				key -> {

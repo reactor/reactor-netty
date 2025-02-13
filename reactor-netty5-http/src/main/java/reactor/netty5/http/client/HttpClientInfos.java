@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2019-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package reactor.netty5.http.client;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import reactor.netty5.http.HttpInfos;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import reactor.util.context.ContextView;
 
 import java.util.Map;
@@ -69,6 +69,5 @@ public interface HttpClientInfos extends HttpInfos {
 	 * @return The URL of the retrieved resource. This method can return null in case there was an error before the
 	 * client could create the URL
 	 */
-	@Nullable
-	String resourceUrl();
+	@Nullable String resourceUrl();
 }

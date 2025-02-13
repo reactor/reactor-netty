@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import io.netty.contrib.handler.proxy.Socks5ProxyHandler;
 import io.netty5.util.internal.StringUtil;
 import reactor.netty5.NettyPipeline;
 import reactor.netty5.transport.logging.AdvancedBufferFormat;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Proxy configuration.
@@ -241,8 +241,7 @@ public class ProxyProvider {
 		return nonProxyHostPredicate.test(getSocketAddress().get());
 	}
 
-	@Nullable
-	private String getPasswordValue(@Nullable Function<? super String, ? extends String> passwordFunction) {
+	private @Nullable String getPasswordValue(@Nullable Function<? super String, ? extends String> passwordFunction) {
 		if (username == null || passwordFunction == null) {
 			return null;
 		}
@@ -261,8 +260,7 @@ public class ProxyProvider {
 	static final String SOCKS_USERNAME = "java.net.socks.username";
 	static final String SOCKS_PASSWORD = "java.net.socks.password";
 
-	@Nullable
-	static ProxyProvider createFrom(Properties properties) {
+	static @Nullable ProxyProvider createFrom(Properties properties) {
 		Objects.requireNonNull(properties, "properties");
 
 		if (properties.containsKey(SOCKS_PROXY_HOST)) {

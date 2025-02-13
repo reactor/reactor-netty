@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty5.NettyInbound;
 import reactor.netty5.NettyPipeline;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A websocket framed inbound.
@@ -40,8 +40,7 @@ public interface WebsocketInbound extends NettyInbound {
 	 *
 	 * @return the subprotocol, or null
 	 */
-	@Nullable
-	String selectedSubprotocol();
+	@Nullable String selectedSubprotocol();
 
 	/**
 	 * Returns the websocket remote headers sent during handshake.

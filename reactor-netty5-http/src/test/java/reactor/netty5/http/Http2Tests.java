@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import io.netty5.handler.codec.http2.Http2Connection;
 import io.netty5.handler.codec.http2.Http2FrameCodec;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,7 +39,6 @@ import reactor.netty5.internal.shaded.reactor.pool.PoolAcquireTimeoutException;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.tcp.SslProvider.ProtocolSslContextSpec;
 import reactor.test.StepVerifier;
-import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import java.nio.charset.Charset;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2018-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ import java.util.logging.Level;
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMethod;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -51,7 +52,6 @@ import reactor.core.publisher.SignalType;
 import reactor.netty5.BaseHttpTest;
 import reactor.netty5.NettyOutbound;
 import reactor.netty5.http.client.HttpClient;
-import reactor.util.annotation.Nullable;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -298,7 +298,7 @@ class HttpSendFileTests extends BaseHttpTest {
 	}
 
 	private void doTestSendFileAsync(BiFunction<? super HttpServerRequest, ? super
-			HttpServerResponse, ? extends Publisher<Void>> fn, int chunk, @Nullable byte[] expectedContent) throws IOException, URISyntaxException {
+			HttpServerResponse, ? extends Publisher<Void>> fn, int chunk, byte @Nullable [] expectedContent) throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		Path largeFileParent = largeFile.getParent();
 		assertThat(largeFileParent).isNotNull();

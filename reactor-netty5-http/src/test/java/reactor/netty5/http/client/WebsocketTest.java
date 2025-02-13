@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import io.netty5.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty5.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
@@ -77,7 +78,6 @@ import reactor.netty5.tcp.SslProvider;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import static io.netty5.handler.codec.http.websocketx.WebSocketCloseStatus.ABNORMAL_CLOSURE;
@@ -1492,7 +1492,7 @@ class WebsocketTest extends BaseHttpTest {
 	@MethodSource("http11CompatibleProtocols")
 	@SuppressWarnings("deprecation")
 	public void testIssue3036(HttpProtocol[] serverProtocols, HttpProtocol[] clientProtocols,
-			@Nullable SslProvider.ProtocolSslContextSpec serverCtx, @Nullable SslProvider.ProtocolSslContextSpec clientCtx) {
+			SslProvider.@Nullable ProtocolSslContextSpec serverCtx, SslProvider.@Nullable ProtocolSslContextSpec clientCtx) {
 		WebsocketServerSpec websocketServerSpec = WebsocketServerSpec.builder().compress(true).build();
 
 		HttpServer httpServer = createServer().protocol(serverProtocols);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import reactor.netty5.ReactorNetty;
 import reactor.netty5.http.server.ConnectionInformation;
 import reactor.netty5.internal.util.MapUtils;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.net.SocketAddress;
 import java.time.ZonedDateTime;
@@ -73,45 +73,38 @@ abstract class AbstractAccessLogArgProvider<SELF extends AbstractAccessLogArgPro
 	}
 
 	@Override
-	@Nullable
-	public ZonedDateTime accessDateTime() {
+	public @Nullable ZonedDateTime accessDateTime() {
 		return accessDateTime;
 	}
 
 	@Override
-	@Nullable
 	@SuppressWarnings("deprecation")
-	public SocketAddress remoteAddress() {
+	public @Nullable SocketAddress remoteAddress() {
 		return remoteAddress;
 	}
 
 	@Override
-	@Nullable
-	public ConnectionInformation connectionInformation() {
+	public @Nullable ConnectionInformation connectionInformation() {
 		return connectionInfo;
 	}
 
 	@Override
-	@Nullable
-	public CharSequence method() {
+	public @Nullable CharSequence method() {
 		return method;
 	}
 
 	@Override
-	@Nullable
-	public CharSequence uri() {
+	public @Nullable CharSequence uri() {
 		return uri;
 	}
 
 	@Override
-	@Nullable
-	public String protocol() {
+	public @Nullable String protocol() {
 		return protocol;
 	}
 
 	@Override
-	@Nullable
-	public String user() {
+	public @Nullable String user() {
 		return user;
 	}
 

@@ -23,7 +23,7 @@ import io.netty5.channel.Channel;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
@@ -187,8 +187,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		}
 
 		@Override
-		@Nullable
-		public Timer getTimer() {
+		public @Nullable Timer getTimer() {
 			return recorder.getResponseTimeTimer(getName(), netPeerName + ":" + netPeerPort, proxyAddress == null ? NA : proxyAddress, path, method, status);
 		}
 

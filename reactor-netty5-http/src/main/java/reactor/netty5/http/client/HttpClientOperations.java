@@ -69,6 +69,7 @@ import io.netty5.handler.timeout.ReadTimeoutHandler;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.util.concurrent.Future;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -91,7 +92,6 @@ import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.ContextView;
 
 import static io.netty5.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker.MAX_WINDOW_SIZE;

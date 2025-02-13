@@ -29,6 +29,7 @@ import io.specto.hoverfly.junit.core.HoverflyMode;
 import io.specto.hoverfly.junit5.HoverflyExtension;
 import io.specto.hoverfly.junit5.api.HoverflyConfig;
 import io.specto.hoverfly.junit5.api.HoverflyCore;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +41,6 @@ import reactor.netty5.http.Http11SslContextSpec;
 import reactor.netty5.resources.ConnectionProvider;
 import reactor.netty5.transport.ProxyProvider;
 import reactor.test.StepVerifier;
-import reactor.util.annotation.Nullable;
 import reactor.util.function.Tuple2;
 
 import java.net.SocketAddress;

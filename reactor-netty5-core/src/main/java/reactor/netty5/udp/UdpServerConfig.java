@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ import reactor.netty5.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty5.resources.LoopResources;
 import reactor.netty5.transport.TransportConfig;
 import reactor.netty5.transport.logging.AdvancedBufferFormat;
-import reactor.util.annotation.Nullable;
 
+import org.jspecify.annotations.Nullable;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
@@ -60,8 +60,7 @@ public final class UdpServerConfig extends TransportConfig {
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super UdpServerConfig> doOnBind() {
+	public final @Nullable Consumer<? super UdpServerConfig> doOnBind() {
 		return doOnBind;
 	}
 
@@ -70,8 +69,7 @@ public final class UdpServerConfig extends TransportConfig {
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super Connection> doOnBound() {
+	public final @Nullable Consumer<? super Connection> doOnBound() {
 		return doOnBound;
 	}
 
@@ -80,8 +78,7 @@ public final class UdpServerConfig extends TransportConfig {
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public final Consumer<? super Connection> doOnUnbound() {
+	public final @Nullable Consumer<? super Connection> doOnUnbound() {
 		return doOnUnbound;
 	}
 

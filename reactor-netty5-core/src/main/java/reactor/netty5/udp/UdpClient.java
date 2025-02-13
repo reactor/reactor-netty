@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2011-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 import io.netty5.channel.ChannelOption;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.util.AttributeKey;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty5.Connection;
@@ -33,7 +34,6 @@ import reactor.netty5.channel.ChannelMetricsRecorder;
 import reactor.netty5.transport.ClientTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 
 import static reactor.netty5.ReactorNetty.format;
 

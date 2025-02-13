@@ -41,6 +41,7 @@ import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.ssl.OpenSsl;
 import io.netty5.handler.ssl.SslContext;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
@@ -64,7 +65,6 @@ import reactor.netty5.transport.ClientTransport;
 import reactor.netty5.transport.ProxyProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 
 /**
  * An HttpClient allows building in a safe immutable way an http client that is

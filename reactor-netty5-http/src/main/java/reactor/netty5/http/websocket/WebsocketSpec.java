@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package reactor.netty5.http.websocket;
 
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -34,8 +34,7 @@ public interface WebsocketSpec {
 	 *
 	 * @return returns the configured sub protocols.
 	 */
-	@Nullable
-	String protocols();
+	@Nullable String protocols();
 
 	/**
 	 * Returns the configured maximum allowable frame payload length.

@@ -46,7 +46,7 @@ import reactor.netty5.ReactorNetty;
 import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.netty5.http.server.compression.HttpCompressionOptionsSpec;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static io.netty5.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static reactor.netty5.ReactorNetty.format;

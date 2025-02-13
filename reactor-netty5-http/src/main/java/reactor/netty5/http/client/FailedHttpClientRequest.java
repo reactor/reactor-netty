@@ -23,7 +23,7 @@ import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpSetCookie;
 import reactor.netty5.http.HttpOperations;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import reactor.util.context.ContextView;
 
 import java.time.Duration;
@@ -134,8 +134,7 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	}
 
 	@Override
-	@Nullable
-	public String resourceUrl() {
+	public @Nullable String resourceUrl() {
 		return null;
 	}
 

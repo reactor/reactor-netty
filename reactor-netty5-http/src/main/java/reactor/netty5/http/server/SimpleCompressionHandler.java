@@ -26,8 +26,8 @@ import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.util.concurrent.Future;
+import org.jspecify.annotations.Nullable;
 import reactor.netty5.http.server.compression.HttpCompressionOptionsSpec;
-import reactor.util.annotation.Nullable;
 
 /**
  * {@link HttpContentCompressor} to enable on-demand compression.

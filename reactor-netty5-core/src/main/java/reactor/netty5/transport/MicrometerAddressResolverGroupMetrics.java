@@ -25,7 +25,7 @@ import io.netty5.util.concurrent.Future;
 import reactor.netty5.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty5.internal.util.MapUtils;
 import reactor.netty5.observability.ReactorNettyHandlerContext;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import reactor.util.context.ContextView;
 
 import java.net.InetSocketAddress;
@@ -106,8 +106,7 @@ final class MicrometerAddressResolverGroupMetrics<T extends SocketAddress> exten
 		}
 
 		@Override
-		@Nullable
-		public Timer getTimer() {
+		public @Nullable Timer getTimer() {
 			return recorder.getResolveAddressTimer(getName(), netPeerName + ':' + netPeerPort, status);
 		}
 

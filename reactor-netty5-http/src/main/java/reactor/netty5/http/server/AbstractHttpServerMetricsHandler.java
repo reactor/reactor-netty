@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +27,9 @@ import io.netty5.handler.codec.http.LastHttpContent;
 import io.netty5.handler.codec.http2.Http2StreamChannel;
 import io.netty5.util.concurrent.Future;
 import reactor.netty5.channel.ChannelOperations;
+import org.jspecify.annotations.Nullable;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
 
@@ -478,9 +478,8 @@ abstract class AbstractHttpServerMetricsHandler extends ChannelHandlerAdapter {
 			return this;
 		}
 
-		@Nullable
 		@SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
-		<T> T get(Object key) {
+		<T> @Nullable T get(Object key) {
 			return (T) this.map.get(key);
 		}
 	}

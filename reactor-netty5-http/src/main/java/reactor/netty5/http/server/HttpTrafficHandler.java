@@ -53,7 +53,7 @@ import reactor.netty5.channel.ChannelOperations;
 import reactor.netty5.http.logging.HttpMessageArgProviderFactory;
 import reactor.netty5.http.logging.HttpMessageLogFactory;
 import reactor.netty5.http.server.compression.HttpCompressionOptionsSpec;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import reactor.util.concurrent.Queues;
 
 import static io.netty5.handler.codec.http.HttpUtil.isContentLengthSet;

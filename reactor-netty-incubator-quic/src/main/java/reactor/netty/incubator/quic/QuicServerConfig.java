@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,12 @@ import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
 import io.netty.incubator.codec.quic.QuicSslEngine;
 import io.netty.incubator.codec.quic.QuicTokenHandler;
 import io.netty.util.AttributeKey;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.transport.logging.AdvancedByteBufFormat;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
@@ -96,8 +96,7 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 	 *
 	 * @return the configured callback or null
 	 */
-	@Nullable
-	public Consumer<? super QuicConnection> doOnConnection() {
+	public @Nullable Consumer<? super QuicConnection> doOnConnection() {
 		return doOnConnection;
 	}
 
@@ -106,8 +105,7 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 	 *
 	 * @return the configured {@link QuicTokenHandler} or null
 	 */
-	@Nullable
-	public QuicTokenHandler tokenHandler() {
+	public @Nullable QuicTokenHandler tokenHandler() {
 		return tokenHandler;
 	}
 

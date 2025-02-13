@@ -17,7 +17,7 @@
 /**
  * Server compression.
  */
-@NonNullApi
+@NullMarked
 package reactor.netty5.http.server.compression;
 
-import reactor.util.annotation.NonNullApi;
+import org.jspecify.annotations.NullMarked;
