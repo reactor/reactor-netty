@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,10 +54,16 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	protected Mono<? extends Connection> connect() {
 		CONF originalConfiguration = configuration();
 		CONF config;
-		if (originalConfiguration.proxyProvider() == null && originalConfiguration.proxyProviderSupplier() != null) {
-			T dup = duplicate();
-			config = dup.configuration();
-			config.proxyProvider(config.proxyProviderSupplier().get());
+		if (originalConfiguration.proxyProvider() == null) {
+			Supplier<ProxyProvider> proxyProviderSupplier = originalConfiguration.proxyProviderSupplier();
+			if (proxyProviderSupplier != null) {
+				T dup = duplicate();
+				config = dup.configuration();
+				config.proxyProvider(proxyProviderSupplier.get());
+			}
+			else {
+				config = originalConfiguration;
+			}
 		}
 		else {
 			config = originalConfiguration;
