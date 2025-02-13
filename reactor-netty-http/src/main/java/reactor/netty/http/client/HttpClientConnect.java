@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2017-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -183,12 +183,14 @@ class HttpClientConnect extends HttpClient {
 			httpClient = httpClient.option((ChannelOption<Object>) entry.getKey(), entry.getValue());
 		}
 
-		if (config.proxyProvider() != null) {
-			httpClient.configuration().proxyProvider(config.proxyProvider());
+		ProxyProvider proxyProvider = config.proxyProvider();
+		if (proxyProvider != null) {
+			httpClient.configuration().proxyProvider(proxyProvider);
 		}
 
-		if (config.proxyProviderSupplier() != null) {
-			httpClient.configuration().proxyProviderSupplier(config.proxyProviderSupplier());
+		Supplier<ProxyProvider> proxyProviderSupplier = config.proxyProviderSupplier();
+		if (proxyProviderSupplier != null) {
+			httpClient.configuration().proxyProviderSupplier(proxyProviderSupplier);
 		}
 
 		if (config.sslProvider() != null) {
@@ -267,14 +269,17 @@ class HttpClientConnect extends HttpClient {
 					}
 				}
 
-				if (_config.proxyProvider() == null && _config.proxyProviderSupplier() != null) {
-					if (!configCopied) {
-						configCopied = true;
-						_config = new HttpClientConfig(config);
+				if (_config.proxyProvider() == null) {
+					Supplier<ProxyProvider> proxyProviderSupplier = _config.proxyProviderSupplier();
+					if (proxyProviderSupplier != null) {
+						if (!configCopied) {
+							configCopied = true;
+							_config = new HttpClientConfig(config);
+						}
+						ProxyProvider proxyProvider = proxyProviderSupplier.get();
+						_config.proxyProvider(proxyProvider);
+						handler.proxyProvider = proxyProvider;
 					}
-					ProxyProvider proxyProvider = _config.proxyProviderSupplier().get();
-					_config.proxyProvider(proxyProvider);
-					handler.proxyProvider = proxyProvider;
 				}
 
 				ConnectionObserver observer =
