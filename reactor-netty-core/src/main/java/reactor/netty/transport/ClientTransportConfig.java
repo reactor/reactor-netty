@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -232,11 +232,11 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		return loopResources().onClient(isPreferNative());
 	}
 
-	protected void proxyProvider(@Nullable ProxyProvider proxyProvider) {
+	protected void proxyProvider(ProxyProvider proxyProvider) {
 		this.proxyProvider = proxyProvider;
 	}
 
-	protected void proxyProviderSupplier(@Nullable Supplier<ProxyProvider> proxyProviderSupplier) {
+	protected void proxyProviderSupplier(Supplier<ProxyProvider> proxyProviderSupplier) {
 		this.proxyProviderSupplier = proxyProviderSupplier;
 	}
 
