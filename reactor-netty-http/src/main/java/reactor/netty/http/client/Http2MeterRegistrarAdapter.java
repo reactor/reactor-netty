@@ -27,6 +27,8 @@ import java.net.SocketAddress;
  * methods to register and deregister metrics specific to HTTP/2 connections.
  * <p>
  * This is useful for monitoring and managing the performance of HTTP/2 connections in a pool.
+ *
+ * @author raccoonback
  */
 public abstract class Http2MeterRegistrarAdapter implements ConnectionProvider.MeterRegistrar {
 

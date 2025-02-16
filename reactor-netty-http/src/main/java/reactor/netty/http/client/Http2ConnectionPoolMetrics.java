@@ -21,6 +21,8 @@ import reactor.netty.resources.ConnectionPoolMetrics;
  * Interface for collecting HTTP/2 specific connection pool metrics.
  * Extends the {@link ConnectionPoolMetrics} interface to include metrics
  * related to active, pending HTTP/2 streams.
+ *
+ * @author raccoonback
  */
 public interface Http2ConnectionPoolMetrics extends ConnectionPoolMetrics {
 
