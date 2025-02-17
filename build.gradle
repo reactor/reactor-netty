@@ -99,7 +99,7 @@ ext {
 	}
 
 	// Used only in examples
-	braveVersion = '6.0.3'
+	braveVersion = '6.1.0'
 	zipkinSenderVersion = '3.5.0'
 
 	jspecifyVersion = '1.0.0'
