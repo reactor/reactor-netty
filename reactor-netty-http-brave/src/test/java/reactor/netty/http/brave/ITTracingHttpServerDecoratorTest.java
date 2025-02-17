@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
@@ -34,11 +35,12 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static brave.Span.Kind.SERVER;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
-	private DisposableServer disposableServer;
-	private ChannelGroup group;
+	private @Nullable DisposableServer disposableServer;
+	private @Nullable ChannelGroup group;
 	private static final EventExecutor executor = new DefaultEventExecutor();
 
 	@AfterAll
@@ -121,7 +123,7 @@ public class ITTracingHttpServerDecoratorTest extends ITHttpServer {
 
 	@Override
 	protected String url(String path) {
-		return "http://127.0.0.1:" + disposableServer.port() + path;
+		return "http://127.0.0.1:" + requireNonNull(disposableServer).port() + path;
 	}
 
 	@Override
