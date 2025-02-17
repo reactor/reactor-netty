@@ -74,29 +74,29 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 	static final long                    DEFAULT_MAX_RECV_UDP_PAYLOAD_SIZE = 65527;
 	static final long                    DEFAULT_MAX_SEND_UDP_PAYLOAD_SIZE = 1200;
 
-	long                           ackDelayExponent;
-	boolean                        activeMigration;
-	QuicCongestionControlAlgorithm congestionControlAlgorithm;
-	Consumer<? super CONF>         doOnBind;
-	Consumer<? super Connection>   doOnBound;
-	Consumer<? super Connection>   doOnUnbound;
-	boolean                        grease;
-	boolean                        hystart;
-	Duration                       idleTimeout;
-	QuicInitialSettingsSpec        initialSettings;
-	int                            localConnectionIdLength;
-	Duration                       maxAckDelay;
-	long                           maxRecvUdpPayloadSize;
-	long                           maxSendUdpPayloadSize;
-	int                            recvQueueLen;
-	int                            sendQueueLen;
-	Function<QuicChannel, ? extends QuicSslEngine>
-	                               sslEngineProvider;
-	Map<AttributeKey<?>, ?>        streamAttrs;
-	BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>>
-	                               streamHandler;
-	ConnectionObserver             streamObserver;
-	Map<ChannelOption<?>, ?>       streamOptions;
+	long                                   ackDelayExponent;
+	boolean                                activeMigration;
+	QuicCongestionControlAlgorithm         congestionControlAlgorithm;
+	@Nullable Consumer<? super CONF>       doOnBind;
+	@Nullable Consumer<? super Connection> doOnBound;
+	@Nullable Consumer<? super Connection> doOnUnbound;
+	boolean                                grease;
+	boolean                                hystart;
+	@Nullable Duration                     idleTimeout;
+	QuicInitialSettingsSpec                initialSettings;
+	int                                    localConnectionIdLength;
+	Duration                               maxAckDelay;
+	long                                   maxRecvUdpPayloadSize;
+	long                                   maxSendUdpPayloadSize;
+	int                                    recvQueueLen;
+	int                                    sendQueueLen;
+	@Nullable Function<QuicChannel, ? extends QuicSslEngine>
+	                                       sslEngineProvider;
+	Map<AttributeKey<?>, ?>                streamAttrs;
+	@Nullable BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>>
+	                                       streamHandler;
+	ConnectionObserver                     streamObserver;
+	Map<ChannelOption<?>, ?>               streamOptions;
 
 	QuicTransportConfig(
 			Map<ChannelOption<?>, ?> options,
@@ -374,7 +374,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 	static final class QuicChannelInboundHandler extends ChannelInboundHandlerAdapter {
 
 		final ConnectionObserver       listener;
-		final ChannelHandler           loggingHandler;
+		final @Nullable ChannelHandler loggingHandler;
 		final Map<AttributeKey<?>, ?>  streamAttrs;
 		final ConnectionObserver       streamObserver;
 		final Map<ChannelOption<?>, ?> streamOptions;
@@ -421,7 +421,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 
 	static final class QuicChannelInitializer implements ChannelPipelineConfigurer {
 
-		final ChannelHandler           loggingHandler;
+		final @Nullable ChannelHandler loggingHandler;
 		final Map<AttributeKey<?>, ?>  streamAttrs;
 		final ConnectionObserver       streamObserver;
 		final Map<ChannelOption<?>, ?> streamOptions;
@@ -447,9 +447,9 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 
 	static final class QuicStreamChannelInitializer extends ChannelInitializer<QuicStreamChannel> {
 
-		final ChannelHandler     loggingHandler;
-		final ConnectionObserver streamListener;
-		final boolean            inbound;
+		final @Nullable ChannelHandler loggingHandler;
+		final ConnectionObserver       streamListener;
+		final boolean                  inbound;
 
 		QuicStreamChannelInitializer(
 				@Nullable ChannelHandler loggingHandler,
@@ -482,7 +482,7 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 
 	static final class QuicStreamChannelObserver implements ConnectionObserver {
 
-		final BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>> streamHandler;
+		final @Nullable BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>> streamHandler;
 
 		QuicStreamChannelObserver(
 				@Nullable BiFunction<? super QuicInbound, ? super QuicOutbound, ? extends Publisher<Void>> streamHandler) {
@@ -525,14 +525,14 @@ abstract class QuicTransportConfig<CONF extends TransportConfig> extends Transpo
 
 	static final class QuicTransportDoOn implements ConnectionObserver {
 
-		final Consumer<? super Connection> doOnBound;
-		final Consumer<? super Connection> doOnUnbound;
+		final @Nullable Consumer<? super Connection> doOnBound;
+		final @Nullable Consumer<? super Connection> doOnUnbound;
 
 		QuicTransportDoOn(
 				@Nullable ChannelGroup channelGroup,
 				@Nullable Consumer<? super Connection> doOnBound,
 				@Nullable Consumer<? super Connection> doOnUnbound) {
-			this.doOnBound = doOnBound;
+ 			this.doOnBound = doOnBound;
 			this.doOnUnbound = doOnUnbound;
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package reactor.netty.incubator.quic;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.util.NetUtil;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
@@ -36,6 +37,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -67,7 +70,8 @@ final class QuicServerBind extends QuicServer {
 		validate(config);
 
 		Mono<? extends Connection> mono = Mono.create(sink -> {
-			SocketAddress local = Objects.requireNonNull(config.bindAddress().get(), "Bind Address supplier returned null");
+			Supplier<? extends SocketAddress> bindAddress = Objects.requireNonNull(config.bindAddress());
+			SocketAddress local = Objects.requireNonNull(bindAddress.get(), "Bind Address supplier returned null");
 			if (local instanceof InetSocketAddress) {
 				InetSocketAddress localInet = (InetSocketAddress) local;
 
@@ -81,8 +85,9 @@ final class QuicServerBind extends QuicServer {
 			                  .subscribe(disposableBind);
 		});
 
-		if (config.doOnBind() != null) {
-			mono = mono.doOnSubscribe(s -> config.doOnBind().accept(config));
+		Consumer<? super QuicServerConfig> doOnBind = config.doOnBind();
+		if (doOnBind != null) {
+			mono = mono.doOnSubscribe(s -> doOnBind.accept(config));
 		}
 
 		return mono;
@@ -110,7 +115,7 @@ final class QuicServerBind extends QuicServer {
 		final Context              currentContext;
 		final MonoSink<Connection> sink;
 
-		Subscription subscription;
+		@Nullable Subscription subscription;
 
 		DisposableBind(SocketAddress bindAddress, MonoSink<Connection> sink) {
 			this.bindAddress = bindAddress;

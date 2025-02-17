@@ -287,7 +287,7 @@ public class QuicResources implements LoopResources {
 
 	static final Function<LoopResources, QuicResources> ON_QUIC_NEW;
 
-	static final AtomicReference<QuicResources>         quicResources;
+	static final AtomicReference<@Nullable QuicResources> quicResources;
 
 	static {
 		ON_QUIC_NEW = QuicResources::new;

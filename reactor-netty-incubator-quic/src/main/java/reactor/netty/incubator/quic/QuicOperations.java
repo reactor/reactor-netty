@@ -48,7 +48,7 @@ import static reactor.netty.ReactorNetty.format;
  */
 final class QuicOperations implements ChannelOperationsId, QuicConnection {
 
-	final ChannelHandler           loggingHandler;
+	final @Nullable ChannelHandler loggingHandler;
 	final QuicChannel              quicChannel;
 	final String                   shortId;
 	final Map<AttributeKey<?>, ?>  streamAttrs;

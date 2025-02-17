@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
 import io.netty.incubator.codec.quic.QuicSslContext;
 import io.netty.incubator.codec.quic.QuicSslContextBuilder;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import reactor.netty.Connection;
 
@@ -63,8 +64,8 @@ class BaseQuicTests {
 				                     .build();
 	}
 
-	protected QuicConnection client;
-	protected Connection server;
+	protected @Nullable QuicConnection client;
+	protected @Nullable Connection server;
 
 	@AfterEach
 	void dispose() {
