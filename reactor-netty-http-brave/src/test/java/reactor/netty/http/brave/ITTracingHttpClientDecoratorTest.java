@@ -46,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClient> {
-	private ChannelGroup group;
+	private @Nullable ChannelGroup group;
 	private static final EventExecutor executor = new DefaultEventExecutor();
 
 	@AfterAll
@@ -139,8 +139,9 @@ public class ITTracingHttpClientDecoratorTest extends ITHttpAsyncClient<HttpClie
 			      .aggregate()
 			      .block(Duration.ofSeconds(30));
 
-			assertThat(headers.get()).isNotNull();
-			assertThat(headers.get().get("x-b3-traceId")).isEqualTo(headers.get().get("test-id"));
+			HttpHeaders httpHeaders = headers.get();
+			assertThat(httpHeaders).isNotNull();
+			assertThat(httpHeaders.get("x-b3-traceId")).isEqualTo(httpHeaders.get("test-id"));
 		}
 		finally {
 			if (disposableServer != null) {

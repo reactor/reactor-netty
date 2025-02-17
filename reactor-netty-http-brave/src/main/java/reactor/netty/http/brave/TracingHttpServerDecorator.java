@@ -67,7 +67,7 @@ final class TracingHttpServerDecorator {
 
 		final reactor.netty.http.server.HttpServerRequest delegate;
 		final Function<String, String> uriMapping;
-		final String path;
+		final @Nullable String path;
 
 		DelegatingHttpRequest(reactor.netty.http.server.HttpServerRequest delegate, Function<String, String> uriMapping) {
 			this.delegate = delegate;
@@ -146,8 +146,8 @@ final class TracingHttpServerDecorator {
 	static final class DelegatingHttpResponse extends HttpServerResponse {
 
 		final reactor.netty.http.server.HttpServerResponse delegate;
-		final HttpServerRequest request;
-		final Throwable error;
+		final @Nullable HttpServerRequest request;
+		final @Nullable Throwable error;
 
 		DelegatingHttpResponse(reactor.netty.http.server.HttpServerResponse delegate, @Nullable HttpServerRequest request) {
 			this(delegate, request, null);
@@ -246,7 +246,7 @@ final class TracingHttpServerDecorator {
 		final CurrentTraceContext currentTraceContext;
 		final HttpServerHandler<HttpServerRequest, HttpServerResponse> handler;
 
-		volatile Throwable throwable;
+		volatile @Nullable Throwable throwable;
 
 		TracingMapHandle(
 				CurrentTraceContext currentTraceContext,

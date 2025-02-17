@@ -148,7 +148,7 @@ final class TracingHttpClientDecorator {
 	static final class DelegatingHttpResponse extends HttpClientResponse {
 
 		final reactor.netty.http.client.HttpClientResponse delegate;
-		final Throwable error;
+		final @Nullable Throwable error;
 		final HttpClientRequest request;
 
 		DelegatingHttpResponse(reactor.netty.http.client.HttpClientResponse delegate, HttpClientRequest request, @Nullable Throwable error) {
@@ -183,7 +183,7 @@ final class TracingHttpClientDecorator {
 		}
 	}
 
-	static final class PendingSpan extends AtomicReference<Span> {
+	static final class PendingSpan extends AtomicReference<@Nullable Span> {
 	}
 
 	static final class TracingDoOnRequest
