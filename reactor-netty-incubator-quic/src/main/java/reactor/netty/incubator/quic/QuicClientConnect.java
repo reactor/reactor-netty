@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicChannelBootstrap;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
@@ -43,6 +44,7 @@ import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static reactor.netty.ConnectionObserver.State.CONFIGURED;
@@ -82,7 +84,8 @@ final class QuicClientConnect extends QuicClient {
 		validate(config);
 
 		Mono<? extends QuicConnection> mono = Mono.create(sink -> {
-			SocketAddress local = Objects.requireNonNull(config.bindAddress().get(), "Bind Address supplier returned null");
+			Supplier<? extends SocketAddress> bindAddress = Objects.requireNonNull(config.bindAddress());
+			SocketAddress local = Objects.requireNonNull(bindAddress.get(), "Bind Address supplier returned null");
 			if (local instanceof InetSocketAddress) {
 				InetSocketAddress localInet = (InetSocketAddress) local;
 
@@ -96,8 +99,9 @@ final class QuicClientConnect extends QuicClient {
 			                  .subscribe(disposableConnect);
 		});
 
-		if (config.doOnConnect != null) {
-			mono = mono.doOnSubscribe(s -> config.doOnConnect.accept(config));
+		Consumer<? super QuicClientConfig> doOnConnect = config.doOnConnect;
+		if (doOnConnect != null) {
+			mono = mono.doOnSubscribe(s -> doOnConnect.accept(config));
 		}
 
 		return mono;
@@ -119,7 +123,7 @@ final class QuicClientConnect extends QuicClient {
 		final Map<AttributeKey<?>, ?>           attributes;
 		final SocketAddress                     bindAddress;
 		final Context                           currentContext;
-		final ChannelHandler                    loggingHandler;
+		final @Nullable ChannelHandler          loggingHandler;
 		final Map<ChannelOption<?>, ?>          options;
 		final ChannelInitializer<Channel>       quicChannelInitializer;
 		final Supplier<? extends SocketAddress> remoteAddress;
@@ -128,7 +132,7 @@ final class QuicClientConnect extends QuicClient {
 		final ConnectionObserver                streamObserver;
 		final Map<ChannelOption<?>, ?>          streamOptions;
 
-		Subscription subscription;
+		@Nullable Subscription subscription;
 
 		DisposableConnect(QuicClientConfig config, SocketAddress bindAddress, MonoSink<QuicConnection> sink) {
 			this.attributes = config.attributes();

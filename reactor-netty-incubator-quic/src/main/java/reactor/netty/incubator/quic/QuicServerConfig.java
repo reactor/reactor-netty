@@ -63,9 +63,9 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 	static final QuicConnectionIdGenerator DEFAULT_CONNECTION_ID_ADDRESS_GENERATOR =
 			QuicConnectionIdGenerator.randomGenerator();
 
-	QuicConnectionIdGenerator        connectionIdAddressGenerator;
-	Consumer<? super QuicConnection> doOnConnection;
-	QuicTokenHandler                 tokenHandler;
+	QuicConnectionIdGenerator                  connectionIdAddressGenerator;
+	@Nullable Consumer<? super QuicConnection> doOnConnection;
+	@Nullable QuicTokenHandler                 tokenHandler;
 
 	QuicServerConfig(
 			Map<ChannelOption<?>, ?> options,
@@ -156,10 +156,10 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 		final QuicConnectionIdGenerator      connectionIdAddressGenerator;
 		final boolean                        grease;
 		final boolean                        hystart;
-		final Duration                       idleTimeout;
+		final @Nullable Duration             idleTimeout;
 		final QuicInitialSettingsSpec        initialSettings;
 		final int                            localConnectionIdLength;
-		final ChannelHandler                 loggingHandler;
+		final @Nullable ChannelHandler       loggingHandler;
 		final Duration                       maxAckDelay;
 		final long                           maxRecvUdpPayloadSize;
 		final long                           maxSendUdpPayloadSize;
@@ -170,9 +170,9 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 		final Map<AttributeKey<?>, ?>        streamAttrs;
 		final ConnectionObserver             streamObserver;
 		final Map<ChannelOption<?>, ?>       streamOptions;
-		final Function<QuicChannel, ? extends QuicSslEngine>
+		final @Nullable Function<QuicChannel, ? extends QuicSslEngine>
 		                                     sslEngineProvider;
-		final QuicTokenHandler               tokenHandler;
+		final @Nullable QuicTokenHandler     tokenHandler;
 
 		ParentChannelInitializer(QuicServerConfig config) {
 			this.ackDelayExponent = config.ackDelayExponent;
@@ -281,8 +281,8 @@ public final class QuicServerConfig extends QuicTransportConfig<QuicServerConfig
 
 	static final class QuicServerDoOnConnection implements ConnectionObserver {
 
-		final ChannelGroup                     channelGroup;
-		final Consumer<? super QuicConnection> doOnConnection;
+		final @Nullable ChannelGroup                     channelGroup;
+		final @Nullable Consumer<? super QuicConnection> doOnConnection;
 
 		QuicServerDoOnConnection(
 				@Nullable ChannelGroup channelGroup,

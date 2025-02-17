@@ -56,9 +56,9 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 	 */
 	public static final String QUIC_CLIENT_PREFIX = "reactor.netty.quic.client";
 
-	Consumer<? super QuicClientConfig> doOnConnect;
-	Consumer<? super QuicConnection>   doOnConnected;
-	Consumer<? super QuicConnection>   doOnDisconnected;
+	@Nullable Consumer<? super QuicClientConfig> doOnConnect;
+	@Nullable Consumer<? super QuicConnection>   doOnConnected;
+	@Nullable Consumer<? super QuicConnection>   doOnDisconnected;
 	Supplier<? extends SocketAddress>  remoteAddress;
 
 	QuicClientConfig(
@@ -159,16 +159,16 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 		final QuicCongestionControlAlgorithm congestionControlAlgorithm;
 		final boolean                        grease;
 		final boolean                        hystart;
-		final Duration                       idleTimeout;
+		final @Nullable Duration             idleTimeout;
 		final QuicInitialSettingsSpec        initialSettings;
 		final int                            localConnectionIdLength;
-		final ChannelHandler                 loggingHandler;
+		final @Nullable ChannelHandler       loggingHandler;
 		final Duration                       maxAckDelay;
 		final long                           maxRecvUdpPayloadSize;
 		final long                           maxSendUdpPayloadSize;
 		final int                            recvQueueLen;
 		final int                            sendQueueLen;
-		final Function<QuicChannel, ? extends QuicSslEngine>
+		final @Nullable Function<QuicChannel, ? extends QuicSslEngine>
 		                                     sslEngineProvider;
 
 		ParentChannelInitializer(QuicClientConfig config) {
@@ -226,9 +226,9 @@ public final class QuicClientConfig extends QuicTransportConfig<QuicClientConfig
 
 	static final class QuicClientDoOn implements ConnectionObserver {
 
-		final ChannelGroup                     channelGroup;
-		final Consumer<? super QuicConnection> doOnConnected;
-		final Consumer<? super QuicConnection> doOnDisconnected;
+		final @Nullable ChannelGroup                     channelGroup;
+		final @Nullable Consumer<? super QuicConnection> doOnConnected;
+		final @Nullable Consumer<? super QuicConnection> doOnDisconnected;
 
 		QuicClientDoOn(
 				@Nullable ChannelGroup channelGroup,

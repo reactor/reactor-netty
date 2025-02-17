@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,7 +91,8 @@ public abstract class QuicClient extends QuicTransport<QuicClient, QuicClientCon
 			return Objects.requireNonNull(connect().block(timeout), "aborted");
 		}
 		catch (IllegalStateException e) {
-			if (e.getMessage().contains("blocking read")) {
+			String message = e.getMessage();
+			if (message != null && message.contains("blocking read")) {
 				throw new IllegalStateException("QuicClient couldn't be started within " + timeout.toMillis() + "ms");
 			}
 			throw e;
