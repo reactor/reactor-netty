@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2020-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,7 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		return parseXForwardedInfo(connectionInfo, request);
 	}
 
+	@SuppressWarnings("NullAway")
 	private ConnectionInfo parseForwardedInfo(ConnectionInfo connectionInfo, String forwardedHeader) {
 		String forwarded = forwardedHeader.split(",", 2)[0];
 		Matcher protoMatcher = FORWARDED_PROTO_PATTERN.matcher(forwarded);
@@ -84,16 +85,21 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 		Matcher forMatcher = FORWARDED_FOR_PATTERN.matcher(forwarded);
 		if (forMatcher.find()) {
 			connectionInfo = connectionInfo.withRemoteAddress(
+					// Deliberately suppress "NullAway"
+					// This implementation is invoked always with InetSocketAddress and remote address != null
 					AddressUtils.parseAddress(forMatcher.group(1).trim(), connectionInfo.getRemoteAddress().getPort(),
 							DEFAULT_FORWARDED_HEADER_VALIDATION));
 		}
 		return connectionInfo;
 	}
 
+	@SuppressWarnings("NullAway")
 	private ConnectionInfo parseXForwardedInfo(ConnectionInfo connectionInfo, HttpRequest request) {
 		String ipHeader = request.headers().get(X_FORWARDED_IP_HEADER);
 		if (ipHeader != null) {
 			connectionInfo = connectionInfo.withRemoteAddress(
+					// Deliberately suppress "NullAway"
+					// This implementation is invoked always with InetSocketAddress and remote address != null
 					AddressUtils.parseAddress(ipHeader.split(",", 2)[0], connectionInfo.getRemoteAddress().getPort()));
 		}
 		String protoHeader = request.headers().get(X_FORWARDED_PROTO_HEADER);
@@ -113,6 +119,8 @@ final class DefaultHttpForwardedHeaderHandler implements BiFunction<ConnectionIn
 			if (portStr.chars().allMatch(Character::isDigit)) {
 				int port = Integer.parseInt(portStr);
 				connectionInfo = connectionInfo.withHostAddress(
+						// Deliberately suppress "NullAway"
+						// This implementation is invoked always with InetSocketAddress and local address != null
 						AddressUtils.createUnresolved(connectionInfo.getHostAddress().getHostString(), port),
 						connectionInfo.getHostName(), port);
 			}

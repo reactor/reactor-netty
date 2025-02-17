@@ -201,12 +201,12 @@ public final class Http3SettingsSpec {
 		return result;
 	}
 
-	final Duration idleTimeout;
+	final @Nullable Duration idleTimeout;
 	final long maxData;
 	final long maxStreamDataBidirectionalLocal;
 	final long maxStreamDataBidirectionalRemote;
 	final long maxStreamsBidirectional;
-	final QuicTokenHandler tokenHandler;
+	final @Nullable QuicTokenHandler tokenHandler;
 
 	Http3SettingsSpec(Build build) {
 		this.idleTimeout = build.idleTimeout;
@@ -223,12 +223,12 @@ public final class Http3SettingsSpec {
 		static final long DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_REMOTE = 0L;
 		static final long DEFAULT_MAX_STREAMS_BIDIRECTIONAL = 0L;
 
-		Duration idleTimeout;
+		@Nullable Duration idleTimeout;
 		long maxData = DEFAULT_MAX_DATA;
 		long maxStreamDataBidirectionalLocal = DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_LOCAL;
 		long maxStreamDataBidirectionalRemote = DEFAULT_MAX_STREAM_DATA_BIDIRECTIONAL_REMOTE;
 		long maxStreamsBidirectional = DEFAULT_MAX_STREAMS_BIDIRECTIONAL;
-		QuicTokenHandler tokenHandler;
+		@Nullable QuicTokenHandler tokenHandler;
 
 		@Override
 		public Http3SettingsSpec build() {

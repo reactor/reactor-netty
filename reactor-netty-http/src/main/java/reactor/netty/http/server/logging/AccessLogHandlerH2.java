@@ -35,9 +35,12 @@ import java.util.function.Function;
  */
 final class AccessLogHandlerH2 extends BaseAccessLogHandler {
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	AccessLogArgProviderH2 accessLogArgProvider;
 
-	AccessLogHandlerH2(@Nullable Function<AccessLogArgProvider, AccessLog> accessLog) {
+	AccessLogHandlerH2(@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog) {
 		super(accessLog);
 	}
 

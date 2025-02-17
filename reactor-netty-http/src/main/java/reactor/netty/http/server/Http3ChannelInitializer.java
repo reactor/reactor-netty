@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2024-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
 import io.netty.incubator.codec.quic.QuicSslContext;
 import io.netty.util.AttributeKey;
+import org.jspecify.annotations.Nullable;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.Http3SettingsSpec;
 
@@ -35,8 +36,8 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 	final Map<AttributeKey<?>, ?>     attributes;
 	final Map<AttributeKey<?>, ?>     childAttributes;
 	final Map<ChannelOption<?>, ?>    childOptions;
-	final Http3SettingsSpec           http3Settings;
-	final ChannelHandler              loggingHandler;
+	final @Nullable Http3SettingsSpec http3Settings;
+	final @Nullable ChannelHandler    loggingHandler;
 	final Map<ChannelOption<?>, ?>    options;
 	final ChannelInitializer<Channel> quicChannelInitializer;
 	final QuicSslContext              quicSslContext;
@@ -49,7 +50,7 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 		this.loggingHandler = config.loggingHandler();
 		this.options = config.options();
 		this.quicChannelInitializer = quicChannelInitializer;
-		if (config.sslProvider.getSslContext() instanceof QuicSslContext) {
+		if (config.sslProvider != null && config.sslProvider.getSslContext() instanceof QuicSslContext) {
 			this.quicSslContext = (QuicSslContext) config.sslProvider.getSslContext();
 		}
 		else {

@@ -167,7 +167,7 @@ class ChannelOperationsHandlerTest extends BaseHttpTest {
 
 		private final int                 port;
 		private final ServerSocketChannel server;
-		private volatile Thread           thread;
+		private volatile @Nullable Thread thread;
 
 		private ConnectionAbortServer(int port) {
 			super(1);
@@ -248,7 +248,7 @@ class ChannelOperationsHandlerTest extends BaseHttpTest {
 
 		private final    int                 port;
 		private final    ServerSocketChannel server;
-		private volatile Thread              thread;
+		private volatile @Nullable Thread    thread;
 
 		private TestServer(int port) {
 			super(1);

@@ -47,7 +47,7 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	final boolean             isWebsocket;
 	final HttpMethod          method;
 	final String              path;
-	final Duration            responseTimeout;
+	final @Nullable Duration  responseTimeout;
 	final String              uri;
 
 	FailedHttpClientRequest(ContextView contextView, HttpClientConfig c) {
@@ -56,8 +56,10 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 		this.headers = c.headers;
 		this.isWebsocket = c.websocketClientSpec != null;
 		this.method = c.method;
-		this.uri = c.uri == null ? c.uriStr : c.uri.toString();
-		this.path = this.uri != null ? HttpOperations.resolvePath(this.uri) : null;
+		this.uri = c.uri == null ?
+				c.uriStr == null ? "/bad-request" : c.uriStr :
+				c.uri.toString();
+		this.path = HttpOperations.resolvePath(this.uri);
 		this.responseTimeout = c.responseTimeout;
 	}
 

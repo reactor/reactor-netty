@@ -1302,8 +1302,8 @@ class HttpClientTest extends BaseHttpTest {
 	}
 
 	private void doOnError(HttpClient client) {
-		AtomicReference<String> requestError1 = new AtomicReference<>();
-		AtomicReference<String> responseError1 = new AtomicReference<>();
+		AtomicReference<@Nullable String> requestError1 = new AtomicReference<>();
+		AtomicReference<@Nullable String> responseError1 = new AtomicReference<>();
 
 		Mono<String> content =
 				client.doOnRequestError((req, err) ->
@@ -1324,8 +1324,8 @@ class HttpClientTest extends BaseHttpTest {
 		assertThat(requestError1.get()).isEqualTo("success");
 		assertThat(responseError1.get()).isNull();
 
-		AtomicReference<String> requestError2 = new AtomicReference<>();
-		AtomicReference<String> responseError2 = new AtomicReference<>();
+		AtomicReference<@Nullable String> requestError2 = new AtomicReference<>();
+		AtomicReference<@Nullable String> responseError2 = new AtomicReference<>();
 
 		content =
 				createHttpClientForContextWithPort()
@@ -1595,7 +1595,7 @@ class HttpClientTest extends BaseHttpTest {
 	private static final class ConnectionResetByPeerServer extends CountDownLatch implements Runnable {
 		final int port;
 		private final ServerSocketChannel server;
-		private volatile Thread thread;
+		private volatile @Nullable Thread thread;
 
 		private ConnectionResetByPeerServer(int port) {
 			super(1);
@@ -2871,7 +2871,7 @@ class HttpClientTest extends BaseHttpTest {
 		AtomicReference<List<HttpClientInfos>> onRequest = new AtomicReference<>(new ArrayList<>());
 		AtomicReference<HttpClientInfos> onRedirect = new AtomicReference<>();
 		AtomicReference<HttpClientInfos> onResponse = new AtomicReference<>();
-		AtomicReference<HttpClientInfos> onResponseError = new AtomicReference<>();
+		AtomicReference<@Nullable HttpClientInfos> onResponseError = new AtomicReference<>();
 		Tuple2<String, HttpResponseStatus> response =
 				createHttpClientForContextWithAddress()
 				          .followRedirect(true, req -> req.addHeader("testIssue1031", "testIssue1031"))
@@ -3260,7 +3260,7 @@ class HttpClientTest extends BaseHttpTest {
 				        .bindNow();
 
 		EventLoopGroup loop = new NioEventLoopGroup(1);
-		AtomicReference<List<AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
+		AtomicReference<List<@Nullable AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
 		AtomicReference<List<AddressResolverGroup<?>>> resolversInternal = new AtomicReference<>(new ArrayList<>());
 		try {
 			HttpClient client = createClientNewConnection(disposableServer.port()).runOn(useNative -> loop);
@@ -3508,7 +3508,7 @@ class HttpClientTest extends BaseHttpTest {
 				          .bindNow(Duration.ofSeconds(30));
 
 		LoopResources loop = LoopResources.create("doTestSharedNameResolver", 4, true);
-		AtomicReference<List<AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
+		AtomicReference<List<@Nullable AddressResolverGroup<?>>> resolvers = new AtomicReference<>(new ArrayList<>());
 		try {
 			int count = 8;
 			CountDownLatch latch = new CountDownLatch(count);
@@ -3681,7 +3681,7 @@ class HttpClientTest extends BaseHttpTest {
 				                     .ws("/ws", (in, out) -> out.neverComplete()))
 				        .bindNow();
 
-		AtomicReference<WeakReference<Connection>> connWeakRef = new AtomicReference<>();
+		AtomicReference<@Nullable WeakReference<@Nullable Connection>> connWeakRef = new AtomicReference<>();
 		HttpClient client =
 				createClient(disposableServer.port())
 				        .observe((conn, state) -> {
@@ -3700,7 +3700,8 @@ class HttpClientTest extends BaseHttpTest {
 		                    Flux.range(0, 10)
 		                        .delayElements(Duration.ofMillis(100))
 		                        .skipUntil(l -> {
-		                            boolean result = connWeakRef.get().get() == null;
+			                        WeakReference<@Nullable Connection> weakReference = connWeakRef.get();
+			                        boolean result = weakReference != null && weakReference.get() == null;
 		                            if (!result) {
 		                                System.gc();
 		                            }

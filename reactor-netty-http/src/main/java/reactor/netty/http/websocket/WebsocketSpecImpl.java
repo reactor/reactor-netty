@@ -26,7 +26,7 @@ import org.jspecify.annotations.Nullable;
  */
 public class WebsocketSpecImpl implements WebsocketSpec {
 
-	private final String protocols;
+	private final @Nullable String protocols;
 	private final int maxFramePayloadLength;
 	private final boolean proxyPing;
 	private final boolean compress;

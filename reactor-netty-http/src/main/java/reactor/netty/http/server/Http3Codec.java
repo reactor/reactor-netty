@@ -50,30 +50,30 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
 	static final Logger log = Loggers.getLogger(Http3Codec.class);
 
-	final boolean                                                 accessLogEnabled;
-	final Function<AccessLogArgProvider, AccessLog>               accessLog;
-	final HttpCompressionOptionsSpec                              compressionOptions;
-	final BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
-	final ServerCookieDecoder                                     cookieDecoder;
-	final ServerCookieEncoder                                     cookieEncoder;
-	final HttpServerFormDecoderProvider                           formDecoderProvider;
-	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-	final HttpMessageLogFactory                                   httpMessageLogFactory;
-	final ConnectionObserver                                      listener;
-	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
-	                                                              mapHandle;
-	final Function<String, String>                                methodTagValue;
-	final ChannelMetricsRecorder                                  metricsRecorder;
-	final int                                                     minCompressionSize;
-	final ChannelOperations.OnSetup                               opsFactory;
-	final Duration                                                readTimeout;
-	final Duration                                                requestTimeout;
-	final Function<String, String>                                uriTagValue;
-	final boolean                                                 validate;
+	final boolean                                                           accessLogEnabled;
+	final @Nullable Function<AccessLogArgProvider, @Nullable AccessLog>     accessLog;
+	final @Nullable HttpCompressionOptionsSpec                              compressionOptions;
+	final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compressPredicate;
+	final ServerCookieDecoder                                               cookieDecoder;
+	final ServerCookieEncoder                                               cookieEncoder;
+	final HttpServerFormDecoderProvider                                     formDecoderProvider;
+	final @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	final HttpMessageLogFactory                                             httpMessageLogFactory;
+	final ConnectionObserver                                                listener;
+	final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+	                                                                        mapHandle;
+	final @Nullable Function<String, String>                                methodTagValue;
+	final @Nullable ChannelMetricsRecorder                                  metricsRecorder;
+	final int                                                               minCompressionSize;
+	final ChannelOperations.OnSetup                                         opsFactory;
+	final @Nullable Duration                                                readTimeout;
+	final @Nullable Duration                                                requestTimeout;
+	final @Nullable Function<String, String>                                uriTagValue;
+	final boolean                                                           validate;
 
 	Http3Codec(
 			boolean accessLogEnabled,
-			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,
@@ -158,7 +158,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 
 	static ChannelHandler newHttp3ServerConnectionHandler(
 			boolean accessLogEnabled,
-			@Nullable Function<AccessLogArgProvider, AccessLog> accessLog,
+			@Nullable Function<AccessLogArgProvider, @Nullable AccessLog> accessLog,
 			@Nullable HttpCompressionOptionsSpec compressionOptions,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 			ServerCookieDecoder decoder,

@@ -65,7 +65,7 @@ public interface HttpServerRequest extends NettyInbound, HttpServerInfos {
 	 *
 	 * @return this {@link HttpServerRequest}
 	 */
-	HttpServerRequest paramsResolver(Function<? super String, Map<String, String>> paramsResolver);
+	HttpServerRequest paramsResolver(@Nullable Function<? super String, Map<String, String>> paramsResolver);
 
 	/**
 	 * Returns a {@link Flux} of {@link HttpContent} containing received chunks.

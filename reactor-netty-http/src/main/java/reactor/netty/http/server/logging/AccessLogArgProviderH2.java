@@ -30,8 +30,8 @@ final class AccessLogArgProviderH2 extends AbstractAccessLogArgProvider<AccessLo
 
 	static final String H2_PROTOCOL_NAME = "HTTP/2.0";
 
-	Http2HeadersFrame requestHeaders;
-	Http2HeadersFrame responseHeaders;
+	@Nullable Http2HeadersFrame requestHeaders;
+	@Nullable Http2HeadersFrame responseHeaders;
 
 	AccessLogArgProviderH2(@Nullable SocketAddress remoteAddress) {
 		super(remoteAddress);

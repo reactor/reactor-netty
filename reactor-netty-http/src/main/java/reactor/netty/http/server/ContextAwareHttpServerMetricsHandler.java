@@ -23,6 +23,8 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * {@link AbstractHttpServerMetricsHandler} that propagates {@link ContextView}.
  *
@@ -60,28 +62,30 @@ final class ContextAwareHttpServerMetricsHandler extends AbstractHttpServerMetri
 	protected void recordException() {
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().incrementErrorsCount(contextView, remoteSocketAddress, path);
+		recorder().incrementErrorsCount(requireNonNull(contextView), requireNonNull(remoteSocketAddress), requireNonNull(path));
 	}
 
 	@Override
 	protected void recordRead() {
-		recorder().recordDataReceivedTime(contextView, path, method,
+		recorder().recordDataReceivedTime(requireNonNull(contextView), requireNonNull(path), requireNonNull(method),
 				Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 		// Always take the remote address from the operations in order to consider proxy information
 		// Use remoteSocketAddress() in order to obtain UDS info
-		recorder().recordDataReceived(contextView, remoteSocketAddress, path, dataReceived);
+		recorder().recordDataReceived(contextView, requireNonNull(remoteSocketAddress), path, dataReceived);
 	}
 
 	@Override
 	protected void recordWrite(Channel channel) {
-		recordWrite(contextView, dataReceivedTime, dataSent, dataSentTime, method, path, remoteSocketAddress, status);
+		recordWrite(requireNonNull(contextView), dataReceivedTime, dataSent, dataSentTime, requireNonNull(method),
+				requireNonNull(path), requireNonNull(remoteSocketAddress), requireNonNull(status));
 	}
 
 	@Override
 	protected void recordWrite(Channel channel, MetricsArgProvider metricsArgProvider) {
-		recordWrite(metricsArgProvider.contextView, metricsArgProvider.dataReceivedTime, metricsArgProvider.dataSent, metricsArgProvider.dataSentTime,
-				metricsArgProvider.method, metricsArgProvider.path, metricsArgProvider.remoteSocketAddress, metricsArgProvider.status);
+		recordWrite(requireNonNull(metricsArgProvider.contextView), metricsArgProvider.dataReceivedTime, metricsArgProvider.dataSent, metricsArgProvider.dataSentTime,
+				requireNonNull(metricsArgProvider.method), requireNonNull(metricsArgProvider.path),
+				requireNonNull(metricsArgProvider.remoteSocketAddress), requireNonNull(metricsArgProvider.status));
 	}
 
 	void recordWrite(

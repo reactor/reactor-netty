@@ -43,10 +43,10 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 	final ConnectionObserver obs;
 	final ChannelOperations.OnSetup opsFactory;
 	final boolean acceptGzip;
-	final LoggingHandler loggingHandler;
-	final ChannelMetricsRecorder metricsRecorder;
+	final @Nullable LoggingHandler loggingHandler;
+	final @Nullable ChannelMetricsRecorder metricsRecorder;
 	final SocketAddress remoteAddress;
-	final Function<String, String> uriTagValue;
+	final @Nullable Function<String, String> uriTagValue;
 	final boolean validate;
 
 	Http3Codec(
@@ -56,7 +56,7 @@ final class Http3Codec extends ChannelInitializer<QuicStreamChannel> {
 			@Nullable LoggingHandler loggingHandler,
 			@Nullable ChannelMetricsRecorder metricsRecorder,
 			SocketAddress remoteAddress,
-			Function<String, String> uriTagValue,
+			@Nullable Function<String, String> uriTagValue,
 			boolean validate) {
 		this.obs = obs;
 		this.opsFactory = opsFactory;

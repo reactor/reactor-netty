@@ -24,6 +24,8 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * {@link AbstractHttpClientMetricsHandler} that propagates {@link ContextView}.
  *
@@ -56,10 +58,10 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 	protected void recordException(ChannelHandlerContext ctx) {
 		if (contextView != null) {
 			if (proxyAddress == null) {
-				recorder().incrementErrorsCount(contextView, remoteAddress, path);
+				recorder().incrementErrorsCount(contextView, remoteAddress, requireNonNull(path));
 			}
 			else {
-				recorder().incrementErrorsCount(contextView, remoteAddress, proxyAddress, path);
+				recorder().incrementErrorsCount(contextView, remoteAddress, proxyAddress, requireNonNull(path));
 			}
 		}
 		else {
@@ -71,13 +73,13 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 	protected void recordWrite(SocketAddress address) {
 		if (contextView != null) {
 			if (proxyAddress == null) {
-				recorder.recordDataSentTime(contextView, address, path, method,
+				recorder.recordDataSentTime(contextView, address, requireNonNull(path), requireNonNull(method),
 						Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 				recorder.recordDataSent(contextView, address, path, dataSent);
 			}
 			else {
-				recorder.recordDataSentTime(contextView, address, proxyAddress, path, method,
+				recorder.recordDataSentTime(contextView, address, proxyAddress, requireNonNull(path), requireNonNull(method),
 						Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 				recorder.recordDataSent(contextView, address, proxyAddress, path, dataSent);
@@ -92,7 +94,7 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 	protected void recordRead(Channel channel, SocketAddress address) {
 		if (contextView != null) {
 			if (proxyAddress == null) {
-				recorder.recordDataReceivedTime(contextView, address, path, method, status,
+				recorder.recordDataReceivedTime(contextView, address, requireNonNull(path), requireNonNull(method), requireNonNull(status),
 						Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 				recorder.recordResponseTime(contextView, address, path, method, status,
@@ -101,7 +103,7 @@ final class ContextAwareHttpClientMetricsHandler extends AbstractHttpClientMetri
 				recorder.recordDataReceived(contextView, address, path, dataReceived);
 			}
 			else {
-				recorder.recordDataReceivedTime(contextView, address, proxyAddress, path, method, status,
+				recorder.recordDataReceivedTime(contextView, address, proxyAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
 						Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 				recorder.recordResponseTime(contextView, address, proxyAddress, path, method, status,

@@ -36,7 +36,7 @@ import java.util.stream.Stream;
  */
 public class BaseHttpTest {
 
-	protected DisposableServer disposableServer;
+	protected @Nullable DisposableServer disposableServer;
 
 	@AfterEach
 	void disposeServer() {

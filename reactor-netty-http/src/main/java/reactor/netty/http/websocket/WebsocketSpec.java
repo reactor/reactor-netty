@@ -59,7 +59,7 @@ public interface WebsocketSpec {
 	boolean compress();
 
 	class Builder<SPEC extends Builder<SPEC>> implements Supplier<SPEC> {
-		String protocols;
+		@Nullable String protocols;
 		int maxFramePayloadLength = 65536;
 		boolean handlePing;
 		boolean compress;

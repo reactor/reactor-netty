@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2022-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,6 @@ class ContextPropagationTest {
 	static SelfSignedCertificate ssc;
 
 	HttpServer baseServer;
-	DisposableServer disposableServer;
 	Http2SslContextSpec serverCtx;
 
 
@@ -91,7 +90,7 @@ class ContextPropagationTest {
 				baseServer.secure(spec -> spec.sslContext(serverCtx)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2) :
 				baseServer.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C);
 
-		disposableServer = server.bindNow();
+		DisposableServer disposableServer = server.bindNow();
 
 		try {
 			registry.registerThreadLocalAccessor(new TestThreadLocalAccessor());
@@ -126,7 +125,7 @@ class ContextPropagationTest {
 				baseServer.secure(spec -> spec.sslContext(serverCtx)).protocol(HttpProtocol.HTTP11, HttpProtocol.H2) :
 				baseServer.protocol(HttpProtocol.HTTP11, HttpProtocol.H2C);
 
-		disposableServer = server.bindNow();
+		DisposableServer disposableServer = server.bindNow();
 
 		try {
 			Hooks.enableAutomaticContextPropagation();

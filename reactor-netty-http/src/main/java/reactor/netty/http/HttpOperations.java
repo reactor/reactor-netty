@@ -485,7 +485,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 		final Mono<Void> source;
 		final HttpOperations<?, ?> parent;
-		final ByteBuf msg;
+		final @Nullable ByteBuf msg;
 
 		public PostHeadersNettyOutbound(Mono<Void> source, HttpOperations<?, ?> parent, @Nullable ByteBuf msg) {
 			this.msg = msg;

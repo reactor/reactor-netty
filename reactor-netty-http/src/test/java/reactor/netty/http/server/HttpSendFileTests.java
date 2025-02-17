@@ -268,6 +268,7 @@ class HttpSendFileTests extends BaseHttpTest {
 
 		String body = response.block(Duration.ofSeconds(30));
 
+		assertThat(body).isNotNull();
 		bodyAssertion.accept(body);
 	}
 

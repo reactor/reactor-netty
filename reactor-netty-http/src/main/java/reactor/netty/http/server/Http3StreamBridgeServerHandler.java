@@ -54,19 +54,22 @@ import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 import static reactor.netty.ReactorNetty.format;
 
 final class Http3StreamBridgeServerHandler extends ChannelDuplexHandler {
-	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
-	final HttpCompressionOptionsSpec                              compressionOptions;
-	final ServerCookieDecoder                                     cookieDecoder;
-	final ServerCookieEncoder                                     cookieEncoder;
-	final HttpServerFormDecoderProvider                           formDecoderProvider;
-	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-	final HttpMessageLogFactory                                   httpMessageLogFactory;
-	final ConnectionObserver                                      listener;
-	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
-	                                                              mapHandle;
-	final Duration                                                readTimeout;
-	final Duration                                                requestTimeout;
+	final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
+	final @Nullable HttpCompressionOptionsSpec                              compressionOptions;
+	final ServerCookieDecoder                                               cookieDecoder;
+	final ServerCookieEncoder                                               cookieEncoder;
+	final HttpServerFormDecoderProvider                                     formDecoderProvider;
+	final @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	final HttpMessageLogFactory                                             httpMessageLogFactory;
+	final ConnectionObserver                                                listener;
+	final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+	                                                                        mapHandle;
+	final @Nullable Duration                                                readTimeout;
+	final @Nullable Duration                                                requestTimeout;
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	SocketAddress remoteAddress;
 
 	/**

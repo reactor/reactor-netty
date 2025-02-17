@@ -29,10 +29,10 @@ import reactor.util.context.ContextView;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static java.util.Objects.requireNonNull;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.UNKNOWN;
@@ -58,9 +58,15 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	final MicrometerHttpServerMetricsRecorder recorder;
 	final String responseTimeName;
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	ResponseTimeHandlerContext responseTimeHandlerContext;
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	Observation responseTimeObservation;
-	ContextView parentContextView;
+	@Nullable ContextView parentContextView;
 
 	MicrometerHttpServerMetricsHandler(
 			MicrometerHttpServerMetricsRecorder recorder,
@@ -93,15 +99,17 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 
 	@Override
 	protected void recordWrite(Channel channel) {
-		recordWrite(dataSent, dataSentTime, method, path, remoteSocketAddress, responseTimeObservation, status);
+		recordWrite(dataSent, dataSentTime, requireNonNull(method), requireNonNull(path), requireNonNull(remoteSocketAddress),
+				responseTimeObservation, requireNonNull(status));
 
 		setChannelContext(channel, parentContextView);
 	}
 
 	@Override
 	protected void recordWrite(Channel channel, MetricsArgProvider metricsArgProvider) {
-		recordWrite(metricsArgProvider.dataSent, metricsArgProvider.dataSentTime, metricsArgProvider.method, metricsArgProvider.path,
-				metricsArgProvider.remoteSocketAddress, metricsArgProvider.get(Observation.class), metricsArgProvider.status);
+		recordWrite(metricsArgProvider.dataSent, metricsArgProvider.dataSentTime, requireNonNull(metricsArgProvider.method),
+				requireNonNull(metricsArgProvider.path), requireNonNull(metricsArgProvider.remoteSocketAddress),
+				requireNonNull(metricsArgProvider.get(Observation.class)), requireNonNull(metricsArgProvider.status));
 	}
 
 	void recordWrite(
@@ -131,7 +139,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 	protected void startRead(HttpServerOperations ops) {
 		super.startRead(ops);
 
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, method, path, ops);
+		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, requireNonNull(method), requireNonNull(path), ops);
 		responseTimeObservation = Observation.createNotStarted(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		parentContextView = updateChannelContext(ops.channel(), responseTimeObservation);
 		responseTimeObservation.start();
@@ -143,16 +151,19 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		super.startWrite(ops);
 
 		if (responseTimeObservation == null) {
-			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, method, path, ops);
+			responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, requireNonNull(method), requireNonNull(path), ops);
 			responseTimeObservation = Observation.createNotStarted(this.responseTimeName, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 			parentContextView = updateChannelContext(ops.channel(), responseTimeObservation);
 			responseTimeObservation.start();
 		}
 		responseTimeHandlerContext.setResponse(ops.nettyResponse);
-		responseTimeHandlerContext.status = status;
+		responseTimeHandlerContext.status = requireNonNull(status);
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	protected void reset(Channel channel) {
 		super.reset(channel);
 
@@ -186,7 +197,7 @@ final class MicrometerHttpServerMetricsHandler extends AbstractHttpServerMetrics
 		String status = UNKNOWN;
 
 		ResponseTimeHandlerContext(MicrometerHttpServerMetricsRecorder recorder, String method, String path, HttpServerOperations ops) {
-			super((carrier, key) -> Objects.requireNonNull(carrier).headers().get(key));
+			super((carrier, key) -> requireNonNull(carrier).headers().get(key));
 			this.recorder = recorder;
 			HttpRequest request = ops.nettyRequest;
 			this.method = method;

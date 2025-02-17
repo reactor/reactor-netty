@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2023 VMware, Inc. or its affiliates, All Rights Reserved.
+ * Copyright (c) 2021-2025 VMware, Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,9 @@ class HttpServerFormDecoderProviderTests {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void baseDirectoryBadValue() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.baseDirectory(null));
 	}
@@ -85,7 +87,9 @@ class HttpServerFormDecoderProviderTests {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void charsetBadValue() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.charset(null));
 	}
@@ -150,7 +154,9 @@ class HttpServerFormDecoderProviderTests {
 	}
 
 	@Test
+	@SuppressWarnings("NullAway")
 	void schedulerBadValue() {
+		// Deliberately suppress "NullAway" for testing purposes
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.scheduler(null));
 	}

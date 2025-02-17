@@ -77,22 +77,25 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	static final boolean LAST_FLUSH_WHEN_NO_READ = Boolean.parseBoolean(
 			System.getProperty("reactor.netty.http.server.lastFlushWhenNoRead", "false"));
 
-	final BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
-	final HttpCompressionOptionsSpec                              compressionOptions;
-	final ServerCookieDecoder                                     cookieDecoder;
-	final ServerCookieEncoder                                     cookieEncoder;
-	final HttpServerFormDecoderProvider                           formDecoderProvider;
-	final BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
-	final HttpMessageLogFactory                                   httpMessageLogFactory;
-	final Duration                                                idleTimeout;
-	final ConnectionObserver                                      listener;
-	final BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
-	                                                              mapHandle;
-	final int                                                     maxKeepAliveRequests;
-	final Duration                                                readTimeout;
-	final Duration                                                requestTimeout;
-	final boolean                                                 validateHeaders;
+	final @Nullable BiPredicate<HttpServerRequest, HttpServerResponse>      compress;
+	final @Nullable HttpCompressionOptionsSpec                              compressionOptions;
+	final ServerCookieDecoder                                               cookieDecoder;
+	final ServerCookieEncoder                                               cookieEncoder;
+	final HttpServerFormDecoderProvider                                     formDecoderProvider;
+	final @Nullable BiFunction<ConnectionInfo, HttpRequest, ConnectionInfo> forwardedHeaderHandler;
+	final HttpMessageLogFactory                                             httpMessageLogFactory;
+	final @Nullable Duration                                                idleTimeout;
+	final ConnectionObserver                                                listener;
+	final @Nullable BiFunction<? super Mono<Void>, ? super Connection, ? extends Mono<Void>>
+	                                                                        mapHandle;
+	final int                                                               maxKeepAliveRequests;
+	final @Nullable Duration                                                readTimeout;
+	final @Nullable Duration                                                requestTimeout;
+	final boolean                                                           validateHeaders;
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	ChannelHandlerContext ctx;
 
 	boolean nonInformationalResponse;
@@ -102,10 +105,16 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	int pendingResponses;
 	boolean persistentConnection = true;
 
-	Queue<Object> pipelined;
+	@Nullable Queue<Object> pipelined;
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	SocketAddress remoteAddress;
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	Boolean secure;
 
 	boolean read;
@@ -552,9 +561,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler implements Runnable 
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public void run() {
 		Object next;
 		HttpRequest nextRequest = null;
+		// Deliberately suppress "NullAway"
+		// pipelined is a lazy initialization
 		while ((next = pipelined.peek()) != null) {
 			if (next instanceof HttpRequestHolder) {
 				if (nextRequest != null) {

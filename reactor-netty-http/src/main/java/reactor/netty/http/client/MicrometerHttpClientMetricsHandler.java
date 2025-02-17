@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static java.util.Objects.requireNonNull;
 import static reactor.netty.Metrics.NA;
 import static reactor.netty.Metrics.OBSERVATION_REGISTRY;
 import static reactor.netty.Metrics.RESPONSE_TIME;
@@ -61,9 +62,15 @@ import static reactor.netty.http.client.HttpClientObservations.ResponseTimeLowCa
 final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetricsHandler {
 	final MicrometerHttpClientMetricsRecorder recorder;
 
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	ResponseTimeHandlerContext responseTimeHandlerContext;
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	Observation responseTimeObservation;
-	ContextView parentContextView;
+	@Nullable ContextView parentContextView;
 
 	MicrometerHttpClientMetricsHandler(MicrometerHttpClientMetricsRecorder recorder,
 			SocketAddress remoteAddress,
@@ -90,13 +97,13 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	@Override
 	protected void recordRead(Channel channel, SocketAddress address) {
 		if (proxyAddress == null) {
-			recorder().recordDataReceivedTime(address, path, method, status,
+			recorder().recordDataReceivedTime(address, requireNonNull(path), requireNonNull(method), requireNonNull(status),
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 			recorder().recordDataReceived(address, path, dataReceived);
 		}
 		else {
-			recorder().recordDataReceivedTime(address, proxyAddress, path, method, status,
+			recorder().recordDataReceivedTime(address, proxyAddress, requireNonNull(path), requireNonNull(method), requireNonNull(status),
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 			recorder().recordDataReceived(address, proxyAddress, path, dataReceived);
@@ -113,6 +120,9 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
+	// Deliberately suppress "NullAway"
+	// This is a lazy initialization
 	protected void reset() {
 		super.reset();
 		responseTimeHandlerContext = null;
@@ -126,7 +136,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		super.startRead(msg);
 
 		responseTimeHandlerContext.setResponse(msg);
-		responseTimeHandlerContext.status = status;
+		responseTimeHandlerContext.status = requireNonNull(status);
 	}
 
 	// writing the request
@@ -134,7 +144,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 	protected void startWrite(HttpRequest msg, Channel channel, SocketAddress address) {
 		super.startWrite(msg, channel, address);
 
-		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, path, address, proxyAddress);
+		responseTimeHandlerContext = new ResponseTimeHandlerContext(recorder, msg, requireNonNull(path), address, proxyAddress);
 		responseTimeObservation = Observation.createNotStarted(recorder.name() + RESPONSE_TIME, responseTimeHandlerContext, OBSERVATION_REGISTRY);
 		parentContextView = updateChannelContext(channel, responseTimeObservation);
 		responseTimeObservation.start();
@@ -156,7 +166,7 @@ final class MicrometerHttpClientMetricsHandler extends AbstractHttpClientMetrics
 		final String netPeerName;
 		final String netPeerPort;
 		final String path;
-		final String proxyAddress;
+		final @Nullable String proxyAddress;
 		final MicrometerHttpClientMetricsRecorder recorder;
 
 		// status might not be known beforehand

@@ -42,7 +42,7 @@ import java.util.List;
 final class SimpleCompressionHandler extends HttpContentCompressor {
 
 	boolean decoded;
-	HttpRequest request;
+	@Nullable HttpRequest request;
 
 	private SimpleCompressionHandler() {
 		super((CompressionOptions[]) null);
@@ -65,6 +65,7 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
 			throws Exception {
 
@@ -73,6 +74,8 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		}
 		else {
 			if (!decoded && msg instanceof HttpResponse) {
+				// Deliberately suppress "NullAway"
+				// This is a lazy initialization
 				decode(ctx, request);
 			}
 			if (decoded && request != null && msg instanceof LastHttpContent) {

@@ -183,7 +183,7 @@ class HttpServerTests extends BaseHttpTest {
 	static final String DATA_STRING = String.join("", Collections.nCopies(128, "X"));
 	static final byte[] DATA = DATA_STRING.getBytes(Charset.defaultCharset());
 
-	ChannelGroup group;
+	@Nullable ChannelGroup group;
 
 	/**
 	 * Server Handler used to send a TLS close_notify after the server last response has been flushed.
@@ -625,10 +625,11 @@ class HttpServerTests extends BaseHttpTest {
 
 		//the router is not done and is still blocking the thread
 		assertThat(f.isDone()).isFalse();
-		assertThat(ref.get()).withFailMessage("Server is not initialized after 1s").isNotNull();
+		DisposableServer actual = ref.get();
+		assertThat(actual).withFailMessage("Server is not initialized after 1s").isNotNull();
 
 		//shutdown the router to unblock the thread
-		ref.get().disposeNow();
+		actual.disposeNow();
 		Thread.sleep(100);
 		assertThat(f.isDone()).isTrue();
 	}
@@ -782,15 +783,16 @@ class HttpServerTests extends BaseHttpTest {
 				        else {
 				            String chunkedReceived = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
 				            String clReceived = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
-				            String chunkedSent = sentHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING);
-				            String clSent = sentHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH);
+					        HttpHeaders httpHeaders = sentHeaders.get();
+					        String chunkedSent = httpHeaders != null ? httpHeaders.get(HttpHeaderNames.TRANSFER_ENCODING) : null;
+				            String clSent = httpHeaders != null ? httpHeaders.get(HttpHeaderNames.CONTENT_LENGTH) : null;
 				            if (HttpMethod.GET.equals(method)) {
-				                return chunkedReceived == null && chunkedSent == null &&
+				                return httpHeaders != null && chunkedReceived == null && chunkedSent == null &&
 				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
 				                       "OK".equals(t.getT2());
 				            }
 				            else {
-				                return chunkedReceived == null && chunkedSent == null &&
+				                return httpHeaders != null && chunkedReceived == null && chunkedSent == null &&
 				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
 				                       "NO BODY".equals(t.getT2());
 				            }
@@ -862,7 +864,9 @@ class HttpServerTests extends BaseHttpTest {
 		            .expectError(IOException.class)
 		            .verify(Duration.ofSeconds(30));
 
-		FutureMono.from(ch.get().closeFuture()).block(Duration.ofSeconds(30));
+		Channel actual = ch.get();
+		assertThat(actual).isNotNull();
+		FutureMono.from(actual.closeFuture()).block(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -1592,7 +1596,7 @@ class HttpServerTests extends BaseHttpTest {
 
 	@Test
 	void testDecodingFailureLastHttpContent() throws Exception {
-		AtomicReference<Throwable> error = new AtomicReference<>();
+		AtomicReference<@Nullable Throwable> error = new AtomicReference<>();
 		disposableServer =
 				createServer()
 				          .doOnConnection(conn -> conn.channel().pipeline().addAfter(NettyPipeline.HttpTrafficHandler, null,
@@ -1744,7 +1748,7 @@ class HttpServerTests extends BaseHttpTest {
 				          .doOnChannelInit((obs, ch, addr) ->
 				              ch.pipeline().addBefore(NettyPipeline.HttpTrafficHandler, "", new ChannelDuplexHandler() {
 
-				                  HttpRequest request;
+				                  @Nullable HttpRequest request;
 
 				                  @Override
 				                  public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -3791,7 +3795,7 @@ class HttpServerTests extends BaseHttpTest {
 
 	static final class TestHttpServerMetricsRecorder implements HttpServerMetricsRecorder {
 
-		Duration tlsHandshakeTime;
+		@Nullable Duration tlsHandshakeTime;
 
 		@Override
 		public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
@@ -3845,7 +3849,7 @@ class HttpServerTests extends BaseHttpTest {
 
 	static final class TestHttpClientMetricsRecorder implements HttpClientMetricsRecorder {
 
-		Duration tlsHandshakeTime;
+		@Nullable Duration tlsHandshakeTime;
 
 		@Override
 		public void recordDataReceived(SocketAddress remoteAddress, long bytes) {

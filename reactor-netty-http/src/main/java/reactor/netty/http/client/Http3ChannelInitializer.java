@@ -42,13 +42,13 @@ import static io.netty.incubator.codec.http3.Http3.newQuicClientCodecBuilder;
 
 final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 
-	final Http3SettingsSpec           http3Settings;
-	final ChannelHandler              loggingHandler;
+	final @Nullable Http3SettingsSpec http3Settings;
+	final @Nullable ChannelHandler    loggingHandler;
 	final ConnectionObserver          obs;
 	final ChannelOperations.OnSetup   opsFactory;
 	final ChannelInitializer<Channel> quicChannelInitializer;
-	final SocketAddress               remoteAddress;
-	final SslProvider                 sslProvider;
+	final @Nullable SocketAddress     remoteAddress;
+	final @Nullable SslProvider       sslProvider;
 
 	Http3ChannelInitializer(HttpClientConfig config, ChannelInitializer<Channel> quicChannelInitializer, ConnectionObserver obs,
 			@Nullable SocketAddress remoteAddress) {
@@ -67,7 +67,7 @@ final class Http3ChannelInitializer extends ChannelInitializer<Channel> {
 
 		quicClientCodecBuilder.sslEngineProvider(ch -> {
 			QuicSslContext quicSslContext;
-			if (sslProvider.getSslContext() instanceof QuicSslContext) {
+			if (sslProvider != null && sslProvider.getSslContext() instanceof QuicSslContext) {
 				quicSslContext = (QuicSslContext) sslProvider.getSslContext();
 			}
 			else {
