@@ -100,7 +100,7 @@ ext {
 	}
 
 	braveVersion = '6.0.3'
-	zipkinSenderVersion = '3.4.3'
+	zipkinSenderVersion = '3.5.0'
 
 	jspecifyVersion = '1.0.0'
 
