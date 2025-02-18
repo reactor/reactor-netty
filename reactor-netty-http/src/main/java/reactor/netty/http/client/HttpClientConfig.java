@@ -1061,7 +1061,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 		@Override
 		public void onChannelInit(ConnectionObserver observer, Channel channel, @Nullable SocketAddress remoteAddress) {
-			requireNonNull(remoteAddress);
 			if (sslProvider != null) {
 				if ((protocols & h3) != h3) {
 					sslProvider.addSslHandler(channel, remoteAddress, SSL_DEBUG);
@@ -1070,10 +1069,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 				if ((protocols & h11orH2) == h11orH2) {
 					channel.pipeline()
 					       .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2OrHttp11Codec,
-					               new H2OrHttp11Codec(this, observer, remoteAddress));
+					               new H2OrHttp11Codec(this, observer, requireNonNull(remoteAddress)));
 				}
 				else if ((protocols & h11) == h11) {
-					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
+					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, requireNonNull(remoteAddress), uriTagValue);
 				}
 				else if ((protocols & h2) == h2) {
 					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
@@ -1087,7 +1086,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 					configureHttp11OrH2CleartextPipeline(channel.pipeline(), acceptGzip, decoder, http2Settings, metricsRecorder, observer, opsFactory, proxyAddress, remoteAddress, uriTagValue);
 				}
 				else if ((protocols & h11) == h11) {
-					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, remoteAddress, uriTagValue);
+					configureHttp11Pipeline(channel.pipeline(), acceptGzip, decoder, metricsRecorder, proxyAddress, requireNonNull(remoteAddress), uriTagValue);
 				}
 				else if ((protocols & h2c) == h2c) {
 					configureHttp2Pipeline(channel.pipeline(), decoder, http2Settings, observer);
